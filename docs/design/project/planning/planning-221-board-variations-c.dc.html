@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 option C, pushing drawer and review dialog</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./planning-221-board-variations.css" />
+      </helmet>
+      <div class="pb-opt">
+        <sc-if value="{{ wide }}">
+          <dc-import name="Shell" width="1440" theme="{{ theme }}" hint-size="1440px,900px">
+            <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+            <div class="pb-page">
+              <div class="pb-tb" role="toolbar" aria-label="Board">
+                <div class="pb-grp" role="group" aria-label="Zoom">
+                  <button class="btn icon v-outline" type="button" aria-label="Zoom out to Day"><span class="ic" data-icon="ZoomOut"></span></button>
+                  <span class="pb-range" style="min-width:56px;text-align:center">Hours</span>
+                  <button class="btn icon v-outline is-dis" type="button" aria-label="Zoom in" aria-disabled="true"><span class="ic" data-icon="ZoomIn"></span></button>
+                </div>
+                <span class="sh-vsep"></span>
+                <div class="pb-grp">
+                  <button class="btn icon v-outline" type="button" aria-label="Show earlier range"><span class="ic" data-icon="ChevronLeft"></span></button>
+                  <button class="btn v-outline pb-rbtn" type="button" aria-haspopup="dialog" aria-label="Go to date, showing Tue 3 Nov 06:00 to 18:00"><span class="ic" data-icon="CalendarDays"></span>Tue 3 Nov, <span class="num">06:00</span> to <span class="num">18:00</span></button>
+                  <button class="btn icon v-outline" type="button" aria-label="Show later range"><span class="ic" data-icon="ChevronRight"></span></button>
+                  <button class="btn v-outline" type="button">Now</button>
+                </div>
+                <span class="pb-sp"></span>
+                <button class="btn v-outline {{ slotBtn }}" type="button" aria-pressed="{{ slotPressed }}"><span class="ic" data-icon="PanelRight"></span>Large orders</button>
+                <button class="btn v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause live updates</button>
+              </div>
+              <div class="pb-bar">
+                <span class="pb-st"><span class="ic" data-icon="Pencil"></span><span>My draft: <span class="num">6</span> changes, not saved.</span></span>
+                <button class="btn v-outline" type="button">Review</button>
+                <button class="btn v-ghost" type="button">Discard draft</button>
+                <span class="pb-vr"></span>
+                <sc-if value="{{ queued }}"><span class="pb-st wait"><span class="ic" data-icon="Clock"></span><span>Autoplan already queued by Erik Sand. Your request was not added.</span></span></sc-if>
+                <sc-if value="{{ applied }}"><span class="pb-st ok"><span class="ic" data-icon="CircleCheck"></span><span>Autoplan applied at <span class="num">06:12</span>: <span class="num">37</span> moved, <span class="num">2</span> skipped because being edited, <span class="num">3</span> late, <span class="num">1</span> conflict, <span class="num">0</span> unplaced.</span></span></sc-if>
+              </div>
+              <div class="pb-body2">
+                <div class="pb-gw"><dc-import name="planning-221-board-variations-grid" pinned="on" summary="on" focus="{{ gfocus }}" idp="{{ idp }}" hint-size="100%,640px"></dc-import></div>
+                <sc-if value="{{ drawer }}"><div class="pb-pw"><dc-import name="planning-221-board-variations-panel" chrome="drawer" view="details" expiry="in" hint-size="360px,640px"></dc-import></div></sc-if>
+                <sc-if value="{{ slot }}">
+                  <section class="pb-wf" aria-label="Large orders" style="width:280px;align-self:flex-start">
+                    <div class="pb-wfh"><h2 class="pb-h3">Large orders</h2><span class="pb-muted">Example widget</span></div>
+                    <ul class="pb-wfl"><sc-for list="{{ large }}" as="o"><li><span class="num b6">{{ o.o }}</span><span lang="{{ o.lang }}">{{ o.a }}</span><span class="num">{{ o.q }}</span></li></sc-for></ul>
+                  </section>
+                </sc-if>
+              </div>
+              <sc-if value="{{ dialog }}">
+                <div class="sh-ov"></div>
+                <div class="pb-dlg" role="dialog" aria-modal="true" aria-label="Review my draft">
+                  <div class="pb-dlh"><h2 class="pb-dlt">Review my draft</h2><p class="pb-muted" style="margin:0;font-size:14px;line-height:20px">Save writes every change in the draft or none. <span class="num">5</span> need your action before you can save.</p></div>
+                  <div class="pb-dlb">
+                    <ul class="pb-dlist">
+                      <sc-for list="{{ draftRows }}" as="d">
+                        <li class="pb-dr">
+                          <div class="pb-drh"><span class="pb-j">{{ d.j }}</span><span class="pb-a">{{ d.a }}</span><span class="badge {{ d.bc }}" style="margin-left:4px">{{ d.status }}</span></div>
+                          <div class="pb-drt"><sc-for list="{{ d.segs }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></div>
+                          <div class="pb-dra"><sc-if value="{{ d.rebase }}"><button class="btn v-outline" type="button" aria-label="{{ d.rbLabel }}">Rebase</button></sc-if><button class="btn v-ghost" type="button" aria-label="{{ d.dsLabel }}">Discard</button></div>
+                        </li>
+                      </sc-for>
+                    </ul>
+                    <div class="pb-alert err"><span class="ic" data-icon="CircleAlert"></span><span class="pb-at">New conflict: <span class="num">1003.20</span> overlaps <span class="num">1021.10</span> on Lathe 2 from <span class="num">11:30</span> to <span class="num">11:45</span>.</span></div>
+                    <label class="fld"><span class="lbl">Reason to save with this conflict</span><span class="inp is-focus" style="height:64px;align-items:flex-start;padding-top:8px;white-space:normal"><span class="ph">For example: 1021.10 finishes early, agreed with the shift lead</span></span><span class="desc"><span class="num">3</span> to <span class="num">500</span> characters.</span></label>
+                  </div>
+                  <div class="pb-dlf"><span class="pb-muted" id="pb-save-hint-c" style="margin-right:auto;align-self:center;font-size:13px;line-height:18px">Resolve the <span class="num">5</span> rows above to save.</span><button class="btn v-outline" type="button">Back to board</button><button class="btn v-default is-dis" type="button" aria-disabled="true" aria-describedby="pb-save-hint-c">Save changes</button></div>
+                </div>
+              </sc-if>
+            </div>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ narrow }}">
+          <dc-import name="Shell" width="320" theme="{{ theme }}" hint-size="320px,640px">
+            <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+            <div class="pb-page nar">
+              <div class="pb-tb" role="toolbar" aria-label="Board">
+                <button class="btn icon v-outline" type="button" aria-label="Zoom out to Day"><span class="ic" data-icon="ZoomOut"></span></button>
+                <button class="btn icon v-outline is-dis" type="button" aria-label="Zoom in" aria-disabled="true"><span class="ic" data-icon="ZoomIn"></span></button>
+                <button class="btn icon v-outline" type="button" aria-label="Show earlier range"><span class="ic" data-icon="ChevronLeft"></span></button>
+                <button class="btn icon v-outline" type="button" aria-label="Show later range"><span class="ic" data-icon="ChevronRight"></span></button>
+                <button class="btn v-outline" type="button">Now</button>
+                <span class="pb-sp"></span>
+                <button class="btn icon v-outline" type="button" aria-label="Board options" aria-haspopup="menu"><span class="ic" data-icon="SlidersHorizontal"></span></button>
+              </div>
+              <div class="pb-bar" style="padding-left:10px"><span class="pb-st"><span class="ic" data-icon="Pencil"></span><span><span class="num">6</span> changes, not saved</span></span><span class="pb-sp"></span><button class="btn v-outline" type="button">Review</button></div>
+              <div class="pb-gw"><dc-import name="planning-221-board-variations-grid" size="narrow" r0="9" r1="13" pinned="on" idp="c3" hint-size="100%,400px"></dc-import></div>
+            </div>
+          </dc-import>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"},"state":{"editor":"enum","options":["details","review"],"default":"details","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const p = this.props;
+          const narrow = p.size === "narrow";
+          const review = p.state === "review";
+          const NB = " ";
+          // Splits a text into segments, so times and job numbers render in Mono.
+          const segs = (t) => t.split(/(\d{4}\.\d{2}|\d{1,2}:\d{2})/).filter((x) => x !== "").map((x) => ({ t: x, c: /^\d/.test(x) ? "num" : "" }));
+          const rows = [
+            { j: "1003.20", a: "Shaft 40", bc: "b-ok", status: "Ready to save", change: "Lathe 1 to Lathe 2, Tue 3 Nov 11:30", why: "Overlaps 1021.10, give a reason below", rebase: false },
+            { j: "1015.10", a: "Cover plate", bc: "b-warn", status: "Changed by someone else", change: "Mill 2, Wed 4 Nov 07:00", why: "Erik Sand changed it at 09:05", rebase: true },
+            { j: "1016.10", a: "Hub 12", bc: "b-warn", status: "Soft lock lost", change: "CNC1, Wed 4 Nov 09:30", why: "Lena Ek holds it since 09:30", rebase: true },
+            { j: "1017.10", a: "Spacer 8", bc: "b-info", status: "Started", change: "Press 4, Tue 3 Nov 06:00", why: "Started on the shop floor at 06:02", rebase: false },
+            { j: "1018.10", a: "Flange DN50", bc: "b-info", status: "ERP change waiting", change: "Lathe 3, Thu 5 Nov 06:00", why: "Accept or reject the ERP change, then rebase", rebase: false },
+            { j: "1019.20", a: "Gear blank 32", bc: "b-mut", status: "No longer in the plan", change: "CNC2, Thu 5 Nov 10:00", why: "The job order was cancelled", rebase: false },
+          ];
+          return {
+            wide: !narrow,
+            narrow,
+            theme: p.theme === "dark" ? "dark" : "light",
+            queued: !review,
+            applied: review,
+            drawer: !review,
+            slot: review,
+            dialog: review,
+            slotBtn: review ? "on" : "",
+            slotPressed: String(review),
+            gfocus: review ? "off" : "on",
+            idp: review ? "c2" : "c1",
+            large: [
+              { o: "1013", a: "Spacer 8", lang: "en", q: "7" + NB + "200 pcs" },
+              { o: "1011", a: "Cover plate", lang: "en", q: "7" + NB + "200 pcs" },
+              { o: "1014", a: "Lagerhus 62", lang: "sv", q: "3" + NB + "600 pcs" },
+              { o: "1008", a: "Housing P", lang: "en", q: "3" + NB + "600 pcs" },
+              { o: "1009", a: "Bracket L", lang: "en", q: "3" + NB + "600 pcs" },
+            ],
+            draftRows: rows.map((d) => Object.assign({}, d, { segs: segs(d.change + ". " + d.why), rbLabel: "Rebase " + d.j, dsLabel: "Discard " + d.j })),
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

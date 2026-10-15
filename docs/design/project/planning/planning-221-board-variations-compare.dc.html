@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 variations comparison</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./planning-221-board-variations.css" />
+      </helmet>
+      <article class="sheet pv-sheet">
+        <p class="kick">Comparison and recommendation</p>
+        <h1 class="t1">Options against the criteria of the board spec</h1>
+        <p class="lede">Widths are the grid's own box, machine column included, in the D2 shell with the sidebar expanded. Rows are machine rows fully in view. Each cell starts with a word that reads on its own: Strong, Fair or Weak.</p>
+        <div class="sec">
+          <table class="pv-tbl">
+            <thead><tr><th scope="col">Criterion</th><th scope="col">A, docked inspector</th><th scope="col">B, board over table</th><th scope="col">C, drawer and review dialog</th></tr></thead>
+            <tbody>
+              <sc-for list="{{ rows }}" as="r">
+                <tr>
+                  <th scope="row">{{ r.k }}<div class="pv-src" style="font-weight:400;margin-top:2px">{{ r.s }}</div></th>
+                  <sc-for list="{{ r.c }}" as="c"><td><span class="tag {{ c.t }}">{{ c.w }}</span><div>{{ c.v }}</div></td></sc-for>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+        <section class="pv-rec">
+          <h2 class="pv-h" style="display:flex;align-items:center;gap:10px"><span class="pv-oid">A</span>Recommendation: A, docked inspector, with C's pinned Not placed row</h2>
+          <p style="margin:0;max-width:120ch">A keeps 9 machine rows in view at 1440 by 900, C 8 and B 4. Over C, A keeps the board in view during review (no modal), does not reflow the grid when details open and close, shows the soft lock warning on every tab and has the simpler focus model. With details open and the side slot hidden, A keeps 638 px at 1280 and C 598 px; the gap is the drawn panel width, 320 against 360. A's weak point, job orders without a place behind a link to the table view, is fixed by taking C's pinned Not placed row, which keeps them one arrow key above the machines and costs one machine row of height. The spec page takes A's zoom control, a Toggle Group of the four presets with Earlier, Now, Later and Go to date, and full-width group bands as in A and C. Two changes come with it: a control that collapses the column to recover C's full-width board, and a rule for 1280 with the assistant docked, where A's grid keeps about 278 px. B's table stays as the table view and the SP3 fallback, but as the main layout it shows 4 machine rows. The side slot as a tab needs a yes against D2.</p>
+        </section>
+      </article>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const S = { t: "ok", w: "Strong" }, F = { t: "", w: "Fair" }, W = { t: "q", w: "Weak" };
+          const c = (g, v) => ({ t: g.t, w: g.w, v });
+          return {
+            rows: [
+              { k: "Grid width at 1440, details open", s: "D2 shell sizes", c: [c(F, "798 px. The column is always there."), c(S, "838 px. Details sit under the grid."), c(F, "758 px with the drawer open, 1134 px closed.")] },
+              { k: "Grid width at 1280, details open", s: "D2 shell sizes", c: [c(S, "638 px, side slot included in the column; Large orders and Details never show together."), c(S, "678 px, side slot beside the grid."), c(F, "598 px open; 302 px with the slot toggled on too.")] },
+              { k: "Grid width at 1280, assistant docked, details open", s: "D2 shell sizes", c: [c(W, "About 278 px; the column needs a collapse rule."), c(W, "About 318 px."), c(W, "About 238 px.")] },
+              { k: "Machine rows in view", s: "plan 07 Performance budgets", c: [c(S, "9 at 1440 by 900, about 7 at 1280 by 800."), c(W, "4 at 1440 by 900, about 3 at 1280 by 800."), c(S, "8 at 1440 by 900, about 6 at 1280 by 800.")] },
+              { k: "Details never cover the grid", s: "WCAG 2.4.11", c: [c(S, "Always docked beside it."), c(S, "Under it, in the split."), c(F, "Docked while open; the board reflows on each open and close.")] },
+              { k: "Moving without dragging", s: "WCAG 2.5.7", c: [c(S, "Fields, steps and Apply in the Details tab."), c(S, "Fields plus a Move button on every table row; a row menu at 320."), c(S, "Fields, steps and Apply in the drawer.")] },
+              { k: "Review before Save", s: "WCAG 3.3.4", c: [c(S, "My draft tab with the board in view."), c(S, "My draft tab in the split, as a table."), c(F, "Modal dialog; the board is out of reach meanwhile.")] },
+              { k: "Side slot against D2's place", s: "D2 Slots", c: [c(W, "Moves into a tab. Needs a yes."), c(S, "Stays beside the grid, as D2 drew it."), c(W, "Hidden behind a toggle. Needs a yes.")] },
+              { k: "Autoplan status", s: "#96", c: [c(S, "One line under the toolbar."), c(F, "In the split header; long results wrap."), c(S, "In the bar above the grid.")] },
+              { k: "Soft lock warning", s: "WCAG 2.2.1; #93", c: [c(S, "Above the tabs, on every tab."), c(F, "At the top of the split body."), c(F, "In the drawer, else in the bar.")] },
+              { k: "Job orders without a place", s: "plan 07 Statuses", c: [c(W, "Table view only, behind a link."), c(S, "Own tab in the split."), c(S, "Pinned row at the top of the grid.")] },
+              { k: "Reflow at 320", s: "WCAG 1.4.10", c: [c(F, "Grid, then a sheet with the same tabs; the draft count shows only inside the sheet."), c(F, "Table first; the board is one tap away."), c(S, "Grid with a short draft bar.")] },
+              { k: "SP3 fallback", s: "plan 07 The board spike", c: [c(F, "Table view plus a read-only timeline; column unchanged."), c(S, "Closest: the split is already the table."), c(F, "Table view plus a read-only timeline; drawer unchanged.")] },
+              { k: "Keyboard and focus model", s: "plan 07 Grid semantics", c: [c(S, "Grid, then one tab list and its panel."), c(W, "Two regions with their own keys, plus a separator."), c(F, "Drawer layer and a modal dialog layer.")] },
+              { k: "Zoom and range controls", s: "plan 07 In release 1; ADR 0062", c: [c(S, "A Toggle Group of the four presets, plus Earlier, Now, Later and Go to date."), c(F, "A Select between zoom out and zoom in buttons; the other presets sit in the list."), c(F, "Zoom buttons around the preset name, and a range button that opens Go to date.")] },
+              { k: "Group rows", s: "D1 Q10; plan 07", c: [c(S, "Full-width bands with the name and the machine count."), c(F, "Headers in the machine column; the lanes run on through the group row."), c(S, "Full-width bands; a collapsed group shows a one-line summary.")] },
+              { k: "New shadcn parts to draw", s: "D1 Components", c: [c(S, "Tabs and Toggle Group."), c(F, "Resizable, Tabs and Table rows with actions."), c(F, "Dialog, Toggle and a push drawer that Sheet does not cover.")] },
+            ],
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

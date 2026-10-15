@@ -1,6 +1,6 @@
 # D3 variations: chosen direction
 
-This is the decision record of the variations round for design task D3, issue [northMES/northmes#221](https://github.com/northMES/northmes/issues/221), for story E08-S01 ([northMES/northmes#88](https://github.com/northMES/northmes/issues/88)). The variations page is [planning/planning-221-board-variations.dc.html](https://claude.ai/design/p/dba068e0-37df-46e5-adcf-4439b6c4c0ad?file=planning%2Fplanning-221-board-variations.dc.html) in the Claude Design project. It is not an approved page; the D3 spec page `planning/planning-221-board.dc.html` follows the chosen direction and is approved on its own.
+This is the decision record of the variations round for design task D3, issue [northMES/northmes#221](https://github.com/northMES/northmes/issues/221), for story E08-S01 ([northMES/northmes#88](https://github.com/northMES/northmes/issues/88)). The variations page is [planning/planning-221-board-variations.dc.html](../project/planning/planning-221-board-variations.dc.html) in the design project. It is not an approved page; the D3 spec page `planning/planning-221-board.dc.html` follows the chosen direction and is approved on its own.
 
 The round drew three page layouts of the planning board inside the D2 shell, each with the same plan: A, docked inspector; B, board over table; C, drawer and review dialog.
 

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Canonical list and form page: variations</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./ui-222-list-form-variations.css" />
+      </helmet>
+      <div class="frame lf-w1440" style="left:80px;top:80px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">What is decided and how to compare</span></div>
+        <dc-import name="ui-222-list-form-variations-header" hint-size="1440px,2492px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:1600px;top:80px" data-screen-label="R Comparison and recommendation">
+        <div class="flabel" data-drags-parent="1"><span class="fid">R</span>Comparison and recommendation<span class="fth">The options against the criteria</span></div>
+        <dc-import name="ui-222-list-form-variations-compare" hint-size="1440px,1388px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:80px;top:2820px" data-screen-label="A1 Pages, list, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A1</span>List<span class="fth">Light, 1440. Article group menu open, keyboard focus on Shafts</span><span class="lf-url">/plant-a/core/articles?articleGroup=Hoses,Shafts</span></div>
+        <dc-import name="ui-222-list-form-variations-a" state="list" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:1600px;top:2820px" data-screen-label="A2 Pages, detail, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A2</span>Detail<span class="fth">Light, 1440. History tab with two entries open</span><span class="lf-url">/plant-a/core/articles/$articleId?tab=history</span></div>
+        <dc-import name="ui-222-list-form-variations-a" state="detail" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:3120px;top:2820px" data-screen-label="A3 Pages, edit page with errors, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A3</span>Edit page with errors<span class="fth">Light, 1440. Error summary focused after Save</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+        <dc-import name="ui-222-list-form-variations-a" state="edit" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:80px;top:3924px" data-screen-label="A notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A</span>Pages<span class="fth">What it optimizes, what it costs, how it meets the fixed rules</span></div>
+        <dc-import name="ui-222-list-form-variations-notes" option="A" hint-size="1440px,879px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:1600px;top:3924px" data-screen-label="A4 Pages, selection and row menu, dark, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A4</span>Selection and row menu<span class="fth">Dark, 1440. Three rows selected, the bulk bar, the menu of AX-20411 open</span><span class="lf-url">/plant-a/core/articles</span></div>
+        <dc-import name="ui-222-list-form-variations-a" state="bulk" theme="dark" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame lf-w320" style="left:3120px;top:3924px" data-screen-label="A5 Pages, 320 by 640, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">A5</span>320 by 640<span class="fth">Table scrolled sideways</span></div>
+        <dc-import name="ui-222-list-form-variations-a" state="narrow" theme="light" hint-size="320px,676px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:80px;top:5148px" data-screen-label="B1 Side sheet, list with facets, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B1</span>List with facets<span class="fth">Light, 1440. Pointer on AX-20411, its row buttons and the Archive tooltip</span><span class="lf-url">/plant-a/core/articles</span></div>
+        <dc-import name="ui-222-list-form-variations-b" state="list" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:1600px;top:5148px" data-screen-label="B2 Side sheet, sheet with history, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B2</span>Sheet with History<span class="fth">Light, 1440. History tab, focus on the sheet heading</span><span class="lf-url">/plant-a/core/articles?selected=$articleId&amp;tab=history</span></div>
+        <dc-import name="ui-222-list-form-variations-b" state="detail" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:3120px;top:5148px" data-screen-label="B3 Side sheet, sheet in edit mode with errors, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B3</span>Sheet in edit mode with errors<span class="fth">Light, 1440. Error summary focused after Save</span><span class="lf-url">/plant-a/core/articles?selected=$articleId (form state not in the URL)</span></div>
+        <dc-import name="ui-222-list-form-variations-b" state="edit" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:80px;top:6252px" data-screen-label="B notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B</span>Side sheet<span class="fth">What it optimizes, what it costs, how it meets the fixed rules</span></div>
+        <dc-import name="ui-222-list-form-variations-notes" option="B" hint-size="1440px,733px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:1600px;top:6252px" data-screen-label="B4 Side sheet, selection and actions menu, dark, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B4</span>Selection and Actions menu<span class="fth">Dark, 1440. Two rows selected, the Actions menu open</span><span class="lf-url">/plant-a/core/articles</span></div>
+        <dc-import name="ui-222-list-form-variations-b" state="bulk" theme="dark" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame lf-w320" style="left:3120px;top:6252px" data-screen-label="B5 Side sheet, 320 by 640, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B5</span>320 by 640<span class="fth">Three columns</span></div>
+        <dc-import name="ui-222-list-form-variations-b" state="narrow" theme="light" hint-size="320px,676px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:80px;top:7476px" data-screen-label="C1 Split view, list and detail, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C1</span>List and detail<span class="fth">Light, 1440. General tab, focus stays on the row link</span><span class="lf-url">/plant-a/core/articles?selected=$articleId</span></div>
+        <dc-import name="ui-222-list-form-variations-c" state="list" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:1600px;top:7476px" data-screen-label="C2 Split view, list and history, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C2</span>List and History<span class="fth">Light, 1440. History tab, two rows selected, the bulk bar</span><span class="lf-url">/plant-a/core/articles?selected=$articleId&amp;tab=history</span></div>
+        <dc-import name="ui-222-list-form-variations-c" state="detail" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:3120px;top:7476px" data-screen-label="C3 Split view, edit dialog with errors, light, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C3</span>Edit dialog with errors<span class="fth">Light, 1440. Error summary focused after Review changes</span><span class="lf-url">/plant-a/core/articles?selected=$articleId (dialog state not in the URL)</span></div>
+        <dc-import name="ui-222-list-form-variations-c" state="edit" theme="light" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:80px;top:8580px" data-screen-label="C notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C</span>Split view<span class="fth">What it optimizes, what it costs, how it meets the fixed rules</span></div>
+        <dc-import name="ui-222-list-form-variations-notes" option="C" hint-size="1440px,768px"></dc-import>
+      </div>
+      <div class="frame lf-w1440" style="left:1600px;top:8580px" data-screen-label="C4 Split view, review step on save, dark, 1440">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C4</span>Review step on Save<span class="fth">Dark, 1440. Changed fields and the reason, focus in the reason field</span><span class="lf-url">/plant-a/core/articles?selected=$articleId</span></div>
+        <dc-import name="ui-222-list-form-variations-c" state="review" theme="dark" hint-size="1440px,936px"></dc-import>
+      </div>
+      <div class="frame lf-w320" style="left:3120px;top:8580px" data-screen-label="C5 Split view, 320 by 640, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">C5</span>320 by 640<span class="fth">Rows as cards</span></div>
+        <dc-import name="ui-222-list-form-variations-c" state="narrow" theme="light" hint-size="320px,676px"></dc-import>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler as Shell.dc.html (flag __nmIconFill2), so the header, notes and
+          // comparison frames get their icons even before a shell mounts.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -26,7 +26,8 @@ The NorthMES web app is one browser shell (`apps/web`) that loads one React remo
 | [0030 A planning board built in house](../adr/0030-a-planning-board-built-in-house.md) | proposed | Board and job order table view |
 | [0033 Online operator station](../adr/0033-online-operator-station-in-the-production-start-module.md) | accepted | Station mount, targets, idle warning |
 | [0038 Versions and releases](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md) | accepted | Shared version checks, API reports for MIT packages |
-| [0049 Delivery workflow](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md) | accepted | Claude Design per task, approval by etag |
+| [0049 Delivery workflow](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md) | accepted | Claude Design per task |
+| [0079 Design pages as artifacts](../adr/0079-design-pages-as-artifacts-on-the-northmes-design-system-with-the-approved-source-in-the-repository.md) | proposed | Pages as artifacts on the NorthMES design system, approval by artifact version, the approved source in `docs/design/project/` |
 | [0044 On-prem deployment with mandatory TLS](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md) | accepted | HTTPS for every browser |
 | [0064 REST routes under /api/v1 and OpenAPI from Zod contracts](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md) | accepted | The shell's endpoints as first-party routes under `/api/v1/web`, Better Auth under `/api/v1/auth`, the reserved plant slugs |
 | [0066 Companies created by the CLI, plant slugs unique per installation, company settings at /settings and an onboarding wizard before a plant opens](../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md) | proposed | The settings area: company settings at `/settings/$companyId` with `settingsRoutes`, plant settings under their module paths in `/$plant`, the Settings button and the main sidebar that collapses on a settings page; where `/` sends a user, the onboarding wizard and the gate that keeps a plant closed until its onboarding is complete, `companies`, `admin` and `onboardingState` in `/api/v1/web/modules`, plant slugs unique per installation, `settings` and `admin` as reserved slugs |
@@ -773,16 +774,16 @@ Rules:
 
 ## Claude Design per task
 
-Every UI task starts from a design approved in the Claude Design project, made between `create_task` and `move_to_ready` in a Claude Code session outside handoff runs ([0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [13-delivery-and-github.md](13-delivery-and-github.md)).
+Every UI task starts from an approved design page, made between `create_task` and `move_to_ready` in a Claude Code session outside handoff runs ([0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md), [13-delivery-and-github.md](13-delivery-and-github.md)). Claude Design moved into Claude Artifacts on 2026-09-16, and standalone Claude Design closes on 2026-12-14. A new page is a Design artifact built on the [NorthMES design system](https://claude.ai/artifact/65vYss7WbTHUytBjyWEJHy), and its approved source is exported to `docs/design/project/` ([0079](../adr/0079-design-pages-as-artifacts-on-the-northmes-design-system-with-the-approved-source-in-the-repository.md)). The NorthMES project from standalone Claude Design was copied to `docs/design/project/` on 2026-10-14, with the etags of the pages approved there.
 
 ```mermaid
 flowchart LR
-  A["Task in Shaping<br/>Design: pending"] --> B["Design session<br/>Claude Code with claude-design MCP"]
-  B --> C["Review with pin comments<br/>in the Claude Design app"]
+  A["Task in Shaping<br/>Design: pending"] --> B["Design session<br/>Claude Code with the Artifact tool,<br/>page on the NorthMES design system"]
+  B --> C["Review with artifact comments"]
   C -->|changes| B
-  C -->|approved| D["Record approval: etag,<br/>PNGs and build notes in docs/design/{area}/,<br/>Design section in the issue"]
+  C -->|approved| D["Record approval: artifact URL and version,<br/>page source in docs/design/project/{area}/,<br/>PNGs and build notes in docs/design/{area}/,<br/>Design section in the issue"]
   D --> E["move_to_ready"]
-  E --> F["handoff run: the operating session<br/>compares the etag at the plan gate"]
+  E --> F["handoff run: the operating session<br/>compares the artifact version at the plan gate"]
 ```
 
 ### Order of design work
@@ -807,16 +808,16 @@ After that, design only what the next task needs.
 - Keyboard and focus frames: tab order, keys, where focus goes after each action, the focus ring, and the sticky offsets that keep focus visible.
 - Build notes, marked as not part of the UI: the shadcn component for each element by its shadcn name (not Base UI or Radix APIs), tokens used, ARIA roles, accessible names and announcements, slot ids and what a contribution may render there, the WCAG 2.2 criteria that apply by number, and the final English copy (labels with units, error messages that state the allowed range, button and page titles).
 
-Pages live in area folders in the design project. `ui/` holds the styles (`ui/tokens.css` and the D1 page) and `ui/explorations/` the D1 direction round; `shell/` holds the shell pages and the shared frames; each module id gets its own folder (`planning/`, `production-start/`, `core/` and so on) when its first page lands. A page file is named `<area>-<issue>-<slug>.dc.html` and sits in the folder of its area, where `area` is `ui`, `shell` or a module id; the prefix maps to `packages/ui`, `apps/web` or `modules/<id>/web`. A page draws its states as frames inside it, not as separate pages. Every module page mounts the shared shell frame (`shell/Shell.dc.html`; station pages mount `shell/StationFrame.dc.html`). States the shell owns, such as the module unavailable placeholder, are drawn once in a shell page. Each folder has its own `support.js`, and pages outside `ui/` link the tokens as `../ui/tokens.css`. `README.md` at the project root is the index of pages: each page has a row with its path, issue, status and approved etag. An approved page is frozen; a later change copies it under a new issue number.
+Approved pages live in area folders in `docs/design/project/`. `ui/` holds the styles (`ui/tokens.css` and the D1 page) and `ui/explorations/` the D1 direction round; `shell/` holds the shell pages and the shared frames; each module id gets its own folder (`planning/`, `production-start/`, `core/` and so on) when its first page lands. A page is named `<area>-<issue>-<slug>` and sits in the folder of its area, where `area` is `ui`, `shell` or a module id; the prefix maps to `packages/ui`, `apps/web` or `modules/<id>/web`. Pages approved in standalone Claude Design end in `.dc.html`, link the tokens as `../ui/tokens.css` and load each folder's `support.js`; a new page is the exported source of its artifact and ends in `.html`. A page draws its states as frames inside it, not as separate pages. Every module page draws the approved shell frame (`shell/Shell.dc.html`; station pages draw `shell/StationFrame.dc.html`); a new page redraws it from those approved pages until the design system has a shell component. States the shell owns, such as the module unavailable placeholder, are drawn once in a shell page. `docs/design/project/README.md` is the index of pages: each page has a row with its path, issue, status and its approval, an etag for pages approved in standalone Claude Design and the artifact URL and version id for new pages. An approved page is frozen; a later change is a new page under a new issue number.
 
 ### Approval and what the implementer takes
 
-- Claude Design has no approval state. Approval is recorded as the approved file's etag, PNGs of each frame in light and dark at the frame width plus the build notes committed to `docs/design/<area>/` on main, and a Design section in the issue that names the page, the etag, the frames this task implements and the PNGs.
+- Artifacts have no approval state. Approval is recorded as the artifact URL and the version id of the publish labelled "approved #<issue>", the page source of that version exported to `docs/design/project/<area>/`, PNGs of each frame in light and dark at the frame width plus the build notes committed to `docs/design/<area>/` on main, and a Design section in the issue that names the page, the URL, the version id, the frames this task implements and the PNGs. Pages approved in standalone Claude Design keep their etag as the approval record.
 - A UI task moves to Ready only when its design is approved (definition of ready).
-- Before a UI task's run starts, and again before Krister answers its plan gate, the operating session compares the approved etag with the design project's current etag; on a mismatch it asks whether the new version is approved.
+- Before a UI task's run starts, and again before Krister answers its plan gate, the operating session reads the artifact and compares its current version with the approved version id; on a mismatch it asks whether the new version is approved. For a page approved in standalone Claude Design, the repository copy is final and there is nothing to compare.
 - The implementing agent takes layout, region order, states and their transitions (one test per state), copy text verbatim, the keyboard model and slot placements. It does not take markup, class names, inline styles, token values, canvas icons or demo numbers. A value on the page that is not a token is a question, not a new color. Controls that lead nowhere in this task are left out and named in the pull request.
 - When a design and the accessibility rules in this document disagree, the rules win, and the design is fixed in a new page version.
-- A pull request that changes tokens is not done until a design session copies the new token blocks into the design project's `ui/tokens.css`, which names the source commit.
+- A pull request that changes tokens is not done until a design session republishes the NorthMES design system's tokens and component styles with a change note that names the source commit. The approved D1 `ui/tokens.css` in `docs/design/project/` is not updated, so the pages that link it keep the tokens they were approved with.
 
 ## Supported browsers
 

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 shell, navigation and station frame</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <style>
+/* D2 spec page: one header frame, then one row per part file. Row labels are canvas annotations in the D1 label colors. */
+.nv-row{display:flex;flex-direction:column;align-items:flex-start}
+.nv-rh{position:relative;z-index:30;display:grid;gap:6px;max-width:1440px;margin:0 0 32px;padding:14px 20px 16px;border-radius:8px;background:#ffffff;color:#1a1a1a;box-shadow:0 0 0 1px rgba(0,0,0,.16);cursor:grab;user-select:none}
+.nv-rh1{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;font:600 28px/36px "IBM Plex Sans",system-ui,sans-serif;letter-spacing:-0.01em}
+.nv-rn{padding:3px 10px;border-radius:5px;background:#1a1a1a;color:#ffffff;font:600 18px/26px "IBM Plex Mono",ui-monospace,monospace;letter-spacing:0}
+.nv-ids{font:500 18px/26px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46;letter-spacing:0}
+.nv-rh2{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;font:400 16px/24px "IBM Plex Sans",system-ui,sans-serif;color:#4f4c46}
+.nv-file{font:400 14px/20px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46}
+.nv-part{position:relative;z-index:1}
+        </style>
+      </helmet>
+      <div class="frame w1440" style="left:80px;top:80px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">Issue, direction and the review of 2026-10-05, acceptance, frames by row, build notes, assumptions and open questions</span></div>
+        <dc-import name="shell-190-navigation-header" hint-size="1440px,6728px"></dc-import>
+      </div>
+      <div class="frame nv-row" style="left:80px;top:7032px;width:5280px" data-screen-label="Row 1 Planner shell">
+        <div class="nv-rh" data-drags-parent="1">
+          <div class="nv-rh1"><span class="nv-rn">Row 1</span><span>Planner shell</span><span class="nv-ids">PL1 to PL49</span></div>
+          <div class="nv-rh2"><span>The planning board at 1440, 1280 and 1920 in light and dark; the expanded sidebar with icons and the rail with its tooltip, flyout, menus and one plant head; the switcher, help and user menus; one plant and plants in two companies; the bell, the release 1 top bar without it and a failed top bar item; the admin sidebar, a company admin's switcher and user menus with a plant in onboarding and Admin, the admin frame at /admin, and the landmarks.</span><span class="nv-file">shell-190-navigation-planner.dc.html</span></div>
+        </div>
+        <div class="nv-part"><dc-import name="shell-190-navigation-planner" hint-size="5280px,22380px"></dc-import></div>
+      </div>
+      <div class="frame nv-row" style="left:80px;top:29852px;width:2960px" data-screen-label="Row 2 Reflow at 320 and long strings">
+        <div class="nv-rh" data-drags-parent="1">
+          <div class="nv-rh1"><span class="nv-rn">Row 2</span><span>Reflow at 320 and long strings</span><span class="nv-ids">NA1 to NA23</span></div>
+          <div class="nv-rh2"><span>Production orders at 320 by 640 with the menu button, the navigation sheet with the switcher, one plant, Administration and the user menu, the switcher menu with short and long names and with a plant in onboarding, the assistant sheet and a deep trail; German labels and a Finnish plugin page at 1440.</span><span class="nv-file">shell-190-navigation-narrow.dc.html</span></div>
+        </div>
+        <div class="nv-part"><dc-import name="shell-190-navigation-narrow" hint-size="2960px,4512px"></dc-import></div>
+      </div>
+      <div class="frame nv-row" style="left:80px;top:34780px;width:2960px" data-screen-label="Row 3 States the shell owns">
+        <div class="nv-rh" data-drags-parent="1">
+          <div class="nv-rh1"><span class="nv-rn">Row 3</span><span>States the shell owns</span><span class="nv-ids">ST1 to ST43</span></div>
+          <div class="nv-rh2"><span>Every state the shell owns, in light and dark: failures, a module unavailable in the sidebar and in the rail, the reload dialog, live status, banners, loading, a slow remote, a failed slot, an unknown plant, a plant in onboarding, the plant list at / and the pages for a plant and a company in onboarding; ST33 holds their build notes.</span><span class="nv-file">shell-190-navigation-states.dc.html</span></div>
+        </div>
+        <div class="nv-part" style="margin:-80px 0 0 -80px"><dc-import name="shell-190-navigation-states" hint-size="3120px,24524px"></dc-import></div>
+      </div>
+      <div class="frame nv-row" style="left:80px;top:59590px;width:3360px" data-screen-label="Row 4 Sign-in page">
+        <div class="nv-rh" data-drags-parent="1">
+          <div class="nv-rh1"><span class="nv-rn">Row 4</span><span>Sign-in page</span><span class="nv-ids">SI1 to SI22</span></div>
+          <div class="nv-rh2"><span>Default, field errors, wrong password, rate limited, blocked, the new password step and signed out; SI22 holds the sign-in build notes.</span><span class="nv-file">shell-190-navigation-signin.dc.html</span></div>
+        </div>
+        <div class="nv-part"><dc-import name="shell-190-navigation-signin" hint-size="3360px,8679px"></dc-import></div>
+      </div>
+      <div class="frame nv-row" style="left:80px;top:68637px;width:5520px" data-screen-label="Row 5 Station frame">
+        <div class="nv-rh" data-drags-parent="1">
+          <div class="nv-rh1"><span class="nv-rn">Row 5</span><span>Station frame</span><span class="nv-ids">SF1 to SF20</span></div>
+          <div class="nv-rh2"><span>Station frame S1 at three sizes, disconnected, the idle warning, the Switch operator screens, nobody signed in, the More menu and the landmarks; SF20 holds the build notes.</span><span class="nv-file">shell-190-navigation-station.dc.html</span></div>
+        </div>
+        <div class="nv-part"><dc-import name="shell-190-navigation-station" hint-size="5520px,8276px"></dc-import></div>
+      </div>
+      <div class="frame nv-row" style="left:80px;top:77305px;width:3360px" data-screen-label="Row 6 Keyboard and focus">
+        <div class="nv-rh" data-drags-parent="1">
+          <div class="nv-rh1"><span class="nv-rn">Row 6</span><span>Keyboard and focus</span><span class="nv-ids">KE1 to KE32</span></div>
+          <div class="nv-rh2"><span>Tab order, route change, the switcher, user and help menus, the notifications panel, the rail flyout, the sheet, the reload dialog, focus rings, focus not obscured and the station; KE23 holds the build notes of rows 1, 2 and 6.</span><span class="nv-file">shell-190-navigation-keyboard.dc.html</span></div>
+        </div>
+        <div class="nv-part"><dc-import name="shell-190-navigation-keyboard" hint-size="3360px,16918px"></dc-import></div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

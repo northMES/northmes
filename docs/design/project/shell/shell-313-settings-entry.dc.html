@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Settings: way in, way back and scope</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-313-settings-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-313-settings.css" />
+        <style>
+          /* Frames EN1 to EN38 of the spec page shell/shell-313-settings.dc.html (issue northMES/northmes#313): how a user
+             reaches Settings and gets back to work, the scope cases (several plants, two companies, one plant, a plant admin
+             of one plant, a planner, nothing allowed) and the plant list at / with each company's settings link. Each frame
+             is its screen size plus the 36 px document title and mounts shell-313-settings-frame, the #313 copy of
+             Shell.dc.html; settings pages mount shell-313-settings-layout with a landing or list part inside. Light frames
+             left, dark frames right; the 1280 and 1920 frames share a row, with their dark twins (EN31 to EN36) in the row
+             below. These rules are the canvas only; the chips use the D1 canvas label styles and are not part of the UI. */
+          .set-en{position:relative}
+          .set-en-f{position:absolute}
+          .flabel.set-en-chip{position:absolute;left:0;bottom:calc(100% + 12px);margin:0;white-space:nowrap;cursor:default}
+        </style>
+      </helmet>
+      <div class="set-en" style="width:3280px;height:21736px">
+        <div class="set-en-f" style="left:0px;top:64px;width:1440px;height:936px" data-screen-label="EN1 Way in on the planning board, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN1</span>Way in on the planning board<span class="fth">Light, 1440 by 900. Settings button focused, its tooltip open</span><span class="set-url">/plant-a/planning/board</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" nav="planning.board" focus="settings" width="1440" show-title="on" hint-size="1440px,936px">
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:64px;width:1440px;height:936px" data-screen-label="EN2 Way in on the planning board, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN2</span>Way in on the planning board<span class="fth">Dark, 1440 by 900. As EN1</span><span class="set-url">/plant-a/planning/board</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" nav="planning.board" focus="settings" theme="dark" width="1440" show-title="on" hint-size="1440px,936px">
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:1156px;width:1280px;height:836px" data-screen-label="EN3 Way in on the planning board, light, 1280 by 800">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN3</span>Way in on the planning board<span class="fth">Light, 1280 by 800. As EN1</span><span class="set-url">/plant-a/planning/board</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" nav="planning.board" focus="settings" width="1280" show-title="on" hint-size="1280px,836px">
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1360px;top:1156px;width:1920px;height:1116px" data-screen-label="EN4 Way in on the planning board, light, 1920 by 1080">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN4</span>Way in on the planning board<span class="fth">Light, 1920 by 1080. As EN1</span><span class="set-url">/plant-a/planning/board</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" nav="planning.board" focus="settings" width="1920" show-title="on" hint-size="1920px,1116px">
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:2428px;width:1280px;height:836px" data-screen-label="EN31 Way in on the planning board, dark, 1280 by 800">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN31</span>Way in on the planning board<span class="fth">Dark, 1280 by 800. As EN3</span><span class="set-url">/plant-a/planning/board</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" nav="planning.board" focus="settings" theme="dark" width="1280" show-title="on" hint-size="1280px,836px">
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1360px;top:2428px;width:1920px;height:1116px" data-screen-label="EN32 Way in on the planning board, dark, 1920 by 1080">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN32</span>Way in on the planning board<span class="fth">Dark, 1920 by 1080. As EN4</span><span class="set-url">/plant-a/planning/board</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" nav="planning.board" focus="settings" theme="dark" width="1920" show-title="on" hint-size="1920px,1116px">
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:3700px;width:1440px;height:936px" data-screen-label="EN5 Plant A settings, opened from the button, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN5</span>Plant A settings, opened from the button<span class="fth">Light, 1440 by 900. Main sidebar collapsed to the rail, h1 focused</span><span class="set-url">/plant-a/settings</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="plant" plant="Plant A" title="Settings" settings-current="page" width="1440" skip-to="en5-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" focus="h1" content-id="en5-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:3700px;width:1440px;height:936px" data-screen-label="EN6 Plant A settings, opened from the button, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN6</span>Plant A settings, opened from the button<span class="fth">Dark, 1440 by 900. As EN5</span><span class="set-url">/plant-a/settings</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="plant" plant="Plant A" title="Settings" settings-current="page" theme="dark" width="1440" skip-to="en6-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" focus="h1" content-id="en6-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:4792px;width:1280px;height:836px" data-screen-label="EN7 Plant A settings, opened from the button, light, 1280 by 800">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN7</span>Plant A settings, opened from the button<span class="fth">Light, 1280 by 800. As EN5</span><span class="set-url">/plant-a/settings</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="plant" plant="Plant A" title="Settings" settings-current="page" width="1280" skip-to="en7-page" show-title="on" hint-size="1280px,836px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" focus="h1" content-id="en7-page" width="1280" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1360px;top:4792px;width:1920px;height:1116px" data-screen-label="EN8 Plant A settings, opened from the button, light, 1920 by 1080">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN8</span>Plant A settings, opened from the button<span class="fth">Light, 1920 by 1080. As EN5</span><span class="set-url">/plant-a/settings</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="plant" plant="Plant A" title="Settings" settings-current="page" width="1920" skip-to="en8-page" show-title="on" hint-size="1920px,1116px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" focus="h1" content-id="en8-page" width="1920" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:6064px;width:1280px;height:836px" data-screen-label="EN33 Plant A settings, opened from the button, dark, 1280 by 800">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN33</span>Plant A settings, opened from the button<span class="fth">Dark, 1280 by 800. As EN7</span><span class="set-url">/plant-a/settings</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="plant" plant="Plant A" title="Settings" settings-current="page" theme="dark" width="1280" skip-to="en33-page" show-title="on" hint-size="1280px,836px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" focus="h1" content-id="en33-page" width="1280" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1360px;top:6064px;width:1920px;height:1116px" data-screen-label="EN34 Plant A settings, opened from the button, dark, 1920 by 1080">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN34</span>Plant A settings, opened from the button<span class="fth">Dark, 1920 by 1080. As EN8</span><span class="set-url">/plant-a/settings</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="plant" plant="Plant A" title="Settings" settings-current="page" theme="dark" width="1920" skip-to="en34-page" show-title="on" hint-size="1920px,1116px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" focus="h1" content-id="en34-page" width="1920" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:7336px;width:1440px;height:936px" data-screen-label="EN9 Back to work from plant settings, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN9</span>Back to work from plant settings<span class="fth">Light, 1440 by 900. Board menu open from the rail on Machines</span><span class="set-url">/plant-a/core/machines</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="plant" plant="Plant A" title="Machines" actions="*New machine" flyout="planning.board" width="1440" skip-to="en9-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" page="machines" content-id="en9-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="machines" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:7336px;width:1440px;height:936px" data-screen-label="EN10 Back to work from plant settings, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN10</span>Back to work from plant settings<span class="fth">Dark, 1440 by 900. As EN9</span><span class="set-url">/plant-a/core/machines</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="plant" plant="Plant A" title="Machines" actions="*New machine" flyout="planning.board" theme="dark" width="1440" skip-to="en10-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" page="machines" content-id="en10-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="machines" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:8428px;width:1440px;height:936px" data-screen-label="EN11 Back on the planning board, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN11</span>Back on the planning board<span class="fth">Light, 1440 by 900. Main sidebar as the user left it, h1 focused. Master data keeps Tools, Articles, Routings, Warehouses and Customers</span><span class="set-url">/plant-a/planning/board</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" nav="planning.board" open="core.master-data,planning.board" focus="h1" width="1440" show-title="on" hint-size="1440px,936px">
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:8428px;width:1440px;height:936px" data-screen-label="EN12 Back on the planning board, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN12</span>Back on the planning board<span class="fth">Dark, 1440 by 900. As EN11</span><span class="set-url">/plant-a/planning/board</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" plant="Plant A" nav="planning.board" open="core.master-data,planning.board" focus="h1" theme="dark" width="1440" show-title="on" hint-size="1440px,936px">
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:9520px;width:1440px;height:936px" data-screen-label="EN13 Acme AB settings, a company with several plants, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN13</span>Acme AB settings, a company with several plants<span class="fth">Light, 1440 by 900. Company entries, then Plant A, Plant B and Plant D settings</span><span class="set-url">/settings/$companyId</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="company" company="Acme AB" title="Company settings" settings-current="page" width="1440" skip-to="en13-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="company" company="Acme AB" from="Plant A" content-id="en13-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" company="Acme AB" from="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:9520px;width:1440px;height:936px" data-screen-label="EN14 Acme AB settings, a company with several plants, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN14</span>Acme AB settings, a company with several plants<span class="fth">Dark, 1440 by 900. As EN13</span><span class="set-url">/settings/$companyId</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="company" company="Acme AB" title="Company settings" settings-current="page" theme="dark" width="1440" skip-to="en14-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="company" company="Acme AB" from="Plant A" content-id="en14-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" company="Acme AB" from="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:10612px;width:1280px;height:836px" data-screen-label="EN15 Acme AB settings, a company with several plants, light, 1280 by 800">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN15</span>Acme AB settings, a company with several plants<span class="fth">Light, 1280 by 800. As EN13</span><span class="set-url">/settings/$companyId</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="company" company="Acme AB" title="Company settings" settings-current="page" width="1280" skip-to="en15-page" show-title="on" hint-size="1280px,836px">
+            <dc-import name="shell-313-settings-layout" area="company" company="Acme AB" from="Plant A" content-id="en15-page" width="1280" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" company="Acme AB" from="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1360px;top:10612px;width:1920px;height:1116px" data-screen-label="EN16 Acme AB settings, a company with several plants, light, 1920 by 1080">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN16</span>Acme AB settings, a company with several plants<span class="fth">Light, 1920 by 1080. As EN13</span><span class="set-url">/settings/$companyId</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="company" company="Acme AB" title="Company settings" settings-current="page" width="1920" skip-to="en16-page" show-title="on" hint-size="1920px,1116px">
+            <dc-import name="shell-313-settings-layout" area="company" company="Acme AB" from="Plant A" content-id="en16-page" width="1920" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" company="Acme AB" from="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:11884px;width:1280px;height:836px" data-screen-label="EN35 Acme AB settings, a company with several plants, dark, 1280 by 800">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN35</span>Acme AB settings, a company with several plants<span class="fth">Dark, 1280 by 800. As EN15</span><span class="set-url">/settings/$companyId</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="company" company="Acme AB" title="Company settings" settings-current="page" theme="dark" width="1280" skip-to="en35-page" show-title="on" hint-size="1280px,836px">
+            <dc-import name="shell-313-settings-layout" area="company" company="Acme AB" from="Plant A" content-id="en35-page" width="1280" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" company="Acme AB" from="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1360px;top:11884px;width:1920px;height:1116px" data-screen-label="EN36 Acme AB settings, a company with several plants, dark, 1920 by 1080">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN36</span>Acme AB settings, a company with several plants<span class="fth">Dark, 1920 by 1080. As EN16</span><span class="set-url">/settings/$companyId</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="company" company="Acme AB" title="Company settings" settings-current="page" theme="dark" width="1920" skip-to="en36-page" show-title="on" hint-size="1920px,1116px">
+            <dc-import name="shell-313-settings-layout" area="company" company="Acme AB" from="Plant A" content-id="en36-page" width="1920" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" company="Acme AB" from="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:13156px;width:1440px;height:936px" data-screen-label="EN17 Back to work from company settings, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN17</span>Back to work from company settings<span class="fth">Light, 1440 by 900. Back to Plant A focused on Users</span><span class="set-url">/settings/$companyId/core/users</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="company" company="Acme AB" title="Users" actions="*New user" width="1440" skip-to="en17-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="company" company="Acme AB" page="users" focus="nav:back" from="Plant A" content-id="en17-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="users" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:13156px;width:1440px;height:936px" data-screen-label="EN18 Back to work from company settings, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN18</span>Back to work from company settings<span class="fth">Dark, 1440 by 900. As EN17</span><span class="set-url">/settings/$companyId/core/users</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="company" company="Acme AB" title="Users" actions="*New user" theme="dark" width="1440" skip-to="en18-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="company" company="Acme AB" page="users" focus="nav:back" from="Plant A" content-id="en18-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-list" list="users" hint-size="100%,400px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:14248px;width:1440px;height:936px" data-screen-label="EN37 Your plants, the way into each company's settings, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN37</span>Your plants, the way into each company's settings<span class="fth">Light, 1440 by 900. Jonas Holm's plants by company; each company ends with its settings link. No Admin and no Settings button</span><span class="set-url">/</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="home" title="Your plants" focus="h1" width="1440" show-title="on" hint-size="1440px,936px">
+            <div class="panel set-home">
+              <div class="set-home-co">
+                <h2 class="set-home-h" id="en37-c1">Acme AB</h2>
+                <ul class="set-home-pl" aria-labelledby="en37-c1">
+                  <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="set-home-a" href="#">Plant A</a><span class="set-home-p">/plant-a</span></li>
+                  <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="set-home-a" href="#">Plant B</a><span class="set-home-p">/plant-b</span></li>
+                  <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="set-home-a set-home-pb" href="#"><span class="set-home-pn">Plant D</span><span class="sh-vh">, </span><span class="badge sh-onboarding">Onboarding</span></a><span class="set-home-p">/plant-d</span></li>
+                </ul>
+                <p class="set-home-s"><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Building2"></span></span><a class="set-home-a" href="#">Acme AB settings</a></p>
+              </div>
+              <div class="set-home-co">
+                <h2 class="set-home-h" id="en37-c2">Nordic Tools AB</h2>
+                <ul class="set-home-pl" aria-labelledby="en37-c2">
+                  <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="set-home-a" href="#">Plant C</a><span class="set-home-p">/plant-c</span></li>
+                </ul>
+                <p class="set-home-s"><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Building2"></span></span><a class="set-home-a" href="#">Nordic Tools AB settings</a></p>
+              </div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:14248px;width:1440px;height:936px" data-screen-label="EN38 Your plants, the way into each company's settings, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN38</span>Your plants, the way into each company's settings<span class="fth">Dark, 1440 by 900. As EN37</span><span class="set-url">/</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="home" title="Your plants" focus="h1" theme="dark" width="1440" show-title="on" hint-size="1440px,936px">
+            <div class="panel set-home">
+              <div class="set-home-co">
+                <h2 class="set-home-h" id="en38-c1">Acme AB</h2>
+                <ul class="set-home-pl" aria-labelledby="en38-c1">
+                  <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="set-home-a" href="#">Plant A</a><span class="set-home-p">/plant-a</span></li>
+                  <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="set-home-a" href="#">Plant B</a><span class="set-home-p">/plant-b</span></li>
+                  <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="set-home-a set-home-pb" href="#"><span class="set-home-pn">Plant D</span><span class="sh-vh">, </span><span class="badge sh-onboarding">Onboarding</span></a><span class="set-home-p">/plant-d</span></li>
+                </ul>
+                <p class="set-home-s"><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Building2"></span></span><a class="set-home-a" href="#">Acme AB settings</a></p>
+              </div>
+              <div class="set-home-co">
+                <h2 class="set-home-h" id="en38-c2">Nordic Tools AB</h2>
+                <ul class="set-home-pl" aria-labelledby="en38-c2">
+                  <li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="set-home-a" href="#">Plant C</a><span class="set-home-p">/plant-c</span></li>
+                </ul>
+                <p class="set-home-s"><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Building2"></span></span><a class="set-home-a" href="#">Nordic Tools AB settings</a></p>
+              </div>
+            </div>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:15340px;width:1440px;height:936px" data-screen-label="EN19 A user in two companies, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN19</span>A user in two companies<span class="fth">Light, 1440 by 900. Switcher menu open by company; Plant C keeps the route</span><span class="set-url">/plant-a/settings</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="plant" plant="Plant A" title="Settings" settings-current="page" menu="plant" width="1440" skip-to="en19-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" content-id="en19-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:15340px;width:1440px;height:936px" data-screen-label="EN20 A user in two companies, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN20</span>A user in two companies<span class="fth">Dark, 1440 by 900. As EN19</span><span class="set-url">/plant-a/settings</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="plant" plant="Plant A" title="Settings" settings-current="page" menu="plant" theme="dark" width="1440" skip-to="en20-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" content-id="en20-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:16432px;width:1440px;height:936px" data-screen-label="EN21 Plant C settings, the way to Nordic Tools AB, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN21</span>Plant C settings, the way to Nordic Tools AB<span class="fth">Light, 1440 by 900. Nordic Tools AB settings focused; no Assistant, because Nordic Tools AB has no AI provider yet</span><span class="set-url">/plant-c/settings</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="plant" plant="Plant C" assistant="off" title="Settings" settings-current="page" width="1440" skip-to="en21-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant C" focus="nav:other" content-id="en21-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant C" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:16432px;width:1440px;height:936px" data-screen-label="EN22 Plant C settings, the way to Nordic Tools AB, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN22</span>Plant C settings, the way to Nordic Tools AB<span class="fth">Dark, 1440 by 900. As EN21</span><span class="set-url">/plant-c/settings</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="plant" plant="Plant C" assistant="off" title="Settings" settings-current="page" theme="dark" width="1440" skip-to="en22-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant C" focus="nav:other" content-id="en22-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant C" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:17524px;width:1440px;height:936px" data-screen-label="EN23 Nordic Tools AB settings, a company with one plant, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN23</span>Nordic Tools AB settings, a company with one plant<span class="fth">Light, 1440 by 900. Plant C settings only, Back to Plant C</span><span class="set-url">/settings/$companyId</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="company" company="Nordic Tools AB" title="Company settings" settings-current="page" width="1440" skip-to="en23-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="company" company="Nordic Tools AB" from="Plant C" content-id="en23-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" company="Nordic Tools AB" from="Plant C" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:17524px;width:1440px;height:936px" data-screen-label="EN24 Nordic Tools AB settings, a company with one plant, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN24</span>Nordic Tools AB settings, a company with one plant<span class="fth">Dark, 1440 by 900. As EN23</span><span class="set-url">/settings/$companyId</span></div>
+          <dc-import name="shell-313-settings-frame" role="company-admin" companies="Acme AB: Plant A, Plant B, Plant D; Nordic Tools AB: Plant C" onboarding="Plant D" user="Jonas Holm" bell="off" area="company" company="Nordic Tools AB" title="Company settings" settings-current="page" theme="dark" width="1440" skip-to="en24-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="company" company="Nordic Tools AB" from="Plant C" content-id="en24-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" company="Nordic Tools AB" from="Plant C" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:18616px;width:1440px;height:936px" data-screen-label="EN25 Erik Lind, plant admin of Plant A only, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN25</span>Erik Lind, plant admin of Plant A only<span class="fth">Light, 1440 by 900. Plant A settings, no company area, no Other settings</span><span class="set-url">/plant-a/settings</span></div>
+          <dc-import name="shell-313-settings-frame" role="admin" access="one-plant" user="Erik Lind" bell="off" area="plant" plant="Plant A" title="Settings" settings-current="page" width="1440" skip-to="en25-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" others="none" onboarding="none" content-id="en25-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" others="none" onboarding="none" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:18616px;width:1440px;height:936px" data-screen-label="EN26 Erik Lind, plant admin of Plant A only, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN26</span>Erik Lind, plant admin of Plant A only<span class="fth">Dark, 1440 by 900. As EN25</span><span class="set-url">/plant-a/settings</span></div>
+          <dc-import name="shell-313-settings-frame" role="admin" access="one-plant" user="Erik Lind" bell="off" area="plant" plant="Plant A" title="Settings" settings-current="page" theme="dark" width="1440" skip-to="en26-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="plant" plant="Plant A" others="none" onboarding="none" content-id="en26-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="plant" plant="Plant A" others="none" onboarding="none" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:19708px;width:1440px;height:936px" data-screen-label="EN27 Alex Lund, planner with no settings, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN27</span>Alex Lund, planner with no settings<span class="fth">Light, 1440 by 900. No Settings button; Profile stays in the user menu</span><span class="set-url">/plant-a/planning/board</span></div>
+          <dc-import name="shell-313-settings-frame" role="planner" access="one-plant" user="Alex Lund" bell="off" plant="Plant A" nav="planning.board" menu="user" width="1440" show-title="on" hint-size="1440px,936px">
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:19708px;width:1440px;height:936px" data-screen-label="EN28 Alex Lund, planner with no settings, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN28</span>Alex Lund, planner with no settings<span class="fth">Dark, 1440 by 900. As EN27</span><span class="set-url">/plant-a/planning/board</span></div>
+          <dc-import name="shell-313-settings-frame" role="planner" access="one-plant" user="Alex Lund" bell="off" plant="Plant A" nav="planning.board" menu="user" theme="dark" width="1440" show-title="on" hint-size="1440px,936px">
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:0px;top:20800px;width:1440px;height:936px" data-screen-label="EN29 Nothing allowed: the empty company landing, light, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN29</span>Nothing allowed: the empty company landing<span class="fth">Light, 1440 by 900. Alex Lund opens an old link to company settings</span><span class="set-url">/settings/$companyId</span></div>
+          <dc-import name="shell-313-settings-frame" role="planner" access="one-plant" user="Alex Lund" bell="off" area="company" company="Acme AB" title="Company settings" settings-current="page" settings-button="off" width="1440" skip-to="en29-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="company" company="Acme AB" entries="none" others="none" from="Plant A" content-id="en29-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" company="Acme AB" state="empty" from="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+        <div class="set-en-f" style="left:1520px;top:20800px;width:1440px;height:936px" data-screen-label="EN30 Nothing allowed: the empty company landing, dark, 1440 by 900">
+          <div class="flabel set-en-chip" data-drags-parent="1"><span class="fid">EN30</span>Nothing allowed: the empty company landing<span class="fth">Dark, 1440 by 900. As EN29</span><span class="set-url">/settings/$companyId</span></div>
+          <dc-import name="shell-313-settings-frame" role="planner" access="one-plant" user="Alex Lund" bell="off" area="company" company="Acme AB" title="Company settings" settings-current="page" settings-button="off" theme="dark" width="1440" skip-to="en30-page" show-title="on" hint-size="1440px,936px">
+            <dc-import name="shell-313-settings-layout" area="company" company="Acme AB" entries="none" others="none" from="Plant A" content-id="en30-page" width="1440" hint-size="100%,100%">
+              <dc-import name="shell-313-settings-landing" area="company" company="Acme AB" state="empty" from="Plant A" hint-size="100%,600px"></dc-import>
+            </dc-import>
+          </dc-import>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3280,"height":21736}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

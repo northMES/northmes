@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Error and system pages</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./shell-306-errors.css" />
+      </helmet>
+      <div class="frame w1440" style="left:80px;top:80px" data-screen-label="F0 Header">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">Issue, story, area, routes, personas, acceptance criteria, frames by row, assumptions and open questions</span></div>
+        <dc-import name="shell-306-errors-header" hint-size="1440px,4340px"></dc-import>
+      </div>
+      <div class="frame er-row" style="left:80px;top:4628px;width:2960px" data-screen-label="Row 1 A link the app cannot read (400)">
+        <div class="er-rh" data-drags-parent="1">
+          <div class="er-rh1"><span class="er-rn">Row 1</span><span>A link the app cannot read (400)</span><span class="er-ids">BL1 to BL6</span></div>
+          <div class="er-rh2"><span>The route's error component for a link the page cannot use, at 1440 and at 320 in a new tab without Go back, and the page that ignores one setting it cannot use and says so in an inline status.</span><span class="er-file">shell-306-errors-inshell.dc.html</span></div>
+        </div>
+        <div class="er-blocks">
+          <dc-import name="shell-306-errors-inshell" row="BL" hint-size="2960px,3400px"></dc-import>
+        </div>
+      </div>
+      <div class="frame er-row" style="left:80px;top:8088px;width:2960px" data-screen-label="Row 2 Not found outside a module (404)">
+        <div class="er-rh" data-drags-parent="1">
+          <div class="er-rh1"><span class="er-rn">Row 2</span><span>Not found outside a module (404)</span><span class="er-ids">NF1 to NF8</span></div>
+          <div class="er-rh2"><span>defaultNotFoundComponent for an unknown path in a plant and under /admin, inside their layouts, and a record that does not exist or is hidden. D2's ST5 and ST29 are the reference and are not drawn again.</span><span class="er-file">shell-306-errors-inshell.dc.html</span></div>
+        </div>
+        <div class="er-blocks">
+          <dc-import name="shell-306-errors-inshell" row="NF" hint-size="2960px,4400px"></dc-import>
+        </div>
+      </div>
+      <div class="frame er-row" style="left:80px;top:12504px;width:2960px" data-screen-label="Row 3 The server failed (500)">
+        <div class="er-rh" data-drags-parent="1">
+          <div class="er-rh1"><span class="er-rn">Row 3</span><span>The server failed (500)</span><span class="er-ids">SE1 to SE8</span></div>
+          <div class="er-rh2"><span>A full page state in main with the correlation id, Try again and a way out, at 1440, 1280, 1920 and 320, and Try again in the D1 loading state. F0 and BN state how it differs from D2's error panel ST6.</span><span class="er-file">shell-306-errors-inshell.dc.html</span></div>
+        </div>
+        <div class="er-blocks">
+          <dc-import name="shell-306-errors-inshell" row="SE" hint-size="2960px,5600px"></dc-import>
+        </div>
+      </div>
+      <div class="frame er-row" style="left:80px;top:17930px;width:2960px" data-screen-label="Row 4 The server cannot be reached">
+        <div class="er-rh" data-drags-parent="1">
+          <div class="er-rh1"><span class="er-rn">Row 4</span><span>The server cannot be reached</span><span class="er-ids">NC1 to NC8</span></div>
+          <div class="er-rh2"><span>No connection at page load with the reconnecting chip, after a failed Try again, at 320, and the boundary with the restarting state, which shows no error page.</span><span class="er-file">shell-306-errors-inshell.dc.html</span></div>
+        </div>
+        <div class="er-blocks">
+          <dc-import name="shell-306-errors-inshell" row="NC" hint-size="2960px,4400px"></dc-import>
+        </div>
+      </div>
+      <div class="frame er-row" style="left:80px;top:22244px;width:2960px" data-screen-label="Row 5 Maintenance page">
+        <div class="er-rh" data-drags-parent="1">
+          <div class="er-rh1"><span class="er-rn">Row 5</span><span>Maintenance page</span><span class="er-ids">MA1 to MA9</span></div>
+          <div class="er-rh2"><span>Caddy's static page while NorthMES is down or upgrading: plain HTML and CSS with the mark, hex colors and system fonts, light and dark, at 1440, 320, 1920 and the station sizes, and the moment its check gets an answer.</span><span class="er-file">shell-306-errors-static.dc.html</span></div>
+        </div>
+        <div class="er-blocks">
+          <dc-import name="shell-306-errors-static" row="MA" hint-size="2960px,6000px"></dc-import>
+        </div>
+      </div>
+      <div class="frame er-row" style="left:80px;top:28394px;width:2960px" data-screen-label="Row 6 Signed out (401, close code 4401)">
+        <div class="er-rh" data-drags-parent="1">
+          <div class="er-rh1"><span class="er-rn">Row 6</span><span>Signed out (401, close code 4401)</span><span class="er-ids">SO1 to SO5</span></div>
+          <div class="er-rh2"><span>Sign-in after the session ended, with the return URL, and the page it returns to with its search kept.</span><span class="er-file">shell-306-errors-outside.dc.html, shell-306-errors-inshell.dc.html</span></div>
+        </div>
+        <div class="er-blocks">
+          <dc-import name="shell-306-errors-outside" row="SO" hint-size="2960px,1200px"></dc-import>
+          <dc-import name="shell-306-errors-inshell" row="SO" hint-size="2960px,1200px"></dc-import>
+        </div>
+      </div>
+      <div class="frame er-row" style="left:80px;top:31656px;width:2960px" data-screen-label="Row 7 Boot">
+        <div class="er-rh" data-drags-parent="1">
+          <div class="er-rh1"><span class="er-rn">Row 7</span><span>Boot</span><span class="er-ids">BO1 to BO7</span></div>
+          <div class="er-rh2"><span>Loading NorthMES from the static index.html, the modules request failing, and no answer at boot at the station landscape size.</span><span class="er-file">shell-306-errors-outside.dc.html</span></div>
+        </div>
+        <div class="er-blocks">
+          <dc-import name="shell-306-errors-outside" row="BO" hint-size="2960px,3500px"></dc-import>
+        </div>
+      </div>
+      <div class="frame er-row" style="left:80px;top:35750px;width:2960px" data-screen-label="Row 8 Unsupported browser and HTTPS required">
+        <div class="er-rh" data-drags-parent="1">
+          <div class="er-rh1"><span class="er-rn">Row 8</span><span>Unsupported browser and HTTPS required</span><span class="er-ids">UB1 to UB3, HS1 to HS3</span></div>
+          <div class="er-rh2"><span>The plain page browser-check.js builds, with hex colors and system fonts, and the page boot shows without a secure context.</span><span class="er-file">shell-306-errors-static.dc.html, shell-306-errors-outside.dc.html</span></div>
+        </div>
+        <div class="er-blocks">
+          <dc-import name="shell-306-errors-static" row="UB" hint-size="2960px,2300px"></dc-import>
+          <dc-import name="shell-306-errors-outside" row="HS" hint-size="2960px,2300px"></dc-import>
+        </div>
+      </div>
+      <div class="frame er-row" style="left:80px;top:39962px;width:2960px" data-screen-label="Row 9 Long strings">
+        <div class="er-rh" data-drags-parent="1">
+          <div class="er-rh1"><span class="er-rn">Row 9</span><span>Long strings</span><span class="er-ids">LS1 to LS4</span></div>
+          <div class="er-rh2"><span>The server error page with German chrome and text, a Finnish plugin page with German text, and the maintenance page in German at 320.</span><span class="er-file">shell-306-errors-inshell.dc.html, shell-306-errors-static.dc.html</span></div>
+        </div>
+        <div class="er-blocks">
+          <dc-import name="shell-306-errors-inshell" row="LS" hint-size="2960px,1100px"></dc-import>
+          <dc-import name="shell-306-errors-static" row="LS" hint-size="2960px,1100px"></dc-import>
+        </div>
+      </div>
+      <div class="frame er-row" style="left:80px;top:43204px;width:2960px" data-screen-label="Row 10 Keyboard and focus">
+        <div class="er-rh" data-drags-parent="1">
+          <div class="er-rh1"><span class="er-rn">Row 10</span><span>Keyboard and focus</span><span class="er-ids">KF1 to KF15</span></div>
+          <div class="er-rh2"><span>Tab order on the server error, sign-in, boot failure and HTTPS pages, where focus goes after each action, the polite messages, focus not obscured, and the ring on every new control.</span><span class="er-file">shell-306-errors-keyboard.dc.html</span></div>
+        </div>
+        <div class="er-blocks">
+          <dc-import name="shell-306-errors-keyboard" hint-size="2960px,6000px"></dc-import>
+        </div>
+      </div>
+      <div class="frame er-row" style="left:80px;top:50804px;width:2960px" data-screen-label="Row 11 Build notes">
+        <div class="er-rh" data-drags-parent="1">
+          <div class="er-rh1"><span class="er-rn">Row 11</span><span>Build notes</span><span class="er-ids">BN</span></div>
+          <div class="er-rh2"><span>Not part of the UI: components by shadcn name, tokens, icons, roles, focus, announcements, titles, the error classification, the pages without the shell, the static page rules, WCAG 2.2 criteria and the final English copy.</span><span class="er-file">shell-306-errors-notes.dc.html</span></div>
+        </div>
+        <div class="er-blocks">
+          <dc-import name="shell-306-errors-notes" hint-size="2960px,3600px"></dc-import>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          // Spec page for issue northMES/northmes#306 (E04-S02-T02): the header F0, then one row per state group; each row
+          // mounts a part file of this folder. Pages inside the shell mount Shell.dc.html read only.
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

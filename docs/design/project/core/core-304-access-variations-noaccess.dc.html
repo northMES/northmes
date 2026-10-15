@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access variations, no-access states</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./core-304-access-variations-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./core-304-access-variations.css" />
+      </helmet>
+      <div class="ac-o" data-screen-label="{{ label }}">
+        <sc-if value="{{ isUrl }}">
+          <dc-import name="Shell" width="1440" theme="light" nav="none" title="{{ u.title }}" crumbs="Administration|Roles" doc-title="{{ u.doc }}" focus="h1" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="panel ac-state">
+              <div class="ac-head">
+                <span class="ic ic24 ac-mut" data-icon="ShieldX"></span>
+                <div class="ac-rg">
+                  <sc-if value="{{ u.h2 }}"><h2 class="ac-h2">You cannot open Roles at Plant A</h2></sc-if>
+                  <p class="ac-lead">Opening Roles needs the permission to read roles (<span class="ac-data">core.role:read</span>) at Plant A.</p>
+                  <p class="ac-p">Ask a plant admin for a role that includes it.</p>
+                  <sc-if value="{{ u.roles }}"><p class="ac-p ac-mut">At Acme AB these roles include it: Plant admin, IT and Company admin.</p></sc-if>
+                </div>
+              </div>
+              <div class="ac-acts"><a class="btn v-default" href="#">Go to Planning board</a></div>
+            </div>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ isRegionUser }}">
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" entity="Sara Nyberg" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span class="badge ac-bg"><span class="ic" data-icon="CircleCheck"></span>Active</span><span class="ac-mono">sara.nyberg</span></div>
+            <div class="ac-page">
+              <div class="ac-tabs" role="tablist" aria-label="Sara Nyberg"><button class="ac-tab" type="button" role="tab" aria-selected="false">General</button><button class="ac-tab on" type="button" role="tab" aria-selected="true">Access</button><button class="ac-tab" type="button" role="tab" aria-selected="false">History</button></div>
+              <div class="ac-scroll" role="tabpanel" aria-label="Access">
+                <sc-if value="{{ regionFull }}">
+                  <section class="ac-card">
+                    <div class="ac-card-h"><div class="ac-grow"><h2 class="ac-h2">Roles</h2><p class="ac-desc">Sara Nyberg's roles that apply at Plant A.</p></div><a class="btn v-outline" href="#"><span class="ic" data-icon="Plus"></span>Add role</a></div>
+                    <div class="ac-tbl-wrap" role="table" aria-label="Roles of Sara Nyberg">
+                      <div class="ac-tr hd ac-c-roles" role="row"><span class="ac-td" role="columnheader">Role</span><span class="ac-td" role="columnheader">Where</span><span class="ac-td" role="columnheader">Assigned</span><span class="ac-td" role="columnheader"><span class="ac-vh">Actions</span></span></div>
+                      <sc-for list="{{ roleRows }}" as="r">
+                        <div class="ac-tr ac-c-roles" role="row">
+                          <span class="ac-td two" role="cell"><a href="#">{{ r.name }}</a><span class="ac-sub">{{ r.kind }}</span></span>
+                          <span class="ac-td" role="cell"><span class="ic ac-mut" data-icon="{{ r.icon }}"></span>{{ r.where }}</span>
+                          <span class="ac-td two" role="cell"><span class="ac-mono">{{ r.on }}</span><span class="ac-sub">by {{ r.by }}</span></span>
+                          <span class="ac-td end" role="cell"><sc-if value="{{ r.canRemove }}"><button class="btn v-outline" type="button" aria-label="Remove {{ r.name }} at {{ r.scope }}">Remove</button></sc-if><sc-if value="{{ r.cannot }}"><span class="ac-sm ac-mut">A company admin of Acme AB can remove it.</span></sc-if></span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </section>
+                </sc-if>
+                <sc-if value="{{ regionLine }}">
+                  <section class="ac-card">
+                    <div class="ac-card-h"><div class="ac-grow"><h2 class="ac-h2">Roles</h2><p class="ac-desc">Sara Nyberg's roles that apply at Plant A.</p></div></div>
+                    <div class="ac-card-b">
+                      <ul class="ac-cards">
+                        <li class="ac-ci"><div class="ac-ci-h"><a class="ac-b" href="#">Shift lead</a><span class="ac-sm ac-mut">Custom role</span></div><span class="ac-line"><span class="ic" data-icon="Factory"></span><span>Assigned at Plant A</span></span></li>
+                        <li class="ac-ci"><div class="ac-ci-h"><a class="ac-b" href="#">Viewer</a><span class="ac-sm ac-mut">Planning, default role</span></div><span class="ac-line"><span class="ic" data-icon="Building2"></span><span>Assigned at Acme AB, all plants</span></span></li>
+                      </ul>
+                    </div>
+                  </section>
+                </sc-if>
+                <sc-if value="{{ regionFull }}">
+                  <section class="ac-card" aria-labelledby="ac-n2a-h">
+                    <div class="ac-card-h"><div class="ac-grow"><h2 class="ac-h2" id="ac-n2a-h">Access changes</h2><p class="ac-desc">Who added or removed Sara Nyberg's roles, and why.</p></div></div>
+                    <div class="ac-card-b"><div class="ac-empty"><span class="ic ic24 ac-mut" data-icon="ShieldX"></span><p class="ac-empty-t">You cannot see access changes here</p><p class="ac-p ac-sm ac-mut">This needs the permission to read the audit log (<span class="ac-mono">core.audit:read</span>) at Plant A.</p></div></div>
+                  </section>
+                </sc-if>
+                <sc-if value="{{ regionLine }}">
+                  <section class="ac-card" aria-labelledby="ac-n2c-h">
+                    <div class="ac-card-h"><h2 class="ac-h2" id="ac-n2c-h">Access changes</h2><span class="ac-line"><span class="ic" data-icon="Lock"></span><span>Needs the permission to read the audit log (<span class="ac-mono">core.audit:read</span>) at Plant A.</span></span></div>
+                  </section>
+                </sc-if>
+              </div>
+            </div>
+          </dc-import>
+          <sc-if value="{{ regionFull }}"><span class="ac-ann" style="{{ annStyle }}">With Plant admin as defined here, Audit log has no entry (spec 8.1.1); the D2 admin preset draws it.</span></sc-if>
+        </sc-if>
+        <sc-if value="{{ isRegionCells }}">
+          <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="ac-page">
+              <div class="ac-tool"><span class="inp ac-search"><span class="ic" data-icon="Search"></span><span class="ph">Search production orders</span></span><button class="btn v-outline ac-fb" type="button" aria-haspopup="menu" aria-expanded="false">Status<span class="ic" data-icon="ChevronDown"></span></button></div>
+              <div class="ac-card">
+                <div class="ac-tbl-wrap" role="table" aria-label="Production orders">
+                  <div class="ac-tr hd ac-c-ord" role="row">
+                    <span class="ac-td" role="columnheader">Order</span><span class="ac-td" role="columnheader">Article</span>
+                    <span class="ac-td" role="columnheader"><span class="ac-tip-w"><button class="btn v-ghost is-focus" type="button" aria-describedby="ac-n2b-tip" style="height:24px;padding:0 6px;margin:0 -6px;font-size:12px;font-weight:600;color:inherit">Customer<span class="ic ic14" data-icon="Info"></span></button><span class="ac-tip" role="tooltip" id="ac-n2b-tip">Customer needs the permission to read customers (core.customer:read) at Plant A.</span></span></span>
+                    <span class="ac-td end" role="columnheader">Quantity</span><span class="ac-td" role="columnheader">Due</span><span class="ac-td" role="columnheader">Status</span>
+                  </div>
+                  <sc-for list="{{ orders }}" as="o">
+                    <div class="ac-tr ac-c-ord" role="row">
+                      <span class="ac-td" role="cell"><a class="ac-mono" href="#">{{ o.no }}</a></span>
+                      <span class="ac-td" role="cell" lang="sv">{{ o.art }}</span>
+                      <span class="ac-td" role="cell"><span class="ac-dis-r"><span class="ic ic14" data-icon="Lock"></span>No access</span></span>
+                      <span class="ac-td end ac-mono" role="cell">{{ o.qty }}</span>
+                      <span class="ac-td ac-mono" role="cell">{{ o.due }}</span>
+                      <span class="ac-td" role="cell"><span class="badge" style="{{ o.bst }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ isRef }}">
+          <div class="sheet ac-refc">
+            <p class="kick">Not redrawn</p>
+            <h2 class="t2">Option A keeps D2 state ST29 as approved</h2>
+            <p class="ac-p">One page for an unknown plant and for a plant without a role: title Page not found · NorthMES, h1 Page not found, the text "There is no plant at /plant-c/planning/board that you can open. The link may be out of date." and the user's plants by company, without a sidebar. The approved frames are ST29 (light) and ST30 (dark) in shell/shell-190-navigation.dc.html; this page does not draw them again.</p>
+            <p class="ac-p ac-mut">The gateway still answers FORBIDDEN with core.plant_forbidden and writes one permission.denied event; the page does not tell the user whether some company has a plant at that path.</p>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isPlain }}">
+          <div class="ac-shot">
+            <div class="sh-doc"><span class="sh-doc-k">title</span><span>{{ pg.doc }}</span></div>
+            <div class="sh-scr w1440" lang="en">
+              <a class="btn v-default sh-skip" href="#{{ pg.mainId }}">Skip to main content</a>
+              <div class="sh-col">
+                <header class="sh-tb">
+                  <span class="sh-mark"><span class="sh-mark-sq" aria-hidden="true">N</span>NorthMES</span>
+                  <span class="sh-grow"></span>
+                  <button class="btn icon v-ghost" type="button" aria-label="Help" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="CircleHelp"></span></button>
+                  <button class="sh-rmark" type="button" aria-label="Alex Lund, alex.lund, account" aria-haspopup="menu" aria-expanded="false"><span class="sh-av" aria-hidden="true">AL</span></button>
+                </header>
+                <main class="sh-main" id="{{ pg.mainId }}" tabindex="-1">
+                  <div class="sh-ph"><h1 class="sh-h1 is-focus" tabindex="-1">{{ pg.h1 }}</h1></div>
+                  <div class="panel ac-state">
+                    <div class="ac-head"><span class="ic ic24 ac-mut" data-icon="{{ pg.icon }}"></span><div class="ac-rg"><p class="ac-lead">{{ pg.a }}<span class="ac-data">{{ pg.path }}</span>{{ pg.b }}</p><sc-if value="{{ pg.hasExtra }}"><p class="ac-p">{{ pg.extra }}</p></sc-if></div></div>
+                    <h2 class="ac-h3">Your plants</h2>
+                    <div class="ac-cos">
+                      <sc-for list="{{ pg.cos }}" as="c">
+                        <div class="ac-co">
+                          <h3 class="ac-co-h" id="{{ c.id }}">{{ c.name }}</h3>
+                          <ul class="ac-pls" aria-labelledby="{{ c.id }}">
+                            <sc-for list="{{ c.plants }}" as="p"><li><span class="sh-pi-m" aria-hidden="true"><span class="ic" data-icon="Factory"></span></span><a class="ac-plk" href="#">{{ p.name }}</a><span class="ac-data">{{ p.path }}</span></li></sc-for>
+                          </ul>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </main>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isBanner }}">
+          <dc-import name="Shell" width="1440" theme="light" companies="Acme AB: Plant A, Plant B" plant="Plant B" nav="planning.board" status="banner" banner-kind="error" banner="You no longer have access to Plant B. Your role at Plant B was removed or changed, so this page cannot load or save anything at Plant B." banner-action="Your plants" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+            <div data-slot="actions"><span class="ac-vh" id="ac-n4a-why">You no longer have access to Plant B.</span><button class="btn v-outline is-dis" type="button" aria-disabled="true" aria-describedby="ac-n4a-why">Run autoplan</button><button class="btn v-default is-dis" type="button" aria-disabled="true" aria-describedby="ac-n4a-why">Save</button></div>
+            <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3. It stays on screen and read only: nothing more loads from Plant B, and moves and saves are off.</span></div>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ isDialog }}">
+          <div class="ac-shot">
+            <div class="sh-doc"><span class="sh-doc-k">title</span><span>You no longer have access to Plant B · NorthMES</span></div>
+            <div class="ac-stage">
+              <div class="ac-inert" inert="">
+                <dc-import name="Shell" width="1440" theme="light" companies="Acme AB: Plant A, Plant B" plant="Plant B" nav="planning.board" bell="off" hint-size="1440px,900px">
+                  <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+                  <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3</span></div>
+                </dc-import>
+              </div>
+              <div class="ac-ov"></div>
+              <div class="ac-dlg" role="alertdialog" aria-modal="true" aria-labelledby="ac-n4c-t" aria-describedby="ac-n4c-d">
+                <h1 class="ac-dlg-t" id="ac-n4c-t" tabindex="-1">You no longer have access to Plant B</h1>
+                <div class="ac-dlg-d" id="ac-n4c-d">
+                  <p class="ac-p">Your role at Plant B was removed or changed, so this page cannot load or save anything at Plant B.</p>
+                  <p class="ac-p">Changes on this page that are not saved are lost.</p>
+                </div>
+                <div class="ac-dlg-f"><a class="btn v-outline" href="#">Your plants</a><a class="btn v-default is-focus" href="#">Go to Plant A</a></div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["url-a","url-b","url-c","region-a","region-b","region-c","plant-a","plant-b","plant-c","lost-a","lost-b","lost-c"],"default":"url-a","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler as Shell.dc.html (flag __nmIconFill2), for a standalone render.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.ACC ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.ACC) ready();
+        }
+        renderVals() {
+          const P = this.props || {};
+          const STATES = ["url-a", "url-b", "url-c", "region-a", "region-b", "region-c", "plant-a", "plant-b", "plant-c", "lost-a", "lost-b", "lost-c"];
+          const state = STATES.indexOf(P.state) >= 0 ? P.state : "url-a";
+          const kind = state.split("-")[0], opt = state.split("-")[1].toUpperCase();
+          const NAMES = { url: "a page opened by URL without the permission", region: "a FORBIDDEN region", plant: "a plant without a role", lost: "access lost after close code 4403" };
+          // A page opened by URL: Alex Lund, a planner, opens /plant-a/core/roles.
+          const u = {
+            title: opt === "B" ? "No access to Roles" : "Roles",
+            doc: (opt === "B" ? "No access to Roles" : "Roles") + " · Plant A · NorthMES",
+            h2: opt !== "B", roles: opt === "C"
+          };
+          // A FORBIDDEN cell (B): Alex Lund on Production orders, without the invented core.customer:read.
+          const PL = "--bb:var(--status-planned);--bf:var(--status-planned-foreground)";
+          const RE = "--bb:var(--status-registered);--bf:var(--status-registered-foreground)";
+          const AC = "--bb:var(--status-active);--bf:var(--status-active-foreground)";
+          // StatusBadge is icon plus text (D1): Play for active, Info for planned, CircleDashed for registered.
+          const O = (no, art, qty, due, st, bst, ic) => ({ no: no, art: art, qty: qty, due: due, st: st, bst: bst, ic: ic });
+          const orders = [
+            O("PO-24101", "Fläns DN50 rostfri", "120", "2026-10-12", "Active", AC, "Play"),
+            O("PO-24102", "Hydraulslang 16 mm", "400", "2026-10-13", "Planned", PL, "Info"),
+            O("PO-24104", "Axeltapp 40 h6", "60", "2026-10-14", "Planned", PL, "Info"),
+            O("PO-24107", "Lagerhus 62 mm", "35", "2026-10-15", "Registered", RE, "CircleDashed"),
+            O("PO-24108", "Drivaxel 30 x 620", "24", "2026-10-15", "Planned", PL, "Info"),
+            O("PO-24111", "Mellanaxel 45 x 300", "80", "2026-10-16", "Registered", RE, "CircleDashed"),
+            O("PO-24113", "Fläns DN80 rostfri", "150", "2026-10-19", "Registered", RE, "CircleDashed"),
+            O("PO-24115", "Tryckslang 25 mm", "300", "2026-10-20", "Registered", RE, "CircleDashed")
+          ];
+          // Pages without a plant: the layout of D2 ST29 and ST40.
+          const plants = (list) => [{ id: "ac-" + state + "-co1", name: "Acme AB", plants: list.map((n) => ({ name: n, path: "/" + n.toLowerCase().replace(" ", "-") })) }];
+          const PG = {
+            "plant-b": { doc: "No role at this plant · NorthMES", h1: "You have no role at this plant", icon: "ShieldX", a: "You have no role at the plant at ", path: "/plant-c/planning/board", b: ".", hasExtra: true, extra: "If you need this plant, ask its plant admin for a role there.", cos: plants(["Plant A", "Plant B"]) },
+            "plant-c": { doc: "Page not found · NorthMES", h1: "Page not found", icon: "SearchX", a: "There is no plant at ", path: "/plant-c/planning/board", b: " that you can open. The link may be out of date.", hasExtra: true, extra: "If you need this plant, ask its plant admin for a role there.", cos: plants(["Plant A", "Plant B"]) },
+            "lost-b": { doc: "You no longer have access to Plant B · NorthMES", h1: "You no longer have access to Plant B", icon: "ShieldX", a: "Your role at Plant B was removed or changed, so this page cannot load or save anything at Plant B.", path: "", b: "", hasExtra: true, extra: "If you still need Plant B, ask its plant admin for a role there.", cos: plants(["Plant A"]) }
+          };
+          const pg = PG[state] ? Object.assign({ mainId: "ac-" + state + "-main" }, PG[state]) : { cos: [], mainId: "ac-none-main" };
+          // Option A's FORBIDDEN region (N2A) draws the Roles section of A3, from the shared data: Sara Nyberg, Shift lead at Plant A and Viewer at Acme AB.
+          const A = window.ACC;
+          const sara = A ? A.PEOPLE.filter((p) => p.user === "sara.nyberg")[0] : null;
+          const roleRows = sara ? sara.a.map((x) => {
+            const r = A.ROLE[x[0]];
+            const company = x[1] === "Acme AB";
+            return { name: r.name, kind: r.kind, scope: x[1], where: company ? "Acme AB, all plants" : "Plant A", icon: company ? "Building2" : "Factory", on: x[2], by: x[3], canRemove: !company, cannot: company };
+          }) : [];
+          return {
+            label: "No-access states, option " + opt + ", " + NAMES[kind],
+            isUrl: kind === "url",
+            u: u,
+            isRegionUser: state === "region-a" || state === "region-c", regionFull: state === "region-a", regionLine: state === "region-c", roleRows: roleRows,
+            annStyle: "left:104px;top:592px;width:148px",
+            isRegionCells: state === "region-b", orders: orders,
+            isRef: state === "plant-a",
+            isPlain: !!PG[state], pg: pg,
+            isBanner: state === "lost-a",
+            isDialog: state === "lost-c"
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

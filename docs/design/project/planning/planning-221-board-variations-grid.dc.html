@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 board grid</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./planning-221-board-variations.css" />
+      </helmet>
+      <div class="pb-grid {{ gridCls }}" role="grid" aria-label="{{ gridLabel }}" aria-rowcount="46" style="{{ gridStyle }}">
+        <div class="pb-gh" role="row" aria-rowindex="1">
+          <div class="pb-corner" role="columnheader"><b>Machines</b><sc-if value="{{ wide }}"><span class="pb-muted">40 in 6 groups</span></sc-if></div>
+          <div class="pb-ticks" role="columnheader" aria-label="{{ timeLabel }}">
+            <div class="pb-day">{{ dayLabel }}</div>
+            <sc-for list="{{ ticks }}" as="t" hint-placeholder-count="12"><span class="pb-tick" style="{{ t.style }}" aria-hidden="true">{{ t.label }}</span></sc-for>
+            <span class="pb-nowl" style="{{ nowStyle }}" aria-hidden="true">09:40</span>
+          </div>
+          <div class="pb-sbg"></div>
+        </div>
+        <div class="pb-body">
+          <div class="pb-rows">
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="12">
+              <sc-if value="{{ r.isFull }}">
+                <div class="pb-row band full" role="row" aria-rowindex="{{ r.ri }}" style="{{ r.gcs }}">
+                  <div class="pb-gr" role="rowheader" aria-label="{{ r.label }}"><button class="pb-disc" type="button" tabIndex="-1" aria-expanded="{{ r.expanded }}" aria-label="{{ r.discLabel }}"><span class="ic" data-icon="{{ r.discIcon }}"></span></button><span class="pb-dot"></span><span class="pb-gn">{{ r.name }}</span><span class="pb-gc">{{ r.count }}</span></div>
+                  <div class="pb-lane" style="background:transparent"><sc-if value="{{ r.hasSum }}"><span class="pb-sum">{{ r.sum }}</span></sc-if></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ r.isCol }}">
+                <div class="pb-row band col" role="row" aria-rowindex="{{ r.ri }}" style="{{ r.gcs }}">
+                  <div class="pb-rh pb-gr" role="rowheader" aria-label="{{ r.label }}"><button class="pb-disc" type="button" tabIndex="-1" aria-expanded="{{ r.expanded }}" aria-label="{{ r.discLabel }}"><span class="ic" data-icon="{{ r.discIcon }}"></span></button><span class="pb-dot"></span><span class="pb-gn">{{ r.name }}</span><span class="pb-cnt">{{ r.n }}</span></div>
+                  <div class="pb-lane"><sc-for list="{{ r.off }}" as="o"><span class="pb-off hatch" style="{{ o.style }}"></span></sc-for></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ r.isPinned }}">
+                <div class="pb-row pinned" role="row" aria-rowindex="{{ r.ri }}">
+                  <div class="pb-rh" role="rowheader" aria-label="Not placed, 3 job orders"><span class="ic" data-icon="Inbox"></span><span class="pb-mn">Not placed</span><span class="pb-cnt">3</span></div>
+                  <div class="pb-lane"><div class="pb-pin"><sc-for list="{{ unplaced }}" as="u"><span class="pb-chip" role="gridcell" tabIndex="-1" aria-label="{{ u.label }}"><span class="num">{{ u.j }}</span>{{ u.a }}</span></sc-for></div></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ r.isMachine }}">
+                <div class="pb-row {{ r.cls }}" role="row" aria-rowindex="{{ r.ri }}">
+                  <div class="pb-rh" role="rowheader" aria-label="{{ r.name }}"><span class="pb-stripe" style="{{ r.gcs }}"></span><span class="pb-mn">{{ r.name }}</span><button class="pb-jb" type="button" tabIndex="-1" aria-label="{{ r.jobsLabel }}"><span class="ic" data-icon="List"></span></button></div>
+                  <div class="pb-lane">
+                    <sc-for list="{{ r.off }}" as="o"><span class="pb-off hatch" style="{{ o.style }}"></span></sc-for>
+                    <sc-for list="{{ r.sels }}" as="s"><span class="pb-selb {{ s.cls }}" style="{{ s.style }}"></span></sc-for>
+                    <sc-for list="{{ r.blocks }}" as="b">
+                      <div class="pb-bk {{ b.cls }}" role="gridcell" tabIndex="{{ b.ti }}" aria-selected="{{ b.sel }}" aria-labelledby="{{ b.lby }}" style="{{ b.style }}">
+                        <div class="pb-b1"><span class="pb-j" id="{{ b.idj }}">{{ b.j }}</span><span class="pb-a" id="{{ b.ida }}" lang="{{ b.lang }}">{{ b.a }}</span><span class="pb-mk"><sc-for list="{{ b.icons }}" as="i"><span class="ic" data-icon="{{ i.n }}"></span></sc-for><sc-if value="{{ b.hasIni }}"><span class="ini">{{ b.ini }}</span></sc-if></span></div>
+                        <sc-if value="{{ b.two }}"><div class="pb-b2"><sc-for list="{{ b.l2 }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></div></sc-if>
+                        <span class="sh-vh" id="{{ b.idh }}">{{ b.hid }}</span>
+                        <sc-if value="{{ b.hasProg }}"><span class="prog" style="{{ b.progStyle }}"></span></sc-if>
+                      </div>
+                    </sc-for>
+                    <sc-for list="{{ r.clusters }}" as="c"><div class="pb-cl" role="gridcell" tabIndex="-1" aria-haspopup="dialog" aria-label="{{ c.label }}" style="{{ c.style }}">{{ c.n }}<span class="ic" data-icon="Layers"></span></div></sc-for>
+                  </div>
+                </div>
+              </sc-if>
+            </sc-for>
+            <div class="pb-nowlayer" aria-hidden="true"><span class="pb-now" style="{{ nowStyle }}"></span></div>
+            <div class="pb-ovl" aria-hidden="true">
+              <sc-for list="{{ lines }}" as="l"><span class="{{ l.cls }}" style="{{ l.style }}"></span></sc-for>
+              <sc-if value="{{ hasLt }}"><span class="pb-lt" style="{{ ltStyle }}">30 min</span></sc-if>
+            </div>
+          </div>
+          <div class="pb-vs" aria-hidden="true"><span class="pb-th" style="{{ vthStyle }}"></span></div>
+        </div>
+        <div class="pb-hs" aria-hidden="true"><span class="pb-hsp"></span><span class="pb-htr"><span class="pb-th" style="{{ hthStyle }}"></span></span><span class="pb-sbg"></span></div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"layout":{"editor":"enum","options":["band","column"],"default":"band","tsType":"string"},"skip":{"editor":"int","default":0,"tsType":"number"},"r0":{"editor":"int","default":6,"tsType":"number"},"r1":{"editor":"int","default":18,"tsType":"number"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"pinned":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"summary":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"focus":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"idp":{"editor":"text","default":"g","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const p = this.props;
+          const layout = p.layout === "column" ? "column" : "band";
+          const nar = p.size === "narrow";
+          const r0 = Number(p.r0 || 6), r1 = Number(p.r1 || 18), span = r1 - r0;
+          const skip = Number(p.skip || 0);
+          const focusOn = p.focus === "on";
+          const idp = String(p.idp || "g");
+          const pct = (t) => ((t - r0) / span) * 100;
+          const f = (n) => Math.round(n * 1000) / 1000;
+          const hm = (t) => { const h = Math.floor(t + 1e-6); const m = Math.round((t - h) * 60); return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0"); };
+          const pos = (s, e) => "left:" + f(pct(s)) + "%;width:calc(" + f(pct(e) - pct(s)) + "% - 1px)";
+          const P = (n) => "var(--palette-" + n + ")";
+          const NB = " ";
+          // Splits a text into segments, so times, counts and job numbers render in Mono.
+          const segs = (t) => t.split(/(\d[\d ]*(?:[.:]\d+)?)/).filter((x) => x !== "").map((x) => ({ t: x, c: /^\d/.test(x) ? "num" : "" }));
+          // Calendars: A1 plant calendar (06:00 to 15:00, breaks 08:30 and 11:00), Press 3 maintenance until 10:00,
+          // Press 4 on two shifts. Every value is fictional.
+          const cals = {
+            A1: [[8.5, 8.75], [11, 11.5], [15, 24]],
+            P3: [[6, 10], [11, 11.5], [15, 24]],
+            P4: [[8.5, 8.75], [11, 11.5], [17, 17.25]],
+          };
+          const groups = [
+            { name: "Milling", gc: "var(--group-1)", machines: [
+              { name: "CNC1", cal: "A1", blocks: [
+                { j: "1001.20", a: "Housing P", q: "120 pcs", s: 6, e: 10.75, f: 6, st: ["started"], done: "40 of 120 pcs", prog: 33 },
+                { j: "1014.10", a: "Lagerhus 62", lang: "sv", q: "3" + NB + "600 pcs", s: 11.5, e: 14.75, f: 12, st: [] } ] },
+              { name: "CNC2", cal: "A1", blocks: [
+                { j: "1004.10", a: "Gear blank 32", q: "1" + NB + "200 pcs", s: 6, e: 9.5, f: 3, st: ["finpend"], done: "1" + NB + "200 of 1" + NB + "200 pcs", prog: 100 },
+                { j: "1002.10", a: "Bracket L", q: "1" + NB + "200 pcs", s: 9.75, e: 13, f: 2, st: [] },
+                { j: "1020.10", a: "Cover plate", q: "480 pcs", s: 13.25, e: 14.75, f: 9, st: [] } ] },
+              { name: "Mill 1", cal: "A1", blocks: [
+                { j: "1010.10", a: "Bracket L", q: "1" + NB + "200 pcs", s: 6, e: 10, f: 15, st: ["started"], done: "840 of 1" + NB + "200 pcs", prog: 70 },
+                { j: "1005.10", a: "Housing P", q: "120 pcs", s: 10.25, e: 12.75, f: 7, st: ["lock"] },
+                { j: "1022.10", a: "Bracket L", q: "480 pcs", s: 13, e: 14.75, f: 14, st: [] } ] },
+              { name: "Mill 2", cal: "A1", blocks: [
+                { j: "1006.10", a: "Hub 12", q: "1" + NB + "200 pcs", s: 7, e: 10.5, f: 10, st: ["overdue"] },
+                { j: "1013.10", a: "Spacer 8", q: "7" + NB + "200 pcs", s: 11.5, e: 14.75, f: 11, st: ["mat"] } ] } ] },
+            { name: "Turning", gc: "var(--group-2)", machines: [
+              { name: "Lathe 1", cal: "A1", blocks: [
+                { j: "1003.10", a: "Shaft 40", q: "480 pcs", s: 6, e: 10.5, f: 4, st: ["started"], done: "300 of 480 pcs", prog: 62, sib: true },
+                { j: "1012.30", a: "Hub 12", q: "480 pcs", s: 11.5, e: 14.75, f: 1, st: ["late"] } ] },
+              { name: "Lathe 2", cal: "A1", tall: true, blocks: [
+                { j: "1003.20", a: "Shaft 40", q: "480 pcs", s: 11.5, e: 14.75, f: 4, st: ["draft", "conf"], over: "1021.10", sub: 0, sel: true },
+                { j: "1021.10", a: "Flange DN50", q: "480 pcs", s: 6.5, e: 11.75, f: 5, st: ["started", "conf"], over: "1003.20", done: "410 of 480 pcs", prog: 85, sub: 1 } ] },
+              { name: "Lathe 3", cal: "A1", blocks: [
+                { j: "1023.10", a: "Gear blank 32", q: "1" + NB + "200 pcs", s: 6, e: 9.75, f: 9, st: ["started"], done: "1" + NB + "080 of 1" + NB + "200 pcs", prog: 90 },
+                { j: "1007.10", a: "Flange DN50", q: "1" + NB + "200 pcs", s: 10, e: 13.5, f: 8, st: ["held"], ini: "ES" } ] } ] },
+            { name: "Pressing", gc: "var(--palette-16)", machines: [
+              { name: "Press 3", cal: "P3", tall: true, blocks: [
+                { j: "1008.10", a: "Housing P", q: "3" + NB + "600 pcs", s: 10.25, e: 13, f: 11, st: ["conf"], over: "1009.10", sub: 0 },
+                { j: "1009.10", a: "Bracket L", q: "3" + NB + "600 pcs", s: 12.25, e: 14.75, f: 18, st: ["conf"], over: "1008.10", sub: 1 } ] },
+              { name: "Press 4", cal: "P4", cluster: { s: 10, e: 10 + 40 / 60, n: 4, label: "4 jobs, 10:00 to 10:40, 2 late, 1 being edited by Erik Sand" }, blocks: [
+                { j: "1017.10", a: "Spacer 8", q: "7" + NB + "200 pcs", s: 6, e: 9.75, f: 13, st: ["started"], done: "6" + NB + "600 of 7" + NB + "200 pcs", prog: 92 },
+                { j: "1011.10", a: "Cover plate", q: "7" + NB + "200 pcs", s: 10.75, e: 14.25, f: 20, st: ["prop"] },
+                { j: "1024.10", a: "Hub 12", q: "1" + NB + "200 pcs", s: 14.5, e: 17.5, f: 6, st: [] } ] } ] },
+            { name: "Finishing", gc: "var(--palette-19)", collapsed: true, n: 2, sum: "6 jobs in this range, 1 late", machines: [] },
+            { name: "Assembly", gc: "var(--palette-17)", machines: [
+              { name: "Assembly 1", cal: "A1", blocks: [
+                { j: "1025.30", a: "Bracket L", q: "1" + NB + "200 pcs", s: 6, e: 9.75, f: 2, st: ["started"], done: "500 of 1" + NB + "200 pcs", prog: 42 },
+                { j: "1027.30", a: "Lagerhus 62", lang: "sv", q: "3" + NB + "600 pcs", s: 10, e: 14.5, f: 12, st: [] } ] },
+              { name: "Assembly 2", cal: "A1", blocks: [
+                { j: "1026.30", a: "Cover plate", q: "480 pcs", s: 7.5, e: 10.25, f: 9, st: ["started"], done: "200 of 480 pcs", prog: 40 },
+                { j: "1028.30", a: "Bracket L", q: "480 pcs", s: 11.5, e: 14, f: 14, st: [] } ] } ] },
+          ];
+          const stateText = { started: null, draft: "changed in your draft, not saved", held: "being edited by Erik Sand", lock: "locked", prop: "proposed by assistant, not reviewed", late: "late by 2 days", overdue: "overdue, planned 07:00, not started", finpend: "finish pending", mat: "material short" };
+          const icon = { started: "Play", draft: "Pencil", lock: "Lock", prop: "Sparkles", late: "Clock", overdue: "ClockAlert", finpend: "CircleCheckBig", mat: "TriangleAlert" };
+          const marker = { draft: "m-draft", held: "m-held", lock: "m-lock", prop: "m-prop", conf: "m-conf" };
+          const offOf = (cal) => (cals[cal] || []).map(([a, b]) => [Math.max(a, r0), Math.min(b, r1)]).filter(([a, b]) => b > a).map(([a, b]) => ({ style: "left:" + f(pct(a)) + "%;width:" + f(pct(b) - pct(a)) + "%" }));
+          const all = [];
+          let ri = 2;
+          if (p.pinned === "on") all.push({ isPinned: true, h: 46, ri: ri++ });
+          groups.forEach((g) => {
+            const n = g.collapsed ? g.n : g.machines.length;
+            const count = n + " machines";
+            const band = { name: g.name, n: n, count: g.collapsed ? count + ", collapsed" : count, gcs: "--gc:" + g.gc, expanded: g.collapsed ? "false" : "true", discIcon: g.collapsed ? "ChevronRight" : "ChevronDown", discLabel: (g.collapsed ? "Expand " : "Collapse ") + g.name, label: g.name + ", " + count, hasSum: !!(g.collapsed && p.summary === "on"), sum: g.sum || "", h: 28, ri: ri++, off: offOf("A1") };
+            band.isFull = layout === "band";
+            band.isCol = layout === "column";
+            all.push(band);
+            g.machines.forEach((m) => {
+              const rowH = m.tall ? 68 : 46;
+              const blocks = m.blocks.map((b) => {
+                const st = b.st || [];
+                const notes = st.map((s) => (s === "started" ? "started, " + b.done : s === "finpend" ? "finish pending, " + b.done + " reported" : s === "conf" ? "overlaps " + b.over : stateText[s]));
+                const cls = st.map((s) => marker[s]).filter(Boolean);
+                if (b.sub === 0) cls.push("s0");
+                if (b.sub === 1) cls.push("s1");
+                const isFocus = b.sel && focusOn;
+                if (isFocus) cls.push("is-focus");
+                const icons = st.filter((s) => icon[s]).map((s) => ({ n: icon[s] }));
+                const two = b.sub === undefined;
+                // Line 2: numbers in Mono, words in Sans
+                const l2 = segs((st.indexOf("started") >= 0 ? b.done : b.q) + ", ends " + hm(b.e));
+                const bid = idp + "-" + b.j.replace(".", "-");
+                return {
+                  j: b.j, a: b.a, lang: b.lang || "en", cls: cls.join(" "), icons, hasIni: !!b.ini, ini: b.ini || "",
+                  two, l2, hasProg: !!b.prog, progStyle: "--prog:" + (b.prog || 0) + "%",
+                  sel: b.sel ? "true" : "false", ti: b.sel ? "0" : "-1",
+                  style: "--fill:" + P(b.f) + ";" + pos(b.s, b.e),
+                  idj: bid + "-j", ida: bid + "-a", idh: bid + "-h", lby: bid + "-j " + bid + "-a " + bid + "-h",
+                  hid: ", " + [b.q, m.name, "Tue 3 Nov " + hm(b.s) + " to " + hm(b.e)].concat(notes).join(", "),
+                };
+              });
+              const sels = m.blocks.filter((b) => b.sel || b.sib).map((b) => ({ cls: b.sub === 1 ? "s1" : "", style: pos(b.s, b.e) }));
+              const clusters = m.cluster ? [{ n: m.cluster.n, label: m.cluster.label, style: pos(m.cluster.s, m.cluster.e) }] : [];
+              all.push({ isMachine: true, name: m.name, cls: (m.tall ? "tall " : "") + (all.filter((x) => x.isMachine).length % 2 ? "alt" : ""), gcs: "--gc:" + g.gc, jobsLabel: "Jobs on this machine, " + m.name, off: offOf(m.cal), blocks, sels, clusters, h: rowH, ri: ri++ });
+            });
+          });
+          const rows = all.slice(skip);
+          // Link from 1003.10 on Lathe 1 to 1003.20 on Lathe 2, with the lead time.
+          let y = 0;
+          const top = {};
+          rows.forEach((r) => { top[r.name || ""] = y; y += r.h; });
+          const lines = [];
+          let hasLt = false, ltStyle = "";
+          if (top["Lathe 1"] !== undefined && top["Lathe 2"] !== undefined) {
+            const y1 = top["Lathe 1"] + 23, y2 = top["Lathe 2"] + 17, xa = 10.5, xm = 10.75, xb = 11.5;
+            if (xa > r0 && xb < r1) {
+              lines.push({ cls: "pb-ln h", style: "left:" + f(pct(xa)) + "%;top:" + y1 + "px;width:" + f(pct(xm) - pct(xa)) + "%" });
+              lines.push({ cls: "pb-ln v", style: "left:" + f(pct(xm)) + "%;top:" + (y1 - 1) + "px;height:" + (y2 - y1 + 2) + "px" });
+              lines.push({ cls: "pb-ln h", style: "left:" + f(pct(xm)) + "%;top:" + y2 + "px;width:calc(" + f(pct(xb) - pct(xm)) + "% - 6px)" });
+              lines.push({ cls: "pb-arr", style: "left:" + f(pct(xb)) + "%;top:" + y2 + "px" });
+              hasLt = true;
+              ltStyle = "left:calc(" + f(pct(xm)) + "% - 28px);top:" + y2 + "px";
+            }
+          }
+          const ticks = [];
+          // The now label replaces the hour labels it would touch: the hour it falls in, and an hour within 30 min after now.
+          const now = 9 + 40 / 60;
+          for (let h = Math.ceil(r0); h < r1; h++) ticks.push({ label: now >= h - 0.5 && now < h + 1 ? "" : hm(h), style: "left:" + f(pct(h)) + "%" });
+          const shown = rows.length;
+          const vTop = f((skip / 46) * 100), vH = f(Math.max(12, (shown / 46) * 100));
+          const hLeft = 20 + ((r0 - 6) / 12) * 60, hW = (span / 12) * 60;
+          return {
+            wide: !nar,
+            gridCls: (nar ? "nar" : "") + (p.pinned === "on" ? " pinned" : ""),
+            gridStyle: "--span:" + span,
+            gridLabel: "Plant A board, Tue 3 Nov " + hm(r0) + " to " + hm(r1),
+            timeLabel: "Plant time, Tue 3 Nov",
+            dayLabel: nar ? "Tue 3 Nov" : "Tue 3 Nov 2026, W45",
+            ticks,
+            nowStyle: "left:" + f(pct(9 + 40 / 60)) + "%",
+            rows,
+            unplaced: [
+              { j: "1024.20", a: "Hub 12", label: "1024.20 Hub 12, 1" + NB + "200 pcs, not placed" },
+              { j: "1024.30", a: "Hub 12", label: "1024.30 Hub 12, 1" + NB + "200 pcs, not placed" },
+              { j: "1022.20", a: "Bracket L", label: "1022.20 Bracket L, 480 pcs, not placed" },
+            ],
+            lines, hasLt, ltStyle,
+            vthStyle: "top:" + vTop + "%;height:" + vH + "%",
+            hthStyle: "left:" + f(hLeft) + "%;width:" + f(hW) + "%",
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

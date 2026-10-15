@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 tokens, contrast and component states</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+      </helmet>
+      <div class="frame" style="left:80px;top:80px" data-screen-label="F0 Header, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">Light</span></div>
+        <dc-import name="ui-189-tokens-header" theme="light" hint-size="1280px,1958px"></dc-import>
+      </div>
+      <div class="frame dark" style="left:1456px;top:80px" data-screen-label="F0 Header, dark">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F0</span>Header<span class="fth">Dark</span></div>
+        <dc-import name="ui-189-tokens-header" theme="dark" hint-size="1280px,1958px"></dc-import>
+      </div>
+      <div class="frame" style="left:80px;top:2232px" data-screen-label="F1 Token base, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F1</span>Token base<span class="fth">Light</span></div>
+        <dc-import name="ui-189-tokens-base" theme="light" hint-size="1280px,3008px"></dc-import>
+      </div>
+      <div class="frame dark" style="left:1456px;top:2232px" data-screen-label="F1 Token base, dark">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F1</span>Token base<span class="fth">Dark</span></div>
+        <dc-import name="ui-189-tokens-base" theme="dark" hint-size="1280px,3008px"></dc-import>
+      </div>
+      <div class="frame" style="left:80px;top:5434px" data-screen-label="F2 Contrast table, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F2</span>Contrast table<span class="fth">Light</span></div>
+        <dc-import name="ui-189-tokens-contrast" theme="light" hint-size="1280px,6739px"></dc-import>
+      </div>
+      <div class="frame dark" style="left:1456px;top:5434px" data-screen-label="F2 Contrast table, dark">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F2</span>Contrast table<span class="fth">Dark</span></div>
+        <dc-import name="ui-189-tokens-contrast" theme="dark" hint-size="1280px,6739px"></dc-import>
+      </div>
+      <div class="frame" style="left:80px;top:12367px" data-screen-label="F3 Order palette, group colors and the block text rule, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F3</span>Order palette, group colors and the block text rule<span class="fth">Light</span></div>
+        <dc-import name="ui-189-tokens-palette" theme="light" hint-size="1280px,1716px"></dc-import>
+      </div>
+      <div class="frame dark" style="left:1456px;top:12367px" data-screen-label="F3 Order palette, group colors and the block text rule, dark">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F3</span>Order palette, group colors and the block text rule<span class="fth">Dark</span></div>
+        <dc-import name="ui-189-tokens-palette" theme="dark" hint-size="1280px,1716px"></dc-import>
+      </div>
+      <div class="frame" style="left:80px;top:14277px" data-screen-label="F4 State markers and the two-tone focus ring, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F4</span>State markers and the two-tone focus ring<span class="fth">Light</span></div>
+        <dc-import name="ui-189-tokens-markers" theme="light" hint-size="1280px,2238px"></dc-import>
+      </div>
+      <div class="frame dark" style="left:1456px;top:14277px" data-screen-label="F4 State markers and the two-tone focus ring, dark">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F4</span>State markers and the two-tone focus ring<span class="fth">Dark</span></div>
+        <dc-import name="ui-189-tokens-markers" theme="dark" hint-size="1280px,2238px"></dc-import>
+      </div>
+      <div class="frame" style="left:80px;top:16709px" data-screen-label="F5 Fonts and icons, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F5</span>Fonts and icons<span class="fth">Light</span></div>
+        <dc-import name="ui-189-tokens-type" theme="light" hint-size="1280px,1829px"></dc-import>
+      </div>
+      <div class="frame dark" style="left:1456px;top:16709px" data-screen-label="F5 Fonts and icons, dark">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F5</span>Fonts and icons<span class="fth">Dark</span></div>
+        <dc-import name="ui-189-tokens-type" theme="dark" hint-size="1280px,1829px"></dc-import>
+      </div>
+      <div class="frame" style="left:80px;top:18732px" data-screen-label="F6 shadcn components in every state, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F6</span>shadcn components in every state<span class="fth">Light</span></div>
+        <dc-import name="ui-189-tokens-components" theme="light" hint-size="1280px,4140px"></dc-import>
+      </div>
+      <div class="frame dark" style="left:1456px;top:18732px" data-screen-label="F6 shadcn components in every state, dark">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F6</span>shadcn components in every state<span class="fth">Dark</span></div>
+        <dc-import name="ui-189-tokens-components" theme="dark" hint-size="1280px,4140px"></dc-import>
+      </div>
+      <div class="frame" style="left:80px;top:23066px" data-screen-label="F7 Themes, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F7</span>Themes<span class="fth">Light</span></div>
+        <dc-import name="ui-189-tokens-themes" theme="light" hint-size="1280px,739px"></dc-import>
+      </div>
+      <div class="frame dark" style="left:1456px;top:23066px" data-screen-label="F7 Themes, dark">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F7</span>Themes<span class="fth">Dark</span></div>
+        <dc-import name="ui-189-tokens-themes" theme="dark" hint-size="1280px,739px"></dc-import>
+      </div>
+      <div class="frame" style="left:80px;top:23999px" data-screen-label="F8 Keyboard and focus, light">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F8</span>Keyboard and focus<span class="fth">Light</span></div>
+        <dc-import name="ui-189-tokens-keyboard" theme="light" hint-size="1280px,1931px"></dc-import>
+      </div>
+      <div class="frame dark" style="left:1456px;top:23999px" data-screen-label="F8 Keyboard and focus, dark">
+        <div class="flabel" data-drags-parent="1"><span class="fid">F8</span>Keyboard and focus<span class="fth">Dark</span></div>
+        <dc-import name="ui-189-tokens-keyboard" theme="dark" hint-size="1280px,1931px"></dc-import>
+      </div>
+      <div class="frame wide" style="left:80px;top:26124px" data-screen-label="Build notes">
+        <div class="flabel" data-drags-parent="1"><span class="fid">B</span>Build notes, not part of the UI<span class="fth">Light and dark values</span></div>
+        <dc-import name="ui-189-tokens-notes" theme="light" hint-size="2656px,3882px"></dc-import>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Access management: users list and user form</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./core-304-access-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./core-304-access.css" />
+        <style>
+          /* User list and user form frames of the spec page core/core-304-access.dc.html (issue northMES/northmes#304;
+             E05-S08 #56 as far as access goes), frames US1 to US18. Each frame is its screen size (1440 by 900 plus the
+             36 px document title) and mounts core/Shell.dc.html, with the shared parts core-304-access-picker (New user)
+             and core-304-access-tab (the user page under a dialog); the rest is drawn with the canonical lf- classes and
+             the ca- classes. Its chip sits 12 px above it. Light frames left, dark frames right, rows 1048 px apart.
+             These three rules are the canvas only; the chips use the D1 canvas label styles and are not part of the UI. */
+          .ca-usp{position:relative}
+          .ca-usf{position:absolute}
+          .flabel.ca-uchip{position:absolute;left:0;bottom:calc(100% + 12px);margin:0;white-space:nowrap;cursor:default}
+        </style>
+      </helmet>
+      <div class="ca-usp" style="width:2960px;height:9368px">
+        <sc-for list="{{ frames }}" as="fr" hint-placeholder-count="18">
+          <div class="ca-usf" style="{{ fr.pos }}" data-screen-label="{{ fr.label }}" data-part="{{ fr.part }}">
+            <div class="flabel ca-uchip"><span class="fid">{{ fr.id }}</span>{{ fr.title }}<span class="fth">{{ fr.what }}</span><span class="ca-url">{{ fr.url }}</span></div>
+            <dc-import name="Shell" dc-props="{{ fr.shell }}" hint-size="1440px,936px">
+              <div data-slot="header"><sc-if value="{{ fr.isDetail }}"><span class="badge {{ fr.badge.cls }}"><span class="ic" data-icon="{{ fr.badge.icon }}"></span>{{ fr.badge.t }}</span><span class="ca-mono">{{ fr.user }}</span></sc-if></div>
+              <sc-if value="{{ fr.isList }}">
+                <div class="lf-page">
+                  <div class="lf-tool">
+                    <span class="inp lf-search"><span class="ic" data-icon="Search"></span><span class="ph">Search users</span></span>
+                    <span class="lf-wrap"><button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false">Role<span class="ic" data-icon="ChevronDown"></span></button></span>
+                    <span class="lf-wrap"><button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false">Status<span class="ic" data-icon="ChevronDown"></span></button></span>
+                    <span class="lf-tool-end"><span class="lf-wrap"><button class="btn v-outline lf-fb" type="button" aria-haspopup="menu" aria-expanded="false"><span class="ic" data-icon="Columns3"></span>Columns<span class="ic" data-icon="ChevronDown"></span></button></span></span>
+                  </div>
+                  <div class="lf-card auto" style="--cols:minmax(200px,1fr) 168px minmax(280px,1.4fr) 120px 248px">
+                    <div class="lf-scroll">
+                      <div class="lf-grid" role="table" aria-label="Users at Acme AB and Plant A">
+                        <div class="lf-tr hd" role="row"><span class="lf-td" role="columnheader" aria-sort="ascending"><button class="lf-sortb on" type="button">Name<span class="ic" data-icon="ArrowUp"></span></button></span><span class="lf-td" role="columnheader" aria-sort="none"><button class="lf-sortb" type="button">Username<span class="ic" data-icon="ArrowUpDown"></span></button></span><span class="lf-td" role="columnheader"><span>Roles at Acme AB and Plant A</span></span><span class="lf-td" role="columnheader"><span>Status</span></span><span class="lf-td" role="columnheader"><span class="lf-vh">Actions</span></span></div>
+                        <sc-for list="{{ fr.rows }}" as="r" hint-placeholder-count="10">
+                          <div class="lf-tr {{ r.cls }}" role="row"><span class="lf-td" role="cell"><a class="lf-cl" href="#" lang="{{ r.lang }}">{{ r.name }}</a></span><span class="lf-td" role="cell"><span class="ca-mono">{{ r.user }}</span></span><span class="lf-td lf-wrapc" role="cell"><sc-for list="{{ r.chips }}" as="c"><span class="ca-src-i"><span class="ic" data-icon="{{ c.icon }}"></span><span>{{ c.t }}</span></span></sc-for></span><span class="lf-td" role="cell"><span class="badge {{ r.badge.cls }}"><span class="ic" data-icon="{{ r.badge.icon }}"></span>{{ r.badge.t }}</span></span><span class="lf-td end" role="cell"><sc-if value="{{ r.can }}"><span class="lf-wrap"><button class="btn icon v-ghost {{ r.btn }}" type="button" aria-label="{{ r.menuName }}" aria-haspopup="menu" aria-expanded="{{ r.open }}" aria-controls="{{ r.ctl }}"><span class="ic" data-icon="Ellipsis"></span></button><sc-if value="{{ r.open }}"><div class="pop lf-pop below-r" id="{{ r.ctl }}" style="width:220px" role="menu" aria-label="{{ r.menuName }}"><sc-for list="{{ r.items }}" as="m"><div class="mi {{ m.cls }}" role="menuitem"><span class="ic" data-icon="{{ m.icon }}"></span>{{ m.t }}</div></sc-for></div></sc-if></span></sc-if><sc-if value="{{ r.cannot }}"><span class="ca-line">{{ coLine }}</span></sc-if></span></div>
+                        </sc-for>
+                      </div>
+                    </div>
+                    <div class="lf-pager"><span>Rows <span class="lf-mono">1</span> to <span class="lf-mono">10</span> of <span class="lf-mono">10</span></span><span class="lf-pg"><button class="btn v-outline is-dis" type="button" aria-disabled="true"><span class="ic" data-icon="ChevronLeft"></span>Previous</button><button class="btn v-outline is-dis" type="button" aria-disabled="true">Next<span class="ic" data-icon="ChevronRight"></span></button></span></div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ fr.isForm }}">
+                <div class="lf-page">
+                  <div class="lf-fscroll">
+                    <div class="lf-form">
+                      <sc-if value="{{ fr.form.hasSum }}">
+                        <div class="lf-summary is-focus" tabindex="-1" role="group" aria-labelledby="{{ fr.ids.sum }}"><h2 class="lf-summary-h" id="{{ fr.ids.sum }}"><span class="ic" data-icon="CircleAlert"></span>{{ fr.form.sumTitle }}</h2><ul><sc-for list="{{ fr.form.errs }}" as="e"><li><a href="#">{{ e }}</a></li></sc-for></ul></div>
+                      </sc-if>
+                      <section class="lf-fs" aria-labelledby="{{ fr.ids.s1 }}">
+                        <h2 class="lf-fs-h" id="{{ fr.ids.s1 }}">Person</h2>
+                        <div class="lf-g2">
+                          <div class="fld"><span class="lbl">Name</span><span class="inp"><span class="lf-iv">Tove Lindqvist</span></span></div>
+                          <div class="fld"><span class="lbl">Username</span><span class="inp {{ fr.form.userCls }}"><sc-if value="{{ fr.form.hasUser }}"><span class="lf-iv lf-mono">{{ fr.form.user }}</span></sc-if></span><sc-if value="{{ fr.form.hasUserErr }}"><span class="err"><span class="ic" data-icon="CircleAlert"></span><span>{{ fr.form.userErr }}</span></span></sc-if><span class="desc">Used to sign in. It cannot be changed later, and no one else can ever use it.</span></div>
+                        </div>
+                        <div class="lf-g1 lf-pair">
+                          <div class="fld"><span class="lbl">Email<span class="lf-req">(optional)</span></span><span class="inp {{ fr.form.emailCls }}"><sc-if value="{{ fr.form.hasEmail }}"><span class="lf-iv">{{ fr.form.email }}</span></sc-if></span><sc-if value="{{ fr.form.hasEmailErr }}"><span class="err"><span class="ic" data-icon="CircleAlert"></span><span>{{ fr.form.emailErr }}</span></span></sc-if><span class="desc">Leave it empty for a person without email, such as an operator who signs in at a station.</span></div>
+                          <sc-if value="{{ fr.form.noEmail }}"><div class="lf-note"><span class="ic" data-icon="Info"></span><span>Without an email, Tove Lindqvist gets a placeholder address that receives no mail, and NorthMES shows No email on the user.</span></div></sc-if>
+                        </div>
+                      </section>
+                      <div class="lf-fit"><dc-import name="core-304-access-picker" assigner="companyAdmin" person="lena.ek" value="operator" hint-size="100%,330px"></dc-import></div>
+                      <section class="lf-fs" aria-labelledby="{{ fr.ids.s3 }}">
+                        <h2 class="lf-fs-h" id="{{ fr.ids.s3 }}">Password</h2>
+                        <div class="fld"><span class="lbl">Password</span><span class="lf-ro">Temporary, shown to you once after you create the user</span><span class="desc">Tove Lindqvist must choose a new password at the first sign-in.</span></div>
+                      </section>
+                      <section class="lf-fs" aria-labelledby="{{ fr.ids.s4 }}">
+                        <h2 class="lf-fs-h" id="{{ fr.ids.s4 }}">Reason for change</h2>
+                        <div class="fld"><span class="lbl">Reason<span class="lf-req">(optional)</span></span><span class="inp lf-ta"><sc-if value="{{ fr.form.hasReason }}"><span>{{ fr.form.reason }}</span></sc-if><sc-if value="{{ fr.form.noReason }}"><span class="lf-ph">Why you create this user</span></sc-if></span><span class="desc">Shown in the user's history. Do not enter personal data. Up to 500 characters.</span></div>
+                      </section>
+                      <div class="lf-foot"><button class="btn v-default" type="button">Create user</button><button class="btn v-outline" type="button">Cancel</button></div>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ fr.isDetail }}">
+                <div class="lf-fill"><dc-import name="core-304-access-tab" user="{{ fr.user }}" hint-size="100%,760px"></dc-import></div>
+              </sc-if>
+              <sc-if value="{{ fr.isConfirm }}">
+                <div class="lf-ov"></div>
+                <div class="lf-dlg" role="alertdialog" aria-modal="true" aria-labelledby="{{ fr.ids.t }}" aria-describedby="{{ fr.ids.d }}">
+                  <div class="lf-dlg-h"><h2 class="lf-dlg-t" id="{{ fr.ids.t }}">{{ fr.dlg.a }}<span lang="{{ fr.dlg.lang }}">{{ fr.dlg.name }}</span>{{ fr.dlg.b }}</h2></div>
+                  <div class="lf-dlg-b">
+                    <div class="ca-rg" id="{{ fr.ids.d }}"><p class="ca-p">{{ fr.dlg.p1 }}</p><p class="ca-p {{ fr.dlg.p2cls }}">{{ fr.dlg.p2 }}</p></div>
+                    <div class="fld"><span class="lbl">Reason<span class="lf-req">(optional)</span></span><span class="inp lf-ta is-focus"><sc-if value="{{ fr.dlg.hasReason }}"><span>{{ fr.dlg.reason }}</span></sc-if><sc-if value="{{ fr.dlg.noReason }}"><span class="lf-ph">{{ fr.dlg.ph }}</span></sc-if></span><span class="desc">Shown in the user's history. Do not enter personal data. Up to 500 characters.</span></div>
+                  </div>
+                  <div class="lf-dlg-f"><button class="btn v-outline" type="button">Cancel</button><button class="btn {{ fr.dlg.ccls }}" type="button">{{ fr.dlg.confirm }}</button></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ fr.isTemp }}">
+                <div class="lf-ov"></div>
+                <div class="lf-dlg" role="dialog" aria-modal="true" aria-labelledby="{{ fr.ids.t }}" aria-describedby="{{ fr.ids.d }}">
+                  <div class="lf-dlg-h"><h2 class="lf-dlg-t" id="{{ fr.ids.t }}">Temporary password for Alex Lund</h2></div>
+                  <div class="lf-dlg-b">
+                    <div class="ca-rg" id="{{ fr.ids.d }}"><p class="ca-p">Give it to Alex Lund, who must choose a new password at the next sign-in.</p><p class="ca-p ca-mut">The old password no longer works.</p></div>
+                    <div class="fld"><span class="lbl" id="{{ fr.ids.pl }}">Temporary password</span><span class="lf-lk"><span class="inp" role="textbox" aria-readonly="true" aria-labelledby="{{ fr.ids.pl }}"><span class="lf-mono">Rk7qTm3vXp9w</span></span><button class="btn v-outline is-focus" type="button"><span class="ic" data-icon="Copy"></span>Copy password</button></span><span class="desc">Shown only now. After you close this dialog, it cannot be shown again.</span></div>
+                  </div>
+                  <div class="lf-dlg-f"><button class="btn v-default" type="button">Done</button></div>
+                </div>
+              </sc-if>
+            </dc-import>
+          </div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2960,"height":9368}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), installed here too when no shell has
+          // installed it yet.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          // People with a role at Acme AB or Plant A, as core-304-access-data.js holds them (Lena Ek, without a role,
+          // is left out). can: Jonas Holm (Plant admin at Plant A only) may block the user and reset the password,
+          // because every role of the user is at Plant A (rule 7.3).
+          const PLACE = { pl: ["Plant A", "Factory"], co: ["Acme AB", "Building2"] };
+          const USERS = [
+            ["Alex Lund", null, "alex.lund", [["Planner", "pl"]], false, true],
+            ["Anna Berg", null, "anna.berg", [["Operator", "pl"]], false, true],
+            ["Erik Lind", null, "erik.lind", [["Planner", "co"], ["Upload ERP files", "co"]], false, false],
+            ["Hannelore Wiesenthal-Brückner", "de", "h.wiesenthal", [["Planner", "pl"], ["Shift lead", "pl"], ["Viewer", "co"]], false, false],
+            ["Jonas Holm", null, "jonas.holm", [["Plant admin", "pl"]], false, true],
+            ["Karin Dahl", null, "karin.dahl", [["Company admin", "co"]], false, false],
+            ["Mikael Strand", null, "mikael.strand", [["Viewer", "pl"]], true, true],
+            ["Oskar Wik", null, "oskar.wik", [["IT", "co"]], false, false],
+            ["Päivi Kärkkäinen-Leppänen", "fi", "paivi.karkkainen", [["Operator", "pl"]], false, true],
+            ["Sara Nyberg", null, "sara.nyberg", [["Shift lead", "pl"], ["Viewer", "co"]], false, false]
+          ];
+          const ACTIVE = { cls: "ca-bg", icon: "CircleCheck", t: "Active" };
+          const BLOCKED = { cls: "ca-br", icon: "Ban", t: "Blocked" };
+          const rows = (lid, openUser) => USERS.map(([name, lang, user, roles, blocked, can]) => {
+            const open = openUser === user;
+            const items = (blocked ? [["CircleCheck", "Unblock user"]] : []).concat([["KeyRound", "Reset password"]]).concat(blocked ? [] : [["Ban", "Block user"]]);
+            return {
+              name: name, lang: lang, user: user, cls: open ? "hov" : "", badge: blocked ? BLOCKED : ACTIVE,
+              chips: roles.map(([r, p]) => ({ icon: PLACE[p][1], t: r + " at " + PLACE[p][0] })),
+              can: can, cannot: !can, open: open, btn: open ? "is-active" : "", ctl: open ? lid + "-menu" : null,
+              menuName: "Actions for " + name, items: items.map(([icon, t], i) => ({ icon: icon, t: t, cls: i === 0 ? "kfocus" : "" }))
+            };
+          });
+          const form = (state) => {
+            const errs = [];
+            const userErr = state === "errors" ? "Enter a username." : state === "taken" ? "The username t.lindqvist is taken or was used before. Choose another username." : "";
+            const emailErr = state === "errors" ? "Enter an email such as name@acme.example, or leave the field empty." : "";
+            if (userErr) errs.push(userErr);
+            if (emailErr) errs.push(emailErr);
+            const user = { clean: "tove.lindqvist", errors: "", taken: "t.lindqvist" }[state];
+            const email = state === "errors" ? "tove.lindqvist@acme" : "";
+            const reason = state === "taken" ? "Night shift operator for line 2 from week 2026-W42" : "";
+            return {
+              hasSum: errs.length > 0, errs: errs, sumTitle: "Fix " + errs.length + (errs.length === 1 ? " field" : " fields") + " to create the user",
+              user: user, hasUser: !!user, userCls: userErr ? "is-err" : "", userErr: userErr, hasUserErr: !!userErr,
+              email: email, hasEmail: !!email, emailCls: emailErr ? "is-err" : state === "clean" ? "is-focus" : "", emailErr: emailErr, hasEmailErr: !!emailErr, noEmail: !email,
+              reason: reason, hasReason: !!reason, noReason: !reason
+            };
+          };
+          const JONAS = { role: "admin", user: "Jonas Holm", nav: "core.users" };
+          const LIST = Object.assign({ actions: "*New user" }, JONAS);
+          const NEW = { role: "company-admin", user: "Karin Dahl", nav: "core.users", entity: "New user", crumbs: "Administration|Users|New user", actions: "none" };
+          const DETAIL = (name, blocked) => Object.assign({ entity: name, actions: blocked ? "Reset password|Unblock user" : "Reset password|Block user" }, JONAS);
+          const DURL = "/plant-a/core/users/$userId?tab=access";
+          const PAIRS = [
+            { title: "Users list", what: "Plant admin; roles per place as chips; a line where only a company admin can act", url: "/plant-a/core/users", kind: "list", shell: LIST },
+            { title: "Row menu", what: "Actions for Anna Berg open, keyboard focus on Reset password", url: "/plant-a/core/users", kind: "list", menu: "anna.berg", shell: LIST },
+            { title: "New user, operator without email", what: "Company admin; Email empty with the placeholder note; first role Operator", url: "/plant-a/core/users/new", kind: "form", state: "clean", shell: NEW },
+            { title: "New user, field errors", what: "After Create user: the error summary has focus and links to both fields", url: "/plant-a/core/users/new", kind: "form", state: "errors", shell: NEW },
+            { title: "New user, username refused", what: "The server refused a username that is taken or was used before; entries kept", url: "/plant-a/core/users/new", kind: "form", state: "taken", shell: NEW },
+            { title: "Block user", what: "ConfirmDialog with the reason; focus in the reason field", url: DURL, kind: "confirm", user: "paivi.karkkainen", shell: DETAIL("Päivi Kärkkäinen-Leppänen", false),
+              dlg: { a: "Block ", name: "Päivi Kärkkäinen-Leppänen", lang: "fi", b: "?", p1: "Päivi Kärkkäinen-Leppänen is signed out within a minute and cannot sign in until unblocked.", p2: "The roles stay, so unblocking gives the same access back.", p2cls: "ca-mut", reason: "Account under review, IT case 4471", confirm: "Block user", ccls: "v-destructive" } },
+            { title: "Unblock user", what: "ConfirmDialog for a blocked user; focus in the reason field", url: DURL, kind: "confirm", user: "mikael.strand", blocked: true, shell: DETAIL("Mikael Strand", true),
+              dlg: { a: "Unblock ", name: "Mikael Strand", lang: null, b: "?", p1: "Mikael Strand can sign in again with the current password.", p2: "The roles stayed while the user was blocked: Viewer at Plant A.", p2cls: "ca-mut", reason: "Review done, IT case 4402", confirm: "Unblock user", ccls: "v-default" } },
+            { title: "Reset password", what: "ConfirmDialog; focus in the empty reason field", url: DURL, kind: "confirm", user: "alex.lund", shell: DETAIL("Alex Lund", false),
+              dlg: { a: "Reset the password of ", name: "Alex Lund", lang: null, b: "?", p1: "NorthMES replaces the password with a temporary one and shows it to you once.", p2: "Alex Lund must choose a new password at the next sign-in, before anything else.", p2cls: "", reason: "", ph: "Why you reset the password", confirm: "Reset password", ccls: "v-default" } },
+            { title: "Temporary password", what: "Shown once in a dialog with Copy, never in a toast; focus on Copy password", url: DURL, kind: "temp", user: "alex.lund", shell: DETAIL("Alex Lund", false) }
+          ];
+          const frames = [];
+          PAIRS.forEach((p, row) => {
+            ["light", "dark"].forEach((theme, col) => {
+              const n = frames.length + 1;
+              const id = "US" + n;
+              const lid = "us" + n;
+              const Theme = theme === "light" ? "Light" : "Dark";
+              const detail = p.kind === "confirm" || p.kind === "temp";
+              const dlg = p.dlg ? Object.assign({ hasReason: !!p.dlg.reason, noReason: !p.dlg.reason }, p.dlg) : null;
+              frames.push({
+                id: id, title: p.title, what: Theme + ", 1440 by 900. " + p.what, url: p.url,
+                label: id + " " + p.title + ", " + theme + ", 1440 by 900",
+                pos: "left:" + col * 1520 + "px;top:" + (48 + row * 1048) + "px;width:1440px;height:936px",
+                part: p.kind === "list" ? null : "1",
+                shell: Object.assign({ width: "1440", theme: theme, bell: "off", showTitle: "on" }, p.shell),
+                isList: p.kind === "list", isForm: p.kind === "form", isDetail: detail, isConfirm: p.kind === "confirm", isTemp: p.kind === "temp",
+                rows: p.kind === "list" ? rows(lid, p.menu || null) : [],
+                form: p.kind === "form" ? form(p.state) : {},
+                user: p.user || "", badge: p.blocked ? BLOCKED : ACTIVE, dlg: dlg || {},
+                ids: { sum: lid + "-sum", s1: lid + "-s1", s3: lid + "-s3", s4: lid + "-s4", t: lid + "-t", d: lid + "-d", pl: lid + "-pl" }
+              });
+            });
+          });
+          return { frames: frames, coLine: "A company admin of Acme AB can block this user or reset the password." };
+        }
+      }
+    </script>
+  </body>
+</html>

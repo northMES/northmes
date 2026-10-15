@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D4 selected job panel</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./production-start-303-station-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station.css" />
+      </helmet>
+      <div class="ps-part {{ rootCls }}" lang="{{ lang }}" style="{{ rootStyle }}">
+        <sc-if value="{{ loading }}">
+          <section class="ps-card ps-jh {{ jhCls }}" aria-busy="true" aria-labelledby="{{ ids.h }}">
+            <div class="ps-jh-t">
+              <h2 class="ps-vh" id="{{ ids.h }}">{{ t.loadingJob }}</h2>
+              <span class="sk ps-sk-line" style="width:180px;height:40px"></span>
+            </div>
+            <div class="ps-jh-d">
+              <span class="sk ps-sk-line" style="width:220px"></span>
+              <span class="sk ps-sk-line" style="width:340px"></span>
+            </div>
+            <div class="ps-cmds"><span class="sk" style="width:132px;height:48px"></span><span class="sk" style="width:132px;height:48px"></span></div>
+            <div class="ps-stats {{ statsCls }}" aria-hidden="true">
+              <sc-for list="{{ skStats }}" as="s"><div class="ps-stat"><span class="sk ps-sk-line" style="width:70px"></span><span class="sk ps-sk-line" style="{{ s }}"></span></div></sc-for>
+            </div>
+          </section>
+        </sc-if>
+        <sc-if value="{{ ready }}">
+          <section class="ps-card ps-jh {{ jhCls }}" aria-labelledby="{{ ids.h }}">
+            <div class="ps-jh-t">
+              <h2 class="ps-jobno {{ f.heading }}" id="{{ ids.h }}" tabIndex="-1">{{ num }}</h2>
+              <span class="badge ps-badge {{ stCls }}"><span class="ic" data-icon="{{ stI }}"></span>{{ stT }}</span>
+              <sc-if value="{{ hasFlag }}"><span class="badge ps-badge ps-flag">{{ flag }}</span></sc-if>
+            </div>
+            <div class="ps-jh-d">
+              <p class="ps-art" lang="{{ artLang }}">{{ art }}</p>
+              <p class="ps-meta">{{ meta }}</p>
+            </div>
+            <div class="ps-cmds">
+              <sc-for list="{{ slots }}" as="s">
+                <div class="ps-slot {{ s.cls }}">
+                  <button class="btn lg v-outline {{ s.btnCls }}" type="button" aria-disabled="{{ s.dis }}" aria-busy="{{ s.busy }}" aria-describedby="{{ s.desc }}"><span class="ic" data-icon="{{ s.icon }}"></span>{{ s.label }}</button>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ sending }}"><p class="ps-vh" role="status">{{ t.sending }}</p></sc-if>
+            <sc-if value="{{ hasMsg }}"><p class="ps-msg err ps-cmdmsg" id="{{ ids.msg }}"><span class="ic" data-icon="CircleAlert"></span><span>{{ msg }}</span></p></sc-if>
+            <dl class="ps-stats {{ statsCls }}">
+              <sc-for list="{{ stats }}" as="s">
+                <div class="ps-stat"><dt>{{ s.k }}</dt><dd>{{ s.v }}<sc-if value="{{ s.u }}"><span class="u">{{ s.u }}</span></sc-if></dd></div>
+              </sc-for>
+            </dl>
+          </section>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"enum","options":["1920x1080","1280x800","800x1280"],"default":"1920x1080","tsType":"string"},"job":{"editor":"text","default":"5001.20","tsType":"string"},"cmd":{"editor":"enum","options":["none","start","pause","finish"],"default":"none","tsType":"string"},"cmdstate":{"editor":"enum","options":["idle","sending","offline","timeout"],"default":"idle","tsType":"string"},"state":{"editor":"enum","options":["populated","loading"],"default":"populated","tsType":"string"},"after":{"editor":"enum","options":["none","sent","corrected"],"default":"none","tsType":"string"},"focus":{"editor":"enum","options":["none","heading","start","pause","finish"],"default":"none","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"solo":{"editor":"enum","options":["auto","on","off"],"default":"auto","tsType":"string"},"theme":{"editor":"enum","options":["inherit","dark"],"default":"inherit","tsType":"string"},"idp":{"editor":"text","default":"jp","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: lucide fills every [data-icon] span and redraws one whose data-icon changed (the frame's filler, same flag).
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          // The data script loads from the helmet; draw again once it is there.
+          const ready = () => (window.PS ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.PS) ready();
+        }
+        renderVals() {
+          const p = this.props || {};
+          const PS = window.PS;
+          const idp = String(p.idp || "jp");
+          const pick = (v, d, opts) => { const s = v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim(); return opts.indexOf(s) < 0 ? d : s; };
+          const size = pick(p.size, "1920x1080", ["1920x1080", "1280x800", "800x1280"]);
+          const compact = size === "1280x800";
+          // Rendered as the page root, the part draws the station's main area itself; mounted in a frame it inherits.
+          const solo = p.solo === "on" || (p.solo !== "off" && !!window.__dcRootName && window.__dcRootName() === "production-start-303-station-job");
+          const colW = size === "1920x1080" ? 810 : size === "1280x800" ? 890 : 750;
+          const ids = { h: idp + "-h", msg: idp + "-msg" };
+          const base = { rootCls: (solo ? "solo" : "") + (p.theme === "dark" ? " dark" : ""), rootStyle: solo ? "width:" + (colW + 48) + "px" : "", lang: "en", ids: ids, t: {}, f: {}, slots: [], stats: [], skStats: [], loading: false, ready: false };
+          if (!PS) return base;
+          const strings = p.strings === "long" ? "long" : "default";
+          const L = strings === "long";
+          const T = PS.tr(strings);
+          // after="sent" or "corrected": the figures and the meta line once the server has answered the report or correction of 14:06.
+          const j = PS.after(PS.job(String(p.job || "5001.20").trim()), pick(p.after, "none", ["none", "sent", "corrected"]));
+          const st = PS.STATUS[j.status];
+          const u = PS.unit(j, strings);
+          const N = (v) => PS.num(v, j.dec);
+          const rem = j.qty - j.good - j.scrap;
+          const focus = pick(p.focus, "none", ["none", "heading", "start", "pause", "finish"]);
+          const cmd = pick(p.cmd, "none", ["none", "start", "pause", "finish"]);
+          const cmdstate = pick(p.cmdstate, "idle", ["idle", "sending", "offline", "timeout"]);
+          const by = PS.person(j.startedBy, strings);
+          const at = L && j.startedAtDe ? j.startedAtDe : j.startedAt;
+          const meta = j.status === "planned" ? T.metaPlanned(L ? j.windowDe : j.window)
+            : j.status === "finished" ? T.metaFinished(j.num, at, by, j.finishedAt)
+            : T.metaStarted(j.num, at, by, j.lastReport);
+          // Allowed transitions (spec 4.5) in fixed slots (rule 19.7): a command that is not allowed keeps its slot, drawn empty.
+          const allowed = { planned: ["start"], active: ["pause", "finish"], paused: ["start", "finish"], finished: [], cancelled: [] }[j.status];
+          const ICON = { start: "Play", pause: "Pause", finish: "CircleCheck" };
+          const waiting = cmdstate === "sending" && cmd !== "none";
+          const failed = (cmdstate === "offline" || cmdstate === "timeout") && cmd !== "none";
+          const slots = ["start", "pause", "finish"].map((k) => {
+            const on = allowed.indexOf(k) >= 0;
+            const pressed = cmd === k && on;
+            return {
+              cls: on ? "" : "gone",
+              btnCls: (pressed && waiting ? "is-busy " : "") + (focus === k || (pressed && (waiting || failed) && focus === "none") ? "is-focus" : ""),
+              icon: pressed && waiting ? "LoaderCircle" : ICON[k],
+              label: pressed && waiting ? T.sending : T[k],
+              dis: pressed && waiting ? "true" : undefined,
+              busy: pressed && waiting ? "true" : undefined,
+              desc: pressed && failed ? ids.msg : undefined
+            };
+          });
+          const stats = [
+            { k: T.quantity, v: N(j.qty), u: u },
+            { k: T.good, v: N(j.good) },
+            { k: T.scrap, v: N(j.scrap) },
+            { k: T.remaining, v: N(rem), u: u }
+          ];
+          const statsCls = compact ? "sm inl" : size === "800x1280" ? "sm" : "";
+          return Object.assign(base, {
+            lang: T.lang,
+            t: T,
+            f: { heading: focus === "heading" ? "is-focus" : "" },
+            loading: p.state === "loading",
+            ready: p.state !== "loading",
+            jhCls: compact ? "cmp" : "",
+            statsCls: statsCls,
+            skStats: ["width:120px", "width:70px", "width:50px", "width:110px"].map((w) => w + ";height:" + (compact ? 24 : 32) + "px"),
+            num: j.num,
+            stCls: "ps-" + j.status, stI: st.icon, stT: L ? st.de : st.en,
+            hasFlag: !!j.flag,
+            flag: j.flag === "overdue" ? T.overdue : j.flag === "elsewhere" ? T.plannedOn(PS.mName(j.plannedOn, strings)) : "",
+            compact: compact,
+            notCompact: !compact,
+            art: L ? j.artDe : j.art,
+            artLang: L ? j.artLang : undefined,
+            meta: meta,
+            slots: slots,
+            sending: waiting,
+            hasMsg: failed,
+            msg: failed ? (cmdstate === "offline" ? T.cmdOffline[cmd] : T.cmdTimeout[cmd]) : "",
+            stats: stats
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

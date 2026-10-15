@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard widget settings</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-454-dashboard-variations.css" />
+      </helmet>
+      <div class="db-form {{ formCls }}" data-screen-label="Widget settings, {{ variant }}">
+        <div class="fld">
+          <span class="lbl">Title</span>
+          <span class="inp {{ titleFocus }}"><span class="lf-iv">Production orders, Milling</span></span>
+          <sc-if value="{{ descs }}"><span class="desc">The widget's heading. Two copies of one widget read best with different titles.</span></sc-if>
+        </div>
+        <div class="fld">
+          <span class="lbl">Data source</span>
+          <span class="inp lf-sel"><span class="lf-iv">Production orders</span><span class="ic lf-chev" data-icon="ChevronsUpDown"></span></span>
+          <sc-if value="{{ descs }}"><span class="desc">Demo data in this release.</span></sc-if>
+        </div>
+        <div class="fld">
+          <span class="lbl">Equipment group</span>
+          <span class="inp lf-sel"><span class="lf-iv">Milling</span><span class="ic lf-chev" data-icon="ChevronsUpDown"></span></span>
+          <sc-if value="{{ descs }}"><span class="desc">Groups of Plant A. At a plant without Milling, the widget says so and shows no rows.</span></sc-if>
+        </div>
+        <sc-if value="{{ full }}">
+          <fieldset class="lf-fset">
+            <legend>Status</legend>
+            <div class="db-chks">
+              <sc-for list="{{ statuses }}" as="s"><span class="cb {{ s.cls }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span>{{ s.t }}</span></sc-for>
+            </div>
+          </fieldset>
+        </sc-if>
+        <div class="fld">
+          <span class="lbl">Rows shown</span>
+          <span class="inp db-num"><span>5</span><span class="lf-unit">rows</span></span>
+          <sc-if value="{{ descs }}"><span class="desc">From 3 to 5 at Medium and Large, 3 to 8 at Tall.</span></sc-if>
+        </div>
+        <sc-if value="{{ position }}">
+          <fieldset class="lf-fset">
+            <legend>Position</legend>
+            <sc-if value="{{ arrows }}">
+              <div class="db-moves">
+                <button class="btn v-outline db-mb u" type="button" aria-label="Move up"><span class="ic" data-icon="ArrowUp"></span></button>
+                <button class="btn v-outline db-mb l" type="button" aria-label="Move left"><span class="ic" data-icon="ArrowLeft"></span></button>
+                <button class="btn v-outline db-mb d {{ downFocus }}" type="button" aria-label="Move down"><span class="ic" data-icon="ArrowDown"></span></button>
+                <button class="btn v-outline db-mb r" type="button" aria-label="Move right"><span class="ic" data-icon="ArrowRight"></span></button>
+              </div>
+              <span class="desc">{{ posText }}</span>
+            </sc-if>
+            <sc-if value="{{ linear }}">
+              <div class="db-row"><button class="btn v-outline db-btn-s" type="button"><span class="ic" data-icon="ArrowUp"></span>Move up</button><button class="btn v-outline db-btn-s" type="button"><span class="ic" data-icon="ArrowDown"></span>Move down</button></div>
+              <span class="desc">Second of 5 widgets.</span>
+            </sc-if>
+          </fieldset>
+        </sc-if>
+        <sc-if value="{{ size }}">
+          <fieldset class="lf-fset" role="radiogroup" aria-label="Size">
+            <legend>Size</legend>
+            <div class="db-rads">
+              <sc-for list="{{ sizes }}" as="z"><span class="db-rad" role="radio" aria-checked="{{ z.on }}"><span class="db-rd {{ z.cls }}"><span></span></span>{{ z.name }}<span class="d">{{ z.dim }}</span></span></sc-for>
+            </div>
+          </fieldset>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"variant":{"editor":"enum","options":["sheet","side","flip","narrow"],"default":"sheet","tsType":"string"},"focus":{"editor":"enum","options":["none","title","down"],"default":"none","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          // The settings of one placed widget: the List "Production orders, Milling" on Alex Lund's tab My shift.
+          // sheet: option A's Sheet; side: option B's side column; flip: option C, inside the widget; narrow: B at 320.
+          const P = this.props || {};
+          const v = ["sheet", "side", "flip", "narrow"].indexOf(P.variant) >= 0 ? P.variant : "sheet";
+          const focus = String(P.focus || "none");
+          const moved = focus === "down";
+          return {
+            variant: v,
+            formCls: v === "flip" || v === "side" ? "tight" : "",
+            descs: v === "sheet",
+            full: v !== "flip",
+            position: v === "side" || v === "narrow",
+            arrows: v === "side",
+            linear: v === "narrow",
+            posText: moved ? "Column 4, row 5." : "Column 4, row 1.",
+            downFocus: moved ? "is-focus" : "",
+            size: v !== "flip",
+            titleFocus: focus === "title" ? "is-focus" : "",
+            statuses: [["Registered", false], ["Planned", true], ["Active", true], ["Paused", true]].map((s) => ({ t: s[0], cls: s[1] ? "on" : "" })),
+            sizes: [["Medium", "4 by 4", true], ["Large", "6 by 4", false], ["Tall", "6 by 6", false]].map((z) => ({ name: z[0], dim: z[1], on: z[2] ? "true" : "false", cls: z[2] ? "on" : "" }))
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

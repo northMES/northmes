@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 board interaction frames</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./planning-221-board-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./planning-221-board.css" />
+        <style>
+          /* Part IN of planning-221-board.dc.html (issue northMES/northmes#221): the interaction frames IN1 to IN19 and IN21
+             to IN34, light and dark, and their build notes IN20. Every frame mounts Shell.dc.html with the shared grid and
+             inspector parts; this part adds the toolbar and status line (page markup), the Actions menu, the Move dialog
+             and the Break soft lock dialog. UI colors are D1 tokens; the overlay is D2's .sh-ov. Classes start with in-,
+             so they never meet a D1, D2, pb- or ps- class. */
+          body{margin:0}
+          .in-root{display:grid;grid-template-columns:repeat(3,1440px);gap:72px 80px;align-items:start;width:max-content;padding:80px}
+          .in-root.one{display:block;padding:0}
+          .in-f{display:flex;flex-direction:column;align-items:flex-start;width:1440px}
+          .in-f.wide{grid-column:1 / span 3;width:4480px}
+          /* A 1920 screen with its notes beside it (block fields slot) */
+          .in-f.big{grid-column:span 2;width:2960px}
+          .in-f.big .in-row{display:flex;align-items:flex-start;gap:24px}
+          .in-f.big .in-stage{width:1920px;height:1080px}
+          .in-f.big .in-nt{width:1016px;margin-top:0}
+          .in-row{display:contents}
+          .in-f.big .in-row{display:flex}
+          .in-stage{position:relative;flex:none;width:1440px;height:900px}
+          .in-page{position:relative;z-index:0}
+          .in-ovr{z-index:11;border-radius:var(--radius-xl)}
+          .in-pw{position:relative}
+
+          /* Actions menu of the Details heading, under its Ellipsis button */
+          .pop.in-amenu{position:absolute;z-index:9;top:88px;right:10px;min-width:200px}
+
+          /* Dialogs over the inert page (Move, Break soft lock) */
+          .pb-dlg.in-wide{width:640px}
+          .pb-dlg{box-shadow:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);font:400 14px/20px var(--font-sans)}
+          .pb-dlt .pb-j{font-size:18px;line-height:26px}
+          .in-dld{margin:0;color:var(--muted-foreground);font-size:13px;line-height:18px}
+          .in-fs{display:grid;gap:6px;min-width:0;margin:0;padding:0;border:0}
+          .in-mt td,.in-mt th{height:auto;padding:7px 10px;white-space:normal;vertical-align:middle}
+          .in-mt thead th{white-space:nowrap}
+          .in-mt tbody th{font-weight:600;color:var(--foreground)}
+          .in-mt .in-rc{width:44px;padding:4px 6px 4px 10px}
+          .in-mn{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+          .in-mt .in-end{width:64px}
+          .in-rb{display:grid;place-items:center;width:24px;height:24px;border-radius:999px;cursor:pointer}
+          .in-rd{display:grid;place-items:center;width:16px;height:16px;border:1px solid var(--input);border-radius:999px;background:var(--card)}
+          .in-rb.on .in-rd{border-color:var(--primary)}
+          .in-rb.on .in-rd::after{content:"";width:8px;height:8px;border-radius:999px;background:var(--primary)}
+          .in-dfacts{display:grid;grid-template-columns:92px minmax(0,1fr);gap:4px 12px;margin:0;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--muted);font-size:13px;line-height:18px}
+          .in-dfacts dt{color:var(--muted-foreground)}
+          .in-dfacts dd{margin:0;min-width:0}
+          .inp.ta .in-val{color:var(--foreground)}
+          .in-dlg-alert{margin:0}
+
+          /* Notes under each screen: not part of the UI */
+          .in-nt{display:grid;gap:8px;width:1440px;margin-top:12px;padding:12px 16px 14px;border:1px dashed var(--muted-foreground);border-radius:var(--radius-lg);background:var(--card);color:var(--foreground);font:400 13px/18px var(--font-sans);text-wrap:pretty}
+          .in-ntk{justify-self:start;padding:1px 6px;border-radius:4px;background:var(--foreground);color:var(--background);font:600 11px/16px var(--font-mono)}
+          .in-ndl{display:grid;grid-template-columns:112px minmax(0,1fr);gap:6px 16px;margin:0}
+          .in-ndl dt{font-weight:600}
+          .in-ndl dd{margin:0;min-width:0}
+
+          /* Build notes frame IN20 */
+          .in-bn{display:grid;gap:28px;width:4480px;padding:36px 44px 44px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--background);color:var(--foreground);font:400 13px/19px var(--font-sans);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+          .in-bnh{display:grid;gap:6px}
+          .in-bnt{margin:0;font-size:20px;line-height:28px;font-weight:600}
+          .in-bnc{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px 40px;align-items:start}
+          .in-bns{display:grid;gap:8px;align-content:start;min-width:0}
+          .in-bns h3{margin:0;font-size:14px;line-height:20px;font-weight:600}
+          .in-bns ul{display:grid;gap:6px;margin:0;padding:0 0 0 18px}
+          .in-tbl{width:100%;border-collapse:collapse;font-size:13px;line-height:18px}
+          .in-tbl th,.in-tbl td{padding:8px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+          .in-tbl thead th{background:var(--muted);color:var(--muted-foreground);font-size:12px;line-height:16px;font-weight:600}
+          .in-tbl td.in-msg{font-weight:500}
+          .in-code{font:500 12px/18px var(--font-mono);white-space:nowrap}
+        </style>
+      </helmet>
+      <div class="in-root {{ rootCls }}">
+        <sc-for list="{{ frames }}" as="fr" hint-placeholder-count="2">
+          <section class="in-f {{ fr.cls }}" data-screen-label="{{ fr.label }}">
+            <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">{{ fr.id }}</span>{{ fr.title }}<span class="fth">{{ fr.fth }}</span></div></sc-if>
+            <sc-if value="{{ fr.screen }}">
+              <div class="in-row">
+              <div class="in-stage {{ fr.stageCls }}">
+                <div class="in-page" inert="{{ fr.inert }}">
+                  <dc-import name="Shell" width="{{ fr.sw }}" theme="{{ fr.theme }}" hint-size="{{ fr.shint }}">
+                    <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+                    <div class="pb-page">
+                      <div class="pb-tb" role="toolbar" aria-label="Board">
+                        <div class="pb-grp">
+                          <button class="btn v-outline" type="button" aria-label="Show earlier range"><span class="ic" data-icon="ChevronLeft"></span>Earlier</button>
+                          <button class="btn v-outline" type="button">Now</button>
+                          <button class="btn v-outline" type="button" aria-label="Show later range">Later<span class="ic" data-icon="ChevronRight"></span></button>
+                          <button class="btn v-ghost" type="button" aria-haspopup="dialog"><span class="ic" data-icon="CalendarDays"></span>Go to date</button>
+                        </div>
+                        <span class="pb-range"><sc-for list="{{ fr.range }}" as="s"><span class="{{ s.c }}">{{ s.t }}</span></sc-for></span>
+                        <span class="pb-sp"></span>
+                        <span class="pb-lbl" id="{{ fr.zid }}">Zoom</span>
+                        <div class="pb-tg" role="group" aria-labelledby="{{ fr.zid }}">
+                          <sc-for list="{{ fr.zooms }}" as="z"><button class="pb-tgi {{ z.cls }}" type="button" aria-pressed="{{ z.pressed }}">{{ z.t }}</button></sc-for>
+                        </div>
+                        <button class="btn v-outline" type="button"><span class="ic" data-icon="{{ fr.liveIcon }}"></span>{{ fr.liveLabel }}</button>
+                      </div>
+                      <div class="pb-stl">
+                        <sc-for list="{{ fr.st }}" as="s">
+                          <span class="pb-st {{ s.tone }}"><span class="ic" data-icon="{{ s.icon }}"></span><span><sc-for list="{{ s.segs }}" as="g"><span class="{{ g.c }}">{{ g.t }}</span></sc-for></span></span>
+                          <sc-if value="{{ s.btn }}"><button class="btn v-outline {{ s.btnCls }}" type="button">{{ s.btn }}</button></sc-if>
+                        </sc-for>
+                      </div>
+                      <div class="pb-body2">
+                        <div class="pb-gw"><dc-import name="planning-221-board-grid" idp="{{ fr.gid }}" zoom="{{ fr.g.zoom }}" r0="{{ fr.g.r0 }}" r1="{{ fr.g.r1 }}" selected="{{ fr.g.sel }}" focus="{{ fr.g.focus }}" hover="{{ fr.g.hover }}" move="{{ fr.g.move }}" pop="{{ fr.g.pop }}" skip="{{ fr.g.skip }}" fields="{{ fr.g.fields }}" reconnect="{{ fr.g.reconnect }}" hint-size="100%,660px"></dc-import></div>
+                        <div class="pb-pw in-pw">
+                          <dc-import name="planning-221-board-inspector" idp="{{ fr.iid }}" view="{{ fr.i.view }}" chrome="{{ fr.i.chrome }}" details="{{ fr.i.details }}" draft="{{ fr.i.draft }}" slot="{{ fr.i.slot }}" paused="{{ fr.i.paused }}" expiry="{{ fr.i.expiry }}" job="{{ fr.i.job }}" snap="{{ fr.i.snap }}" focus="{{ fr.i.focus }}" fields="{{ fr.i.fields }}" scroll="{{ fr.i.scroll }}" hint-size="320px,660px"></dc-import>
+                          <sc-if value="{{ fr.amenu }}">
+                            <div class="pop pb-menu in-amenu" role="menu" aria-label="Actions for 1003.20">
+                              <div class="mi kfocus" role="menuitem" tabIndex="-1"><span class="ic" data-icon="Move"></span><span>Move</span><span class="end kbd">M</span></div>
+                              <div class="mi" role="menuitem" tabIndex="-1"><span class="ic" data-icon="Lock"></span><span>Lock</span></div>
+                              <div class="mi" role="menuitem" tabIndex="-1"><span class="ic" data-icon="ExternalLink"></span><span>Open order</span></div>
+                            </div>
+                          </sc-if>
+                        </div>
+                      </div>
+                    </div>
+                  </dc-import>
+                </div>
+                <sc-if value="{{ fr.dlg }}"><div class="sh-ov in-ovr"></div></sc-if>
+                <sc-if value="{{ fr.mv }}">
+                  <div class="pb-dlg in-wide" role="dialog" aria-modal="true" aria-labelledby="{{ fr.ids.t }}" aria-describedby="{{ fr.ids.d }}">
+                    <div class="pb-dlh">
+                      <h2 class="pb-dlt" id="{{ fr.ids.t }}">Move <span class="pb-j">1003.20</span> Shaft 40</h2>
+                      <p class="in-dld" id="{{ fr.ids.d }}">Choose a machine and a start. The move goes into your draft, and Save writes it to the plan.</p>
+                    </div>
+                    <div class="pb-dlb">
+                      <sc-if value="{{ fr.err }}">
+                        <div class="pb-esum is-focus" id="{{ fr.ids.es }}" tabindex="-1"><b><span class="ic" data-icon="CircleAlert"></span>1 field needs attention</b><a href="#">Start, plant time (CET)</a></div>
+                      </sc-if>
+                      <div class="in-fs">
+                        <span class="lbl" id="{{ fr.ids.ml }}">Machine</span>
+                        <div role="radiogroup" aria-labelledby="{{ fr.ids.ml }}" aria-describedby="{{ fr.ids.md }}">
+                          <table class="pb-t in-mt">
+                            <thead><tr><th class="in-rc" scope="col"><span class="pb-vh">Choose</span></th><th scope="col">Machine</th><th class="in-end" scope="col">Ends</th><th scope="col">Overlaps at this start</th></tr></thead>
+                            <tbody>
+                              <tr>
+                                <td class="in-rc"><span class="in-rb" role="radio" aria-checked="false" tabIndex="-1" aria-labelledby="{{ fr.ids.m0n }}" aria-describedby="{{ fr.ids.m0d }}"><span class="in-rd"></span></span></td>
+                                <th scope="row" id="{{ fr.ids.m0n }}"><span class="in-mn"><span>Lathe 1</span></span></th>
+                                <td class="num in-end" id="{{ fr.ids.m0e }}"><span class="pb-vh">Ends </span>14:45</td>
+                                <td id="{{ fr.ids.m0o }}"><span class="pb-vh">Overlaps </span><span class="num">1012.30</span> Hub <span class="num">12</span>, late by <span class="num">2</span> days</td>
+                              </tr>
+                              <tr class="on">
+                                <td class="in-rc"><span class="in-rb on {{ fr.r1f }}" role="radio" aria-checked="true" tabIndex="0" aria-labelledby="{{ fr.ids.m1n }}" aria-describedby="{{ fr.ids.m1d }}"><span class="in-rd"></span></span></td>
+                                <th scope="row" id="{{ fr.ids.m1n }}"><span class="in-mn"><span>Lathe 2</span><span class="pb-vh">, </span><span class="badge b-mut">Current</span></span></th>
+                                <td class="num in-end" id="{{ fr.ids.m1e }}"><span class="pb-vh">Ends </span>14:45</td>
+                                <td id="{{ fr.ids.m1o }}"><span class="pb-vh">Overlaps </span><span class="num">1021.10</span> Flange DN50, until <span class="num">11:45</span></td>
+                              </tr>
+                              <tr>
+                                <td class="in-rc"><span class="in-rb" role="radio" aria-checked="false" tabIndex="-1" aria-labelledby="{{ fr.ids.m2n }}" aria-describedby="{{ fr.ids.m2d }}"><span class="in-rd"></span></span></td>
+                                <th scope="row" id="{{ fr.ids.m2n }}"><span class="in-mn"><span>Lathe 3</span></span></th>
+                                <td class="num in-end" id="{{ fr.ids.m2e }}"><span class="pb-vh">Ends </span>14:45</td>
+                                <td id="{{ fr.ids.m2o }}"><span class="pb-vh">Overlaps </span><span class="num">1007.10</span> Flange DN50, being edited by Erik Sand</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                        <span class="desc" id="{{ fr.ids.md }}">3 allowed machines for operation 20, Turning.</span>
+                      </div>
+                      <div class="fld">
+                        <span class="lbl" id="{{ fr.ids.sl }}">Start, plant time (CET)</span>
+                        <span class="inp num {{ fr.startCls }}" role="textbox" aria-labelledby="{{ fr.ids.sl }}" aria-invalid="{{ fr.startInvalid }}" aria-describedby="{{ fr.startDesc }}">{{ fr.start }}</span>
+                        <sc-if value="{{ fr.err }}"><span class="err" id="{{ fr.ids.se }}"><span class="ic" data-icon="CircleAlert"></span><span>Enter a date and time like <span class="num">2026-11-03 11:30</span>.</span></span></sc-if>
+                        <span class="desc" id="{{ fr.ids.sd }}">Starts in the frozen window, which ends at <span class="num">13:40</span>, so Save asks for a reason. Steps of <span class="num">15</span> min, the Hours snap.</span>
+                      </div>
+                      <div class="pb-steps"><button class="btn v-outline" type="button" aria-label="Start 15 min earlier"><span class="ic" data-icon="ChevronLeft"></span>15 min earlier</button><button class="btn v-outline" type="button" aria-label="Start 15 min later">15 min later<span class="ic" data-icon="ChevronRight"></span></button></div>
+                    </div>
+                    <div class="pb-dlf"><button class="btn v-outline" type="button">Cancel</button><button class="btn v-default" type="button">Move</button></div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ fr.bk }}">
+                  <div class="pb-dlg" role="alertdialog" aria-modal="true" aria-labelledby="{{ fr.ids.t }}" aria-describedby="{{ fr.ids.d }}">
+                    <div class="pb-dlh">
+                      <h2 class="pb-dlt" id="{{ fr.ids.t }}">Break Erik Sand's soft lock on order <span class="num">1007</span>?</h2>
+                    </div>
+                    <div class="pb-dlb">
+                      <sc-if value="{{ fr.err }}">
+                        <div class="pb-esum is-focus" id="{{ fr.ids.es }}" tabindex="-1"><b><span class="ic" data-icon="CircleAlert"></span>1 field needs attention</b><a href="#">Reason</a></div>
+                      </sc-if>
+                      <sc-if value="{{ fr.srv }}">
+                        <div class="pb-alert err in-dlg-alert"><span class="ic" data-icon="CircleAlert"></span><span class="pb-at">The soft lock was not broken. Try again. Error id <span class="num">2b8e40d1</span>.</span></div>
+                      </sc-if>
+                      <p class="pb-p" id="{{ fr.ids.d }}">Erik Sand has been editing order <span class="num">1007</span> since <span class="num">09:12</span>. If you break the soft lock, it moves to you. Erik Sand's changes to order <span class="num">1007</span> stay in his draft as Soft lock lost, and he is told at once.</p>
+                      <dl class="in-dfacts">
+                        <dt>Order</dt><dd><span class="num">1007</span>, stock order, deadline Fri <span class="num">6</span> Nov</dd>
+                        <dt>Job order</dt><dd><span class="num">1007.10</span> Flange DN50 on Lathe <span class="num">3</span>, Tue <span class="num">3</span> Nov <span class="num">10:00</span> to <span class="num">13:30</span></dd>
+                      </dl>
+                      <div class="fld">
+                        <span class="lbl" id="{{ fr.ids.rl }}">Reason</span>
+                        <span class="inp ta {{ fr.reasonCls }}" role="textbox" aria-multiline="true" aria-required="true" aria-labelledby="{{ fr.ids.rl }}" aria-invalid="{{ fr.reasonInvalid }}" aria-describedby="{{ fr.reasonDesc }}"><sc-if value="{{ fr.hasVal }}"><span class="in-val">{{ fr.reasonVal }}</span></sc-if><sc-if value="{{ fr.noVal }}"><span class="ph">For example: Erik Sand is away and order 1007 must move today</span></sc-if></span>
+                        <sc-if value="{{ fr.err }}"><span class="err" id="{{ fr.ids.re }}"><span class="ic" data-icon="CircleAlert"></span><span>Enter a reason of <span class="num">3</span> to <span class="num">500</span> characters.</span></span></sc-if>
+                        <span class="desc" id="{{ fr.ids.rd }}">Erik Sand sees this reason. <span class="num">3</span> to <span class="num">500</span> characters.</span>
+                      </div>
+                    </div>
+                    <div class="pb-dlf"><button class="btn v-outline" type="button">Cancel</button><button class="btn v-destructive {{ fr.bkCls }}" type="button">Break soft lock</button></div>
+                  </div>
+                </sc-if>
+              </div>
+              <div class="in-nt">
+                <span class="in-ntk">Not part of the UI</span>
+                <dl class="in-ndl"><sc-for list="{{ fr.notes }}" as="n"><dt>{{ n.k }}</dt><dd>{{ n.v }}</dd></sc-for></dl>
+              </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ fr.bn }}">
+              <div class="in-bn">
+                <div class="in-bnh">
+                  <h2 class="in-bnt">Interaction build notes, not part of the UI</h2>
+                  <p class="in-dld">For IN1 to IN19 and IN21 to IN34. Grid, Not placed row and inspector notes are in TA19 and DR25; this list adds what the interaction frames decide. Items marked proposed need Krister Johansson's yes before the page is approved.</p>
+                </div>
+                <div class="in-bnc">
+                  <sc-for list="{{ bn.cols }}" as="c">
+                    <div class="in-bns"><h3>{{ c.h }}</h3><ul><sc-for list="{{ c.items }}" as="x"><li><sc-for list="{{ x }}" as="g"><span class="{{ g.c }}">{{ g.t }}</span></sc-for></li></sc-for></ul></div>
+                  </sc-for>
+                </div>
+                <div class="in-bns">
+                  <h3>Messages through announce()</h3>
+                  <table class="in-tbl">
+                    <thead><tr><th scope="col">Message, final English copy</th><th scope="col">Politeness</th><th scope="col">When</th><th scope="col">Frames</th><th scope="col">Source</th></tr></thead>
+                    <tbody>
+                      <tr><td class="in-msg">{machine}, {day} {start} to {end}. Not saved.</td><td>polite</td><td>Each move mode step, debounced to about 300 ms; adds "Starts in the frozen window." when it does (proposed)</td><td>IN6</td><td>plan 06 Live regions</td></tr>
+                      <tr><td class="in-msg">{job} moved to {machine}, {day} {start} to {end}. Not saved.</td><td>polite</td><td>After a drop, Enter in move mode, Apply or Move, with the server's times</td><td>IN4, IN6, IN8</td><td>plan 06; wording proposed</td></tr>
+                      <tr><td class="in-msg">Move cancelled.</td><td>polite</td><td>Escape in move mode or during a drag</td><td>IN4, IN6</td><td>proposed</td></tr>
+                      <tr><td class="in-msg">Cannot move {job}: soft lock held by {name} since {time}.</td><td>assertive</td><td>A LOCKED result; the block returns</td><td>IN4</td><td>plan 06, with soft lock (19.19)</td></tr>
+                      <tr><td class="in-msg">Cannot move {job}: not allowed on {machine}. This operation runs on {group} machines.</td><td>assertive</td><td>A drop on a machine outside the operation's equipment</td><td>IN5</td><td>proposed</td></tr>
+                      <tr><td class="in-msg">Your soft lock on order {order} ends in 20 s.</td><td>assertive</td><td>Once, when the warning appears</td><td>IN10, IN12</td><td>copy 19.19; politeness proposed</td></tr>
+                      <tr><td class="in-msg">Soft lock on order {order} extended.</td><td>polite</td><td>After Extend</td><td>IN11, IN12</td><td>proposed</td></tr>
+                      <tr><td class="in-msg">Your soft lock on order {order} ended. Your moves stay in your draft.</td><td>polite</td><td>When the soft lock ends without Extend; the warning shows the same text</td><td>IN10</td><td>proposed</td></tr>
+                      <tr><td class="in-msg">You hold the soft lock on order {order} now. {name} was told.</td><td>polite</td><td>After Break soft lock succeeds</td><td>IN14</td><td>proposed</td></tr>
+                      <tr><td class="in-msg">{name} broke your soft lock on order {order} at {time}. Reason: "{reason}"</td><td>assertive</td><td>To the previous holder, also while paused; the status line keeps it</td><td>IN14, IN16</td><td>plan 06 (assertive); wording proposed</td></tr>
+                      <tr><td class="in-msg">Large orders could not be shown.</td><td>polite</td><td>Once, when the contribution fails and focus was elsewhere</td><td>IN19</td><td>D2 ST27</td></tr>
+                      <tr><td class="in-msg">The move was not added to your draft. Try again. Error id {id}.</td><td>assertive</td><td>Apply or Move fails on the server; every value stays and focus stays on the button</td><td>IN33</td><td>19.13; politeness proposed</td></tr>
+                      <tr><td class="in-msg">The soft lock was not broken. Try again. Error id {id}.</td><td>assertive</td><td>Break soft lock fails on the server; the reason stays and focus stays on Break soft lock</td><td>IN34</td><td>proposed</td></tr>
+                      <tr><td class="in-msg">Soft lock on order {order} changed. {name} holds it now.</td><td>assertive</td><td>Break soft lock meets a stale expectedHolderId; the dialog closes and Details shows the new holder</td><td>IN34 notes</td><td>proposed</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </sc-if>
+          </section>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"enum","options":["all","IN1","IN2","IN3","IN4","IN5","IN6","IN7","IN8","IN9","IN10","IN11","IN12","IN13","IN14","IN15","IN16","IN17","IN18","IN19","IN20","IN21","IN22","IN23","IN24","IN25","IN26","IN27","IN28","IN29","IN30","IN31","IN32","IN33","IN34"],"default":"all","tsType":"string"},"labels":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the Shell's lucide filler, same flag, so one filler runs per document.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+        }
+        renderVals() {
+          // frame="IN8" draws only that frame, so the spec page can place each frame on its own; labels="off" drops the chips.
+          const P = this.props || {};
+          const want = String(P.frame === undefined || P.frame === null ? "all" : P.frame).trim().toUpperCase();
+          const labels = String(P.labels === undefined || P.labels === null ? "on" : P.labels).trim() !== "off";
+          const NB = " ";
+          // Numbers, times and job numbers in Plex Mono.
+          const sg = (s) => String(s).split(/(\d[\d:. -]*\d|\d)/).filter((x) => x !== "").map((x) => ({ t: x, c: /^\d/.test(x) ? "num" : "" }));
+          const zoomNames = [["hours", "Hours"], ["day", "Day"], ["week", "Week"], ["weeks", "4 weeks"]];
+          const autoplan = { tone: "ok", icon: "CircleCheck", segs: sg("Autoplan applied at 06:12: 37 moved, 2 skipped because being edited, 3 late, 1 conflict, 0 unplaced.") };
+          const G = (o) => Object.assign({ zoom: "hours", r0: "6", r1: "18", sel: "1003.20", focus: "none", hover: "none", move: "none", pop: "none", skip: "0", fields: "off", reconnect: "off" }, o || {});
+          const I = (o) => Object.assign({ view: "details", chrome: "column", details: "selected", draft: "review", slot: "populated", paused: "off", expiry: "off", job: "1003.20", snap: "hours", focus: "none", fields: "off", scroll: "top" }, o || {});
+          const N = (rows) => rows.map((r) => ({ k: r[0], v: r[1] }));
+
+          const defs = [
+            { id: "IN1", title: "Hover card", fth: "Light, 1440 by 900. The pointer rests on 1008.10, which overlaps 1009.10, and the card lists every hover field",
+              g: G({ hover: "1008.10" }), i: I(),
+              notes: N([
+                ["Shows", "The pointer rests on 1008.10 Housing P on Press 3, which overlaps 1009.10. After the open delay the hover card opens below the block, else above it as here, else beside it, and stays inside the grid (19.23). It lists the state badges and every hover field in the order of 19.16; Details lists the same fields."],
+                ["Timing", "Open delay 700 ms and close delay 300 ms, the shadcn Hover Card defaults (proposed). The card stays open while the pointer is over the block or over the card."],
+                ["Keys", "Escape closes the card and focus does not move. The card holds no links or buttons, so nothing in it takes focus."],
+                ["Screen readers", "The card is not announced. The block's accessible name already carries the times and every state, and Details carries every hover field."],
+                ["WCAG", "1.4.13, 1.3.1, 1.4.1"],
+              ]) },
+            { id: "IN2", title: "Hover card on focus", fth: "Light, 1440 by 900. Keyboard focus on 1001.20, started: the card opens at once",
+              g: G({ hover: "1001.20", focus: "1001.20" }), i: I(),
+              notes: N([
+                ["Shows", "Arrow keys moved focus to 1001.20 Housing P on CNC1, started with 40 of 120 pcs. The card opens at once on keyboard focus, below the block, and adds Good and scrap because the job order has started."],
+                ["Rule", "Only keyboard focus (focus-visible) opens the card at once. A click focuses the block and opens Details without the card and without the focus ring (proposed, 3.2.1)."],
+                ["Keys", "Escape closes the card and focus stays on 1001.20; the next Escape clears the selection (17.14). Enter opens Details. Left, Right, Up and Down move focus and the card follows it."],
+                ["Announced", "The focused block's name: \"1001.20 Housing P, 120 pcs, CNC1, Tue 3 Nov 06:00 to 10:45, started, 40 of 120 pcs\". The card itself is not announced."],
+                ["WCAG", "1.4.13, 2.4.7, 2.4.11, 3.2.1"],
+              ]) },
+            { id: "IN3", title: "Links with lead time", fth: "Light, 1440 by 900. Order 1014 selected: links from both halves on CNC1 and CNC2 to 1014.20, lead time 30 min",
+              g: G({ sel: "1014.20" }), i: I({ job: "1014.20" }),
+              notes: N([
+                ["Shows", "A click on 1014.20 Lagerhus 62 on Press 4 selects order 1014. Its first operation is split 3" + NB + "600 plus 3" + NB + "600 pcs on CNC1 and CNC2, so a link leaves each row and both meet at 1014.20, with the lead time pill \"30 min\" before it."],
+                ["Rules", "Links show for the selected order only (4.15). Lines and arrow heads are borders, so forced colors keeps them. The 3 px bar marks every job order of the order (20.3)."],
+                ["Screen readers", "The link overlay is aria-hidden. Details lists the same links as text under Linked job orders: Before, both halves with machine, end and lead time; After, None."],
+                ["Focus", "A click selects the block, opens Details and moves focus to the block without the focus ring and without the hover card (proposed). Selection follows a click or Enter, never focus alone (3.2.1)."],
+                ["WCAG", "1.3.1, 1.4.1, 1.4.11"],
+              ]) },
+            { id: "IN4", title: "Pointer move into my draft", fth: "Light, 1440 by 900. 1013.10 dragged to 10:30 on Mill 2: origin slot, snap line, tooltip and the frozen window",
+              g: G({ move: "pointer" }), i: I(),
+              notes: N([
+                ["Shows", "1013.10 Spacer 8 is dragged from 11:30 to 10:30 on Mill 2. The origin keeps a dashed slot, the preview follows the pointer, the snap line marks the snapped start, and the tooltip names the machine and times. The start falls before 13:40, so the frozen window line shows and the tooltip adds \"Starts in the frozen window. Save asks for a reason.\""],
+                ["Snapping", "First to the preset step (15 min at Hours), then forward to the next working instant on the target machine (2.8). The end comes from the scheduling package over the target machine's calendar (5.1)."],
+                ["Drop", "Pointer up writes one draft change and takes the soft lock on order 1013. The block then shows Pencil and the double border, as 1003.20 does, and the My draft count goes to 7. Polite, with the server's times: \"1013.10 moved to Mill 2, Tue 3 Nov {start} to {end}. Not saved.\""],
+                ["Cancel, refusal", "Escape before release cancels and the block returns (2.5.2). A LOCKED result returns the block; assertive: \"Cannot move 1013.10: soft lock held by {name} since {time}.\" Moves are off while the socket is disconnected (5.5). A drag does not change the selection (proposed)."],
+                ["Motion", "The preview moves in requestAnimationFrame and the board scrolls near its edges; under prefers-reduced-motion nothing animates (2.13)."],
+                ["WCAG", "2.5.2, 2.5.7 (IN6 to IN9 are the paths without dragging), 4.1.3"],
+              ]) },
+            { id: "IN5", title: "Pointer move refused", fth: "Light, 1440 by 900. The same drag over Lathe 3, which this operation may not use",
+              g: G({ move: "refused" }), i: I(),
+              notes: N([
+                ["Shows", "The same drag over Lathe 3: the preview takes a dashed --destructive border and Ban, and the tooltip says \"Not allowed on Lathe 3. This operation runs on Milling machines.\""],
+                ["Rule", "Only machines of the operation's equipment accept the drop; judgeMove decides (5.1, 5.3). Refusals cannot be confirmed."],
+                ["Drop", "Releasing here returns the block to its origin. Assertive: \"Cannot move 1013.10: not allowed on Lathe 3. This operation runs on Milling machines.\" (proposed)"],
+                ["WCAG", "1.4.1, 3.3.1, 4.1.3"],
+              ]) },
+            { id: "IN6", title: "Keyboard move mode", fth: "Light, 1440 by 900. M on 1003.20, then one Right step: the preview at 11:45, focus on the moving block",
+              range: "Tue 3 Nov, 08:00 to 20:00", g: G({ move: "keyboard", r0: "8", r1: "20" }), i: I(),
+              notes: N([
+                ["Shows", "M on the focused 1003.20 started move mode, and one Right step moved the preview to 11:45 to 15:00 on Lathe 2. Focus stays on the moving block, the origin slot shows, and the hint names the keys. The view is scrolled to 08:00 to 20:00. At 11:45 the job order no longer overlaps 1021.10, so the conflict stripe is gone from the preview."],
+                ["Keys", "Left and Right step one snap slot (15 min at Hours). Up and Down step through the allowed machines Lathe 1, Lathe 2 and Lathe 3 and skip collapsed groups. Enter places, Escape cancels. Letter keys work only while a board cell has focus (2.1.4). Escape closes the hover card first when it is open (13.4)."],
+                ["Announced", "Polite, debounced to about 300 ms: \"Lathe 2, Tue 3 Nov 11:45 to 15:00. Starts in the frozen window. Not saved.\" (the frozen window sentence is proposed). After Enter, with the server's times: \"1003.20 moved to Lathe 2, Tue 3 Nov 11:45 to 15:00. Not saved.\" After Escape: \"Move cancelled.\" (proposed)."],
+                ["Focus", "After the commit focus returns to the block by id; the move preview's row stays mounted (3.4)."],
+                ["WCAG", "2.1.1, 2.1.4, 2.5.7, 4.1.3"],
+              ]) },
+            { id: "IN7", title: "Actions menu in Details", fth: "Light, 1440 by 900. Actions for 1003.20 in Details opens the block menu, focus on Move",
+              g: G(), i: I(), amenu: true,
+              notes: N([
+                ["Shows", "Actions for 1003.20 (Ellipsis) in the Details heading opened the block menu with focus on Move: Move with its M key hint, Lock, Open order. Break soft lock shows only on another planner's order (19.17)."],
+                ["Keys", "Enter or Space on Actions opens the menu, Up and Down move, Enter on Move opens the Move dialog, Escape closes the menu and focus returns to Actions. On the grid the same menu opens by right click, the context-menu key and Shift+F10 (22.8)."],
+                ["Roles", "Dropdown Menu: role menu named \"Actions for 1003.20\", menuitems; the trigger has aria-haspopup=\"menu\" and aria-expanded."],
+                ["WCAG", "2.1.1, 2.5.7, 4.1.2"],
+              ]) },
+            { id: "IN8", title: "Move dialog", fth: "Light, 1440 by 900. Move opens the Move dialog with every allowed machine; focus on the current machine",
+              g: G(), i: I(), dlg: "move",
+              notes: N([
+                ["Shows", "The Move dialog lists every allowed machine for operation 20, Turning, with where the job order would end and what it would overlap at the chosen start. Lathe 2, the current machine, is checked and has focus. The page behind is inert."],
+                ["Keys", "Arrow keys choose a machine (radio group, one Tab stop). Tab reaches Start, the two steps, Cancel and Move. Escape or Cancel closes without a change."],
+                ["After Move", "judgeMove runs, then the same draft move as a drag. The dialog closes and focus returns to its trigger: Actions for 1003.20 here, or the block when the block menu opened it (13.5). Polite, with the server's times: \"1003.20 moved to Lathe 3, Tue 3 Nov 11:30 to 14:45. Not saved.\""],
+                ["Shared", "The job order table view opens the same dialog from a row's Move (9.4), and the SP3 fallback relies on it (2.14)."],
+                ["WCAG", "2.4.3, 2.5.7, 3.3.2, 4.1.2"],
+              ]) },
+            { id: "IN9", title: "Move dialog field error", fth: "Light, 1440 by 900. Move with an invalid start: the error summary takes focus",
+              g: G(), i: I(), dlg: "move", err: true,
+              notes: N([
+                ["Shows", "Move with Start \"2026-11-03 1130\": the error summary takes focus and links to Start; the field shows its error, aria-invalid and the value as typed. The machine choice stays."],
+                ["Rule", "Ends and Overlaps keep the last valid start until Start is valid again (proposed)."],
+                ["Announced", "The focused summary is read; there is no live message."],
+                ["WCAG", "3.3.1, 3.3.3, 3.3.7, 2.4.3"],
+              ]) },
+            { id: "IN10", title: "Soft lock warning", fth: "Light, 1440 by 900. 20 s before the soft lock on order 1003 ends; Extend reached with one Tab",
+              g: G(), i: I({ expiry: "on", focus: "extend" }),
+              notes: N([
+                ["Shows", "20 s before Alex Lund's soft lock on order 1003 ends, the warning shows above the panel tabs, so it shows on every tab (6.10). Focus does not move when it appears; from the grid one Tab reaches Extend, shown focused here."],
+                ["Announced", "Assertive, once, when it appears: \"Your soft lock on order 1003 ends in 20 s.\" (assertive is proposed, 21.13). The seconds count down on screen without new messages (proposed)."],
+                ["Extend", "One action, any number of times. It extends the soft lock only and leaves the draft as it is."],
+                ["Expiry", "Without Extend the soft lock ends and the moves stay in My draft. The warning then reads \"Your soft lock on order 1003 ended. Your moves stay in your draft.\" (proposed). Save takes the soft lock again when nobody else holds it."],
+                ["WCAG", "2.2.1, 4.1.3"],
+              ]) },
+            { id: "IN11", title: "Soft lock extended", fth: "Light, 1440 by 900. After Extend the warning closes and focus moves to the Details tab",
+              g: G(), i: I({ focus: "tab" }),
+              notes: N([
+                ["Shows", "After Extend the warning closes. Extend is gone, so focus moves to the next stop, the selected Details tab (proposed)."],
+                ["Announced", "Polite: \"Soft lock on order 1003 extended.\" (proposed)"],
+                ["WCAG", "2.2.1, 2.4.3, 4.1.3"],
+              ]) },
+            { id: "IN12", title: "Soft lock warning, panel collapsed", fth: "Light, 1440 by 900. Panel collapsed to its strip: the warning and Extend sit in the status line",
+              g: G(), i: I({ chrome: "collapsed" }), stWarn: true,
+              notes: N([
+                ["Shows", "With the panel collapsed to its 48 px strip (19.6) the warning and Extend sit in the status line under the toolbar. Extend has focus."],
+                ["After Extend", "The status line item goes and focus moves to the next stop, the board grid's Tab stop (proposed). Polite: \"Soft lock on order 1003 extended.\""],
+                ["Announced", "The same assertive message, once, when the warning appears."],
+                ["WCAG", "2.2.1, 2.4.3"],
+              ]) },
+            { id: "IN13", title: "Another planner's soft lock", fth: "Light, 1440 by 900. Erik Sand holds the soft lock on order 1007, shown live; Break soft lock focused",
+              g: G({ sel: "1007.10" }), i: I({ details: "held", focus: "breaklock" }),
+              notes: N([
+                ["Shows", "Erik Sand took the soft lock on order 1007 at 09:12. planning.production_order.soft_lock_changed updates the board live: 1007.10 shows ES and the dashed border. With 1007.10 selected, Details shows \"Being edited by Erik Sand since 09:12\", the note, read-only move fields and Break soft lock, focused here."],
+                ["Announced", "Nothing: another planner's soft lock does not concern Alex Lund (8.1). The block's name, the hover card and Details carry \"being edited by Erik Sand since 09:12\"."],
+                ["Fields", "Machine, Start and the steps are aria-disabled and stay focusable, so their values stay readable."],
+                ["Permission", "Break soft lock needs breakLock. Planners get it only if the product owner agrees (PO-41); without it the button is not drawn and the note stays."],
+                ["WCAG", "1.4.1, 4.1.2"],
+              ]) },
+            { id: "IN14", title: "Break soft lock, review step", fth: "Light, 1440 by 900. Break soft lock opens the review step with a required reason",
+              g: G({ sel: "1007.10" }), i: I({ details: "held" }), dlg: "break",
+              notes: N([
+                ["Shows", "Break soft lock opens the review step (D.7, 3.3.4): what the break does, the order and its job order, and a required reason of 3 to 500 characters, trimmed. Focus starts in Reason (6.9). The page behind is inert."],
+                ["Keys", "Tab: Reason, Cancel, Break soft lock. Escape or Cancel closes and focus returns to Break soft lock in Details."],
+                ["After confirm", "planning.breakSoftLock runs with the reason and expectedHolderId; the soft lock moves to Alex Lund. 1007.10 loses ES and the dashed border, Details enables the move fields, and focus goes to Machine because the trigger is gone (proposed). Polite: \"You hold the soft lock on order 1007 now. Erik Sand was told.\" (proposed)"],
+                ["Erik Sand hears", "Assertive, also while paused: \"Alex Lund broke your soft lock on order 1007 at {time}. Reason: \"{reason}\"\" (IN16 shows that side). A stale expectedHolderId returns a conflict, shown as a server error in the dialog with the reason kept."],
+                ["WCAG", "3.3.4, 3.3.2, 2.4.3, 4.1.2"],
+              ]) },
+            { id: "IN15", title: "Break soft lock, reason error", fth: "Light, 1440 by 900. Break soft lock with a reason that is too short",
+              g: G({ sel: "1007.10" }), i: I({ details: "held" }), dlg: "break", err: true,
+              notes: N([
+                ["Shows", "Break soft lock with the reason \"ok\": the error summary takes focus and links to Reason; the field shows \"Enter a reason of 3 to 500 characters.\", aria-invalid and the text as typed. The length counts the trimmed reason."],
+                ["Announced", "The focused summary is read; there is no live message."],
+                ["WCAG", "3.3.1, 3.3.3, 3.3.4"],
+              ]) },
+            { id: "IN16", title: "My soft lock broken", fth: "Light, 1440 by 900. Lena Ek broke the soft lock on order 1016: what Alex Lund sees and hears",
+              range: "Wed 4 Nov, 06:00 to 18:00", g: G({ r0: "30", r1: "42", sel: "1016.10", reconnect: "on" }), i: I({ view: "draft" }), stBroken: true,
+              notes: N([
+                ["Shows", "Lena Ek broke Alex Lund's soft lock on order 1016 at 09:30. Later moved the view to Wed 4 Nov, where 1016.10 on CNC1 shows LockOpen and is named \"soft lock lost, Lena Ek holds it since 09:30\". The status line keeps the message with Lena Ek's reason, and My draft lists the row as Soft lock lost with Rebase and Discard. 1015.10 shows RefreshCw, changed by Erik Sand at 09:05 (19.11)."],
+                ["Announced", "Assertive, at 09:30, also while live updates are paused (8.2): \"Lena Ek broke your soft lock on order 1016 at 09:30. Reason: \"Order 1016 moves to Thu 5 Nov to free CNC1 for a rush order.\"\" The status line is its visible copy (13.7, proposed)."],
+                ["Focus", "Does not move."],
+                ["WCAG", "4.1.3, 1.4.1, 2.2.2"],
+              ]) },
+            { id: "IN17", title: "Large orders tab", fth: "Light, 1440 by 900. The side slot as the Large orders tab, with its contribution",
+              g: G(), i: I({ view: "slot", focus: "tab" }),
+              notes: N([
+                ["Shows", "The board side slot planning/board/side/v1 is the panel's Large orders tab (D.3). The tab label is the contribution's label. The example contribution example-widget.large-orders renders inside a WidgetFrame region named by its heading, at the column's 288 px content width. The tab has focus."],
+                ["Contract", "Slot kind region, props { plantId, paused }. Only the selected tab mounts its content, so the contribution's query runs when its tab opens (proposed). A contribution renders inside its own frame, never a widget per block or row (10.4). At 320 the same tab sits in the sheet."],
+                ["Keys", "Left and Right move between the tabs; Tab moves into the widget."],
+                ["WCAG", "1.3.1, 2.4.6, 4.1.2"],
+              ]) },
+            { id: "IN18", title: "Large orders while paused", fth: "Light, 1440 by 900. Live updates paused: the contribution receives paused",
+              live: "resume", g: G(), i: I({ view: "slot", paused: "on" }), stPaused: true,
+              notes: N([
+                ["Shows", "Live updates paused at 09:31: the toolbar offers Resume live updates (Play), the status line reads \"Live updates paused. 12 changes waiting.\", and the contribution receives paused and adds \"Paused with the board at 09:31.\""],
+                ["Rule", "While paused the board renders a frozen block model; my own draft operations and autoplan results still apply by id; a broken soft lock or a draft conflict still announces (8.2). The waiting count updates without a message."],
+                ["WCAG", "2.2.2, 4.1.3"],
+              ]) },
+            { id: "IN19", title: "Large orders fallback", fth: "Light, 1440 by 900. The contribution failed: the WidgetFrame fallback inside the tab",
+              g: G(), i: I({ view: "slot", slot: "failed", focus: "tab" }),
+              notes: N([
+                ["Shows", "The contribution threw. The fallback stays inside its WidgetFrame in the tab panel: \"Large orders could not be shown.\", \"The rest of the board works as usual.\" and Try again. The board and the other tabs work as usual."],
+                ["Focus", "Focus was on the tab, so it stays. When focus was inside the widget it moves to the fallback, a group named by its first line with tabindex -1 (D2 ST27, ST28)."],
+                ["Announced", "Polite, once, only when focus was elsewhere: \"Large orders could not be shown.\" (D2). Try again mounts the contribution again."],
+                ["WCAG", "1.3.1, 2.4.3, 4.1.3"],
+              ]) },
+            { id: "IN27", title: "Cluster popover", fth: "Light, 1440 by 900. Enter on the Press 4 cluster opens its popover; focus on the first row's Move",
+              range: "Tue 3 Nov, 06:00 to 18:00", g: G({ pop: "cluster", skip: "9" }), i: I(),
+              notes: N([
+                ["Shows", "The rows are scrolled to Pressing. Enter or a click on the Press 4 cluster, 4 jobs from 10:00 to 10:40, opens its popover below it, else above it (19.18, 19.23). One row per job order lists the job, the article, the times and the states, with Move and an Actions menu button. Focus moves to the first row's Move. The cluster keeps aria-expanded true and points to the popover with aria-controls."],
+                ["Roles", "A popover with role dialog, named by its heading \"4 jobs on Press 4, 10:00 to 10:40\". It is not modal: the board stays visible, and Tab stays inside the popover while it is open (proposed)."],
+                ["Keys", "Tab and Shift+Tab move through Move and Actions of each row. Escape closes the popover and returns focus to the cluster. Move opens the Move dialog for that job order (IN8); after the move focus goes to the job order by id, or to its cluster when it stays inside one. Actions opens the block menu (19.17)."],
+                ["Announced", "The dialog's name when focus enters it; there is no live message."],
+                ["WCAG", "1.3.1, 2.1.1, 2.4.3, 2.5.8, 4.1.2"],
+              ]) },
+            { id: "IN29", title: "Block fields slot", big: true, fth: "Light, 1920 by 1080. The Pyramid connector's contribution to planning/board/block-fields/v1 on four blocks; its hover fields in the card and in Details",
+              range: "Tue 3 Nov, 06:00 to 18:00", g: G({ fields: "on", hover: "1012.30", sel: "1012.30" }), i: I({ job: "1012.30", fields: "on", scroll: "end" }),
+              notes: N([
+                ["Shows", "The connector contributes to planning/board/block-fields/v1 (4.16, 10.2). 1012.30 on Lathe 1 shows the pending change badge \"ERP change\" (FileDiff), 1002.10 on CNC2 the flag \"Differs\" (GitCompareArrows), 1027.30 on Assembly 1 the marker \"Not mirrored\" (CloudOff), and 1013.10 on Mill 2 \"Stale\" (RefreshCwOff), because the last import of order 1013 failed. The pointer rests on 1012.30: the hover card adds the hover renderer's fields after the board's, and Details lists them under From Pyramid, scrolled to its end here."],
+                ["Board draws", "The place at the trailing edge after the state icons, the 14 px icon and the 11 px 600 text in the block's text color. It drops the text when the block has no room and draws nothing in a bar. It builds the accessible name, which appends accessibleText after the states, and it draws the hover card and the Details section with the contribution's label as heading."],
+                ["Contribution returns", "Per block, synchronously: a short text, a lucide icon name and accessibleText (\"pending ERP change, quantity 480 to 600 pcs\"). Its hover renderer may fetch and returns label and value pairs. It renders no interactive content, no WidgetFrame per block and no color of its own (10.2, 10.4)."],
+                ["Name", "\"1012.30 Hub 12, 480 pcs, Lathe 1, Tue 3 Nov 11:30 to 14:45, late by 2 days, pending ERP change, quantity 480 to 600 pcs\""],
+                ["WCAG", "1.1.1, 1.3.1, 1.4.1, 1.4.13, 4.1.2"],
+              ]) },
+            { id: "IN31", title: "Details, order not in range", fth: "Light, 1440 by 900. The URL names order 1099, which has no job order in this range",
+              g: G({ sel: "none" }), i: I({ details: "notfound" }),
+              notes: N([
+                ["Shows", "The URL carries order=1099, and the range Tue 3 Nov 06:00 to 18:00 holds none of its job orders. Details shows \"Order 1099 is not in this range\", why, and the link Find it in the job table, which opens the table view filtered to order 1099 (19.13). Nothing on the board is selected."],
+                ["Focus", "Does not move on load. The link is a normal Tab stop in the tab panel."],
+                ["Announced", "Nothing; the heading sits in the tab panel."],
+                ["WCAG", "1.3.1, 2.4.6, 3.3.1"],
+              ]) },
+            { id: "IN32", title: "Details, field error", fth: "Light, 1440 by 900. Apply with an invalid start: the error summary in Details takes focus",
+              g: G(), i: I({ details: "invalid", focus: "esum" }),
+              notes: N([
+                ["Shows", "Apply with Start \"2026-11-03 1130\": the error summary \"1 field needs attention\" takes focus and links to Start; the field shows \"Enter a date and time like 2026-11-03 11:30.\", aria-invalid and the value as typed (19.13). Machine keeps Lathe 2."],
+                ["Keys", "The link moves focus to Start. Apply checks the field again."],
+                ["Announced", "The focused summary is read; there is no live message."],
+                ["WCAG", "2.4.3, 3.3.1, 3.3.3"],
+              ]) },
+            { id: "IN33", title: "Details, move not added", fth: "Light, 1440 by 900. Apply failed on the server: the Alert keeps every value",
+              g: G(), i: I({ details: "error", focus: "apply" }),
+              notes: N([
+                ["Shows", "Apply reached the server and failed. The Alert \"The move was not added to your draft. Try again. Error id 7f3a91c2.\" sits under the badges; Machine and Start keep Lathe 2 and 2026-11-03 11:30 (plan 06 Page states, 19.13). Nothing changed on the board or in My draft."],
+                ["Focus", "Stays on Apply, so a second press tries again."],
+                ["Announced", "Assertive: the Alert's text (proposed)."],
+                ["WCAG", "3.3.1, 4.1.3"],
+              ]) },
+            { id: "IN34", title: "Break soft lock, server error", fth: "Light, 1440 by 900. Break soft lock failed on the server; the reason is kept",
+              g: G({ sel: "1007.10" }), i: I({ details: "held" }), dlg: "break", srv: true,
+              notes: N([
+                ["Shows", "Break soft lock with a valid reason failed on the server. The dialog stays open with the Alert \"The soft lock was not broken. Try again. Error id 2b8e40d1.\" above the text, and Reason keeps what Alex Lund typed. Erik Sand still holds the soft lock."],
+                ["Focus", "Stays on Break soft lock, so a second press tries again; Cancel and Escape close the dialog as in IN14."],
+                ["Stale holder", "When the soft lock moved to someone else after the dialog opened, the command returns a conflict instead: the dialog closes, Details shows the new holder, and an assertive message names them (proposed)."],
+                ["Announced", "Assertive: the Alert's text (proposed)."],
+                ["WCAG", "3.3.1, 3.3.4, 4.1.3"],
+              ]) },
+            { id: "IN20", title: "Interaction build notes, not part of the UI", fth: "Light, 4480 wide. Components, roles, slots, messages, copy and proposals for IN1 to IN19 and IN21 to IN34", bn: true },
+          ];
+          // Dark twins of the frames whose surfaces change most with the theme.
+          const byId = {};
+          defs.forEach((d) => { byId[d.id] = d; });
+          const twin = (id, src, shows, wcag) => Object.assign({}, byId[src], { id, theme: "dark", fth: "Dark, " + (byId[src].big ? "1920 by 1080" : "1440 by 900") + ", as " + src, notes: N([["Shows", shows], ["WCAG", wcag]]) });
+          [
+            twin("IN21", "IN1", "IN1 in dark: the hover card on 1008.10 with its badges and every hover field, on the dark popover surface.", "1.4.3, 1.4.11, 1.4.13"),
+            twin("IN22", "IN4", "IN4 in dark: the origin slot, the preview, the snap line, the tooltip and the frozen window line.", "1.4.11, 2.5.7"),
+            twin("IN23", "IN6", "IN6 in dark: the moving block keeps focus, with the origin slot and the move hint.", "2.4.7, 2.5.7"),
+            twin("IN24", "IN8", "IN8 in dark over the dark overlay: the machine radio table with the checked row on --info-subtle, Start and its steps.", "1.4.3, 1.4.11, 2.4.3"),
+            twin("IN25", "IN14", "IN14 in dark: the alertdialog with what the break does and the required reason, focus in Reason.", "1.4.3, 3.3.4"),
+            twin("IN26", "IN17", "IN17 in dark: the side slot contribution in its WidgetFrame inside the Large orders tab, the tab focused.", "1.4.3, 4.1.2"),
+            twin("IN28", "IN27", "IN27 in dark: the cluster popover with its rows, focus on the first row's Move.", "1.4.3, 1.4.11, 2.4.7"),
+            twin("IN30", "IN29", "IN29 in dark: the contribution's icons and texts on the blocks, the hover card and Details with From Pyramid.", "1.4.3, 1.4.11"),
+          ].forEach((d) => { defs.push(d); byId[d.id] = d; });
+          // Canvas order: three columns, each topic with its dark twin; the build notes close the part.
+          const ORDER = ["IN1", "IN21", "IN2", "IN3", "IN27", "IN28", "IN4", "IN22", "IN5", "IN6", "IN23", "IN7", "IN8", "IN24", "IN9", "IN31", "IN32", "IN33", "IN10", "IN11", "IN12", "IN13", "IN14", "IN25", "IN15", "IN34", "IN16", "IN17", "IN26", "IN18", "IN19", "IN29", "IN30", "IN20"];
+
+          const frames = ORDER.map((id) => byId[id]).filter((d) => want === "ALL" || want === d.id).map((d) => {
+            const n = d.id.toLowerCase();
+            const theme = d.theme || "light";
+            const sizeTxt = d.bn ? "4480 wide" : d.big ? "1920 by 1080" : "1440 by 900";
+            const base = { id: d.id, title: d.title, fth: d.fth, label: d.id + " " + (d.bn ? "Interaction build notes" : d.title) + ", " + theme + ", " + sizeTxt, cls: d.bn ? "wide" : d.big ? "big" : "", screen: !d.bn, bn: !!d.bn };
+            if (d.bn) return base;
+            const zoom = "hours";
+            const st = [];
+            if (d.stPaused) st.push({ tone: "", icon: "Pause", segs: sg("Live updates paused. 12 changes waiting.") });
+            else st.push(autoplan);
+            if (d.stWarn) st.push({ tone: "wait", icon: "Clock", segs: sg("Your soft lock on order 1003 ends in 20 s."), btn: "Extend", btnCls: "is-focus" });
+            if (d.stBroken) st.push({ tone: "wait", icon: "LockOpen", segs: sg("Lena Ek broke your soft lock on order 1016 at 09:30. Reason: \"Order 1016 moves to Thu 5 Nov to free CNC1 for a rush order.\"") });
+            const ids = { t: n + "p-dlt", d: n + "p-dld", es: n + "p-esum", ml: n + "p-ml", md: n + "p-md", sl: n + "p-sl", se: n + "p-se", sd: n + "p-sd", rl: n + "p-rl", re: n + "p-re", rd: n + "p-rd" };
+            [0, 1, 2].forEach((k) => { ids["m" + k + "n"] = n + "p-m" + k; ids["m" + k + "e"] = n + "p-me" + k; ids["m" + k + "o"] = n + "p-mo" + k; ids["m" + k + "d"] = n + "p-me" + k + " " + n + "p-mo" + k; });
+            const err = !!d.err;
+            const srv = !!d.srv;
+            return Object.assign(base, {
+              theme, stageCls: theme === "dark" ? "dark" : "", sw: d.big ? "1920" : "1440", shint: d.big ? "1920px,1080px" : "1440px,900px",
+              srv, bkCls: srv ? "is-focus" : "", hasVal: err || srv, noVal: !err && !srv, reasonVal: srv ? "Erik Sand is away and order 1007 must move today" : "ok",
+              inert: d.dlg ? "" : undefined,
+              gid: n + "g", iid: n + "i", zid: n + "p-zoom",
+              range: sg(d.range || "Tue 3 Nov, 06:00 to 18:00"),
+              zooms: zoomNames.map((z) => ({ t: z[1], cls: z[0] === zoom ? "on" : "", pressed: String(z[0] === zoom) })),
+              liveIcon: d.live === "resume" ? "Play" : "Pause", liveLabel: d.live === "resume" ? "Resume live updates" : "Pause live updates",
+              st, g: d.g, i: d.i, amenu: !!d.amenu,
+              dlg: !!d.dlg, mv: d.dlg === "move", bk: d.dlg === "break", err, noErr: !err, ids, r1f: err ? "" : "is-focus",
+              start: err ? "2026-11-03 1130" : "2026-11-03 11:30",
+              startCls: err ? "is-err" : "", startInvalid: err ? "true" : undefined, startDesc: err ? ids.se + " " + ids.sd : ids.sd,
+              reasonCls: err ? "is-err" : srv ? "" : "is-focus", reasonInvalid: err ? "true" : undefined, reasonDesc: err ? ids.re + " " + ids.rd : ids.rd,
+              notes: d.notes,
+            });
+          });
+
+          const bn = {
+            cols: [
+              { h: "Components (shadcn names)", items: [
+                "Hover Card: the block card, IN1 and IN2; open delay 700 ms, close delay 300 ms (proposed).",
+                "Dropdown Menu: Actions in the Details heading, IN7. Context Menu: the same items on the grid by right click.",
+                "Dialog: the Move dialog, IN8 and IN9, 640 px wide (proposed), shared with the job order table view.",
+                "Alert Dialog: Break soft lock, IN14 and IN15, through ConfirmDialog with a required reason (plan 06).",
+                "Radio Group: the machine choice in the Move dialog. It is not in D1's component table, so its unchecked, checked and focused states are drawn here (question for D1).",
+                "Table: the Move dialog's machine list with D1's selected row on --info-subtle.",
+                "Input, Textarea, Label: Start and Reason, with the D1 error state and the error summary.",
+                "Button: default (Move), outline (Cancel, Extend, the steps), ghost (Actions), destructive (Break soft lock).",
+                "Alert: the soft lock warning (warning tone), the held note in Details (info tone), and the server errors in Details and in the Break soft lock dialog (destructive tone), IN33 and IN34.",
+                "Popover: the cluster popover, IN27 and IN28, a dialog with one row per job order, each with Move and an Actions menu button (19.18).",
+                "Tabs: the panel with Details, My draft and Large orders. Toggle Group: the zoom presets. Badge: Current and the state badges.",
+              ] },
+              { h: "Roles, names and focus", items: [
+                "Grid: role grid with roving tabindex; the moving block keeps focus in move mode; the hint, tooltip, snap line, origin slot and link overlay are aria-hidden drawings.",
+                "Cluster: a gridcell with aria-haspopup dialog, and aria-expanded with aria-controls while its popover is open. The popover is role dialog named by its heading; focus starts on the first row's Move, and Escape returns it to the cluster (IN27).",
+                "Hover card: drawn for sighted users only; the block's name and Details carry the same facts.",
+                "Actions menu: role menu named \"Actions for 1003.20\"; the trigger has aria-haspopup=\"menu\" and aria-expanded; Escape returns focus to it.",
+                "Move dialog: role dialog, aria-modal, named by its title and described by its first line. Machine is a radiogroup; each radio is named by its machine and described by its Ends and Overlaps cells. Start has aria-invalid and aria-describedby for its error.",
+                "Break soft lock: role alertdialog, aria-modal, named by its title and described by its text. Reason is required, with aria-invalid and aria-describedby for its error and hint.",
+                "Error summaries take focus on submit and link to their field (plan 06, 3.3.1).",
+                "Dialogs return focus to their trigger on Cancel and Escape. After a confirmed break the trigger is gone, so focus goes to Machine (proposed).",
+                "Status line and warnings carry no live role; their messages go through announce() (21.13).",
+                "WidgetFrame: a region named by the contribution's heading; its fallback is a group with tabindex -1.",
+              ] },
+              { h: "Slot, tokens and WCAG 2.2", items: [
+                "`planning/board/side/v1`: kind region, props { plantId, paused }, rendered as the Large orders tab (D.3). The tab label is the contribution's label; only the selected tab mounts its content (proposed).",
+                "`planning/board/block-fields/v1`: kind field, props { plantId }, items are the blocks of the loaded range. Per block a synchronous render returns text, an icon name and accessibleText; the board draws the icon and the text at the trailing edge after the state icons, drops the text when there is no room and draws nothing in a bar, and appends accessibleText to the block's name. A hover renderer may fetch; its fields follow the board's in the hover card and in Details under the contribution's label (IN29, IN30).",
+                "Tokens from D1 only: `--popover`, `--border`, `--foreground`, `--muted-foreground`, `--destructive`, `--destructive-subtle`, `--warning`, `--warning-subtle`, `--info-subtle`, `--primary`, `--input`, `--card`, `--focus-outline`, `--focus-ring`. The dialog overlay is D2's `.sh-ov`.",
+                "No new board token: the move tooltip, hint and snap line come from the grid part.",
+                "WCAG 2.2: 1.1.1, 1.3.1, 1.4.1, 1.4.3, 1.4.11, 1.4.13, 2.1.1, 2.1.4, 2.2.1, 2.2.2, 2.4.3, 2.4.6, 2.4.7, 2.4.11, 2.5.2, 2.5.7, 2.5.8, 3.2.1, 3.3.1, 3.3.2, 3.3.3, 3.3.4, 3.3.7, 4.1.2, 4.1.3.",
+                "Final English copy, new in this part: Move 1003.20 Shaft 40; Choose a machine and a start. The move goes into your draft, and Save writes it to the plan.; Machine; Ends; Overlaps at this start; Current; 3 allowed machines for operation 20, Turning.; Starts in the frozen window, which ends at 13:40, so Save asks for a reason.; Move; Cancel; Break Erik Sand's soft lock on order 1007?; Reason; Erik Sand sees this reason. 3 to 500 characters.; Break soft lock; 4 jobs on Press 4, 10:00 to 10:40; The soft lock was not broken. Try again. Error id 2b8e40d1.; From Pyramid (the contribution's label). The block field texts ERP change, Differs, Not mirrored and Stale are the connector's copy.",
+                "Proposed, needs Krister's yes: the hover card on keyboard focus only and its delays; a drag keeps the selection; the frozen window sentence in move messages; the Move dialog layout and its Move button; Ends and Overlaps kept while Start is invalid; the soft lock warning assertive, its countdown and the expiry copy; focus after Extend and after a break; the status line keeping the broken soft lock message; the contribution mounted only in its open tab; the cluster popover keeping Tab inside it; server errors announced as assertive with focus kept on the button.",
+              ] },
+            ],
+          };
+          // Text in backticks is code: Plex Mono, never broken at a hyphen.
+          const C = (t) => String(t).split("`").map((x, i) => ({ t: x, c: i % 2 ? "in-code" : "" })).filter((x) => x.t !== "");
+          bn.cols.forEach((c) => { c.items = c.items.map(C); });
+
+          return { frames, bn, labels, rootCls: want === "ALL" ? "" : "one" };
+        }
+      }
+    </script>
+  </body>
+</html>

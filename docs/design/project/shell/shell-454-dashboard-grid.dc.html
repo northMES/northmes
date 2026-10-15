@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard grid</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-454-dashboard-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-454-dashboard.css" />
+      </helmet>
+      <div class="db-gs" data-screen-label="{{ label }}">
+        <sc-if value="{{ isEmpty }}">
+          <div class="db-empty">
+            <span class="big"><span class="ic" data-icon="LayoutDashboard"></span></span>
+            <h2>{{ emptyHead }}</h2>
+            <p>Add a widget to see the numbers you follow. Only you see this tab, at every plant you open.</p>
+            <button class="btn v-default" type="button" aria-haspopup="dialog"><span class="ic" data-icon="Plus"></span>Add widget</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasGrid }}">
+          <div class="db-g {{ gcls }}" style="{{ gstyle }}">
+            <sc-for list="{{ guides }}" as="g" hint-placeholder-count="0"><span class="db-gcol" style="{{ g }}" aria-hidden="true"></span></sc-for>
+            <sc-if value="{{ ghost }}"><span class="db-ghost" style="{{ ghostStyle }}" aria-hidden="true"></span></sc-if>
+            <sc-if value="{{ ph }}"><span class="db-ph" style="{{ phStyle }}" aria-hidden="true"></span></sc-if>
+            <sc-for list="{{ items }}" as="w" hint-placeholder-count="5">
+              <div class="db-cell {{ w.cellCls }}" style="{{ w.style }}">
+                <section class="db-w {{ w.cls }}" style="{{ w.wStyle }}" aria-labelledby="{{ w.hid }}" aria-busy="{{ w.busy }}">
+                  <div class="db-wh">
+                    <sc-if value="{{ w.grip }}"><button class="db-ib {{ w.gripCls }}" type="button" aria-label="Move {{ w.title }}" aria-pressed="{{ w.pressed }}" aria-describedby="db-move-help"><span class="ic" data-icon="GripVertical"></span><sc-if value="{{ w.gripKf }}"><span class="db-kb">{{ w.gripKf }}</span></sc-if></button></sc-if>
+                    <h2 class="db-wt" id="{{ w.hid }}">{{ w.title }}</h2>
+                    <sc-if value="{{ w.demo }}"><span class="badge db-demo">Demo</span></sc-if>
+                    <sc-if value="{{ w.menuBtn }}">
+                      <span class="db-wrap">
+                        <button class="db-ib {{ w.menuCls }}" type="button" aria-label="Actions for {{ w.title }}" aria-haspopup="menu" aria-expanded="{{ w.menuOpen }}"><span class="ic" data-icon="Ellipsis"></span><sc-if value="{{ w.menuKf }}"><span class="db-kb">{{ w.menuKf }}</span></sc-if></button>
+                        <sc-if value="{{ w.menuOpen }}">
+                          <div class="pop db-pop {{ w.menuPos }}" role="menu" aria-label="Actions for {{ w.title }}" style="width:240px">
+                            <sc-for list="{{ w.menuItems }}" as="m">
+                              <sc-if value="{{ m.sep }}"><div class="msep" role="separator"></div></sc-if>
+                              <sc-if value="{{ m.head }}"><div class="db-mh" role="presentation">{{ m.label }}</div></sc-if>
+                              <sc-if value="{{ m.item }}"><div class="mi {{ m.cls }}" role="menuitem" aria-disabled="{{ m.dis }}"><span class="ic" data-icon="{{ m.icon }}"></span>{{ m.label }}</div></sc-if>
+                              <sc-if value="{{ m.radio }}"><div class="mi {{ m.cls }}" role="menuitemradio" aria-checked="{{ m.on }}"><span class="db-mrad {{ m.rcls }}"></span>{{ m.label }}<span class="db-mi-d">{{ m.dim }}</span></div></sc-if>
+                            </sc-for>
+                          </div>
+                        </sc-if>
+                      </span>
+                    </sc-if>
+                  </div>
+                  <div class="db-wb">
+                    <sc-if value="{{ w.isValue }}">
+                      <div class="db-val"><span class="db-vn">{{ w.v }}</span><span class="db-vu">{{ w.u }}</span></div>
+                      <p class="db-vc"><sc-if value="{{ w.trend }}"><span class="ic" data-icon="{{ w.trend }}"></span></sc-if><span>{{ w.c }}</span></p>
+                    </sc-if>
+                    <sc-if value="{{ w.isList }}">
+                      <ul class="db-list">
+                        <sc-for list="{{ w.rows }}" as="r">
+                          <li class="db-li">
+                            <span class="db-li-a"><a class="db-lk" href="#">{{ r.no }}<sc-if value="{{ r.kf }}"><span class="db-kb">{{ r.kf }}</span></sc-if></a><span class="db-art" lang="{{ r.lang }}">{{ r.art }}</span></span>
+                            <span class="badge {{ r.bcls }}">{{ r.st }}</span>
+                            <span class="db-li-b"><span>{{ r.sub }}</span><sc-if value="{{ r.late }}"><span class="db-late"><span class="ic" data-icon="AlarmClock"></span>Late</span></sc-if></span>
+                          </li>
+                        </sc-for>
+                      </ul>
+                      <a class="db-more" href="#">{{ w.more }}<sc-if value="{{ w.moreKf }}"><span class="db-kb">{{ w.moreKf }}</span></sc-if></a>
+                    </sc-if>
+                    <sc-if value="{{ w.isTable }}">
+                      <div class="db-tw {{ w.twCls }}" tabindex="{{ w.twTab }}" role="{{ w.twRole }}" aria-label="{{ w.twLabel }}">
+                        <div class="db-tgrid" style="{{ w.tstyle }}" role="table" aria-labelledby="{{ w.hid }}">
+                          <div class="db-trow hd" role="row"><sc-for list="{{ w.head }}" as="h"><span class="db-td {{ h.cls }}" role="columnheader">{{ h.t }}</span></sc-for></div>
+                          <sc-for list="{{ w.trows }}" as="r">
+                            <div class="db-trow" role="row">
+                              <sc-for list="{{ r }}" as="c">
+                                <span class="db-td {{ c.cls }}" role="cell"><sc-if value="{{ c.link }}"><a class="db-lk" href="#">{{ c.t }}<sc-if value="{{ c.kf }}"><span class="db-kb">{{ c.kf }}</span></sc-if></a></sc-if><sc-if value="{{ c.badge }}"><span class="badge {{ c.bcls }}">{{ c.t }}</span></sc-if><sc-if value="{{ c.text }}">{{ c.t }}</sc-if></span>
+                              </sc-for>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </div>
+                      <sc-if value="{{ w.xhint }}"><p class="db-hint"><span class="ic" data-icon="MoveHorizontal"></span>Scroll sideways for more columns</p></sc-if>
+                      <sc-if value="{{ w.more }}"><a class="db-more" href="#">{{ w.more }}<sc-if value="{{ w.moreKf }}"><span class="db-kb">{{ w.moreKf }}</span></sc-if></a></sc-if>
+                    </sc-if>
+                    <sc-if value="{{ w.isChart }}">
+                      <div class="db-legend"><sc-for list="{{ w.series }}" as="s"><span class="db-lg"><span class="db-sw {{ s.cls }}"></span>{{ s.name }}</span></sc-for></div>
+                      <div class="db-ch" role="img" aria-label="{{ w.alt }}">
+                        <div class="db-ya" aria-hidden="true"><sc-for list="{{ w.ticks }}" as="t"><span>{{ t }}</span></sc-for></div>
+                        <div class="db-plot">
+                          <div class="db-gl"><sc-for list="{{ w.ticks }}" as="t"><span></span></sc-for></div>
+                          <div class="db-bars"><sc-for list="{{ w.groups }}" as="g"><div class="db-bg"><sc-for list="{{ g.bars }}" as="b"><span class="db-bar {{ b.cls }}" style="{{ b.style }}"></span></sc-for></div></sc-for></div>
+                        </div>
+                        <span></span>
+                        <div class="db-xa" aria-hidden="true"><sc-for list="{{ w.groups }}" as="g"><span>{{ g.label }}</span></sc-for></div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ w.isLoading }}">
+                      <div class="db-skg">
+                        <sc-if value="{{ w.skValue }}"><span class="sk db-skl big"></span><span class="sk db-skl" style="width:78%"></span></sc-if>
+                        <sc-if value="{{ w.skRows }}"><span class="sk db-skl row"></span><span class="sk db-skl row"></span><span class="sk db-skl row"></span><span class="sk db-skl row"></span><span class="sk db-skl" style="width:40%"></span></sc-if>
+                        <sc-if value="{{ w.skChart }}"><span class="sk db-skl" style="width:30%"></span><div class="db-skbars"><span class="sk" style="height:55%"></span><span class="sk" style="height:70%"></span><span class="sk" style="height:48%"></span><span class="sk" style="height:82%"></span><span class="sk" style="height:30%"></span></div></sc-if>
+                        <span class="db-vh">Loading {{ w.title }}</span>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ w.isState }}">
+                      <div class="db-st {{ w.stCls }}">
+                        <p class="db-st-h {{ w.stTone }}"><span class="ic" data-icon="{{ w.stIcon }}"></span><span>{{ w.stHead }}</span></p>
+                        <sc-if value="{{ w.stText }}"><p class="db-st-p">{{ w.stText }}</p></sc-if>
+                        <sc-for list="{{ w.stIds }}" as="x"><p class="db-cid"><span>{{ x.k }}</span><span class="v">{{ x.v }}</span><sc-if value="{{ x.copy }}"><button class="db-ib" type="button" aria-label="Copy correlation id"><span class="ic" data-icon="Copy"></span></button></sc-if></p></sc-for>
+                        <sc-if value="{{ w.stBtn }}"><button class="btn v-outline db-btn-s" type="button"><sc-if value="{{ w.stBtnIcon }}"><span class="ic" data-icon="{{ w.stBtnIcon }}"></span></sc-if>{{ w.stBtn }}</button></sc-if>
+                        <sc-if value="{{ w.stLink }}"><a class="db-more" href="#" style="margin-top:2px">{{ w.stLink }}</a></sc-if>
+                      </div>
+                    </sc-if>
+                  </div>
+                  <sc-if value="{{ w.rsz }}"><span class="db-rszh {{ w.rszCls }}" aria-hidden="true"><span class="ic" data-icon="MoveDiagonal2"></span></span></sc-if>
+                  <sc-if value="{{ w.rszTip }}"><span class="db-rtip" aria-hidden="true">{{ w.rszTip }}</span></sc-if>
+                </section>
+              </div>
+            </sc-for>
+            <sc-if value="{{ tile }}">
+              <div class="db-cell {{ tileCellCls }}" style="{{ tileStyle }}">
+                <button class="db-tile {{ tileCls }}" type="button" aria-haspopup="dialog" aria-expanded="{{ tileOpen }}" aria-label="{{ tileLabel }}"><span class="ic" data-icon="Plus"></span><span>{{ tileText }}</span><sc-if value="{{ tileSub }}"><span class="db-sub">{{ tileSub }}</span></sc-if><sc-if value="{{ tileKf }}"><span class="db-kb">{{ tileKf }}</span></sc-if></button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ cursor }}"><span class="db-cur" style="{{ cursorStyle }}" aria-hidden="true"><span class="ic" data-icon="MousePointer2"></span></span></sc-if>
+          </div>
+          <span class="db-vh" id="db-move-help">Enter picks the widget up, arrow keys move it, Enter drops it, Escape cancels.</span>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"frame":{"editor":"text","default":"PE1","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), for a standalone render.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.DB454S ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.DB454S) ready();
+        }
+        renderVals() {
+          // The widget grid of one frame (prop frame, a scene id of shell-454-dashboard-data.js). 12 columns at 1280, 1440
+          // and 1920; one column in reading order at 320, where no drag exists and Widget actions moves. In edit mode the
+          // grid shows its column guides, each widget gets the move button, Widget actions and, when its type has more
+          // than one size, the resize handle; the Add widget tile waits at the first free place for a Small widget.
+          const P = this.props || {};
+          const D = window.DB454S;
+          const id = String(P.frame || "PE1");
+          const empty = { label: "Grid " + id, isEmpty: false, hasGrid: false, items: [], guides: [], tile: false, ghost: false, ph: false, cursor: false };
+          if (!D || !D.scene(id)) return empty;
+          const S = D.scene(id);
+          const tab = D.TABS[S.tab];
+          if (!tab || S.pageState) return empty;
+          const narrow = S.w === "320";
+          const cols = narrow ? 1 : 12;
+          const editMode = S.mode === "edit";
+          const focus = S.focus || "";
+          const px = (h) => 72 * h + 16 * (h - 1);
+          const at = (x, y, w, h) => (cols === 1 ? "grid-column:1 / -1" : "grid-column:" + (x + 1) + " / span " + w + ";grid-row:" + (y + 1) + " / span " + h);
+          const BADGE = { Registered: "lf-st-registered", Planned: "lf-st-planned", Active: "lf-st-active", Paused: "lf-st-paused" };
+          const lay = D.layout(S, cols);
+          // Tab order badges (frames KF1 and KF2): the page's own stops come first, numbered by the screen part.
+          let k = 0;
+          if (S.kf) k = editMode ? 6 : (S.canEdit ? 4 : 3);
+          const next = () => (S.kf ? String(++k) : "");
+          const typeOf = (w) => D.TYPES[w.type];
+          // Move down is possible when another widget sits below in a shared column, or at one column when it is not last.
+          const below = (o) => lay.some((p) => p.id !== o.id && p.y >= o.y + o.h && p.x < o.x + o.w && o.x < p.x + p.w);
+          const items = lay.map((o, idx) => {
+            const w = D.widget(o.id, S);
+            const T = typeOf(w);
+            const hid = "db-" + id + "-" + o.id;
+            const lifted = S.lift === o.id;
+            const dragged = S.drag === o.id;
+            const resized = S.resize === o.id;
+            const plugin = w.type === "plugin";
+            const menuOpen = S.menu === "widget" && S.target === o.id;
+            const sizes = plugin ? [] : T.sizes.slice().sort((a, b) => D.SIZE_ORDER.indexOf(a) - D.SIZE_ORDER.indexOf(b));
+            const menuItems = [];
+            if (menuOpen) {
+              const it = (label, icon, dis, cls) => menuItems.push({ item: true, sep: false, head: false, radio: false, label: label, icon: icon, dis: dis ? "true" : null, cls: (dis ? "is-dis " : "") + (cls || "") });
+              const sep = () => menuItems.push({ sep: true, item: false, head: false, radio: false });
+              if (!plugin) { it("Settings", "Settings2", false); sep(); }
+              if (cols === 1) {
+                it("Move up", "ArrowUp", idx === 0);
+                it("Move down", "ArrowDown", idx === lay.length - 1);
+              } else {
+                it("Move up", "ArrowUp", o.y === 0);
+                it("Move down", "ArrowDown", !below(o));
+                it("Move left", "ArrowLeft", o.x === 0);
+                it("Move right", "ArrowRight", o.x + o.w >= cols);
+              }
+              if (sizes.length > 1) {
+                sep();
+                menuItems.push({ head: true, sep: false, item: false, radio: false, label: "Size" });
+                sizes.forEach((z) => menuItems.push({ radio: true, sep: false, head: false, item: false, label: D.SIZE[z].name, dim: D.sizeDim(z), on: z === w.size ? "true" : "false", rcls: z === w.size ? "on" : "", cls: "" }));
+              }
+              sep();
+              it("Remove widget", "Trash2", false, "db-danger");
+              const first = menuItems.find((m) => (m.item || m.radio) && !m.dis);
+              if (first) first.cls = (first.cls || "") + " kfocus";
+            }
+            const vm = {
+              hid: hid,
+              title: w.title,
+              style: at(o.x, o.y, o.w, o.h) + (cols === 1 ? ";--minh:" + px(o.h) + "px" : "") + (dragged && S.dragOff ? ";" + S.dragOff : ""),
+              cellCls: [menuOpen ? "top" : "", lifted ? "top" : "", dragged ? "drag" : ""].filter(Boolean).join(" "),
+              cls: [editMode && !lifted && !dragged && !resized ? "edit" : "", lifted ? "lift" : "", dragged ? "drag" : "", resized ? "rsz" : "", focus === "w:" + o.id ? "is-focus" : ""].filter(Boolean).join(" "),
+              wStyle: resized && S.rszW ? "flex:none;width:" + S.rszW : "",
+              busy: w.st === "loading" ? "true" : null,
+              demo: !plugin,
+              grip: editMode && cols > 1,
+              gripCls: [lifted ? "on" : "", focus === "move:" + o.id ? "is-focus" : ""].filter(Boolean).join(" "),
+              pressed: editMode && cols > 1 ? (lifted ? "true" : "false") : null,
+              gripKf: "",
+              menuBtn: editMode,
+              menuCls: [menuOpen ? "open" : "", focus === "actions:" + o.id ? "is-focus" : ""].filter(Boolean).join(" "),
+              menuOpen: menuOpen,
+              menuKf: "",
+              menuPos: cols > 1 && o.y >= 4 ? "above-r" : "below-r",
+              menuItems: menuItems,
+              rsz: editMode && cols > 1 && !lifted && !dragged && !!T && T.resizable,
+              rszCls: resized ? "on" : "",
+              rszTip: resized ? S.rszTip || "" : "",
+              isValue: false, isList: false, isTable: false, isChart: false, isLoading: false, isState: false,
+              more: "", moreKf: ""
+            };
+            if (editMode && cols > 1) { vm.gripKf = next(); vm.menuKf = next(); }
+            else if (editMode) { vm.menuKf = next(); }
+            const st = w.st || "";
+            if (st === "loading") {
+              Object.assign(vm, { isLoading: true, skValue: w.type === "value", skRows: w.type === "list" || w.type === "table", skChart: w.type === "chart" });
+              return vm;
+            }
+            if (st) {
+              const small = o.w <= 3 && cols !== 1;
+              const other = S.plant === "Plant A" ? "Plant B" : "Plant A";
+              const ownTab = tab.scope === "mine";
+              const EMPTY_ICON = { list: "ListX", table: "ListX", chart: "ChartNoAxesColumn", value: "Hash" };
+              const ST = {
+                error: { icon: "CircleAlert", tone: "db-te", head: w.title + " could not be loaded.", text: "", ids: [{ k: "Correlation id", v: w.cid || "01JA2V7Q9K3M5T", copy: true }], btn: "Try again", btnIcon: "RotateCw" },
+                render: { icon: "CircleAlert", tone: "db-te", head: w.title + " could not be shown.", text: "", ids: [{ k: "Stage", v: "render", copy: false }, { k: "Code", v: "web.render_error", copy: false }], btn: "Try again", btnIcon: "RotateCw" },
+                forbidden: { icon: "Lock", tone: "db-tm", head: "No permission", text: "You need permission to read " + w.perm + " at " + S.plant + ". Ask your plant admin for a role that can read " + w.perm + "." },
+                missing: { icon: "MapPinOff", tone: "db-tm", head: "Not at " + S.plant, text: w.stText, link: "Show at " + other },
+                removed: { icon: "Unplug", tone: "db-tm", head: "Not installed", text: "The Andon plugin that provided this widget is no longer installed." + (editMode ? "" : S.canEdit ? " Select Edit layout to remove it." : ""), btn: editMode ? "Remove widget" : "", btnIcon: editMode ? "Trash2" : "" },
+                empty: { icon: EMPTY_ICON[w.type] || "ListX", tone: "db-tm", head: w.emptyHead || "No data", text: w.emptyText || "", btn: S.canEdit && ownTab && w.type !== "chart" ? "Change settings" : "", btnIcon: "" }
+              }[st];
+              Object.assign(vm, { isState: true, stCls: small ? "" : "big", stIcon: ST.icon, stTone: ST.tone, stHead: ST.head, stText: ST.text || "", stIds: ST.ids || [], stBtn: ST.btn || "", stBtnIcon: ST.btnIcon || "", stLink: ST.link || "" });
+              return vm;
+            }
+            if (w.type === "value") Object.assign(vm, { isValue: true, v: w.v, u: w.u, c: w.c, trend: w.trend || "" });
+            if (w.type === "list") {
+              const n = o.h >= 6 ? 7 : 5;
+              const rows = D.LISTS[w.list].slice(0, n).map((r) => Object.assign({}, r, { bcls: BADGE[r.st] || "", kf: editMode ? "" : next() }));
+              Object.assign(vm, { isList: true, rows: rows, more: w.more, moreKf: editMode ? "" : next() });
+            }
+            if (w.type === "table") {
+              const T2 = D.TABLES[w.table];
+              const x = cols === 1;
+              const trows = T2.rows.map((r) => r.map((c, i) => {
+                const link = i === T2.link;
+                const badge = i === T2.badge;
+                return { t: c, link: link, badge: badge, text: !link && !badge, bcls: BADGE[c] || "", kf: link && !editMode ? next() : "", cls: T2.num.indexOf(i) >= 0 ? "n" : T2.mono.indexOf(i) >= 0 ? "m" : "" };
+              }));
+              Object.assign(vm, {
+                isTable: true, more: w.more || "", moreKf: w.more && !editMode ? next() : "",
+                twCls: (x ? "x" : "") + (focus === "table:" + o.id ? " is-focus" : ""), twTab: x ? "0" : null, twRole: x ? "region" : null, twLabel: x ? w.title + ", scrolls sideways" : null, xhint: x,
+                tstyle: "--tcols:" + T2.cols + (x ? ";--minw:" + T2.minw + "px" : ""),
+                head: T2.head.map((h, i) => ({ t: h, cls: T2.num.indexOf(i) >= 0 ? "n" : "" })),
+                trows: trows
+              });
+            }
+            if (w.type === "chart") {
+              const C = D.CHARTS[w.chart];
+              Object.assign(vm, {
+                isChart: true, series: C.series, ticks: C.ticks, alt: C.alt,
+                groups: C.groups.map((g) => ({ label: g[0], bars: g.slice(1).map((v, i) => ({ cls: C.series[i].cls, style: "height:" + Math.round((v / C.max) * 1000) / 10 + "%" })) }))
+              });
+            }
+            return vm;
+          });
+          // The Add widget tile: edit mode only, at the first free place where a Small widget fits, or after the last widget.
+          let tile = editMode && !S.lift && !S.drag && !S.resize;
+          let tileStyle = "", tileText = "Add widget", tileSub = "", tileLabel = "Add widget";
+          let tileRows = 0;
+          if (tile) {
+            if (!lay.length) {
+              tileStyle = cols === 1 ? "grid-column:1 / -1;--minh:" + px(4) + "px" : "grid-column:1 / span " + cols + ";grid-row:1 / span 4";
+              tileText = "Add your first widget";
+              tileSub = "Choose from the widget catalog. Only you see this tab, at every plant you open.";
+              tileLabel = "Add your first widget";
+              tileRows = 4;
+            } else if (cols === 1) {
+              tileStyle = "grid-column:1 / -1;--minh:" + px(2) + "px";
+              tileLabel = "Add widget at the end";
+            } else {
+              const spot = D.firstFree(lay, cols, 3, 2);
+              tileStyle = "grid-column:" + (spot[0] + 1) + " / span 3;grid-row:" + (spot[1] + 1) + " / span 2";
+              tileLabel = "Add widget at column " + (spot[0] + 1) + ", row " + (spot[1] + 1);
+              tileRows = spot[1] + 2;
+            }
+          }
+          const rows = Math.max(lay.reduce((m, o) => Math.max(m, o.y + o.h), 0), tileRows);
+          const guides = editMode && cols > 1 ? Array.from({ length: cols }, (_, i) => "grid-column:" + (i + 1) + " / span 1;grid-row:1 / span " + Math.max(rows, 8)) : [];
+          const g = S.ghost, ph = S.ph;
+          return {
+            label: "Grid, " + tab.name + ", " + cols + (cols === 1 ? " column" : " columns"),
+            isEmpty: !lay.length && !tile,
+            emptyHead: tab.name + " has no widgets yet",
+            hasGrid: lay.length > 0 || tile,
+            gcls: cols === 1 ? "one" : "",
+            gstyle: "--cols:" + cols,
+            guides: guides,
+            ghost: !!g,
+            ghostStyle: g ? at(g[0], g[1], g[2], g[3]) : "",
+            ph: !!ph,
+            phStyle: ph ? at(ph[0], ph[1], ph[2], ph[3]) : "",
+            items: items,
+            tile: tile,
+            tileCellCls: S.tileOpen ? "top" : "",
+            tileStyle: tileStyle,
+            tileCls: [S.tileOpen ? "open" : "", focus === "tile" ? "is-focus" : ""].filter(Boolean).join(" "),
+            tileText: tileText,
+            tileSub: tileSub,
+            tileLabel: tileLabel,
+            tileOpen: S.tileOpen ? "true" : "false",
+            tileKf: tile ? next() : "",
+            cursor: !!S.cursor,
+            cursorStyle: S.cursor || ""
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

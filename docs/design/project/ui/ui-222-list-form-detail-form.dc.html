@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Canonical list and form page: detail, forms and review step</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./ui-222-list-form.css" />
+        <style>
+          /* Detail, form and review step frames of the spec page ui/ui-222-list-form.dc.html (issue northMES/northmes#222),
+             frames DE1 to DE44. Each frame is its screen size (1440 by 900 plus the 36 px document title) and mounts
+             ui/Shell.dc.html with the shared parts as its content; its chip sits 12 px above it. Light frames left, dark
+             frames right. Classes start with dfp-; the chips use the D1 canvas label styles and are not part of the UI. */
+          .dfp-part{position:relative}
+          .dfp-fr{position:absolute}
+          .flabel.dfp-chip{position:absolute;left:0;bottom:calc(100% + 12px);margin:0;white-space:nowrap;cursor:default}
+        </style>
+      </helmet>
+      <div class="dfp-part" style="width:2960px;height:22992px">
+        <div class="dfp-fr" style="left:0px;top:48px;width:1440px;height:936px" data-screen-label="DE1 Article detail, General tab, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE1</span>Article detail, General tab<span class="fth">Light, 1440 by 900. Sections as Cards with DefinitionLists; Edit and Archive in the top bar</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="Article AX-20410" actions="Archive|*Edit" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span lang="sv">Fläns DN50 rostfri</span><span>Company article, Acme AB</span></div>
+            <div class="lf-fill"><dc-import name="ui-222-list-form-detail" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:48px;width:1440px;height:936px" data-screen-label="DE2 Article detail, General tab, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE2</span>Article detail, General tab<span class="fth">Dark, 1440 by 900. Sections as Cards with DefinitionLists; Edit and Archive in the top bar</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="Article AX-20410" actions="Archive|*Edit" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span lang="sv">Fläns DN50 rostfri</span><span>Company article, Acme AB</span></div>
+            <div class="lf-fill"><dc-import name="ui-222-list-form-detail" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:1096px;width:1440px;height:936px" data-screen-label="DE3 Article detail, History tab, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE3</span>Article detail, History tab<span class="fth">Light, 1440 by 900. Two entries open with Field, Before and After; focus on the History tab</span><span class="lf-url">/plant-a/core/articles/$articleId?tab=history</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="Article AX-20410" actions="Archive|*Edit" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span lang="sv">Fläns DN50 rostfri</span><span>Company article, Acme AB</span></div>
+            <div class="lf-fill"><dc-import name="ui-222-list-form-detail" tab="history" focus="tab" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:1096px;width:1440px;height:936px" data-screen-label="DE4 Article detail, History tab, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE4</span>Article detail, History tab<span class="fth">Dark, 1440 by 900. Two entries open with Field, Before and After; focus on the History tab</span><span class="lf-url">/plant-a/core/articles/$articleId?tab=history</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="Article AX-20410" actions="Archive|*Edit" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span lang="sv">Fläns DN50 rostfri</span><span>Company article, Acme AB</span></div>
+            <div class="lf-fill"><dc-import name="ui-222-list-form-detail" tab="history" focus="tab" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:2144px;width:1440px;height:936px" data-screen-label="DE5 New article, create form, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE5</span>New article, create form<span class="fth">Light, 1440 by 900. Empty fields, only optional fields marked; focus on the h1 after arrival</span><span class="lf-url">/plant-a/core/articles/new</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="New article" crumbs="Core|Master data|Articles|New article" actions="none" bell="off" focus="h1" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" mode="create" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:2144px;width:1440px;height:936px" data-screen-label="DE6 New article, create form, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE6</span>New article, create form<span class="fth">Dark, 1440 by 900. Empty fields, only optional fields marked; focus on the h1 after arrival</span><span class="lf-url">/plant-a/core/articles/new</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="New article" crumbs="Core|Master data|Articles|New article" actions="none" bell="off" focus="h1" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" mode="create" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:3192px;width:1440px;height:936px" data-screen-label="DE7 Edit article, edit form, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE7</span>Edit article, edit form<span class="fth">Light, 1440 by 900. Scrolled to Reason for change above the sticky footer; focus in Reason</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" scroll="320" focus="field:reason" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:3192px;width:1440px;height:936px" data-screen-label="DE8 Edit article, edit form, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE8</span>Edit article, edit form<span class="fth">Dark, 1440 by 900. Scrolled to Reason for change above the sticky footer; focus in Reason</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" scroll="320" focus="field:reason" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:4240px;width:1440px;height:936px" data-screen-label="DE9 New production order, create form, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE9</span>New production order, create form<span class="fth">Light, 1440 by 900. Quantity (pcs), deadline date and time in plant time; focus in Deadline date</span><span class="lf-url">/plant-a/planning/orders/new</span></div>
+          <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" entity="New order" crumbs="Planning|Production orders|New order" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" form="order" mode="create" focus="field:deadlineDate" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:4240px;width:1440px;height:936px" data-screen-label="DE10 New production order, create form, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE10</span>New production order, create form<span class="fth">Dark, 1440 by 900. Quantity (pcs), deadline date and time in plant time; focus in Deadline date</span><span class="lf-url">/plant-a/planning/orders/new</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" nav="planning.orders" entity="New order" crumbs="Planning|Production orders|New order" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" form="order" mode="create" focus="field:deadlineDate" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:5288px;width:1440px;height:936px" data-screen-label="DE11 Edit article, field errors, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE11</span>Edit article, field errors<span class="fth">Light, 1440 by 900. After Save: inline errors on two fields; the error summary has focus</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" state="errors" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:5288px;width:1440px;height:936px" data-screen-label="DE12 Edit article, field errors, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE12</span>Edit article, field errors<span class="fth">Dark, 1440 by 900. After Save: inline errors on two fields; the error summary has focus</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" state="errors" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:6336px;width:1440px;height:936px" data-screen-label="DE13 New production order, field errors, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE13</span>New production order, field errors<span class="fth">Light, 1440 by 900. After Save: a number and a date that do not parse; the summary has focus</span><span class="lf-url">/plant-a/planning/orders/new</span></div>
+          <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" entity="New order" crumbs="Planning|Production orders|New order" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" form="order" mode="create" state="parse" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:6336px;width:1440px;height:936px" data-screen-label="DE14 New production order, field errors, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE14</span>New production order, field errors<span class="fth">Dark, 1440 by 900. After Save: a number and a date that do not parse; the summary has focus</span><span class="lf-url">/plant-a/planning/orders/new</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" nav="planning.orders" entity="New order" crumbs="Planning|Production orders|New order" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" form="order" mode="create" state="parse" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:7384px;width:1440px;height:936px" data-screen-label="DE15 Edit article, server error, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE15</span>Edit article, server error<span class="fth">Light, 1440 by 900. Could not save, with the correlation id; the summary has focus</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" state="server" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:7384px;width:1440px;height:936px" data-screen-label="DE16 Edit article, server error, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE16</span>Edit article, server error<span class="fth">Dark, 1440 by 900. Could not save, with the correlation id; the summary has focus</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" state="server" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:8432px;width:1440px;height:936px" data-screen-label="DE17 Edit article, server error, values kept, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE17</span>Edit article, server error, values kept<span class="fth">Light, 1440 by 900. Scrolled down after the server error: the typed note and reason are kept</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" state="server" scroll="320" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:8432px;width:1440px;height:936px" data-screen-label="DE18 Edit article, server error, values kept, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE18</span>Edit article, server error, values kept<span class="fth">Dark, 1440 by 900. Scrolled down after the server error: the typed note and reason are kept</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" state="server" scroll="320" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:9480px;width:1440px;height:936px" data-screen-label="DE19 Edit article, version conflict, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE19</span>Edit article, version conflict<span class="fth">Light, 1440 by 900. Jonas Holm saved at 14:05 after Maria Nyberg opened it; the summary has focus</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" user="Maria Nyberg" username="maria.nyberg" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" state="conflict" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:9480px;width:1440px;height:936px" data-screen-label="DE20 Edit article, version conflict, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE20</span>Edit article, version conflict<span class="fth">Dark, 1440 by 900. Jonas Holm saved at 14:05 after Maria Nyberg opened it; the summary has focus</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" user="Maria Nyberg" username="maria.nyberg" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" state="conflict" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:10528px;width:1440px;height:936px" data-screen-label="DE21 Release order, review step, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE21</span>Release order, review step<span class="fth">Light, 1440 by 900. Alert Dialog over order 1001 with the values and Reason; focus in Reason</span><span class="lf-url">/plant-a/planning/orders/$orderId</span></div>
+          <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" entity="Order 1001" actions="Edit|*Release order" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span lang="sv">Fläns DN50 rostfri</span><span>Planned</span></div>
+            <div class="lf-fill"><dc-import name="ui-222-list-form-detail" entity="order" hint-size="100%,700px"></dc-import></div>
+            <dc-import name="ui-222-list-form-dialog" kind="release" focus="reason" hint-size="1px,1px"></dc-import>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:10528px;width:1440px;height:936px" data-screen-label="DE22 Release order, review step, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE22</span>Release order, review step<span class="fth">Dark, 1440 by 900. Alert Dialog over order 1001 with the values and Reason; focus in Reason</span><span class="lf-url">/plant-a/planning/orders/$orderId</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" nav="planning.orders" entity="Order 1001" actions="Edit|*Release order" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span lang="sv">Fläns DN50 rostfri</span><span>Planned</span></div>
+            <div class="lf-fill"><dc-import name="ui-222-list-form-detail" entity="order" hint-size="100%,700px"></dc-import></div>
+            <dc-import name="ui-222-list-form-dialog" kind="release" focus="reason" hint-size="1px,1px"></dc-import>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:11576px;width:1440px;height:936px" data-screen-label="DE23 Archive article, confirm dialog, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE23</span>Archive article, confirm dialog<span class="fth">Light, 1440 by 900. Alert Dialog over the list after Archive in the row menu of AX-20410; optional reason; focus in Reason</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" hover="AX-20410" hint-size="100%,600px"></dc-import></div></div>
+            <dc-import name="ui-222-list-form-dialog" kind="archive" focus="reason" hint-size="1px,1px"></dc-import>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:11576px;width:1440px;height:936px" data-screen-label="DE24 Archive article, confirm dialog, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE24</span>Archive article, confirm dialog<span class="fth">Dark, 1440 by 900. As DE23</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" hover="AX-20410" hint-size="100%,600px"></dc-import></div></div>
+            <dc-import name="ui-222-list-form-dialog" kind="archive" focus="reason" hint-size="1px,1px"></dc-import>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:12624px;width:1440px;height:936px" data-screen-label="DE25 Archive 3 articles, reason required, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE25</span>Archive 3 articles, reason required<span class="fth">Light, 1440 by 900. If a contract requires the reason (open question 8): 2 characters typed, the message states the range; focus in Reason</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" bulk="3" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" select="some" hint-size="100%,600px"></dc-import></div></div>
+            <dc-import name="ui-222-list-form-dialog" kind="archive-bulk" reason="required-error" focus="reason" hint-size="1px,1px"></dc-import>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:12624px;width:1440px;height:936px" data-screen-label="DE26 Archive 3 articles, reason required, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE26</span>Archive 3 articles, reason required<span class="fth">Dark, 1440 by 900. As DE25</span><span class="lf-url">/plant-a/core/articles</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" bulk="3" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" select="some" hint-size="100%,600px"></dc-import></div></div>
+            <dc-import name="ui-222-list-form-dialog" kind="archive-bulk" reason="required-error" focus="reason" hint-size="1px,1px"></dc-import>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:13672px;width:1440px;height:936px" data-screen-label="DE27 Restore article, confirm dialog, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE27</span>Restore article, confirm dialog<span class="fth">Light, 1440 by 900. Restore in the row menu of AX-20417 with Show archived on; optional reason; focus in Reason</span><span class="lf-url">/plant-a/core/articles?archived=1</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" archived="on" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" archived="on" hover="AX-20417" hint-size="100%,600px"></dc-import></div></div>
+            <dc-import name="ui-222-list-form-dialog" kind="restore" focus="reason" hint-size="1px,1px"></dc-import>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:13672px;width:1440px;height:936px" data-screen-label="DE28 Restore article, confirm dialog, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE28</span>Restore article, confirm dialog<span class="fth">Dark, 1440 by 900. As DE27</span><span class="lf-url">/plant-a/core/articles?archived=1</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" actions="*New article" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-page"><div class="lf-fit"><dc-import name="ui-222-list-form-toolbar" archived="on" hint-size="100%,48px"></dc-import></div><div class="lf-fill"><dc-import name="ui-222-list-form-table" archived="on" hover="AX-20417" hint-size="100%,600px"></dc-import></div></div>
+            <dc-import name="ui-222-list-form-dialog" kind="restore" focus="reason" hint-size="1px,1px"></dc-import>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:14720px;width:1440px;height:936px" data-screen-label="DE29 New article, number taken, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE29</span>New article, number taken<span class="fth">Light, 1440 by 900. After Save: core.code_taken lands on Article number and names no other plant; the summary has focus</span><span class="lf-url">/plant-a/core/articles/new</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="New article" crumbs="Core|Master data|Articles|New article" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" mode="create" state="taken" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:14720px;width:1440px;height:936px" data-screen-label="DE30 New article, number taken, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE30</span>New article, number taken<span class="fth">Dark, 1440 by 900. As DE29</span><span class="lf-url">/plant-a/core/articles/new</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="New article" crumbs="Core|Master data|Articles|New article" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" mode="create" state="taken" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:15768px;width:1440px;height:936px" data-screen-label="DE31 Edit article, archived meanwhile, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE31</span>Edit article, archived meanwhile<span class="fth">Light, 1440 by 900. Save returned core.archived: the typed values stay, with Restore article; the summary has focus</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" state="archived" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:15768px;width:1440px;height:936px" data-screen-label="DE32 Edit article, archived meanwhile, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE32</span>Edit article, archived meanwhile<span class="fth">Dark, 1440 by 900. As DE31</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" state="archived" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:16816px;width:1440px;height:936px" data-screen-label="DE33 Edit operation, limit, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE33</span>Edit operation, limit<span class="fth">Light, 1440 by 900. After Save: the server states the limit in the unit typed; the summary has focus</span><span class="lf-url">/plant-a/core/routings/$routingId/operations/$operationId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.routings" entity="Edit operation 20" crumbs="Core|Master data|Routings|Routing AX-20410|Edit operation 20" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" form="operation" state="limit" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:16816px;width:1440px;height:936px" data-screen-label="DE34 Edit operation, limit, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE34</span>Edit operation, limit<span class="fth">Dark, 1440 by 900. As DE33</span><span class="lf-url">/plant-a/core/routings/$routingId/operations/$operationId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.routings" entity="Edit operation 20" crumbs="Core|Master data|Routings|Routing AX-20410|Edit operation 20" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" form="operation" state="limit" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:17864px;width:1440px;height:936px" data-screen-label="DE35 Edit article, reason required, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE35</span>Edit article, reason required<span class="fth">Light, 1440 by 900. A required reason: (optional) drops, the message states the range; focus came from the summary link</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" reason="required-error" focus="field:reason" scroll="320" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:17864px;width:1440px;height:936px" data-screen-label="DE36 Edit article, reason required, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE36</span>Edit article, reason required<span class="fth">Dark, 1440 by 900. As DE35</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" reason="required-error" focus="field:reason" scroll="320" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:18912px;width:1440px;height:936px" data-screen-label="DE37 New tool, code taken, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE37</span>New tool, code taken<span class="fth">Light, 1440 by 900. The master-data kit's create form: Code T-100 is in use, so the message asks for another code; the summary has focus</span><span class="lf-url">/plant-a/core/tools/new</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.tools" entity="New tool" crumbs="Core|Master data|Tools|New tool" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" form="tool" mode="create" state="taken" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:18912px;width:1440px;height:936px" data-screen-label="DE38 New tool, code taken, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE38</span>New tool, code taken<span class="fth">Dark, 1440 by 900. As DE37</span><span class="lf-url">/plant-a/core/tools/new</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.tools" entity="New tool" crumbs="Core|Master data|Tools|New tool" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" form="tool" mode="create" state="taken" focus="summary" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:19960px;width:1440px;height:936px" data-screen-label="DE39 Imported article, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE39</span>Imported article<span class="fth">Light, 1440 by 900. AX-31007 from the Pyramid import: Source Pyramid with its external reference and no external data</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="Article AX-31007" actions="Archive|*Edit" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span lang="sv">Hydraulslang 12 mm</span><span>Company article, Acme AB</span></div>
+            <div class="lf-fill"><dc-import name="ui-222-list-form-detail" entity="imported" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:19960px;width:1440px;height:936px" data-screen-label="DE40 Imported article, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE40</span>Imported article<span class="fth">Dark, 1440 by 900. As DE39</span><span class="lf-url">/plant-a/core/articles/$articleId</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="Article AX-31007" actions="Archive|*Edit" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span lang="sv">Hydraulslang 12 mm</span><span>Company article, Acme AB</span></div>
+            <div class="lf-fill"><dc-import name="ui-222-list-form-detail" entity="imported" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:21008px;width:1440px;height:936px" data-screen-label="DE41 Imported order, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE41</span>Imported order<span class="fth">Light, 1440 by 900. Order 1002 from Pyramid: External data as sent, operations with statuses, the order panels slot beside the details</span><span class="lf-url">/plant-a/planning/orders/$orderId</span></div>
+          <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" entity="Order 1002" actions="*Edit" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span lang="sv">Hydraulslang 12 mm</span><span>Active</span></div>
+            <div class="lf-fill"><dc-import name="ui-222-list-form-detail" entity="imported-order" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:21008px;width:1440px;height:936px" data-screen-label="DE42 Imported order, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE42</span>Imported order<span class="fth">Dark, 1440 by 900. As DE41</span><span class="lf-url">/plant-a/planning/orders/$orderId</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" nav="planning.orders" entity="Order 1002" actions="*Edit" bell="off" show-title="on" hint-size="1440px,936px">
+            <div data-slot="header"><span lang="sv">Hydraulslang 12 mm</span><span>Active</span></div>
+            <div class="lf-fill"><dc-import name="ui-222-list-form-detail" entity="imported-order" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:0px;top:22056px;width:1440px;height:936px" data-screen-label="DE43 Edit article, Stock unit open, light, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE43</span>Edit article, Stock unit open<span class="fth">Light, 1440 by 900. The Select opens as a listbox with the current option checked and focused</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" open="unit" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+        <div class="dfp-fr" style="left:1520px;top:22056px;width:1440px;height:936px" data-screen-label="DE44 Edit article, Stock unit open, dark, 1440 by 900" data-part="1">
+          <div class="flabel dfp-chip"><span class="fid">DE44</span>Edit article, Stock unit open<span class="fth">Dark, 1440 by 900. As DE43</span><span class="lf-url">/plant-a/core/articles/$articleId/edit</span></div>
+          <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="core.articles" entity="Edit article AX-20410" crumbs="Core|Master data|Articles|Article AX-20410|Edit" actions="none" bell="off" show-title="on" hint-size="1440px,936px">
+            <div class="lf-fill"><dc-import name="ui-222-list-form-form" open="unit" hint-size="100%,700px"></dc-import></div>
+          </dc-import>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler as Shell.dc.html, one per document (flag __nmIconFill2).
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          return {};
+        }
+      }
+    </script>
+  </body>
+</html>

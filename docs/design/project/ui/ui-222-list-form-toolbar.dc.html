@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>List toolbar</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./ui-222-list-form.css" />
+      </helmet>
+      <div class="lf-part fit {{ rootCls }}" lang="{{ lang }}" data-screen-label="{{ label }}">
+        <sc-if value="{{ showNotice }}">
+          <div class="lf-status" role="status"><span class="ic" data-icon="Info"></span><span>{{ t.notice }}</span></div>
+        </sc-if>
+        <sc-if value="{{ wideTool }}">
+          <div class="lf-tool">
+            <span class="inp lf-search {{ f.search }}"><span class="ic" data-icon="Search"></span><sc-if value="{{ hasQ }}"><span class="lf-qv">{{ q }}</span><button class="lf-clr" type="button" aria-label="{{ t.clearSearch }}"><span class="ic" data-icon="X"></span></button></sc-if><sc-if value="{{ noQ }}"><span class="ph">{{ t.search }}</span></sc-if></span>
+            <sc-for list="{{ fbtns }}" as="b">
+              <span class="lf-wrap">
+                <button class="btn v-outline lf-fb {{ b.cls }}" type="button" aria-haspopup="menu" aria-expanded="{{ b.open }}" aria-controls="{{ b.ctl }}">{{ b.label }}<sc-if value="{{ b.hasN }}"><span class="lf-n" aria-hidden="true">{{ b.n }}</span><span class="lf-vh">{{ b.nText }}</span></sc-if><span class="ic" data-icon="ChevronDown"></span></button>
+                <sc-if value="{{ b.open }}">
+                  <div class="pop lf-pop below" id="{{ b.ctl }}" style="{{ b.style }}" role="menu" aria-label="{{ b.label }}">
+                    <div class="lf-mh" role="presentation">{{ b.hint }}</div>
+                    <sc-for list="{{ b.opts }}" as="o">
+                      <div class="lf-pv {{ o.cls }}" role="menuitemcheckbox" aria-checked="{{ o.on }}"><span class="cb {{ o.cb }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span></span><span lang="{{ o.lang }}">{{ o.label }}</span><span class="c">{{ o.count }}</span></div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </span>
+            </sc-for>
+            <span class="lf-wrap">
+              <button class="btn v-outline lf-fb {{ grp.cls }}" type="button" aria-haspopup="menu" aria-expanded="{{ grp.open }}" aria-controls="{{ grp.ctl }}"><span class="ic" data-icon="Group"></span>{{ grp.text }}<span class="ic" data-icon="ChevronDown"></span></button>
+              <sc-if value="{{ grp.open }}">
+                <div class="pop lf-pop below" id="{{ grp.ctl }}" style="width:240px" role="menu" aria-label="{{ t.group }}">
+                  <sc-for list="{{ grp.opts }}" as="o">
+                    <div class="lf-pv {{ o.cls }}" role="menuitemradio" aria-checked="{{ o.on }}"><span class="lf-rd"><span class="lf-rd-dot"></span></span><span>{{ o.label }}</span></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </span>
+            <span class="lf-tool-end">
+            <sc-if value="{{ hasArchived }}">
+              <span class="cb {{ arch.cls }}"><span class="cb-hit"><span class="cb-box {{ f.archived }}"><span class="ic" data-icon="Check"></span></span></span>{{ t.archived }}</span>
+            </sc-if>
+            <span class="lf-wrap">
+              <button class="btn v-outline lf-fb {{ cols.cls }}" type="button" aria-haspopup="menu" aria-expanded="{{ cols.open }}" aria-controls="{{ cols.ctl }}"><span class="ic" data-icon="Columns3"></span>{{ t.columns }}<span class="ic" data-icon="ChevronDown"></span></button>
+              <sc-if value="{{ cols.open }}">
+                <div class="pop lf-pop below-r" id="{{ cols.ctl }}" style="width:256px" role="menu" aria-label="{{ t.columns }}">
+                  <div class="lf-mh" role="presentation">{{ t.colsHint }}</div>
+                  <sc-for list="{{ cols.opts }}" as="o">
+                    <div class="lf-pv {{ o.cls }}" role="menuitemcheckbox" aria-checked="{{ o.on }}" aria-disabled="{{ o.dis }}"><span class="cb {{ o.cb }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span></span><span>{{ o.label }}</span><sc-if value="{{ o.dis }}"><span class="c lf-ct">{{ t.always }}</span></sc-if></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </span>
+            </span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ narrowTool }}">
+          <span class="inp lf-search full {{ f.search }}"><span class="ic" data-icon="Search"></span><sc-if value="{{ hasQ }}"><span class="lf-qv">{{ q }}</span><button class="lf-clr" type="button" aria-label="{{ t.clearSearch }}"><span class="ic" data-icon="X"></span></button></sc-if><sc-if value="{{ noQ }}"><span class="ph">{{ t.search }}</span></sc-if></span>
+          <div class="lf-tool">
+            <button class="btn v-outline lf-fb {{ nf.cls }}" type="button" aria-haspopup="dialog" aria-expanded="{{ nf.open }}"><span class="ic" data-icon="ListFilter"></span>{{ t.filters }}<sc-if value="{{ nf.hasN }}"><span class="lf-n" aria-hidden="true">{{ nf.n }}</span><span class="lf-vh">{{ nf.nText }}</span></sc-if></button>
+            <span class="lf-wrap">
+              <button class="btn v-outline lf-fb {{ cols.cls }}" type="button" aria-haspopup="menu" aria-expanded="{{ cols.open }}" aria-controls="{{ cols.ctl }}"><span class="ic" data-icon="Columns3"></span>{{ t.columns }}</button>
+              <sc-if value="{{ cols.open }}">
+                <div class="pop lf-pop below" id="{{ cols.ctl }}" style="width:256px" role="menu" aria-label="{{ t.columns }}">
+                  <div class="lf-mh" role="presentation">{{ t.colsHint }}</div>
+                  <sc-for list="{{ cols.opts }}" as="o">
+                    <div class="lf-pv {{ o.cls }}" role="menuitemcheckbox" aria-checked="{{ o.on }}" aria-disabled="{{ o.dis }}"><span class="cb {{ o.cb }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span></span><span>{{ o.label }}</span><sc-if value="{{ o.dis }}"><span class="c lf-ct">{{ t.always }}</span></sc-if></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showBulk }}">
+          <div class="lf-bulk" role="group" aria-label="{{ t.selectedName }}">
+            <span class="k">{{ bulkText }}</span>
+            <sc-if value="{{ hasArchived }}"><button class="btn v-outline {{ f.bulkArchive }}" type="button"><span class="ic" data-icon="Archive"></span>{{ bulkArchive }}</button></sc-if>
+            <button class="btn v-ghost {{ f.bulkClear }}" type="button">{{ t.clearSel }}</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showChips }}">
+          <div class="lf-chips">
+            <sc-for list="{{ chips }}" as="c">
+              <span class="lf-chip"><span class="lf-chip-t"><span class="k">{{ c.field }}:</span><sc-for list="{{ c.vals }}" as="v"><span class="lf-cv"><span lang="{{ v.lang }}">{{ v.label }}</span><span class="lf-mono lf-mut">{{ v.count }}</span><sc-if value="{{ v.sep }}"><span class="s">,</span></sc-if></span></sc-for></span><button class="lf-x {{ c.fcls }}" type="button" aria-label="{{ c.remove }}"><span class="ic" data-icon="X"></span></button></span>
+            </sc-for>
+            <button class="btn v-link {{ f.clear }}" type="button">{{ t.clear }}</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ sheetOpen }}">
+          <div class="lf-ov"></div>
+          <div class="lf-sheet" role="dialog" aria-modal="true" aria-labelledby="{{ ids.sheetT }}">
+            <div class="lf-sh-h"><h2 class="lf-sh-t lf-grow" id="{{ ids.sheetT }}">{{ t.filters }}</h2><button class="btn icon v-ghost {{ f.close }}" type="button" aria-label="{{ t.close }}"><span class="ic" data-icon="X"></span></button></div>
+            <div class="lf-sh-b">
+              <sc-for list="{{ sheetSets }}" as="s">
+                <fieldset class="lf-fset">
+                  <legend>{{ s.label }}</legend>
+                  <sc-for list="{{ s.opts }}" as="o">
+                    <span class="lf-opt"><span class="cb {{ o.cb }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span><span lang="{{ o.lang }}">{{ o.label }}</span></span><span class="c">{{ o.count }}</span></span>
+                  </sc-for>
+                </fieldset>
+              </sc-for>
+              <fieldset class="lf-fset">
+                <legend>{{ t.group }}</legend>
+                <sc-for list="{{ grp.opts }}" as="o">
+                  <span class="lf-opt lf-pv {{ o.onCls }}"><span class="lf-rd"><span class="lf-rd-dot"></span></span><span>{{ o.label }}</span></span>
+                </sc-for>
+              </fieldset>
+              <sc-if value="{{ hasArchived }}">
+                <span class="cb {{ arch.cls }}"><span class="cb-hit"><span class="cb-box"><span class="ic" data-icon="Check"></span></span></span>{{ t.archived }}</span>
+              </sc-if>
+            </div>
+            <div class="lf-sh-f"><button class="btn v-default" type="button">{{ showN }}</button><button class="btn v-outline" type="button">{{ t.clear }}</button></div>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"list":{"editor":"enum","options":["articles","orders","tools"],"default":"articles","tsType":"string"},"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"menu":{"editor":"enum","options":["none","filter","filter2","filter3","group","columns","filters"],"default":"none","tsType":"string"},"filtered":{"editor":"enum","options":["off","on","empty"],"default":"off","tsType":"string"},"q":{"editor":"text","default":"","tsType":"string"},"group":{"editor":"enum","options":["none","on"],"default":"none","tsType":"string"},"archived":{"editor":"enum","options":["off","on"],"default":"off","tsType":"string"},"bulk":{"editor":"int","default":0,"tsType":"number"},"notice":{"editor":"enum","options":["none","ignored"],"default":"none","tsType":"string"},"focus":{"editor":"enum","options":["none","search","filter","chip","clear","group","archived","columns","filters","bulk-archive","bulk-clear","close"],"default":"none","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"theme":{"editor":"enum","options":["inherit","light","dark"],"default":"inherit","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), so the part also draws its icons when it is
+          // rendered on its own, without a shell.
+          if (window.__nmIconFill2) return;
+          window.__nmIconFill2 = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              const name = el.getAttribute("data-icon");
+              if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+              const node = L.icons[name];
+              if (!node) return;
+              while (el.firstChild) el.removeChild(el.firstChild);
+              el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+              el.setAttribute("data-icon-drawn", name);
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.uid) {
+            window.__lfSeq = (window.__lfSeq || 0) + 1;
+            this.uid = "lf-t" + window.__lfSeq;
+          }
+          const pick = (v, list, d) => (list.indexOf(v) >= 0 ? v : d);
+          const list = pick(P.list, ["articles", "orders", "tools"], "articles");
+          const narrow = P.size === "narrow";
+          const long = P.strings === "long" && list === "articles";
+          const menu = pick(P.menu, ["none", "filter", "filter2", "filter3", "group", "columns", "filters"], "none");
+          const filtered = P.filtered === "on" || P.filtered === "empty";
+          // filtered="empty": Article group Housings and Source NorthMES, which no article has together. Each count is
+          // taken with the other field's filter applied, so both picked values count 0.
+          const emptyPick = P.filtered === "empty" && list === "articles";
+          const q = typeof P.q === "string" ? P.q : "";
+          const grouped = P.group === "on";
+          const archived = P.archived === "on";
+          const bulk = Math.max(0, parseInt(P.bulk, 10) || 0);
+          const focus = P.focus || "none";
+          const theme = pick(P.theme, ["inherit", "light", "dark"], "inherit");
+          // Fictional data. Counts come from the same groupedAggregates call as the list (VS 2.3.2); totals add up to the list total.
+          const V = (label, count, on, lang) => ({ label: label, count: count, on: !!on, lang: lang || null });
+          const PRESETS = {
+            articles: {
+              noun: "articles", total: 248, filteredTotal: 61,
+              search: "Search articles",
+              filters: [
+                { key: "articleGroup", label: "Article group", hint: "Show articles in these groups", remove: "Remove the article group filter",
+                  vals: [V("Consumables", 12), V("Flanges", 34), V("Hoses", 21, true), V("Housings", 18), V("Shafts", 40, true), V("No article group", 123)] },
+                { key: "stockUnit", label: "Stock unit", hint: "Show articles counted in", remove: "Remove the stock unit filter",
+                  vals: [V("Pieces (pcs)", 201), V("Metres (m)", 21), V("Kilograms (kg)", 14), V("Litres (l)", 12)] },
+                { key: "source", label: "Source", hint: "Show articles from", remove: "Remove the source filter",
+                  vals: [V("NorthMES", 96), V("Pyramid", 152)] }
+              ],
+              groups: ["Article group", "Stock unit", "Source"],
+              columns: ["Article number", "Name", "Article group", "Stock unit", "Source", "Last changed"],
+              archived: true, selNoun: "articles"
+            },
+            orders: {
+              noun: "production orders", total: 37, filteredTotal: 24,
+              search: "Search production orders",
+              filters: [
+                { key: "status", label: "Status", hint: "Show orders with this status", remove: "Remove the status filter",
+                  vals: [V("Registered", 5), V("Planned", 18, true), V("Active", 6, true), V("Paused", 2), V("Finished", 4), V("Delivered", 1), V("Cancelled", 1)] },
+                { key: "articleId", label: "Article", hint: "Show orders for", remove: "Remove the article filter",
+                  vals: [V("AX-20410 Fläns DN50 rostfri", 9, false, "sv"), V("AX-31007 Hydraulslang 12 mm", 7, false, "sv"), V("AX-45020 Lagerhus 62 mm", 6, false, "sv"), V("AX-52001 Smörjfett EP2", 8, false, "sv"), V("AX-60300 Axeltapp 40 h6", 7, false, "sv")] }
+              ],
+              groups: ["Status", "Article"],
+              columns: ["Order", "Article", "Quantity", "Deadline", "Priority", "Status"],
+              archived: false, selNoun: "orders"
+            },
+            tools: {
+              noun: "tools", total: 14, filteredTotal: 9,
+              search: "Search tools",
+              filters: [
+                { key: "scope", label: "Scope", hint: "Show tools of", remove: "Remove the scope filter",
+                  vals: [V("Plant A", 9, true), V("Acme AB", 5)] }
+              ],
+              groups: ["Scope"],
+              columns: ["Code", "Name", "Scope", "Last changed"],
+              archived: true, selNoun: "tools"
+            }
+          };
+          const L = PRESETS[list];
+          if (emptyPick) {
+            L.filters[0].vals = L.filters[0].vals.map((v) => Object.assign({}, v, v.label === "Housings" ? { on: true, count: 0 } : { on: false }));
+            L.filters[2].vals = L.filters[2].vals.map((v) => Object.assign({}, v, v.label === "NorthMES" ? { on: true, count: 0 } : { on: false }));
+            L.filteredTotal = 0;
+          }
+          // German labels and long data for the long-strings frame (VS 12.9). Labels other than the spec's are proposals.
+          if (long) {
+            L.search = "Artikel suchen";
+            L.filters = [
+              { key: "articleGroup", label: "Artikelgruppe", hint: "Artikel dieser Gruppen anzeigen", remove: "Filter Artikelgruppe entfernen",
+                vals: [V("Flansche", 34), V("Schläuche", 21), V("Gehäuse", 18), V("Sonderanfertigungen nach Kundenzeichnung", 7, true), V("Verbrauchsmaterial", 12), V("Wellen", 40), V("Ohne Artikelgruppe", 116)] },
+              { key: "stockUnit", label: "Lagereinheit", hint: "Artikel mit dieser Lagereinheit anzeigen", remove: "Filter Lagereinheit entfernen",
+                vals: [V("Stück (Stk)", 201), V("Meter (m)", 21), V("Kilogramm (kg)", 14), V("Liter (l)", 12)] },
+              { key: "source", label: "Quelle", hint: "Artikel aus dieser Quelle anzeigen", remove: "Filter Quelle entfernen",
+                vals: [V("NorthMES", 96), V("Pyramid", 152)] }
+            ];
+            L.groups = ["Artikelgruppe", "Lagereinheit", "Quelle"];
+            L.columns = ["Artikelnummer", "Bezeichnung", "Artikelgruppe", "Lagereinheit", "Quelle", "Zuletzt geändert"];
+            L.filteredTotal = 7;
+          }
+          const t = long ? {
+            search: L.search, clearSearch: "Suche leeren", group: "Gruppieren nach", none: "Keine Gruppierung", archived: "Archivierte anzeigen", columns: "Spalten",
+            colsHint: "Diese Spalten anzeigen", always: "Immer sichtbar", filters: "Filter", clear: "Filter zurücksetzen", close: "Schließen",
+            clearSel: "Auswahl aufheben", selectedName: "Ausgewählte Artikel",
+            notice: "Dieser Link enthielt 1 Einstellung, die nicht mehr gilt. Sie wurde ignoriert.",
+            sel: (n) => n + " ausgewählt", archiveN: (n) => n + " Artikel archivieren", showN: (n) => n + " Artikel anzeigen", picked: (n) => ", " + n + " ausgewählt"
+          } : {
+            search: L.search, clearSearch: "Clear search", group: "Group by", none: "No grouping", archived: "Show archived", columns: "Columns",
+            colsHint: "Show these columns", always: "Always shown", filters: "Filters", clear: "Clear filters", close: "Close",
+            clearSel: "Clear selection", selectedName: "Selected " + L.selNoun,
+            notice: "This link had 1 setting that no longer applies, so it was ignored.",
+            sel: (n) => n + " selected", archiveN: (n) => "Archive " + n + " " + (n === 1 ? L.selNoun.replace(/s$/, "") : L.selNoun), showN: (n) => "Show " + n + " " + L.noun, picked: (n) => ", " + n + " selected"
+          };
+          const uid = this.uid;
+          const fc = (k) => (focus === k ? "is-focus" : "");
+          // Filter buttons and their menus. The menu opens under its button; the last picked value has keyboard focus.
+          const menuIndex = { filter: 0, filter2: 1, filter3: 2 }[menu];
+          const fbtns = L.filters.map((F, i) => {
+            const vals = F.vals.map((v) => Object.assign({}, v, { on: filtered && v.on }));
+            const picked = vals.filter((v) => v.on);
+            const open = !narrow && menuIndex === i;
+            let kf = -1;
+            vals.forEach((v, j) => { if (v.on) kf = j; });
+            if (kf < 0) kf = 0;
+            return {
+              label: F.label, hint: F.hint, open: open, ctl: open ? uid + "-m" + i : null,
+              cls: (open ? "open " : "") + (i === 0 ? fc("filter") : ""),
+              hasN: picked.length > 0, n: picked.length, nText: t.picked(picked.length),
+              style: "width:" + (long ? "380px" : list === "orders" && i === 1 ? "320px" : "256px"),
+              opts: vals.map((v, j) => ({ label: v.label, lang: v.lang, count: v.count, on: v.on, cb: v.on ? "on" : "", cls: open && j === kf ? "kfocus" : "" }))
+            };
+          });
+          const chips = fbtns.filter((b) => b.hasN).map((b, i) => {
+            const F = L.filters[fbtns.indexOf(b)];
+            const vals = b.opts.filter((o) => o.on);
+            return { field: F.label, remove: F.remove, fcls: i === 0 ? fc("chip") : "", vals: vals.map((v, j) => ({ label: v.label, lang: v.lang, count: v.count, sep: j < vals.length - 1 })) };
+          });
+          const groupOpen = !narrow && menu === "group";
+          const gopts = [t.none].concat(L.groups).map((g, j) => {
+            const on = grouped ? j === 1 : j === 0;
+            return { label: g, on: on, onCls: on ? "on" : "", cls: (on ? "on " : "") + (groupOpen && on ? "kfocus" : "") };
+          });
+          const grp = { open: groupOpen, ctl: groupOpen ? uid + "-g" : null, cls: (groupOpen ? "open " : "") + fc("group"), text: grouped ? t.group + ": " + L.groups[0] : t.group, opts: gopts };
+          const colsOpen = menu === "columns";
+          const cols = {
+            open: colsOpen, ctl: colsOpen ? uid + "-c" : null, cls: (colsOpen ? "open " : "") + fc("columns"),
+            opts: L.columns.map((c, j) => ({ label: c, on: true, cb: "on", dis: j === 0 ? "true" : null, cls: (j === 0 ? "is-dis " : "") + (colsOpen && j === 1 ? "kfocus" : "") }))
+          };
+          const pickedAll = fbtns.reduce((a, b) => a + b.n, 0);
+          const sheetOpen = narrow && menu === "filters";
+          const total = filtered ? L.filteredTotal : L.total;
+          const nf = { cls: (sheetOpen ? "open " : "") + fc("filters"), open: sheetOpen, hasN: pickedAll > 0, n: pickedAll, nText: t.picked(pickedAll) };
+          const sheetSets = L.filters.map((F, i) => ({ label: F.label, opts: fbtns[i].opts.map((o) => ({ label: o.label, lang: o.lang, count: o.count, cb: o.on ? "on" : "" })) }));
+          const NAMES = { articles: "articles", orders: "production orders", tools: "tools" };
+          return {
+            label: "List toolbar, " + NAMES[list] + (narrow ? ", 320" : "") + (menu !== "none" ? ", menu " + menu : "") + (bulk ? ", " + bulk + " selected" : ""),
+            rootCls: (theme !== "inherit" ? "lf-solo " : "") + (theme === "dark" ? "dark " : "") + (narrow ? "lf-nar" : ""),
+            lang: long ? "de" : null,
+            t: t,
+            ids: { sheetT: uid + "-sheet-t" },
+            f: {
+              search: fc("search"), archived: fc("archived"), clear: fc("clear"), close: fc("close"),
+              bulkArchive: fc("bulk-archive"), bulkClear: fc("bulk-clear")
+            },
+            showNotice: P.notice === "ignored",
+            wideTool: !narrow && bulk === 0,
+            narrowTool: narrow && bulk === 0,
+            showBulk: bulk > 0,
+            bulkText: t.sel(bulk),
+            bulkArchive: t.archiveN(bulk),
+            hasQ: q.length > 0, noQ: q.length === 0, q: q,
+            fbtns: fbtns, grp: grp, cols: cols, nf: nf,
+            hasArchived: L.archived,
+            arch: { cls: archived ? "on" : "" },
+            showChips: chips.length > 0,
+            chips: chips,
+            sheetOpen: sheetOpen,
+            sheetSets: sheetSets,
+            showN: t.showN(total)
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

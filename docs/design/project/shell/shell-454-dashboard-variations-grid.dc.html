@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard grid</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-454-dashboard-variations-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-454-dashboard-variations.css" />
+      </helmet>
+      <div class="db-gs" data-screen-label="{{ label }}">
+        <sc-if value="{{ isEmpty }}">
+          <div class="db-empty">
+            <span class="big"><span class="ic" data-icon="LayoutDashboard"></span></span>
+            <h2>{{ emptyHead }}</h2>
+            <p>Add a widget to see the numbers you follow. Only you see this tab, at every plant you open.</p>
+            <button class="btn v-default {{ emptyFocus }}" type="button"><span class="ic" data-icon="Plus"></span>Add widget</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{ hasGrid }}">
+          <div class="db-g {{ gcls }}" style="{{ gstyle }}">
+            <sc-for list="{{ guides }}" as="g" hint-placeholder-count="0"><span class="db-gcol" style="{{ g }}" aria-hidden="true"></span></sc-for>
+            <sc-if value="{{ ghost }}"><span class="db-ghost" style="{{ ghostStyle }}" aria-hidden="true"></span></sc-if>
+            <sc-for list="{{ items }}" as="w" hint-placeholder-count="5">
+              <div class="db-cell {{ w.cellCls }}" style="{{ w.style }}">
+                <section class="db-w {{ w.cls }}" aria-labelledby="{{ w.hid }}" aria-busy="{{ w.busy }}" tabindex="{{ w.tab }}">
+                  <div class="db-wh">
+                    <sc-if value="{{ w.grip }}"><button class="db-ib {{ w.gripCls }}" type="button" aria-label="{{ w.gripLabel }}" aria-pressed="{{ w.pressed }}"><span class="ic" data-icon="GripVertical"></span></button></sc-if>
+                    <h2 class="db-wt" id="{{ w.hid }}" lang="{{ w.lang }}">{{ w.title }}</h2>
+                    <sc-if value="{{ w.editing }}"><span class="badge db-editing">Editing</span></sc-if>
+                    <sc-if value="{{ w.demo }}"><span class="badge db-demo">Demo</span></sc-if>
+                    <sc-if value="{{ w.editBtn }}"><button class="db-ib {{ w.editCls }}" type="button" aria-label="{{ w.editLabel }}" aria-expanded="{{ w.editExp }}"><span class="ic" data-icon="Settings2"></span></button></sc-if>
+                    <sc-if value="{{ w.menuBtn }}">
+                      <span class="db-wrap">
+                        <button class="db-ib {{ w.menuCls }}" type="button" aria-label="{{ w.menuLabel }}" aria-haspopup="menu" aria-expanded="{{ w.menuOpen }}"><span class="ic" data-icon="Ellipsis"></span></button>
+                        <sc-if value="{{ w.menuOpen }}">
+                          <div class="pop db-pop below-r" role="menu" aria-label="{{ w.menuLabel }}" style="width:236px">
+                            <div class="mi kfocus" role="menuitem"><span class="ic" data-icon="Settings2"></span>Settings</div>
+                            <div class="msep" role="separator"></div>
+                            <div class="mi is-dis" role="menuitem" aria-disabled="true"><span class="ic" data-icon="ArrowUp"></span>Move up</div>
+                            <div class="mi" role="menuitem"><span class="ic" data-icon="ArrowDown"></span>Move down</div>
+                            <div class="msep" role="separator"></div>
+                            <div role="group" aria-labelledby="{{ w.sizeHid }}">
+                              <div class="db-mh" id="{{ w.sizeHid }}" role="presentation">Size</div>
+                              <sc-for list="{{ w.sizes }}" as="z"><div class="mi" role="menuitemradio" aria-checked="{{ z.on }}"><span class="db-mrad {{ z.cls }}"></span>{{ z.name }}<span class="db-mi-d">{{ z.dim }}</span></div></sc-for>
+                            </div>
+                            <div class="msep" role="separator"></div>
+                            <div class="mi" role="menuitem" style="color:var(--destructive)"><span class="ic" data-icon="Trash2" style="color:var(--destructive)"></span>Remove widget</div>
+                          </div>
+                        </sc-if>
+                      </span>
+                    </sc-if>
+                  </div>
+                  <div class="db-wb">
+                    <sc-if value="{{ w.isValue }}">
+                      <div class="db-val"><span class="db-vn">{{ w.v }}</span><span class="db-vu">{{ w.u }}</span></div>
+                      <p class="db-vc"><sc-if value="{{ w.trend }}"><span class="ic" data-icon="{{ w.trend }}"></span></sc-if><span>{{ w.c }}</span></p>
+                    </sc-if>
+                    <sc-if value="{{ w.isList }}">
+                      <ul class="db-list">
+                        <sc-for list="{{ w.rows }}" as="r">
+                          <li class="db-li">
+                            <span class="db-li-a"><a class="db-lk" href="#">{{ r.no }}</a><span class="db-art" lang="{{ r.lang }}">{{ r.art }}</span></span>
+                            <span class="badge {{ r.bcls }}">{{ r.st }}</span>
+                            <span class="db-li-b"><span>{{ r.sub }}</span><sc-if value="{{ r.late }}"><span class="db-late"><span class="ic" data-icon="AlarmClock"></span>Late</span></sc-if></span>
+                          </li>
+                        </sc-for>
+                      </ul>
+                      <a class="db-more" href="#">{{ w.more }}</a>
+                    </sc-if>
+                    <sc-if value="{{ w.isTable }}">
+                      <div class="db-tw {{ w.twCls }}" tabindex="{{ w.twTab }}" role="{{ w.twRole }}" aria-label="{{ w.twLabel }}">
+                        <div class="db-tgrid" style="{{ w.tstyle }}" role="table" aria-labelledby="{{ w.hid }}">
+                          <div class="db-trow hd" role="row"><sc-for list="{{ w.head }}" as="h"><span class="db-td {{ h.cls }}" role="columnheader">{{ h.t }}</span></sc-for></div>
+                          <sc-for list="{{ w.trows }}" as="r">
+                            <div class="db-trow" role="row">
+                              <sc-for list="{{ r }}" as="c">
+                                <span class="db-td {{ c.cls }}" role="cell"><sc-if value="{{ c.link }}"><a class="db-lk" href="#">{{ c.t }}</a></sc-if><sc-if value="{{ c.badge }}"><span class="badge {{ c.bcls }}">{{ c.t }}</span></sc-if><sc-if value="{{ c.text }}">{{ c.t }}</sc-if></span>
+                              </sc-for>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </div>
+                      <a class="db-more" href="#">{{ w.more }}</a>
+                    </sc-if>
+                    <sc-if value="{{ w.isChart }}">
+                      <div class="db-legend"><sc-for list="{{ w.series }}" as="s"><span class="db-lg"><span class="db-sw {{ s.cls }}"></span>{{ s.name }}</span></sc-for></div>
+                      <div class="db-ch" role="img" aria-label="{{ w.alt }}">
+                        <div class="db-ya" aria-hidden="true"><sc-for list="{{ w.ticks }}" as="t"><span>{{ t }}</span></sc-for></div>
+                        <div class="db-plot">
+                          <div class="db-gl"><sc-for list="{{ w.ticks }}" as="t"><span></span></sc-for></div>
+                          <div class="db-bars"><sc-for list="{{ w.groups }}" as="g"><div class="db-bg"><sc-for list="{{ g.bars }}" as="b"><span class="db-bar {{ b.cls }}" style="{{ b.style }}"></span></sc-for></div></sc-for></div>
+                        </div>
+                        <span></span>
+                        <div class="db-xa" aria-hidden="true"><sc-for list="{{ w.groups }}" as="g"><span>{{ g.label }}</span></sc-for></div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ w.isLoading }}">
+                      <div class="db-skg"><span class="sk db-skl big"></span><span class="sk db-skl" style="width:80%"></span><span class="db-vh">Loading {{ w.title }}</span></div>
+                    </sc-if>
+                    <sc-if value="{{ w.isState }}">
+                      <div class="db-st {{ w.stCls }}">
+                        <p class="db-st-h {{ w.stTone }}"><span class="ic" data-icon="{{ w.stIcon }}"></span><span>{{ w.stHead }}</span></p>
+                        <p class="db-st-p">{{ w.stText }}</p>
+                        <sc-if value="{{ w.stCid }}"><p class="db-cid"><span>Correlation id</span><span class="v">{{ w.stCid }}</span><button class="db-ib" type="button" aria-label="Copy correlation id"><span class="ic" data-icon="Copy"></span></button></p></sc-if>
+                        <sc-if value="{{ w.stBtn }}"><button class="btn v-outline db-btn-s" type="button"><sc-if value="{{ w.stBtnIcon }}"><span class="ic" data-icon="{{ w.stBtnIcon }}"></span></sc-if>{{ w.stBtn }}</button></sc-if>
+                        <sc-if value="{{ w.stLink }}"><a class="db-more" href="#" style="margin-top:2px">{{ w.stLink }}</a></sc-if>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ w.isFlip }}">
+                      <div class="db-fscroll">
+                        <dc-import name="shell-454-dashboard-variations-settings" variant="flip" focus="title" hint-size="100%,260px"></dc-import>
+                      </div>
+                    </sc-if>
+                  </div>
+                  <sc-if value="{{ w.isFlip }}">
+                    <div class="db-ffoot"><button class="btn v-default db-btn-s" type="button">Save</button><button class="btn v-outline db-btn-s" type="button">Cancel</button></div>
+                  </sc-if>
+                  <sc-if value="{{ w.rsz }}"><span class="db-rsz" aria-hidden="true"><span class="ic" data-icon="MoveDiagonal2"></span></span></sc-if>
+                </section>
+              </div>
+            </sc-for>
+            <sc-if value="{{ tile }}">
+              <div class="db-cell {{ tileCellCls }}" style="{{ tileStyle }}">
+                <button class="db-tile {{ tileCls }}" type="button" aria-haspopup="dialog" aria-expanded="{{ tileOpen }}"><span class="ic" data-icon="Plus"></span><span>{{ tileText }}</span><sc-if value="{{ tileSub }}"><span class="db-sub">{{ tileSub }}</span></sc-if></button>
+                <sc-if value="{{ tileOpen }}">
+                  <div class="pop db-pop db-catpop" role="dialog" aria-label="Add widget" style="{{ popStyle }}">
+                    <dc-import name="shell-454-dashboard-variations-catalog" variant="pop" hint-size="360px,330px"></dc-import>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"scene":{"editor":"enum","options":["A1","A2","A3","A4","A5","A6","A7","A8","A9","B1","B2","B3","B4","B5","B6","B7","B8","B9","C1","C2","C3","C4","C5","C6","C7","C8","C9"],"default":"A1","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the lucide filler of Shell.dc.html (flag __nmIconFill2), for a standalone render.
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.DB454 ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.DB454) ready();
+        }
+        renderVals() {
+          const P = this.props || {};
+          const D = window.DB454;
+          const id = String(P.scene || "A1");
+          const empty = { label: "Grid " + id, isEmpty: false, hasGrid: false, items: [], guides: [], tile: false, ghost: false };
+          if (!D || !D.SCENES[id]) return empty;
+          const S = D.SCENES[id];
+          const opt = S.opt;
+          const cols = S.cols;
+          const tab = D.TABS[S.tab];
+          const editMode = opt === "A" && S.mode === "edit";
+          const px = (h) => 72 * h + 16 * (h - 1);
+          const at = (x, y, w, h) => (cols === 1 ? "grid-column:1 / -1" : "grid-column:" + (x + 1) + " / span " + w + ";grid-row:" + (y + 1) + " / span " + h);
+          const BADGE = { Planned: "lf-st-planned", Active: "lf-st-active", Paused: "lf-st-paused" };
+          const lay = D.layout(S.tab, cols, S.pos);
+          const rows = lay.reduce((m, o) => Math.max(m, o.y + o.h), 0);
+          // At one column the 320 menus open on the first widget, so they open below it.
+          const menuOn = S.menu === "widget" ? (cols === 1 ? lay[0] && lay[0].id : S.target) : "";
+          const items = lay.map((o) => {
+            const w = D.W[o.id];
+            const hid = "db-" + id + "-" + o.id;
+            const isTarget = o.id === S.target;
+            const moving = !!S.move && isTarget;
+            const st = w.st || "";
+            const flip = opt === "C" && S.panel === "settings" && isTarget;
+            const selected = opt === "B" && S.panel === "settings" && isTarget;
+            const plugin = w.type === "plugin";
+            const vm = {
+              hid: hid,
+              title: w.title,
+              lang: null,
+              style: at(o.x, o.y, o.w, o.h) + (cols === 1 ? ";--minh:" + px(o.h) + "px" : ""),
+              cellCls: (menuOn === o.id ? "top" : "") + (moving ? " top" : ""),
+              cls: [editMode && !moving ? "edit" : "", selected ? "sel" : "", moving ? "lift" : "", moving && opt === "C" ? "is-focus" : ""].filter(Boolean).join(" "),
+              tab: moving && opt === "C" ? "-1" : null,
+              busy: st === "loading" ? "true" : null,
+              demo: !plugin,
+              editing: selected || flip,
+              grip: editMode,
+              gripCls: moving ? "on is-focus" : "",
+              pressed: editMode ? (moving ? "true" : "false") : null,
+              gripLabel: "Move " + w.title,
+              editBtn: opt === "B" && S.edit && !selected,
+              editCls: "",
+              editLabel: "Edit " + w.title,
+              editExp: "false",
+              menuBtn: (opt === "A" && editMode) || (opt === "C" && S.edit && !flip),
+              menuCls: menuOn === o.id ? "open" : "",
+              menuOpen: menuOn === o.id,
+              menuLabel: "Actions for " + w.title,
+              sizeHid: hid + "-size",
+              sizes: D.TYPES[w.type] ? D.TYPES[w.type].sizes.map((k) => ({ name: D.SIZE[k].name, dim: D.SIZE[k].lg[0] + " by " + D.SIZE[k].lg[1], on: k === w.size ? "true" : "false", cls: k === w.size ? "on" : "" })) : [],
+              rsz: editMode && !moving && w.type !== "value",
+              isValue: false, isList: false, isTable: false, isChart: false, isLoading: false, isState: false, isFlip: flip
+            };
+            if (flip) return vm;
+            if (st === "loading") { vm.isLoading = true; return vm; }
+            if (st) {
+              const small = o.w <= 3 && cols !== 1;
+              // A failed data request says "could not be loaded" with the correlation id of the response (#306). A widget
+              // that fails while drawing says "could not be shown" with its stage and code (D2 ST27); no frame draws it.
+              const S2 = {
+                error: { icon: "CircleAlert", tone: "db-te", head: w.title + " could not be loaded.", text: "", cid: w.cid, btn: "Try again", btnIcon: "RotateCw" },
+                forbidden: { icon: "Lock", tone: "db-tm", head: "No permission", text: "You need the permission to read " + w.perm + " at Plant B. Ask your plant admin for a role that can read " + w.perm + "." },
+                missing: { icon: "MapPinOff", tone: "db-tm", head: "Not at Plant B", text: w.stText, link: "Show at Plant A" },
+                removed: { icon: "Unplug", tone: "db-tm", head: "Not installed", text: "The Andon plugin that provided this widget is no longer installed.", btn: "Remove widget" },
+                empty: { icon: "ListX", tone: "db-tm", head: "No jobs", text: "No jobs match these settings at Plant B.", btn: "Change settings" }
+              }[st];
+              Object.assign(vm, { isState: true, stCls: small ? "" : "big", stIcon: S2.icon, stTone: S2.tone, stHead: S2.head, stText: S2.text, stCid: S2.cid || "", stBtn: S2.btn || "", stBtnIcon: S2.btnIcon || "", stLink: S2.link || "" });
+              return vm;
+            }
+            if (w.type === "value") Object.assign(vm, { isValue: true, v: w.v, u: w.u, c: w.c, trend: w.trend || "" });
+            if (w.type === "list") {
+              const n = o.h >= 6 ? 7 : 5;
+              Object.assign(vm, { isList: true, more: w.more, rows: D.LISTS[w.list].slice(0, n).map((r) => Object.assign({}, r, { bcls: BADGE[r.st] || "" })) });
+            }
+            if (w.type === "table") {
+              const T = D.TABLES[w.table];
+              const narrow = cols === 1;
+              Object.assign(vm, {
+                isTable: true, more: w.more,
+                twCls: narrow ? "x" : "", twTab: narrow ? "0" : null, twRole: narrow ? "region" : null, twLabel: narrow ? w.title + ", scrolls sideways" : null,
+                tstyle: "--tcols:" + T.cols + (narrow ? ";--minw:" + T.minw + "px" : ""),
+                head: T.head.map((h) => ({ t: h.t, cls: h.num ? "n" : "" })),
+                trows: T.rows.map((r) => r.map((c, i) => ({ t: c, link: i === 0, badge: i === 6, text: i !== 0 && i !== 6, bcls: BADGE[c] || "", cls: i === 3 ? "m" : i === 4 || i === 5 ? "n" : "" })))
+              });
+            }
+            if (w.type === "chart") {
+              const C = D.CHARTS[w.chart];
+              Object.assign(vm, {
+                isChart: true, series: C.series, ticks: C.ticks, alt: C.alt,
+                groups: C.groups.map((g) => ({ label: g[0], bars: g.slice(1).map((v, i) => ({ cls: C.series[i].cls, style: "height:" + Math.round((v / C.max) * 1000) / 10 + "%" })) }))
+              });
+            }
+            return vm;
+          });
+          // Edit mode (option A) shows the column guides behind the widgets.
+          const guideRows = Math.max(rows, 8);
+          const guides = editMode && cols > 1 ? Array.from({ length: cols }, (_, i) => "grid-column:" + (i + 1) + " / span 1;grid-row:1 / span " + guideRows) : [];
+          const g = S.ghost;
+          // Option C: the Add widget tile at the first free place where a Small widget fits, or after the last widget.
+          let tile = opt === "C" && S.edit && tab.scope === "mine" && !S.move;
+          let tileStyle = "";
+          let tileText = "Add widget";
+          let tileSub = "";
+          if (tile) {
+            if (!lay.length) {
+              tileStyle = cols === 1 ? "grid-column:1 / -1;--minh:" + px(4) + "px" : "grid-column:1 / span " + cols + ";grid-row:1 / span 4";
+              tileText = "Add your first widget";
+              tileSub = "Only you see this tab, at every plant you open.";
+            } else if (cols === 1) {
+              tileStyle = "grid-column:1 / -1;--minh:" + px(2) + "px";
+            } else {
+              const used = {};
+              lay.forEach((o) => { for (let r = o.y; r < o.y + o.h; r++) for (let c = o.x; c < o.x + o.w; c++) used[r + ":" + c] = true; });
+              let spot = null;
+              for (let y = 0; y < 60 && !spot; y++) for (let x = 0; x + 3 <= cols && !spot; x++) {
+                let ok = true;
+                for (let r = y; r < y + 2; r++) for (let c = x; c < x + 3; c++) if (used[r + ":" + c]) ok = false;
+                if (ok) spot = [x, y];
+              }
+              tileStyle = "grid-column:" + (spot[0] + 1) + " / span 3;grid-row:" + (spot[1] + 1) + " / span 2";
+            }
+          }
+          const tileOpen = tile && S.panel === "catalog";
+          return {
+            label: "Grid, " + tab.name + ", " + cols + " columns",
+            isEmpty: !lay.length && !tile,
+            emptyHead: tab.name + " has no widgets yet",
+            emptyFocus: "",
+            hasGrid: lay.length > 0 || tile,
+            gcls: cols === 1 ? "one" : "",
+            gstyle: "--cols:" + cols,
+            guides: guides,
+            ghost: !!g,
+            ghostStyle: g ? at(g[0], g[1], g[2], g[3]) : "",
+            items: items,
+            tile: tile,
+            tileCellCls: tileOpen ? "top" : "",
+            tileStyle: tileStyle,
+            tileCls: tileOpen ? "open" : "",
+            tileText: tileText,
+            tileSub: tileSub,
+            tileOpen: tileOpen,
+            popStyle: "top:0;right:calc(100% + 8px)"
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

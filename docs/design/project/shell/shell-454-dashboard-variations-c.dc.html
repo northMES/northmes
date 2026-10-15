@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard option C, tab picker and tiles</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./shell-454-dashboard-variations-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-190-navigation.css" />
+        <link rel="stylesheet" href="../ui/ui-222-list-form.css" />
+        <link rel="stylesheet" href="./shell-454-dashboard-variations.css" />
+      </helmet>
+      <div class="db-o" data-screen-label="{{ label }}">
+        <dc-import name="Shell" width="{{ sh.width }}" theme="{{ sh.theme }}" role="planner" user="{{ sh.user }}" username="{{ sh.username }}" plant="{{ sh.plant }}" nav="core.dashboard" title="{{ tabName }}" crumbs="Dashboard" actions="none" bell="off" show-title="on" hint-size="{{ sh.hint }}">
+          <div data-slot="header">
+            <span class="db-wrap">
+              <button class="btn v-outline db-pickb {{ pickCls }}" type="button" aria-haspopup="menu" aria-expanded="{{ pickOpen }}"><span class="ic" data-icon="ChevronsUpDown"></span>Switch tab</button>
+              <sc-if value="{{ pickOpen }}">
+                <div class="pop db-pop below" role="menu" aria-label="Switch tab" style="width:280px">
+                  <sc-for list="{{ groups }}" as="g">
+                    <div role="group" aria-labelledby="{{ g.hid }}">
+                      <div class="db-mh" id="{{ g.hid }}" role="presentation"><span class="ic" data-icon="{{ g.icon }}"></span>{{ g.label }}</div>
+                      <sc-for list="{{ g.tabs }}" as="t"><a class="mi {{ t.kf }}" href="#" role="menuitem" aria-current="{{ t.cur }}">{{ t.name }}<span class="ic db-ck {{ t.ck }}" data-icon="Check"></span></a></sc-for>
+                    </div>
+                  </sc-for>
+                  <div class="msep" role="separator"></div>
+                  <div class="mi" role="menuitem"><span class="ic" data-icon="Plus"></span>New tab</div>
+                  <div class="mi" role="menuitem"><span class="ic" data-icon="ListOrdered"></span>Manage tabs</div>
+                </div>
+              </sc-if>
+            </span>
+            <sc-if value="{{ scopeText }}"><span class="db-scope"><span class="ic" data-icon="{{ scopeIcon }}"></span><span>{{ scopeText }}</span></span></sc-if>
+          </div>
+          <div class="db-page">
+            <div class="db-fill"><dc-import name="shell-454-dashboard-variations-grid" scene="{{ scene }}" hint-size="100%,700px"></dc-import></div>
+            <sc-if value="{{ manageOpen }}">
+              <div class="db-ov"></div>
+              <div class="db-dlg wide" role="dialog" aria-modal="true" aria-labelledby="{{ dlgHid }}" style="top:56px">
+                <div class="db-dlg-h"><h2 class="db-dlg-t" id="{{ dlgHid }}">Manage tabs</h2><p class="db-sh-d">The tabs you see at Plant A, in their order. Changes to Plant A's tabs apply to everyone at Plant A.</p></div>
+                <div class="db-dlg-b" style="gap:0">
+                  <sc-for list="{{ groups }}" as="g">
+                    <p class="db-mt-g">{{ g.label }}</p>
+                    <ul class="db-mt">
+                      <sc-for list="{{ g.rows }}" as="r">
+                        <li>
+                          <span class="n"><span class="ic" data-icon="{{ g.icon }}"></span><span>{{ r.name }}</span></span>
+                          <span class="acts">
+                            <sc-if value="{{ r.order }}">
+                              <button class="db-ib" type="button" aria-label="Move {{ r.name }} up" aria-disabled="{{ r.upDis }}" style="{{ r.upStyle }}"><span class="ic" data-icon="ArrowUp"></span></button>
+                              <button class="db-ib {{ r.downCls }}" type="button" aria-label="Move {{ r.name }} down" aria-disabled="{{ r.downDis }}" style="{{ r.downStyle }}"><span class="ic" data-icon="ArrowDown"></span></button>
+                              <button class="btn v-ghost db-btn-s" type="button" aria-label="Rename {{ r.name }}">Rename</button>
+                            </sc-if>
+                            <sc-if value="{{ r.hide }}"><button class="btn v-ghost db-btn-s" type="button" aria-label="Hide {{ r.name }} for me"><span class="ic" data-icon="EyeOff"></span>Hide</button></sc-if>
+                            <sc-if value="{{ r.order }}"><button class="btn v-ghost db-btn-s" type="button" aria-label="Delete {{ r.name }}" style="color:var(--destructive)"><span class="ic" data-icon="Trash2"></span>Delete</button></sc-if>
+                          </span>
+                        </li>
+                      </sc-for>
+                    </ul>
+                  </sc-for>
+                </div>
+                <div class="db-dlg-f"><button class="btn v-default" type="button">Done</button></div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ hasAnn }}">
+              <div class="db-ann" aria-hidden="true"><span class="k">Polite region, debounced to about 300 ms</span><ol><sc-for list="{{ ann }}" as="a"><li>{{ a }}</li></sc-for></ol></div>
+            </sc-if>
+          </div>
+        </dc-import>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["1","2","3","4","5","6","7","8","9"],"default":"1","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; fill(); }, 0); };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          const ready = () => (window.DB454 ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.DB454) ready();
+        }
+        renderVals() {
+          // Option C: the h1 names the open tab and Switch tab beside it lists every tab by scope, on the pattern of the
+          // plant switcher. No edit mode: every widget on a tab the user may change has a Widget actions menu, settings
+          // open inside the widget, and an Add widget tile waits at the first free place. Each change is one command.
+          const P = this.props || {};
+          const D = window.DB454;
+          const id = "C" + String(P.state || "1");
+          const base = { label: "Option C, frame " + id, scene: id, tabName: "Dashboard", scopeText: "", scopeIcon: "User", pickCls: "", pickOpen: false, manageOpen: false, hasAnn: false, sh: { width: "1440", theme: "light", hint: "1440px,936px", user: "Alex Lund", username: "alex.lund", plant: "Plant A" }, groups: [], ann: [] };
+          if (!D || !D.SCENES[id]) return base;
+          const S = D.SCENES[id];
+          const tab = D.TABS[S.tab];
+          const who = D.PEOPLE[S.who];
+          const L = D.TABLISTS[S.tabs];
+          const ICON = { company: "Building2", plant: "Factory", mine: "User" };
+          const LABEL = { company: "Acme AB", plant: S.plant, mine: "My tabs" };
+          const uid = "db-" + id;
+          let kf = false;
+          const groups = ["company", "plant", "mine"].map((g) => ({
+            hid: uid + "-g-" + g, icon: ICON[g], label: LABEL[g],
+            tabs: L[g].map((t) => {
+              const cur = t === S.tab;
+              const k = !cur && !kf;
+              if (k) kf = true;
+              return { name: D.TABS[t].name, cur: cur ? "page" : null, ck: cur ? "on" : "", kf: k ? "kfocus" : "" };
+            }),
+            rows: L[g].map((t, i) => {
+              const order = g !== "company";
+              const first = i === 0, last = i === L[g].length - 1;
+              return {
+                name: D.TABS[t].name, order: order, hide: g !== "mine",
+                upDis: first ? "true" : null, upStyle: first ? "opacity:.5" : "",
+                downDis: last ? "true" : null, downStyle: last ? "opacity:.5" : "",
+                downCls: g === "plant" && first ? "is-focus" : ""
+              };
+            })
+          }));
+          const mine = tab.scope === "mine";
+          const scopeText = mine ? "Only you see this tab, at every plant you open." : S.edit ? "Everyone at " + S.plant + " sees this tab. You can change it." : "Everyone at " + S.plant + " sees this tab.";
+          const ann = D.ANN[id] || [];
+          return {
+            label: "Option C, frame " + id + ", " + tab.name + ", " + S.theme + ", " + S.w,
+            scene: id,
+            sh: {
+              width: S.w, theme: S.theme, hint: S.w === "320" ? "320px,676px" : S.w === "1280" ? "1280px,836px" : "1440px,936px",
+              user: who.user, username: who.username, plant: S.plant
+            },
+            tabName: tab.name,
+            groups: groups,
+            pickOpen: S.menu === "picker",
+            pickCls: S.menu === "picker" ? "open" : "",
+            scopeIcon: ICON[tab.scope],
+            scopeText: scopeText,
+            manageOpen: S.dialog === "manage",
+            dlgHid: uid + "-dlg-t",
+            hasAnn: ann.length > 0,
+            ann: ann
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

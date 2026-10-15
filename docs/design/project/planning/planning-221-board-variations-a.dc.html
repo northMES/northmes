@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D3 option A, docked inspector</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet data-dc-atomics>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./planning-221-board-variations.css" />
+      </helmet>
+      <div class="pb-opt">
+        <sc-if value="{{ wide }}">
+          <dc-import name="Shell" width="1440" theme="{{ theme }}" hint-size="1440px,900px">
+            <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+            <div class="pb-page">
+              <div class="pb-tb" role="toolbar" aria-label="Board">
+                <div class="pb-grp">
+                  <button class="btn v-outline" type="button" aria-label="Show earlier range"><span class="ic" data-icon="ChevronLeft"></span>Earlier</button>
+                  <button class="btn v-outline" type="button">Now</button>
+                  <button class="btn v-outline" type="button" aria-label="Show later range">Later<span class="ic" data-icon="ChevronRight"></span></button>
+                  <button class="btn v-ghost" type="button" aria-haspopup="dialog"><span class="ic" data-icon="CalendarDays"></span>Go to date</button>
+                </div>
+                <span class="pb-range">Tue 3 Nov, <span class="num">06:00</span> to <span class="num">18:00</span></span>
+                <span class="pb-sp"></span>
+                <span class="pb-lbl">Zoom</span>
+                <div class="pb-tg" role="group" aria-label="Zoom">
+                  <button class="pb-tgi on" type="button" aria-pressed="true">Hours</button>
+                  <button class="pb-tgi" type="button" aria-pressed="false">Day</button>
+                  <button class="pb-tgi" type="button" aria-pressed="false">Week</button>
+                  <button class="pb-tgi" type="button" aria-pressed="false">4 weeks</button>
+                </div>
+                <sc-if value="{{ live }}"><button class="btn v-outline" type="button"><span class="ic" data-icon="Pause"></span>Pause live updates</button></sc-if>
+                <sc-if value="{{ paused }}"><button class="btn v-outline" type="button"><span class="ic" data-icon="Play"></span>Resume live updates</button></sc-if>
+              </div>
+              <div class="pb-stl">
+                <sc-if value="{{ applied }}">
+                  <span class="pb-st ok"><span class="ic" data-icon="CircleCheck"></span><span>Autoplan applied at <span class="num">06:12</span>: <span class="num">37</span> moved, <span class="num">2</span> skipped because being edited, <span class="num">3</span> late, <span class="num">1</span> conflict, <span class="num">0</span> unplaced.</span></span>
+                </sc-if>
+                <sc-if value="{{ running }}">
+                  <span class="pb-st run"><span class="ic" data-icon="LoaderCircle"></span><span>Autoplan running. Started at <span class="num">09:38</span> by you.</span></span>
+                </sc-if>
+                <sc-if value="{{ paused }}">
+                  <span class="pb-st wait"><span class="ic" data-icon="Pause"></span><span>Live updates paused. <span class="num">12</span> changes waiting.</span></span>
+                </sc-if>
+                <span class="pb-sp"></span>
+                <a class="pb-link" href="#">3 job orders not placed, show in the table</a>
+              </div>
+              <div class="pb-body2">
+                <div class="pb-gw"><dc-import name="planning-221-board-variations-grid" focus="{{ gfocus }}" idp="{{ idp }}" hint-size="100%,660px"></dc-import></div>
+                <div class="pb-pw"><dc-import name="planning-221-board-variations-panel" chrome="tabs" view="{{ pview }}" expiry="{{ expiry }}" focus="{{ pfocus }}" hint-size="320px,660px"></dc-import></div>
+              </div>
+            </div>
+          </dc-import>
+        </sc-if>
+        <sc-if value="{{ narrow }}">
+          <dc-import name="Shell" width="320" theme="{{ theme }}" hint-size="320px,640px">
+            <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+            <div class="pb-page nar">
+              <div class="pb-tb" role="toolbar" aria-label="Board">
+                <button class="btn icon v-outline" type="button" aria-label="Show earlier range"><span class="ic" data-icon="ChevronLeft"></span></button>
+                <button class="btn v-outline" type="button">Now</button>
+                <button class="btn icon v-outline" type="button" aria-label="Show later range"><span class="ic" data-icon="ChevronRight"></span></button>
+                <span class="pb-range">Tue 3 Nov</span>
+                <span class="pb-sp"></span>
+                <button class="btn icon v-outline" type="button" aria-label="Board options" aria-haspopup="menu"><span class="ic" data-icon="SlidersHorizontal"></span></button>
+              </div>
+              <div class="pb-gw"><dc-import name="planning-221-board-variations-grid" size="narrow" r0="9" r1="13" idp="a3" hint-size="100%,420px"></dc-import></div>
+              <div class="sh-ov"></div>
+              <dc-import name="planning-221-board-variations-panel" chrome="sheet-tabs" view="details" hint-size="320px,460px"></dc-import>
+            </div>
+          </dc-import>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"size":{"editor":"enum","options":["wide","narrow"],"default":"wide","tsType":"string"},"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"},"state":{"editor":"enum","options":["details","draft"],"default":"details","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const p = this.props;
+          const narrow = p.size === "narrow";
+          const draft = p.state === "draft";
+          return {
+            wide: !narrow,
+            narrow,
+            theme: p.theme === "dark" ? "dark" : "light",
+            live: !draft,
+            paused: draft,
+            applied: !draft,
+            running: draft,
+            gfocus: draft ? "off" : "on",
+            pview: draft ? "draft" : "details",
+            expiry: draft ? "off" : "top",
+            pfocus: draft ? "rebase" : "none",
+            idp: draft ? "a2" : "a1",
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

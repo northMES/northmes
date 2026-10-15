@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 F7 themes</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <style>
+.thw{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:32px;align-items:start;margin-top:24px}
+.app{border:1px solid var(--border);border-radius:var(--radius-xl);overflow:hidden;background:var(--background)}
+.app-top{display:flex;align-items:center;gap:16px;height:52px;padding:0 20px;background:var(--card);border-bottom:1px solid var(--border)}
+.app-top .nav{display:flex;gap:4px}
+.app-top .nav span{display:inline-flex;align-items:center;height:32px;padding:0 10px;border-radius:var(--radius-sm);font-size:14px;font-weight:500;color:var(--muted-foreground)}
+.app-top .nav .cur{background:var(--accent);color:var(--foreground);box-shadow:inset 0 -2px 0 var(--foreground)}
+.app-body{display:grid;gap:16px;padding:20px}
+.app-bar{display:flex;align-items:flex-end;gap:10px}
+.mini{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.mini .grow{position:relative;display:flex;align-items:center;gap:8px;height:28px;padding:0 12px;background:var(--muted);border-bottom:1px solid var(--border);font-size:12px;font-weight:600}
+.mini .gdot{width:12px;height:12px;border-radius:3px;background:var(--group-1);box-shadow:0 0 0 1px var(--foreground)}
+.mini .mrow{display:grid;grid-template-columns:120px minmax(0,1fr)}
+.mini .mh{display:flex;align-items:center;padding:0 12px 0 16px;background:var(--card);border-right:1px solid var(--border);box-shadow:inset 6px 0 0 var(--group-1);font-size:13px;font-weight:600}
+.mini .lane.alt{background:var(--lane-alt)}
+.mini .off{position:absolute;top:0;bottom:0}
+.mini .nowl{position:absolute;top:0;bottom:0;border-left:2px solid var(--now);z-index:3}
+.mini .nowt{position:absolute;top:6px;padding:0 5px;border-radius:3px;background:var(--now);color:var(--now-foreground);font-size:11px;line-height:16px;font-weight:700;transform:translateX(-50%);z-index:4}
+.dif{display:grid;gap:0;border-top:1px solid var(--border)}
+.dif div{display:grid;grid-template-columns:130px minmax(0,1fr);gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+        </style>
+      </helmet>
+      <div class="sheet" data-screen-label="Themes">
+        <h2 class="t2">{{ title }}</h2>
+        <p class="lede">{{ lede }}</p>
+        <div class="thw">
+          <div class="app">
+            <div class="app-top"><span class="b6">NorthMES</span><div class="nav"><span class="cur">Planning</span><span>Orders</span><span>Equipment</span></div><span style="margin-left:auto" class="sm mut">Plant A</span><button class="btn icon v-ghost" type="button" aria-label="Theme"><span class="ic" data-icon="{{ themeIcon }}"></span></button></div>
+            <div class="app-body">
+              <div class="app-bar">
+                <div class="fld" style="width:240px"><span class="lbl">Article</span><div class="inp"><span class="ic ph" data-icon="Search"></span><span class="ph">Article number or name</span></div></div>
+                <button class="btn v-outline" type="button">Discard</button>
+                <button class="btn v-default" type="button">Save draft</button>
+                <span class="badge" style="margin-left:auto;--bb:var(--status-active);--bf:var(--status-active-foreground)"><span class="ic" data-icon="Play"></span>Active</span>
+              </div>
+              <div class="mini">
+                <div class="grow"><span class="gdot"></span>Milling<span class="nowt" style="left:520px">Now <span class="mono">14:20</span></span></div>
+                <div class="mrow"><div class="mh">Mill 1</div><div class="lane"><div class="off hatch" style="left:auto;right:0;width:100px"></div><div class="nowl" style="left:400px"></div><div class="blk" style="left:12px;width:200px;--fill:var(--palette-2);--ink:#000000"><div class="b1"><span class="num">5001.10</span></div><div class="b2">Bracket A &#183; 120 pcs</div></div><div class="blk m-draft" style="left:213px;width:160px;--fill:var(--palette-13);--ink:#000000"><div class="b1"><span class="num">5002.10</span><span class="ic" data-icon="Pencil"></span></div><div class="b2">Cover E &#183; 60 pcs</div></div></div></div>
+                <div class="mrow" style="border-top:1px solid var(--border)"><div class="mh">Mill 2</div><div class="lane alt"><div class="off hatch" style="left:auto;right:0;width:100px"></div><div class="nowl" style="left:400px"></div><div class="blk is-focus" style="left:60px;width:180px;--fill:var(--palette-18);--ink:#000000"><div class="b1"><span class="num">5003.10</span><span class="ic" data-icon="Clock"></span></div><div class="b2">Bushing G &#183; 240 pcs</div></div><div class="blk m-lock" style="left:241px;width:150px;--fill:var(--palette-7);--ink:#000000"><div class="b1"><span class="num">5004.10</span><span class="ic" data-icon="Lock"></span></div><div class="b2">Shaft K &#183; 36 pcs</div></div></div></div>
+              </div>
+              <p class="sm" style="margin:0">Last saved <span class="mono">13:52</span>. <a href="#">Open the change log</a></p>
+            </div>
+          </div>
+          <div>
+            <h3 class="t3">What differs between the themes</h3>
+            <div class="dif">
+              <sc-for list="{{ diffs }}" as="d"><div><span class="mono b6">{{ d.k }}</span><span>{{ d.v }}</span></div></sc-for>
+            </div>
+            <h3 class="t3 sec">Rules</h3>
+            <ul class="ul">
+              <li>Every screen defaults to the light theme, stations included. Each user or station can switch to dark.</li>
+              <li>The choice is stored per browser in localStorage under one key and applied by the shell entry before the first render. It is not a setting and is not audited. A station keeps its choice per device.</li>
+              <li>Tokens sit in :root for light and .dark for dark. theme.css in @northmes/ui maps them with @theme inline and holds no values.</li>
+              <li>Every frame on this page exists in both themes, side by side.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const dark = this.props.theme === "dark";
+          return {
+            title: dark ? "Dark theme, chosen per user or station" : "Light theme, the default on every screen",
+            lede: dark
+              ? "The same roles with the dark values. Planners and stations that prefer it switch once; the browser remembers the choice."
+              : "Planner desktops and stations open in light. The same composition below renders in dark in the frame to the right.",
+            themeIcon: dark ? "Moon" : "Sun",
+            diffs: [
+              { k: "block-border", v: dark ? "Its own light token, #c2c4c7, 9.77:1 on the lane. The background token measures 1.04:1 there." : "Equals foreground, 17.30:1 on the lane." },
+              { k: "primary", v: dark ? "Near-white #e9ebee with dark label #13161a." : "Near-black #22272c with white label #fcfcfc." },
+              { k: "destructive", v: dark ? "#f7857d as button text and border on card, 6.71:1; on the destructive-subtle hover, 5.92:1." : "#b02b27 as button text and border on card, 6.51:1; on the destructive-subtle hover, 5.68:1." },
+              { k: "input", v: "The same value in both themes, L 0.6: " + (dark ? "4.54:1 on background." : "3.76:1 on background.") },
+              { k: "palette", v: dark ? "Each color is its light lightness minus 0.08, so black text still reaches 5.49:1 or more." : "Graphite lightness; black text reaches 7.52:1 or more." },
+              { k: "focus ring", v: dark ? "Outline #f0f2f4, inner band #151719, 15.94:1 apart." : "Outline #171b1f, inner band #f9fafb, 16.56:1 apart." }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

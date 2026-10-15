@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Variations header</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./production-start-303-station-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="Header">
+        <p class="kick">NorthMES design page production-start-303-station-variations.dc.html, variations round, in review</p>
+        <h1 class="t1">Operator station: variations</h1>
+        <p class="lede">Three ways to arrange the operator station of design task D4, drawn for Press 4 at Plant A inside the approved D2 station frame with the D1 tokens. Krister picks one option, or names the parts to combine. The spec page production-start-303-station.dc.html then draws every frame of issue #303 in light and dark at 1280 by 800, 1920 by 1080 and portrait, with the admin side of pairing in the shell.</p>
+        <div class="ps-cols2 sec">
+          <dl class="ps-facts">
+            <sc-for list="{{ facts }}" as="f">
+              <dt>{{ f.k }}</dt>
+              <dd>{{ f.v }}</dd>
+            </sc-for>
+          </dl>
+          <div>
+            <h2 class="t3">The options</h2>
+            <div class="ps-rk">
+              <sc-for list="{{ options }}" as="o">
+                <div class="ps-rk-r"><span class="k">{{ o.id }}. {{ o.name }}</span><span>{{ o.t }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div class="ps-cols2 sec">
+          <div>
+            <h2 class="t2">What is being decided</h2>
+            <ol class="ps-pts">
+              <sc-for list="{{ decide }}" as="d"><li>{{ d }}</li></sc-for>
+            </ol>
+          </div>
+          <div>
+            <h2 class="t2">How to compare</h2>
+            <ul class="ps-pts">
+              <sc-for list="{{ compare }}" as="c"><li>{{ c }}</li></sc-for>
+            </ul>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">The axes per option</h2>
+          <div class="ps-cmp">
+            <div class="ps-cmp-r h"><span>Axis</span><span>A. List beside the job</span><span>B. One job at a time</span><span>C. Job tiles</span></div>
+            <sc-for list="{{ axes }}" as="x">
+              <div class="ps-cmp-r"><span class="k">{{ x.k }}</span><span>{{ x.a }}</span><span>{{ x.b }}</span><span>{{ x.c }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="sec">
+          <h2 class="t2">Rules every option keeps</h2>
+          <p class="lede">From the plan, the ADRs, D1 and D2, with the source of each rule. A layout that breaks one of these is not an option.</p>
+          <div class="ps-qgrid">
+            <sc-for list="{{ rules }}" as="r">
+              <div class="ps-qrow"><span class="tag ok">{{ r.id }}</span><span>{{ r.t }} <span class="ps-src">{{ r.src }}</span></span></div>
+            </sc-for>
+          </div>
+        </div>
+        <div class="ps-cols2 sec">
+          <div>
+            <h2 class="t2">Assumptions</h2>
+            <ol class="ps-pts">
+              <sc-for list="{{ assumptions }}" as="a"><li>{{ a }}</li></sc-for>
+            </ol>
+          </div>
+          <div>
+            <h2 class="t2">Open questions for this round</h2>
+            <div class="ps-qgrid one">
+              <sc-for list="{{ questions }}" as="q">
+                <div class="ps-qrow"><span class="tag q">{{ q.id }}</span><span>{{ q.t }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{}'>
+      class Component extends DCLogic {
+        renderVals() {
+          return {
+            facts: [
+              { k: "Issue", v: "northMES/northmes#303, plan E11-S01-T01, design task D4" },
+              { k: "Owning story", v: "E11-S01 (#115) in epic E11 (#114)" },
+              { k: "Waiting tasks", v: "The station UI tasks of E11-S01 to E11-S06 (#115 to #120): pairing, badge sign-in and Switch operator, the job list with Start, Pause and Finish, reporting good and scrap, corrections, and the lost-connection behaviour" },
+              { k: "Area", v: "production-start (modules/production-start/web), in the new project folder production-start/" },
+              { k: "Route", v: "/station/$stationId, the full-screen station layout with no sidebar" },
+              { k: "Personas", v: "Operator in every frame here. The Plant admin, who approves pairing, appears on the spec page." },
+              { k: "Direction", v: "Graphite with the D1 tokens (approved 2026-10-05) inside the D2 station frame (approved 2026-10-06), mounted through an unchanged copy of shell/StationFrame.dc.html" },
+              { k: "Content", v: "Acme AB, Plant A, the station Press 4 bound to the machine Press 4, on Tuesday 2026-11-03 at 14:06. Anna Berg is signed in; Omar Haddad reported earlier. Jobs, articles, quantities and times are invented." }
+            ],
+            options: [
+              { id: "A", name: "List beside the job", t: "The job list stays in a column beside the selected job. Quantities go in NumberFields with the system keyboard and a Keypad toggle, the scrap reasons are always in view, Sending shows on the Send button, the last reports form a table, and a correction opens a Dialog with corrected totals." },
+              { id: "B", name: "One job at a time", t: "The selected job fills the screen and Change job opens the list. A keypad is docked beside the fields, the scrap reasons appear when scrap is above 0, status is a step row, Sending is a status line beside Send, the last reports sit in a tab, and a correction opens inline with signed changes." },
+              { id: "C", name: "Job tiles", t: "Large tiles with an edge line per status open a job screen with steppers. Scrap and its reason go in a Sheet, Sending and errors show in a line under the job header, the last reports form a column, and a correction gets its own screen with corrected totals." }
+            ],
+            decide: [
+              "How the operator moves between jobs: a list beside the job (A), Change job over one job (B), or tiles that open a job screen (C).",
+              "Where quantity entry lives: NumberFields with the system keyboard and a Keypad toggle (A), a docked keypad (B), or steppers that also take typed values (C).",
+              "How scrap and its reason are entered: the reason group always in view (A), shown when scrap is above 0 (B), or in a Sheet (C).",
+              "How job status shows: a StatusBadge (A), a step row (B), or an edge line with the StatusBadge (C).",
+              "Where Sending and the inline errors sit: on and under the pressed button (A), on a status line beside it (B), or under the job header (C).",
+              "How the last five reports and a correction appear: a table and a Dialog with corrected totals (A), a tab and an inline form with signed changes (B), or a column and a correction screen with corrected totals (C).",
+              "How the layout adapts to 1280 by 800 and to portrait.",
+              "How the badge sign-in screen is laid out: badge first with a username button (A), Badge and Username tabs with a PIN keypad (B), or both methods side by side (C).",
+              "How the plant admin approves pairing: types the code shown on the station, or picks the pending request whose code matches (WCAG 3.3.8, Q15). Either way the admin works from their own PC in the shell, under Administration, Stations, and the spec page draws the chosen way."
+            ],
+            compare: [
+              "Every option draws the same station, Press 4 at Plant A, with Anna Berg signed in, the same six jobs, the same entry on 5001.20 (96 good, 2 scrap, Burr) and 80 good typed earlier on 5002.10 and kept unsent, so only the arrangement differs.",
+              "The frames line up by number. 1 is 1920 by 1080 light with the entry typed (C1 is C's tile home). 2 is 1920 by 1080 dark after Send with the connection lost. 3 is 1280 by 800 light while Send waits. 4 is 800 by 1280 light, correcting the report of 13:58. 5 is the badge sign-in at 1280 by 800 light. B6 is B at 1280 by 800 with scrap at 0, so the reason group is hidden; compare it with B3. C6 is C's job screen with its scrap Sheet.",
+              "Read the taps from the job list to a sent report, what stays in view while reporting, how many presses 96 takes with gloves, where Sending and an error appear relative to the pressed button, and what scrolls at 1280 by 800. Frame R lists the options against these criteria.",
+              "Under each option a notes frame lists what it optimizes, what it costs and how it keeps the rules below.",
+              "The frame owns the top bar, the connection chip, the Disconnected strip, the idle warning and More, so they are mounted from D2, not drawn here.",
+              `Copy from the docs: "Press 4, Anna Berg", "5001.20 started 12:02 by Anna Berg, last report 13:58", "Good quantity (pcs)", "Scrap reason", "Sending", "System keyboard" and the Disconnected strip. Every other label and message is a proposal.`,
+              `Drawn on the spec page for the chosen option, not here: the pairing screens on the station and in the shell (how the admin approves is item 9 above), Switch operator, the idle warning, the large-quantity and "Report again?" dialogs, the error summary, the sign-in lock, a session that ended, a plant in onboarding, loading, empty and error states, long German and Finnish strings, and the keyboard and focus frames.`
+            ],
+            axes: [
+              { k: "Moving between jobs", a: "List column, 420 px at 1920 and 320 px at 1280; a Change job bar in portrait", b: "Change job opens the list in a Sheet", c: "Tiles; All jobs returns to them" },
+              { k: "Quantity entry", a: "NumberFields, system keyboard, Keypad toggle", b: "Docked keypad with System keyboard", c: "Steppers -10, -1, +1 and +10 with typed entry" },
+              { k: "Scrap and its reason", a: "Reason group always in view", b: "Reason group shown when scrap is above 0", c: "Sheet with a scrap stepper and the reasons" },
+              { k: "Status", a: "StatusBadge", b: "Step row with the current step filled", c: "Edge line and StatusBadge" },
+              { k: "Sending and errors", a: "Send reads Sending and a polite status says it; the error sits under Send", b: "Status line beside Send", c: "Line under the job header" },
+              { k: "Unsent entries on another job", a: "Unsent entries badge on the job's row; on the Change job bar in portrait", b: "Badge next to Change job and on the job's row in its list", c: "Badge on the tile and next to All jobs" },
+              { k: "Last reports", a: "Table; a third column at 1920, under the form at 1280 and in portrait", b: "Tab beside Report", c: "Column beside the form" },
+              { k: "Correction", a: "Dialog with corrected totals", b: "Inline, signed changes and a minus key", c: "Own screen with corrected totals and steppers" },
+              { k: "Portrait", a: "Change job bar over the job", b: "Keypad under the fields", c: "Two tile columns; one job column" },
+              { k: "Sign-in", a: "Badge, then Sign in with username (the D2 proposal)", b: "Badge and Username tabs, PIN keypad", c: "Badge and username side by side" }
+            ],
+            rules: [
+              { id: "R1", t: `Route /station/$stationId in the D2 station frame, mounted unchanged: the top bar with the station, the plant, the connection chip, Switch operator, Sign out and More, and one h1, "Press 4, Anna Berg".`, src: "P06 Shell routes, P09 1, D2 SF1" },
+              { id: "R2", t: "The list holds the jobs on the station's machines by planned start with priority shown, plus jobs with an open run there; number, status, article and quantity in text on every entry.", src: "P09 4.1, E11-S03" },
+              { id: "R3", t: "Status is never shown by color alone: a StatusBadge with icon and text. Active and finished share the D1 colors, so the icon and the word tell them apart.", src: "P06 Patterns, D1, WCAG 1.4.1" },
+              { id: "R4", t: `Start, Pause and Finish show only the allowed transitions. No optimistic result; while a command waits Send is aria-disabled and a status says "Sending"; the timeout is 15 s.`, src: "P09 4.2 and 7, ADR 0033" },
+              { id: "R5", t: "Quantity fields are NumberFields labelled with the unit, inputmode by the unit's display decimals, parsed with the plant's number format. Enter never submits; only Send does.", src: "P09 4.4, ADR 0061" },
+              { id: "R6", t: "Scrap reason is a fieldset with that legend and large radio buttons, a searchable list above about eight reasons, required when scrap is above 0; the last reason stays selected.", src: "P09 4.4" },
+              { id: "R7", t: "Errors sit next to their field with aria-invalid; on Send an error summary takes focus; messages state the rule and the fix.", src: "P09 4.4, P06 Forms" },
+              { id: "R8", t: `Good plus scrap above 1.5 times the remaining quantity asks in a dialog; the same report within 10 minutes asks "Report again?".`, src: "P09 4.2" },
+              { id: "R9", t: `"Reported 120 good, 3 scrap on 5001.20" appears only after the server answers; focus stays on Send and the polite region says it.`, src: "P09 4.2 and 4.4" },
+              { id: "R10", t: "The last five reports show operator and time. A correction is a new row with a required reason; a report is never edited and the net stays at 0 or above.", src: "P09 4.2 and 6, ADR 0051" },
+              { id: "R11", t: "Lost connection: the frame's strip; entries stay on the screen and in localStorage and are never sent without Send; Send, Start, Pause and Finish each show an inline error.", src: "P09 9, ADR 0033, D2 SF5" },
+              { id: "R12", t: "Targets at least 44 by 44 px in the station layout (D2 draws 48 px buttons) and the D1 two-tone focus ring; a keypad, the strip or a sticky bar never covers the focused field.", src: "P06, P09 4.4, WCAG 2.5.8 and 2.4.11" },
+              { id: "R13", t: "Badge input goes only to the focused badge field, focused through a ref, with no global key listener. A PIN is one password input that accepts paste.", src: "P09 3.3, WCAG 2.1.4" },
+              { id: "R14", t: "Light by default and dark per station from More; D1 tokens only; every value on the page is fictional.", src: "ADR 0061, D2 SF16" }
+            ],
+            assumptions: [
+              "The station Press 4 is bound to one machine, so no machine buttons show. At a station with several machines they sit above the list (A), in the Change job Sheet (B) or above the tiles (C).",
+              "Finished jobs stay on the station for the production day under Finished today, so their reports can still be corrected (Q2).",
+              "Overdue and planned elsewhere show as words only, in the secondary badge colors: Start overdue and Planned on Press 3 (Q1).",
+              "Anna Berg typed 80 good on 5002.10, then changed job without sending. The entry is kept, so 5002.10 carries an Unsent entries badge in the list and on its tile, and the badge sits next to Change job or All jobs wherever the list is hidden.",
+              "The start of a job is a row among the last five, drawn as Started the job, with no Correct (Q5).",
+              "Report times are record times in plant time.",
+              "Anna Berg may correct the station's reports today, as the proposed operator rule says (Q6).",
+              "The report has no note field in these frames (Q8).",
+              "Quantity fields are 56 px high with 24 px Mono digits, keypad keys 64 to 88 px and steppers 64 to 72 px. No D1 token holds these sizes (Q9).",
+              "The keypad's Delete icon and the Upload icon on the Unsent entries badge are proposals; every other icon comes from the D1 and D2 sets."
+            ],
+            questions: [
+              { id: "Q1", t: "Does the station show overdue, finish pending and planned on another machine, and with which words and icons? Here they are words only. Their icons wait for D3's overdue cue and the board's conflict cue; Clock and the late colors stay reserved for Late." },
+              { id: "Q2", t: "Do finished jobs stay in the list for the rest of the production day, so corrections stay reachable?" },
+              { id: "Q3", t: "Is the station hardware touch only, or does it have a keyboard? This is a new hardware question next to IT-22. The answer decides whether a keypad shows by default." },
+              { id: "Q4", t: "While a command waits, are Start, Pause and Finish aria-disabled too, or only Send?" },
+              { id: "Q5", t: "Do start, pause and finish rows count among the last five reports, or only quantity reports and corrections?" },
+              { id: "Q6", t: "Who may correct (PO-60), and what does the operator see on a report they may not correct?" },
+              { id: "Q7", t: "Is Switch operator a route with its own title, or a Dialog or Sheet on the job route?" },
+              { id: "Q8", t: "Is a note field shown on the report, and with which label?" },
+              { id: "Q9", t: "Station buttons at 48 px or 44 px, and the keypad key and stepper sizes for gloves (D2 K10, IT-22)." },
+              { id: "Q10", t: "The copy of the inline errors on Send, Start, Pause and Finish while disconnected and after the 15 s timeout. In these frames Send names its error with aria-describedby, and the failed Send is announced once through announce() in the polite region, apart from the strip's announcement of the drop." },
+              { id: "Q11", t: "Is the form cleared after a confirmed report, and does the scrap reason stay for the next one?" },
+              { id: "Q12", t: "In IBM Plex Mono the U+00A0 group sign of spaceComma is one full digit cell wide, so 1 200 at 32 px reads as 1 and 200. Does the station keep it, or does the display narrow the group gap while formatNumber keeps U+00A0 (ADR 0061)?" },
+              { id: "Q13", t: "Pairing: the route of the registration page before a station has an id. /station with no id, /station/pair or another path? station is a reserved plant slug and module id." },
+              { id: "Q14", t: "Pairing: the code's length, alphabet, lifetime and refresh, and what the station shows when the code expires and after approval." },
+              { id: "Q15", t: "Pairing: does WCAG 3.3.8 apply when the admin types the code shown on the station, and is picking the matching pending request, with nothing to transcribe, preferred?" },
+              { id: "Q16", t: "Pairing: the admin route and permission for the approval, for example /$plant/core/stations under Administration. The docs name no permission; core.station:signIn is the station's own." },
+              { id: "Q17", t: `Pairing: what the station shows after its key is revoked (close code 4403), for example the pairing screen with "This station is no longer registered. Ask a plant admin to pair it again."` }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D4 station dialogs</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <script src="./production-start-303-station-data.js"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <link rel="stylesheet" href="./production-start-303-station.css" />
+      </helmet>
+      <div class="ps-part {{ rootCls }}" lang="{{ lang }}">
+        <div class="sh-ov"></div>
+        <sc-if value="{{ isCorrect }}">
+          <div class="ps-dlg {{ dlgCls }}" role="dialog" aria-modal="true" aria-labelledby="{{ ids.t }}" aria-describedby="{{ ids.d }}">
+            <div class="ps-dlg-h"><h2 class="ps-dlg-t" id="{{ ids.t }}">{{ title }}</h2><button class="btn lg ib v-ghost {{ f.close }}" type="button" aria-label="{{ t.close }}"><span class="ic" data-icon="X"></span></button></div>
+            <p id="{{ ids.d }}">{{ t.dlgCorrectText }}</p>
+            <div class="ps-dlg-b">
+              <dl class="ps-orig ps-stats sm d-o">
+                <div class="ps-stat"><dt>{{ t.reportedBy }}</dt><dd class="t">{{ by }}</dd></div>
+                <div class="ps-stat"><dt>{{ t.good }}</dt><dd>{{ origGood }}</dd></div>
+                <div class="ps-stat"><dt>{{ scrapK }}</dt><dd>{{ origScrap }}</dd></div>
+              </dl>
+              <div class="ps-fields d-f">
+                <sc-for list="{{ fields }}" as="q">
+                  <div class="ps-fld">
+                    <span class="ps-lbl" id="{{ q.lid }}">{{ q.label }}</span>
+                    <span class="ps-nf {{ q.cls }}" id="{{ q.id }}" role="textbox" aria-labelledby="{{ q.lid }}">{{ q.v }}<sc-if value="{{ q.caret }}"><span class="ps-caret"></span></sc-if></span>
+                  </div>
+                </sc-for>
+              </div>
+              <p class="ps-msg busy d-c" id="{{ ids.c }}"><span>{{ t.change }}: <span class="ps-num">{{ changeV }}</span> {{ changeT }}</span></p>
+              <div class="ps-fld d-r">
+                <span class="ps-lbl" id="{{ ids.rl }}">{{ t.reasonReq }}</span>
+                <span class="ps-nf txt {{ reasonCls }}" id="{{ ids.r }}" role="textbox" aria-labelledby="{{ ids.rl }}" aria-invalid="{{ reasonInv }}" aria-describedby="{{ reasonDesc }}"><span>{{ reasonV }}</span><sc-if value="{{ reasonCaret }}"><span class="ps-caret"></span></sc-if></span>
+                <sc-if value="{{ reasonErr }}"><p class="ps-fe" id="{{ ids.re }}"><span class="ic" data-icon="CircleAlert"></span><span>{{ t.errNoReason }}</span></p></sc-if>
+              </div>
+              <sc-if value="{{ kpShown }}">
+                <div class="ps-kp k64 d-k" role="group" aria-labelledby="{{ ids.kc }}">
+                  <div class="ps-kp-h"><span id="{{ ids.kc }}">{{ kpCaption }}</span><button class="btn lg v-outline ps-tog {{ f.toggle }}" type="button" aria-pressed="{{ togPressed }}">{{ togLabel }}</button></div>
+                  <div class="ps-keys">
+                    <sc-for list="{{ keys }}" as="k">
+                      <button class="ps-key {{ k.cls }}" type="button" tabIndex="-1" aria-label="{{ k.aria }}"><sc-if value="{{ k.icon }}"><span class="ic" data-icon="{{ k.icon }}"></span></sc-if>{{ k.t }}</button>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+            <sc-if value="{{ refused }}"><div class="ps-alert err" id="{{ ids.e }}"><span class="ic" data-icon="CircleAlert"></span><p>{{ t.refused }}</p></div></sc-if>
+            <div class="ps-dlg-f">
+              <sc-if value="{{ toggleInFoot }}"><button class="btn lg v-outline ps-tog {{ f.toggle }}" type="button" aria-pressed="{{ togPressed }}" style="margin-right:auto">{{ togLabel }}</button></sc-if>
+              <button class="btn lg v-outline {{ f.cancel }}" type="button">{{ t.cancel }}</button>
+              <button class="btn lg v-default {{ save.cls }}" type="button" aria-disabled="{{ save.dis }}" aria-busy="{{ save.busy }}" aria-describedby="{{ save.desc }}"><sc-if value="{{ save.icon }}"><span class="ic" data-icon="{{ save.icon }}"></span></sc-if>{{ save.label }}</button>
+            </div>
+            <sc-if value="{{ saving }}"><p class="ps-vh" role="status">{{ t.sending }}</p></sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isConfirm }}">
+          <div class="ps-dlg sm" role="alertdialog" aria-modal="true" aria-labelledby="{{ ids.t }}" aria-describedby="{{ ids.d }}">
+            <h2 class="ps-dlg-t" id="{{ ids.t }}">{{ title }}</h2>
+            <p id="{{ ids.d }}">{{ text }}</p>
+            <div class="ps-dlg-f">
+              <button class="btn lg v-outline {{ f.safe }}" type="button">{{ safe }}</button>
+              <button class="btn lg v-default {{ f.go }}" type="button">{{ go }}</button>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"kind":{"editor":"enum","options":["correct","large","again"],"default":"correct","tsType":"string"},"size":{"editor":"enum","options":["1920x1080","1280x800","800x1280"],"default":"1280x800","tsType":"string"},"input":{"editor":"enum","options":["touch","keyboard"],"default":"touch","tsType":"string"},"keypad":{"editor":"enum","options":["auto","shown","hidden"],"default":"auto","tsType":"string"},"state":{"editor":"enum","options":["default","invalid","refused","sending"],"default":"default","tsType":"string"},"focus":{"editor":"text","default":"auto","tsType":"string"},"strings":{"editor":"enum","options":["default","long"],"default":"default","tsType":"string"},"solo":{"editor":"enum","options":["auto","on","off"],"default":"auto","tsType":"string"},"theme":{"editor":"enum","options":["inherit","dark"],"default":"inherit","tsType":"string"},"idp":{"editor":"text","default":"dl","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: lucide fills every [data-icon] span and redraws one whose data-icon changed (the frame's filler, same flag).
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          // The data script loads from the helmet; draw again once it is there.
+          const ready = () => (window.PS ? this.forceUpdate() : setTimeout(ready, 50));
+          if (!window.PS) ready();
+        }
+        renderVals() {
+          const p = this.props || {};
+          const PS = window.PS;
+          const idp = String(p.idp || "dl");
+          const pick = (v, d, opts) => { const s = v === undefined || v === null || String(v).trim() === "" ? d : String(v).trim(); return opts.indexOf(s) < 0 ? d : s; };
+          const kind = pick(p.kind, "correct", ["correct", "large", "again"]);
+          const size = pick(p.size, "1280x800", ["1920x1080", "1280x800", "800x1280"]);
+          // Rendered as the page root, the part draws the station screen behind the dialog itself; mounted in a frame it inherits.
+          const solo = p.solo === "on" || (p.solo !== "off" && !!window.__dcRootName && window.__dcRootName() === "production-start-303-station-dialog");
+          const ids = { t: idp + "-t", d: idp + "-d", c: idp + "-c", r: idp + "-r", rl: idp + "-rl", re: idp + "-re", e: idp + "-e", kc: idp + "-kc", g: idp + "-g", gl: idp + "-gl", s: idp + "-s", sl: idp + "-sl" };
+          const base = { rootCls: (solo ? "solo" : "ps-layer") + (p.theme === "dark" ? " dark" : ""), lang: "en", ids: ids, t: {}, f: {}, fields: [], keys: [], save: {}, isCorrect: false, isConfirm: false };
+          if (!PS) return base;
+          const strings = p.strings === "long" ? "long" : "default";
+          const L = strings === "long";
+          const T = PS.tr(strings);
+          const state = pick(p.state, "default", ["default", "invalid", "refused", "sending"]);
+          let focus = String(p.focus || "auto").trim();
+          if (focus === "auto") focus = kind !== "correct" ? "safe" : state === "invalid" ? "reason" : state === "default" ? "good" : "save";
+          const F = (k) => (focus === k ? "is-focus" : "");
+          if (kind !== "correct") {
+            // Alert Dialogs for the large quantity and for "Report again?" (rule 19.18); the safe choice has focus when they open.
+            const large = kind === "large";
+            return Object.assign(base, {
+              lang: T.lang, t: T, isConfirm: true,
+              f: { safe: F("safe"), go: F("go") },
+              title: large ? T.largeTitle("900") : T.againTitle,
+              text: large ? T.largeText("900", "548") : T.againText,
+              safe: large ? T.changeQty : T.dontReport,
+              go: large ? T.reportGood("900") : T.reportAgain
+            });
+          }
+          // Correction Dialog with corrected totals (rules 7.2, 16.24, 19.18): the report of 13:58 on 5001.20, 120 good and 3 scrap, Burr.
+          const u = L ? T.unitPcs : "pcs";
+          const input = pick(p.input, "touch", ["touch", "keyboard"]);
+          const kpMode = pick(p.keypad, "auto", ["auto", "shown", "hidden"]);
+          const kpShown = kpMode === "shown" || (kpMode === "auto" && input === "touch");
+          const portrait = size === "800x1280";
+          const target = focus === "scrap" ? T.scrapName : T.goodName;
+          const keys = ["7", "8", "9", "4", "5", "6", "1", "2", "3"].map((d) => ({ t: d, aria: undefined, icon: "", cls: "" })).concat([
+            { t: T.clear, aria: T.clearName(target), icon: "", cls: "fn" },
+            { t: "0", aria: undefined, icon: "", cls: "" },
+            { t: "", aria: T.del, icon: "Delete", cls: "fn" }
+          ]);
+          const sending = state === "sending";
+          const reasonErr = state === "invalid";
+          return Object.assign(base, {
+            lang: T.lang, t: T, isCorrect: true,
+            dlgCls: kpShown ? "kp" + (portrait ? " por" : "") : "",
+            f: { close: F("close"), toggle: F("toggle"), cancel: F("cancel") },
+            title: T.dlgCorrectTitle("13:58"),
+            by: PS.person("Anna Berg", strings),
+            origGood: "120",
+            scrapK: T.scrap + ", " + (L ? PS.REASONS[2].de : PS.REASONS[2].en),
+            origScrap: "3",
+            fields: [
+              { lid: ids.gl, id: ids.g, label: T.goodQty(u), v: "118", cls: F("good"), caret: focus === "good" },
+              { lid: ids.sl, id: ids.s, label: T.scrapQty(u), v: "3", cls: F("scrap"), caret: focus === "scrap" }
+            ],
+            changeV: "-2",
+            changeT: L ? "gut, Ausschuss unverändert" : "good, scrap unchanged",
+            reasonV: reasonErr ? "" : L ? PS.CORRECTION.noteDe : PS.CORRECTION.note,
+            reasonCls: (reasonErr ? "is-err " : "") + F("reason"),
+            reasonCaret: focus === "reason",
+            reasonInv: reasonErr ? "true" : undefined,
+            reasonDesc: reasonErr ? ids.re : undefined,
+            reasonErr: reasonErr,
+            kpShown: kpShown,
+            kpCaption: T.keypadFor(target),
+            togLabel: input === "touch" ? T.systemKeyboard : T.keypad,
+            togPressed: input === "touch" ? (kpShown ? "false" : "true") : (kpShown ? "true" : "false"),
+            toggleInFoot: !kpShown,
+            keys: keys,
+            refused: state === "refused",
+            saving: sending,
+            save: {
+              cls: (sending ? "is-busy " : "") + F("save"),
+              icon: sending ? "LoaderCircle" : "",
+              label: sending ? T.sending : T.saveCorrection,
+              dis: sending ? "true" : undefined,
+              busy: sending ? "true" : undefined,
+              desc: state === "refused" ? ids.e : undefined
+            }
+          });
+        }
+      }
+    </script>
+  </body>
+</html>

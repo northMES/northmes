@@ -34,7 +34,7 @@ handoff's scheduler is not used. An operating Claude Code session with handoff's
 4. It keeps one run active at first, and two after two runs have finished without a collision on owned paths.
 5. It batches gate questions so Krister answers gates in two batches a day.
 6. It checks that CodeRabbit reviewed each new commit of a run's pull request. The pull request step asks by itself (see "Before the first run"); the session posts `@coderabbitai review` only on pull requests it opens itself.
-7. Before it starts the run of a UI task, and again before Krister answers its plan gate where the graph has one, it compares the approved etag in the issue's Design section with the design project's current etag, and brings a mismatch to Krister.
+7. Before Krister moves a UI task to Ready, before it starts the task's run, and again before Krister answers its plan gate where the graph has one, it reads the design artifact named in the issue's Design section and compares its current version with the approved version id. On a mismatch it stops: it brings the mismatch to Krister, and the task does not move to Ready and its run does not start until Krister decides whether the new version is approved. A Design section that names an etag points at a page approved in standalone Claude Design, whose repository copy is final, so there is nothing to compare ([ADR 0079](../../adr/0079-design-pages-as-artifacts-on-the-northmes-design-system-with-the-approved-source-in-the-repository.md)).
 
 ### Where run rules live
 

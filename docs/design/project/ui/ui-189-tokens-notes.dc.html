@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D1 build notes</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="./tokens.css" />
+        <link rel="stylesheet" href="./ui-189-tokens-page.css" />
+        <style>
+.bn-banner{display:flex;align-items:center;gap:12px;padding:12px 16px;margin:16px 0 28px;border:1px dashed var(--input);border-radius:var(--radius);background:var(--muted);font-weight:600}
+.bn{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr) minmax(0,1fr);gap:40px;align-items:start}
+.bn .t2{margin-bottom:6px}
+.bn .lede{margin:0 0 14px}
+.mp{display:grid;grid-template-columns:136px 124px minmax(0,0.8fr) minmax(0,1.25fr);gap:10px;align-items:start;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:16px}
+.mp.h{font-weight:600;color:var(--muted-foreground)}
+.mp span{min-width:0;overflow-wrap:anywhere}
+.fr{display:grid;grid-template-columns:minmax(0,1fr) 64px 64px;gap:10px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:16px}
+.fr.h{font-weight:600;color:var(--muted-foreground)}
+.fr .r{text-align:right}
+.wc{display:grid;grid-template-columns:56px 200px minmax(0,1fr);gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:16px}
+.wc.req .mono{font-weight:700}
+.code{display:block;margin:0;padding:12px 14px;border-radius:var(--radius);background:var(--muted);font:12px/18px var(--font-mono);white-space:pre-wrap}
+.icl{display:flex;flex-wrap:wrap;gap:6px}
+        </style>
+      </helmet>
+      <div class="sheet" data-screen-label="Build notes">
+        <h2 class="t1">Build notes, not part of the UI</h2>
+        <div class="bn-banner"><span class="ic" data-icon="Info"></span>These notes are for the implementer of E04-S01. They are not a screen and are not drawn in the product. They become docs/design/ui/ui-189-tokens.md with the approved etags of all 13 files.</div>
+        <div class="bn">
+          <div>
+            <h3 class="t2">Token names and values</h3>
+            <p class="lede">84 color tokens in :root (light) and .dark, plus 6 shared values. Source: tokens.css in this project; the values are not in a repository commit yet. oklch is the source value and hex its sRGB rendering.</p>
+            <dc-import name="ui-189-tokens-base" mode="notes" theme="light" hint-size="100%,2600px"></dc-import>
+          </div>
+          <div>
+            <h3 class="t2">Contrast ratio of each pair</h3>
+            <p class="lede">The 275 required pairs, light and dark side by side, rounded down. Pre-test values until packages/ui/test/tokens.contrast.test.ts exists, which asserts "every text pair meets 4.5:1 in light and dark" and "the focus ring meets 3:1 on every surface".</p>
+            <dc-import name="ui-189-tokens-contrast" mode="notes" theme="light" hint-size="100%,3600px"></dc-import>
+          </div>
+          <div>
+            <h3 class="t2">shadcn components by name</h3>
+            <p class="lede">Names are shadcn's, not Base UI or Radix APIs. Every focusable part also takes focus-outline and focus-ring, the two-tone ring.</p>
+            <div class="mp h"><span>@northmes/ui</span><span>shadcn</span><span>Notes</span><span>Tokens used</span></div>
+            <sc-for list="{{ comps }}" as="c"><div class="mp"><span class="mono">{{ c.a }}</span><span class="b6">{{ c.b }}</span><span class="mut">{{ c.n }}</span><span>{{ c.t }}</span></div></sc-for>
+
+            <h3 class="t2 sec">The focus ring on every surface</h3>
+            <pre class="code">:focus-visible {
+  outline: 2px solid var(--focus-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}</pre>
+            <p class="sm mut" style="margin:8px 0 12px">It replaces shadcn's outline-ring/50 in the base layer. ring and sidebar-ring hold the focus-outline value for components that read them, without the /50. The outline survives forced-colors mode.</p>
+            <div class="fr h"><span>Outer half (focus-outline) on</span><span class="r">Light</span><span class="r">Dark</span></div>
+            <sc-for list="{{ outer }}" as="o"><div class="fr"><span class="mono">{{ o.k }}</span><span class="mono r">{{ o.l }}</span><span class="mono r">{{ o.d }}</span></div></sc-for>
+            <div class="fr h" style="margin-top:12px"><span>Inner half (focus-ring) against</span><span class="r">Light</span><span class="r">Dark</span></div>
+            <sc-for list="{{ inner }}" as="o"><div class="fr"><span class="mono">{{ o.k }}</span><span class="mono r">{{ o.l }}</span><span class="mono r">{{ o.d }}</span></div></sc-for>
+            <div class="fr"><span>Halves against each other (C40 needs 9)</span><span class="mono r">{{ apartL }}</span><span class="mono r">{{ apartD }}</span></div>
+            <div class="fr"><span>Better half over the worst sRGB color</span><span class="mono r">{{ worstL }}</span><span class="mono r">{{ worstD }}</span></div>
+            <p class="sm mut" style="margin:8px 0 0">input is the edge of the outline button and the unchecked checkbox. A secondary button, a tab, a ghost button and a link have no edge of their own, so the inner half sits on their fill or surface (1.00 to 1.22:1) and the outer half carries 3:1 (C40). F2 lists these under Not required.</p>
+
+            <h3 class="t2 sec">WCAG 2.2 criteria</h3>
+            <p class="lede">The five the issue names are bold; the others come from the D1 spec.</p>
+            <sc-for list="{{ wcag }}" as="w"><div class="wc {{ w.cls }}"><span class="mono">{{ w.n }}</span><span class="b6">{{ w.t }}</span><span class="mut">{{ w.where }}</span></div></sc-for>
+
+            <h3 class="t2 sec">CSS rules</h3>
+            <ul class="ul sm">
+              <sc-for list="{{ css }}" as="c"><li>{{ c }}</li></sc-for>
+            </ul>
+
+            <h3 class="t2 sec">Lucide icons (lucide-react)</h3>
+            <div class="icl"><sc-for list="{{ icons }}" as="i"><span class="tag mono">{{ i }}</span></sc-for></div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          if (window.__nmIconObserver) return;
+          window.__nmIconObserver = true;
+          const fill = () => {
+            const L = window.lucide;
+            if (!L) return;
+            document.querySelectorAll("[data-icon]").forEach((el) => {
+              if (el.firstElementChild) return;
+              const node = L.icons[el.getAttribute("data-icon")];
+              if (node) el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+            });
+          };
+          let queued = false;
+          const schedule = () => {
+            if (queued) return;
+            queued = true;
+            setTimeout(() => { queued = false; fill(); }, 0);
+          };
+          new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+          const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+          wait();
+        }
+        renderVals() {
+          const RING = {"l":{"outer":{"background":"16.56","card":"17.30","popover":"17.30","muted":"15.16","secondary":"15.16","accent":"15.16","sidebar":"17.30","sidebar-accent":"15.16","info-subtle":"15.20","lane":"17.30","lane-alt":"16.24","off-time":"14.49"},"inner":{"primary":"14.40","primary-hover":"10.36","destructive":"6.23","input":"3.76","block-border":"16.56"},"apart":"16.56","worst":["#b86350","4.06"]},"d":{"outer":{"background":"15.94","card":"14.59","popover":"14.59","muted":"12.98","secondary":"12.98","accent":"12.98","sidebar":"14.59","sidebar-accent":"12.98","info-subtle":"12.53","lane":"15.22","lane-alt":"14.42","off-time":"16.59"},"inner":{"primary":"15.02","primary-hover":"11.70","destructive":"7.31","input":"4.54","block-border":"10.26"},"apart":"15.94","worst":["#7b6ac2","3.99"]}};
+          const keys = (o) => Object.keys(o);
+          return {
+            comps: [
+              { a: "Button", b: "Button default", n: "Loading (Q8) sets aria-busy and aria-disabled", t: "primary, primary-foreground; hover and active primary-hover" },
+              { a: "Button", b: "Button secondary", n: "", t: "secondary, secondary-foreground; hover secondary at 80 percent (P2)" },
+              { a: "Button", b: "Button outline", n: "", t: "card, foreground, border input; hover accent and accent-foreground with border foreground" },
+              { a: "Button", b: "Button ghost", n: "", t: "No fill or border; hover accent and accent-foreground" },
+              { a: "Button", b: "Button destructive", n: "Graphite's outlined look", t: "card, destructive text, border destructive; hover destructive-subtle" },
+              { a: "Button", b: "Button link", n: "", t: "primary text; underline on hover" },
+              { a: "IconButton", b: "Button (size icon)", n: "Required label prop, 36 px", t: "As the variant it uses (ghost or outline)" },
+              { a: "Field", b: "Field, Label", n: "Label, description and error wired; aria-invalid, aria-describedby", t: "Label foreground; description muted-foreground; error text and icon destructive" },
+              { a: "Input", b: "Input", n: "", t: "card, foreground, border input; placeholder muted-foreground; hover and focus border foreground; disabled muted at 50 percent; invalid border destructive plus a 1 px destructive inset" },
+              { a: "NumberField", b: "none (Q12)", n: "Drawn as Input with a format hint", t: "As Input; the value in font-mono" },
+              { a: "Select", b: "Select", n: "", t: "Trigger as Input, end icon muted-foreground. List: popover, popover-foreground, border; item hover accent; keyboard focus accent plus a 2 px inset focus-outline" },
+              { a: "Combobox", b: "Combobox", n: "aria-activedescendant, results in a live region", t: "Trigger and list as Select; search icon muted-foreground" },
+              { a: "Checkbox", b: "Checkbox", n: "16 px box in a var(--nm-target-min) hit area", t: "card, border input; checked and indeterminate primary with primary-foreground; hover border foreground; invalid border destructive plus a 1 px inset" },
+              { a: "Dialog", b: "Dialog", n: "Returns focus to the trigger", t: "background surface, border; overlay black at 50 percent (question)" },
+              { a: "ConfirmDialog", b: "Alert Dialog", n: "Optional or required reason (break lock: 3 to 500 characters)", t: "As Dialog" },
+              { a: "Sheet", b: "Sheet", n: "", t: "As Dialog" },
+              { a: "Menu", b: "Dropdown Menu", n: "Focused item: accent plus 2 px inset outline (P4)", t: "popover, popover-foreground, border; item hover accent; keyboard focus accent plus a 2 px inset focus-outline" },
+              { a: "Tabs", b: "Tabs", n: "Selected tab: 2 px foreground underline", t: "List muted; tab muted-foreground; hover foreground; selected card with a 2 px foreground underline" },
+              { a: "Table, DataTable", b: "Table", n: "aria-sort on sortable columns; keyset paging", t: "card, border; header muted and muted-foreground; row hover accent; selected row info-subtle; links in link" },
+              { a: "Tooltip", b: "Tooltip", n: "Opens after a delay on hover and at once on focus", t: "primary, primary-foreground" },
+              { a: "HoverCard", b: "Hover Card", n: "No interactive content", t: "popover, popover-foreground, border" },
+              { a: "Toaster", b: "Sonner", n: "Echoes only; errors stay inline", t: "popover, popover-foreground, border; icons in success, destructive and info" },
+              { a: "Card", b: "Card", n: "The panel surface", t: "card, card-foreground, border" },
+              { a: "StatusBadge", b: "Badge", n: "Icon plus text", t: "status-* and status-*-foreground; late and late-foreground; lock-owner and lock-owner-foreground" },
+              { a: "LoadingState", b: "Skeleton", n: "main sets aria-busy", t: "accent" },
+              { a: "Lookup, HoverCard", b: "Popover", n: "Popover surface", t: "popover, popover-foreground, border" },
+              { a: "SkipLink, VisuallyHidden", b: "none (Q12)", n: "SkipLink drawn in F8", t: "SkipLink: primary, primary-foreground" },
+              { a: "ColorSwatchPicker, QuantityInput", b: "none (Q12)", n: "Swatches alone use forced-color-adjust: none", t: "" }
+            ],
+            outer: keys(RING.l.outer).map((k) => ({ k: k, l: RING.l.outer[k], d: RING.d.outer[k] })),
+            inner: keys(RING.l.inner).map((k) => ({ k: k, l: RING.l.inner[k], d: RING.d.inner[k] })),
+            apartL: RING.l.apart, apartD: RING.d.apart,
+            worstL: RING.l.worst[1], worstD: RING.d.worst[1],
+            wcag: [
+              { n: "1.4.3", t: "Contrast (Minimum)", where: "Every text pair at 4.5:1, no large-text allowance (F1, F2)", cls: "req" },
+              { n: "1.4.11", t: "Non-text Contrast", where: "Input border, focus ring halves, block border, checkbox (F1, F2, F4); selected tab underline in F6, foreground on card 17.30:1 light, 14.59:1 dark", cls: "req" },
+              { n: "2.4.7", t: "Focus Visible", where: "Two-tone ring on every focus stop, except menu and listbox items, which draw a 2 px inset outline in focus-outline (P4; F4, F6, F8)", cls: "req" },
+              { n: "2.4.11", t: "Focus Not Obscured (Minimum)", where: "scroll-padding-top, board scroll-padding, scrollPaddingStart, toasts placed away (F8)", cls: "req" },
+              { n: "2.5.8", t: "Target Size (Minimum)", where: "24 px nm-target-min, the checkbox hit area, 44 px at stations (F1, F6)", cls: "req" },
+              { n: "1.4.1", t: "Use of Color", where: "State markers, StatusBadge icon plus text, selected row checkbox (F4, F6)", cls: "" },
+              { n: "1.4.4", t: "Resize Text", where: "rem sizes (F5)", cls: "" },
+              { n: "1.4.10", t: "Reflow", where: "No fixed text heights except board blocks (F5)", cls: "" },
+              { n: "1.4.12", t: "Text Spacing", where: "Text containers grow (F5)", cls: "" },
+              { n: "1.4.13", t: "Content on Hover or Focus", where: "Tooltip, Hover Card (F6, F8)", cls: "" },
+              { n: "2.1.1", t: "Keyboard", where: "Keys per component (F8)", cls: "" },
+              { n: "2.1.4", t: "Character Key Shortcuts", where: "Letter commands only while a board cell has focus (F8)", cls: "" },
+              { n: "2.4.1", t: "Bypass Blocks", where: "SkipLink (F8)", cls: "" },
+              { n: "2.4.3", t: "Focus Order", where: "Tab order, focus on route change (F8)", cls: "" },
+              { n: "2.5.2, 2.5.7", t: "Pointer Cancellation, Dragging Movements", where: "Board moves, set in D3", cls: "" },
+              { n: "3.2.1", t: "On Focus", where: "Focus only scrolls into view (F8)", cls: "" },
+              { n: "3.3.1, 3.3.3", t: "Error Identification, Error Suggestion", where: "Field errors state the rule and the fix (F6)", cls: "" },
+              { n: "3.3.7", t: "Redundant Entry", where: "A server error keeps entered values (F6 error toast)", cls: "" },
+              { n: "3.3.8", t: "Accessible Authentication (Minimum)", where: "Password field with show toggle, not drawn (Q13)", cls: "" },
+              { n: "4.1.3", t: "Status Messages", where: "Toasts, Combobox result count (F6)", cls: "" },
+              { n: "EN 9.7", t: "EN 301 549 V4.1.1 clause 9.7", where: "Forced colors: outline ring, markers, forced-color-adjust: none only on swatches", cls: "" }
+            ],
+            css: [
+              "Radius: --radius 0.375rem. theme.css derives radius-sm 0.6, radius-md 0.8, radius-lg 1 and radius-xl 1.4 times the base (3.6, 4.8, 6, 8.4 px; Q21).",
+              "Controls are var(--nm-control-height), 36 px. Every interactive primitive has at least var(--nm-target-min).",
+              "Invalid fields: border destructive plus inset 0 0 0 1px destructive. With focus: box-shadow 0 0 0 2px var(--focus-ring), inset 0 0 0 1px var(--destructive).",
+              "Disabled: opacity 0.5, the shadcn default (Q8).",
+              "Board blocks: 1 px block-border, 1 px gap, fill from a CSS variable, text and markers in textColorFor(fill) via currentColor. State markers never use outline or box-shadow, which belong to the focus ring: the border styles sit on ::before, the conflict stripe on ::after, and the Started progress bar is a child element.",
+              "Selected tab with focus: box-shadow 0 0 0 2px var(--focus-ring), inset 0 -2px 0 var(--foreground), so the inner band and the underline both stay.",
+              "Text on a destructive fill uses destructive-foreground, never white.",
+              "Values on this page that are not tokens, each a question: secondary hover at 80 percent (P2), dialog overlay black at 50 percent, popover shadow-md (P3), the 1 px press on active.",
+              "Fonts are self-hosted; this page alone loads them from Google Fonts. Icons come from lucide-react; this page alone loads lucide 1.45.0 from unpkg."
+            ],
+            icons: ["Pencil", "Lock", "Play", "Sparkles", "Clock", "TriangleAlert", "CircleDashed", "Info", "Pause", "CircleCheck", "Truck", "Ban", "Check", "Minus", "Plus", "ChevronDown", "ChevronLeft", "ChevronRight", "ArrowUp", "ArrowDown", "ArrowUpDown", "Search", "X", "CircleAlert", "CircleX", "Ellipsis", "LoaderCircle", "Eye", "User", "Sun", "Moon"]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

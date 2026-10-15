@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dashboard variations notes</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="./shell-454-dashboard-variations.css" />
+      </helmet>
+      <div class="sheet" data-screen-label="{{ screen }}">
+        <sc-if value="{{ isOpt }}">
+          <h2 class="t2">{{ o.title }}</h2>
+          <p class="lede">{{ o.lede }}</p>
+          <div class="db-cols3">
+            <div>
+              <h3 class="t3">What it optimizes</h3>
+              <ul class="db-pts"><sc-for list="{{ o.gains }}" as="g"><li>{{ g }}</li></sc-for></ul>
+            </div>
+            <div>
+              <h3 class="t3">What it costs</h3>
+              <ul class="db-pts"><sc-for list="{{ o.costs }}" as="c"><li>{{ c }}</li></sc-for></ul>
+            </div>
+            <div>
+              <h3 class="t3">How it meets the rules</h3>
+              <div class="db-rk"><sc-for list="{{ o.rules }}" as="r"><div class="db-rk-r"><span class="k">{{ r.k }}</span><span>{{ r.v }}</span></div></sc-for></div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ isG }}">
+          <p class="kick">Frame G</p>
+          <h2 class="t1">Grid library, widget sizes and draft build notes</h2>
+          <p class="lede">The grid library decides how much of the keyboard and reflow work NorthMES writes itself. Four libraries were compared on 2026-10-10 from their docs (Context7), npm, GitHub and bundlephobia. The build notes are drafts for the recommended option in frame R; the spec page settles them.</p>
+          <div class="sec">
+            <h2 class="t2">Recommendation: react-grid-layout 2.2.4, pinned exactly</h2>
+            <ul class="db-pts"><sc-for list="{{ g.why }}" as="w"><li>{{ w }}</li></sc-for></ul>
+          </div>
+          <div class="sec">
+            <h2 class="t2">Libraries compared</h2>
+            <div class="db-tbl">
+              <div class="db-tbl-r db-lib h"><span>Criterion</span><span>react-grid-layout 2.2.4</span><span>gridstack 14.0.0</span><span>dnd-kit with our own grid</span><span>Pragmatic drag and drop 4.0.0 with our own grid</span></div>
+              <sc-for list="{{ g.libs }}" as="r"><div class="db-tbl-r db-lib"><span class="k">{{ r.k }}</span><span>{{ r.a }}</span><span>{{ r.b }}</span><span>{{ r.c }}</span><span>{{ r.d }}</span></div></sc-for>
+            </div>
+          </div>
+          <div class="db-cols2 sec">
+            <div>
+              <h2 class="t2">What the recommendation costs</h2>
+              <ol class="db-pts"><sc-for list="{{ g.costs }}" as="c"><li>{{ c }}</li></sc-for></ol>
+            </div>
+            <div>
+              <h2 class="t2">Set aside</h2>
+              <ul class="db-pts"><sc-for list="{{ g.aside }}" as="c"><li>{{ c }}</li></sc-for></ul>
+              <h2 class="t2" style="margin-top:28px">Sources</h2>
+              <ul class="db-pts db-src"><sc-for list="{{ g.sources }}" as="c"><li>{{ c }}</li></sc-for></ul>
+            </div>
+          </div>
+          <div class="sec">
+            <h2 class="t2">Breakpoints</h2>
+            <p class="lede">Measured on the grid container (useContainerWidth), not on the viewport, because the 256 px sidebar, the 64 px rail and docked panels change the room. The widths are the drawn ones: 24 px page padding on each side and the frames' 1 px screen border, so a browser window gives 2 px more. lg starts at 900 px, so 1280 keeps 12 columns when a permanent vertical scrollbar (17 px with Windows classic scrollbars, or macOS set to always show them) takes the grid to 957 px. rowHeight 72 px, margin [16, 16], containerPadding [0, 0]: a widget h rows tall is 72h + 16(h - 1) px, so 2 rows are 160 px, 4 rows 336 px and 6 rows 512 px.</p>
+            <div class="db-tbl">
+              <div class="db-tbl-r db-bp h"><span>Name</span><span>Container width</span><span>Columns</span><span>Examples</span></div>
+              <sc-for list="{{ g.bps }}" as="r"><div class="db-tbl-r db-bp"><span class="k">{{ r.k }}</span><span>{{ r.w }}</span><span>{{ r.c }}</span><span>{{ r.e }}</span></div></sc-for>
+            </div>
+          </div>
+          <div class="db-cols2 sec">
+            <div>
+              <h2 class="t2">Widget sizes in grid units</h2>
+              <div class="db-tbl">
+                <div class="db-tbl-r db-sz h"><span>Size</span><span>12 columns</span><span>6 columns</span><span>One column</span><span>Width at 974, 1134 and 1614 px</span><span>Height</span></div>
+                <sc-for list="{{ g.sizes }}" as="r"><div class="db-tbl-r db-sz"><span class="k">{{ r.k }}</span><span>{{ r.lg }}</span><span>{{ r.md }}</span><span>{{ r.sm }}</span><span>{{ r.px }}</span><span>{{ r.h }}</span></div></sc-for>
+              </div>
+              <p class="lede">Widths are rounded to whole pixels, as react-grid-layout rounds them. At 6 columns a half-width widget is 292 px wide in a 600 px container and 442 px in an 899 px one. At one column the heights are minimums, and content can make a widget taller; a Table scrolls sideways in its own region, as plan 06 allows for data tables.</p>
+            </div>
+            <div>
+              <h2 class="t2">Sizes per widget type, default first</h2>
+              <div class="db-tbl">
+                <div class="db-tbl-r db-wt-r h"><span>Type</span><span>Sizes</span></div>
+                <sc-for list="{{ g.types }}" as="r"><div class="db-tbl-r db-wt-r"><span class="k">{{ r.k }}</span><span>{{ r.v }}</span></div></sc-for>
+              </div>
+              <p class="lede">Each tab stores <span class="db-code">{ columns: 12, widgets: [{ id, type, size, x, y, settings }] }</span>. w and h follow from size, so a stored layout cannot hold a size its type does not allow, and two copies of one type differ only in settings. The 6-column and one-column layouts come from a pure function of the 12-column one, with tests.</p>
+            </div>
+          </div>
+          <div class="sec">
+            <h2 class="t2">Draft build notes</h2>
+            <p class="lede">For option A with the parts of B and C that frame R recommends. Each element is named by its shadcn component; the implementer takes layout, states, copy, the keyboard model and slot placements, never markup, class names or demo numbers.</p>
+            <div class="db-tbl">
+              <div class="db-tbl-r db-bn h"><span>Element</span><span>Build note</span></div>
+              <sc-for list="{{ g.notes }}" as="r"><div class="db-tbl-r db-bn"><span class="k">{{ r.k }}</span><span>{{ r.v }}</span></div></sc-for>
+            </div>
+          </div>
+          <div class="sec">
+            <h2 class="t2">Copy, proposed final English</h2>
+            <p class="lede">Braces mark values the page fills in.</p>
+            <div class="db-tbl">
+              <div class="db-tbl-r db-cp h"><span>Where</span><span>Copy</span></div>
+              <sc-for list="{{ g.copy }}" as="r"><div class="db-tbl-r db-cp"><span class="k">{{ r.k }}</span><span>{{ r.v }}</span></div></sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"option":{"editor":"enum","options":["A","B","C","G"],"default":"A","tsType":"string"}}'>
+      class Component extends DCLogic {
+        renderVals() {
+          const P = this.props || {};
+          const R = (k, v) => ({ k: k, v: v });
+          const opt = String(P.option || "A");
+          const O = {
+            A: {
+              title: "A. Tabs and edit mode",
+              lede: "The tabs sit in a row under the h1: the company's tabs, then the plant's, then the user's own, each with its scope icon. Edit layout in the page actions puts the open tab into edit mode: column guides show, each widget gets a move button, a Widget actions menu and a resize handle, and an edit bar holds Add widget, Cancel and Done. The catalog and the settings open in a Sheet from the right. Changes wait until Done and are saved as one command; Cancel discards them. At 320 the tabs become a Select.",
+              gains: [
+                "Nothing changes by accident: outside edit mode a widget has no controls, and Cancel undoes a whole session.",
+                "The grid keeps the full width of main: 12 columns at 1280 (974 px) and at 1440 (1134 px).",
+                "One edit session is one command and one audit row, and other people see the finished layout, not each step (question 9).",
+                "The tabs are visible and one activation apart: arrow keys move focus along the tablist, and Enter or Space opens a tab.",
+                "The Sheet has room for every setting with its description, and the same Sheet holds the catalog.",
+                "The move button is the drag handle and the keyboard handle, so pointer and keyboard users learn one control."
+              ],
+              costs: [
+                "Adding a widget takes three steps: Edit layout, Add widget, Add.",
+                "The settings Sheet is modal and covers the right of the grid, so the user sees the result only after Apply.",
+                "A row of tabs runs out of room at about eight tabs at 1440 and needs a More tabs menu; at 320 a Select hides the other tabs.",
+                "Edit mode is a state the user can forget: leaving the page with unsaved changes needs a ConfirmDialog.",
+                "Two people editing one shared tab can overwrite each other's session, so Done needs a version check (question 16).",
+                "The keyboard move mode is our own code on react-grid-layout's moveElement and verticalCompactor (frame G)."
+              ],
+              rules: [
+                R("Route", "/plant-a?tab=$tabId; edit mode is not in the URL."),
+                R("Who may change", "Edit layout shows on an own tab, and on a shared tab only with core.dashboardTab:manage (A1, A4)."),
+                R("Follows the user", "Press line at Plant B (A5): each widget says what is missing there."),
+                R("Tabs at a glance", "Every tab in one row, More tabs past the row."),
+                R("2.5.7 move", "The move button: Enter picks up, arrow keys move, Enter drops, Escape cancels (A7). Move up and Move down in Widget actions (A9)."),
+                R("2.5.7 size", "Size in Widget actions and in the settings (A3, A9)."),
+                R("4.1.3", "Pickup, each step, drop and cancel in the polite region, debounced."),
+                R("2.4.3 order", "Widgets in reading order, re-sorted after a drop; focus returns to the move button."),
+                R("Reflow", "One column; the tabs as a Select (A8)."),
+                R("3.3.4", "Delete tab in the tab's actions menu, then a ConfirmDialog."),
+                R("Questions", "9 and 16 matter most here.")
+              ]
+            },
+            B: {
+              title: "B. Side column",
+              lede: "A 280 px column inside the page lists the tabs as links under the headings Acme AB, Plant A and My tabs. The same column turns into the catalog when the user selects Add widget, and into the settings of a widget when the user selects its Edit button, with Back to tabs at its head. There is no edit mode: the settings preview live in the grid, and Save stores them as one command. Position and Size in the settings move and resize the widget with buttons. At 320 a Tabs button opens the list as a sheet, and the settings open as a full-screen sheet.",
+              gains: [
+                "Every tab is listed under its scope, so the user sees at once which tabs are shared and with whom, and the list scrolls for any number of tabs.",
+                "Settings preview live beside the widget instead of behind a modal.",
+                "Move and Size are plain buttons in the settings: no keyboard mode to learn, and each press is announced (B7).",
+                "Adding a widget takes two steps, and the catalog never covers the grid.",
+                "The Plant A heading tells someone who may change its tabs that everyone at Plant A sees them (B4)."
+              ],
+              costs: [
+                "The column takes 304 px, so the grid has 6 columns at 1280 (670 px) and at 1440 (830 px), and 12 only from about 1510 px. Large and Wide widgets fill a whole row, and the Values stack two by two (B1).",
+                "While the column shows the catalog or the settings, the tab list is one Back away.",
+                "Two navigation regions sit side by side at 1440: the main sidebar and the tab list.",
+                "An Edit button on every widget of a tab the user may change, always visible.",
+                "At 320 the tab list needs its own sheet and trigger (B8).",
+                "Each Save is a command, so a session of moves writes several audit rows.",
+                "At 6 columns Press line at Plant B needs scrolling to reach its lower widgets (B5)."
+              ],
+              rules: [
+                R("Route", "/plant-a?tab=$tabId; each tab is a link with aria-current."),
+                R("Who may change", "Edit buttons, Add widget and the editing items of a row menu only on an own tab or with core.dashboardTab:manage (B1, B4)."),
+                R("Follows the user", "Press line at Plant B (B5)."),
+                R("Tabs at a glance", "Every tab listed under its scope."),
+                R("2.5.7 move", "Move up, down, left and right buttons in the settings (B7)."),
+                R("2.5.7 size", "The Size radio group in the settings."),
+                R("4.1.3", "Each move announces the new column and row."),
+                R("2.4.3 order", "Tab list, then the grid in reading order; while open, the settings column comes first."),
+                R("Reflow", "A Tabs sheet and a full-screen settings sheet (B8, B9)."),
+                R("3.3.4", "Delete in the tab row menu, then a ConfirmDialog (B4)."),
+                R("Questions", "9 and 16 matter most here.")
+              ]
+            },
+            C: {
+              title: "C. Tab picker and tiles",
+              lede: "The h1 names the open tab, and Switch tab beside it opens a menu of every tab grouped by scope, with New tab and Manage tabs, on the pattern of the plant switcher. There is no edit mode: on a tab the user may change, each widget has a Widget actions menu, an Add widget tile waits at the first free place, and the settings open inside the widget itself. Each change is one command. At 320 only the column count changes.",
+              gains: [
+                "The grid gets the most room: no tab row, and 12 columns at 1280 and 1440.",
+                "Adding happens where the widget will land: the tile, then a type (C2).",
+                "Any number of tabs fits the menu, and the page title names the open tab.",
+                "The same control at every width, so 320 needs no new pattern (C8).",
+                "It reuses the plant switcher's menu, so users learn one kind of switcher."
+              ],
+              costs: [
+                "The other tabs are hidden: switching takes two activations, against the request for a tabs system.",
+                "Settings must fit the widget's own size. A Medium List shows three fields before the form scrolls, and a Small Value has no room, so it needs a popover (C3).",
+                "A Widget actions button on every widget of a tab the user may change, and no Cancel for a session: each change is saved at once.",
+                "The h1 changes on a tab switch without a path change, which the focus rule for the h1 does not cover.",
+                "Manage tabs is one more dialog, for order, rename, hide and delete (C4)."
+              ],
+              rules: [
+                R("Route", "/plant-a?tab=$tabId; the tab names the h1 and the title."),
+                R("Who may change", "Widget actions, the tile and the editing items of Manage tabs only on an own tab or with core.dashboardTab:manage (C1, C4)."),
+                R("Follows the user", "Press line at Plant B (C5)."),
+                R("Tabs at a glance", "Broken: one tab shows, the others are a menu away."),
+                R("2.5.7 move", "Move in Widget actions moves focus to the widget; arrow keys move, Enter places, Escape cancels (C7)."),
+                R("2.5.7 size", "Size in Widget actions (C9)."),
+                R("4.1.3", "Start, each step, drop and cancel in the polite region, debounced."),
+                R("2.4.3 order", "Widgets in reading order; the tile where it sits in that order."),
+                R("Reflow", "One column, the tile after the last widget (C8)."),
+                R("3.3.4", "Delete in Manage tabs, then a ConfirmDialog."),
+                R("Questions", "12 and 16 matter most here.")
+              ]
+            }
+          };
+          const G = {
+            why: [
+              "Of the libraries compared, only react-grid-layout is written for React and in TypeScript, measures its container, takes a controlled JSON layout per breakpoint and enforces min, max and fixed sizes per item. It is MIT, and so are its six dependencies.",
+              "None of the candidates moves or resizes grid items by keyboard with announcements, so NorthMES adds its own keyboard, single-pointer and announcement layer whichever library it takes. react-grid-layout keeps that layer smallest: the layout is a plain array in React state, and react-grid-layout/core exports moveElement, collides and verticalCompactor, so a keyboard step reuses the logic a drag uses.",
+              "Pin 2.2.4, released 2026-07-29, not 2.3.0: 2.3.0 came out on 2026-10-05 and stays inside the 14-day minimumReleaseAge until 2026-10-19, and open issue #2303 reports that in 2.3.0 a dragged or resized item stops following the pointer between grid steps.",
+              "It injects no style elements, so it works under style-src 'self' (ADR 0020); its two small style sheets go into the shell's one sheet."
+            ],
+            libs: [
+              { k: "What it is", a: "React grid with drag, resize, compaction and breakpoints", b: "Grid engine for any framework, with a React wrapper", c: "Drag toolkit only; the grid would be a CSS grid with spans of our own", d: "Drag toolkit on native HTML5 drag; the grid would be our own" },
+              { k: "React 19 and TypeScript", a: "v2 is a TypeScript rewrite with hooks; no findDOMNode", b: "The wrapper renders through createPortal into DOM gridstack owns, and its notes advise against driving the grid from React state", c: "@dnd-kit/react 0.5.0 accepts React 18 or 19 but is before 1.0", d: "Typed; the React glue is ours" },
+              { k: "One column at 320", a: "Columns per breakpoint from the container width, so a one-column breakpoint works", b: "Breakpoints set column counts; column(1) stacks the items", c: "Plain CSS: container queries change the spans", d: "As dnd-kit" },
+              { k: "Keyboard move and resize", a: "None; the resize handle is a span without tabindex; issue #1907 open", b: "None; pull request #3092 for keyboard move open since 2025-07-10", c: "Keyboard moves in list order; no resize", d: "No keyboard drag by design; its guidelines put moves in a menu" },
+              { k: "Screen reader", a: "None; ours", b: "None", c: "An announcements plugin", d: "A live-region package" },
+              { k: "Focus order (2.4.3)", a: "The order of the children, so we sort them by y, then x", b: "Yes, since 13.1.0", c: "List order", d: "Ours" },
+              { k: "Layout as JSON", a: "Controlled array of { i, x, y, w, h, minW, maxW, minH, maxH, static, isResizable }", b: "save() and load()", c: "Ours", d: "Ours" },
+              { k: "Size, min and gzip", a: "73.5 and 22.8 kB with dependencies", b: "92.1 and 25.1 kB for the core", c: "101.6 and 33.1 kB", d: "Not measured" },
+              { k: "style-src 'self'", a: "Injects no style elements", b: "Injects no style sheet", c: "Inserts style elements; needs a nonce or three plugins removed", d: "Not checked" },
+              { k: "License", a: "MIT", b: "MIT", c: "MIT", d: "Apache-2.0" }
+            ],
+            costs: [
+              "A keyboard and single-pointer layer (2.1.1, 2.5.7). The move button is also the drag handle: Enter or Space picks the widget up, arrow keys move it one grid unit through moveElement and verticalCompactor, Enter drops it and Escape restores the layout from before the pickup. Our own code with tests, a few hundred lines.",
+              "Announcements in one polite region (4.1.3): pickup, each step, a size change, drop and cancel.",
+              "Focus order (2.4.3): the children render sorted by y, then x, and are re-sorted after a drop, not on each step, with focus back on the move button.",
+              "The resize handle: hidden from assistive technology with a 24 px target (2.5.8), or replaced through resizeConfig.handleComponent; on release it snaps to the nearest size the type allows.",
+              "One column below 600 px: an ordered list in reading order without react-grid-layout, with heights that grow with content (1.4.4, 1.4.10, 1.4.12).",
+              "The pin: 2.2.4 until #2303 is fixed and a 2.3.x release is 14 days old; 2.3.0 also needs memoized children.",
+              "CSS: the styles of react-grid-layout and react-resizable go into the one Tailwind sheet, with their colors replaced by D1 tokens.",
+              "prop-types and resize-observer-polyfill ship though React 19 and current browsers do not need them; both are small.",
+              "The dependency comes in its own pull request (AGENTS.md)."
+            ],
+            aside: [
+              "dockview 8.4.1 (MIT) docks panels into tabs and splits like an IDE; it does not place tiles on a grid.",
+              "react-mosaic-component 7.2.1 (Apache-2.0) splits windows and depends on react-dnd.",
+              "muuri was last released in 2022 (0.9.5); packery 3.0.0 is not a React library; react-dashboard-grid 1.0.4 wraps react-grid-layout v1.",
+              "If the dashboard ever gives up free placement, a CSS grid with spans and Move earlier and Move later menu items needs no drag library at all."
+            ],
+            sources: [
+              "github.com/react-grid-layout/react-grid-layout: issues #1907 and #2303, CHANGELOG.md",
+              "github.com/gridstack/gridstack.js: pull request #3092, doc/CHANGES.md, react/DESIGN-DECISIONS.md",
+              "github.com/clauderic/dnd-kit: packages/dom StyleInjector",
+              "github.com/atlassian/pragmatic-drag-and-drop: design guidelines",
+              "bundlephobia.com; ADR 0020, ADR 0040, plan 06, pnpm-workspace.yaml"
+            ],
+            bps: [
+              { k: "lg", w: "900 px and wider", c: "12", e: "1280 with the sidebar: 974 px, 957 px with a permanent scrollbar; 1440: 1134 px; 1920: 1614 px; 1280 with the rail: 1166 px" },
+              { k: "md", w: "600 to 899 px", c: "6", e: "Narrow windows, the Assistant docked, option B's side column at 1280 and 1440 (670 and 830 px)" },
+              { k: "sm", w: "Below 600 px", c: "1, in reading order", e: "320 and 400 % zoom: 286 px drawn, with 16 px page padding" }
+            ],
+            sizes: [
+              { k: "Small", lg: "3 by 2", md: "3 by 2, half", sm: "Full width", px: "232, 272, 392 px", h: "160 px" },
+              { k: "Medium", lg: "4 by 4", md: "3 by 4, half", sm: "Full width", px: "314, 367, 527 px", h: "336 px" },
+              { k: "Large", lg: "6 by 4", md: "6 by 4", sm: "Full width", px: "479, 559, 799 px", h: "336 px" },
+              { k: "Tall", lg: "6 by 6", md: "6 by 6", sm: "Full width", px: "479, 559, 799 px", h: "512 px" },
+              { k: "Wide", lg: "12 by 4", md: "6 by 4", sm: "Full width", px: "974, 1134, 1614 px", h: "336 px" }
+            ],
+            types: [
+              R("Value", "Small only: the fixed-size case, minW = maxW = 3, minH = maxH = 2, isResizable false"),
+              R("List", "Medium, Large, Tall"),
+              R("Table", "Large, Tall, Wide"),
+              R("Chart", "Large, Medium, Wide")
+            ],
+            notes: [
+              R("Route and tab", "The index route of /$plant. defineSearch keeps tab=$tabId; a tab switch calls setView with push and never moves focus. An unknown tab falls back to the first with the status line of ADR 0062."),
+              R("Tabs", "shadcn Tabs with the D1 Tabs look in a tablist named Dashboard tabs. Each tab is named by its visible label first: \"{tab}, shared, {scope}\" or \"{tab}, your tab\". The rules between scopes are hidden from assistive technology. TabsList keeps activateOnFocus={false}, as DetailTabs sets it: arrow keys, Home and End move focus, and Enter or Space opens the focused tab, so each opened tab is one history entry and one load of widgets."),
+              R("Tab actions", "DropdownMenu on an IconButton named \"Actions for {tab}\": Rename, Move left, Move right, Hide for me, Copy to my tabs, Delete tab. Items the user may not use are left out. New tab is a Button, and a DropdownMenu with My tab and Shared tab for someone who may change shared tabs."),
+              R("Edit mode", "Button Edit layout in the page actions. The edit bar is a group named \"Editing {tab}\" with Add widget, Cancel and Done; Done saves one command, and leaving with changes opens a ConfirmDialog."),
+              R("Widget", "WidgetFrame: a section named by its h2 title, inside its own error boundary, with a Badge Demo in release 1. Tokens --card, --border, --radius-xl; status badges use the status tokens with their text."),
+              R("Widget body", "The body never clips its content. Rows shown fits the size: 3 to 5 at Medium and Large, 3 to 8 at Tall. When text spacing overrides, 200 % text or long strings make the content taller than the widget, the body scrolls in a region named by the widget's title with tabindex 0, and the All link stays below it, outside the scroll (1.4.4, 1.4.12)."),
+              R("Move", "IconButton \"Move {title}\" with aria-pressed while picked up. Enter or Space picks up, arrow keys move one grid unit, Enter drops, Escape restores; focus stays on the button. A drag commits on pointer up, and Escape cancels before release."),
+              R("Widget actions", "DropdownMenu \"Actions for {title}\": Settings, Move up, Move down, Move left, Move right, Size as menuitemradio per allowed size, Remove widget. A move goes one grid unit through moveElement, scrolls the widget into view, announces the new column and row, and returns focus to the menu button; at one column only Move up and Move down show (question 18). It opens on Enter or a click, never on hover."),
+              R("Catalog", "Sheet \"Add widget\" with a search field named Search widgets, groups by module label, and per entry its type, provider and sizes. Add places the widget at the first free place in its default size and moves focus to its move button."),
+              R("Settings", "Sheet \"Widget settings\" with Field, Input, Select, Checkbox, NumberField and RadioGroup, and Size from option B. No Position: the Sheet's overlay covers the grid, so moves stay with the move button and Widget actions. Apply closes the Sheet and shows the change in the grid, and Done saves it with the session; Cancel discards only the Sheet's changes. Errors follow #222: the rule and the fix, with the range and the typed value."),
+              R("Widget states", "One state at a time, checked in this order. Not installed offers Remove widget. Forbidden names the permission and shows no data; it comes before any setting is checked, so it never tells what exists at the plant. Not at {plant} links to the plant where the setting applies. LoadingState: a skeleton of the widget with aria-busy on its section. A failed data request shows ErrorState \"{title} could not be loaded.\" with the correlation id of the response, Copy correlation id and Try again (#306). EmptyState with Change settings. Then the data. A widget that throws while drawing shows \"{title} could not be shown.\" with Stage render, Code web.render_error and Try again, in place of whatever it drew (D2 ST27, ST6)."),
+              R("Charts", "role img with a text summary as its name; series told apart by fill and hatching and named in a legend. A table view of the data is a follow-up (question 7)."),
+              R("Reflow", "Below a 600 px container an ordered list in reading order without react-grid-layout; heights grow with content. A Table scrolls sideways in a region named \"{title}, scrolls sideways\" with tabindex 0. The tab row becomes a Select."),
+              R("Focus not obscured", "Sheets are modal and return focus to their trigger; the grid's scroll container uses scroll-padding so a focused widget never sits under a sticky edit bar (2.4.11)."),
+              R("Slot", "core/dashboard/widgets/v1 or built in (question 6). A widget never uses fixed or sticky positioning, reads size from useHost and reflows at 320."),
+              R("WCAG 2.2", "1.3.1, 1.3.2, 1.4.1, 1.4.4, 1.4.10, 1.4.11, 1.4.12, 1.4.13, 2.1.1, 2.1.2, 2.4.3, 2.4.7, 2.4.11, 2.5.3, 2.5.7, 2.5.8, 3.2.6, 3.3.4, 4.1.2, 4.1.3")
+            ],
+            copy: [
+              R("Title and h1", "Dashboard · {plant} · NorthMES; h1 Dashboard"),
+              R("Scope line", "Everyone at {plant} sees this tab. / Everyone at {plant} sees this tab. You can change it. / Only you see this tab, at every plant you open."),
+              R("Edit bar", "Editing {tab}. Only you see this tab. Changes are saved when you select Done. / Editing {tab}. Everyone at {plant} sees your changes when you select Done."),
+              R("Empty tab", "{tab} has no widgets yet / Add a widget to see the numbers you follow. Only you see this tab, at every plant you open. / Add widget"),
+              R("Catalog", "Add widget / To {tab}. In this release every widget shows demo data. / Search widgets / Sizes"),
+              R("Widget settings", "Widget settings / {title}: a {type} on {tab}. / Apply / Cancel"),
+              R("Error, data request", "{title} could not be loaded. / Correlation id {id} / Copy correlation id / Try again"),
+              R("Error, drawing", "{title} could not be shown. / Stage render / Code web.render_error / Try again"),
+              R("No permission", "No permission / You need the permission to read {data} at {plant}. Ask your plant admin for a role that can read {data}."),
+              R("Not at this plant", "Not at {plant} / {name} is not a machine at {plant}. / {name} is not an equipment group at {plant}. / Show at {plant}"),
+              R("Not installed", "Not installed / The {plugin} plugin that provided this widget is no longer installed. / Remove widget"),
+              R("Empty widget", "No jobs / No jobs match these settings at {plant}. / Change settings"),
+              R("Delete a shared tab", "Delete {tab} for everyone at {plant}? / {tab} and its {n} widgets are deleted for everyone at {plant}. Copies that people made in their own tabs stay. This cannot be undone. / Cancel / Delete tab"),
+              R("Delete an own tab", "Delete {tab}? / {tab} and its {n} widgets are deleted. This cannot be undone. / Cancel / Delete tab"),
+              R("Announcements", "{title} picked up. Column {c}, row {r}. Arrow keys move it, Enter drops it, Escape cancels. / Column {c}, row {r}. / {title} dropped at column {c}, row {r}. / Move cancelled. {title} is back at column {c}, row {r}. / {title} moved to column {c}, row {r}. / {title} is now {size}, {w} columns by {h} rows. / {title} could not be loaded. / {title} could not be shown.")
+            ]
+          };
+          const isG = opt === "G";
+          return {
+            screen: isG ? "Grid library, sizes and build notes" : "Option notes " + opt,
+            isOpt: !isG,
+            isG: isG,
+            o: O[opt] || O.A,
+            g: G
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

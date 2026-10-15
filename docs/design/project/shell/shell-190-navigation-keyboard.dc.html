@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>D2 keyboard and focus</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap" />
+        <script src="https://unpkg.com/lucide@1.45.0/dist/umd/lucide.min.js" integrity="sha384-1K5mjRr9EvBwlp0ALeQf1DEysXoqYs+nRQmDBi/UrEty5RgCjPRph7NJZkRjAFWJ" crossorigin="anonymous"></script>
+        <link rel="stylesheet" href="../ui/tokens.css" />
+        <link rel="stylesheet" href="../ui/ui-189-tokens-page.css" />
+        <link rel="stylesheet" href="../shell/shell-190-navigation.css" />
+        <style>
+/* Part page: keyboard and focus frames KE1 to KE32 of the D2 page. Frames mount Shell.dc.html and
+   StationFrame.dc.html; everything drawn here on top of them is an annotation, except the reload dialog. */
+.ke-root{display:flex;flex-direction:column;align-items:flex-start;gap:120px}
+.ke-row{display:flex;align-items:flex-start;gap:80px}
+.ke-f{position:relative;flex:none}
+.ke-f .flabel{cursor:default;white-space:nowrap}
+.ke-stage{position:relative}
+.ke-stage.crop{overflow:hidden;border-radius:var(--radius-xl)}
+.ke-shift{position:absolute;top:0}
+.ke-ovl{position:absolute;inset:0;z-index:30;pointer-events:none}
+.ke-b{position:absolute;display:grid;place-items:center;width:20px;height:20px;border-radius:999px;background:var(--info);color:var(--background);box-shadow:0 0 0 2px var(--background);font:600 11px/1 var(--font-mono)}
+.ke-ring{position:absolute;border:2px solid var(--focus-outline);box-shadow:inset 0 0 0 2px var(--focus-ring)}
+.ke-t{position:absolute;padding:3px 8px;border-radius:4px;background:var(--info);color:var(--background);box-shadow:0 0 0 2px var(--background);font:600 11px/16px var(--font-mono)}
+.ke-band{position:absolute;background:repeating-linear-gradient(135deg,var(--info) 0 2px,transparent 2px 5px)}
+.ke-dim{position:absolute;width:2px;background:var(--info)}
+.ke-dim::before,.ke-dim::after{content:"";position:absolute;left:-4px;width:10px;height:2px;background:var(--info)}
+.ke-dim::before{top:0}
+.ke-dim::after{bottom:0}
+.ke-leg{position:absolute;z-index:31;display:grid;gap:8px;padding:12px 14px;border-radius:6px;background:#ffffff;color:#1a1a1a;box-shadow:0 0 0 1px rgba(0,0,0,.16);font:400 12px/16px "IBM Plex Sans",system-ui,sans-serif}
+.ke-leg-h{font-weight:600}
+.ke-leg-g{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px}
+.ke-leg-r{display:grid;grid-template-columns:20px minmax(0,1fr);align-items:center;gap:8px}
+.ke-leg-f{padding-top:6px;border-top:1px solid rgba(0,0,0,.12);color:#4f4c46}
+.ke-bs{display:inline-grid;place-items:center;flex:none;width:20px;height:20px;border-radius:999px;background:var(--info);color:var(--background);font:600 11px/1 var(--font-mono)}
+/* Reload dialog (shadcn Alert Dialog on the D1 Dialog surface) */
+.ke-layer{position:absolute;left:0;z-index:25;overflow:hidden;border-radius:var(--radius-xl)}
+.ke-scrim{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+.ke-dlg{position:absolute;left:50%;top:50%;display:grid;gap:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);width:min(480px,calc(100% - 32px));padding:24px;transform:translate(-50%,-50%);border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--background);color:var(--foreground);font:400 14px/20px var(--font-sans);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+.ke-trap{position:absolute;left:50%;top:calc(50% + 112px);transform:translateX(-50%);max-width:calc(100% - 32px)}
+.ke-dlg-t{margin:0;font-size:20px;line-height:28px;font-weight:600;letter-spacing:-0.01em}
+.ke-dlg-p{margin:0}
+.ke-dlg-d{display:grid;gap:8px}
+.ke-dlg-f{display:flex;justify-content:flex-end;gap:8px;padding-top:8px}
+/* Sample route content: a production orders list in the D1 F8 shape */
+.ke-list{display:flex;flex-direction:column;gap:16px;min-width:0}
+.ke-fb{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.ke-search{width:240px}
+.ke-sel{width:160px}
+.ke-tbl{border:1px solid var(--border);border-radius:var(--radius);background:var(--card);color:var(--card-foreground);overflow:hidden}
+.ke-tr{display:grid;grid-template-columns:96px minmax(0,1fr) 96px 112px 132px;align-items:center;gap:12px;min-height:40px;padding:0 12px;border-top:1px solid var(--border)}
+.ke-tr.h{min-height:36px;border-top:0;background:var(--muted);color:var(--muted-foreground);font-size:12px;line-height:16px;font-weight:600}
+.ke-sort{display:inline-flex;align-items:center;gap:4px;justify-self:start;height:28px;margin-left:-6px;padding:0 6px;border:0;border-radius:var(--radius-sm);background:transparent;color:inherit;font:inherit;cursor:pointer}
+.ke-sort .ic{width:14px;height:14px}
+.ke-tbl .ke-a{justify-self:start;color:var(--link);font-family:var(--font-mono);font-variant-numeric:tabular-nums;text-decoration:underline;text-underline-offset:2px;border-radius:var(--radius-sm)}
+.ke-ell{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ke-pg{display:flex;justify-content:flex-end;gap:8px}
+.ke-st-registered{--bb:var(--status-registered);--bf:var(--status-registered-foreground)}
+.ke-st-planned{--bb:var(--status-planned);--bf:var(--status-planned-foreground)}
+.ke-st-active{--bb:var(--status-active);--bf:var(--status-active-foreground)}
+.ke-st-paused{--bb:var(--status-paused);--bf:var(--status-paused-foreground)}
+.ke-od{display:flex;flex-wrap:wrap;gap:12px 48px;padding:20px 24px}
+.ke-di{display:grid;gap:4px;align-content:start}
+.ke-scrolled{margin-top:-23px}
+.ke-scrolled.nar{margin-top:-19px}
+.ke-w680{max-width:680px}
+.ke-tbl.cut{border-top:0;border-top-left-radius:0;border-top-right-radius:0}
+.ke-r{justify-self:end;text-align:right}
+.ke-jobs{display:flex;flex-direction:column;gap:12px;flex:1;min-height:0}
+.ke-job{display:flex;align-items:center;flex:none;min-height:72px;padding:0 20px;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--muted-foreground);font:500 14px/20px var(--font-mono);text-align:left;cursor:pointer}
+/* Orders table at 320, as in the narrow part (NA1): every column, scrolling sideways in its own container */
+.ke-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ke-tools .ke-s1{flex:1 1 240px;width:auto}
+.ke-tools .ke-s2{flex:1 1 120px;width:auto}
+.ke-tw{flex:none;max-width:100%;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--card-foreground);overflow-x:auto}
+.ke-tw.cut{border-top:0;border-top-left-radius:0;border-top-right-radius:0}
+.ke-tw::-webkit-scrollbar{height:10px}
+.ke-tw::-webkit-scrollbar-track{background:var(--muted)}
+.ke-tw::-webkit-scrollbar-thumb{border:2px solid var(--muted);border-radius:999px;background:var(--muted-foreground)}
+.ke-g5{display:grid;grid-template-columns:repeat(5,auto);width:max-content;min-width:100%;font-size:14px;line-height:20px}
+.ke-rw{display:contents}
+.ke-th{display:flex;align-items:center;min-height:38px;padding:0 12px;background:var(--muted);color:var(--muted-foreground);font-size:12px;line-height:16px;font-weight:600;white-space:nowrap}
+.ke-td{display:flex;align-items:center;gap:4px;min-height:44px;padding:6px 12px;border-top:1px solid var(--border);white-space:nowrap}
+.ke-g5.cut .ke-rw:first-child .ke-td{border-top:0}
+.ke-th.r,.ke-td.r{justify-content:flex-end}
+.ke-td .ke-a{color:var(--link);font-family:var(--font-mono);font-variant-numeric:tabular-nums;text-decoration:underline;text-underline-offset:2px;border-radius:var(--radius-sm)}
+/* Build notes */
+.ke-notes{width:1440px}
+.ke-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:48px;align-items:start;margin-top:32px}
+.ke-col{display:grid;gap:32px;align-content:start;min-width:0}
+.ke-frl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 24px;font-size:13px;line-height:18px}
+.ke-fr{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px}
+.ke-fk{font:600 12px/18px var(--font-mono)}
+.ke-sec{display:grid;gap:10px;align-content:start;min-width:0}
+.ke-tb{display:grid;border-top:1px solid var(--border)}
+.ke-tbr{display:grid;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:18px}
+.ke-tbr.h{padding:6px 0;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+.ke-g3{grid-template-columns:120px minmax(0,1fr) 92px}
+.ke-g4{grid-template-columns:150px minmax(0,1fr) minmax(0,1.1fr) 84px}
+.ke-g3b{grid-template-columns:150px minmax(0,1.3fr) minmax(0,1fr)}
+.ke-g2{grid-template-columns:96px minmax(0,1fr)}
+.ke-g2s{grid-template-columns:170px minmax(0,1fr)}
+.ke-slotk{font-family:var(--font-mono);font-size:12px;overflow-wrap:anywhere}
+.ke-doc{font-size:10px;line-height:16px}
+.ke-ul{display:grid;gap:6px;margin:0;padding:0 0 0 18px;font-size:13px;line-height:18px}
+.ke-ord{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 16px;font-size:13px;line-height:18px}
+.ke-oi{display:flex;align-items:center;gap:8px;min-width:0}
+.ke-cpg{display:grid;gap:6px}
+.ke-cps{display:flex;flex-wrap:wrap;gap:6px}
+.ke-cp{display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);font-size:12px;line-height:18px}
+.ke-cp .ic{width:14px;height:14px}
+.ke-in{color:var(--muted-foreground);font-family:var(--font-mono);font-size:11px}
+.ke-q{display:grid;grid-template-columns:40px minmax(0,1fr);gap:10px;font-size:13px;line-height:18px}
+.ke-qk{font:600 12px/18px var(--font-mono)}
+.ke-tok{font-family:var(--font-mono);font-size:.92em;white-space:nowrap}
+        </style>
+      </helmet>
+      <div class="ke-root" id="{{ rid }}">
+        <sc-if value="{{ show.r1 }}">
+          <div class="ke-row">
+            <sc-if value="{{ show.KE1 }}">
+              <div class="ke-f" data-ke="KE1" data-screen-label="KE1 Tab order, light, 1440 by 900" style="width:1440px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE1</span>Tab order<span class="fth">Light, 1440 by 900. Planner on Production orders; numbers are the Tab sequence, the skip link has focus</span></div></sc-if>
+                <div class="ke-stage" style="width:1440px">
+                  <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" focus="skip" hint-size="1440px,900px">
+                    <div class="ke-list">
+                      <div class="ke-fb"><span class="inp ke-search" data-stop="1"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel" data-stop="1"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                      <div class="ke-tbl">
+                        <div class="ke-tr h"><span><button class="ke-sort" type="button" data-badge="r">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button" data-badge="r">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                        <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#" data-badge="r">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                      </div>
+                      <div class="ke-pg"><button class="btn v-outline is-dis" type="button" aria-disabled="true">Previous</button><button class="btn v-outline" type="button">Next</button></div>
+                    </div>
+                  </dc-import>
+                  <div class="ke-ovl"><sc-for list="{{ ov.KE1.b }}" as="o"><span class="ke-b" style="{{ o.st }}">{{ o.n }}</span></sc-for></div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE2 }}">
+              <div class="ke-f" data-ke="KE2" data-screen-label="KE2 Tab order with the rail, dark, 1280 by 800" style="width:1280px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE2</span>Tab order with the rail<span class="fth">Dark, 1280 by 800. Planning board; focus on the Board icon, its tooltip open. Stop 1 is the skip link, hidden until focused</span></div></sc-if>
+                <div class="ke-stage dark" style="width:1280px">
+                  <dc-import name="Shell" width="1280" theme="dark" sidebar="rail" nav="planning.board" focus="nav" hint-size="1280px,800px">
+                    <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+                    <div class="sh-phbox" data-stop="1" data-badge="in"><span class="sh-phl">Board grid, designed in D3. One Tab stop: Tab enters at the selected block and leaves the grid</span></div>
+                  </dc-import>
+                  <div class="ke-ovl"><sc-for list="{{ ov.KE2.b }}" as="o"><span class="ke-b" style="{{ o.st }}">{{ o.n }}</span></sc-for></div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE32 }}">
+              <div class="ke-f" data-ke="KE32" data-screen-label="KE32 Tab order with Administration, light, 480 by 900" style="width:480px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE32</span>Tab order, admin<span class="fth">Light, 480 by 900 crop</span></div></sc-if>
+                <div class="ke-stage crop" style="width:480px;height:900px">
+                  <div class="ke-shift" style="left:0px">
+                    <dc-import name="Shell" width="1440" theme="light" role="admin" nav="core.users" nav-scroll="end" hint-size="1440px,900px">
+                      <div class="sh-phbox" data-stop="1" data-badge="in"><span class="sh-phl">Users page, a later design task (C7). Its own Tab order continues here</span></div>
+                    </dc-import>
+                  </div>
+                  <div class="ke-ovl"><sc-for list="{{ ov.KE32.b }}" as="o"><span class="ke-b" style="{{ o.st }}">{{ o.n }}</span></sc-for></div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ show.r2 }}">
+          <div class="ke-row">
+            <sc-if value="{{ show.KE3 }}">
+              <div class="ke-f" data-ke="KE3" data-screen-label="KE3 Route change, light, 1440 by 900" style="width:1440px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE3</span>Route change<span class="fth">Light, 1440 by 900. Enter on 1001 in Production orders; one frame after the route renders, the h1 has focus</span></div></sc-if>
+                <div class="ke-stage" style="width:1440px">
+                  <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" entity="Order 1001" actions="*Release order" focus="h1" show-title="on" hint-size="1440px,936px">
+                    <div class="panel ke-od">
+                      <div class="ke-di"><span class="lbl mut">Article</span><span>Bearing housing BH-40</span></div>
+                      <div class="ke-di"><span class="lbl mut">Quantity</span><span><span class="num">120</span> pcs</span></div>
+                      <div class="ke-di"><span class="lbl mut">Deadline</span><span class="num">2026-10-12 14:00</span></div>
+                      <div class="ke-di"><span class="lbl mut">Status</span><span class="badge ke-st-planned"><span class="ic" data-icon="Info"></span>Planned</span></div>
+                    </div>
+                    <div class="sh-phbox"><span class="sh-phl">Order detail content, designed outside D2</span></div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE4 }}">
+              <div class="ke-f" data-ke="KE4" data-screen-label="KE4 Route change, dark, 1280 by 800" style="width:1280px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE4</span>Route change<span class="fth">Dark, 1280 by 800. The same step: the h1 Order 1001 has focus, the title names the order</span></div></sc-if>
+                <div class="ke-stage dark" style="width:1280px">
+                  <dc-import name="Shell" width="1280" theme="dark" nav="planning.orders" entity="Order 1001" actions="*Release order" focus="h1" show-title="on" hint-size="1280px,836px">
+                    <div class="panel ke-od">
+                      <div class="ke-di"><span class="lbl mut">Article</span><span>Bearing housing BH-40</span></div>
+                      <div class="ke-di"><span class="lbl mut">Quantity</span><span><span class="num">120</span> pcs</span></div>
+                      <div class="ke-di"><span class="lbl mut">Deadline</span><span class="num">2026-10-12 14:00</span></div>
+                      <div class="ke-di"><span class="lbl mut">Status</span><span class="badge ke-st-planned"><span class="ic" data-icon="Info"></span>Planned</span></div>
+                    </div>
+                    <div class="sh-phbox"><span class="sh-phl">Order detail content, designed outside D2</span></div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ show.r3 }}">
+          <div class="ke-row">
+            <sc-if value="{{ show.KE5 }}">
+              <div class="ke-f" data-ke="KE5" data-screen-label="KE5 Collapse keeps focus, light, 720 by 240" style="width:720px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE5</span>Collapse keeps focus<span class="fth">Light, 720 by 240 crop. Focus stays on the sidebar trigger</span></div></sc-if>
+                <div class="ke-stage crop" style="width:720px;height:240px">
+                  <div class="ke-shift" style="left:0px">
+                    <dc-import name="Shell" width="1440" theme="light" sidebar="rail" nav="planning.orders" focus="toggle" hint-size="1440px,900px">
+                      <div class="ke-list">
+                        <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                        <div class="ke-tbl">
+                          <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                          <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                        </div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE6 }}">
+              <div class="ke-f" data-ke="KE6" data-screen-label="KE6 Fallback to main, light, 960 by 360" style="width:960px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE6</span>Fallback to main<span class="fth">Light, 960 by 360 crop. No h1 after the route renders: main takes focus</span></div></sc-if>
+                <div class="ke-stage crop" style="width:960px;height:360px">
+                  <div class="ke-shift" style="left:0px">
+                    <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" heading="none" focus="main" hint-size="1440px,900px">
+                      <div class="ke-list">
+                        <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                        <div class="ke-tbl">
+                          <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                          <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                        </div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE7 }}">
+              <div class="ke-f" data-ke="KE7" data-screen-label="KE7 Switcher menu open, light, 720 by 320" style="width:720px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE7</span>Switcher menu open<span class="fth">Light, 720 by 320 crop. Two companies; focus on Plant B</span></div></sc-if>
+                <div class="ke-stage crop" style="width:720px;height:320px">
+                  <div class="ke-shift" style="left:0px">
+                    <dc-import name="Shell" width="1440" theme="light" access="companies" nav="planning.orders" open="none" menu="plant" hint-size="1440px,900px">
+                      <div class="ke-list">
+                        <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                        <div class="ke-tbl">
+                          <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                          <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                        </div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE8 }}">
+              <div class="ke-f" data-ke="KE8" data-screen-label="KE8 Switcher menu closed, light, 720 by 200" style="width:720px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE8</span>Switcher menu closed<span class="fth">Light, 720 by 200 crop. Escape: focus back on the switcher</span></div></sc-if>
+                <div class="ke-stage crop" style="width:720px;height:200px">
+                  <div class="ke-shift" style="left:0px">
+                    <dc-import name="Shell" width="1440" theme="light" access="companies" nav="planning.orders" focus="plant" hint-size="1440px,900px">
+                      <div class="ke-list">
+                        <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                        <div class="ke-tbl">
+                          <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                          <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                        </div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ show.r4 }}">
+          <div class="ke-row">
+            <sc-if value="{{ show.KE9 }}">
+              <div class="ke-f" data-ke="KE9" data-screen-label="KE9 Plant chosen, dark, 1440 by 900" style="width:1440px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE9</span>Plant chosen<span class="fth">Dark, 1440 by 900. Enter on Plant B: the same page opens in Plant B and its h1 has focus</span></div></sc-if>
+                <div class="ke-stage dark" style="width:1440px">
+                  <dc-import name="Shell" width="1440" theme="dark" access="companies" plant="Plant B" nav="planning.orders" focus="h1" show-title="on" hint-size="1440px,936px">
+                    <div class="ke-list">
+                      <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                      <div class="ke-tbl">
+                        <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                        <sc-for list="{{ ordersB }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                      </div>
+                      <div class="ke-pg"><button class="btn v-outline is-dis" type="button" aria-disabled="true">Previous</button><button class="btn v-outline" type="button">Next</button></div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE10 }}">
+              <div class="ke-f" data-ke="KE10" data-screen-label="KE10 Reload dialog, light, 1440 by 900" style="width:1440px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE10</span>Reload dialog, focus trap<span class="fth">Light, 1440 by 900. Opens by itself with focus on Reload page; Tab and Shift+Tab stay there; Escape does nothing (question K8)</span></div></sc-if>
+                <div class="ke-stage" style="width:1440px">
+                  <div inert="">
+                  <dc-import name="Shell" width="1440" theme="light" nav="planning.board" show-title="on" doc-title="NorthMES was updated · Plant A · NorthMES" hint-size="1440px,936px">
+                    <div data-slot="header"><span>Pyramid data as of <span class="num">06:40</span></span></div>
+                    <div class="sh-phbox"><span class="sh-phl">Board grid, designed in D3</span></div>
+                  </dc-import>
+                  </div>
+                  <sc-for list="{{ ov.KE10.layer }}" as="l">
+                    <div class="ke-layer" style="{{ l.st }}">
+                      <div class="ke-scrim"></div>
+                      <div class="ke-dlg" role="alertdialog" aria-modal="true" aria-labelledby="ke10-t" aria-describedby="ke10-d">
+                        <h1 class="ke-dlg-t" id="ke10-t" tabIndex="-1">NorthMES was updated</h1>
+                        <div class="ke-dlg-d" id="ke10-d"><p class="ke-dlg-p">This tab runs the previous version, so saving is off until you reload.</p><p class="ke-dlg-p">Reloading keeps everything that is saved. Changes on this page that are not saved yet are lost.</p></div>
+                        <div class="ke-dlg-f"><button class="btn v-default is-focus" type="button"><span class="ic" data-icon="RotateCw"></span>Reload page</button></div>
+                      </div>
+                      <span class="ke-t ke-trap">Stop 1 of 1: Tab and Shift+Tab stay on Reload page. Escape does nothing (K8). The page behind is inert.</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ show.r5 }}">
+          <div class="ke-row">
+            <sc-if value="{{ show.KE24 }}">
+              <div class="ke-f" data-ke="KE24" data-screen-label="KE24 User menu open, light, 720 by 400" style="width:720px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE24</span>User menu open<span class="fth">Light, 720 by 400 crop, bottom left. Focus on Profile</span></div></sc-if>
+                <div class="ke-stage crop" style="width:720px;height:400px">
+                  <div class="ke-shift" style="left:0px;top:-500px">
+                    <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" menu="user" hint-size="1440px,900px">
+                      <div class="ke-list">
+                        <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                        <div class="ke-tbl">
+                          <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                          <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                        </div>
+                        <div class="ke-pg"><button class="btn v-outline is-dis" type="button" aria-disabled="true">Previous</button><button class="btn v-outline" type="button">Next</button></div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE25 }}">
+              <div class="ke-f" data-ke="KE25" data-screen-label="KE25 User menu closed, dark, 720 by 200" style="width:720px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE25</span>User menu closed<span class="fth">Dark, 720 by 200 crop. Escape: focus back on the user button</span></div></sc-if>
+                <div class="ke-stage crop dark" style="width:720px;height:200px">
+                  <div class="ke-shift" style="left:0px;top:-700px">
+                    <dc-import name="Shell" width="1440" theme="dark" nav="planning.orders" focus="user" hint-size="1440px,900px">
+                      <div class="ke-list">
+                        <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                        <div class="ke-tbl">
+                          <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                          <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                        </div>
+                        <div class="ke-pg"><button class="btn v-outline is-dis" type="button" aria-disabled="true">Previous</button><button class="btn v-outline" type="button">Next</button></div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE28 }}">
+              <div class="ke-f" data-ke="KE28" data-screen-label="KE28 Rail flyout open, light, 720 by 420" style="width:720px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE28</span>Rail flyout open<span class="fth">Light, 720 by 420 crop. Focus on the first item, Master data</span></div></sc-if>
+                <div class="ke-stage crop" style="width:720px;height:420px">
+                  <div class="ke-shift" style="left:0px">
+                    <dc-import name="Shell" width="1440" theme="light" sidebar="rail" flyout="core.master-data" nav="core.machines" hint-size="1440px,900px"></dc-import>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE29 }}">
+              <div class="ke-f" data-ke="KE29" data-screen-label="KE29 Rail flyout closed, dark, 720 by 240" style="width:720px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE29</span>Rail flyout closed<span class="fth">Dark, 720 by 240 crop. Escape: focus back on Master data</span></div></sc-if>
+                <div class="ke-stage crop dark" style="width:720px;height:240px">
+                  <div class="ke-shift" style="left:0px">
+                    <dc-import name="Shell" width="1440" theme="dark" sidebar="rail" nav="core.machines" focus="nav" hint-size="1440px,900px"></dc-import>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ show.r6 }}">
+          <div class="ke-row">
+            <sc-if value="{{ show.KE11 }}">
+              <div class="ke-f" data-ke="KE11" data-screen-label="KE11 Navigation sheet open, light, 320 by 640" style="width:320px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE11</span>Sheet open<span class="fth">Light, 320 by 640</span></div></sc-if>
+                <div class="ke-stage" style="width:320px">
+                  <dc-import name="Shell" width="320" theme="light" sidebar="sheet" nav="planning.orders" focus="toggle" hint-size="320px,640px">
+                    <div class="ke-list">
+                      <div class="ke-tools"><span class="inp ke-s1"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-s2"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                      <div class="ke-tw" role="region" aria-label="Production orders" tabindex="0">
+                        <div class="ke-g5" role="table" aria-label="Production orders">
+                          <div class="ke-rw" role="row"><span class="ke-th" role="columnheader" aria-sort="ascending">Order</span><span class="ke-th" role="columnheader">Article</span><span class="ke-th r" role="columnheader">Quantity</span><span class="ke-th" role="columnheader">Deadline</span><span class="ke-th" role="columnheader">Status</span></div>
+                          <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-rw" role="row"><span class="ke-td" role="cell"><a class="ke-a" href="#">{{ o.no }}</a></span><span class="ke-td" role="cell">{{ o.art }}</span><span class="ke-td r" role="cell"><span class="num">{{ o.qty }}</span> pcs</span><span class="ke-td num" role="cell">{{ o.dl }}</span><span class="ke-td" role="cell"><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></span></div></sc-for>
+                        </div>
+                      </div>
+                      <div class="ke-pg"><button class="btn v-outline is-dis" type="button" aria-disabled="true">Previous</button><button class="btn v-outline" type="button">Next</button></div>
+                    </div>
+                  </dc-import>
+                  <div class="ke-ovl"><sc-for list="{{ ov.KE11.b }}" as="o"><span class="ke-b" style="{{ o.st }}">{{ o.n }}</span></sc-for></div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE12 }}">
+              <div class="ke-f" data-ke="KE12" data-screen-label="KE12 Navigation sheet closed, light, 320 by 640" style="width:320px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE12</span>Sheet closed<span class="fth">Light, 320 by 640</span></div></sc-if>
+                <div class="ke-stage" style="width:320px">
+                  <dc-import name="Shell" width="320" theme="light" nav="planning.orders" focus="toggle" hint-size="320px,640px">
+                    <div class="ke-list">
+                      <div class="ke-tools"><span class="inp ke-s1"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-s2"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                      <div class="ke-tw" role="region" aria-label="Production orders" tabindex="0">
+                        <div class="ke-g5" role="table" aria-label="Production orders">
+                          <div class="ke-rw" role="row"><span class="ke-th" role="columnheader" aria-sort="ascending">Order</span><span class="ke-th" role="columnheader">Article</span><span class="ke-th r" role="columnheader">Quantity</span><span class="ke-th" role="columnheader">Deadline</span><span class="ke-th" role="columnheader">Status</span></div>
+                          <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-rw" role="row"><span class="ke-td" role="cell"><a class="ke-a" href="#">{{ o.no }}</a></span><span class="ke-td" role="cell">{{ o.art }}</span><span class="ke-td r" role="cell"><span class="num">{{ o.qty }}</span> pcs</span><span class="ke-td num" role="cell">{{ o.dl }}</span><span class="ke-td" role="cell"><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></span></div></sc-for>
+                        </div>
+                      </div>
+                      <div class="ke-pg"><button class="btn v-outline is-dis" type="button" aria-disabled="true">Previous</button><button class="btn v-outline" type="button">Next</button></div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE13 }}">
+              <div class="ke-f" data-ke="KE13" data-screen-label="KE13 Entry chosen in the sheet, dark, 320 by 640" style="width:320px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE13</span>Entry chosen<span class="fth">Dark, 320 by 640</span></div></sc-if>
+                <div class="ke-stage dark" style="width:320px">
+                  <dc-import name="Shell" width="320" theme="dark" nav="planning.proposals" focus="h1" hint-size="320px,640px"></dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE14 }}">
+              <div class="ke-f" data-ke="KE14" data-screen-label="KE14 Reload dialog, dark, 320 by 640" style="width:320px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE14</span>Reload dialog<span class="fth">Dark, 320 by 640</span></div></sc-if>
+                <div class="ke-stage dark" style="width:320px">
+                  <div inert="">
+                  <dc-import name="Shell" width="320" theme="dark" nav="planning.board" hint-size="320px,640px"></dc-import>
+                  </div>
+                  <sc-for list="{{ ov.KE14.layer }}" as="l">
+                    <div class="ke-layer" style="{{ l.st }}">
+                      <div class="ke-scrim"></div>
+                      <div class="ke-dlg" role="alertdialog" aria-modal="true" aria-labelledby="ke14-t" aria-describedby="ke14-d">
+                        <h1 class="ke-dlg-t" id="ke14-t" tabIndex="-1">NorthMES was updated</h1>
+                        <div class="ke-dlg-d" id="ke14-d"><p class="ke-dlg-p">This tab runs the previous version, so saving is off until you reload.</p><p class="ke-dlg-p">Reloading keeps everything that is saved. Changes on this page that are not saved yet are lost.</p></div>
+                        <div class="ke-dlg-f"><button class="btn v-default is-focus" type="button"><span class="ic" data-icon="RotateCw"></span>Reload page</button></div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE30 }}">
+              <div class="ke-f" data-ke="KE30" data-screen-label="KE30 Switcher menu in the sheet, light, 320 by 640" style="width:320px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE30</span>Switcher menu<span class="fth">Light, 320 by 640</span></div></sc-if>
+                <div class="ke-stage" style="width:320px">
+                  <dc-import name="Shell" width="320" theme="light" sidebar="sheet" access="companies" nav="planning.orders" open="none" menu="plant" hint-size="320px,640px"></dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE31 }}">
+              <div class="ke-f" data-ke="KE31" data-screen-label="KE31 User menu in the sheet, dark, 320 by 640" style="width:320px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE31</span>User menu<span class="fth">Dark, 320 by 640</span></div></sc-if>
+                <div class="ke-stage dark" style="width:320px">
+                  <dc-import name="Shell" width="320" theme="dark" sidebar="sheet" nav="planning.orders" menu="user" hint-size="320px,640px"></dc-import>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ show.r7 }}">
+          <div class="ke-row">
+            <sc-if value="{{ show.KE15 }}">
+              <div class="ke-f" data-ke="KE15" data-screen-label="KE15 Help menu open, light, 720 by 360" style="width:720px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE15</span>Help menu open<span class="fth">Light, 720 by 360 crop. Release 1 top bar; focus on the first entry</span></div></sc-if>
+                <div class="ke-stage crop" style="width:720px;height:360px">
+                  <div class="ke-shift" style="left:-720px">
+                    <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" bell="off" menu="help" hint-size="1440px,900px">
+                      <div class="ke-list">
+                        <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                        <div class="ke-tbl">
+                          <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                          <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                        </div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE16 }}">
+              <div class="ke-f" data-ke="KE16" data-screen-label="KE16 Help menu closed, dark, 720 by 200" style="width:720px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE16</span>Help menu closed<span class="fth">Dark, 720 by 200 crop. Escape: focus back on Help, the last stop</span></div></sc-if>
+                <div class="ke-stage crop dark" style="width:720px;height:200px">
+                  <div class="ke-shift" style="left:-720px">
+                    <dc-import name="Shell" width="1440" theme="dark" nav="planning.orders" bell="off" focus="help" hint-size="1440px,900px">
+                      <div class="ke-list">
+                        <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                        <div class="ke-tbl">
+                          <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                          <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                        </div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE26 }}">
+              <div class="ke-f" data-ke="KE26" data-screen-label="KE26 Notifications panel open, light, 720 by 320" style="width:720px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE26</span>Notifications panel open<span class="fth">Light, 720 by 320 crop. The panel has focus</span></div></sc-if>
+                <div class="ke-stage crop" style="width:720px;height:320px">
+                  <div class="ke-shift" style="left:-720px">
+                    <dc-import name="Shell" width="1440" theme="light" nav="planning.orders" bell="open" focus="panel" hint-size="1440px,900px">
+                      <div class="ke-list">
+                        <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                        <div class="ke-tbl">
+                          <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                          <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                        </div>
+                      </div>
+                    </dc-import>
+                  </div>
+                  <div class="ke-ovl"><sc-for list="{{ ov.KE26.t }}" as="o"><span class="ke-t" style="{{ o.st }}">{{ o.text }}</span></sc-for></div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE27 }}">
+              <div class="ke-f" data-ke="KE27" data-screen-label="KE27 Notifications panel closed, dark, 720 by 200" style="width:720px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE27</span>Notifications panel closed<span class="fth">Dark, 720 by 200 crop. Escape: focus back on the bell</span></div></sc-if>
+                <div class="ke-stage crop dark" style="width:720px;height:200px">
+                  <div class="ke-shift" style="left:-720px">
+                    <dc-import name="Shell" width="1440" theme="dark" nav="planning.orders" focus="bell" hint-size="1440px,900px">
+                      <div class="ke-list">
+                        <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                        <div class="ke-tbl">
+                          <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                          <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                        </div>
+                      </div>
+                    </dc-import>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ show.r8 }}">
+          <div class="ke-row">
+            <sc-if value="{{ show.KE17 }}">
+              <div class="ke-f" data-ke="KE17" data-screen-label="KE17 Focus ring on every shell surface, light, 1440 by 900" style="width:1440px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE17</span>Focus ring on every shell surface<span class="fth">Light, 1440 by 900. Annotation: every stop is drawn focused at once; in use one stop has focus at a time</span></div></sc-if>
+                <div class="ke-stage" style="width:1440px">
+                  <dc-import name="Shell" width="1440" theme="light" role="admin" nav="planning.orders" status="both" banner-kind="error" banner-action="Open System health" assistant="docked" bell="unread" bell-count="3" focus="skip" hint-size="1440px,900px">
+                    <div class="ke-list">
+                      <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                      <div class="ke-tbl">
+                        <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                        <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                      </div>
+                    </div>
+                  </dc-import>
+                  <div class="ke-ovl">
+                    <sc-for list="{{ ov.KE17.r }}" as="o"><span class="ke-ring" style="{{ o.st }}"></span></sc-for>
+                    <sc-for list="{{ ov.KE17.b }}" as="o"><span class="ke-b" style="{{ o.st }}">{{ o.n }}</span></sc-for>
+                  </div>
+                  <div class="ke-leg" style="left:280px;bottom:24px;width:776px">
+                    <span class="ke-leg-h">Where each ring sits (letters on the frame)</span>
+                    <div class="ke-leg-g"><sc-for list="{{ ringLegend }}" as="g"><span class="ke-leg-r"><span class="ke-bs">{{ g.k }}</span><span><sc-for list="{{ g.t }}" as="p"><sc-if value="{{ p.tok }}"><span class="ke-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.num }}"><span class="num">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span></span></sc-for></div>
+                    <span class="ke-leg-f"><sc-for list="{{ legendNote }}" as="p"><sc-if value="{{ p.tok }}"><span class="ke-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.num }}"><span class="num">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE18 }}">
+              <div class="ke-f" data-ke="KE18" data-screen-label="KE18 Focus ring on every shell surface, dark, 1440 by 900" style="width:1440px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE18</span>Focus ring on every shell surface<span class="fth">Dark, 1440 by 900. The same annotation in dark</span></div></sc-if>
+                <div class="ke-stage dark" style="width:1440px">
+                  <dc-import name="Shell" width="1440" theme="dark" role="admin" nav="planning.orders" status="both" banner-kind="error" banner-action="Open System health" assistant="docked" bell="unread" bell-count="3" focus="skip" hint-size="1440px,900px">
+                    <div class="ke-list">
+                      <div class="ke-fb"><span class="inp ke-search"><span class="ic ph" data-icon="Search"></span><span class="ph">Search orders</span></span><span class="inp ke-sel"><span>Status</span><span class="ic end" data-icon="ChevronDown"></span></span><button class="btn v-ghost" type="button">Clear filters</button></div>
+                      <div class="ke-tbl">
+                        <div class="ke-tr h"><span><button class="ke-sort" type="button">Order<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Article</span><span class="ke-r">Quantity</span><span><button class="ke-sort" type="button">Deadline<span class="ic" data-icon="ArrowUpDown"></span></button></span><span>Status</span></div>
+                        <sc-for list="{{ ordersA }}" as="o" hint-placeholder-count="5"><div class="ke-tr"><a class="ke-a" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                      </div>
+                    </div>
+                  </dc-import>
+                  <div class="ke-ovl">
+                    <sc-for list="{{ ov.KE18.r }}" as="o"><span class="ke-ring" style="{{ o.st }}"></span></sc-for>
+                    <sc-for list="{{ ov.KE18.b }}" as="o"><span class="ke-b" style="{{ o.st }}">{{ o.n }}</span></sc-for>
+                  </div>
+                  <div class="ke-leg" style="left:280px;bottom:24px;width:776px">
+                    <span class="ke-leg-h">Where each ring sits (letters on the frame)</span>
+                    <div class="ke-leg-g"><sc-for list="{{ ringLegend }}" as="g"><span class="ke-leg-r"><span class="ke-bs">{{ g.k }}</span><span><sc-for list="{{ g.t }}" as="p"><sc-if value="{{ p.tok }}"><span class="ke-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.num }}"><span class="num">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span></span></sc-for></div>
+                    <span class="ke-leg-f"><sc-for list="{{ legendNoteDark }}" as="p"><sc-if value="{{ p.tok }}"><span class="ke-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.num }}"><span class="num">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ show.r9 }}">
+          <div class="ke-row">
+            <sc-if value="{{ show.KE19 }}">
+              <div class="ke-f" data-ke="KE19" data-screen-label="KE19 Focus not obscured, light, 1280 by 800" style="width:1280px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE19</span>Focus not obscured<span class="fth">Light, 1280 by 800. Shift+Tab up the scrolled list: 1006 lands below the top bar and the strip, ring included</span></div></sc-if>
+                <div class="ke-stage" style="width:1280px">
+                  <dc-import name="Shell" width="1280" theme="light" nav="planning.orders" status="banner" banner-kind="warning" heading="none" hint-size="1280px,800px">
+                    <div class="ke-scrolled">
+                      <div class="ke-tbl cut ke-w680">
+                        <sc-for list="{{ scrollRows }}" as="o" hint-placeholder-count="16"><div class="ke-tr"><a class="{{ o.cls }}" href="#">{{ o.no }}</a><span class="ke-ell">{{ o.art }}</span><span class="ke-r"><span class="num">{{ o.qty }}</span> pcs</span><span class="num">{{ o.dl }}</span><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></div></sc-for>
+                      </div>
+                    </div>
+                  </dc-import>
+                  <div class="ke-ovl">
+                    <sc-for list="{{ ov.KE19.band }}" as="o"><span class="ke-band" style="{{ o.st }}"></span></sc-for>
+                    <sc-for list="{{ ov.KE19.dim }}" as="o"><span class="ke-dim" style="{{ o.st }}"></span></sc-for>
+                    <sc-for list="{{ ov.KE19.t }}" as="o"><span class="ke-t" style="{{ o.st }}">{{ o.text }}</span></sc-for>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE20 }}">
+              <div class="ke-f" data-ke="KE20" data-screen-label="KE20 Focus not obscured at 320, dark, 320 by 640" style="width:320px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE20</span>Not obscured<span class="fth">Dark, 320 by 640</span></div></sc-if>
+                <div class="ke-stage dark" style="width:320px">
+                  <dc-import name="Shell" width="320" theme="dark" nav="planning.orders" status="both" banner-kind="warning" heading="none" hint-size="320px,640px">
+                    <div class="ke-scrolled nar">
+                      <div class="ke-tw cut" role="region" aria-label="Production orders" tabindex="0">
+                        <div class="ke-g5 cut" role="table" aria-label="Production orders">
+                          <sc-for list="{{ scrollRows }}" as="o" hint-placeholder-count="16"><div class="ke-rw" role="row"><span class="ke-td" role="cell"><a class="{{ o.cls }}" href="#">{{ o.no }}</a></span><span class="ke-td" role="cell">{{ o.art }}</span><span class="ke-td r" role="cell"><span class="num">{{ o.qty }}</span> pcs</span><span class="ke-td num" role="cell">{{ o.dl }}</span><span class="ke-td" role="cell"><span class="badge {{ o.sc }}"><span class="ic" data-icon="{{ o.ic }}"></span>{{ o.st }}</span></span></div></sc-for>
+                        </div>
+                      </div>
+                    </div>
+                  </dc-import>
+                  <div class="ke-ovl">
+                    <sc-for list="{{ ov.KE20.band }}" as="o"><span class="ke-band" style="{{ o.st }}"></span></sc-for>
+                    <sc-for list="{{ ov.KE20.dim }}" as="o"><span class="ke-dim" style="{{ o.st }}"></span></sc-for>
+                    <sc-for list="{{ ov.KE20.t }}" as="o"><span class="ke-t" style="{{ o.st }}">{{ o.text }}</span></sc-for>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE21 }}">
+              <div class="ke-f" data-ke="KE21" data-screen-label="KE21 Station tab order, light, 1280 by 800" style="width:1280px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE21</span>Station tab order<span class="fth">Light, 1280 by 800. Skip link has focus; every top bar target is 48 by 48 px</span></div></sc-if>
+                <div class="ke-stage" style="width:1280px">
+                  <dc-import name="StationFrame" size="1280x800" theme="light" focus="skip" hint-size="1280px,800px">
+                    <div class="sh-phbox" data-stop="1" data-badge="in"><span class="sh-phl">Job list, designed in D4; its own Tab order continues from here</span></div>
+                  </dc-import>
+                  <div class="ke-ovl"><sc-for list="{{ ov.KE21.b }}" as="o"><span class="ke-b" style="{{ o.st }}">{{ o.n }}</span></sc-for></div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+        <sc-if value="{{ show.r10 }}">
+          <div class="ke-row">
+            <sc-if value="{{ show.KE22 }}">
+              <div class="ke-f" data-ke="KE22" data-screen-label="KE22 Idle warning closed, dark, 1280 by 800" style="width:1280px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE22</span>Idle warning closed<span class="fth">Dark, 1280 by 800. After Stay signed in (SF8) the dialog closes and focus returns to the element that had it, here the first job of the D4 list</span></div></sc-if>
+                <div class="ke-stage dark" style="width:1280px">
+                  <dc-import name="StationFrame" size="1280x800" theme="dark" hint-size="1280px,800px">
+                    <div class="ke-jobs">
+                      <button class="ke-job is-focus" type="button">First job of the D4 job list, focused again</button>
+                      <div class="sh-phbox"><span class="sh-phl">The rest of the job list, designed in D4 (E11)</span></div>
+                    </div>
+                  </dc-import>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ show.KE23 }}">
+              <div class="ke-f" data-ke="KE23" data-screen-label="KE23 Build notes, not part of the UI, light, 1440 wide" style="width:1440px">
+                <sc-if value="{{ labels }}"><div class="flabel"><span class="fid">KE23</span>Build notes, not part of the UI<span class="fth">Light, 1440 wide. Keyboard, roles, icons, slots and copy for rows 1, 2 and 6</span></div></sc-if>
+                <div class="sheet ke-notes">
+                  <h2 class="t2">Build notes, not part of the UI</h2>
+                  <p class="lede">Keyboard and focus, roles, icons, slots and copy for the planner shell: rows 1, 2 and 6 of this page, revised after Krister Johansson's review on 2026-10-05. The states of row 3 have their notes in ST33, the station frame in SF20 and the sign-in page in SI22. Rules cite the D2 spec (shell/shell-190-spec.md, keys such as 7.2) and the D1 record; a line marked proposed is not in the docs and needs Krister's yes. On the frames, numbered and lettered badges, tags, the hatched band, the measuring line and the white legend are annotations in the info color, not UI.</p>
+                  <div class="ke-sec" style="margin-top:28px">
+                    <h3 class="t3">Frames in this part</h3>
+                    <div class="ke-frl"><sc-for list="{{ notes.frames }}" as="r"><span class="ke-fr"><span class="ke-fk">{{ r.k }}</span><span>{{ r.t }}</span></span></sc-for></div>
+                  </div>
+                  <div class="ke-sec" style="margin-top:32px">
+                    <h3 class="t3">Decisions of 2026-10-05 and what they change here</h3>
+                    <ul class="ke-ul"><sc-for list="{{ notes.decisions }}" as="x"><li><sc-for list="{{ x }}" as="p"><sc-if value="{{ p.tok }}"><span class="ke-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.num }}"><span class="num">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></li></sc-for></ul>
+                  </div>
+                  <div class="ke-cols">
+                    <div class="ke-col">
+                      <div class="ke-sec">
+                        <h3 class="t3">shadcn components</h3>
+                        <div class="ke-tb">
+                          <div class="ke-tbr ke-g3 h"><span>Component</span><span>Used for</span><span>Frames</span></div>
+                          <sc-for list="{{ notes.components }}" as="r"><div class="ke-tbr ke-g3"><span class="b6">{{ r.c }}</span><span><sc-for list="{{ r.u }}" as="p"><sc-if value="{{ p.tok }}"><span class="ke-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.num }}"><span class="num">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span><span>{{ r.f }}</span></div></sc-for>
+                        </div>
+                      </div>
+                      <div class="ke-sec">
+                        <h3 class="t3">Icons per entry, proposed</h3>
+                        <sc-for list="{{ notes.icons }}" as="g">
+                          <div class="ke-cpg"><span class="sm mut b6">{{ g.h }}</span><span class="ke-cps"><sc-for list="{{ g.items }}" as="x"><span class="ke-cp"><span class="ic" data-icon="{{ x.i }}"></span>{{ x.t }}<span class="ke-in">{{ x.i }}</span></span></sc-for></span></div>
+                        </sc-for>
+                        <p class="sm mut" style="margin:0">{{ notes.iconNote }}</p>
+                      </div>
+                      <div class="ke-sec">
+                        <h3 class="t3">Tokens from D1</h3>
+                        <ul class="ke-ul"><sc-for list="{{ notes.tokens }}" as="x"><li><sc-for list="{{ x }}" as="p"><sc-if value="{{ p.tok }}"><span class="ke-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.num }}"><span class="num">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></li></sc-for></ul>
+                      </div>
+                      <div class="ke-sec">
+                        <h3 class="t3">Focus rules</h3>
+                        <ul class="ke-ul"><sc-for list="{{ notes.rules }}" as="x"><li><sc-for list="{{ x }}" as="p"><sc-if value="{{ p.tok }}"><span class="ke-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.num }}"><span class="num">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></li></sc-for></ul>
+                      </div>
+                      <div class="ke-sec">
+                        <h3 class="t3">Tab order in KE1 (planner, Production orders, 1440)</h3>
+                        <div class="ke-ord"><sc-for list="{{ notes.order }}" as="s"><span class="ke-oi"><span class="ke-bs">{{ s.n }}</span><span>{{ s.t }}</span></span></sc-for></div>
+                        <ul class="ke-ul"><sc-for list="{{ notes.orderMore }}" as="x"><li>{{ x }}</li></sc-for></ul>
+                      </div>
+                      <div class="ke-sec">
+                        <h3 class="t3">WCAG 2.2 criteria</h3>
+                        <div class="ke-tb">
+                          <div class="ke-tbr ke-g2 h"><span>Criterion</span><span>Where these frames apply it</span></div>
+                          <sc-for list="{{ notes.wcag }}" as="r"><div class="ke-tbr ke-g2"><span class="b6">{{ r.k }}</span><span>{{ r.t }}</span></div></sc-for>
+                        </div>
+                      </div>
+                      <div class="ke-sec">
+                        <h3 class="t3">Open questions</h3>
+                        <span class="sm mut b6">Carried from the spec</span>
+                        <sc-for list="{{ notes.qSpec }}" as="q"><div class="ke-q"><span class="ke-qk">{{ q.k }}</span><span>{{ q.t }}</span></div></sc-for>
+                        <span class="sm mut b6" style="margin-top:8px">Answered</span>
+                        <sc-for list="{{ notes.qDone }}" as="q"><div class="ke-q"><span class="ke-qk"><span class="tag ok">{{ q.k }}</span></span><span>{{ q.t }}</span></div></sc-for>
+                        <span class="sm mut b6" style="margin-top:8px">Raised by these frames</span>
+                        <sc-for list="{{ notes.qNew }}" as="q"><div class="ke-q"><span class="ke-qk">{{ q.k }}</span><span>{{ q.t }}</span></div></sc-for>
+                      </div>
+                    </div>
+                    <div class="ke-col">
+                      <div class="ke-sec">
+                        <h3 class="t3">Keys and where focus goes</h3>
+                        <div class="ke-tb">
+                          <div class="ke-tbr ke-g4 h"><span>Control</span><span>Keys</span><span>Focus after</span><span>Frames</span></div>
+                          <sc-for list="{{ notes.keys }}" as="r"><div class="ke-tbr ke-g4"><span class="b6">{{ r.c }}</span><span>{{ r.k }}</span><span>{{ r.a }}</span><span>{{ r.f }}</span></div></sc-for>
+                        </div>
+                      </div>
+                      <div class="ke-sec">
+                        <h3 class="t3">Landmarks, roles and accessible names</h3>
+                        <div class="ke-tb">
+                          <div class="ke-tbr ke-g3b h"><span>Element</span><span>Role and state</span><span>Accessible name</span></div>
+                          <sc-for list="{{ notes.roles }}" as="r"><div class="ke-tbr ke-g3b"><span class="b6">{{ r.e }}</span><span>{{ r.r }}</span><span>{{ r.n }}</span></div></sc-for>
+                        </div>
+                      </div>
+                      <div class="ke-sec">
+                        <h3 class="t3">Announcements</h3>
+                        <div class="ke-tb">
+                          <div class="ke-tbr ke-g3b h"><span>When</span><span>How</span><span>Text</span></div>
+                          <sc-for list="{{ notes.announce }}" as="r"><div class="ke-tbr ke-g3b"><span class="b6">{{ r.w }}</span><span>{{ r.h }}</span><span><sc-for list="{{ r.t }}" as="p"><sc-if value="{{ p.tok }}"><span class="ke-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.num }}"><span class="num">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span></div></sc-for>
+                        </div>
+                        <p class="sm mut" style="margin:0">{{ notes.announceNote }}</p>
+                      </div>
+                      <div class="ke-sec">
+                        <h3 class="t3">Slots and what a contribution may render there</h3>
+                        <div class="ke-tb">
+                          <div class="ke-tbr ke-g2s h"><span>Slot</span><span>Place, contents and rules</span></div>
+                          <sc-for list="{{ notes.slots }}" as="r"><div class="ke-tbr ke-g2s"><span class="b6 ke-slotk">{{ r.k }}</span><span><sc-for list="{{ r.t }}" as="p"><sc-if value="{{ p.tok }}"><span class="ke-tok">{{ p.t }}</span></sc-if><sc-if value="{{ p.num }}"><span class="num">{{ p.t }}</span></sc-if><sc-if value="{{ p.txt }}">{{ p.t }}</sc-if></sc-for></span></div></sc-for>
+                        </div>
+                      </div>
+                      <div class="ke-sec">
+                        <h3 class="t3">Final English copy</h3>
+                        <sc-for list="{{ notes.copy }}" as="g">
+                          <div class="ke-cpg"><span class="sm mut b6">{{ g.h }}</span><span class="ke-cps"><sc-for list="{{ g.items }}" as="x"><span class="ke-cp">{{ x.t }}<sc-if value="{{ x.doc }}"><span class="tag ok ke-doc">doc</span></sc-if></span></sc-for></span></div>
+                        </sc-for>
+                        <p class="sm mut" style="margin:0">{{ notes.copyNote }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script data-props='{"labels":{"editor":"enum","options":["on","off"],"default":"on","tsType":"string"},"frame":{"editor":"enum","options":["all","KE1","KE2","KE3","KE4","KE5","KE6","KE7","KE8","KE9","KE10","KE11","KE12","KE13","KE14","KE15","KE16","KE17","KE18","KE19","KE20","KE21","KE22","KE23","KE24","KE25","KE26","KE27","KE28","KE29","KE30","KE31","KE32"],"default":"all","tsType":"string"}}'>
+      class Component extends DCLogic {
+        componentDidMount() {
+          // Icons: the same lucide filler as Shell.dc.html, for a part page that mounts no frame (frame="KE23").
+          if (!window.__nmIconFill2) {
+            window.__nmIconFill2 = true;
+            const fill = () => {
+              const L = window.lucide;
+              if (!L) return;
+              document.querySelectorAll("[data-icon]").forEach((el) => {
+                const name = el.getAttribute("data-icon");
+                if (el.firstElementChild && el.getAttribute("data-icon-drawn") === name) return;
+                const node = L.icons[name];
+                if (!node) return;
+                while (el.firstChild) el.removeChild(el.firstChild);
+                el.appendChild(L.createElement(node, { "aria-hidden": "true", focusable: "false" }));
+                el.setAttribute("data-icon-drawn", name);
+              });
+            };
+            let queued = false;
+            const schedule = () => {
+              if (queued) return;
+              queued = true;
+              setTimeout(() => { queued = false; fill(); }, 0);
+            };
+            new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-icon"] });
+            const wait = () => (window.lucide ? schedule() : setTimeout(wait, 100));
+            wait();
+          }
+          // Annotations are measured from the mounted frames, so they follow the frames' real layout.
+          this.__alive = true;
+          const root = document.getElementById(this.__rid);
+          if (root) {
+            this.__mo = new MutationObserver(() => this.__soon());
+            this.__mo.observe(root, { childList: true, subtree: true, characterData: true });
+          }
+          [150, 500, 1200, 2500, 4500].forEach((t) => setTimeout(() => this.__soon(), t));
+          if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => this.__soon());
+        }
+        componentWillUnmount() {
+          this.__alive = false;
+          if (this.__mo) this.__mo.disconnect();
+          clearTimeout(this.__mt);
+        }
+        __soon() {
+          clearTimeout(this.__mt);
+          this.__mt = setTimeout(() => this.__measure(), 80);
+        }
+        // What each frame annotates. stops: number every Tab stop in DOM order (stopsIn limits them to one
+        // container, swCorner puts the switcher's badge on its top right corner). rings: draw the two-tone ring
+        // on these elements with a letter. pads: measure the sticky block and show scroll-padding-top.
+        // tags: a tag under an element.
+        __spec() {
+          const rings = [
+            { k: "A", sel: ".sh-skip", native: true }, { k: "B", sel: ".sh-sb-head .sh-sw" },
+            { k: "C", sel: ".sh-ni.cur" }, { k: "D", sel: ".sh-nu" },
+            { k: "E", sel: ".sh-trig" }, { k: "F", sel: "a.sh-cxl" },
+            { k: "G", sel: ".sh-cr" }, { k: "H", sel: ".sh-actions .btn" },
+            { k: "I", sel: "header .btn.on" }, { k: "J", sel: "header .btn[aria-label='Help']" },
+            { k: "K", sel: "header .sh-bell" }, { k: "L", sel: ".sh-strip-a" },
+            { k: "M", sel: ".sh-h1" }, { k: "N", sel: ".ke-a" },
+            { k: "O", sel: ".sh-as-h .btn" }, { k: "P", sel: ".sh-as-f .btn" }
+          ];
+          return {
+            KE1: { stops: true, swCorner: true },
+            KE2: { stops: true },
+            KE10: { layer: true },
+            KE11: { stops: true, stopsIn: ".sh-sb" },
+            KE14: { layer: true },
+            KE17: { rings: rings },
+            KE18: { rings: rings },
+            KE19: { pads: "tr" },
+            KE20: { pads: "bl" },
+            KE21: { stops: true },
+            KE26: { tags: [{ sel: ".sh-np", text: "Focus on the panel itself: Notifications, dialog, No notifications" }] },
+            KE32: { stops: true }
+          };
+        }
+        __measure() {
+          if (!this.__alive) return;
+          const root = document.getElementById(this.__rid);
+          if (!root) return;
+          const SPEC = this.__spec();
+          const next = {};
+          const px = (v) => Math.round(v * 10) / 10 + "px";
+          Object.keys(SPEC).forEach((id) => {
+            const sp = SPEC[id];
+            const st = root.querySelector('[data-ke="' + id + '"] .ke-stage');
+            if (!st) return;
+            const scr = st.querySelector(".sh-scr, .stn-scr");
+            if (!scr) return;
+            const sr = st.getBoundingClientRect();
+            const k = st.offsetWidth ? sr.width / st.offsetWidth : 1;
+            if (!k) return;
+            const R = (el) => {
+              const r = el.getBoundingClientRect();
+              return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, w: r.width / k, h: r.height / k };
+            };
+            const S = R(scr);
+            const pos = (x, y) => "left:" + px(Math.max(S.x + 1, Math.min(S.x + S.w - 21, x))) + ";top:" + px(Math.max(S.y + 1, y));
+            const textRight = (el) => {
+              const rg = document.createRange();
+              rg.selectNodeContents(el);
+              const tr = rg.getBoundingClientRect();
+              return (tr.right - sr.left) / k;
+            };
+            const o = { b: [], r: [], t: [], band: [], dim: [], layer: [] };
+            // The reload dialog covers exactly the screen, wherever the title above it ends.
+            if (sp.layer) o.layer.push({ st: "left:" + px(S.x) + ";top:" + px(S.y) + ";width:" + px(S.w) + ";height:" + px(S.h) });
+            if (sp.stops) {
+              let n = 0;
+              const scope = sp.stopsIn ? scr.querySelector(sp.stopsIn) : scr;
+              Array.prototype.slice.call(scope ? scope.querySelectorAll("a[href], button, [data-stop]") : []).forEach((el) => {
+                if (el.matches(".is-dis, [disabled], [aria-disabled='true']")) return;
+                const skip = el.matches(".sh-skip, .stn-skip");
+                const r = R(el);
+                if (!skip && (r.w < 2 || r.h < 2)) return;
+                n += 1;
+                // A stop scrolled out of its list keeps its number but gets no badge.
+                const clip = el.closest(".sh-sb-body, .sh-rail-nav");
+                if (clip) {
+                  const c = R(clip);
+                  const mid = r.y + r.h / 2;
+                  if (mid < c.y + 4 || mid > c.y + c.h - 4) return;
+                }
+                let x;
+                let y;
+                if (skip) {
+                  if (r.w < 4) { x = S.x + 2; y = S.y + 2; } else { x = r.x - 8; y = r.y - 8; }
+                } else if (el.matches(".sh-sw")) {
+                  if (sp.swCorner) { x = r.x + r.w - 14; y = r.y - 4; } else {
+                    const t = el.querySelector(".sh-sw-t");
+                    x = (t ? Math.max.apply(null, Array.prototype.slice.call(t.children).map(textRight)) : r.x + r.w) + 8;
+                    y = r.y + r.h / 2 - 10;
+                  }
+                } else if (el.closest(".sh-sb-head") || el.closest(".sh-sb-foot")) {
+                  x = r.x + r.w / 2 - 10; y = el.closest(".sh-sb-foot") ? r.y - 14 : r.y + r.h - 8;
+                } else if (el.matches(".sh-disc")) {
+                  x = r.x + r.w + 2; y = r.y + r.h / 2 - 10;
+                } else if (el.matches(".sh-ni")) {
+                  x = textRight(el) + 8; y = r.y + r.h / 2 - 10;
+                } else if (el.matches(".sh-rb")) {
+                  x = r.x + r.w - 6; y = r.y - 8;
+                } else if (el.closest(".sh-rail")) {
+                  x = r.x + r.w - 10; y = r.y - 6;
+                } else if (el.closest("header")) {
+                  x = r.x + r.w / 2 - 10; y = r.y + r.h - (r.h < 30 ? 2 : 8);
+                } else if (el.getAttribute("data-badge") === "in") {
+                  x = r.x + 16; y = r.y + 32;
+                } else if (el.getAttribute("data-badge") === "r") {
+                  x = r.x + r.w + 6; y = r.y + r.h / 2 - 10;
+                } else {
+                  x = r.x - 10; y = r.y - 10;
+                }
+                o.b.push({ n: String(n), st: pos(x, y) });
+              });
+            }
+            (sp.rings || []).forEach((g) => {
+              const el = scr.querySelector(g.sel);
+              if (!el) return;
+              const r = R(el);
+              if (r.w < 2) return;
+              const rad = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
+              if (!g.native) o.r.push({ st: "left:" + px(r.x - 4) + ";top:" + px(r.y - 4) + ";width:" + px(r.w + 8) + ";height:" + px(r.h + 8) + ";border-radius:" + px(rad + 4) });
+              o.b.push({ n: g.k, st: pos(r.x + r.w + 4 - 10, r.y - 4 - 14) });
+            });
+            (sp.tags || []).forEach((g) => {
+              const el = scr.querySelector(g.sel);
+              if (!el) return;
+              const r = R(el);
+              o.t.push({ text: g.text, st: "left:" + px(r.x + r.w) + ";top:" + px(r.y + r.h + 10) + ";transform:translateX(-100%);width:" + px(r.w) });
+            });
+            if (sp.pads) {
+              const hd = scr.querySelector("header");
+              const mn = scr.querySelector(".sh-main");
+              if (hd && mn) {
+                const H = R(hd);
+                let bottom = H.y + H.h;
+                const parts = ["top bar " + Math.round(H.h)];
+                Array.prototype.slice.call(scr.querySelectorAll(".sh-strip")).forEach((s) => {
+                  const q = R(s);
+                  bottom = Math.max(bottom, q.y + q.h);
+                  parts.push("strip " + Math.round(q.h));
+                });
+                const M = R(mn);
+                const total = Math.round(bottom - S.y) + 8;
+                o.band.push({ st: "left:" + px(M.x + 1) + ";top:" + px(bottom) + ";width:" + px(Math.min(20, M.w)) + ";height:8px" });
+                o.dim.push({ st: "left:" + px(M.x + 6) + ";top:" + px(S.y + 1) + ";height:" + px(bottom + 8 - S.y - 1) });
+                const text = "scroll-padding-top " + total + " px: " + parts.join(" + ") + " + 8 for the focus ring";
+                const tst = sp.pads === "tr"
+                  ? "left:" + px(M.x + M.w - 16) + ";top:" + px(bottom + 16) + ";transform:translateX(-100%);width:260px"
+                  : "left:" + px(M.x + 12) + ";top:" + px(S.y + S.h - 16) + ";transform:translateY(-100%);width:" + px(M.w - 24);
+                o.t.push({ text: text, st: tst });
+              }
+            }
+            next[id] = o;
+          });
+          const sig = JSON.stringify(next);
+          if (sig !== this.__sig) {
+            this.__sig = sig;
+            this.setState({ ov: next });
+          }
+        }
+        renderVals() {
+          const P = this.props || {};
+          if (!this.__rid) {
+            window.__nmKeSeq = (window.__nmKeSeq || 0) + 1;
+            this.__rid = "nm-ke-" + window.__nmKeSeq;
+          }
+          // frame="all" draws every frame in rows; frame="KE7" draws only that one, for placing frames one by one.
+          const IDS = [];
+          for (let i = 1; i <= 32; i += 1) IDS.push("KE" + i);
+          const ROWS = { r1: [1, 2, 32], r2: [3, 4], r3: [5, 6, 7, 8], r4: [9, 10], r5: [24, 25, 28, 29], r6: [11, 12, 13, 14, 30, 31], r7: [15, 16, 26, 27], r8: [17, 18], r9: [19, 20, 21], r10: [22, 23] };
+          const want = P.frame === undefined || P.frame === null || String(P.frame).trim() === "" ? "all" : String(P.frame).trim();
+          const show = {};
+          IDS.forEach((id) => { show[id] = want === "all" || want === id; });
+          Object.keys(ROWS).forEach((r) => { show[r] = ROWS[r].some((i) => show["KE" + i]); });
+          const ovState = (this.state && this.state.ov) || {};
+          const ov = {};
+          // Before the first measure the dialog layer sits under a one-line title (36 px).
+          const LAYER0 = { KE10: [{ st: "left:0px;top:36px;width:1440px;height:900px" }], KE14: [{ st: "left:0px;top:0px;width:320px;height:640px" }] };
+          IDS.forEach((id) => { ov[id] = Object.assign({ b: [], r: [], t: [], band: [], dim: [], layer: LAYER0[id] || [] }, ovState[id] || {}); });
+
+          // Sample content. Production orders are numbered from 1001 (plan 07); articles and dates are invented.
+          const ST = { registered: { st: "Registered", ic: "CircleDashed" }, planned: { st: "Planned", ic: "Info" }, active: { st: "Active", ic: "Play" }, paused: { st: "Paused", ic: "Pause" } };
+          const row = (no, art, qty, dl, s, cls) => ({ no: no, art: art, qty: qty, dl: dl, st: ST[s].st, ic: ST[s].ic, sc: "ke-st-" + s, cls: cls || "ke-a" });
+          const ordersA = [
+            row("1001", "Bearing housing BH-40", "120", "2026-10-12", "planned"), row("1002", "Flange DN50", "400", "2026-10-13", "active"),
+            row("1003", "Drive shaft 40 mm", "60", "2026-10-14", "registered"), row("1004", "Pump cover PC-12", "250", "2026-10-15", "planned"),
+            row("1005", "Gear blank 32T", "90", "2026-10-16", "paused")
+          ];
+          const ordersB = [
+            row("1021", "Valve body VB-20", "300", "2026-10-12", "active"), row("1022", "Bracket L-80", "800", "2026-10-13", "planned"),
+            row("1023", "Hub cap HC-6", "150", "2026-10-14", "registered"), row("1024", "Spacer ring SR-25", "500", "2026-10-15", "planned"),
+            row("1025", "Motor flange MF-90", "75", "2026-10-17", "planned")
+          ];
+          const arts = ["Sleeve S-30", "Housing cover HC-40", "Shaft collar SC-18", "Clamp plate CP-50", "Bearing cap BC-40", "Flange DN80", "Gear blank 48T", "Pump cover PC-16", "Valve seat VS-12", "Bracket L-60", "Hub HB-25", "Drive shaft 50 mm", "Spacer SP-10", "End plate EP-70", "Nozzle NZ-8", "Coupling CO-30", "Cover plate CV-22", "Pin bushing PB-12"];
+          const qtys = ["200", "120", "300", "80", "160", "220", "90", "140", "60", "450", "110", "40", "600", "75", "95", "130", "180", "260"];
+          const sts = ["planned", "registered", "planned", "active", "planned", "registered", "planned", "registered", "planned", "planned", "registered", "planned", "registered", "planned", "registered", "planned", "registered", "planned"];
+          const scrollRows = arts.map((a, i) => row(String(1006 + i), a, qtys[i], "2026-10-" + String(16 + Math.floor(i / 2)), sts[i], i === 0 ? "ke-a is-focus" : "ke-a"));
+
+          const ringLegend = [
+            { k: "A", t: "Skip to main content: --primary over the sidebar head" }, { k: "B", t: "Switcher: on --sidebar" },
+            { k: "C", t: "Current entry: --sidebar-primary on --sidebar" }, { k: "D", t: "User button: on --sidebar" },
+            { k: "E", t: "Collapse sidebar: ghost on --background" }, { k: "F", t: "Plant crumb: link on --background" },
+            { k: "G", t: "Planning crumb: link on --background" }, { k: "H", t: "New order: --primary on --background" },
+            { k: "I", t: "Assistant, panel open: --accent on --background" }, { k: "J", t: "Help: ghost on --background" },
+            { k: "K", t: "Notifications, 3 unread: ghost, badge in --primary" }, { k: "L", t: "Open System health: link on --destructive-subtle" },
+            { k: "M", t: "h1 after a route change: on --background" }, { k: "N", t: "Row link 1001: on the --card table" },
+            { k: "O", t: "Close assistant: ghost on the --card aside" }, { k: "P", t: "Send: --primary on --card" }
+          ];
+
+          // Text parts: token names stay on one line in Plex Mono, dates and times render in Plex Mono.
+          const SPLIT = /(--[a-z][a-z0-9-]*|\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2})?)/;
+          const tp = (str) => String(str).split(SPLIT).filter((x) => x !== "").map((x) => {
+            const tok = /^--[a-z]/.test(x);
+            const num = !tok && /^\d{4}-/.test(x);
+            return { t: x, tok: tok, num: num, txt: !tok && !num };
+          });
+          const notes = {
+            frames: [
+              { k: "KE1", t: "Tab order, light, 1440 by 900: planner on Production orders, all 32 stops numbered, the skip link focused" },
+              { k: "KE2", t: "Tab order with the rail, dark, 1280 by 800: Planning board, focus on the Board icon with its tooltip" },
+              { k: "KE3", t: "Route change, light, 1440 by 900: Enter on 1001, then the h1 Order 1001 has focus" },
+              { k: "KE4", t: "Route change, dark, 1280 by 800: the same step at 1280" },
+              { k: "KE5", t: "Collapse keeps focus, light, 720 by 240 from the top left of 1440: the sidebar trigger, now Expand sidebar" },
+              { k: "KE6", t: "Fallback to main, light, 960 by 360 from the top left of 1440: no h1, so main has focus" },
+              { k: "KE7", t: "Switcher menu open, light, 720 by 320 from the top left of 1440: plants in two companies, focus on Plant B" },
+              { k: "KE8", t: "Switcher menu closed, light, 720 by 200 from the top left of 1440: focus back on the switcher" },
+              { k: "KE9", t: "Plant chosen, dark, 1440 by 900: Production orders in Plant B, its h1 focused" },
+              { k: "KE10", t: "Reload dialog, light, 1440 by 900: the focus trap on Reload page, annotated" },
+              { k: "KE11", t: "Navigation sheet open, light, 320 by 640: focus on Close navigation; numbers are the Tab cycle inside the sheet" },
+              { k: "KE12", t: "Navigation sheet closed, light, 320 by 640: focus back on Open navigation" },
+              { k: "KE13", t: "Entry chosen in the sheet, dark, 320 by 640: Proposals, its h1 focused; title Proposals · Plant A · NorthMES" },
+              { k: "KE14", t: "Reload dialog, dark, 320 by 640: focus on Reload page" },
+              { k: "KE15", t: "Help menu open, light, 720 by 360 from the top right of 1440: the release 1 top bar with no bell, focus on the first entry" },
+              { k: "KE16", t: "Help menu closed, dark, 720 by 200 from the top right of 1440: focus back on Help, the last top bar stop in release 1" },
+              { k: "KE17", t: "Focus ring on every shell surface, light, 1440 by 900: every stop ringed at once, as an annotation" },
+              { k: "KE18", t: "Focus ring on every shell surface, dark, 1440 by 900" },
+              { k: "KE19", t: "Focus not obscured, light, 1280 by 800: scroll-padding-top measured under the restarting strip" },
+              { k: "KE20", t: "Focus not obscured, dark, 320 by 640: two strips under the top bar; the table scrolls sideways" },
+              { k: "KE21", t: "Station tab order, light, 1280 by 800: skip link focused, 48 px targets" },
+              { k: "KE22", t: "Idle warning closed, dark, 1280 by 800: focus back on the first job of the D4 list" },
+              { k: "KE23", t: "These build notes: keyboard, roles, icons, slots and copy for rows 1, 2 and 6" },
+              { k: "KE24", t: "User menu open, light, 720 by 400 from the bottom left of 1440: opens upward with focus on Profile" },
+              { k: "KE25", t: "User menu closed, dark, 720 by 200 from the bottom left of 1440: focus back on the user button" },
+              { k: "KE26", t: "Notifications panel open, light, 720 by 320 from the top right of 1440: the panel has focus and reads No notifications" },
+              { k: "KE27", t: "Notifications panel closed, dark, 720 by 200 from the top right of 1440: focus back on the bell" },
+              { k: "KE28", t: "Rail flyout open, light, 720 by 420 from the top left of 1440: Master data's flyout, focus on its first item" },
+              { k: "KE29", t: "Rail flyout closed, dark, 720 by 240 from the top left of 1440: focus back on the Master data icon, its tooltip open" },
+              { k: "KE30", t: "Switcher menu in the sheet, light, 320 by 640: plants in two companies, focus on Plant B" },
+              { k: "KE31", t: "User menu in the sheet, dark, 320 by 640: focus on Profile" },
+              { k: "KE32", t: "Tab order with Administration, light, 480 by 900 from the top left of 1440: an admin on Users, the sidebar at its end; numbers count the entries scrolled out of view" }
+            ],
+            decisions: [
+              "C1: the company and plant switcher sits at the top of the sidebar on the TeamSwitcher pattern. It groups plants by company and supports several companies; with plants of one company the menu has no company label (ADR 0067; PL48, PL49). A user with roles in one plant gets a static head with no switcher and no focus stop.",
+              "ADR 0067: a plant whose onboarding is in progress is listed in the switcher only for a holder of core.onboarding:manage, such as a company admin, and carries Onboarding in its link text. The menu item draws a Badge with Onboarding after the plant name, and the link reads Plant D, Onboarding (PL32, PL33, NA23). The rail and the 320 sheet show the same menu. A company admin reaches /admin through Admin after All plants, or through Admin in the user menu when the switcher is hidden (PL32, PL42).",
+              "C2: the user menu sits in the sidebar footer on the NavUser pattern and holds Profile, Theme, Presentation settings and Sign out. In the rail it is the avatar alone.",
+              "C3: the bell for notifications sits at the top bar end, after Assistant and Help, and appears only when the notifications module is installed. Release 1 ships without that module (ADR 0055), so the release 1 top bar has no bell and Help is its last stop (KE15, KE16). The other frames show the bell. ADR 0067 makes the bell a contribution to the top bar slot core/top-bar/items/v1: a contribution that fails keeps its place as an icon button with CircleAlert and a dashed border, named Notifications (unavailable), whose tooltip says how to try again (PL40, PL41).",
+              "C4: every nav entry has a lucide icon. The rail shows one icon per top-level entry with a tooltip, and a parent opens its nested entries in a flyout. The monograms are gone.",
+              "C5: the breadcrumb starts with the plant, a plain link to the plant home. With plants in two or more companies the company comes first, as text.",
+              "C6: the sidebar trigger sits at the top bar start, because the switcher fills the sidebar head.",
+              "C7: an Administration section sits at the bottom of the nav for admins: Users, Roles, Stations, Integrations, Settings and System health. Companies come from the command line on the host, so no role sits above a company (ADR 0066). A company admin creates the company's plants on the admin pages under /admin, outside any plant, so Administration has neither a Plants nor a Companies entry. A new plant stays closed until its onboarding wizard is complete; the wizard is its own design task, E06-S14. Plant slugs are unique per installation, so planner URLs stay /$plant.",
+              "C8: the station frame S1 and the sign-in page do not change, so KE21 and KE22 keep their order.",
+              "C9: the admin frame at /admin (PL44 to PL47) has no plant: no plant or company crumb, no Assistant, and a title without the plant (Plants · Admin · NorthMES). The switcher heads its sidebar with the Building2 mark as Admin, Choose a plant, and lists the user's plants with none current, so it is the way back; core's admin entries Overview and Plants follow. The plant list at /, the unknown plant page and the pages for a plant or a company in onboarding have no sidebar; ST33 holds their notes.",
+              "Decided in this part (proposed): the DOM order is skip link, nav, header, main, aside, so focus order equals reading order (spec 2.1, 2.2; WCAG 2.4.3). shadcn renders Sidebar before SidebarInset, which holds the header, so the library order already matches.",
+              "Contract changes these decisions imply: nav entries and module manifests gain an icon field (spec 1.1.6, ADR 0067); core's admin routes in a plant need a way to land in Administration; the admin pages come from adminRoutes under /admin (ADR 0066); the switcher needs the companies and plants the user holds roles in, with the onboarding state of each plant, which ADR 0066 proposes as the fields companies and admin of /api/v1/web/modules (spec Q4); the bell becomes a contribution to the top bar slot; plant slugs are unique per installation.",
+              "The frames draw three roles: planner, plant admin and company admin. PL32, PL33, PL42 to PL47 and NA23 draw the company admin, who holds core's company admin role, sees a plant in onboarding in the switcher and reaches /admin through Admin. A narrower permission, such as one that only manages users, would show only its own entries in Administration; no frame draws it."
+            ],
+            components: [
+              { c: "Sidebar", u: "collapsible=\"icon\": the labelled sidebar (256 px) and the rail (64 px). One nav landmark, Main, wraps SidebarHeader, SidebarContent and SidebarFooter, so the switcher and the user button sit in the same landmark as the entries.", f: "KE1, KE2, KE32" },
+              { c: "SidebarHeader", u: "The company and plant switcher on the TeamSwitcher pattern: a SidebarMenuButton size lg (48 px) as the DropdownMenu trigger, with the company mark, the company over the plant and ChevronsUpDown. With roles in one plant it is static text, not a button. In the rail the company mark alone is the trigger, and with one plant it is static. On /admin the mark shows Building2 and the trigger reads Admin, Choose a plant.", f: "KE7, KE8, KE30, PL32, PL36 to PL38, PL44, PL46" },
+              { c: "SidebarGroup", u: "One group per module under its SidebarGroupLabel, in the sections core, modules, plugins, then Administration at the bottom for admins. An unavailable or loading module keeps its label with (unavailable) or (loading).", f: "KE1, KE32" },
+              { c: "SidebarMenu, SidebarMenuSub", u: "Entries as SidebarMenuButton links with the icon before the label and aria-current=\"page\" on the current one. Nested entries sit in SidebarMenuSub behind a Collapsible disclosure. In the rail each top-level entry is an icon with a Tooltip, and a parent opens a DropdownMenu flyout to its right with itself and its nested entries.", f: "KE1, KE2, KE28, KE29" },
+              { c: "SidebarFooter", u: "The user menu on the NavUser pattern: Avatar, name, username and ChevronsUpDown in a 48 px button. Its DropdownMenu opens upward, as wide as the button. In the rail the avatar alone opens it to the right.", f: "KE24, KE25, KE31, PL34, PL35" },
+              { c: "SidebarTrigger", u: "At the top bar start with PanelLeft: Collapse sidebar or Expand sidebar, with aria-expanded and aria-controls the sidebar. Focus stays on it when the state flips. At 320 the Menu button opens the Sheet instead.", f: "KE5, KE11, KE12" },
+              { c: "SidebarInset", u: "The column with the top bar, the strips and main. It renders as a div, not the main element shadcn gives it, so the header stays the banner landmark and main holds only the route (proposed).", f: "KE1" },
+              { c: "Tooltip", u: "The labels of the rail icons, side right; the reason on the disabled Assistant; the retry hint under a failed top bar item, side bottom. Opens at once on focus and after a delay on hover; Escape closes it and focus stays.", f: "KE2, KE29, ST22, PL40" },
+              { c: "DropdownMenu", u: "The switcher (one DropdownMenuGroup per company under a DropdownMenuLabel when the plants span two or more companies, plants as link items, then All plants and, for a company admin, Admin after a separator), the user menu (Profile, Admin for a company admin whose switcher is hidden, a DropdownMenuRadioGroup for the theme, Presentation settings, Sign out), Help, the rail flyout, Show the full path, and Page actions when the bar folds or at 320.", f: "KE7, KE15, KE24, KE28, PL32, PL42, PL48" },
+              { c: "Popover", u: "The notifications panel under the bell: role dialog, not modal, labelled by its h2 Notifications and described by the empty state No notifications. With nothing focusable inside, the panel itself takes focus through tabindex -1 and draws the two-tone ring.", f: "KE26, KE27" },
+              { c: "Breadcrumb", u: "BreadcrumbLink for the plant crumb, a plain link to the plant home; the company as plain text when the user has plants in two or more companies; BreadcrumbLink for the route crumbs, BreadcrumbPage for the current page and BreadcrumbEllipsis with the Show the full path menu.", f: "KE1, KE9, NA11" },
+              { c: "Avatar", u: "AvatarFallback with the initials on --secondary with an inset --border ring, in the footer button, the rail and the user menu header. It is decorative: the name is text beside it, or the button's name in the rail.", f: "KE24, KE31" },
+              { c: "Badge", u: "The unread count on the bell in Plex Mono, 9+ above nine, aria-hidden because the bell's name carries the number; the reconnecting chip in the top bar; Onboarding after the name of a plant in onboarding in the switcher menu, --warning on --warning-subtle, whose word is part of the link text after a visually hidden comma. None is a focus stop.", f: "KE17, KE18, PL32, PL33, NA23" },
+              { c: "Sheet", u: "Navigation at 320 from the left: the switcher head with Close navigation, the entries, then one footer row with the user button, Assistant, Help and the bell. Opening moves focus to Close navigation. The assistant sheet at 320 opens from the right edge to the full screen.", f: "KE11 to KE13, KE30, KE31" },
+              { c: "Dialog", u: "The reload dialog and the station idle warning, both as Alert Dialog (role alertdialog).", f: "KE10, KE14, SF7" },
+              { c: "Alert", u: "Banner strips under the top bar, without role=\"alert\": their text goes through the polite live region once. The link in a strip is 24 px high.", f: "KE17, KE19" },
+              { c: "Button", u: "Page actions and Assistant; IconButton with its required label for the sidebar trigger, Help, the bell, Open navigation and Close navigation, and for the fallback of a failed top bar item, with CircleAlert and a dashed --muted-foreground border; 48 px at the station (question K10).", f: "All, PL40" },
+              { c: "SkipLink", u: "A NorthMES pattern, not shadcn (D1 Q12): the first stop, in the primary colors.", f: "KE1, KE21, PL14" }
+            ],
+            icons: [
+              { h: "Core: Master data and its nested entries", items: [["Master data", "Database"], ["Equipment groups", "Layers"], ["Machines", "Drill"], ["Tools", "Hammer"], ["Articles", "Package"], ["Routings", "Route"], ["Calendars", "CalendarDays"], ["Warehouses", "Warehouse"], ["Customers", "Handshake"]] },
+              { h: "Planning", items: [["Board", "ChartGantt"], ["Job table", "Table"], ["Production orders", "ClipboardList"], ["Proposals", "ListChecks"], ["Settings", "CalendarCog"]] },
+              { h: "Pyramid connector, AI and Audit", items: [["Pending changes", "FileDiff"], ["Import log", "Logs"], ["Import inbox", "Inbox"], ["Settings", "ServerCog"], ["Usage", "Gauge"], ["Audit log", "ScrollText"]] },
+              { h: "Acme tooling (plugin)", items: [["Tool life", "Hourglass"], ["Tool changes", "Repeat"]] },
+              { h: "Administration", items: [["Users", "Users"], ["Roles", "Shield"], ["Stations", "Monitor"], ["Integrations", "Plug"], ["Settings", "Settings"], ["System health", "Activity"]] },
+              { h: "Admin pages at /admin", items: [["Overview", "LayoutDashboard"], ["Plants", "Factory"]] },
+              { h: "Module icons, drawn in the rail only while a module is unavailable or loading", items: [["Core", "Database"], ["Planning", "ChartGantt"], ["Production start", "CirclePlay"], ["Pyramid connector", "ArrowLeftRight"], ["AI", "Sparkles"], ["Audit", "ScrollText"], ["Acme tooling", "Wrench"], ["Administration", "Shield"]] },
+              { h: "Shell chrome", items: [["Switcher and user button", "ChevronsUpDown"], ["Plants in the switcher", "Factory"], ["All plants", "LayoutGrid"], ["Sidebar trigger", "PanelLeft"], ["Open navigation", "Menu"], ["Notifications", "Bell"], ["Help", "CircleHelp"], ["Assistant", "Sparkles"], ["Profile", "User"], ["Light", "Sun"], ["Dark", "Moon"], ["Presentation settings", "SlidersHorizontal"], ["Sign out", "LogOut"], ["Current item", "Check"], ["Disclosure, crumb separator", "ChevronRight"], ["Show the full path, Page actions", "Ellipsis"], ["Close", "X"], ["Admin, and the mark on /admin", "Building2"], ["A failed top bar item", "CircleAlert"], ["Fallback for an icon name NavIcon does not know", "Shapes"]] }
+            ],
+            iconNote: "Every name is an icon of lucide 1.45.0, the version D1 pins, and each one renders on this page. All of them are proposals until the manifests carry an icon (spec 1.1.6). Planning and its Board entry share ChartGantt, and Administration and Roles share Shield; a module icon shows only in the rail while that module is unavailable or loading. The three Settings entries have their own icons: CalendarCog for Planning, ServerCog for Pyramid connector and Settings for Administration. In the rail a label that repeats gives way to the route title as the name and the tooltip (Planning settings, Pyramid connector settings, Settings). Building2 marks Admin and the mark of the admin frame; Factory marks the plants in the switcher and Plants under /admin. NavIcon draws Shapes for a name it does not know, so a plugin built against a newer list still loads (ADR 0067).",
+            tokens: [
+              "Focus ring: --focus-outline is the 2 px outline at 2 px offset, --focus-ring the 2 px band that touches the control. --ring and --sidebar-ring hold the outline value. Menu items: --accent with a 2 px inset --focus-outline. Main as the fallback target: the outline at -4 px offset plus an inset --focus-ring band (KE6).",
+              "Surfaces the ring sits on (KE17, KE18): --background, --card, --popover, --sidebar, --sidebar-primary, --primary, --accent and --destructive-subtle; the station top bar is --card.",
+              "Skip link and tooltips: --primary and --primary-foreground. Sidebar: --sidebar, --sidebar-foreground, --sidebar-primary with --sidebar-primary-foreground for the current entry and the company mark, --sidebar-accent for hover and for the switcher and user button while their menu is open, --sidebar-border and --muted-foreground. Row links: --link.",
+              "Avatar: --secondary with a 1 px inset --border ring, so it stays visible on --sidebar-accent. Unread badge: --primary and --primary-foreground with a 2 px ring in the surface color.",
+              "Status: --warning and --warning-subtle for the chip, the restarting strip and the Onboarding badge, --destructive and --destructive-subtle for the database strip, --info and --info-subtle for the restore strip and the plant in onboarding strip, --success and --success-subtle for the station chip. A failed top bar item draws --muted-foreground with a dashed border, as an unavailable module does in the rail.",
+              "Sizes: the top bar, the sidebar head and the rail head are 56 px, so their rules meet on one line. The switcher and the user button are 48 px (SidebarMenuButton size lg), rail icons 32 px, the rail mark and the avatar 40 px. --nm-control-height (36 px) for the trigger, Help, the bell and Assistant; --nm-target-min (24 px), which the crumb links, the ellipsis and the strip links meet; --nm-target-min-station (44 px). Station buttons draw 48 px, which no D1 token holds yet (question K10). The overlay, black at 50 percent, is still D1's open question.",
+              "Type: the h1 uses the D1 Page title role, 28 / 34, from 1280 up. At 320 it is 1.5rem / 1.875rem (24 / 30), proposed for D1 Q18."
+            ],
+            rules: [
+              "DOM order: skip link, the nav Main (switcher, entries, Administration, user button), the header (sidebar trigger, breadcrumb, page actions, Assistant, Help, bell), main, then the docked aside. Focus order follows the DOM and the DOM follows the visual order: the sidebar is the left column from the top left corner, so it comes before the top bar (2.4.3). The h1 and main have tabindex -1, so Tab never stops on them.",
+              "The sidebar trigger controls the sidebar before it in the DOM through aria-controls. Collapsing or expanding keeps focus on the trigger (KE5). The rail keeps the same order: company mark, one icon per top-level entry, avatar.",
+              "Route change: on onRendered with pathChanged, focusPageHeading waits one frame and focuses the h1, else main (spec 7.2; KE3, KE4, KE6). A change of search parameters only, such as filters, sort or ?view=table, leaves focus where it is.",
+              "First load: nothing in the page has focus, so the first Tab reaches the skip link, which the route suite checks (derived from spec 2.2 and 7.2). The same holds after Reload page.",
+              "Layers: menus, the rail flyout, the notifications Popover, the sheet and dialogs move focus inside when they open and return it to their trigger when they close (spec 7.4, 7.5). When a choice inside a layer changes the route, the route change wins and focus goes to the new h1 (KE9, KE13). Inside the 320 sheet, Escape closes an open menu first and the sheet on a second press.",
+              "One plant: the head is static text with no stop, so the first Tab after the skip link reaches the first entry. Release 1: no bell, so Help is the last top bar stop (KE16).",
+              "Focus not obscured: the top bar and the strips under it form one sticky block. The page scroller sets scroll-padding-top to the block's height plus 8 px, read with a ResizeObserver, because strips wrap, appear and go (proposed, K3; KE19, KE20). Docked panels sit beside main, never over it (spec 7.7). Menus, the flyout and tooltips open beside or above their trigger and never cover the focused item.",
+              "The shell adds no single-key shortcut (spec 7.9), and the station has no global key listener. The Ctrl+B and Cmd+B toggle that shadcn Sidebar ships is left off (question K12)."
+            ],
+            order: [
+              { n: "1", t: "Skip to main content" }, { n: "2", t: "Acme AB, Plant A, switch plant" }, { n: "3", t: "Master data" }, { n: "4", t: "Entries under Master data" }, { n: "5", t: "Board" },
+              { n: "6", t: "Entries under Board" }, { n: "7", t: "Job table" }, { n: "8", t: "Production orders (current)" }, { n: "9", t: "Proposals" }, { n: "10", t: "Pending changes" },
+              { n: "11", t: "Import log" }, { n: "12", t: "Tool life" }, { n: "13", t: "Tool changes" }, { n: "14", t: "Alex Lund, alex.lund, account" }, { n: "15", t: "Collapse sidebar" },
+              { n: "16", t: "Plant A (crumb)" }, { n: "17", t: "Planning (crumb)" }, { n: "18", t: "New order" }, { n: "19", t: "Assistant" }, { n: "20", t: "Help" },
+              { n: "21", t: "Notifications" }, { n: "22", t: "Search orders" }, { n: "23", t: "Status" }, { n: "24", t: "Clear filters" }, { n: "25", t: "Order (sort)" },
+              { n: "26", t: "Deadline (sort)" }, { n: "27", t: "1001" }, { n: "28", t: "1002" }, { n: "29", t: "1003" }, { n: "30", t: "1004" },
+              { n: "31", t: "1005" }, { n: "32", t: "Next (Previous is disabled and skipped)" }
+            ],
+            orderMore: [
+              "KE2, the rail: 1 the skip link, 2 the company mark (Acme AB, Plant A, switch plant), 3 to 10 the icons Master data, Board, Production orders, Proposals, Pending changes, Import log, Tool life and Tool changes, 11 the avatar (Alex Lund, alex.lund, account), 12 Expand sidebar, 13 Plant A, 14 Planning, 15 Run autoplan, 16 Save, 17 Assistant, 18 Help, 19 Notifications, 20 the board grid as one stop.",
+              "KE32, an admin: the admin entries Settings, Import inbox, Settings, Usage and Audit log join their modules, and after Tool changes come Users, Roles, Stations, Integrations, Settings and System health, then the user button and the top bar.",
+              "PL44, the admin frame: 1 the skip link, 2 the switcher (Admin, choose a plant), 3 Overview, 4 Plants, 5 the user button, 6 Collapse sidebar, 7 Admin (crumb), 8 New plant, 9 Help, 10 Notifications, then the page.",
+              "KE11, the sheet: Tab cycles through the switcher, Close navigation, the entries, the user button, Assistant, Help and Notifications, then back to the switcher.",
+              "One plant: no switcher stop. Release 1: no Notifications stop.",
+              "KE21, the station: 1 Skip to main content, 2 Switch operator, 3 Sign out, 4 More, 5 the first stop of the D4 screen. SF20 holds the station build notes."
+            ],
+            keys: [
+              { c: "Skip to main content", k: "Tab reaches it first; Enter follows it", a: "Focus moves to main; the next Tab reaches the first stop in the content", f: "KE1, KE21" },
+              { c: "Sidebar entry, rail icon, flyout item, breadcrumb link", k: "Enter", a: "The route changes and focus moves to the new h1, else to main; an open flyout closes first", f: "KE3, KE4, KE6" },
+              { c: "Entries under Board", k: "Enter or Space", a: "Stays on the button; aria-expanded flips and the nested entries follow it in the Tab order", f: "KE1" },
+              { c: "Collapse sidebar, Expand sidebar", k: "Enter or Space", a: "Stays on the trigger at the top bar start, whose name and aria-expanded flip; the sidebar becomes the rail or the labelled sidebar", f: "KE5" },
+              { c: "Rail icon", k: "Tab onto it; Escape", a: "Its tooltip opens at once; Escape closes the tooltip and focus stays", f: "KE2" },
+              { c: "Rail parent icon (Master data, Board)", k: "Enter, Space or Down opens; Up, Down, Home and End move; Enter follows; Escape closes", a: "The flyout opens to the right with focus on its first item, the parent entry. Escape returns focus to the icon, whose tooltip opens again (K13)", f: "KE28, KE29" },
+              { c: "Switcher", k: "Enter, Space or Down opens; Up, Down, Home and End move across the companies; Enter follows; Escape closes", a: "Opens with focus on the first plant other than the current one (proposed, K1). Escape returns to the switcher. Another plant opens the same page there with focus on its h1; All plants opens /, and Admin opens /admin in a full navigation with focus on its h1. On /admin no plant is current, so focus starts on the first plant", f: "KE7, KE8, KE9, PL32, PL46" },
+              { c: "User button", k: "As the switcher; Enter or Space on Light or Dark", a: "Opens upward with focus on Profile. Choosing a theme closes the menu and focus returns to the user button (proposed, K7); Admin, for a company admin whose switcher is hidden, opens /admin; Sign out goes to the sign-in page", f: "KE24, KE25, PL42" },
+              { c: "Switcher or user menu at 320", k: "As above, inside the open sheet; Escape", a: "The menu opens inside the sheet. Escape closes the menu and focus returns to its button in the sheet; a second Escape closes the sheet", f: "KE30, KE31" },
+              { c: "Notifications (bell)", k: "Enter or Space opens; Escape closes", a: "The Popover opens and focus moves into it; with no notifications the panel itself has focus: tabindex -1, the two-tone ring, aria-describedby the empty state (proposed, K11). Escape returns focus to the bell", f: "KE26, KE27" },
+              { c: "Notifications at 320", k: "Enter or Space on the bell in the navigation sheet footer; Escape", a: "The navigation sheet closes and the panel opens as a sheet with focus in it; Escape returns focus to Open navigation (proposed, not drawn). Whether Open navigation shows an unread marker while the sheet is closed is question K14", f: "NA3, NA4" },
+              { c: "Failed top bar item", k: "Tab onto it; Enter or Space", a: "Its tooltip opens at once on focus. Enter or Space mounts the contribution again, and focus stays at its place, on the control it renders (proposed)", f: "PL40, PL41" },
+              { c: "Help", k: "As the switcher", a: "Opens with focus on the first entry; Escape returns to Help; an in-app entry such as All pages moves focus to its h1", f: "KE15, KE16" },
+              { c: "Show the full path", k: "As the switcher", a: "Opens with focus on the plant, the first link of the trail; Escape returns to the ellipsis; a link changes the route and focus moves to its h1", f: "NA11, NA12" },
+              { c: "Page actions", k: "As the switcher", a: "Escape, or an action that stays on the page, returns focus to the trigger", f: "NA8" },
+              { c: "Open navigation (320)", k: "Enter or Space", a: "The sheet opens with focus on Close navigation; Tab and Shift+Tab stay inside", f: "KE11" },
+              { c: "Close navigation", k: "Enter or Space; Escape anywhere in the sheet", a: "The sheet closes and focus returns to Open navigation", f: "KE12" },
+              { c: "Entry in the sheet", k: "Enter", a: "The sheet closes, the route changes and focus moves to the new h1", f: "KE13" },
+              { c: "Assistant", k: "Enter or Space", a: "The panel docks and focus moves to its message input; Escape or Close assistant returns focus to Assistant", f: "KE17, PL14" },
+              { c: "Assistant at 320", k: "Enter or Space in the navigation sheet footer", a: "The navigation sheet closes and the assistant sheet opens with focus in the message input; Close assistant returns focus to Open navigation (proposed)", f: "NA9, NA10" },
+              { c: "Assistant, disabled", k: "Tab onto it", a: "Focus stays; its tooltip opens at once and names the reason; Enter and Space do nothing", f: "ST22" },
+              { c: "Reload page (dialog)", k: "Tab and Shift+Tab stay on it; Escape does nothing (question K8)", a: "Opening moves focus to Reload page; the reload starts a fresh page with nothing focused", f: "KE10, KE14" },
+              { c: "Reload page (placeholder, status route)", k: "Enter or Space", a: "A fresh page loads with nothing focused", f: "ST1, ST7" },
+              { c: "Try again (error panel)", k: "Enter or Space", a: "The route renders again and focus moves to its h1 (spec 7.2)", f: "ST6" },
+              { c: "Copy correlation id", k: "Enter or Space", a: "Focus stays on the button; the polite region says Correlation id copied (proposed)", f: "ST6" },
+              { c: "Switch operator, Sign out, More (station)", k: "Enter or Space", a: "Switch operator opens the Switch operator screen with focus in the badge field. Sign out goes to the sign-in screen, whose badge field takes focus through a ref. More opens with focus on Help", f: "KE21, SF9, SF16" },
+              { c: "Idle warning (station)", k: "Tab stays on Stay signed in; Escape: question K6", a: "Opening moves focus to Stay signed in; closing returns focus to where it was", f: "SF7, SF8, KE22" }
+            ],
+            roles: [
+              { e: "Skip link", r: "link to main", n: "Skip to main content" },
+              { e: "Sidebar", r: "nav; holds the switcher, the entries, Administration and the user button; at 320 it sits inside the sheet", n: "Main" },
+              { e: "Switcher", r: "button, aria-haspopup=\"menu\", aria-expanded; the company mark is aria-hidden; the name starts with the visible company and plant (2.5.3)", n: "Acme AB, Plant A, switch plant; on /admin: Admin, choose a plant" },
+              { e: "Static head (one plant)", r: "text with no role and no stop; in the rail the mark carries the same words, visually hidden", n: "Acme AB, Plant A" },
+              { e: "Switcher menu", r: "menu; one group per company, labelled by the company name, when the plants span two or more companies, and no group with one company; plants are menuitem links, the current one with aria-current=\"page\" and a check, none on /admin; a plant in onboarding ends its link text with Onboarding, drawn as a Badge; All plants and, for a company admin, Admin after a separator", n: "Switch plant; a plant in onboarding: Plant D, Onboarding" },
+              { e: "Module group", r: "header text plus a list with aria-labelledby; an unavailable or loading module keeps the header and has no list", n: "Planning; Pyramid connector (unavailable)" },
+              { e: "Administration", r: "a group like a module group, after the plugins, drawn only for admin permissions", n: "Administration" },
+              { e: "Entry", r: "link; the icon is aria-hidden; aria-current=\"page\" on the current one", n: "its label" },
+              { e: "Disclosure", r: "button, aria-expanded", n: "Entries under Board" },
+              { e: "Rail icon", r: "link named by its entry, aria-current=\"page\" on the current one; a parent is a button with aria-haspopup=\"menu\" and aria-expanded, and a parent that holds the current page carries aria-current, page for its own route and true when a nested entry is current. Each module's icons sit in one list labelled by the module. Rail names use the route title when a label repeats, so an admin's three Settings read Planning settings, Pyramid connector settings and Settings. A Tooltip with role tooltip shows the same name", n: "Production orders; Master data; Planning settings; Pyramid connector (unavailable)" },
+              { e: "Rail flyout", r: "menu; the group label above the items is presentation; items are menuitem links, the current one with aria-current=\"page\" and a check", n: "Master data" },
+              { e: "User button", r: "button, aria-haspopup=\"menu\", aria-expanded; the avatar is aria-hidden", n: "Alex Lund, alex.lund, account" },
+              { e: "User menu", r: "menu; the header with avatar, name and username is presentation; Profile, Admin (a company admin whose switcher is hidden) and Presentation settings are links, Light and Dark are menuitemradio with aria-checked, Sign out is a menuitem", n: "Alex Lund, alex.lund, account" },
+              { e: "Sidebar trigger", r: "button, aria-expanded, aria-controls the sidebar", n: "Collapse sidebar, Expand sidebar" },
+              { e: "Open navigation", r: "button, aria-haspopup=\"dialog\", aria-expanded", n: "Open navigation" },
+              { e: "Navigation sheet", r: "dialog, aria-modal=\"true\"; holds the switcher, the nav Main and the footer row", n: "Navigation" },
+              { e: "Top bar", r: "header (banner landmark)", n: "" },
+              { e: "Breadcrumb", r: "nav with an ordered list: the company as text when there are several, the plant crumb as a link to the plant home, then the route crumbs; the last crumb has aria-current=\"page\"; crumbs of a module page carry the module's lang; on /admin the trail starts with Admin", n: "Breadcrumb" },
+              { e: "Ellipsis crumb", r: "button, aria-haspopup=\"menu\", aria-expanded; its menu, labelled by the company, lists the plant and every crumb above the current page as links", n: "Show the full path" },
+              { e: "Help menu", r: "menu; one group per module, labelled by the module label", n: "Help" },
+              { e: "Bell", r: "button, aria-haspopup=\"dialog\", aria-expanded, aria-controls the panel while it is open; the count badge is aria-hidden", n: "Notifications; Notifications, 3 unread" },
+              { e: "Failed top bar item", r: "button at the contribution's place; aria-describedby its tooltip while the tooltip shows; the icon is aria-hidden", n: "Notifications (unavailable)" },
+              { e: "Notifications panel", r: "Popover with role dialog, not modal, aria-labelledby its h2, aria-describedby the empty state; tabindex -1, so it takes focus when nothing inside can, with the two-tone ring (KE26)", n: "Notifications" },
+              { e: "Assistant", r: "button, aria-expanded, aria-controls the aside while it is docked; when disabled, aria-disabled and aria-describedby its tooltip", n: "Assistant" },
+              { e: "Assistant panel", r: "aside (complementary), aria-labelledby its h2; at 320 a dialog with aria-modal", n: "Assistant" },
+              { e: "Main", r: "main, tabindex=\"-1\", aria-busy while the route loads", n: "" },
+              { e: "Page heading", r: "h1, tabindex=\"-1\"", n: "the route title or the entity label" },
+              { e: "Reload dialog", r: "alertdialog, aria-modal=\"true\", aria-labelledby its heading, aria-describedby its text; the app root behind it is inert", n: "NorthMES was updated" },
+              { e: "Station", r: "header and main after the skip link; the idle warning is an alertdialog; the offline strip has role=\"status\" (SF20)", n: "You will be signed out in 30 seconds" }
+            ],
+            announce: [
+              { w: "Live updates stop (planner layout)", h: "Polite region, once", t: "Live updates paused, reconnecting" },
+              { w: "Live updates are back", h: "Polite region, once (proposed, K5)", t: "Live updates resumed" },
+              { w: "Server restarting (502 or 503)", h: "Polite region, once; the strip stays", t: "NorthMES is restarting. Changes are paused until it is back; you do not need to reload." },
+              { w: "Database not ready (admins)", h: "Polite region, once", t: "The database is not ready. Changes cannot be saved until it is back." },
+              { w: "Restore banner (24 hours)", h: "Polite region, once per page load (proposed)", t: "Data restored to 2026-10-04 22:00; changes after that were lost." },
+              { w: "Readiness or AI budget changes (admins)", h: "Polite region, once per change", t: "The banner text (ST11, ST12, ST13)" },
+              { w: "Route change or plant switch", h: "No live message: the focused h1 is read and the title changes", t: "" },
+              { w: "Sidebar collapses or expands", h: "No live message: the trigger's name and aria-expanded change while it keeps focus", t: "" },
+              { w: "A top bar item fails", h: "Polite region, once, only when focus was elsewhere (proposed)", t: "Notifications could not load." },
+              { w: "Unread count changes", h: "No live message from the shell: the bell's name carries the count; what a new notification announces belongs to the notifications module", t: "" },
+              { w: "Reload dialog opens", h: "No live message: the alertdialog is read when focus moves into it", t: "" },
+              { w: "Station loses the connection", h: "The role=\"status\" strip, once per change. The station layout sends nothing to the polite region for the drop, and its chip has no live role (Q15)", t: "No connection to NorthMES. Entries stay on this screen and are not sent until the connection is back." }
+            ],
+            announceNote: "The polite and assertive regions sit in index.html outside #root, with aria-live and aria-atomic set, so they work while a modal is open (spec 1.6.2). In the planner layout the chip, the strips and the dialogs carry no live role of their own, so each message is read once. At the station the Disconnected strip is the one element with its own role=\"status\", and nothing else speaks for a drop.",
+            wcag: [
+              { k: "1.3.1", t: "Landmarks, one labelled list per module group in the sidebar and in the rail, one labelled group per company in the switcher when the plants span two or more companies, the breadcrumb list, menu groups, dialog headings; the rail parent that holds the current page carries aria-current" },
+              { k: "1.4.1", t: "A plant in onboarding is marked by the word Onboarding in its link, not by the badge color alone (PL32, PL33, PL46, NA23)" },
+              { k: "1.4.11", t: "Each ring half reaches 3:1 on every surface in KE17 and KE18 (D1 contrast)" },
+              { k: "1.4.13", t: "The rail tooltips, the disabled Assistant tooltip and the tooltip of a failed top bar item open on focus, close on Escape, stay open while the pointer moves onto them and hold nothing interactive (KE2, KE29, ST22, PL40)" },
+              { k: "2.1.1", t: "Every shell control is reachable and operable by keyboard; the flows run without page.mouse" },
+              { k: "2.1.2", t: "The sheet and dialogs hold focus by design and close with Escape; the reload dialog leaves through Reload page; the notifications Popover is not modal" },
+              { k: "2.1.4", t: "No single-key shortcut in the shell" },
+              { k: "2.2.1", t: "Station idle warning 30 s ahead with Stay signed in (SF7, SF8)" },
+              { k: "2.4.1", t: "Skip link as the first stop (KE1, KE21, PL14)" },
+              { k: "2.4.2", t: "Title pattern, unique per route: the three Settings entries have their own titles (Settings, Planning settings, Pyramid connector settings); titles under /admin leave the plant out (Plants · Admin · NorthMES)" },
+              { k: "2.4.3", t: "DOM order equals visual order: skip link, sidebar, top bar, main; route change to the h1; layers return focus to their trigger" },
+              { k: "2.4.4", t: "Rail links have distinct names: a label that repeats uses the route title (Planning settings, Pyramid connector settings, Settings)" },
+              { k: "2.4.7", t: "Two-tone ring on every stop, the notifications panel included when it holds focus (KE26); inset outline on menu items" },
+              { k: "2.4.11", t: "scroll-padding-top from the sticky block (KE19, KE20); docked panels beside main; menus, the flyout and tooltips open beside or above their trigger" },
+              { k: "2.5.3", t: "The switcher's name starts with its visible company and plant, the user button's with the visible name and username. Icon-only controls (rail icons, the trigger, Help, the bell) show no text, and the rail tooltip shows the name" },
+              { k: "2.5.8", t: "Crumb links, the ellipsis and strip links are 24 px high; the switcher and the user button 48 px, rail icons 32 px, the rail mark and avatar 40 px, other controls 36 px; 48 px station buttons" },
+              { k: "3.1.2", t: "Module text in another language carries lang: the Finnish plugin's crumbs, h1 and content (NA8)" },
+              { k: "3.2.1", t: "Focus only scrolls into view and opens a tooltip; menus, the flyout, the panel and the sheet open on Enter or click" },
+              { k: "3.2.2", t: "The switcher is a menu of links; nothing changes until a link is followed" },
+              { k: "3.2.3", t: "Sidebar and rail order come from the manifests and never follow usage; a failed or loading module keeps its place, in the rail too; Administration is always last" },
+              { k: "3.2.4", t: "An entry has the same icon and label in the sidebar, the rail tooltip and the flyout; where a label repeats in the rail, the rail name and tooltip use the route title, as the page title does" },
+              { k: "3.2.6", t: "Help keeps its place and order in the top bar on every planner page; the bell, when installed, always follows it" },
+              { k: "4.1.2", t: "Names, roles and states as listed above" },
+              { k: "4.1.3", t: "Reconnecting, the banners and the station connection through live regions, each read once" }
+            ],
+            slots: [
+              { k: "TopBarActions", t: "The page actions slot (pin 1 in PL1). Remotes render Buttons through the TopBarActions portal of @northmes/ui; PageFrame places them at the start of the top bar's end group, before Assistant, Help and the bell. It takes Buttons only: one Button default for the main action at most, outline for the rest, no menus or inputs (proposed). When the bar runs out of room the shell folds, in this order: the middle crumbs into Show the full path, then every page action into one Page actions menu in their order, then Assistant drops its label (NA8). At 320 the actions always sit in Page actions." },
+              { k: "planning/board/header/v1", t: "Beside the h1 (pin 2): Pyramid data as of 06:40, from the Pyramid connector. Text only, no controls (proposed)." },
+              { k: "Route content", t: "main (pin 3): the route's screen, under the h1 that PageFrame renders." },
+              { k: "Aside slot", t: "The shell aside (pin 4), aria-labelledby its h2 Assistant. The chat panel of E14-S03 mounts here and survives route changes: docked at 360 px beside main from 1280 px up, a modal sheet at 320 (NA9, NA10), absent when no provider is configured (ST31)." },
+              { k: "planning/board/side/v1", t: "Beside the board grid in PL1: a WidgetFrame section, 280 px wide, aria-labelledby the contribution's label, Large orders (example-widget.large-orders). Its props carry plantId and paused. A failure renders the fallback inside the frame (ST27, ST28)." },
+              { k: "core/top-bar/items/v1", t: "At the top bar end after Help (ADR 0067; the id is proposed). Each contribution renders one compact control named by its label, such as the bell with its Popover, without a WidgetFrame and inside its own error boundary. Its props carry plantId, null on /admin. A contribution that fails at stage slot keeps its place as an IconButton with CircleAlert and a dashed border, named {label} (unavailable), with a tooltip; Enter or Space mounts it again (PL40, PL41). Release 1 builds neither the slot nor the bell." }
+            ],
+            copy: [
+              { h: "Shell chrome", items: [["Skip to main content", 1], ["Collapse sidebar", 0], ["Expand sidebar", 0], ["Open navigation", 0], ["Close navigation", 0], ["Navigation", 0], ["Main", 0], ["Breadcrumb", 0], ["Switch plant", 0], ["{company}, {plant}, switch plant", 0], ["All plants", 0], ["Show the full path", 0], ["Entries under {label}", 0], ["(unavailable)", 1], ["(loading)", 0], ["Page actions", 0], ["Assistant", 0], ["Close assistant", 0], ["Message the assistant", 0], ["Send", 0], ["Written by an AI assistant. Check before you commit.", 1], ["Help", 0], ["All pages", 1], ["Accessibility", 1], ["Notifications", 0], ["Notifications, {n} unread", 0], ["No notifications", 0], ["9+", 0], ["{user}, {username}, account", 0], ["Profile", 0], ["Theme", 0], ["Light", 0], ["Dark", 0], ["Presentation settings", 0], ["Sign out", 0], ["Onboarding", 0], ["Admin", 0], ["Choose a plant", 0], ["Admin, choose a plant", 0], ["Notifications (unavailable)", 0], ["Notifications could not load. Select to try again.", 0], ["Notifications could not load.", 0], ["Planner", 1], ["Plant admin", 1], ["Company admin", 0]] },
+              { h: "Navigation labels (spec 8.2)", items: [["Core", 0], ["Master data", 0], ["Equipment groups", 0], ["Machines", 0], ["Tools", 0], ["Articles", 0], ["Routings", 0], ["Calendars", 0], ["Warehouses", 0], ["Customers", 0], ["Planning", 1], ["Board", 0], ["Job table", 0], ["Production orders", 0], ["Proposals", 0], ["Settings", 0], ["Pyramid connector", 0], ["Pending changes", 0], ["Import log", 0], ["Import inbox", 0], ["AI", 0], ["Usage", 0], ["Audit", 0], ["Audit log", 0], ["Acme tooling", 0], ["Tool life", 0], ["Tool changes", 0], ["Administration", 0], ["Users", 0], ["Roles", 0], ["Stations", 0], ["Integrations", 0], ["System health", 0]] },
+              { h: "Admin pages at /admin", items: [["Overview", 0], ["Plants", 0], ["New plant", 0]] },
+              { h: "Companies, plants and people in the frames", items: [["Acme AB", 0], ["Nordic Tools AB", 0], ["Plant A", 1], ["Plant B", 1], ["Plant C", 0], ["Plant D", 0], ["Alex Lund", 1], ["alex.lund", 0], ["Jonas Holm", 0], ["jonas.holm", 0]] },
+              { h: "Status and banners", items: [["Live updates paused, reconnecting", 1], ["Live updates resumed", 0], ["NorthMES is restarting. Changes are paused until it is back; you do not need to reload.", 0], ["The database is not ready. Changes cannot be saved until it is back.", 0], ["Data restored to {time}; changes after that were lost.", 1], ["Open System health", 0], ["Open AI usage", 0]] },
+              { h: "Reload dialog, as in the states part (ST3)", items: [["NorthMES was updated", 0], ["This tab runs the previous version, so saving is off until you reload.", 0], ["Reloading keeps everything that is saved. Changes on this page that are not saved yet are lost.", 0], ["Reload page", 0]] },
+              { h: "Route titles", items: [["Planning board · Plant A · NorthMES", 1], ["Order 1001 · Plant A · NorthMES", 1], ["Production orders · Plant A · NorthMES", 0], ["Production orders · Plant B · NorthMES", 0], ["Proposals · Plant A · NorthMES", 0], ["Machines · Plant A · NorthMES", 0], ["Users · Plant A · NorthMES", 0], ["Mill 1 · Plant A · NorthMES", 0], ["Settings · Plant A · NorthMES", 0], ["Planning settings · Plant A · NorthMES", 0], ["Pyramid connector settings · Plant A · NorthMES", 0], ["AI usage · Plant A · NorthMES", 0], ["Pyramid connector unavailable · Plant A · NorthMES", 0], ["Page not found · Planning · Plant A · NorthMES", 1], ["Production orders could not be shown · Plant A · NorthMES", 0], ["System status · Plant A · NorthMES", 0], ["Planning · Plant A · NorthMES", 0], ["Page not found · NorthMES", 0], ["NorthMES was updated · Plant A · NorthMES", 0], ["Sign in · NorthMES", 0], ["Set a new password · NorthMES", 0], ["Press 4 · Plant A · NorthMES", 0], ["Switch operator · Press 4 · Plant A · NorthMES", 0], ["Plants · Admin · NorthMES", 1], ["Overview · Admin · NorthMES", 0]] },
+              { h: "Sample content, not shell copy", items: [["Search orders", 0], ["Status", 0], ["Clear filters", 0], ["Order", 0], ["Article", 0], ["Quantity", 0], ["Deadline", 0], ["Previous", 0], ["Next", 0], ["pcs", 0]] }
+            ],
+            copyNote: "Lines marked doc are verbatim from the docs; every other line is proposed and needs Krister's yes. The company names, Plant C, Plant D, Jonas Holm and the usernames are invented. The station copy is in SF20, the states copy in ST33 and the sign-in copy in SI22.",
+            qSpec: [
+              { k: "Q4", t: "The switcher needs the companies and plants the user holds roles in, while /api/v1/web/modules returns only the current plant. Where does that list come from? ADR 0066 proposes the fields companies, with each plant's onboardingState, and admin in that response." },
+              { k: "Q11", t: "The reload dialog has a title and an h1 (A0021). These frames draw its heading as the h1 with the page behind inert. Or an h2?" },
+              { k: "Q13", t: "Page actions sit in the top bar, so New order (KE1, stop 18) comes before the page's filters, unlike the D1 F8 sample. Which order?" },
+              { k: "Q15", t: "Station: the top bar status and the Disconnected strip can both appear. Drawn: only the strip speaks (SF5, SF6)." },
+              { k: "Q18", t: "What does the user menu, now at the foot of the sidebar, hold besides the name, the theme switch and Sign out? Drawn: Profile and Presentation settings (C2; PL9, PL13, PL34, PL35, KE24, KE31). GLOSSARY.md makes presentation settings company and plant settings, so that entry needs a route and a permission." },
+              { k: "Q19", t: "Does the collapsed sidebar state persist per browser?" },
+              { k: "Q24", t: "Are the Sidebar and Breadcrumb states in these frames enough as their shadcn states?" },
+              { k: "Q25", t: "Where do toasts sit so they never cover the focused element?" }
+            ],
+            qDone: [
+              { k: "Q1", t: "Answered by C4 and ADR 0067: every nav entry has an icon, so the nav contract and the manifests carry an icon name from navIconNames." },
+              { k: "Q12", t: "Answered by the chosen direction: the breadcrumb is the nav Breadcrumb inside the header, and the h1 stays in main." },
+              { k: "K16", t: "Answered by ADR 0066 and ADR 0067: a holder of core.plant:create, which core's company admin role holds, creates plants on the admin pages under /admin. Plants left the plant's Administration section; a company admin reaches /admin through Admin in the switcher menu, or in the user menu when the switcher is hidden (PL32, PL42)." }
+            ],
+            qNew: [
+              { k: "K1", t: "Switcher menu: focus on the first plant other than the current one (drawn, KE7 and KE30), or on the first item, the current plant (the library default)?" },
+              { k: "K2", t: "Navigation sheet: focus on Close navigation (the D1 Sheet state, drawn), or on the current entry?" },
+              { k: "K3", t: "scroll-padding-top as the sticky block's height plus 8 px, so the 4 px ring clears the strip (KE19, KE20)?" },
+              { k: "K4", t: "At 320, two strips make the sticky block about a third of the screen (KE20). Keep them sticky, or let banners scroll away at 320?" },
+              { k: "K5", t: "Announce Live updates resumed after a reconnect?" },
+              { k: "K6", t: "Station idle warning: does Escape count as activity and close it like Stay signed in?" },
+              { k: "K7", t: "User menu: does choosing Light or Dark close the menu?" },
+              { k: "K8", t: "Reload dialog: spec 3.6 makes it blocking, while spec 7.5 and the D1 Dialog row say Escape closes a dialog. Drawn: Escape does nothing (KE10). If Escape closes it, the dialog goes, mutations stay refused, and a strip under the top bar offers Reload page." },
+              { k: "K9", t: "Settings: core's settings now sit in Administration with the title Settings, beside Planning settings and Pyramid connector settings, so the three titles stay unique. Is Settings the right title for core's page?" },
+              { k: "K10", t: "Station buttons draw 48 px, above the 44 px of --nm-target-min-station. Add a station control-height token, or draw them at 44 px?" },
+              { k: "K11", t: "Notifications panel: with nothing focusable inside, focus goes to the panel itself (drawn, KE26), and Tab closes it and moves on to main. Or should the bell keep focus while the panel is open?" },
+              { k: "K12", t: "shadcn Sidebar toggles on Ctrl+B and Cmd+B, which Firefox uses for its bookmarks sidebar. Drawn: no shortcut. Keep it off?" },
+              { k: "K13", t: "When the rail flyout closes, focus returns to the parent icon and its tooltip opens, as on any focus (drawn, KE29). Or keep the tooltip closed after a flyout?" },
+              { k: "K14", t: "At 320, does Open navigation carry an unread marker when the bell has unread notifications? The bell sits in the sheet footer, so nothing shows the count while the sheet is closed (NA1, NA2)." },
+              { k: "K15", t: "The pages without a plant have no sidebar. Does their account menu stay at the top bar end (drawn, ST29, ST30, ST38 to ST43), or do they get a sidebar footer with the user button?" },
+              { k: "K17", t: "The admin pages and the link to them read Admin, after the title Plants · Admin · NorthMES in ADR 0066, while the plant's own section stays Administration. Is that pair clear, or should the link read Company admin (PL32, PL42, PL44)?" }
+            ]
+          };
+
+          notes.copy = notes.copy.map((g) => ({ h: g.h, items: g.items.map((x) => ({ t: x[0], doc: !!x[1] })) }));
+          notes.icons = notes.icons.map((g) => ({ h: g.h, items: g.items.map((x) => ({ t: x[0], i: x[1] })) }));
+          notes.components = notes.components.map((r) => ({ c: r.c, u: tp(r.u), f: r.f }));
+          notes.slots = notes.slots.map((r) => ({ k: r.k, t: tp(r.t) }));
+          notes.decisions = notes.decisions.map(tp);
+          notes.tokens = notes.tokens.map(tp);
+          notes.rules = notes.rules.map(tp);
+          notes.announce = notes.announce.map((r) => Object.assign({}, r, { t: tp(r.t) }));
+          const legend = ringLegend.map((g) => ({ k: g.k, t: tp(g.t) }));
+          return {
+            labels: String(P.labels === undefined || P.labels === null ? "on" : P.labels).trim() !== "off",
+            rid: this.__rid,
+            show: show,
+            ov: ov,
+            ordersA: ordersA,
+            ordersB: ordersB,
+            scrollRows: scrollRows,
+            ringLegend: legend,
+            legendNote: tp("Each ring is a 2 px --focus-outline outline at 2 px offset plus a 2 px --focus-ring band. Menu items draw a 2 px inset --focus-outline on --accent instead (KE7, KE15, KE24, KE28). The chip, the strip text and the unread badge are not focus stops."),
+            legendNoteDark: tp("In dark the outline half is the light --focus-outline and the band is the dark --focus-ring, so one half reaches 3:1 on every fill (D1 Focus ring)."),
+            notes: notes
+          };
+        }
+      }
+    </script>
+  </body>
+</html>
