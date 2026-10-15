@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { HttpStatus } from '@nestjs/common';
 import { DomainError } from '../errors/domain-error.ts';
 

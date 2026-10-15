@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { ShellProvider, useShell } from '@northmes/web-sdk';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';

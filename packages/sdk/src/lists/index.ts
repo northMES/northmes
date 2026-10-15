@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Server-only: the list kit, which builds a list's connection types and pages from one declaration
 // (ADR 0016).
 export {

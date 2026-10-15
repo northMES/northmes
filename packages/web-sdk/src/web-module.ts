@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { AnyRoute } from '@tanstack/react-router';
 import type { ComponentType } from 'react';
 import type { PlantRoute, SettingsRoute } from './routes.ts';

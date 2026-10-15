@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Fixture module catalog: owns Article and reads the articles of a list of ids through a loader.
 import { Inject, Injectable, Module } from '@nestjs/common';
 import { Args, Context, Field, ID, ObjectType, Query, Resolver } from '@nestjs/graphql';
