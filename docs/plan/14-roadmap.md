@@ -5175,7 +5175,7 @@ Acceptance criteria:
 - The release workflow publishes `northmes-web-<version>.tar.gz` with its digest and attestation beside the bundle and the backend image.
 - `upgrade.sh` refuses to run against an external database and names the upgrade guide.
 - The upgrade guide in `apps/docs` covers a split installation: provider snapshot after the backend stops, a rehearsal on a clone with `northmes migrate` from the new image, the backend first and then the web build of the same version, and rollback by restoring the snapshot.
-- The upgrade guide for a platform gives the stop of every backend replica, a migrate job recipe for Kubernetes, Azure Container Apps and ECS, the direct database URL for the migrate job, plugins from a site image, and the managed Postgres steps (restore to a new host name, extensions on the provider's allow-list).
+- The upgrade guide for a platform gives the stop of every backend replica, a migrate job recipe for Kubernetes, Azure Container Apps and ECS as text (no example manifests or Helm chart in release 1), the direct database URL for the migrate job, plugins from a site image, and the managed Postgres steps (restore to a new host name, extensions on the provider's allow-list).
 - When a reload still serves the old web build, the shell stops reloading and says that the web host has not been updated, naming both versions; queries keep working and mutations stay refused.
 
 Tests first:
