@@ -29,7 +29,16 @@ NorthMES has no 1.0 release yet. Until 1.0, only the latest 0.x minor release ge
 
 ## Plugins run with full trust
 
-A NorthMES plugin runs inside the server process and the web app with the same rights as NorthMES itself (ADR 0037, ADR 0068). It can read the database through the application's role, the configuration and the users' sessions. NorthMES does not sandbox plugins.
+A NorthMES plugin runs inside the server process and the web app with the same rights as NorthMES itself (ADR 0037, ADR 0068). NorthMES does not sandbox plugins. In release 1 the host operator installs a plugin with `npm install --ignore-scripts` into the plugin volume (ADR 0075), and the next restart loads it.
+
+What a plugin can reach, its blast radius:
+
+- **Data:** whatever the database role `nm_app` can read and write within the scopes of the current request. Row-level security still applies, so a plugin's queries see the companies and plants that the request's scopes allow, but nothing stops a plugin's code from opening a transaction with other scopes, as core's own code does.
+- **Sessions and configuration:** the request's principal and token, the server's configuration and the secrets the server process holds.
+- **The browser:** a plugin's screens run in the same page as NorthMES, so they can read the session token in `sessionStorage` and call the API as the signed-in user.
+- **The host:** the server process's files and network access inside its container.
+
+A plugin cannot reach what the server process cannot: `nm_owner`, the database admin password and the host outside the container. This is an accepted risk, with an owner and a review date, in the [risk register](docs/security/risks.md).
 
 Install only plugins from publishers you trust, and review a plugin's inventory before you install it. A vulnerability in a third-party plugin belongs to its publisher; report it to them. If a plugin can break NorthMES's own controls, for example by reaching one company's data that core keeps apart from another's, report that to us as above.
 
@@ -41,4 +50,4 @@ Out of scope: an installation's own configuration and infrastructure (its host, 
 
 ## How NorthMES handles security
 
-The rules every change follows, the controls index and the internal audit reports are described in ADR 0076 and kept under `docs/security/`. Known limitations that the project has accepted for now are listed with their reasons in the latest audit report there.
+The rules every change follows, the controls index and the internal audit reports are described in ADR 0076 and kept under `docs/security/`. The [threat model](docs/security/threat-model.md) lists the trust boundaries and the threats at each, and the [risk register](docs/security/risks.md) lists the limitations the project has accepted for now, with their reasons.
