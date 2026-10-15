@@ -95,7 +95,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 |---|---|---|
 | `SECURITY.md` with reporting, response target, supported versions and the plugin trust model | built | `SECURITY.md`; `test/meta/security-policy.test.ts` |
 | Patch releases for security fixes | decided | ADR 0038, ADR 0051 |
-| Vulnerable dependencies and static analysis findings fixed within set time frames (critical 7 days, high 30, medium 90), or recorded as accepted risks; no release with an open critical or high finding | decided | [vulnerability-policy.md](vulnerability-policy.md); checked in the release review of ADR 0076 until a CI gate exists ([#197](https://github.com/northMES/northmes/issues/197)) |
+| Vulnerable dependencies and static analysis findings fixed within set time frames (critical 7 days, high 30, medium 90), or recorded as accepted risks; no release with an open critical or high finding that is neither fixed nor recorded as an accepted risk | decided | [vulnerability-policy.md](vulnerability-policy.md); checked in the release review of ADR 0076 until a CI gate exists ([#197](https://github.com/northMES/northmes/issues/197)) |
 | Accepted risks recorded with an owner and a review date | built | the [risk register](risks.md); `test/meta/security-docs.test.ts` |
 
 ### 7. Architecture and industrial standards

@@ -29,7 +29,7 @@ The [threat model](threat-model.md) holds the full analysis. In short:
 - Seven conduits cross them: the browser to the server (C1), the server to the database (C2), the host operator (C3), plugins (C4), the ERP and other systems (C5), source to the running image (C6) and CI to third-party services (C7).
 - Each surface has a row with its conduit and the credential it accepts, and each conduit has a STRIDE table with the controls that meet each threat and their status.
 
-The trust boundary that matters most is C1: any device on the plant network can send requests. Every request across it is authenticated, checked against a permission and limited by row-level security, as the principles below show. Plugins (C4) are trusted fully by design, which the risk register records as A-03.
+The trust boundary that matters most is C1: any device on the plant network can send requests. Apart from the sign-in routes, a request across it needs a signed-in principal; a write passes the command bus's permission check, and row-level security limits the database rows a request reads and changes. A permission check on every read is still a gap in the controls index ([#474](https://github.com/northMES/northmes/issues/474)). The principles below give the evidence. Plugins (C4) are trusted fully by design, which the risk register records as A-03.
 
 ## Secure design principles
 
