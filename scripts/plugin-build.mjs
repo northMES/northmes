@@ -128,6 +128,8 @@ export async function buildPlugin(dir, outDir) {
     }
   }
   const webEntry = webEntryOf(dir);
+  // A web/ folder without a source entry is stale, from a src/web.tsx the plugin no longer has.
+  if (!webEntry) await rm(join(dir, 'web'), { recursive: true, force: true });
   const webFiles = webEntry ? await buildWebPart(dir, webEntry) : [];
   await rm(outDir, { recursive: true, force: true });
   for (const part of packageParts) {

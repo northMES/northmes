@@ -76,6 +76,8 @@ function originRule(publicOrigin: string, webOrigins: readonly string[]) {
   const allowed = new Set(webOrigins);
   return (request: Request, response: Response, next: NextFunction): void => {
     const origin = request.headers.origin;
+    // The answer depends on Origin, so a shared cache keeps one copy per origin.
+    response.setHeader('Vary', 'Origin');
     if (origin === undefined || origin === publicOrigin) {
       next();
       return;
@@ -85,7 +87,6 @@ function originRule(publicOrigin: string, webOrigins: readonly string[]) {
       return;
     }
     response.setHeader('Access-Control-Allow-Origin', origin);
-    response.setHeader('Vary', 'Origin');
     next();
   };
 }
