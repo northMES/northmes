@@ -11,13 +11,16 @@
 set -eu
 
 # The admin's password and the whole database cross this connection, so a server other than the
-# bundled db must be reached with a verified certificate.
+# bundled db must be reached with a verified certificate: every sslmode in the URL's query, and at
+# least one, is verify-full.
 case "$DATABASE_URL" in
   postgres://db:5432/*) ;;
-  *sslmode=verify-full*) ;;
   *)
-    echo "NORTHMES_DATABASE_URL must hold sslmode=verify-full for backup to use it" >&2
-    exit 1
+    modes="$(printf '%s' "${DATABASE_URL#*\?}" | tr '&' '\n' | sed -n 's/^sslmode=//p')"
+    if [ -z "$modes" ] || printf '%s\n' "$modes" | grep -qvx verify-full; then
+      echo "NORTHMES_DATABASE_URL must hold sslmode=verify-full for backup to use it" >&2
+      exit 1
+    fi
     ;;
 esac
 
