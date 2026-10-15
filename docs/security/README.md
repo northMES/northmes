@@ -3,7 +3,8 @@
 This is the entry point for an auditor and for anyone who changes NorthMES. [ADR 0076](../adr/0076-secure-development-lifecycle-with-a-security-note-per-change-a-controls-index-and-an-internal-audit-each-release.md) decides the working rules: a security note in every pull request, security tests first, the threat model kept current, and an internal audit before each release. The guidelines follow IEC 62443-4-1, the development controls of ISO 27001 and SOC 2, and OpenSSF Best Practices, with ISA-95 terms where practical.
 
 - [Controls index](#controls-index): each control, its decision, and the evidence that it is built, or the issue that will build it.
-- Threat model: `threat-model.md`, written by [#485](https://github.com/northMES/northmes/issues/485).
+- [Threat model](threat-model.md): the assets, zones and conduits, surfaces, and the STRIDE threats at each boundary with their controls.
+- [Risk register](risks.md): each accepted risk with an owner, a review date and its ADR or issue.
 - Audit reports: [2026-10-11](audits/2026-10-11.md), tracked in [#473](https://github.com/northMES/northmes/issues/473).
 - Architecture and data flows: [plan 02](../plan/02-architecture.md). Deployment and operations: [plan 12](../plan/12-operations-and-security.md). Risks: [plan 17](../plan/17-risks.md).
 - Reporting a vulnerability: [`SECURITY.md`](../../SECURITY.md) at the repository root.
@@ -46,7 +47,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Only the auth routes the web uses are open | gap | [#475](https://github.com/northMES/northmes/issues/475) |
 | Sign-in throttling and account lockout | gap | [#476](https://github.com/northMES/northmes/issues/476) |
 | Session absolute lifetime, and JWTs ended with their session | gap | [#479](https://github.com/northMES/northmes/issues/479) |
-| The auth design (ADR 0011) matches the code | gap | [#485](https://github.com/northMES/northmes/issues/485) |
+| The auth design (ADR 0011) matches the code | built | ADR 0011 and ADR 0070: a bearer session in `sessionStorage`, five-minute JWTs, CORS for `webOrigins` without credentials; `apps/backend/src/http/web-origins.module.ts` |
 | MFA and a password policy | accepted | ADR 0051 B2: deferred until the pilot's NIS2 status is known |
 
 ### 3. Logging, monitoring and audit trails
@@ -86,7 +87,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 |---|---|---|
 | `SECURITY.md` with reporting, response target, supported versions and the plugin trust model | built | `SECURITY.md`; `test/meta/security-policy.test.ts` |
 | Patch releases for security fixes | decided | ADR 0038, ADR 0051 |
-| Accepted risks recorded | built | the audit reports in `audits/`; [plan 17](../plan/17-risks.md) |
+| Accepted risks recorded with an owner and a review date | built | the [risk register](risks.md); `test/meta/security-docs.test.ts` |
 
 ### 7. Architecture and industrial standards
 
@@ -101,7 +102,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Control | Status | Evidence |
 |---|---|---|
 | Architecture and data-flow diagrams | built | [plan 02](../plan/02-architecture.md), [plan 12](../plan/12-operations-and-security.md) |
-| Threat model | gap | [#485](https://github.com/northMES/northmes/issues/485) |
+| Threat model | built | [threat-model.md](threat-model.md); `test/meta/security-docs.test.ts` |
 | Hardening guidance | decided | plan 12 go-live checklist, ADR 0044; the install guide of ADR 0048 |
 | This controls index and the audit reports | built | this page |
 
