@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The types of gen-migration.mjs, for the TypeScript tests that render a migration file.
 
 export interface RenderOptions {

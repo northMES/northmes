@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { HOST_PROVIDED_WEB } from '@northmes/web-sdk/host-provided-web';
 import { describe, expect, it } from 'vitest';
 import { sharedFiles, sharedShims, shimText } from './shared-web.mjs';

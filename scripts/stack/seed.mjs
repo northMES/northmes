@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The seed of the stack script (E02-S08, E05-S03, E05-S05): one company with two plants, a dev
 // admin who signs in with a dev-only password, and fictional articles and production orders at
 // the plants, so the board has orders to list, the article list has pages and the plant switcher

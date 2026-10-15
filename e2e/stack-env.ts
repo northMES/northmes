@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 /** The variable that carries the stack's environment from globalSetup to the workers, as JSON. */
 export const stackEnvKey = 'NORTHMES_E2E_STACK_ENV';
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The coverage summary step of CI / test. pnpm test:coverage writes coverage/text-summary.txt in the
 // checkout, and GitHub shows the Markdown in the file that GITHUB_STEP_SUMMARY names on the run page.
 

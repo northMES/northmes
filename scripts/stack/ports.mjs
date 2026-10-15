@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The ports of the stack script (ADR 0058): taken from the operating system, never fixed, so two
 // stacks on one machine never share one.
 

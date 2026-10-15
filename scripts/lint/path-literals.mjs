@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Keeps app paths out of string literals in the web code and the end-to-end specs
 // (docs/adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md): a path comes from
 // a link builder's `to` or `href`, or from apiPath. The check parses the TypeScript and JavaScript

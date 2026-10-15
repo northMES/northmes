@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Keeps customer data out of the repository (docs/plan/11-quality-and-testing.md, "Test data and
 // fixtures"). Two checks run:
 //

@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 # The backup service of compose.yaml (ADR 0045). README.md, "Back up" and "Restore", has the steps.
 #
 #   nightly         take a backup at 02:00 UTC every night, the service's default
