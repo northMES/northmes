@@ -23,7 +23,8 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Row-level security on reads of the identity and company tables, and a closed `principal_grants` | gap | [#483](https://github.com/northMES/northmes/issues/483) |
 | Least privilege in containers (non-root, read-only, no capabilities, a memory limit) | built | ADR 0044; `Dockerfile` (`USER node`), `deploy/compose.yaml`; `test/meta/compose.test.ts` |
 | No secrets in code: secret files only, files readable by others refused, dev secrets refused in production | built | ADR 0060, ADR 0047; `packages/sdk/src/config/secrets.ts`; `config.int.test.ts` |
-| A minimum strength for the auth secret | gap | [#484](https://github.com/northMES/northmes/issues/484) |
+| A minimum strength for the auth secret: at least 32 bytes, or the boot is refused | built | `packages/sdk/src/config/secrets.ts`; `secrets.test.ts` |
+| The stack seed's dev users, whose passwords are public, refused in production: the boot stops while one exists | built | `apps/backend/src/boot/dev-users.ts`; `boot.int.test.ts` |
 | Every input parsed by a Zod contract | built | ADR 0017; `packages/sdk/src/commands/command-bus.ts`, `mutation-field.ts` |
 | Parameterized SQL only (Kysely with bound values; `sql.raw` on constants only) | built | `packages/sdk/src/lists/define-list.ts`; CodeRabbit path instructions in `.coderabbit.yaml` |
 | Errors masked: GraphQL `maskedErrors`, only HTTP exceptions pass the filter, static file errors hide paths | built | `apps/backend/src/graphql/server.ts`; `packages/sdk/src/errors/exception-filter.ts`; `apps/backend/src/web/static-mounts.ts` |
@@ -37,6 +38,8 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 |---|---|---|
 | Deny by default: a global principal guard, which also runs on field resolvers | built | ADR 0011 (proposed); `access-api.module.ts`, `graphql.module.ts` |
 | Short-lived JWTs (5 minutes, EdDSA, issuer and audience pinned), principal re-read on every request | built | `auth-options.ts`; `principal.service.ts`; `sign-in.int.test.ts` |
+| JWT signing keys rotated every 30 days by Better Auth's own rotation, encrypted with the auth secret in `auth.jwks` | built | `auth-options.ts`; `sign-in.int.test.ts` |
+| The sign-in return path stays on the web's origin: resolved as a URL, any other origin leads to the root | built | `apps/web/src/auth/sign-in-link.ts`; `sign-in-link.test.ts` |
 | Role-based access control with permissions per scope, checked by the command bus at the row's scope | built | ADR 0010, ADR 0012; `permissions.ts`; `command-bus.ts`; `role-assignment-commands.int.test.ts` |
 | A user's own row changed without a permission: the command bus skips the permission only for a row its target names as the principal's own, which row-level security keeps from every other user, and still checks the version | built | ADR 0078 (proposed); `packages/sdk/src/commands/command-bus.ts`, `apps/backend/src/commands/command-bus.ts`; `command-bus.test.ts`, `dashboard-save.int.test.ts` |
 | A permission check on every read | gap | [#474](https://github.com/northMES/northmes/issues/474) (production orders) |

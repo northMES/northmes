@@ -4,13 +4,20 @@ import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northm
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { NEW_PASSWORD_PATH } from '../../../src/modules/core/api/access/new-password.controller.ts';
 import {
+  JWT_KEY_ROTATION_SECONDS,
   SESSION_LIFETIME_SECONDS,
   SESSION_RENEWAL_SECONDS,
   SIGN_IN_LOCKOUT_FAILURES,
   SIGN_IN_LOCKOUT_SECONDS,
 } from '../../../src/modules/core/infrastructure/auth/auth-options.ts';
 import { BetterAuth } from '../../../src/modules/core/infrastructure/auth/better-auth.ts';
-import { fromNewClient, givenCompany, hostFactory, signIn } from '../../../src/testing.ts';
+import {
+  fromNewClient,
+  givenCompany,
+  hostFactory,
+  queryAsCore,
+  signIn,
+} from '../../../src/testing.ts';
 
 /** The web app's origin in these tests, as webOrigins in northmes.config.json would list it. */
 const webOrigin = 'http://localhost:5173';
@@ -120,6 +127,37 @@ describe('sign-in with Better Auth', () => {
     expect(live).toEqual({ status: 200, data: { coreArticles: { edges: [] } } });
     expect(expired.data).toBeNull();
     expect(expired.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
+  });
+
+  /** The id of the key that signed the JWT in an Authorization header. */
+  function kidOf(authorization: string): string {
+    const [header = ''] = authorization.replace(/^Bearer /, '').split('.');
+    return (JSON.parse(Buffer.from(header, 'base64url').toString()) as { kid: string }).kid;
+  }
+
+  it('E05-S05 a JWT key signs for 30 days, then the next JWT gets a new key and the JWTs of the old key still read', async () => {
+    expect(JWT_KEY_ROTATION_SECONDS).toBe(30 * 24 * 60 * 60);
+    const { user, plant } = await reader();
+    const oldKid = kidOf(user.authorization);
+    const [key] = await queryAsCore<{ lifetime: number }>(
+      db.ownerUrl,
+      'select extract(epoch from "expiresAt" - "createdAt")::int as lifetime from auth.jwks where id = $1',
+      [oldKid],
+    );
+
+    await queryAsCore(
+      db.ownerUrl,
+      'update auth.jwks set "expiresAt" = now() - interval \'1 second\' where id = $1',
+      [oldKid],
+    );
+    const { user: next } = await reader();
+    const old = await gqlClient(url, {
+      headers: { authorization: user.authorization, 'x-northmes-plant': plant },
+    }).send(articlesQuery);
+
+    expect(key?.lifetime).toBe(JWT_KEY_ROTATION_SECONDS);
+    expect(kidOf(next.authorization)).not.toBe(oldKid);
+    expect(old).toEqual({ status: 200, data: { coreArticles: { edges: [] } } });
   });
 
   it('E05-S05 a session token is no bearer token for the API: only the JWT is', async () => {

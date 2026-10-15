@@ -31,7 +31,8 @@ const [plantA, plantB] = seedPlants.map(({ id }) => id);
  * The dev admin, the seed company's Company admin, who holds every permission there, and who signs
  * in with the email under the reserved .test domain (RFC 2606). The password is for development
  * only, it is no secret, and it never reaches production: the stack script seeds only the database
- * of pnpm dev, pnpm demo and the end-to-end tests.
+ * of pnpm dev, pnpm demo and the end-to-end tests. Every dev user's id starts with
+ * 019a0000-0000-7000-8000-0000000d, which a production boot refuses (apps/backend/src/boot/dev-users.ts).
  */
 export const devAdmin = {
   id: '019a0000-0000-7000-8000-0000000d0001',
