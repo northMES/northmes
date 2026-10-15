@@ -132,9 +132,12 @@ describe('plugin web parts', () => {
   it('lets a web origin load a file as a module script, and refuses any other origin', async () => {
     const file = `${url}/api/v1/web/plugins/example-hello/0.1.0/entry.js`;
 
+    const sameOrigin = await fetch(file);
     const fromWeb = await fetch(file, { headers: { origin: webOrigin } });
     const fromElsewhere = await fetch(file, { headers: { origin: 'https://evil.example' } });
 
+    // Every answer varies by Origin, so a cache never hands the same-origin copy to a web origin.
+    expect(sameOrigin.headers.get('vary')).toBe('Origin');
     expect(fromWeb.status).toBe(200);
     expect(fromWeb.headers.get('access-control-allow-origin')).toBe(webOrigin);
     expect(fromElsewhere.status).toBe(403);

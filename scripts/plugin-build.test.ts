@@ -109,6 +109,8 @@ describe('pnpm plugin:build', () => {
     write(join(plugin, 'migrations/20261008120000_label.sql'), migration);
     // A file an earlier build left, which the new build does not write.
     write(join(root, 'plugins/example-labels/dist/old.js'), '');
+    // A web part an earlier build left, from a src/web.tsx the plugin no longer has.
+    write(join(plugin, 'web/entry.js'), '');
 
     const exitCode = await main(['example-labels'], io());
 
