@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { useMutation } from '@apollo/client/react';
 import {
-  type DashboardWidgetType,
   dashboardMaxWidgets,
   dashboardSizesOf,
   dashboardSizeUnits,
@@ -15,7 +14,7 @@ import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-g
 import { announce } from '../../../../ui/lib/announce.ts';
 import { hasErrorCode, refusalMessage } from '../../../../ui/lib/graphql-errors.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
-import { DashboardCatalog, typeName } from './dashboard-catalog.tsx';
+import { type CatalogChoice, DashboardCatalog } from './dashboard-catalog.tsx';
 import { actionsButtonId, addTileId, DashboardEditGrid } from './dashboard-edit-grid.tsx';
 import {
   addWidget,
@@ -90,17 +89,18 @@ export function DashboardEditor({ tab, onClose, onDirtyChange, onReload }: Dashb
     bar.current?.focus();
   }, []);
 
-  const add = (type: DashboardWidgetType) => {
+  const add = ({ type, contribution, title }: CatalogChoice) => {
     const size = dashboardSizesOf[type][0];
     const upper = size.toUpperCase() as EditedWidget['size'];
     const place = catalogAt ?? firstFreePlace(widgets, upper);
     const widget: EditedWidget = {
       id: uuidv7(),
       type: type.toUpperCase() as EditedWidget['type'],
+      ...(contribution === undefined ? {} : { contribution }),
       size: upper,
       x: Math.min(place.x, 12 - dashboardSizeUnits[size].w),
       y: place.y,
-      title: typeName(type),
+      title,
     };
     const next = addWidget(widgets, widget);
     setWidgets(next);

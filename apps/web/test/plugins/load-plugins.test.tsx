@@ -110,6 +110,72 @@ describe('loadPlugins', () => {
     ]);
   });
 
+  it("ADR 0068 a plugin's contributions carry their manifest entry and the component its web part supplies, and a plugin without routes gets no sidebar entry", async () => {
+    const Count = () => <p>42 articles</p>;
+    const counter = defineWebModule({
+      id: 'example-article-count',
+      version: '0.1.0',
+      contributions: { 'example-article-count.count': Count },
+    });
+    const listing: PluginListing = {
+      ...hello,
+      id: 'example-article-count',
+      label: 'Article count',
+      entry: '/api/v1/web/plugins/example-article-count/0.1.0/entry.js',
+      contributes: [
+        {
+          id: 'example-article-count.count',
+          slot: 'core/dashboard/widgets/v1',
+          label: 'Article count',
+          order: 10,
+          permission: 'core.article:read',
+        },
+      ],
+    };
+
+    const [loaded] = await loadPlugins(
+      options([listing], { importModule: async () => ({ default: counter }) }),
+    );
+
+    expect(loaded?.links).toEqual([]);
+    expect(loaded?.contributions).toEqual([
+      {
+        id: 'example-article-count.count',
+        slot: 'core/dashboard/widgets/v1',
+        label: 'Article count',
+        order: 10,
+        permission: 'core.article:read',
+        moduleId: 'example-article-count',
+        moduleLabel: 'Article count',
+        Component: Count,
+      },
+    ]);
+  });
+
+  it('ADR 0068 the contributions of a plugin that did not load have no component, so their slot shows its fallback', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const listing: PluginListing = {
+      ...hello,
+      contributes: [
+        {
+          id: 'example-hello.wave',
+          slot: 'core/dashboard/widgets/v1',
+          label: 'Wave',
+          order: 10,
+          permission: 'core.article:read',
+        },
+      ],
+    };
+
+    const [loaded] = await loadPlugins(
+      options([listing], { importModule: () => Promise.reject(new Error('404')) }),
+    );
+
+    expect(loaded?.contributions?.map(({ id, Component }) => [id, Component])).toEqual([
+      ['example-hello.wave', undefined],
+    ]);
+  });
+
   it('ADR 0075 a plugin list that does not load leaves the shell without plugins', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const opts = options([], { fetch: vi.fn(async () => new Response('', { status: 503 })) });

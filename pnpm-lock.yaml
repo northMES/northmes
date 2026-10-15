@@ -598,6 +598,33 @@ importers:
         specifier: 'catalog:'
         version: 5.0.1(@opentelemetry/api@1.9.1)(@types/node@26.6.2)(@vitest/coverage-v8@5.0.1)(happy-dom@20.14.5)(vite@8.3.0(@types/node@26.6.2)(jiti@2.7.0)(yaml@2.9.1))
 
+  examples/plugin-article-count:
+    devDependencies:
+      '@apollo/client':
+        specifier: 4.3.1
+        version: 4.3.1(graphql-ws@6.2.2(graphql@16.14.2)(ws@8.21.3))(graphql@16.14.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(rxjs@7.8.2)
+      '@biomejs/biome':
+        specifier: 'catalog:'
+        version: 2.5.14
+      '@northmes/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      '@northmes/web-sdk':
+        specifier: workspace:*
+        version: link:../../packages/web-sdk
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
+      graphql:
+        specifier: 16.14.2
+        version: 16.14.2
+      react:
+        specifier: 19.3.0
+        version: 19.3.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+
   examples/plugin-article-log:
     dependencies:
       '@northmes/core-contracts':

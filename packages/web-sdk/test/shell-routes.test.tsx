@@ -107,6 +107,23 @@ describe('createShellRoutes', () => {
     expect(within(plant).getByText('Quality screen')).toBeDefined();
   });
 
+  it('ADR 0068 a module whose screens are only contributions adds no route', async () => {
+    const widgetsOnly = defineWebModule({ id: 'example-article-count', version: '0.0.1' });
+    const router = createRouter({
+      routeTree: createShellRoutes({
+        modules: [quality, widgetsOnly],
+        rootComponent: Shell,
+        plantComponent: Plant,
+      }),
+      history: createMemoryHistory({ initialEntries: ['/plant-a/quality'] }),
+    });
+
+    render(<RouterProvider router={router} />);
+
+    expect(await screen.findByText('Quality screen')).toBeDefined();
+    expect(Object.keys(router.routesByPath)).not.toContain('/$plant/example-article-count');
+  });
+
   it('E05-S05 a route outside the plant renders under the root, and plantBeforeLoad can send a plant path there', async () => {
     const seen: string[] = [];
     const router = createRouter({

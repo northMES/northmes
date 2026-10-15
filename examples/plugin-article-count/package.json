@@ -1,0 +1,33 @@
+{
+  "name": "@northmes/example-article-count",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "exports": {
+    "./manifest": {
+      "@northmes/source": "./src/manifest.ts",
+      "default": "./dist/manifest.js"
+    }
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@apollo/client": "catalog:",
+    "@northmes/sdk": "workspace:*",
+    "@northmes/web-sdk": "workspace:*",
+    "react": "catalog:"
+  },
+  "devDependencies": {
+    "@apollo/client": "catalog:",
+    "@biomejs/biome": "catalog:",
+    "@northmes/sdk": "workspace:*",
+    "@northmes/web-sdk": "workspace:*",
+    "@types/react": "catalog:",
+    "graphql": "catalog:",
+    "react": "catalog:",
+    "typescript": "catalog:"
+  }
+}
