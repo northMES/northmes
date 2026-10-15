@@ -14,6 +14,14 @@ export const AUTH_BASE_PATH = '/api/auth';
 export const JWT_LIFETIME = '5m';
 
 /**
+ * How long Better Auth signs with one JWT key, in seconds: after 30 days the next JWT gets a new
+ * key, and the old key still verifies the JWTs it signed (audit B12). Better Auth's own rotation
+ * replaces a keyring of NorthMES's own (ADR 0047), since the keys live in auth.jwks encrypted with
+ * the auth secret.
+ */
+export const JWT_KEY_ROTATION_SECONDS = 30 * 24 * 60 * 60;
+
+/**
  * How long a session lives after sign-in or its last renewal, in seconds. The session token from
  * set-auth-token is the web's refresh token: it only mints the five-minute JWTs from
  * /api/auth/token, until the session expires or is revoked. The maintainer chose 12 hours, about a
@@ -118,6 +126,7 @@ export function authOptions({ dialect, baseURL, secret, webOrigins }: AuthOption
       apiKey(),
       bearer(),
       jwt({
+        jwks: { rotationInterval: JWT_KEY_ROTATION_SECONDS },
         jwt: {
           expirationTime: JWT_LIFETIME,
           // The subject is the user's id; the JWT carries nothing else about the user.

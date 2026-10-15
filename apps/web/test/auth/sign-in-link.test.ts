@@ -21,6 +21,7 @@ describe('returnPathOf', () => {
       'https://evil.example/',
       '//evil.example',
       '/\\evil.example',
+      '//[evil',
       'javascript:alert(1)',
       'plant-a',
     ]) {

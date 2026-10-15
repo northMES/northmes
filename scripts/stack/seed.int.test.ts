@@ -175,6 +175,12 @@ describe('the seed', () => {
       true,
       true,
     ]);
+    // A production boot refuses every user in this id range (apps/backend/src/boot/dev-users.ts).
+    expect(
+      [devAdmin, ...Object.values(devUsers)].filter(
+        ({ id }) => !id.startsWith('019a0000-0000-7000-8000-0000000d'),
+      ),
+    ).toEqual([]);
     expect(roles).toEqual(
       [
         { username: devUsers.plantAdmin.username, key: 'core-plant-admin' },
