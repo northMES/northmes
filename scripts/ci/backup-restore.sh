@@ -7,6 +7,8 @@
 set -eu
 
 work="$(mktemp -d)"
+# Every exit, passed or failed, removes the stack, its volumes and the folders with their secrets.
+trap 'docker compose --project-name northmes down --volumes >/dev/null 2>&1; sudo rm -rf "$work"' EXIT
 repo="$(pwd)"
 names="postgres_password db_owner_password db_app_password db_auth_password auth_secret"
 
@@ -84,4 +86,3 @@ curl -fsk -o /dev/null -H 'Origin: https://localhost' -H 'Content-Type: applicat
   https://localhost/api/auth/sign-in/email
 
 echo "== restored backup northmes-$stamp: $(wc -l < "$work/counts-after.txt") tables match"
-docker compose down --volumes

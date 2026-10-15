@@ -10,6 +10,17 @@
 # secrets/, .env, compose.override.yaml and Caddy's data. Backups older than 7 days are deleted.
 set -eu
 
+# The admin's password and the whole database cross this connection, so a server other than the
+# bundled db must be reached with a verified certificate.
+case "$DATABASE_URL" in
+  postgres://db:5432/*) ;;
+  *sslmode=verify-full*) ;;
+  *)
+    echo "NORTHMES_DATABASE_URL must hold sslmode=verify-full for backup to use it" >&2
+    exit 1
+    ;;
+esac
+
 export PGPASSWORD="$(cat /run/secrets/postgres_password)"
 login="--username=${NORTHMES_DB_ADMIN_USER}"
 
@@ -17,6 +28,9 @@ backup() {
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
   out="/backups/northmes-${stamp}"
   umask 077
+  # A failed step leaves no partial file behind. The older backups stay: retention runs only
+  # after a backup succeeds, so failing backups never delete the last good ones.
+  trap 'rm -f "${out}"*.partial' EXIT
   pg_dumpall "--dbname=${DATABASE_URL}" "$login" --roles-only --no-role-passwords --file="${out}-roles.sql.partial"
   pg_dump "--dbname=${DATABASE_URL}" "$login" --format=custom --file="${out}.dump.partial"
   files="secrets .env"
@@ -46,8 +60,12 @@ case "${1:-}" in
     ;;
   restore)
     in="/backups/northmes-${2:?name the backup to restore, as in: restore 20261015T020000Z}"
-    # The roles that bootstrap created already exist, so psql reports them and carries on.
-    psql "--dbname=${DATABASE_URL}" "$login" --quiet --file="${in}-roles.sql"
+    # bootstrap created some of the roles already, so their CREATE ROLE lines are left out and
+    # any other error stops the restore.
+    psql "--dbname=${DATABASE_URL}" "$login" -At \
+      -c 'select format($$CREATE ROLE %s;$$, quote_ident(rolname)) from pg_roles' > /tmp/existing
+    grep -vxF -f /tmp/existing "${in}-roles.sql" |
+      psql "--dbname=${DATABASE_URL}" "$login" --quiet -v ON_ERROR_STOP=1
     pg_restore "--dbname=${DATABASE_URL}" "$login" --exit-on-error --single-transaction "${in}.dump"
     tar -xzf "${in}-files.tar.gz" -C / data
     echo "restored northmes-${2}"
