@@ -162,6 +162,38 @@ describe('planningProductionOrders', () => {
     });
   });
 
+  it('E02-S04 a user who reads production orders but lacks core.article:read gets the orders with core.forbidden on each article', async () => {
+    if (!testApp) throw new Error('the test app did not start');
+    const { plants, slugs } = await givenCompany(db.ownerUrl);
+    const [plant = ''] = plants;
+    const [slug = ''] = slugs;
+    await writeOrder(plant, '6361', await writeArticle(plant, 'SH-107', 'Shelf board'), '40');
+    const { authorization } = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: plant, permissions: ['planning.productionOrder:read'] },
+    ]);
+    const orderReader = gqlClient(await testApp.app.getUrl(), {
+      headers: { authorization, 'x-northmes-plant': slug },
+    });
+
+    const answer = await orderReader.send<OrdersAnswer>(ordersQuery);
+
+    expect(answer).toMatchObject({
+      status: 200,
+      data: {
+        planningProductionOrders: [
+          { number: '6361', quantity: '40.000000', status: 'planned', article: null },
+        ],
+      },
+      errors: [
+        {
+          message: `You need core.article:read at plant ${plant}`,
+          path: ['planningProductionOrders', 0, 'article'],
+          extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
+        },
+      ],
+    });
+  });
+
   it('E02-S04 three orders on three articles resolve their articles with one SQL query', async () => {
     const plant = given.plant();
     const articles = [
