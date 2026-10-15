@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { NEW_PASSWORD_PATH } from '../../../src/modules/core/api/access/new-password.controller.ts';
 import {
   JWT_KEY_ROTATION_SECONDS,
+  SESSION_ABSOLUTE_LIFETIME_SECONDS,
   SESSION_LIFETIME_SECONDS,
   SESSION_RENEWAL_SECONDS,
   SIGN_IN_LOCKOUT_FAILURES,
@@ -110,25 +111,6 @@ describe('sign-in with Better Auth', () => {
     expect(answer.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
   });
 
-  it('E05-S05 an expired JWT gets 401 as UNAUTHENTICATED, where the same JWT before it expired reads', async () => {
-    const { user, plant } = await reader();
-    const now = Math.floor(Date.now() / 1000);
-    const { api } = testApp.app.get(BetterAuth).auth;
-    const sign = async (iat: number, exp: number) =>
-      (await api.signJWT({ body: { payload: { sub: user.userId, iat, exp } } })).token;
-    const send = (token: string) =>
-      gqlClient(url, {
-        headers: { authorization: `Bearer ${token}`, 'x-northmes-plant': plant },
-      }).send(articlesQuery);
-
-    const live = await send(await sign(now, now + 60));
-    const expired = await send(await sign(now - 360, now - 60));
-
-    expect(live).toEqual({ status: 200, data: { coreArticles: { edges: [] } } });
-    expect(expired.data).toBeNull();
-    expect(expired.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
-  });
-
   /** The id of the key that signed the JWT in an Authorization header. */
   function kidOf(authorization: string): string {
     const [header = ''] = authorization.replace(/^Bearer /, '').split('.');
@@ -193,7 +175,10 @@ describe('sign-in with Better Auth', () => {
     const answer = await testApp.app.get(BetterAuth).auth.api.getSession({
       headers: new Headers({ authorization: `Bearer ${sessionToken}` }),
     });
-    return answer as { session: { expiresAt: Date }; user: { username: string } };
+    return answer as {
+      session: { id: string; expiresAt: Date };
+      user: { username: string };
+    };
   }
 
   it('E05-S05 a signed-in user cannot change their username, so a username is never reassigned', async () => {
@@ -221,6 +206,93 @@ describe('sign-in with Better Auth', () => {
     const expiresAt = new Date(session.expiresAt).getTime();
     expect(expiresAt).toBeGreaterThanOrEqual(before + SESSION_LIFETIME_SECONDS * 1000 - 1000);
     expect(expiresAt).toBeLessThanOrEqual(Date.now() + SESSION_LIFETIME_SECONDS * 1000 + 1000);
+  });
+
+  it('E05-S05 an expired JWT gets 401 as UNAUTHENTICATED, where the same JWT before it expired reads', async () => {
+    const { user, plant } = await reader();
+    const { session } = await sessionOf(await sessionTokenOf(user));
+    const now = Math.floor(Date.now() / 1000);
+    const { api } = testApp.app.get(BetterAuth).auth;
+    const sign = async (iat: number, exp: number) =>
+      (await api.signJWT({ body: { payload: { sub: user.userId, sid: session.id, iat, exp } } }))
+        .token;
+    const send = (token: string) =>
+      gqlClient(url, {
+        headers: { authorization: `Bearer ${token}`, 'x-northmes-plant': plant },
+      }).send(articlesQuery);
+
+    const live = await send(await sign(now, now + 60));
+    const expired = await send(await sign(now - 360, now - 60));
+
+    expect(live).toEqual({ status: 200, data: { coreArticles: { edges: [] } } });
+    expect(expired.data).toBeNull();
+    expect(expired.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
+  });
+
+  it('E05-S05 a JWT that names no session gets 401 as UNAUTHENTICATED', async () => {
+    const { user, plant } = await reader();
+    const now = Math.floor(Date.now() / 1000);
+    const { api } = testApp.app.get(BetterAuth).auth;
+    const { token } = await api.signJWT({
+      body: { payload: { sub: user.userId, iat: now, exp: now + 60 } },
+    });
+
+    const answer = await gqlClient(url, {
+      headers: { authorization: `Bearer ${token}`, 'x-northmes-plant': plant },
+    }).send(articlesQuery);
+
+    expect(answer.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
+  });
+
+  it('E05-S05 a session older than the absolute lifetime cannot mint a JWT, however much it was used', async () => {
+    expect(SESSION_ABSOLUTE_LIFETIME_SECONDS).toBe(24 * 60 * 60);
+    const { user } = await reader();
+    const sessionToken = await sessionTokenOf(user);
+    const signedInAt = Date.now();
+    const mint = () =>
+      fetch(`${url}/api/auth/token`, { headers: { authorization: `Bearer ${sessionToken}` } });
+    vi.useFakeTimers({ toFake: ['Date'] });
+
+    try {
+      const minted: number[] = [];
+      // Each request renews the session, once its last renewal is an hour old.
+      for (const hours of [6, 11.5, 17, 22.5, 23.9]) {
+        vi.setSystemTime(signedInAt + hours * 60 * 60 * 1000);
+        minted.push((await mint()).status);
+      }
+      vi.setSystemTime(signedInAt + SESSION_ABSOLUTE_LIFETIME_SECONDS * 1000 + 1000);
+      const late = await mint();
+
+      expect(minted).toEqual([200, 200, 200, 200, 200]);
+      expect(late.status).toBe(401);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('E05-S05 a JWT is refused once its session signed out', async () => {
+    const { user, plant } = await reader();
+    const sessionToken = await sessionTokenOf(user);
+    const minted = await fetch(`${url}/api/auth/token`, {
+      headers: { authorization: `Bearer ${sessionToken}` },
+    });
+    const { token } = (await minted.json()) as { token: string };
+    const send = () =>
+      gqlClient(url, {
+        headers: { authorization: `Bearer ${token}`, 'x-northmes-plant': plant },
+      }).send(articlesQuery);
+
+    const before = await send();
+    const signedOut = await fetch(`${url}/api/auth/sign-out`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${sessionToken}` },
+      body: '{}',
+    });
+    const after = await send();
+
+    expect(before).toEqual({ status: 200, data: { coreArticles: { edges: [] } } });
+    expect(signedOut.status).toBe(200);
+    expect(after.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
   });
 
   it('E05-S05 a request from an origin that webOrigins does not list is refused with 403', async () => {

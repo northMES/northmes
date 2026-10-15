@@ -43,6 +43,36 @@ export const SESSION_LIFETIME_SECONDS = 12 * 60 * 60;
 export const SESSION_RENEWAL_SECONDS = 60 * 60;
 
 /**
+ * How long a session lives at most from sign-in, in seconds, however much it is used (security
+ * audit 2026-10-11, B6). A renewal never moves its expiry past this, so a user signs in at least
+ * once a day, also in a tab that stays open.
+ */
+export const SESSION_ABSOLUTE_LIFETIME_SECONDS = 24 * 60 * 60;
+
+/** When a session that signed in at createdAt ends, however much it is used. */
+function absoluteEnd(createdAt: Date): Date {
+  return new Date(createdAt.getTime() + SESSION_ABSOLUTE_LIFETIME_SECONDS * 1000);
+}
+
+/**
+ * The expiry that a renewal at `now` gives a session that signed in at createdAt: the renewal's
+ * own expiresAt, capped at the session's absolute end, or null once that end has passed.
+ */
+export function renewedExpiry(createdAt: Date, expiresAt: Date, now: Date): Date | null {
+  const end = absoluteEnd(createdAt);
+  if (end <= now) return null;
+  return expiresAt < end ? expiresAt : end;
+}
+
+/** Whether a session is live at `now`: it has not expired nor reached its absolute end. */
+export function sessionIsLive(
+  { createdAt, expiresAt }: { readonly createdAt: Date; readonly expiresAt: Date },
+  now: Date,
+): boolean {
+  return expiresAt > now && absoluteEnd(createdAt) > now;
+}
+
+/**
  * The paths of the admin and api-key plugins. NorthMES calls them only on the server, through
  * auth.api from its own commands, so their HTTP paths are disabled (ADR 0011). Sign-up, the
  * username check and /update-user are disabled too, and so is the username plugin's sign-in: a user
@@ -118,7 +148,7 @@ export interface AuthOptionsInput {
  * Better Auth's options in NorthMES (ADR 0010): the username plugin for the never-reassigned
  * handle (its sign-in path is disabled), the organization, admin and api-key plugins, and the bearer and jwt plugins that give the web a short-lived JWT, since the web and
  * the API may be on different origins. The session token that mints the JWTs lives
- * SESSION_LIFETIME_SECONDS. Only openPaths answer over HTTP. Sign-up is disabled, ids are uuids and the tables are in the
+ * SESSION_LIFETIME_SECONDS after its last renewal and SESSION_ABSOLUTE_LIFETIME_SECONDS at most. Only openPaths answer over HTTP. Sign-up is disabled, ids are uuids and the tables are in the
  * auth schema. Sign-in is throttled per client address and an account locks after repeated
  * failures (#476). The same options build the runtime instance and core's migration, and the drift
  * test compares the two.
@@ -134,6 +164,21 @@ export function authOptions({ dialect, baseURL, secret, webOrigins }: AuthOption
     disabledPaths: [...disabledPaths],
     emailAndPassword: { enabled: true, disableSignUp: true },
     session: { expiresIn: SESSION_LIFETIME_SECONDS, updateAge: SESSION_RENEWAL_SECONDS },
+    databaseHooks: {
+      session: {
+        update: {
+          // Better Auth renews a session in getSession, which has just read it into the context,
+          // so the renewal is capped at the session's absolute end, and refused after it: the
+          // request answers 401 and mints no JWT.
+          before: async (data, context) => {
+            const createdAt = context?.context.session?.session.createdAt;
+            if (!(data.expiresAt instanceof Date) || !createdAt) return;
+            const expiresAt = renewedExpiry(new Date(createdAt), data.expiresAt, new Date());
+            return expiresAt ? { data: { ...data, expiresAt } } : false;
+          },
+        },
+      },
+    },
     user: {
       additionalFields: {
         // Set with a temporary password that an admin hands out, cleared when the user sets their

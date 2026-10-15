@@ -76,7 +76,8 @@ export class PrincipalService extends PrincipalResolver {
     const userId = await this.auth.userOfToken(token);
     if (!userId) return null;
     const { rows, blocked, mustChangePassword } = await this.#grants(userId);
-    // A blocked user's JWT may outlive the block by its lifetime; the user's next request fails.
+    // Blocking ends the user's sessions, which already refuses their JWTs; this also refuses them
+    // when a block is written without ending the sessions.
     if (blocked) return null;
     if (mustChangePassword) throw passwordChangeRequired();
     return this.#principal(userId, rows, headers.get(PLANT_HEADER) ?? undefined);
