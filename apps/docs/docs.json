@@ -1,0 +1,20 @@
+{
+  "$schema": "https://context7.com/schema/docs7.json",
+  "name": "NorthMES",
+  "colors": {
+    "primary": "#1F4E79"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Run NorthMES",
+        "groups": [
+          {
+            "group": "Install and upgrade",
+            "pages": ["index", "install", "plugins"]
+          }
+        ]
+      }
+    ]
+  }
+}

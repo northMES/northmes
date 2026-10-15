@@ -164,6 +164,7 @@ describe('migrateEnvSchema and bootstrapEnvSchema', () => {
     });
     expect(loadEnv(bootstrapEnvSchema)(bootstrapKeys)).toEqual({
       NODE_ENV: 'production',
+      NORTHMES_DB_ADMIN_USER: 'postgres',
       ...bootstrapKeys,
     });
 
@@ -190,6 +191,26 @@ describe('migrateEnvSchema and bootstrapEnvSchema', () => {
       expect(error.problems[0], url).toMatch(/^DATABASE_URL: must be /);
       expect(error.message, url).not.toContain('db.internal');
       expect(error.message, url).not.toContain('s3cret-pw');
+    }
+  });
+
+  it("ADR0080 bootstrap logs in as NORTHMES_DB_ADMIN_USER, a managed server's admin, and as postgres without it", () => {
+    expect(
+      loadEnv(bootstrapEnvSchema)({ ...bootstrapKeys, NORTHMES_DB_ADMIN_USER: 'northmes_admin' })
+        .NORTHMES_DB_ADMIN_USER,
+    ).toBe('northmes_admin');
+    expect(loadEnv(bootstrapEnvSchema)(bootstrapKeys).NORTHMES_DB_ADMIN_USER).toBe('postgres');
+  });
+
+  it('ADR0080 a NORTHMES_DB_ADMIN_USER that is not a role name fails without its value', () => {
+    for (const user of ['', 'admin; drop role nm_app', 'admin:s3cret-pw', '1admin']) {
+      const error = configErrorOf(() =>
+        loadEnv(bootstrapEnvSchema)({ ...bootstrapKeys, NORTHMES_DB_ADMIN_USER: user }),
+      );
+
+      expect(error.problems, user).toHaveLength(1);
+      expect(error.problems[0], user).toMatch(/^NORTHMES_DB_ADMIN_USER: must be /);
+      expect(error.message, user).not.toContain('s3cret-pw');
     }
   });
 });
