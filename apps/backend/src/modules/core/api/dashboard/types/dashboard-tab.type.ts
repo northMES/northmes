@@ -23,6 +23,11 @@ export class DashboardTab {
   @Field(() => DashboardTabScope) scope!: DashboardTabScope;
   /** Grows by one with every change to the tab; Done sends it as expectedVersion. */
   @Field(() => Int) version!: number;
+  /**
+   * True when the user may change the tab's layout: an own tab, or a shared tab where the user
+   * holds core.dashboardTab:manage. The page shows Edit layout for it (design shell-454, A4).
+   */
+  @Field(() => Boolean) canEdit!: boolean;
   @Field(() => [DashboardWidget]) widgets!: DashboardWidget[];
 }
 
@@ -33,6 +38,7 @@ export function toDashboardTab(tab: DashboardTabRecord): DashboardTab {
     name: tab.name,
     scope: tab.scope as DashboardTabScope,
     version: tab.version,
+    canEdit: tab.canEdit,
     widgets: tab.widgets.map(toDashboardWidget),
   };
 }

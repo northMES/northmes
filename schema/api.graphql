@@ -186,6 +186,12 @@ input CoreRestoreArticleInput {
   id: ID!
 }
 
+input CoreSaveDashboardTabInput {
+  expectedVersion: Int!
+  id: ID!
+  layout: String!
+}
+
 input CoreSetArticlePlantsInput {
   allPlants: Boolean!
   expectedVersion: Int!
@@ -247,6 +253,7 @@ type CreatedUser {
 }
 
 type DashboardTab {
+  canEdit: Boolean!
   id: ID!
   name: String!
   scope: DashboardTabScope!
@@ -308,6 +315,7 @@ type Mutation {
   coreResetPassword(input: CoreResetPasswordInput!): PasswordReset!
   coreRestoreArticle(input: CoreRestoreArticleInput!): Article!
   coreRestoreArticleGroup(input: CoreRestoreArticleGroupInput!): ArticleGroup!
+  coreSaveDashboardTab(input: CoreSaveDashboardTabInput!): DashboardTab!
   coreSetArticlePlants(input: CoreSetArticlePlantsInput!): Article!
   coreUnblockUser(input: CoreUnblockUserInput!): User!
   coreUpdateArticle(input: CoreUpdateArticleInput!): Article!

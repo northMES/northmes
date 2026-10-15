@@ -39,6 +39,7 @@ describe('schemaSdl', () => {
       'coreResetPassword',
       'coreRestoreArticle',
       'coreRestoreArticleGroup',
+      'coreSaveDashboardTab',
       'coreSetArticlePlants',
       'coreUnblockUser',
       'coreUpdateArticle',

@@ -28,7 +28,7 @@ export interface GridItem {
   readonly y: number;
   readonly w: number;
   readonly h: number;
-  readonly static: true;
+  readonly static: boolean;
 }
 
 /** The grid's columns: 12 or 6, or 1 below 600 px, where the widgets form a list. */
@@ -53,13 +53,18 @@ export function readingOrder<Widget extends PlacedWidget>(widgets: readonly Widg
  * The layout of the widgets at 12 or 6 columns. The stored layout is the 12-column one, and the
  * 6-column one follows from it: each column halves, each size takes its 6-column width, and a
  * widget that would reach past the edge moves left. react-grid-layout's compactor then pulls the
- * widgets up and keeps them from overlapping.
+ * widgets up and keeps them from overlapping. In edit mode the 12-column items are movable; the
+ * 6-column ones never are, since a move there has no 12-column place to save.
  */
-export function gridLayout(widgets: readonly PlacedWidget[], columns: 12 | 6): GridItem[] {
+export function gridLayout(
+  widgets: readonly PlacedWidget[],
+  columns: 12 | 6,
+  { movable = false }: { readonly movable?: boolean } = {},
+): GridItem[] {
   return readingOrder(widgets).map(({ id, size, x, y }) => {
     const key = size.toLowerCase() as DashboardWidgetSize;
     const { w, h } = dashboardSizeUnits[key];
-    if (columns === 12) return { i: id, x, y, w, h, static: true };
+    if (columns === 12) return { i: id, x, y, w, h, static: !movable };
     const narrow = sixColumnWidths[key];
     return { i: id, x: Math.min(Math.floor(x / 2), 6 - narrow), y, w: narrow, h, static: true };
   });

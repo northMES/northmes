@@ -178,6 +178,7 @@ describe('the roles of a company and the permission catalog', () => {
     expect(modules[0]?.resources.map(({ resource }) => resource)).toEqual([
       'core.article',
       'core.articleGroup',
+      'core.dashboardTab',
       'core.role',
       'core.roleAssignment',
       'core.user',
