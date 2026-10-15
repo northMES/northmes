@@ -3,13 +3,17 @@ import { randomBytes, randomUUIDv7 } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
+import type { ModuleManifest } from '@northmes/sdk';
 import type { HostFactory } from '@northmes/testing';
 import { Client, Pool, type PoolClient } from 'pg';
 import { AppModule } from './app.module.ts';
 import { importServers, inRepoCatalog } from './boot/boot.ts';
+import { type CatalogEntry, checkCatalog } from './catalog/check-catalog.ts';
+import { migrate } from './migrate/runner.ts';
 import { AuthService } from './modules/core/core/access/auth.service.ts';
 import { PLANT_HEADER } from './principal.ts';
 import { builtShellDir } from './web/static-mounts.ts';
+import { imageVersion } from './version.ts';
 import { serveWeb } from './web/web.module.ts';
 
 /**
@@ -29,12 +33,57 @@ export function hostFactoryWithShell(shellDir: string): HostFactory {
 }
 
 /**
- * Builds the app of hostFactory and serves the web app as boot does: the one apps/web builds, or
- * the one in shellDir when it is given.
+ * A plugin as a test loads it from its source: its manifest, whose server entry imports the
+ * plugin's Nest module, and the folder of its migration files. Vitest's module runner does not
+ * apply the resolve hook, so the plugin resolves the host packages from the workspace.
  */
-function createHostFactory(shellDir = builtShellDir): HostFactory {
+export interface SourcePlugin {
+  readonly manifest: ModuleManifest;
+  readonly migrationsDir: string;
+}
+
+/** The catalog of the in-repo modules that `modules` names and of `plugins`, checked as boot does. */
+function catalogWith(
+  plugins: readonly SourcePlugin[],
+  modules?: readonly string[],
+): CatalogEntry[] {
+  const entries: CatalogEntry[] = [
+    ...inRepoCatalog(modules ? { modules } : {}),
+    ...plugins.map(({ manifest, migrationsDir }) => ({
+      manifest,
+      kind: 'plugin' as const,
+      migrationsDir,
+    })),
+  ];
+  return checkCatalog(entries, { imageVersion: imageVersion() });
+}
+
+/** The host factory of hostFactory, whose app loads `plugins` after the in-repo modules. */
+export function hostFactoryWithPlugins(plugins: readonly SourcePlugin[]): HostFactory {
+  return createHostFactory(builtShellDir, plugins);
+}
+
+/**
+ * Applies the migration files of `plugins` to the database at ownerUrl, a clone of the template
+ * that holds the in-repo modules' files, as pnpm northmes migrate does once a plugin is installed.
+ */
+export async function migratePlugins(
+  ownerUrl: string,
+  plugins: readonly SourcePlugin[],
+): Promise<void> {
+  await migrate({ ownerUrl, catalog: catalogWith(plugins) });
+}
+
+/**
+ * Builds the app of hostFactory and serves the web app as boot does: the one apps/web builds, or
+ * the one in shellDir when it is given. `plugins` load after the in-repo modules.
+ */
+function createHostFactory(
+  shellDir = builtShellDir,
+  plugins: readonly SourcePlugin[] = [],
+): HostFactory {
   return async ({ modules, config, webOrigins }) => {
-    const catalog = inRepoCatalog({ modules });
+    const catalog = catalogWith(plugins, modules);
     const servers = await importServers(catalog);
     const app = await NestFactory.create<NestExpressApplication>(
       AppModule.forRoot(config, servers, { webOrigins }),
