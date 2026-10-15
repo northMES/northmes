@@ -4798,6 +4798,8 @@ ADRs: [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-r
 
 Out of scope: upgrade requests from the web, `upgrade.sh`, `rollback.sh` and the rehearsal command (triggers in ADR 0080); `northmes upgrade` tooling, codemods and the app repository (after 1.0); npm publishing; Helm.
 
+Order: v0.0.1 comes first (Krister, 2026-10-15). E18-S01, E18-S02 and E18-S16 ship in it with the example plugins, so the version checks and upgrade tests (E18-S03 to S15, S18 and S19) start against a published release ([0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md)).
+
 Estimate: not estimated. Depends on: E17, E01-S03. Milestone: the pilot install.
 
 #### E18-S01 ops: Build, attest and publish release images and the offline bundle
@@ -4817,6 +4819,7 @@ Acceptance criteria:
 - `northmes-<v>-linux-amd64-images.tar.zst` and its sha256 are attached to the draft release before it is published; releases are immutable.
 - A release job loads the bundle in a fresh amd64 VM or dind with `--network none` and checks `/health/ready` through Caddy.
 - Images are scanned with Trivy or Grype pinned by digest.
+- The first release is v0.0.1: release-please runs with `initial-version: 0.0.1` (ADR 0080).
 - A patch release is image-only: it adds no migration and its release manifest states rollback class image. The release workflow fails a patch release whose migration list differs from the previous minor's.
 
 Tests first:
@@ -4849,7 +4852,7 @@ Issue: northMES/northmes#159.
 
 As a plant admin, I want an upgrade that refuses an unsafe release before downtime and keeps the schema readable by the previous image, so that I can always go back.
 
-Module: ops, platform. Blocked by: E18-S02, E17-S04. Design: none.
+Module: ops, platform. Blocked by: E18-S02, E17-S04 and v0.0.1 published. Design: none.
 
 ADRs: [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
 
@@ -4933,7 +4936,7 @@ Issue: not created yet.
 
 As a plant admin, I want the upgrade check to tell me which version to install first when I skip too far, so that I never start an upgrade that cannot work.
 
-Module: platform, ops. Blocked by: E18-S03. Design: none.
+Module: platform, ops. Blocked by: E18-S03 and v0.0.1 published. Design: none.
 
 ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md).
 
@@ -4943,12 +4946,12 @@ Acceptance criteria:
 - The release manifest carries `minimumUpgradeFrom`, the oldest of the last 3 minors in 0.x, and the release notes state it beside the rollback class.
 - `northmes migrate --check` exits 1 before boot step 1 when the installed release is older than `minimumUpgradeFrom`, naming both versions and the version to install first, and changes nothing; when the release check passes it runs boot steps 1 to 10, lists pending files at step 5 and stops before the first file.
 - `migrate --check` compares the installation's catalog with the sorted schema dump of the installed release, which the release bundle carries, and exits 1 naming each object that differs.
-- The story lands before the first release, so every released installation has a `northmes_meta.release` row; the first `migrate` writes a `northmes_meta.install` row before any file, so `docker compose up -d` resumes a first install that failed partway from the same image; `migrate --check` refuses a database with applied migrations and neither row, naming its newest applied file.
+- A v0.0.1 installation, which has no `northmes_meta.release` row, is adopted as v0.0.1 only when its applied migration files equal the list in v0.0.1's release manifest; the first `migrate` writes a `northmes_meta.install` row before any file, so `docker compose up -d` resumes a first install that failed partway from the same image; `migrate --check` refuses a database with applied migrations and neither row, naming its newest applied file.
 - The upgrade guide in `apps/docs` lists the upgrade stops.
 
 Tests first:
 
-- `apps/backend/src/migrate/migrate-release.int.test.ts`: "a successful migrate records the image version"; "a failed migrate records no release"; "migrate --check refuses a database with migrations and no release row".
+- `apps/backend/src/migrate/migrate-release.int.test.ts`: "a successful migrate records the image version"; "a failed migrate records no release"; "migrate --check refuses a database with migrations and no release row"; "a v0.0.1 database whose applied files match its manifest is adopted as v0.0.1"; "a database with one file more than v0.0.1's manifest is refused".
 - `apps/backend/src/migrate/migrate-check-path.int.test.ts`: "a database at 0.3.2 is refused for a release that upgrades from 0.4.0, naming the path".
 - `apps/backend/src/migrate/migrate-check-drift.int.test.ts`: "a column added by hand is named before any file runs".
 
@@ -5125,19 +5128,20 @@ Issue: not created yet.
 
 As a plant admin, I want one page that shows the installed release, the next release, whether I can reach it and which plugins are ready for it, beside the plugins themselves, so that I plan an upgrade and its plugin updates in one place.
 
-Module: core, web. Blocked by: E18-S07, E18-S10, E16-S03 and the Plugins page of proposed ADR 0075. Design: Updates page (a design task under this story, not started; it lays out the NorthMES and Plugins tabs, their empty, loading and stopped states, and where the later upgrade request goes).
+Module: core, web. Blocked by: E16-S03 and the Plugins page of proposed ADR 0075; the release path and plugin readiness also wait for E18-S07 and E18-S10. Design: Updates page (a design task under this story, not started; it lays out the NorthMES and Plugins tabs, their empty, loading and stopped states, and where the later upgrade request goes).
 
 ADRs: [0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md), [0075](../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md), [0045](../adr/0045-backups-restore-drills-upgrades-and-rollback.md).
 
 Acceptance criteria:
 
-- The NorthMES tab shows the installed release, a newer release when the installation knows of one, the path to it with any upgrade stop, its rollback class, the `.env` lines to paste and each installed plugin's readiness for it. It starts nothing.
+- In v0.0.1 the NorthMES tab shows the installed release, read from the running image. It starts nothing.
+- After E18-S07 and E18-S10 it also shows a newer release when the installation knows of one, the path to it with any upgrade stop, its rollback class, the `.env` line to paste and each installed plugin's readiness for it.
 - The Plugins tab is the Plugins page of proposed ADR 0075, with the same actions and permission checks.
 - System health shows a one-line summary that links to the page.
 
 Tests first:
 
-- `modules/core/test/updates-page.int.test.ts`: "an admin without the permission is refused the release query"; "a plugin with no version for the next release is listed as not ready".
+- `modules/core/test/updates-page.int.test.ts`: "an admin without the permission is refused the release query"; "a plugin with no version for the next release is listed as not ready" (with E18-S10).
 
 
 #### E18-S17 core: Show maintenance and other notices to users

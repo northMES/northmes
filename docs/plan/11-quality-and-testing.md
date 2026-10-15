@@ -367,7 +367,7 @@ A snapshot is a database as a real installation of a release left it, so an upgr
 
 - `pnpm upgrade:seed` builds one at a git tag: it starts that tag's image against a fresh Postgres, runs `northmes migrate`, creates two companies with plants through the CLI, and writes the fixture data through that release's own commands, so audit rows, versions and outbox events are what the release wrote. The fixture covers every module's tables, archived rows, the example plugins' tables, a finished and an unfinished background migration once those exist, and data in the edge cases the migrations touch (nulls, long codes, several plant time zones).
 - It writes `northmes-<version>-seed.dump` (`pg_dump -Fc`) and `northmes-<version>-seed.json`: the version, the image digest, row counts per table and the answers to the golden queries below.
-- The release workflow builds the snapshot of each release and candidate and attaches it, attested like the other assets. Before the first release, the matrix has no history, and `pnpm upgrade:seed --ref main` builds one from `main` for local use.
+- The release workflow builds the snapshot of each release and candidate and attaches it, attested like the other assets. Before the first release, the matrix has no history, and `pnpm upgrade:seed --ref main` builds one from `main` for local use. v0.0.1 is the matrix's first row; it ships before this script, so its snapshot is built from the `v0.0.1` tag and kept as a CI cache artifact instead of a release asset (ADR 0080).
 - A large snapshot, five times pilot scale (orders, job orders, audit rows, time series once Data collection exists), is built by the same script with `--scale 5` and kept as a nightly cache artifact, not a release asset.
 
 ### What an upgrade test checks
