@@ -46,6 +46,7 @@ export {
   dashboardSizeUnits,
   dashboardWidget,
   dashboardWidgetSizes,
+  dashboardWidgetSlot,
   dashboardWidgetsOverlap,
   dashboardWidgetTypes,
   saveDashboardTab,

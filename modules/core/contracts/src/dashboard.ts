@@ -3,10 +3,11 @@ import { defineCommandContract } from '@northmes/contracts';
 import { z } from 'zod';
 
 /**
- * The dashboard's widget types of release 1, four demo types whose copies differ only in their
- * settings (design shell-454, maintainer 2026-10-10).
+ * The dashboard's widget types of release 1: four demo types whose copies differ only in their
+ * settings (design shell-454, maintainer 2026-10-10), and a widget that a module or plugin
+ * contributes to the slot core/dashboard/widgets/v1 (ADR 0068, M-32).
  */
-export const dashboardWidgetTypes = ['list', 'table', 'value', 'chart'] as const;
+export const dashboardWidgetTypes = ['list', 'table', 'value', 'chart', 'contribution'] as const;
 
 export type DashboardWidgetType = (typeof dashboardWidgetTypes)[number];
 
@@ -23,7 +24,20 @@ export const dashboardSizesOf: Readonly<
   list: ['medium', 'large', 'tall'],
   table: ['large', 'tall', 'wide'],
   chart: ['large', 'medium', 'wide'],
+  contribution: ['medium', 'small', 'large', 'tall', 'wide'],
 };
+
+/** The slot of the dashboard's contributed widgets (ADR 0068). Its props are `{ plant }`. */
+export const dashboardWidgetSlot = 'core/dashboard/widgets/v1';
+
+/**
+ * A contribution's id: its module's id, a dot and a name, such as example-article-count.count
+ * (ADR 0068). The widget stores it and the web looks it up; nothing else reads it.
+ */
+const contributionId = z
+  .string()
+  .max(128)
+  .regex(/^[a-z][a-z0-9]*(-[a-z0-9]+)*\.[a-z0-9]+([.-][a-z0-9]+)*$/);
 
 /** The columns of the stored layout, the 12-column grid that the narrower ones derive from. */
 export const dashboardColumns = 12;
@@ -40,12 +54,15 @@ export const dashboardSizeUnits: Readonly<Record<DashboardWidgetSize, { w: numbe
 /**
  * One widget of a tab's layout: its type, its size, its place in grid units at 12 columns and its
  * settings. The width and height follow from the size, so a stored layout cannot hold a size its
- * type does not allow, and a widget that does not fit the 12 columns is refused.
+ * type does not allow, and a widget that does not fit the 12 columns is refused. A contributed
+ * widget names its contribution.
  */
 export const dashboardWidget = z
   .object({
     id: z.string().min(1).max(64),
     type: z.enum(dashboardWidgetTypes),
+    /** The contribution a widget of type contribution shows; no other type has one. */
+    contribution: contributionId.optional(),
     size: z.enum(dashboardWidgetSizes),
     x: z
       .int()
@@ -53,6 +70,10 @@ export const dashboardWidget = z
       .max(dashboardColumns - 1),
     y: z.int().min(0).max(10_000),
     settings: z.object({ title: z.string().trim().min(1).max(80) }),
+  })
+  .refine(({ type, contribution }) => (type === 'contribution') === (contribution !== undefined), {
+    message: 'A contributed widget names its contribution, and only it',
+    path: ['contribution'],
   })
   .refine(({ type, size }) => dashboardSizesOf[type].includes(size), {
     message: 'The widget type does not allow this size',
