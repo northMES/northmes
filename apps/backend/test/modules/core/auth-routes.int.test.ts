@@ -80,8 +80,10 @@ describe("Better Auth's routes over HTTP", () => {
         headers: { 'content-type': 'application/json', origin: webOrigin },
         ...(method === 'GET' || method === '*' ? {} : { body: '{}' }),
       });
-      await response.body?.cancel();
-      if (response.status !== 404) open.push(path);
+      // A closed route answers a plain "Not Found", before it runs. A route that runs and answers
+      // 404 itself, as for an invitation it cannot find, answers a JSON error and counts as open.
+      const closed = response.status === 404 && (await response.text()) === 'Not Found';
+      if (!closed) open.push(path);
     }
 
     expect(endpoints.length).toBeGreaterThan(50);
