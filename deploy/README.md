@@ -76,7 +76,7 @@ NorthMES can use a Postgres 18 server you already run, next to the other databas
    NORTHMES_DB_ADMIN_USER=northmes_admin
    ```
 
-   The URL never holds a user or a password: NorthMES refuses one that does. `sslmode=verify-full` checks the server's certificate against the public certificate authorities; drop it only for a server that does not offer TLS. Use a direct connection, not a pooler in transaction mode, because migrations hold a session lock.
+   The URL never holds a user or a password: NorthMES refuses one that does. Keep `sslmode=verify-full`: it encrypts the connection and checks the server's certificate against the public certificate authorities, so the server must offer TLS. Use a direct connection, not a pooler in transaction mode, because migrations hold a session lock.
 
 3. Put the admin's password in `secrets/postgres_password` instead of a random value. Create the other secret files as in [Install](#install).
 
