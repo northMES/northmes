@@ -34,3 +34,21 @@ describe("the web's dev server", () => {
     expect(server?.proxy).toEqual({});
   });
 });
+
+describe("the web's build", () => {
+  it('the web build writes source maps when NORTHMES_SOURCEMAP is 1', () => {
+    vi.stubEnv('NORTHMES_SOURCEMAP', '1');
+
+    const { build } = config({ command: 'build', mode: 'production' });
+
+    expect(build?.sourcemap).toBe(true);
+  });
+
+  it('the web build writes no source maps without NORTHMES_SOURCEMAP', () => {
+    vi.stubEnv('NORTHMES_SOURCEMAP', undefined);
+
+    const { build } = config({ command: 'build', mode: 'production' });
+
+    expect(build?.sourcemap).toBe(false);
+  });
+});

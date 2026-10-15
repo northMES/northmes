@@ -13,7 +13,7 @@ import vitestConfig from '../../vitest.config.ts';
 
 interface TurboConfig {
   globalDependencies?: string[];
-  tasks?: Record<string, { cache?: boolean }>;
+  tasks?: Record<string, { cache?: boolean; env?: string[] }>;
 }
 
 interface BiomeConfig {
@@ -141,6 +141,15 @@ describe('tooling', () => {
       expect(tasks[name]?.cache, name).not.toBe(false);
     }
     expect(Object.keys(tasks).filter((name) => name.startsWith('test'))).toEqual([]);
+  });
+
+  it('the backend build emits source maps, and NORTHMES_SOURCEMAP reaches the build task and its cache key', () => {
+    const backend = readJson<{ compilerOptions?: { sourceMap?: boolean } }>(
+      'apps/backend/tsconfig.build.json',
+    );
+
+    expect(backend.compilerOptions?.sourceMap).toBe(true);
+    expect(readJson<TurboConfig>('turbo.json').tasks?.build?.env).toContain('NORTHMES_SOURCEMAP');
   });
 
   it('turbo.json sets only keys that the installed turbo schema knows', () => {
