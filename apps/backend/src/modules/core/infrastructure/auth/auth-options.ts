@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { apiKey } from '@better-auth/api-key';
-import type { BetterAuthOptions } from 'better-auth';
+import type { BetterAuthOptions, BetterAuthPlugin } from 'better-auth';
 import { admin, bearer, jwt, organization, username } from 'better-auth/plugins';
 import type { Dialect } from 'kysely';
 
@@ -61,6 +61,30 @@ export const disabledPaths: readonly string[] = [
   '/update-user',
 ];
 
+/**
+ * The Better Auth routes that answer over HTTP: the ones the web calls, which are sign-in, the JWT
+ * and sign-out. Every other route answers 404, the organization plugin's among them, which would
+ * show a member every colleague's email and let them leave the company (ADR 0011). NorthMES calls
+ * those plugins only on the server, through auth.api.
+ */
+export const openPaths: readonly string[] = ['/sign-in/email', '/sign-out', '/token'];
+
+/**
+ * Answers 404 for a request to any route outside openPaths, before the route runs. disabledPaths
+ * alone is not enough: it matches exact paths, so it cannot close a route with a parameter such as
+ * /callback/:id, and a route that a Better Auth upgrade adds would answer until someone listed it.
+ */
+function onlyOpenPaths(): BetterAuthPlugin {
+  return {
+    id: 'northmes-open-paths',
+    onRequest: async (request) => {
+      const { pathname } = new URL(request.url);
+      if (openPaths.some((path) => pathname === `${AUTH_BASE_PATH}${path}`)) return;
+      return { response: new Response('Not Found', { status: 404 }) };
+    },
+  };
+}
+
 export interface AuthOptionsInput {
   /** The database Better Auth reads and writes, through its own pool as nm_auth. */
   readonly dialect: Dialect;
@@ -76,7 +100,7 @@ export interface AuthOptionsInput {
  * Better Auth's options in NorthMES (ADR 0010): the username plugin for the never-reassigned
  * handle (its sign-in path is disabled), the organization, admin and api-key plugins, and the bearer and jwt plugins that give the web a short-lived JWT, since the web and
  * the API may be on different origins. The session token that mints the JWTs lives
- * SESSION_LIFETIME_SECONDS. Sign-up is disabled, ids are uuids and the tables are in the
+ * SESSION_LIFETIME_SECONDS. Only openPaths answer over HTTP. Sign-up is disabled, ids are uuids and the tables are in the
  * auth schema. The same options build the runtime instance and core's migration, and the drift
  * test compares the two.
  */
@@ -117,6 +141,7 @@ export function authOptions({ dialect, baseURL, secret, webOrigins }: AuthOption
       admin(),
       apiKey(),
       bearer(),
+      onlyOpenPaths(),
       jwt({
         jwt: {
           expirationTime: JWT_LIFETIME,

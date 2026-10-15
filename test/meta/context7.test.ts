@@ -6,6 +6,8 @@ interface Context7Config {
   folders?: string[];
   excludeFolders?: string[];
   excludeFiles?: string[];
+  url?: string;
+  public_key?: string;
 }
 
 // Context7 indexes the Markdown in the repository for coding agents (ADR 0048). Without a
@@ -25,5 +27,13 @@ describe('context7.json', () => {
 
   it('ADR0048 keeps the changelog and license out, since setting exclusions drops the defaults', () => {
     expect(config().excludeFiles).toEqual(expect.arrayContaining(['CHANGELOG.md', 'LICENSE.md']));
+  });
+
+  // Claiming the library on Context7 ties it to this repository: Context7 checks that the
+  // repository's context7.json names the library's url and its public key, which is meant to be
+  // public.
+  it('ADR0048 claims the northmes/northmes library on Context7', () => {
+    expect(config().url).toBe('https://context7.com/northmes/northmes');
+    expect(config().public_key).toMatch(/^pk_\w+$/);
   });
 });
