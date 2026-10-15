@@ -25,6 +25,10 @@ const archiveMutation = `mutation ($input: CoreArchiveArticleInput!) {
   coreArchiveArticle(input: $input) { ${fields} }
 }`;
 
+const upsertMutation = `mutation ($input: CoreUpsertArticleInput!) {
+  coreUpsertArticle(input: $input) { ${fields} }
+}`;
+
 const restoreMutation = `mutation ($input: CoreRestoreArticleInput!) {
   coreRestoreArticle(input: $input) { ${fields} }
 }`;
@@ -144,6 +148,39 @@ describe('the events of core’s article commands', () => {
       { event: 'core.article.updated', entity_version: '2', data, command: 'core.updateArticle' },
       { event: 'core.article.archived', entity_version: '3', data, command: 'core.archiveArticle' },
       { event: 'core.article.restored', entity_version: '4', data, command: 'core.restoreArticle' },
+    ]);
+  });
+
+  it('E05-S09 coreUpsertArticle writes core.article.updated with the new version when it changes an article, and no event when nothing changed', async () => {
+    const client = await clientAt(given.plant());
+    const id = randomUUIDv7();
+    const upsert = (name: string) =>
+      client.send(upsertMutation, { input: { id, code: 'UP-100', name, source: 'Pyramid' } });
+    await upsert('Bolt');
+
+    await upsert('Bolt, zinc');
+    await upsert('Bolt, zinc');
+
+    expect(
+      (await eventsOf(id)).map(({ event, entity_version, scope_id, data }) => ({
+        event,
+        entity_version,
+        scope_id,
+        data,
+      })),
+    ).toEqual([
+      {
+        event: 'core.article.created',
+        entity_version: '1',
+        scope_id: await editScopeOf(id),
+        data: { code: 'UP-100', name: 'Bolt' },
+      },
+      {
+        event: 'core.article.updated',
+        entity_version: '2',
+        scope_id: await editScopeOf(id),
+        data: { code: 'UP-100', name: 'Bolt, zinc' },
+      },
     ]);
   });
 
