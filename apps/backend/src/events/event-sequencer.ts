@@ -5,8 +5,9 @@ import {
   Logger,
   type OnApplicationBootstrap,
   type OnApplicationShutdown,
+  Optional,
 } from '@nestjs/common';
-import type { ConfigService } from '@nestjs/config';
+import { ConfigService } from '@nestjs/config';
 import type { ServerEnv } from '@northmes/sdk/config';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
 import { sql } from 'kysely';
@@ -21,8 +22,8 @@ const IDLE_MS = 200;
 /**
  * Publishes the event log: every IDLE_MS it runs one batch of core.sequence_events, which gives
  * the committed events without a position theirs, in insertion order (ADR 0014). It runs in roles
- * worker and all; role api only writes events, and the CLI, which has no role, runs none. A batch
- * that fails is logged and the next one tries again.
+ * worker and all; role api only writes events, and an app without NORTHMES_ROLE, such as the
+ * CLI's, runs none. A batch that fails is logged and the next one tries again.
  */
 @Injectable()
 export class EventSequencer implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -33,11 +34,11 @@ export class EventSequencer implements OnApplicationBootstrap, OnApplicationShut
 
   constructor(
     @Inject(DATABASE) private readonly database: ScopedDatabase<unknown>,
-    private readonly config: ConfigService<ServerEnv, true>,
+    @Optional() @Inject(ConfigService) private readonly config?: ConfigService<ServerEnv, true>,
   ) {}
 
   onApplicationBootstrap(): void {
-    const role = this.config.get('NORTHMES_ROLE', { infer: true }) as string | undefined;
+    const role = this.config?.get('NORTHMES_ROLE', { infer: true }) as string | undefined;
     if (role === 'all' || role === 'worker') this.#schedule();
   }
 
