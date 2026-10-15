@@ -611,3 +611,88 @@ describe('context.require of CommandBusImpl', () => {
     ]);
   });
 });
+
+/** Saves the layout of a dashboard tab (ADR 0078). */
+const saveTab = defineCommandContract({
+  name: 'core.saveDashboardTab',
+  target: 'existing',
+  fields: z.object({ layout: z.string() }),
+  permission: 'core.dashboardTab:manage',
+});
+
+/** A tab at the company owned by `ownerId`, or shared with null, and the spies of its command. */
+function saveOfTabOwnedBy(ownerId: string | null) {
+  const load = vi.fn(async (id: string) => ({
+    id,
+    version: 1,
+    scope_id: COMPANY,
+    owner_id: ownerId,
+  }));
+  const handle = vi.fn(async () => ({ saved: true }));
+  const command: Command<
+    { id: string; expectedVersion: number; layout: string },
+    { saved: boolean },
+    TargetRow & { owner_id: string | null }
+  > = {
+    contract: saveTab,
+    target: {
+      entity: 'Dashboard tab',
+      scopeOf: async () => COMPANY,
+      load,
+      ownerOf: (row) => row.owner_id,
+    },
+    handle,
+  };
+  return { command, handle };
+}
+
+describe('own rows in the permission step of CommandBusImpl (ADR 0078)', () => {
+  const input = { id: ORDER_ID, expectedVersion: 1, layout: '[]' };
+  // Reads plant A and its company, and holds no dashboard permission.
+  const viewer = principalHolding({ [PLANT_A]: ['planning.productionOrder:read'] });
+
+  it("ADR0078 a user changes a row the target names as the user's own without the command's permission", async () => {
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
+    const { command, handle } = saveOfTabOwnedBy(viewer.userId);
+
+    const result = await runAs(viewer, () => bus.run(command, input));
+
+    expect(result).toEqual({ saved: true });
+    expect(handle).toHaveBeenCalledOnce();
+  });
+
+  it("ADR0078 a shared row and another user's row still need the command's permission", async () => {
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
+    const shared = saveOfTabOwnedBy(null);
+    const others = saveOfTabOwnedBy('019a0000-0000-7000-8000-0000000000e2');
+    const manager = principalHolding({ [COMPANY]: ['core.dashboardTab:manage'] });
+
+    expect(await refusalOf(runAs(viewer, () => bus.run(shared.command, input)))).toEqual(forbidden);
+    expect(await refusalOf(runAs(viewer, () => bus.run(others.command, input)))).toEqual(forbidden);
+    expect(await runAs(manager, () => bus.run(shared.command, input))).toEqual({ saved: true });
+    expect(shared.handle).toHaveBeenCalledOnce();
+    expect(others.handle).not.toHaveBeenCalled();
+  });
+
+  it('ADR0078 an empty owner never matches, not even a principal with an empty user id', async () => {
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
+    const { command, handle } = saveOfTabOwnedBy('');
+    const nobody = { ...viewer, userId: '' };
+
+    expect(await refusalOf(runAs(nobody, () => bus.run(command, input)))).toEqual(forbidden);
+    expect(handle).not.toHaveBeenCalled();
+  });
+
+  it("ADR0078 the version step still runs on the user's own row", async () => {
+    const bus = new CommandBusImpl(new FakeScopedDatabase(), { modules: ['core'], validators: [] });
+    const { command, handle } = saveOfTabOwnedBy(viewer.userId);
+
+    const run = runAs(viewer, () => bus.run(command, { ...input, expectedVersion: 2 }));
+
+    expect(await refusalOf(run)).toEqual({
+      code: 'core.version_conflict',
+      status: HttpStatus.CONFLICT,
+    });
+    expect(handle).not.toHaveBeenCalled();
+  });
+});

@@ -62,6 +62,14 @@ export interface CommandTarget<Target> {
    * is at the principal's scopes.
    */
   load(id: string, context: Pick<HandlerContext, 'tx' | 'plantId'>): Promise<Target | undefined>;
+  /**
+   * The user id that owns the locked row, or null for a row that no one user owns. When it names
+   * the principal's own user, the bus runs the command without the contract's permission, since
+   * the row is the user's own, such as a user's own dashboard tab (ADR 0078). The row's table must
+   * keep such rows to their owner by row-level security, so load finds no other user's row. A
+   * target without it always needs the permission.
+   */
+  ownerOf?(row: Target): string | null;
 }
 
 /** A command as the bus runs it: the owner's contract and the module's server code for it. */
