@@ -8,6 +8,7 @@ import { emptyTemplateDatabase, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { inRepoCatalog } from '../../../src/boot/boot.ts';
 import { migrate } from '../../../src/migrate/runner.ts';
+import { JWT_KEY_ROTATION_SECONDS } from '../../../src/modules/core/infrastructure/auth/auth-options.ts';
 
 /** core's migrations folder. */
 const coreMigrations = fileURLToPath(
@@ -53,14 +54,15 @@ describe('the migration that gives older JWT keys an expiry', () => {
 
     await migrate({ ownerUrl: db.ownerUrl, catalog: catalogIn(coreMigrations) });
 
-    const keys = await queryAsCore<{ id: string; lifetime: string; live: boolean }>(
+    const keys = await queryAsCore<{ id: string; lifetime: number; live: boolean }>(
       db.ownerUrl,
-      `select id, ("expiresAt" - "createdAt")::text as lifetime, "expiresAt" > now() as live
+      `select id, extract(epoch from "expiresAt" - "createdAt")::int as lifetime,
+              "expiresAt" > now() as live
          from auth.jwks order by "createdAt"`,
     );
     expect(keys).toEqual([
-      { id: old?.id, lifetime: '30 days', live: false },
-      { id: recent?.id, lifetime: '30 days', live: true },
+      { id: old?.id, lifetime: JWT_KEY_ROTATION_SECONDS, live: false },
+      { id: recent?.id, lifetime: JWT_KEY_ROTATION_SECONDS, live: true },
     ]);
   });
 });
