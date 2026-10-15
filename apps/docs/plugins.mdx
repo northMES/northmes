@@ -1,0 +1,100 @@
+---
+title: Install and maintain plugins
+description: Add, upgrade and remove NorthMES plugins on a Docker Compose installation with npm, without rebuilding the image.
+---
+
+A plugin adds screens, fields, checks or integrations to NorthMES. Plugins install into the official NorthMES image without a rebuild: they live in the `plugins` volume beside it, and NorthMES loads them when it starts.
+
+<Warning>
+  A plugin runs with full access inside NorthMES: in the server, in the database schema it owns, and in every user's browser. Install plugins only from a publisher you trust, and only from a registry or a file you chose.
+</Warning>
+
+## How it works
+
+- The `plugins` volume is an ordinary npm project: a `package.json`, a `package-lock.json` and `node_modules/`.
+- You run npm in the one-off `plugins` service, never in `app`. `app` reads the volume but cannot write to it.
+- When `app` starts, it loads every package that `dependencies` in the volume's `package.json` names. `npm install` and `npm uninstall` keep that list current, so there is nothing else to edit.
+- A plugin that brings its own database tables adds them through `migrate`, like NorthMES itself.
+- Every change restarts `app`. All users and stations lose the connection for that moment, so make changes between shifts.
+
+## Install a plugin
+
+<Steps>
+  <Step title="Install the package into the plugins volume">
+    ```sh
+    docker compose run --rm plugins npm install --omit=peer --ignore-scripts @acme/my-plugin
+    ```
+
+    `--ignore-scripts` stops the package from running install scripts on your host. `--omit=peer` leaves out the packages NorthMES already provides.
+  </Step>
+  <Step title="Apply the plugin's migrations">
+    ```sh
+    docker compose run --rm migrate
+    ```
+  </Step>
+  <Step title="Restart NorthMES">
+    ```sh
+    docker compose restart app
+    ```
+
+    The plugin's screens appear in the navigation for users who hold its permissions.
+
+    ![A plugin screen in the NorthMES navigation](/images/plugins/plugin-in-navigation.png)
+  </Step>
+</Steps>
+
+If `app` does not come back, `docker compose logs app` names the plugin that failed to load and why.
+
+## Install without internet access
+
+Copy the plugin's packed file (for example `my-plugin-1.0.0.tgz`) to the host, then install it from the file:
+
+```sh
+docker compose run --rm -v "$PWD/my-plugin-1.0.0.tgz:/tmp/my-plugin-1.0.0.tgz:ro" \
+  plugins npm install --omit=peer --ignore-scripts /tmp/my-plugin-1.0.0.tgz
+docker compose run --rm migrate
+docker compose restart app
+```
+
+## See what is installed
+
+```sh
+docker compose run --rm plugins npm ls --depth=0
+```
+
+## Upgrade a plugin
+
+Install the version you want, then apply its migrations and restart:
+
+```sh
+docker compose run --rm plugins npm install --omit=peer --ignore-scripts @acme/my-plugin@2.1.0
+docker compose run --rm migrate
+docker compose restart app
+```
+
+Read the plugin's release notes first. A plugin version that adds a migration cannot simply be swapped back for the older version afterwards.
+
+## Remove a plugin
+
+```sh
+docker compose run --rm plugins npm uninstall @acme/my-plugin
+docker compose restart app
+```
+
+The plugin's database tables and their data stay, so installing it again later finds its data.
+
+## Before you upgrade NorthMES
+
+Each plugin declares the NorthMES versions it works with. NorthMES refuses to start with a plugin that does not cover its version, and `docker compose logs app` names the plugin.
+
+Before you change `NORTHMES_VERSION`:
+
+1. Check each installed plugin's release notes for a version that supports the new NorthMES version.
+2. Upgrade those plugins as in [Upgrade a plugin](#upgrade-a-plugin), but skip the restart.
+3. Upgrade NorthMES as in [Upgrade](/install#upgrade). `migrate` then applies the migrations of NorthMES and of the plugins together.
+
+If a plugin has no compatible version yet, remove it or wait with the NorthMES upgrade.
+
+## Back up the plugins volume
+
+The `plugins` volume is part of your installation, like the `db-data` volume. Include both in your backups, so a restore brings back the plugins that match the database.

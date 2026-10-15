@@ -1,0 +1,132 @@
+---
+title: Install NorthMES
+description: Run NorthMES on one Linux host with Docker Compose, from a fresh host to the first sign-in.
+---
+
+NorthMES runs on one host as five Docker Compose services. The release bundle holds everything the host needs: `compose.yaml`, `Caddyfile` and `northmes.env.example`.
+
+| Service | What it does |
+|---|---|
+| `db` | Postgres 18, with its data in the `db-data` volume |
+| `bootstrap` | Creates the database roles, then exits. A second run changes nothing |
+| `migrate` | Applies the pending database migrations, then exits. `app` starts only after it succeeds |
+| `app` | NorthMES itself: the API and the web app, reachable only inside the Compose network |
+| `caddy` | Serves HTTPS on port 443, and redirects port 80 to it |
+
+<Warning>
+  Release 0.0.1 has no backups and no offline install yet. Do not keep production data in it.
+</Warning>
+
+## Before you start
+
+You need:
+
+- A Linux host with Docker Engine and the Compose plugin.
+- Ports 80 and 443 free on the host.
+- A host name that the browsers on the shop floor and in the office can reach, such as `northmes.plant.local`.
+
+## Install
+
+<Steps>
+  <Step title="Copy the bundle to the host">
+    Download the bundle from the release page, unpack it on the host and go into its folder.
+  </Step>
+  <Step title="Create the settings file">
+    ```sh
+    cp northmes.env.example .env
+    ```
+
+    Edit `.env`:
+
+    - `NORTHMES_VERSION`: paste the line from the release notes, for example `NORTHMES_VERSION=0.0.1@sha256:...`. The digest pins the exact image.
+    - `NORTHMES_HOST`: the host name browsers use.
+    - `NORTHMES_BIND_IP`: the address Caddy listens on. Keep `0.0.0.0` to listen on every address of the host.
+  </Step>
+  <Step title="Create the secret files">
+    Each file holds one random value. Only the user the NorthMES image runs as (uid 1000) can read them.
+
+    ```sh
+    mkdir -p secrets
+    for name in postgres_password db_owner_password db_app_password db_auth_password auth_secret; do
+      openssl rand -hex 32 > "secrets/$name"
+    done
+    sudo chown 1000:1000 secrets/*
+    chmod 600 secrets/*
+    ```
+
+    Keep a copy of `secrets/` somewhere safe. Without it you cannot reach the database in the `db-data` volume.
+  </Step>
+  <Step title="Start NorthMES">
+    ```sh
+    docker compose up -d
+    ```
+
+    `bootstrap` and `migrate` run once and exit, then `app` and `caddy` start. `docker compose ps` shows the state of each service.
+  </Step>
+  <Step title="Create your company and its first admin">
+    ```sh
+    docker compose run --rm app company create --name "Your company" \
+      --admin-username admin --admin-email admin@example.com --reason "first install"
+    ```
+
+    The command prints a temporary password once. Copy it now.
+  </Step>
+  <Step title="Sign in">
+    Open `https://<NORTHMES_HOST>/sign-in` and sign in with the email and the temporary password. NorthMES then asks you to choose a new password.
+
+    ![The NorthMES sign-in page](/images/install/sign-in.png)
+  </Step>
+</Steps>
+
+## Trust the certificate
+
+The browser warns about the certificate on the first visit, because Caddy signed it with its own certificate authority. To remove the warning, copy Caddy's root certificate out of the container and add it to the trusted certificates of each computer that uses NorthMES:
+
+```sh
+docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./northmes-root.crt
+```
+
+## Upgrade
+
+<Steps>
+  <Step title="Read the release notes">
+    They give the new `NORTHMES_VERSION` line, and say whether the release adds database migrations.
+  </Step>
+  <Step title="Change the version">
+    Put the new line in `.env` in place of the old one.
+  </Step>
+  <Step title="Restart on the new version">
+    ```sh
+    docker compose pull
+    docker compose down
+    docker compose up -d
+    ```
+  </Step>
+</Steps>
+
+`migrate` prints each migration it applies. If it fails, `app` does not start, and `docker compose logs migrate` shows why.
+
+If you installed plugins, read [Before you upgrade NorthMES](/plugins#before-you-upgrade-northmes) first.
+
+## Go back to the previous version
+
+Put the previous `NORTHMES_VERSION` line back in `.env`, then run:
+
+```sh
+docker compose down
+docker compose up -d
+```
+
+This works only while the newer release added no migration. The release notes say whether it did.
+
+## Files that stay yours
+
+`.env`, `secrets/` and a `compose.override.yaml` you add are never part of a release. Copying a newer bundle over the folder keeps them.
+
+## When something goes wrong
+
+| What you see | Where to look |
+|---|---|
+| `app` does not start | `docker compose logs migrate`, then `docker compose logs app` |
+| The browser cannot connect | `docker compose ps caddy`, and that ports 80 and 443 are open on the host's firewall |
+| A secret file error at start | The owner and mode of the files in `secrets/` (uid 1000, mode 600) |
