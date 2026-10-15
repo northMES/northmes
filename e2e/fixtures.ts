@@ -23,6 +23,9 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 /** The seed's plant A, where the specs work. */
 export const plant = seedPlants[0]?.slug ?? '';
 
+/** How many times this worker's signIn has signed in. */
+let signIns = 0;
+
 /** How many codes each running test has taken so far. */
 const codesTaken = new WeakMap<object, number>();
 
@@ -168,6 +171,8 @@ export const test = base.extend<Fixtures, { stack: Stack } & WorkerOptions>({
           PORT: String(port),
           NORTHMES_PUBLIC_ORIGIN: origin,
           ...(config.file ? { NORTHMES_CONFIG: config.file } : {}),
+          // The specs sit behind a pretend proxy, so signIn can name a client of its own (#476).
+          NORTHMES_TRUSTED_PROXY_HOPS: '1',
         },
       });
       try {
@@ -196,6 +201,12 @@ export const test = base.extend<Fixtures, { stack: Stack } & WorkerOptions>({
   },
   signIn: async ({ page }, use) => {
     await use(async (href) => {
+      // Each sign-in comes from a client address of its own, so the server's throttle of 3
+      // sign-ins in 10 seconds per client does not refuse a fast run of specs (#476).
+      signIns += 1;
+      await page.setExtraHTTPHeaders({
+        'x-forwarded-for': `10.0.${(signIns >> 8) & 255}.${signIns & 255}`,
+      });
       await page.goto(href);
       await page.getByLabel('Email').fill(devAdmin.email);
       await page.getByLabel('Password', { exact: true }).fill(devAdmin.password);

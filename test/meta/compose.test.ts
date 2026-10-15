@@ -109,6 +109,8 @@ describe('the Compose bundle (ADR 0080)', () => {
     expect(services.app?.environment?.NORTHMES_PUBLIC_ORIGIN).toMatch(/^https:\/\//);
     // app listens on the Compose network, which only caddy publishes.
     expect(services.app?.environment?.NORTHMES_LISTEN_HOST).toBe('0.0.0.0');
+    // caddy is the one proxy in front of app, so sign-in is throttled per client it reports (#476).
+    expect(services.app?.environment?.NORTHMES_TRUSTED_PROXY_HOPS).toBe('1');
   });
 
   it('runs bootstrap, migrate and app read-only, with no capabilities and no new privileges (ADR 0044)', () => {
