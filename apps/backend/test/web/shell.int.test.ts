@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +9,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 // A built web app in the layout apps/web builds: index.html and the hashed files in assets/.
 const shellDir = fileURLToPath(new URL('../fixtures/web/shell/', import.meta.url));
+
+// The same web app with the import map of ADR 0075 and a shared file under shared/.
+const shellWithImportMap = fileURLToPath(
+  new URL('../fixtures/web/shell-with-import-map/', import.meta.url),
+);
 
 let testApp: TestApp | undefined;
 
@@ -23,8 +29,8 @@ async function cachingOf(url: string) {
 }
 
 /** Boots the in-repo modules that `modules` names with the fixture web app and returns its URL. */
-async function serve(modules: readonly string[]): Promise<string> {
-  testApp = await createTestApp({ modules, hostFactory: hostFactoryWithShell(shellDir) });
+async function serve(modules: readonly string[], dir = shellDir): Promise<string> {
+  testApp = await createTestApp({ modules, hostFactory: hostFactoryWithShell(dir) });
   await testApp.app.listen(0, '127.0.0.1');
   return testApp.app.getUrl();
 }
@@ -102,5 +108,45 @@ describe('the shell', () => {
 
     expect(response.status).toBe(404);
     expect(await response.text()).not.toContain(shellDir);
+  });
+
+  it("ADR 0075 a shell with an import map admits it in script-src by the hash of the map's text", async () => {
+    const url = await serve(['core'], shellWithImportMap);
+    const index = readFileSync(join(shellWithImportMap, 'index.html'), 'utf8');
+    const map = /<script type="importmap">([\s\S]*?)<\/script>/.exec(index)?.[1] ?? '';
+    const hash = createHash('sha256').update(map).digest('base64');
+
+    const response = await fetch(`${url}/`);
+
+    expect(response.headers.get('content-security-policy')).toBe(
+      `default-src 'self'; script-src 'self' 'sha256-${hash}'; style-src 'self'; ` +
+        "connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; " +
+        "frame-ancestors 'none'",
+    );
+  });
+
+  it('ADR 0075 the shared files under /shared/ are served as JavaScript that is revalidated, and a missing one is 404', async () => {
+    const url = await serve(['core'], shellWithImportMap);
+
+    const shared = await fetch(`${url}/shared/react.js`);
+    const missing = await fetch(`${url}/shared/missing.js`);
+
+    expect({
+      status: shared.status,
+      type: shared.headers.get('content-type'),
+      cacheControl: shared.headers.get('cache-control'),
+      nosniff: shared.headers.get('x-content-type-options'),
+      body: await shared.text(),
+    }).toEqual({
+      status: 200,
+      type: 'text/javascript; charset=utf-8',
+      cacheControl: 'no-cache',
+      nosniff: 'nosniff',
+      body: "export default 'the shared react';\n",
+    });
+    expect({ status: missing.status, body: await missing.text() }).toEqual({
+      status: 404,
+      body: '',
+    });
   });
 });

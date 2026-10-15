@@ -46,15 +46,17 @@ describe('gen', () => {
     return existsSync(join(root, path)) ? readFileSync(join(root, path), 'utf8') : undefined;
   }
 
-  it('the stages print the schema first, then the web documents that read it', () => {
+  it('the stages print the schema first, then the web documents that read it, then the shared web files', () => {
     expect(Object.isFrozen(stages)).toBe(true);
     expect(stages.map((stage: { name: string }) => stage.name)).toEqual([
       'schema',
       'web documents',
+      'shared web',
     ]);
     expect(stages.map((stage: { outputs: string[] }) => stage.outputs)).toEqual([
       ['schema/api.graphql'],
       ['apps/web/src/**/*.graphql.gen.ts'],
+      ['apps/web/public/shared/*.js'],
     ]);
   });
 

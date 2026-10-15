@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 /**
  * The words a plant slug may not be: a plant slug is the first segment of a web path (`/$plant`),
- * and these are the server's paths (ADR 0064), the station and company settings mounts, the former
+ * and these are the server's paths (ADR 0064), the shared files of plugin screens (ADR 0075), the station and company settings mounts, the former
  * admin mount (ADR 0066) and the web's sign-in page.
  */
 export const reservedPlantSlugs: ReadonlySet<string> = new Set([
@@ -13,6 +13,7 @@ export const reservedPlantSlugs: ReadonlySet<string> = new Set([
   'health',
   'modules',
   'assets',
+  'shared',
   'station',
   'settings',
   'admin',

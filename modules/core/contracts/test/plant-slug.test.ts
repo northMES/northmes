@@ -16,6 +16,7 @@ describe('plant slug', () => {
       'health',
       'modules',
       'assets',
+      'shared',
       'station',
       'settings',
       'admin',

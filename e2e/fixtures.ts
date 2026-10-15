@@ -1,10 +1,14 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { unitOf } from '@northmes/contracts';
 import { coreLinks } from '@northmes/core-contracts';
 import { test as base, expect } from '@playwright/test';
 import pg from 'pg';
+import { main as buildPlugin } from '../scripts/plugin-build.mjs';
 import { readSecret } from '../scripts/stack/config.mjs';
 import { freePort } from '../scripts/stack/ports.mjs';
 import { devAdmin, seedPlants } from '../scripts/stack/seed.mjs';
@@ -40,6 +44,39 @@ export function uniqueCode(prefix: string): string {
 /** A worker's own server: its origin, on a database cloned from the stack's seeded one. */
 interface Stack {
   readonly origin: string;
+}
+
+interface WorkerOptions {
+  /**
+   * The example plugins under examples/ that the worker's server loads, by id, such as
+   * example-sidebar-page. The worker builds each with pnpm plugin:build and lists it in a
+   * northmes.config.json of its own. A spec sets it with test.use, which gives it its own worker.
+   */
+  readonly plugins: readonly string[];
+}
+
+/**
+ * Builds the example plugins `ids` into plugins/ and writes a northmes.config.json that lists them
+ * into a fresh folder, and returns its path and a function that removes the folder. With no
+ * plugins it returns no file, and the server reads the repository's.
+ */
+async function configWithPlugins(
+  ids: readonly string[],
+): Promise<{ file?: string; remove: () => void }> {
+  if (ids.length === 0) return { remove: () => {} };
+  const errors: string[] = [];
+  for (const id of ids) {
+    const exitCode = await buildPlugin([id], {
+      log: () => {},
+      error: (line) => errors.push(line),
+      root,
+    });
+    if (exitCode !== 0) throw new Error(`pnpm plugin:build ${id} failed:\n${errors.join('\n')}`);
+  }
+  const dir = mkdtempSync(join(tmpdir(), 'northmes-e2e-config-'));
+  const file = join(dir, 'northmes.config.json');
+  writeFileSync(file, JSON.stringify({ plugins: ids.map((id) => join(root, 'plugins', id)) }));
+  return { file, remove: () => rmSync(dir, { recursive: true, force: true }) };
 }
 
 interface Fixtures {
@@ -100,10 +137,10 @@ function listening(server: ChildProcess): Promise<void> {
   });
 }
 
-export const test = base.extend<Fixtures, { stack: Stack }>({
+export const test = base.extend<Fixtures, { stack: Stack } & WorkerOptions>({
+  plugins: [[], { option: true, scope: 'worker' }],
   stack: [
-    // biome-ignore lint/correctness/noEmptyPattern: Playwright reads a fixture's dependencies from the destructured first parameter, and this one has none.
-    async ({}, use, workerInfo) => {
+    async ({ plugins }, use, workerInfo) => {
       const env = stackEnv();
       const database = `e2e_${workerInfo.parallelIndex}`;
       // A worker that replaces a failed one gets the same parallelIndex, so an earlier clone goes
@@ -120,6 +157,7 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
       // fixture takes a free port rather than PORT=0.
       const port = await freePort();
       const origin = `http://127.0.0.1:${port}`;
+      const config = await configWithPlugins(plugins);
       const server = spawn('node', ['apps/backend/dist/main.js'], {
         cwd: root,
         env: {
@@ -129,6 +167,7 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
           NORTHMES_ROLE: 'all',
           PORT: String(port),
           NORTHMES_PUBLIC_ORIGIN: origin,
+          ...(config.file ? { NORTHMES_CONFIG: config.file } : {}),
         },
       });
       try {
@@ -143,6 +182,7 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
           await exited;
         }
         await asSuperuser(env, `drop database if exists ${database} with (force)`);
+        config.remove();
       }
     },
     { scope: 'worker' },
