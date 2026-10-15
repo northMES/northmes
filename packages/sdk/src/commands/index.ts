@@ -7,6 +7,7 @@ export {
   type CommandBus,
   type CommandTarget,
   type HandlerContext,
+  type PublishedEntity,
   type TargetRow,
 } from './command-bus.ts';
 export {

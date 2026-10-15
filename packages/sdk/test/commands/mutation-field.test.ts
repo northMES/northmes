@@ -35,7 +35,12 @@ class FakeCommandBus implements CommandBus {
   ): Promise<Result> {
     this.calls.push({ command, input });
     const tx = {} as Transaction<unknown>;
-    const context = { tx, plantId: undefined, require: () => undefined };
+    const context = {
+      tx,
+      plantId: undefined,
+      require: () => undefined,
+      publish: async () => undefined,
+    };
     const target = (await command.target?.load((input as { id: string }).id, context)) as Target;
     return command.handle(input, { ...context, target });
   }
