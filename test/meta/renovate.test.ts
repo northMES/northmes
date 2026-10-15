@@ -14,6 +14,12 @@ interface RenovateConfig {
     readonly matchStrings: readonly string[];
     readonly datasourceTemplate?: string;
   }[];
+  readonly packageRules?: readonly {
+    readonly matchDatasources?: readonly string[];
+    readonly matchPackageNames?: readonly string[];
+    readonly matchUpdateTypes?: readonly string[];
+    readonly enabled?: boolean;
+  }[];
 }
 
 const renovate = JSON.parse(readFileSync(`${root}renovate.json`, 'utf8')) as RenovateConfig;
@@ -58,6 +64,17 @@ describe('renovate.json', () => {
   it('GitHub Actions are pinned by digest', () => {
     expect(renovate.extends).toEqual(
       expect.arrayContaining(['config:best-practices', 'helpers:pinGitHubActionDigests']),
+    );
+  });
+
+  it('Renovate proposes no Postgres major upgrade, which needs pg_upgrade on every plant', () => {
+    expect(renovate.packageRules).toContainEqual(
+      expect.objectContaining({
+        matchDatasources: ['docker'],
+        matchPackageNames: ['postgres'],
+        matchUpdateTypes: ['major'],
+        enabled: false,
+      }),
     );
   });
 });
