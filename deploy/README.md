@@ -25,6 +25,8 @@ You need Docker Engine with Compose, and ports 80 and 443 free on the host.
 
    Set `NORTHMES_VERSION` to the line in the release notes, for example `NORTHMES_VERSION=0.0.1@sha256:...`. The digest pins the exact image.
 
+   `NORTHMES_BIND_IP=0.0.0.0` opens ports 80 and 443 on every network interface of the host. If the host has more than one, set the address of the one the plant network uses, for example `NORTHMES_BIND_IP=10.0.20.15`.
+
 3. Create the secret files. With a Postgres server of your own, read [Use your own Postgres](#use-your-own-postgres) first. Each holds one random value, readable only by the user the NorthMES image runs as (uid 1000):
 
    ```sh
@@ -95,6 +97,12 @@ NorthMES can use a Postgres 18 server you already run, next to the other databas
    ```
 
 `migrate` prints each migration it applies. If it fails, `app` does not start: `docker compose logs migrate` shows why.
+
+## Container limits
+
+`app`, `bootstrap` and `migrate` run as a non-root user on a read-only file system, with every Linux capability dropped and no way to gain privileges. Only `/tmp` is writable, and it lives in memory. `app` may use at most 2 GB of memory. If `docker compose ps` shows `app` restarting and `docker compose logs app` reports it ran out of memory, raise the limit in `.env`, for example `NORTHMES_APP_MEM_LIMIT=4g`, and run `docker compose up -d`.
+
+`docker compose ps` shows `app` as healthy once it answers on its own port.
 
 ## Go back
 
