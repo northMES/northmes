@@ -117,17 +117,18 @@ With [your own Postgres](#use-your-own-postgres), your provider backs the databa
 To restore onto a new host, or after losing the `db-data` volume:
 
 1. Copy this folder to the host as in [Install](#install), without creating `.env` or `secrets/`, and copy your backups into `backups/`.
-2. Put back `secrets/`, `.env` and `compose.override.yaml` from the backup you restore, keeping their owners:
+2. Name the backup by the time in its file names, then put back `secrets/`, `.env` and `compose.override.yaml` from it, keeping their owners:
 
    ```sh
-   sudo tar -xzf backups/northmes-<time>-files.tar.gz --exclude=data
+   time=20261015T020000Z
+   sudo tar -xzf "backups/northmes-$time-files.tar.gz" --exclude=data
    ```
 
 3. Create the database roles, then restore the roles NorthMES's modules own, the database and Caddy's data:
 
    ```sh
    docker compose run --rm bootstrap
-   docker compose run --rm backup restore <time>
+   docker compose run --rm backup restore "$time"
    ```
 
 4. Start NorthMES. `migrate` applies nothing when the image is the one the backup was taken with:
@@ -175,10 +176,11 @@ Put the previous `NORTHMES_VERSION` line back in `.env` and run `docker compose 
 When it added a migration, going back means restoring the backup you took before the upgrade, which loses what was written since. Put the previous `NORTHMES_VERSION` line back in `.env`, remove the database volume and restore:
 
 ```sh
+time=20261015T020000Z  # the backup you took before the upgrade
 docker compose down
 docker volume rm northmes_db-data
 docker compose run --rm bootstrap
-docker compose run --rm backup restore <time>
+docker compose run --rm backup restore "$time"
 docker compose up -d
 ```
 

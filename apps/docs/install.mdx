@@ -153,14 +153,17 @@ To restore onto a new host, or after losing the `db-data` volume:
     Copy the bundle to the host as in [Install](#install), without creating `.env` or `secrets/`, and copy your backups into `backups/`.
   </Step>
   <Step title="Put back the files">
+    Name the backup by the time in its file names:
+
     ```sh
-    sudo tar -xzf backups/northmes-<time>-files.tar.gz --exclude=data
+    time=20261015T020000Z
+    sudo tar -xzf "backups/northmes-$time-files.tar.gz" --exclude=data
     ```
   </Step>
   <Step title="Restore the database and Caddy's data">
     ```sh
     docker compose run --rm bootstrap
-    docker compose run --rm backup restore <time>
+    docker compose run --rm backup restore "$time"
     ```
   </Step>
   <Step title="Start NorthMES">
@@ -217,10 +220,11 @@ This works only while the newer release added no migration. The release notes sa
 When it added one, going back means restoring the backup you took before the upgrade, which loses what was written since. Put the previous `NORTHMES_VERSION` line back in `.env`, then:
 
 ```sh
+time=20261015T020000Z  # the backup you took before the upgrade
 docker compose down
 docker volume rm northmes_db-data
 docker compose run --rm bootstrap
-docker compose run --rm backup restore <time>
+docker compose run --rm backup restore "$time"
 docker compose up -d
 ```
 
