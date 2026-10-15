@@ -63,9 +63,10 @@ describe('loadPlugins', () => {
     const [loaded, ...rest] = await loadPlugins(opts);
 
     expect(rest).toEqual([]);
-    expect(opts.fetch).toHaveBeenCalledWith(`${apiUrl}/api/v1/web/plugins`, {
-      headers: { authorization: 'Bearer jwt-1' },
-    });
+    expect(opts.fetch).toHaveBeenCalledWith(
+      `${apiUrl}/api/v1/web/plugins`,
+      expect.objectContaining({ headers: { authorization: 'Bearer jwt-1' } }),
+    );
     expect(importModule).toHaveBeenCalledWith(`${apiUrl}${hello.entry}`);
     expect(loaded?.module).toBe(helloModule);
     expect(loaded).toMatchObject({ label: 'Hello', order: 50 });
@@ -115,6 +116,20 @@ describe('loadPlugins', () => {
 
     expect(await loadPlugins(opts)).toEqual([]);
     expect(error).toHaveBeenCalled();
+  });
+
+  it('ADR 0075 a session token that fails or a plugin list that never answers leaves the shell without plugins', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const noToken = options([hello], {
+      token: () => Promise.reject(new Error('offline')),
+    });
+    const hanging = options([hello], {
+      fetch: vi.fn(() => new Promise<Response>(() => {})),
+      timeoutMs: 10,
+    });
+
+    expect(await loadPlugins(noToken)).toEqual([]);
+    expect(await loadPlugins(hanging)).toEqual([]);
   });
 });
 
