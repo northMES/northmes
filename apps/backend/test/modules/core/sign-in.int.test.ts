@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
 import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
-import { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { NEW_PASSWORD_PATH } from '../../../src/modules/core/api/access/new-password.controller.ts';
 import {
@@ -10,7 +9,7 @@ import {
   SESSION_RENEWAL_SECONDS,
 } from '../../../src/modules/core/infrastructure/auth/auth-options.ts';
 import { BetterAuth } from '../../../src/modules/core/infrastructure/auth/better-auth.ts';
-import { givenCompany, hostFactory, signIn } from '../../../src/testing.ts';
+import { givenCompany, hostFactory, queryAsCore, signIn } from '../../../src/testing.ts';
 
 /** The web app's origin in these tests, as webOrigins in northmes.config.json would list it. */
 const webOrigin = 'http://localhost:5173';
@@ -122,18 +121,6 @@ describe('sign-in with Better Auth', () => {
     expect(expired.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
   });
 
-  /** Runs a statement on the auth tables as core's owner role, which owns them. */
-  async function asCoreOwner<Row extends object>(text: string, values: unknown[]) {
-    const client = new Client({ connectionString: db.ownerUrl });
-    await client.connect();
-    try {
-      await client.query('set role nm_mod_core');
-      return (await client.query<Row>(text, values)).rows;
-    } finally {
-      await client.end();
-    }
-  }
-
   /** The id of the key that signed the JWT in an Authorization header. */
   function kidOf(authorization: string): string {
     const [header = ''] = authorization.replace(/^Bearer /, '').split('.');
@@ -144,12 +131,14 @@ describe('sign-in with Better Auth', () => {
     expect(JWT_KEY_ROTATION_SECONDS).toBe(30 * 24 * 60 * 60);
     const { user, plant } = await reader();
     const oldKid = kidOf(user.authorization);
-    const [key] = await asCoreOwner<{ lifetime: number }>(
+    const [key] = await queryAsCore<{ lifetime: number }>(
+      db.ownerUrl,
       'select extract(epoch from "expiresAt" - "createdAt")::int as lifetime from auth.jwks where id = $1',
       [oldKid],
     );
 
-    await asCoreOwner(
+    await queryAsCore(
+      db.ownerUrl,
       'update auth.jwks set "expiresAt" = now() - interval \'1 second\' where id = $1',
       [oldKid],
     );
