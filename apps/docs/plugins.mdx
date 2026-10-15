@@ -10,14 +10,14 @@ A plugin adds screens, fields, checks or integrations to NorthMES. Plugins insta
 </Warning>
 
 <Note>
-  This guide describes the plugin install path of ADR 0075. Release 0.0.1 does not ship the `plugins` service yet; it arrives with the release that adds it to `compose.yaml`.
+  This guide describes the plugin install path of ADR 0075. Release 0.0.1 does not ship the `plugins` service yet; it arrives with the release that adds it to `compose.yaml`. Until then, NorthMES loads only the plugin folders that the `plugins` list in `northmes.config.json` names.
 </Note>
 
 ## How it works
 
 - The `plugins` volume is an ordinary npm project: a `package.json`, a `package-lock.json` and `node_modules/`.
 - You run npm in the one-off `plugins` service, never in `app`. `app` reads the volume but cannot write to it.
-- When `app` starts, it loads every package that `dependencies` in the volume's `package.json` names. `npm install` and `npm uninstall` keep that list current, so there is nothing else to edit.
+- When `app` starts, it loads the plugin folders that `northmes.config.json` lists, then every package that `dependencies` in the volume's `package.json` names. `npm install` and `npm uninstall` keep that second list current, so there is nothing else to edit.
 - A plugin that brings its own database tables adds them through `migrate`, like NorthMES itself.
 - Every change restarts `app`. All users and stations lose the connection for that moment, so make changes between shifts.
 
