@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { startStack } from '../scripts/stack/stack.mjs';
 import { stackEnvKey } from './stack-env.ts';
 

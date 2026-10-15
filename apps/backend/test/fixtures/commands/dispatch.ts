@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Fixture module dispatch: owns the validatable command dispatch.releaseJob, which other modules
 // may veto, and dispatch.holdJob, which they may not. Its handlers write nothing.
 import { Module } from '@nestjs/common';

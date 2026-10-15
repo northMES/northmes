@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The dev configuration of the stack script (ADR 0058, ADR 0060): .northmes/dev.env and the dev
 // secret files under .northmes/secrets/, which every process the stack starts reads.
 

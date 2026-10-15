@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Ban, CircleCheck } from 'lucide-react';
 import { StatusBadge } from '../../ui/components/status-badge/index.ts';
 

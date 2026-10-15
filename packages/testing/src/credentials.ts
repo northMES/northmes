@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { randomBytes } from 'node:crypto';
 
 /** What one test run uses to reach its container: no value is shared between runs or worktrees. */

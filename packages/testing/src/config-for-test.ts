@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { DynamicModule } from '@nestjs/common';
 import { ConfigModule, registerAs } from '@nestjs/config';
 import { loadEnv, serverEnvSchema } from '@northmes/sdk/config';

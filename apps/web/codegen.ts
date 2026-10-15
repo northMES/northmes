@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The GraphQL Code Generator config of the web, which pnpm gen runs (scripts/gen.mjs). Each
 // <operation>.graphql.ts in src holds one named operation; the generator writes the operation's
 // result and variable types and its typed document to <operation>.graphql.gen.ts next to it, from

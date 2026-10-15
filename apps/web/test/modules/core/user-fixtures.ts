@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { MockLink } from '@apollo/client/testing';
 import { CoreBlockUser } from '../../../src/modules/core/screens/user/block-user.graphql.ts';
 import { CoreResetPassword } from '../../../src/modules/core/screens/user/reset-password.graphql.ts';

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { z } from 'zod';
 
 /** The schemas that outsideText marked, with the mark as their metadata in this registry. */

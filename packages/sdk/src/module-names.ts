@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 export interface ModuleNames {
   readonly id: string;
   /** GraphQL name: root field prefix, permission and command prefix. */

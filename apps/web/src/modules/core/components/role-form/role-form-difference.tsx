@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useId } from 'react';
 import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { permissionCount } from '../../access-refusal.ts';

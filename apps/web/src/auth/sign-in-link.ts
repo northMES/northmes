@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 
 /** The sign-in page's path, outside the plant routes (D2, SI1; spec question 2). */
 export const signInPath = '/sign-in';

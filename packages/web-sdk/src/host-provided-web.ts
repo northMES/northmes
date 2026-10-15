@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 
 /**
  * The specifiers the web build shares with plugin screens through its import map (ADR 0075). A

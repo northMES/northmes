@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { GraphQLFormattedError } from 'graphql';
 import { createClient } from 'graphql-ws';
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { getCSPScriptHash } from '@argos-ci/playwright';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { allowArgos } from '../../e2e/snapshot.ts';

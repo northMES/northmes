@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
 
 /** The direction of one orderBy entry of a list (ADR 0016). */

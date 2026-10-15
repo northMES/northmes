@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 # Ops / backup restore (ADR 0045): runs the "Back up" and "Restore" steps of deploy/README.md on the
 # Compose bundle, with the NorthMES image tagged ghcr.io/northmes/northmes:ci. It installs, creates a
 # company, takes a backup, throws the installation away with its volumes, restores the backup into

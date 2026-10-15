@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { ConfigError } from '@northmes/sdk/config';
 
 /** Calls fn and returns the ConfigError it throws, so a test can read its problems. */

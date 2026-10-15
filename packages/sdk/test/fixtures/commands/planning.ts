@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Fixture module planning: lists production orders and releases one through a command, for which
 // it writes no resolver.
 import { Module } from '@nestjs/common';

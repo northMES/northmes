@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Keeps TRUNCATE away from every role, so nm_app holds SELECT, INSERT, UPDATE and DELETE only
 // (docs/adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md). A GRANT
 // statement whose privilege list names TRUNCATE is a finding, wherever it sits in a migration

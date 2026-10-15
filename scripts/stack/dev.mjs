@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // pnpm dev (ADR 0058): the stack script's shared steps, then the server rebuilt by tsc -b --watch
 // and the web's Vite dev server, each on a port of its own.
 

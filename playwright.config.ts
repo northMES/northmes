@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { defineConfig, devices } from '@playwright/test';
 
 // The end-to-end specs under e2e/ (ADR 0041). There is no webServer: Playwright starts it before

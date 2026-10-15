@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The check behind CI / pr security. Every pull request body has a Security section that names the
 // controls the change touches and the threat each one meets, or says none with a reason (ADR 0076).
 

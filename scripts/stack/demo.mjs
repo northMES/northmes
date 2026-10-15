@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // pnpm demo, which handoff-demo in .claude/launch.json runs (ADR 0058): the stack script's shared
 // steps, then the production build of role all on PORT with the fictional seed, so a demo has one
 // origin and one port.
