@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE, type ScopedDatabase } from '@northmes/sdk/data';
+import { readIn, requestScope } from '../../core/public-api.ts';
 import type { PlanningDatabase } from '../infrastructure/database.ts';
 
 /** Where a production order stands. */
@@ -31,21 +32,27 @@ export const recordColumns = [
 
 /**
  * Reads production orders through the ScopedDatabase, so a caller sees only the orders at the
- * scopes of the principal it runs as.
+ * scopes of the principal it runs as, and only when it holds planning.productionOrder:read there.
  */
 @Injectable()
 export class ProductionOrderService {
   constructor(@Inject(DATABASE) private readonly db: ScopedDatabase<PlanningDatabase>) {}
 
-  /** The production orders at the principal's read scopes, by number. */
+  /**
+   * The production orders at the request's read scopes, by number. A principal without
+   * planning.productionOrder:read where the request runs gets core.forbidden.
+   */
   list(): Promise<ProductionOrderRecord[]> {
-    return this.db.transaction((tx) =>
-      tx
-        .selectFrom('planning.production_order')
-        .select(recordColumns)
-        .orderBy('number')
-        .orderBy('id')
-        .execute(),
+    const scope = requestScope('planning.productionOrder:read');
+    return readIn(scope, () =>
+      this.db.transaction((tx) =>
+        tx
+          .selectFrom('planning.production_order')
+          .select(recordColumns)
+          .orderBy('number')
+          .orderBy('id')
+          .execute(),
+      ),
     );
   }
 }
