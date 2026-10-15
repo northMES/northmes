@@ -396,7 +396,15 @@ describe('workflows', () => {
     'id-token': 'write',
   };
 
-  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, and what Scorecard publishes with for its analysis', () => {
+  // release-please opens the release pull request and tags the release; the image job pushes the
+  // image to ghcr.io and writes the .env line into that release's notes (ADR 0080). Nothing else
+  // writes.
+  const releasePermissions: Record<string, Record<string, string>> = {
+    'release please': { contents: 'write', 'pull-requests': 'write' },
+    'release image': { contents: 'write', packages: 'write' },
+  };
+
+  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what Scorecard publishes with for its analysis, and what the two release jobs write', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
@@ -406,9 +414,23 @@ describe('workflows', () => {
           ? {}
           : job.name === 'Scorecard analysis'
             ? scorecardPermissions
-            : { contents: 'read' };
+            : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
       expect(job.permissions, where).toEqual(expected);
     }
+  });
+
+  it('ADR0080 the release jobs live in release.yml, which runs on push to main only, and the image job runs only after release-please created a release', () => {
+    const releaseJobs = allJobs().filter(({ job }) => job.name && job.name in releasePermissions);
+    const release = workflows().find(({ path }) => path.endsWith('/release.yml'));
+
+    expect(releaseJobs.map(({ where }) => where.split(' ')[0])).toEqual(
+      Object.keys(releasePermissions).map(() => '.github/workflows/release.yml'),
+    );
+    expect(release?.on).toEqual({ push: { branches: ['main'] } });
+    expect(release?.permissions).toEqual({});
+    const image = Object.values(release?.jobs ?? {}).find(({ name }) => name === 'release image');
+    expect(image?.if).toBe("needs.release-please.outputs.created == 'true'");
+    expect((image?.steps ?? []).some(installsDependencies)).toBe(false);
   });
 
   // The score behind the badge stays current: weekly, after every push to main and when the

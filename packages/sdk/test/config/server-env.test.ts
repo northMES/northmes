@@ -118,6 +118,29 @@ describe('serverEnvSchema', () => {
       'NORTHMES_DB_AUTH_PASSWORD_FILE',
     ]);
   });
+
+  it('ADR0080 the server listens on 127.0.0.1 unless NORTHMES_LISTEN_HOST names another address', () => {
+    const base = { PORT: '0', NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com', ...databaseKeys };
+
+    expect(loadEnv(serverEnvSchema)(base).NORTHMES_LISTEN_HOST).toBe('127.0.0.1');
+    expect(
+      loadEnv(serverEnvSchema)({ ...base, NORTHMES_LISTEN_HOST: '0.0.0.0' }).NORTHMES_LISTEN_HOST,
+    ).toBe('0.0.0.0');
+  });
+
+  it('ADR0080 NORTHMES_LISTEN_HOST takes an IP address only, and a host name fails naming the key', () => {
+    const error = configErrorOf(() =>
+      loadEnv(serverEnvSchema)({
+        PORT: '0',
+        NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com',
+        NORTHMES_LISTEN_HOST: 'evil.example.com',
+        ...databaseKeys,
+      }),
+    );
+
+    expect(error.problems).toHaveLength(1);
+    expect(error.problems[0]).toMatch(/^NORTHMES_LISTEN_HOST: /);
+  });
 });
 
 describe('migrateEnvSchema and bootstrapEnvSchema', () => {

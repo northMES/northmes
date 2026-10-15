@@ -1,0 +1,16 @@
+# What docker build leaves out of the NorthMES image's build context. Local state and secrets never
+# enter an image (ADR 0047).
+**/node_modules
+**/dist
+**/.turbo
+.git
+.northmes
+.env
+**/secrets
+deploy/.env
+plugins
+coverage
+test-results
+playwright-report
+docs
+e2e

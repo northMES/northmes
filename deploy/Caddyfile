@@ -1,0 +1,5 @@
+# Serves NorthMES over HTTPS at NORTHMES_HOST from .env (ADR 0044). Plain HTTP redirects to HTTPS.
+{$NORTHMES_HOST} {
+	tls internal
+	reverse_proxy app:3000
+}
