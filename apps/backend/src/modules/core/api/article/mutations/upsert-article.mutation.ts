@@ -2,13 +2,10 @@
 import { Inject } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { upsertArticle } from '@northmes/core-contracts';
-import { commandInput } from '@northmes/sdk/commands';
+import { commandInputArg } from '@northmes/sdk/commands';
 import { PlantFree } from '@northmes/sdk/graphql';
 import { type ArticleRecord, ArticleService } from '../../../core/article.service.ts';
 import { Article } from '../types/article.type.ts';
-
-/** The input type of the mutation, registered when the module loads. */
-const UpsertArticleInput = commandInput(upsertArticle);
 
 /**
  * The mutation coreUpsertArticle, whose input type the SDK builds from the contract of
@@ -19,15 +16,10 @@ const UpsertArticleInput = commandInput(upsertArticle);
 export class UpsertArticleMutation {
   constructor(@Inject(ArticleService) private readonly articles: ArticleService) {}
 
-  /**
-   * Creates the article with the input's article number, or renames it and changes its plants,
-   * for an ERP that pushes its articles. A user at a plant upserts there, and in company settings
-   * at the company that companyId names.
-   */
-  @Mutation(() => Article)
+  @Mutation(() => Article, { description: upsertArticle.description })
   @PlantFree()
   coreUpsertArticle(
-    @Args('input', { type: () => UpsertArticleInput }) input: unknown,
+    @Args('input', commandInputArg(upsertArticle)) input: unknown,
   ): Promise<ArticleRecord> {
     return this.articles.upsertByCode(input);
   }

@@ -9,11 +9,10 @@ import { DashboardTab, toDashboardTab } from '../types/dashboard-tab.type.ts';
 export class DashboardQueryResolver {
   constructor(@Inject(DashboardService) private readonly dashboard: DashboardService) {}
 
-  /**
-   * The dashboard's tabs at the request's plant: the company's, then the plant's, then the
-   * signed-in user's own, each in its order. It needs no permission beyond opening the plant.
-   */
-  @Query(() => [DashboardTab])
+  @Query(() => [DashboardTab], {
+    description:
+      "The dashboard's tabs at the request's plant: the company's, then the plant's, then the signed-in user's own, each in its order. Needs no permission beyond opening the plant.",
+  })
   async coreDashboardTabs(): Promise<DashboardTab[]> {
     return (await this.dashboard.tabs()).map(toDashboardTab);
   }

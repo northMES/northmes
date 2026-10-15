@@ -2,11 +2,14 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 
 /** A site of a company where production happens (GLOSSARY.md), at a plant node (ADR 0007). */
-@ObjectType('Plant')
+@ObjectType('Plant', { description: 'One production site of a company.' })
 export class Plant {
-  /** The plant's id, the id of its node in the scope tree. */
-  @Field(() => ID) id!: string;
-  /** The plant's segment of the web's URLs, unique per installation; x-northmes-plant names it. */
-  @Field(() => String) slug!: string;
-  @Field(() => String) name!: string;
+  @Field(() => ID, { description: "The plant's id, the id of its node in the scope tree." })
+  id!: string;
+  @Field(() => String, {
+    description:
+      "The plant's segment of the web's URLs, unique per installation. The x-northmes-plant header names a plant by it.",
+  })
+  slug!: string;
+  @Field(() => String, { description: "The plant's name." }) name!: string;
 }

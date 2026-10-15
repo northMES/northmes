@@ -13,22 +13,37 @@ export enum DashboardTabScope {
   OWN = 'own',
 }
 
-registerEnumType(DashboardTabScope, { name: 'DashboardTabScope' });
+registerEnumType(DashboardTabScope, {
+  name: 'DashboardTabScope',
+  description: 'Who sees a dashboard tab.',
+  valuesMap: {
+    COMPANY: { description: 'Everyone at the company, at each of its plants.' },
+    PLANT: { description: 'Everyone at the plant.' },
+    OWN: { description: 'The signed-in user alone, at each plant of the company.' },
+  },
+});
 
 /** A tab of the dashboard, with the widgets of its layout (ADR 0078, design shell-454). */
-@ObjectType('DashboardTab')
+@ObjectType('DashboardTab', {
+  description: 'A tab of the dashboard, with the widgets of its layout.',
+})
 export class DashboardTab {
-  @Field(() => ID) id!: string;
-  @Field(() => String) name!: string;
-  @Field(() => DashboardTabScope) scope!: DashboardTabScope;
-  /** Grows by one with every change to the tab; Done sends it as expectedVersion. */
-  @Field(() => Int) version!: number;
-  /**
-   * True when the user may change the tab's layout: an own tab, or a shared tab where the user
-   * holds core.dashboardTab:manage. The page shows Edit layout for it (design shell-454, A4).
-   */
-  @Field(() => Boolean) canEdit!: boolean;
-  @Field(() => [DashboardWidget]) widgets!: DashboardWidget[];
+  @Field(() => ID, { description: "The tab's id." }) id!: string;
+  @Field(() => String, { description: "The tab's name." }) name!: string;
+  @Field(() => DashboardTabScope, { description: 'Who sees the tab.' }) scope!: DashboardTabScope;
+  @Field(() => Int, {
+    description:
+      'Grows by one with every change to the tab; coreSaveDashboardTab sends it as expectedVersion.',
+  })
+  version!: number;
+  /** The page shows Edit layout for a tab with canEdit (design shell-454, A4). */
+  @Field(() => Boolean, {
+    description:
+      "True when the user may change the tab's layout: an own tab, or a shared tab where the user holds core.dashboardTab:manage.",
+  })
+  canEdit!: boolean;
+  @Field(() => [DashboardWidget], { description: "The widgets of the tab's layout." })
+  widgets!: DashboardWidget[];
 }
 
 /** A tab as the service hands it out, as the DashboardTab type answers it. */

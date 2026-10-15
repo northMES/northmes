@@ -12,12 +12,12 @@ import { RoleAssignment } from '../types/role-assignment.type.ts';
 export class RoleAssignmentFieldResolver {
   constructor(@Inject(RoleService) private readonly roles: RoleService) {}
 
-  /**
-   * The role held. It needs core.role:read where the request runs: without it, the field is null
-   * with FORBIDDEN and core.forbidden, so a reader of users sees no access in its place. The roles
-   * of every assignment in an answer are read in one query.
-   */
-  @ResolveField(() => Role, { nullable: true })
+  /** The roles of every assignment in an answer are read in one query. */
+  @ResolveField(() => Role, {
+    nullable: true,
+    description:
+      'The role held. It needs core.role:read where the request runs: without it, the field is null with FORBIDDEN and core.forbidden.',
+  })
   role(
     @Parent() assignment: RoleAssignmentRecord,
     @Context() context: RequestContext,
