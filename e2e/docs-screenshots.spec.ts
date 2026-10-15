@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { coreLinks } from '@northmes/core-contracts';
 import type { Page } from '@playwright/test';
 import { expect, plant, test } from './fixtures.ts';
@@ -8,10 +9,16 @@ import { expect, plant, test } from './fixtures.ts';
 // tests only check that the pages they show still render.
 
 const writeImages = process.env.NORTHMES_DOCS_SCREENSHOTS === '1';
+const images = fileURLToPath(new URL('../apps/docs/images/', import.meta.url));
 
-/** Saves the page as apps/docs/images/<name>.png when the run takes the docs screenshots. */
+/**
+ * Saves the page as apps/docs/images/<name>.png when the run takes the docs screenshots, once
+ * nothing on the page is still loading.
+ */
 async function docsImage(page: Page, name: string): Promise<void> {
-  await page.screenshot(writeImages ? { path: `apps/docs/images/${name}.png` } : {});
+  if (!writeImages) return;
+  await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
+  await page.screenshot({ path: `${images}${name}.png` });
 }
 
 test.describe('the docs screenshots', () => {

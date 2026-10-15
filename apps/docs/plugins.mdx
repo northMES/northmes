@@ -9,6 +9,10 @@ A plugin adds screens, fields, checks or integrations to NorthMES. Plugins insta
   A plugin runs with full access inside NorthMES: in the server, in the database schema it owns, and in every user's browser. Install plugins only from a publisher you trust, and only from a registry or a file you chose.
 </Warning>
 
+<Note>
+  This guide describes the plugin install path of ADR 0075. Release 0.0.1 does not ship the `plugins` service yet; it arrives with the release that adds it to `compose.yaml`.
+</Note>
+
 ## How it works
 
 - The `plugins` volume is an ordinary npm project: a `package.json`, a `package-lock.json` and `node_modules/`.
