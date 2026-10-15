@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices", "helpers:pinGitHubActionDigests"],
+  "minimumReleaseAge": "14 days",
+  "vulnerabilityAlerts": {
+    "minimumReleaseAge": null
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "The Postgres image that tests and deployments use (infra/pg-image.json)",
+      "managerFilePatterns": ["/^infra/pg-image\\.json$/"],
+      "matchStrings": [
+        "\"image\":\\s*\"(?<depName>[^:\"]+):(?<currentValue>[^@\"]+)@(?<currentDigest>sha256:[a-f0-9]{64})\""
+      ],
+      "datasourceTemplate": "docker"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "A Postgres major upgrade needs pg_upgrade on every plant, so it is a planned change, not a bot update",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["postgres"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    }
+  ]
+}
