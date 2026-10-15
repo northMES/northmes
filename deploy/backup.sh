@@ -11,17 +11,11 @@
 set -eu
 
 # The admin's password and the whole database cross this connection, so a server other than the
-# bundled db must be reached with a verified certificate: every sslmode in the URL's query, and at
-# least one, is verify-full.
+# bundled db is always reached with a verified certificate: libpq takes the last sslmode in the URL.
 case "$DATABASE_URL" in
   postgres://db:5432/*) ;;
-  *)
-    modes="$(printf '%s' "${DATABASE_URL#*\?}" | tr '&' '\n' | sed -n 's/^sslmode=//p')"
-    if [ -z "$modes" ] || printf '%s\n' "$modes" | grep -qvx verify-full; then
-      echo "NORTHMES_DATABASE_URL must hold sslmode=verify-full for backup to use it" >&2
-      exit 1
-    fi
-    ;;
+  *\?*) DATABASE_URL="${DATABASE_URL}&sslmode=verify-full" ;;
+  *) DATABASE_URL="${DATABASE_URL}?sslmode=verify-full" ;;
 esac
 
 export PGPASSWORD="$(cat /run/secrets/postgres_password)"
