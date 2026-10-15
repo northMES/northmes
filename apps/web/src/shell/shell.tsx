@@ -80,6 +80,12 @@ export interface ShellRouterOptions {
   readonly history?: RouterHistory;
   /** Replaces the global fetch of each plant's Apollo client, for tests. */
   readonly fetch?: typeof globalThis.fetch;
+  /**
+   * Opens the return path once the user signed in. main.tsx loads it with a full page load, so the
+   * boot runs again with the session and loads the plugins (ADR 0075). Without it the router
+   * navigates in place.
+   */
+  readonly onSignedIn?: (href: string) => void;
 }
 
 /** The user menu's user while the session has none, which the plant routes' guard prevents. */
@@ -96,7 +102,7 @@ const nobody: ShellUser = { name: 'Not signed in', username: '' };
  */
 export function createShellRouter(
   modules: readonly ShellModule[],
-  { session, apiUrl, history, fetch }: ShellRouterOptions,
+  { session, apiUrl, history, fetch, onSignedIn }: ShellRouterOptions,
 ) {
   // One client per plant for the router's life (ADR 0018). Switching plants and disposing the
   // client of the plant left behind come with the plant switcher.
@@ -202,7 +208,7 @@ export function createShellRouter(
         getParentRoute: () => rootRoute,
         path: signInPath,
         validateSearch: signInSearch,
-        component: () => <SignInPage session={session} />,
+        component: () => <SignInPage session={session} onSignedIn={onSignedIn} />,
       }),
     ],
   });
@@ -225,7 +231,13 @@ interface SignInState {
  * The sign-in route's component: the sign-in page, which leads to the return path once signed in,
  * and says the session ended when a refused request sent the tab there (shell-306, SO1).
  */
-function SignInPage({ session }: { readonly session: AuthSession }) {
+function SignInPage({
+  session,
+  onSignedIn,
+}: {
+  readonly session: AuthSession;
+  readonly onSignedIn: ShellRouterOptions['onSignedIn'];
+}) {
   const search = signInSearch(useSearch({ strict: false }));
   const state = useRouterState({ select: ({ location }) => location.state as SignInState });
   const router = useRouter();
@@ -234,9 +246,11 @@ function SignInPage({ session }: { readonly session: AuthSession }) {
       session={session}
       signedOut={search.signedOut === true}
       sessionEnded={state.sessionEnded === true}
-      onSignedIn={() =>
-        void router.navigate({ href: returnPathOf(search, window.location.origin) })
-      }
+      onSignedIn={() => {
+        const href = returnPathOf(search, window.location.origin);
+        if (onSignedIn) onSignedIn(href);
+        else void router.navigate({ href });
+      }}
     />
   );
 }

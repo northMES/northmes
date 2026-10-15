@@ -181,6 +181,30 @@ describe('pnpm plugin:build', () => {
     expect(entry).toMatch(/from ["']@northmes\/web-sdk["']/);
   });
 
+  it('ADR 0075 plugin:build builds a plugin with screens only, which has no src/server.ts', async () => {
+    const plugin = pluginWithWebPart({
+      'web.tsx':
+        "import { defineWebModule } from '@northmes/web-sdk';\nexport default defineWebModule({ id: 'example-hello', version: '0.0.0', routes: (route) => route });\n",
+    });
+    rmSync(join(plugin, 'src/server.ts'));
+    write(
+      join(plugin, 'src/manifest.ts'),
+      "import { defineModule } from '@northmes/sdk';\nexport default defineModule({ id: 'example-hello', version: '0.0.0', northmes: '>=0.0.0-0 <0.1.0-0', web: { label: 'Hello', order: 90 } });\n",
+    );
+
+    const exitCode = await main(['example-hello'], io());
+
+    expect(errors).toEqual([]);
+    expect(exitCode).toBe(0);
+    expect(readdirSync(join(root, 'plugins/example-hello'), { recursive: true }).sort()).toEqual([
+      'dist',
+      'dist/manifest.js',
+      'package.json',
+      'web',
+      'web/entry.js',
+    ]);
+  });
+
   it('ADR 0075 plugin:build refuses a web part that imports a package the host does not share, and installs nothing', async () => {
     pluginWithWebPart({
       'web.tsx': "import { createRoot } from 'react-dom/client';\nexport default createRoot;\n",

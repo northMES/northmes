@@ -110,7 +110,11 @@ export async function buildPlugin(dir, outDir) {
   const dist = join(dir, 'dist');
   await rm(dist, { recursive: true, force: true });
   const bundle = await rolldown({
-    input: { manifest: join(dir, 'src/manifest.ts'), server: join(dir, 'src/server.ts') },
+    // A plugin with screens only has no server part.
+    input: {
+      manifest: join(dir, 'src/manifest.ts'),
+      ...(existsSync(join(dir, 'src/server.ts')) ? { server: join(dir, 'src/server.ts') } : {}),
+    },
     platform: 'node',
     external: (id) => isHostProvided(id),
   });

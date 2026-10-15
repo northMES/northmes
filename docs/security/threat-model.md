@@ -73,7 +73,7 @@ Each entry point, the conduit it sits on and the credential it accepts. A surfac
 | WebSocket: graphql-ws on `/graphql` | built, latent (no Subscription field yet) | C1 | the JWT, checked at subscribe time |
 | MCP, `/mcp` | later (ADR 0034, ADR 0073) | C1 | bearer JWT or personal access token |
 | CLI: `northmes admin`, `db bootstrap`, `migrate` | built | C3 | shell access to the host and the role passwords in `secrets/` |
-| Plugins: server part and screens | built (server part from config), decided (npm into the plugin volume, ADR 0075) | C4 | none: full trust |
+| Plugins: server part and screens | built (both from config; screens at `/api/v1/web/plugins/<id>/<version>/`, shared modules at `/shared/`), decided (npm into the plugin volume, ADR 0075) | C4 | none: full trust |
 | ERP connector: the Pyramid file import and later write-back | later (ADR 0031, ADR 0032) | C5 | a session for the upload; a system principal for the run |
 | Operator station | later (ADR 0033) | C1 | a station key and the operator's badge |
 | Database | built | C2, C3 | role passwords: `nm_app`, `nm_auth` at run time, `nm_owner` for migrations only |
@@ -129,6 +129,7 @@ Each table lists the threats that matter at that conduit, not every STRIDE lette
 |---|---|---|---|
 | A malicious or vulnerable plugin reads every company's data within the request's scopes, sessions, configuration and secrets, or changes records | I, T, E | Full trust by design (ADR 0037, ADR 0068); install only from trusted publishers; the admin reviews the plugin inventory; `npm install --ignore-scripts` | accepted A-03 in the [risk register](risks.md) |
 | A plugin's screen reads the session token or acts as the user in the browser | I, S | Full trust; the CSP keeps third-party origins out but not a plugin served by NorthMES | accepted A-03 |
+| A plugin's screen swaps the React, router or Apollo that the shell and other plugins share | T, E | The shared modules sit on a frozen, non-writable property that the shell defines before any plugin loads; `/shared/` serves only files from the web build | built |
 | A changed package on the registry replaces a plugin | T | Pinned versions in the plugin volume's lockfile; signed archives later (ADR 0075) | accepted A-03 |
 
 ### C5: ERP connector and other systems (later)

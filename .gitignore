@@ -28,6 +28,8 @@ coverage/
 # Drop-in plugins that pnpm plugin:build copies to the root (ADR 0037). Anchored, because test
 # fixtures keep plugins in folders of the same name.
 /plugins/
+# The web part that pnpm plugin:build bundles into an example plugin.
+/examples/*/web/
 
 # Output of the to-questionnaire skill (may hold product owner material).
 /to-questionnaire-*.md

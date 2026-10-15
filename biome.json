@@ -9,6 +9,7 @@
       "!**/dist",
       "!docs/agents/handoff/graphs",
       "!**/*.gen.ts",
+      "!apps/web/public/shared",
       "!schema/*.graphql",
       "!test/meta/workspace.test.ts"
     ]
