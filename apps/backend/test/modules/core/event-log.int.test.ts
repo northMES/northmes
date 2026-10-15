@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { randomUUIDv7 } from 'node:crypto';
 import { given, query, useTestDatabase } from '@northmes/testing';
-import { queryAsCore } from '../../../src/testing.ts';
 import { Client } from 'pg';
 import { afterEach, describe, expect, it } from 'vitest';
+import { queryAsCore } from '../../../src/testing.ts';
 
 /**
  * core.event is the outbox and the event log, and core.sequence_events gives each committed event

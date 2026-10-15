@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { updateArticle } from '@northmes/core-contracts';
+import { articleUpdated, updateArticle } from '@northmes/core-contracts';
 import { registerCommand } from '@northmes/sdk/commands';
 import type { z } from 'zod';
 import { type ArticleRecord, selectArticles } from '../article-record.ts';
@@ -11,7 +11,7 @@ import type { CoreContext } from './context.ts';
  * The handler of core.updateArticle (ADR 0012), which the bus checks at the article's edit scope
  * (ADR 0073). It changes the article's code and name, and its translations, article group, stock
  * unit and note when the input names them; a newly picked group must be an active group of the
- * article's company, and returns it with its new version. An archived article is refused
+ * article's company, writes core.article.updated, and returns it with its new version. An archived article is refused
  * with core.archived.
  */
 export const updateArticleHandler = {
@@ -47,7 +47,13 @@ export const updateArticleHandler = {
       })
       .where('id', '=', id)
       .execute();
-    return selectArticles(tx).where('id', '=', id).executeTakeFirstOrThrow();
+    const article = await selectArticles(tx).where('id', '=', id).executeTakeFirstOrThrow();
+    await context.publish(
+      articleUpdated,
+      { id, version: article.version, scopeId: target.scope_id },
+      { code: article.code, name: article.name },
+    );
+    return article;
   },
 };
 

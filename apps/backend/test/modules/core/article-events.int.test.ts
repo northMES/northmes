@@ -75,17 +75,17 @@ describe('the events of core’s article commands', () => {
     );
   }
 
-  /** The company an article belongs to, the scope its events carry. */
-  async function companyOf(id: string): Promise<string> {
+  /** An article's edit scope, where its commands run and the scope its events carry. */
+  async function editScopeOf(id: string): Promise<string> {
     const [row] = await queryAsCore<{ scope_id: string }>(
       db.ownerUrl,
-      'select scope_id from core.article where id = $1',
+      'select edit_scope_id as scope_id from core.article where id = $1',
       [id],
     );
     return row?.scope_id ?? '';
   }
 
-  it('E05-S09 coreCreateArticle writes one core.article.created event with the new version, the company and the code and name', async () => {
+  it('E05-S09 coreCreateArticle writes one core.article.created event with the new version, the edit scope and the code and name', async () => {
     const client = await clientAt(given.plant());
     const id = randomUUIDv7();
 
@@ -98,7 +98,7 @@ describe('the events of core’s article commands', () => {
         entity_type: 'core.article',
         entity_id: id,
         entity_version: '1',
-        scope_id: await companyOf(id),
+        scope_id: await editScopeOf(id),
         data: { code: 'BR-140', name: 'Wall bracket' },
         context: { actor: expect.any(String), command: 'core.createArticle' },
       },
@@ -159,5 +159,26 @@ describe('the events of core’s article commands', () => {
 
     expect(answer.errors).toHaveLength(1);
     expect((await eventsOf(id)).map(({ event }) => event)).toEqual(['core.article.created']);
+  });
+
+  it('E05-S09 the app’s sequencer publishes the event after the command commits, so it gets a position', async () => {
+    const client = await clientAt(given.plant());
+    const id = randomUUIDv7();
+
+    await client.send(createMutation, { input: { id, code: 'SC-500', name: 'Screw' } });
+
+    await expect
+      .poll(
+        async () =>
+          (
+            await queryAsCore<{ position: string | null }>(
+              db.ownerUrl,
+              'select position::text from core.event where entity_id = $1',
+              [id],
+            )
+          )[0]?.position,
+        { timeout: 5_000 },
+      )
+      .toMatch(/^\d+$/);
   });
 });
