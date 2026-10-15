@@ -88,9 +88,9 @@ NorthMES can use a Postgres 18 server you already run, next to the other databas
 
 ## Sign-in limits
 
-NorthMES refuses a fourth sign-in from one computer within 10 seconds, and locks an email for 15 minutes after 5 wrong passwords in a row. A locked user waits, or signs in with the right password once the 15 minutes have passed. The sign-in page says how long to wait.
+NorthMES refuses a fourth sign-in from one client address within 10 seconds, and locks an email for 15 minutes after 5 wrong passwords in a row. A locked user waits, or signs in with the right password once the 15 minutes have passed. The sign-in page says how long to wait.
 
-NorthMES tells computers apart by the address that Caddy reports, so `compose.yaml` sets `NORTHMES_TRUSTED_PROXY_HOPS: "1"` for the one proxy in front of `app`. Keep it at 1 while Caddy is the only proxy.
+Computers behind one address, such as a plant's NAT, share that limit. NorthMES takes the client address that Caddy reports, so `compose.yaml` sets `NORTHMES_TRUSTED_PROXY_HOPS: "1"` for the one proxy in front of `app`. Keep it at 1 while Caddy is the only proxy.
 
 ## Back up
 
