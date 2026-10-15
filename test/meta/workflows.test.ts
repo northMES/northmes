@@ -134,6 +134,11 @@ const ciJobs = [
   'gate',
 ];
 
+// The jobs of the CI workflow that CI / gate does not need yet, and that the main ruleset does not
+// require. CI / cla joins CI / gate before the first outside pull request
+// (docs/adr/0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md).
+const ungatedCiJobs = ['cla'];
+
 // The checks the main ruleset requires from workflow files
 // (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md and
 // docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md). CodeQL runs as GitHub's default
@@ -404,7 +409,10 @@ describe('workflows', () => {
     'release image': { contents: 'write', packages: 'write' },
   };
 
-  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what Scorecard publishes with for its analysis, and what the two release jobs write', () => {
+  // CI / cla reads the pull request and its commits through the API.
+  const claPermissions = { contents: 'read', 'pull-requests': 'read' };
+
+  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what CI / cla reads, what Scorecard publishes with for its analysis, and what the two release jobs write', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
@@ -412,9 +420,11 @@ describe('workflows', () => {
       const expected =
         job.name === 'gate'
           ? {}
-          : job.name === 'Scorecard analysis'
-            ? scorecardPermissions
-            : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
+          : job.name === 'cla'
+            ? claPermissions
+            : job.name === 'Scorecard analysis'
+              ? scorecardPermissions
+              : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
       expect(job.permissions, where).toEqual(expected);
     }
   });
@@ -547,19 +557,20 @@ describe('workflows', () => {
 
   // GitHub counts a skipped required check as passed, so CI / gate needs every job to fail a pull
   // request on which one of them did not run.
-  it('CI / gate needs every other job in its workflow', () => {
+  it('CI / gate needs every other job in its workflow except CI / cla, which joins it before the first outside pull request', () => {
     const { workflow, id } = jobNamed('gate');
 
     expect(allNeedsOf(workflow.jobs, id).sort()).toEqual(
-      Object.keys(workflow.jobs)
-        .filter((job) => job !== id)
+      Object.entries(workflow.jobs)
+        .filter(([job, { name }]) => job !== id && !ungatedCiJobs.includes(name ?? ''))
+        .map(([job]) => job)
         .sort(),
     );
   });
 
   // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
   // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
-  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue, pr security and gate', () => {
+  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue, pr security, gate and cla', () => {
     const ci = workflows().find(({ name }) => name === 'CI');
 
     expect(ci, 'a workflow named CI').toBeDefined();
@@ -567,7 +578,52 @@ describe('workflows', () => {
       Object.values(ci?.jobs ?? {})
         .map(({ name }) => name)
         .sort(),
-    ).toEqual([...ciJobs].sort());
+    ).toEqual([...ciJobs, ...ungatedCiJobs].sort());
+  });
+
+  // A pull request's own files must not decide its CLA check: a checkout would run the pull
+  // request's copy of the check, and its copy of signed.json could list its own author. So the job
+  // checks out nothing and runs the check from the default branch, which reads signed.json from
+  // there too (docs/adr/0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md).
+  it('ADR0039 CI / cla runs on pull requests, checks out nothing and runs the check from the default branch', () => {
+    const { workflow, job } = jobNamed('cla');
+    const steps = job.steps ?? [];
+    const download = steps.find(({ run }) => run?.includes('gh api'));
+    const check = steps.at(-1);
+
+    expect(workflow.path).toBe('.github/workflows/ci.yml');
+    expect(job.if).toBe("github.event_name == 'pull_request'");
+    expect(runsOnOf(job)).toBe('ubuntu-24.04');
+    expect(steps.map(({ uses, run }) => uses?.replace(/@.*$/, '') ?? 'run')).toEqual([
+      'actions/setup-node',
+      'run',
+      'run',
+    ]);
+    expect(download?.env).toEqual({
+      GH_TOKEN: expression('github.token'),
+      DEFAULT_BRANCH: expression('github.event.repository.default_branch'),
+    });
+    for (const file of ['scripts/cla/check.mjs', 'scripts/ci/annotation.mjs']) {
+      expect(download?.run).toContain(`contents/${file}?ref=$DEFAULT_BRANCH`);
+    }
+    expect(check).toEqual({
+      name: expect.any(String),
+      run: 'node "$RUNNER_TEMP/cla/scripts/cla/check.mjs"',
+      env: {
+        GITHUB_TOKEN: expression('github.token'),
+        PR_NUMBER: expression('github.event.pull_request.number'),
+      },
+    });
+  });
+
+  // Without a checkout the job cannot read .node-version, so it names the same version.
+  it('ADR0039 CI / cla sets up the Node version in .node-version', () => {
+    const { job } = jobNamed('cla');
+    const setup = (job.steps ?? []).find(({ uses }) => uses?.startsWith('actions/setup-node@'));
+
+    expect(String(setup?.with?.['node-version'])).toBe(
+      readFileSync(`${root}.node-version`, 'utf8').trim(),
+    );
   });
 
   // A required status check matches a check by its name and the app that reports it, not by the
