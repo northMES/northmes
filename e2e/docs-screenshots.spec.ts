@@ -16,7 +16,8 @@ async function docsImage(page: Page, name: string): Promise<void> {
 
 test.describe('the docs screenshots', () => {
   test('ADR0048 the install guide shows the sign-in page', async ({ page, checkA11y }) => {
-    await page.goto('/sign-in');
+    // Signed out, every app page shows the sign-in page first.
+    await page.goto(coreLinks.dashboard({ plant }).href);
     await expect(
       page.getByRole('heading', { level: 1, name: 'Sign in to NorthMES' }),
     ).toBeVisible();
