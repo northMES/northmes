@@ -42,6 +42,16 @@ This ADR records the backup setup, the disk layout, isolated restore drills, the
 
 Chosen option: "pgBackRest with two repositories and asynchronous archiving, isolated drills, expand and contract markers with a schema compatibility number, and a scripted upgrade that stops the app before its backup", because it is the only option where every fault above has a fix that a nightly test proves.
 
+### Release 1: the customer's backups, through a Compose profile
+
+Amended by Krister, 2026-10-15 ([#582](https://github.com/northMES/northmes/issues/582)). Release 1 ships the nightly `pg_dump` of the third option instead of the pgBackRest setup below, which becomes the later path for a customer who needs a recovery point under a day. The customer owns the backups, as with most self-hosted apps; NorthMES makes them a switch and proves that they restore.
+
+* `deploy/compose.yaml` has a `backup` service under the `backup` profile, on the pinned Postgres image. Every night at 02:00 UTC `deploy/backup.sh` writes `pg_dumpall --roles-only --no-role-passwords`, `pg_dump -Fc` and a tar of `secrets/`, `.env`, `compose.override.yaml` and the `caddy-data` volume to `./backups`, with mode 600 and the owner of that folder, and deletes files older than 7 days. `docker compose run --rm backup now` takes one on demand, and the upgrade steps take one first, so going back across a migration restores it.
+* `northmes.env.example` sets `COMPOSE_PROFILES=backup` for the bundled database. With a Postgres server of the customer's own ([ADR 0080](0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md)) it is off, because the provider backs the server up (Azure Database for PostgreSQL keeps 7 to 35 days with point-in-time restore); turned on, it dumps the server in `NORTHMES_DATABASE_URL` as the admin.
+* A restore runs `bootstrap`, then the roles file, then `pg_restore` in one transaction, then `docker compose up -d`. On a managed server the provider restores, and `NORTHMES_DATABASE_URL` names the restored server.
+* The customer copies `./backups` off the host, encrypts that copy, keeps it as long as they need and runs their own restore drills. The repositories, timers, disk layout and drill isolation below wait for the later path.
+* Confirmation: `Ops / backup restore` builds the image, installs the bundle, creates a company, backs up, removes the installation with its volumes, restores into a fresh folder by the README's steps and checks every table's row count, Caddy's root certificate and an admin sign-in.
+
 ### Backups
 
 | Setting | Value |

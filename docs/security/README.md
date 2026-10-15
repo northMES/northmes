@@ -66,6 +66,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | TLS in transit through the proxy, with HTTPS required for the public origin in production | decided (origin check built) | ADR 0044; `packages/sdk/src/config/server-env.ts` |
 | Security headers on every response | gap | [#480](https://github.com/northMES/northmes/issues/480) |
 | Encryption of stored secrets and of offsite backups | decided | ADR 0047, ADR 0045 |
+| Nightly backups of the database and the site's files, mode 600, with the restore run in CI; the off-host copy and its encryption are the customer's | built | ADR 0045; `deploy/backup.sh`; `scripts/ci/backup-restore.sh` |
 | Append-only production facts, corrections as new records, no hard deletes | decided | ADR 0051 rules 4, 5 and 24 |
 | Retention and erasure | decided | ADR 0013, plan 12 (GDPR basics) |
 

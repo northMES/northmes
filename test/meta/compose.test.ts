@@ -143,12 +143,7 @@ describe('the Compose bundle (ADR 0080)', () => {
       '${NORTHMES_DATABASE_URL:-postgres://db:5432/northmes}',
     );
     expect(backup?.volumes).toEqual(
-      expect.arrayContaining([
-        './backup.sh:/backup.sh:ro',
-        '.:/bundle:ro',
-        './backups:/backups',
-        'caddy-data:/data',
-      ]),
+      expect.arrayContaining(['.:/bundle:ro', './backups:/backups', 'caddy-data:/data']),
     );
     expect(read('deploy/backup.sh')).toContain('-mtime +6 -delete');
   });
