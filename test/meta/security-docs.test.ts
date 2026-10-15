@@ -33,6 +33,46 @@ describe('security docs', () => {
     expect(unknown).toEqual([]);
   });
 
+  it('ADR0076 the controls index links the threat model, and the threat model lists every surface', () => {
+    expect(read(index)).toContain('(threat-model.md)');
+    const surfaces = read('docs/security/threat-model.md')
+      .split('\n')
+      .filter((line) => line.startsWith('| ') && !line.startsWith('| Surface |'))
+      .map((line) => line.split(' | ')[0]?.replace(/^\| /, '').toLowerCase() ?? '');
+
+    // The surfaces #485 names. A new surface adds its row to the threat model (ADR 0076 rule 4).
+    for (const surface of [
+      'web app',
+      'graphql',
+      'rest',
+      'websocket',
+      'cli',
+      'plugins',
+      'erp connector',
+      'operator station',
+    ]) {
+      expect(
+        surfaces.some((row) => row.includes(surface)),
+        `threat model surface ${surface}`,
+      ).toBe(true);
+    }
+  });
+
+  it('ADR0076 the controls index links the risk register, and each accepted risk has an owner, a review date and an ADR or issue', () => {
+    expect(read(index)).toContain('(risks.md)');
+    const rows = read('docs/security/risks.md')
+      .split('\n')
+      .filter((line) => /^\| A-\d{2} \|/.test(line));
+
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      const [, , , owner = '', review = '', link = ''] = row.split(' | ');
+      expect(owner.trim(), row.slice(0, 40)).not.toBe('');
+      expect(review.trim(), row.slice(0, 40)).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(link, row.slice(0, 40)).toMatch(/ADR \d{4}|#\d+/);
+    }
+  });
+
   it('ADR0076 the controls index links every audit report, and each report links its tracking issue', () => {
     const reports = [...trackedFiles()].filter((path) =>
       /^docs\/security\/audits\/\d{4}-\d{2}-\d{2}\.md$/.test(path),
