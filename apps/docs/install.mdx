@@ -105,7 +105,7 @@ NorthMES can use a Postgres 18 server you already run, next to the other databas
 
     `COMPOSE_FILE` replaces the files Compose picks by default, so a `compose.override.yaml` you add must be named in it too: `COMPOSE_FILE=compose.yaml:compose.external-db.yaml:compose.override.yaml`.
 
-    Never put a user or a password in the URL, because NorthMES refuses a URL that holds one. Keep `sslmode=verify-full`: it encrypts the connection and checks the server's certificate against the public certificate authorities, so the server must offer TLS. Connect directly, not through a pooler in transaction mode, because migrations hold a session lock.
+    Never put a user or a password in the URL, because NorthMES refuses a URL that holds one. Keep `sslmode=verify-full`: it encrypts the connection and checks the server's certificate against the public certificate authorities, so the server must offer TLS with a certificate from one of them. Release 0.0.1 cannot add a private certificate authority for the database connection. Connect directly, not through a pooler in transaction mode, because migrations hold a session lock.
   </Step>
   <Step title="Store the admin password">
     Put the admin's password in `secrets/postgres_password` instead of a random value. Create the other secret files as in [Install](#install).
