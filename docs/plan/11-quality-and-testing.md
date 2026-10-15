@@ -388,16 +388,17 @@ An upgrade test restores a snapshot into a Testcontainers Postgres, runs the can
 |---|---|---|
 | Every pull request | Migration lint and markers; the computed rollback class; `migrate.test.ts` on a fresh database; the `migrate --check` path tests with fixture manifests | merge |
 | Pull requests that change a `migrations/` folder, the runner or a seed fixture | The upgrade test from the latest release's snapshot to the pull request, checks 1 to 7 | merge |
-| The release-please pull request and every candidate | The full matrix: every supported release snapshot from `minimumUpgradeFrom`, patches and the last candidate included, to the release; the large snapshot within its time budget; `upgrade.sh` from N-1 to N through the real Compose file | the release |
-| Nightly | The full matrix against `main`; the ops tests (upgrade and rollback with a failing migration, crash injection, rehearsal, the 503 during the stop, the N-1 image); every patch snapshot of the window | nothing; a red night shows in the weekly notes |
-| Before the pilot install, and before every upgrade to a release of the `restore` class | The rehearsal of ADR 0079 on the pilot-like VM or the customer's host, on a copy of their data; optional, and recommended, for the `image` class | that upgrade |
+| The release-please pull request and every candidate | The full matrix: every supported release snapshot from `minimumUpgradeFrom`, patches and the last candidate included, to the release; the large snapshot within its time budget; the upgrade from N-1 to N through the real Compose file: the image lines of N in `.env` and `docker compose up -d` | the release |
+| Nightly | The full matrix against `main`; the ops tests (upgrade and rollback with a failing migration, crash injection, the 503 during the stop, the N-1 image); every patch snapshot of the window | nothing; a red night shows in the weekly notes |
+| Before the pilot install | An upgrade from N to N+1 and a rollback on the pilot-like VM, as documented (E18-S06) | the pilot install |
+| Before every upgrade to a release of the `restore` class | A try on a copy of the customer's data restored with the drill procedure of ADR 0045, until the rehearsal command of ADR 0079 comes (its trigger: the first `restore`-class release after the pilot, or a migration that fails on an installation's data) | that upgrade |
 
 The matrix runs one job per "from" version in parallel, each with its own container, so its time is that of the slowest path, not the sum.
 
 ### Failures the tests inject
 
 - A migration that fails halfway: the old backends stay paused, and the guide's restore to the restore point brings back every row written before it.
-- `migrate` killed after each side effect and during a file: `docker compose up -d` again, or the previous image lines, end with a working installation and no lost rows.
+- `migrate` killed after each side effect and during a file: for an `image`-class release, `docker compose up -d` again, or the previous image lines, end with a working installation and no lost rows; for a `restore`-class release, the guide's restore ends with a working old installation that holds every row written before the restore point, and only writes after it are lost.
 - A migration over its time budget: it fails on `statement_timeout`, and `northmes_meta.migration` does not record it.
 - An older image that cannot run on the schema: refused before the pause, naming the restore guide.
 - An installed plugin whose range excludes the release: `migrate` exits 1 before the pause and names it.

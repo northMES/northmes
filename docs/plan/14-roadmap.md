@@ -50,7 +50,7 @@ Option B keeps the full release 1 scope and moves the pilot later. Measured velo
 | M2 | Fri 2027-01-22 | Velocity checkpoint 1: the first forecast on the 1x line from at least eight weekly rows. The data processing agreement and the pilot agreement are signed. E09 is done. Live write-back is verified (target), or shadow mode runs with the daily write-back report. | A provisional pilot window |
 | M3 | Fri 2027-02-26 | E17 is done: Compose on a pilot-like VM with pgBackRest and a timed restore. If Pyramid has no write path, the product owner picks a file export that Pyramid imports, a REST bridge, or a pilot without ERP write-back. Velocity checkpoint 2. The 10 percent stabilization reserve starts. | A narrower window and a review of the cut list |
 | M4 (proposed) | Fri 2027-04-30 | Velocity checkpoint 3 | Krister fixes the pilot install date and the pilot test start from the three forecasts, and applies cuts if the forecast misses the date. |
-| Pilot install (proposed) | Set at M4, at least 4 weeks before the pilot test | The upgrade rehearsal from N to N+1 with a migration, the restore point and a rollback has run on the pilot-like VM. The second NVDA pass has run. The go-live checklist is complete: TLS option, disk layout, escrow, a monitoring tool or SMTP relay, browser versions, time sync. The conditions in [01-product-and-scope.md](01-product-and-scope.md#what-done-means-for-release-1) hold. | |
+| Pilot install (proposed) | Set at M4, at least 4 weeks before the pilot test | An upgrade from N to N+1 with a migration, the restore point and a rollback has run on the pilot-like VM. The second NVDA pass has run. The go-live checklist is complete: TLS option, disk layout, escrow, a monitoring tool or SMTP relay, browser versions, time sync. The conditions in [01-product-and-scope.md](01-product-and-scope.md#what-done-means-for-release-1) hold. | |
 | Pilot test | Set at M4. The stress test estimated 2027-08-24 to 2028-01-20 on its 2x line. | The pilot acceptance criteria agreed at M0 | |
 
 Nobody installs or upgrades in the week of a daylight saving change (autumn 2027-10-31, spring 2028-03-26). If the pilot window covers the night of 2027-10-31, that night runs on the installed system with the DST suites green. The stress test gave no 1x figure for the pilot window. The estimates already assume coding agents, so the forecast uses the 1x line, and on that line the window falls later than the 2x estimate.
@@ -4909,7 +4909,7 @@ Tests first:
 
 Issue: northMES/northmes#162.
 
-As a plant admin, I want an upgrade from N to N+1 rehearsed and the go-live checklist done with the pilot's IT, so that the pilot install has no open items.
+As a plant admin, I want an upgrade from N to N+1 tried on the pilot-like VM and the go-live checklist done with the pilot's IT, so that the pilot install has no open items.
 
 Module: ops. Blocked by: E18-S05, E17-S07. Design: none.
 
@@ -4923,7 +4923,7 @@ Acceptance criteria:
 
 Tests first:
 
-- A session check: the rehearsal log and the signed-off checklist attached to the issue.
+- A session check: the upgrade log and the signed-off checklist attached to the issue.
 
 Notes: labelled `human`.
 
@@ -5051,9 +5051,9 @@ ADRs: [0080](../adr/0080-safer-upgrades-with-contract-steps-a-release-later-a-co
 
 Acceptance criteria:
 
-- CI computes the rollback class and the schema compatibility number from the migration markers since the previous release, the example plugins' migrations and the recorded third-party schema changes, writes them into the release manifest, and fails the release when a hand-written value disagrees.
+- CI computes the rollback class and the schema compatibility number from the migration markers since the previous release, the backfill declarations (`previousImageReads: true` with its passing test, else `restore`), the example plugins' migrations and the recorded third-party schema changes, writes them into the release manifest, and fails the release when a hand-written value disagrees.
 - The pull request template asks a pull request with a `contract` file for the release whose code stopped using what it removes.
-- The runner sets one deadline for the whole run from the release manifest's migration time budget, and sets `statement_timeout` before each file and statement to the time left.
+- The runner sets one deadline for the whole run from the release manifest's migration time budget, stores it in the `upgrade` row so a rerun keeps it, and sets `statement_timeout` before each file and statement to the time left; past it, `migrate` applies no file and exits 1.
 
 Tests first:
 
@@ -5099,7 +5099,7 @@ Acceptance criteria:
 Tests first:
 
 - `infra/test/upgrade-crash.int.test.ts` (nightly): "migrate killed after each side effect ends working after up -d again or the previous image, with one restore point, one security event per step and no lost rows".
-- `infra/test/upgrade.int.test.ts`: "an older image of the restore class away is refused before the pause"; "an upgrade writes one security event when migrate runs twice".
+- `infra/test/upgrade.int.test.ts`: "an older image is refused before the pause when the installed release is of the restore class"; "an upgrade writes one security event when migrate runs twice".
 
 #### E18-S15 ops: Time migrations on a large snapshot nightly
 
@@ -5691,7 +5691,7 @@ The path runs through dates outside the developer's control as much as through b
 2. The board: SP3 on 2026-10-26 to 2026-11-06 (E01-S04) with its verdict on 2026-11-06, a second-fail deadline on 2026-11-20, then design approval D3, then about 35 raw days of board work (E08), then the board accessibility gate (E20-S02) and the first NVDA pass (E20-S04). The second NVDA pass (E20-S05) comes before the pilot install.
 3. The skeleton: E00 ready by 2026-10-21, E02 green by 2026-11-13, required in `ci / gate` at M1 (2026-11-20), the Rsbuild exit on 2026-11-27 if still red. E04, E05 and E06 all start from it.
 4. Pyramid: write method names by 2026-11-13, a test endpoint or recorded pairs by 2026-12-18, E09 done and live write-back verified by 2027-01-22 as the target, and the product owner's fallback decision on 2027-02-26 if Pyramid has no write path (E10-S04).
-5. Operations: E16, then E17 with the timed restore on the pilot-like VM by 2027-02-26 (M3), then E18 with the upgrade rehearsal before the pilot install.
+5. Operations: E16, then E17 with the timed restore on the pilot-like VM by 2027-02-26 (M3), then E18 with the upgrade trial before the pilot install.
 6. The date: velocity checkpoints at M2, M3 and M4 forecast the install; Krister fixes the install and pilot test dates at M4, at least 4 weeks apart and outside the DST weeks.
 
 ```mermaid
@@ -5706,7 +5706,7 @@ flowchart LR
   E08core --> E08wire --> E20["E20 NVDA passes"]
   E08wire --> E06S14["E06-S14 onboarding wizard"] --> Install
   E09 --> E10["E10 write-back<br/>verified 2027-01-22 or fallback 2027-02-26"]
-  E05 --> E16["E16 health"] --> E17["E17 ops on VM<br/>by 2027-02-26"] --> E18["E18 upgrade rehearsal"]
+  E05 --> E16["E16 health"] --> E17["E17 ops on VM<br/>by 2027-02-26"] --> E18["E18 upgrade trial"]
   E20 --> Install["Pilot install<br/>set at M4"]
   E10 --> Install
   E18 --> Install
