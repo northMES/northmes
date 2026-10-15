@@ -234,7 +234,9 @@ function SignInPage({ session }: { readonly session: AuthSession }) {
       session={session}
       signedOut={search.signedOut === true}
       sessionEnded={state.sessionEnded === true}
-      onSignedIn={() => void router.navigate({ href: returnPathOf(search) })}
+      onSignedIn={() =>
+        void router.navigate({ href: returnPathOf(search, window.location.origin) })
+      }
     />
   );
 }

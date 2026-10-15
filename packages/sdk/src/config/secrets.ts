@@ -19,6 +19,12 @@ export type Secrets<Key extends `${string}_FILE` = `${string}_FILE`> = {
  */
 export const DEV_SECRET_MARKER = 'northmes-dev-secret-';
 
+/**
+ * The fewest bytes a secret holds, by _FILE key. Better Auth signs its cookies and encrypts the JWT
+ * keys with its secret and only warns about a short one (audit B12).
+ */
+const minimumBytes: Readonly<Record<string, number>> = { NORTHMES_AUTH_SECRET_FILE: 32 };
+
 let secretsRead: Secrets | undefined;
 
 /** Reads one secret file, or states the rule it breaks without its path or content. */
@@ -44,8 +50,8 @@ function readSecretFile(path: string): { value: string } | { problem: string } {
 
 /**
  * Reads the file each _FILE key points at and keeps the values for secretsConfig. A missing,
- * unreadable, empty or other-readable file, or a path that is not a regular file, is listed in one
- * ConfigError naming its key. Once every file reads, a dev
+ * unreadable, empty or other-readable file, a path that is not a regular file, or an auth secret
+ * shorter than 32 bytes is listed in one ConfigError naming its key. Once every file reads, a dev
  * secret with NODE_ENV production fails with CONFIG_DEV_SECRET_IN_PRODUCTION. The values stay out
  * of process.env (ADR 0060).
  */
@@ -60,6 +66,13 @@ export function readSecrets<Key extends `${string}_FILE`>(
     const file = readSecretFile(path);
     if ('problem' in file) {
       problems.push(`${key}: ${file.problem}`);
+      continue;
+    }
+    const minimum = minimumBytes[key] ?? 0;
+    if (Buffer.byteLength(file.value) < minimum) {
+      problems.push(
+        `${key}: must hold at least ${minimum} bytes, such as the output of openssl rand -hex 32`,
+      );
       continue;
     }
     secrets[key.replace(/_FILE$/, '')] = file.value;
