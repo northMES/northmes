@@ -44,7 +44,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | No one grants a permission they lack; the last Company admin is protected | built | `role-rules.ts`, `user-rules.ts`; `last-admin` tests |
 | No web setup route: companies, their first Company admins and admin recovery only from the CLI on the host, which writes as `nm_app` and `nm_auth`, never prompts and takes no password as a flag | built | ADR 0011, ADR 0066, ADR 0072; `apps/backend/src/admin/`, `administration.service.ts`; `cli.test.ts`, `company.int.test.ts`, `reset-password.int.test.ts`. The command row and security event wait on the audit trail ([#443](https://github.com/northMES/northmes/issues/443)) |
 | Block and unblock limited to users who hold no more than the actor | gap | [#478](https://github.com/northMES/northmes/issues/478) |
-| Only the auth routes the web uses are open | gap | [#475](https://github.com/northMES/northmes/issues/475) |
+| Only the auth routes the web uses are open: sign-in, the JWT and sign-out | built | ADR 0011 (proposed); `auth-options.ts` (`openPaths`); `auth-routes.int.test.ts` |
 | Sign-in throttling and account lockout | gap | [#476](https://github.com/northMES/northmes/issues/476) |
 | Session absolute lifetime, and JWTs ended with their session | gap | [#479](https://github.com/northMES/northmes/issues/479) |
 | The auth design (ADR 0011) matches the code | built | ADR 0011 and ADR 0070: a bearer session in `sessionStorage`, five-minute JWTs, CORS for `webOrigins` without credentials; `apps/backend/src/http/web-origins.module.ts` |

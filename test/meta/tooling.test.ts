@@ -400,16 +400,17 @@ describe('tooling', () => {
   });
 
   it('E12-S04 @modelcontextprotocol/server and @modelcontextprotocol/client are pinned exactly at one 2.x version, the server a dependency and the client a dev dependency of apps/backend', () => {
-    // ADR 0034 builds /mcp on the official SDK v2 and tests it with its client. 2.1.0 was the
-    // newest 2.x release outside Renovate's 14-day window on 2026-10-09. Both packages pin the
-    // same @modelcontextprotocol/core, so they move together.
+    // ADR 0034 builds /mcp on the official SDK v2 and tests it with its client. 2.2.0 is the first
+    // release with the fix for the advisory against 2.1.0 (#526) and was outside Renovate's 14-day
+    // window on 2026-10-15. Both packages pin the same @modelcontextprotocol/core, so they move
+    // together.
     const packages = ['@modelcontextprotocol/server', '@modelcontextprotocol/client'];
     const catalog = readWorkspace().catalog ?? {};
     const backend = readJson<PackageJson>('apps/backend/package.json');
 
     expect(Object.fromEntries(packages.map((name) => [name, catalog[name]]))).toEqual({
-      '@modelcontextprotocol/server': '2.1.0',
-      '@modelcontextprotocol/client': '2.1.0',
+      '@modelcontextprotocol/server': '2.2.0',
+      '@modelcontextprotocol/client': '2.2.0',
     });
     expect(backend.dependencies?.['@modelcontextprotocol/server']).toBe('catalog:');
     expect(backend.devDependencies?.['@modelcontextprotocol/client']).toBe('catalog:');
