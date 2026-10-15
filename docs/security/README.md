@@ -84,6 +84,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Automated dependency updates | gap | [#482](https://github.com/northMES/northmes/issues/482) |
 | MIT packages import no AGPL code | built | `scripts/lint/mit-imports.mjs`; `test/meta/mit-imports.test.ts` |
 | Origin and license of third-party components | built | `LICENSE`, `NOTICE`, `skills-lock.json`, SPDX headers |
+| Contributions under a signed CLA: `CI / cla` checks the pull request author and every commit author against `.github/cla/signed.json` on the default branch, with no checkout and a read-only token; it joins `CI / gate` before the first outside pull request | built | ADR 0039; `scripts/cla/check.mjs`, `.github/workflows/ci.yml`; `scripts/cla/check.test.ts`, `test/meta/workflows.test.ts`. The CLA texts wait for legal review |
 
 ### 6. Vulnerability management
 

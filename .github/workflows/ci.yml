@@ -1,12 +1,13 @@
 # The CI checks for pull requests and pushes to main. GitHub shows each job as CI / <job name>, so
-# the job names do not repeat "ci". The main ruleset requires each job here as a status check by its
-# job name, as docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md decides, so a renamed,
-# added or removed job needs a ruleset edit: an added name after the merge, a removed or old name
-# just before it. test/meta/workflows.test.ts lists the job names. Every job that CI / gate needs,
-# except the two pull request checks and react doctor, runs root pnpm scripts that pnpm check or
-# pnpm check:full contains; the coverage summary step of CI / test only copies a report into the
-# job summary, and the git worktree add step of CI / fresh worktree only adds the directory that
-# the job's later steps run in.
+# the job names do not repeat "ci". The main ruleset requires each job here except CI / cla as a
+# status check by its job name, as docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md
+# decides, so a renamed, added or removed job needs a ruleset edit: an added name after the merge,
+# a removed or old name just before it. test/meta/workflows.test.ts lists the job names. CI / cla
+# joins CI / gate and the ruleset before the first outside pull request (ADR 0039). Every job that
+# CI / gate needs, except the pull request checks and react doctor, runs root pnpm scripts that
+# pnpm check or pnpm check:full contains; the coverage summary step of CI / test only copies a
+# report into the job summary, and the git worktree add step of CI / fresh worktree only adds the
+# directory that the job's later steps run in.
 name: CI
 
 on:
@@ -273,6 +274,40 @@ jobs:
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+
+  # ADR 0039: the pull request author and every commit author signed the contributor license
+  # agreement. The job checks out nothing and runs scripts/cla/check.mjs from the default branch,
+  # which reads .github/cla/signed.json from there too, so a pull request can neither change the
+  # check nor sign for its own author. CI / gate does not need it yet; it joins the gate, and the
+  # main ruleset, before the first outside pull request.
+  cla:
+    name: cla
+    permissions:
+      contents: read
+      pull-requests: read
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+      - name: Download the CLA check from the default branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/cla/scripts/cla" "$RUNNER_TEMP/cla/scripts/ci"
+          gh api -H 'Accept: application/vnd.github.raw+json' \
+            "repos/$GITHUB_REPOSITORY/contents/scripts/cla/check.mjs?ref=$DEFAULT_BRANCH" \
+            > "$RUNNER_TEMP/cla/scripts/cla/check.mjs"
+          gh api -H 'Accept: application/vnd.github.raw+json' \
+            "repos/$GITHUB_REPOSITORY/contents/scripts/ci/annotation.mjs?ref=$DEFAULT_BRANCH" \
+            > "$RUNNER_TEMP/cla/scripts/ci/annotation.mjs"
+      - name: Check that every author signed the CLA
+        run: node "$RUNNER_TEMP/cla/scripts/cla/check.mjs"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
 
   # GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
   # so CI / gate always runs and fails itself instead. On a pull request every job it needs runs,
