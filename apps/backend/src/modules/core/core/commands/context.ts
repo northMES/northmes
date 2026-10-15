@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+import type { HandlerContext } from '@northmes/sdk/commands';
 import type { Transaction } from 'kysely';
 import type { CoreDatabase } from '../../infrastructure/database.ts';
 
@@ -13,4 +14,6 @@ export interface CoreContext<Target = undefined> {
   readonly target: Target;
   /** Throws core.forbidden unless the principal holds `permission` at `scopeId` (ADR 0073). */
   require(permission: string, scopeId: string): void;
+  /** Writes an event to the event log in the command's transaction (ADR 0014). */
+  readonly publish: HandlerContext['publish'];
 }

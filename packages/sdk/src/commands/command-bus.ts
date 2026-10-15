@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
-import type { CommandContract } from '@northmes/contracts';
+import type { CommandContract, EventContract } from '@northmes/contracts';
 import type { Transaction } from 'kysely';
+import type { z } from 'zod';
 
 /** The token under which the host provides the CommandBus. Generated mutation fields inject it. */
 export const COMMAND_BUS = 'northmes:command-bus';
@@ -26,6 +27,27 @@ export interface HandlerContext<Target = unknown> {
    * throws core.forbidden otherwise, which rolls the command back as the permission step does.
    */
   require(permission: string, scopeId: string): void;
+  /**
+   * Writes `event` about `entity` to the event log in the command's transaction, so it exists
+   * exactly when the command commits (ADR 0014). Call it after the change that gave the entity
+   * `entity.version`, while the command holds the row's lock. `entity.scopeId` is the scope the
+   * change was made at, among the request's write scopes, and readers filter by it. The bus parses
+   * `data` with the contract's schema and records the acting user and the command's name.
+   */
+  publish<Data extends z.ZodType>(
+    event: EventContract<Data>,
+    entity: PublishedEntity,
+    data: z.input<Data>,
+  ): Promise<void>;
+}
+
+/** The entity an event is about, as HandlerContext.publish takes it. */
+export interface PublishedEntity {
+  readonly id: string;
+  /** The entity's version after the change. */
+  readonly version: number;
+  /** The scope the change was made at, such as an article's edit scope. */
+  readonly scopeId: string;
 }
 
 /**
