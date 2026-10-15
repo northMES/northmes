@@ -67,6 +67,8 @@ function themeBoot(): Plugin {
 export default defineConfig(({ command }) => ({
   // Tailwind builds the one stylesheet, src/styles/app.css, which index.html links.
   plugins: [react(), tailwindcss(), themeBoot()],
+  // NORTHMES_SOURCEMAP=1 pnpm build writes a source map next to each asset, for debugging a build.
+  build: { sourcemap: process.env.NORTHMES_SOURCEMAP === '1' },
   // The dev server resolves workspace packages to their source, as the tests do (ADR 0058).
   ...(command === 'serve' && {
     resolve: { conditions: ['@northmes/source', ...defaultClientConditions] },
