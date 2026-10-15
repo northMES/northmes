@@ -42,7 +42,7 @@ NorthMES runs its own Postgres in the `db` service by default. To use a Postgres
 
     - `NORTHMES_VERSION`: paste the line from the release notes, for example `NORTHMES_VERSION=0.0.1@sha256:...`. The digest pins the exact image.
     - `NORTHMES_HOST`: the host name browsers use.
-    - `NORTHMES_BIND_IP`: the address Caddy listens on. Keep `0.0.0.0` to listen on every address of the host.
+    - `NORTHMES_BIND_IP`: the address Caddy listens on. `0.0.0.0` opens ports 80 and 443 on every network interface of the host; if the host has more than one, set the address the plant network uses.
   </Step>
   <Step title="Create the secret files">
     Each file holds one random value. Only the user the NorthMES image runs as (uid 1000) can read them.
@@ -168,5 +168,6 @@ This works only while the newer release added no migration. The release notes sa
 | What you see | Where to look |
 |---|---|
 | `app` does not start | `docker compose logs migrate`, then `docker compose logs app` |
+| `app` keeps restarting, and its log reports it ran out of memory | Raise `NORTHMES_APP_MEM_LIMIT` in `.env` (2 GB by default, for example `NORTHMES_APP_MEM_LIMIT=4g`), then run `docker compose up -d` |
 | The browser cannot connect | `docker compose ps caddy`, and that ports 80 and 443 are open on the host's firewall |
 | A secret file error at start | The owner and mode of the files in `secrets/` (uid 1000, mode 600) |
