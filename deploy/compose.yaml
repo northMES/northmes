@@ -111,6 +111,27 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
 
+  # Starts only when .env has COMPOSE_PROFILES=backup. Every night at 02:00 UTC it writes the
+  # database and the site's files to ./backups and keeps 7 days; copying them off the host is yours
+  # (ADR 0045). backup.sh says what it does; README.md has "Back up" and "Restore".
+  backup:
+    image: postgres:18@sha256:8ff36f3c66371cba71d20ceedccfc3de9669a68737607888c4ef0af93abe8e39
+    profiles: [backup]
+    restart: unless-stopped
+    entrypoint: ["sh", "/bundle/backup.sh"]
+    command: ["nightly"]
+    environment:
+      DATABASE_URL: ${NORTHMES_DATABASE_URL:-postgres://db:5432/northmes}
+      NORTHMES_DB_ADMIN_USER: ${NORTHMES_DB_ADMIN_USER:-postgres}
+      # With your own Postgres and sslmode=verify-full, pg_dump checks the server's certificate
+      # against this file (README.md, "Back up").
+      PGSSLROOTCERT: /bundle/db-root.crt
+    secrets: [postgres_password]
+    volumes:
+      - .:/bundle:ro
+      - ./backups:/backups
+      - caddy-data:/data
+
 secrets:
   postgres_password:
     file: ./secrets/postgres_password
