@@ -212,14 +212,16 @@ export class ArticleService {
 
   /**
    * The articles with these ids in one query, one entry per id in the order of the ids: the
-   * article, or null when none exists at the principal's read scopes. It checks no permission,
-   * because another module's field reads the articles of its own rows through it, such as the
-   * article of a production order.
+   * article, or null when none exists at the request's read scopes. Another module's field reads
+   * the articles of its own rows through it, such as the article of a production order. It needs
+   * core.article:read where the request runs, and is core.forbidden otherwise, so a permission on
+   * those rows grants no article.
    */
   async byIds(ids: readonly string[]): Promise<(ArticleRecord | null)[]> {
     if (ids.length === 0) return [];
-    const articles = await this.db.transaction((tx) =>
-      selectArticles(tx).where('id', 'in', ids).execute(),
+    const scope = requestScope('core.article:read');
+    const articles = await readIn(scope, () =>
+      this.db.transaction((tx) => selectArticles(tx).where('id', 'in', ids).execute()),
     );
     const byId = new Map(articles.map((article) => [article.id, article]));
     return ids.map((id) => byId.get(id) ?? null);
