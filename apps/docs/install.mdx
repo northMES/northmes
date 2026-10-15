@@ -179,11 +179,13 @@ With your own Postgres, restore the server with your provider's tools instead, f
     They give the new `NORTHMES_VERSION` line, and say whether the release adds database migrations.
   </Step>
   <Step title="Take a backup">
+    With the bundled database, run:
+
     ```sh
     docker compose run --rm backup now
     ```
 
-    With your own Postgres, take your provider's on-demand backup instead.
+    With your own Postgres, take your provider's on-demand backup, and back up `secrets/`, `.env` and `compose.override.yaml`.
   </Step>
   <Step title="Change the version">
     Put the new line in `.env` in place of the old one.
