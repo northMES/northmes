@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Preloaded with --import into a server that config.int.test.ts starts. Records the specifier of
 // every import, also one that fails to resolve, and writes the list as JSON to the file that
 // NM_TEST_IMPORTS_FILE names when the process exits.

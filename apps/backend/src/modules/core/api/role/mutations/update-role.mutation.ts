@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { updateRole } from '@northmes/core-contracts';
 import { defineCommand } from '@northmes/sdk/commands';
 import { updateRoleHandler } from '../../../core/commands/update-role.handler.ts';

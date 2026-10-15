@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Fixture module faulty: each of its fields throws one kind of error, for the exception filter.
 import {
   ForbiddenException,

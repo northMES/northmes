@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { releaseProductionOrder } from '@northmes/planning-contracts';
 import { defineCommand } from '@northmes/sdk/commands';
 import { releaseProductionOrderHandler } from '../../../core/commands/release-production-order.handler.ts';
