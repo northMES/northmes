@@ -28,7 +28,8 @@
     "plugin:build": "turbo run build --filter=@northmes/sdk --output-logs=errors-only && node scripts/plugin-build.mjs",
     "dev": "node scripts/stack/dev.mjs",
     "demo": "node scripts/stack/demo.mjs",
-    "e2e": "pnpm build && playwright install chromium && playwright test"
+    "e2e": "pnpm build && playwright install chromium && playwright test",
+    "docs:screenshots": "pnpm build && playwright install chromium && NORTHMES_DOCS_SCREENSHOTS=1 playwright test e2e/docs-screenshots.spec.ts"
   },
   "devDependencies": {
     "@argos-ci/playwright": "catalog:",
