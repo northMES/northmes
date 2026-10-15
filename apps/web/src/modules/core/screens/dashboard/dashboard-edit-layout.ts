@@ -10,7 +10,9 @@ import { readingOrder } from './dashboard-layout.ts';
 /** A widget of a tab in edit mode: what the API answers, without its type name. */
 export interface EditedWidget {
   readonly id: string;
-  readonly type: 'LIST' | 'TABLE' | 'VALUE' | 'CHART';
+  readonly type: 'LIST' | 'TABLE' | 'VALUE' | 'CHART' | 'CONTRIBUTION';
+  /** The contribution a CONTRIBUTION widget shows; null or absent for the other types. */
+  readonly contribution?: string | null;
   readonly size: Uppercase<DashboardWidgetSize>;
   readonly x: number;
   readonly y: number;
@@ -171,9 +173,10 @@ export function sizeText(size: EditedWidget['size']): string {
 /** The layout as the JSON of core.saveDashboardTab's layout field, in reading order (ADR 0078). */
 export function layoutInput(widgets: readonly EditedWidget[]): string {
   return JSON.stringify(
-    readingOrder(widgets).map(({ id, type, size, x, y, title }) => ({
+    readingOrder(widgets).map(({ id, type, contribution, size, x, y, title }) => ({
       id,
       type: type.toLowerCase(),
+      ...(contribution ? { contribution } : {}),
       size: size.toLowerCase(),
       x,
       y,

@@ -40,7 +40,16 @@ function widget(
   y: number,
   title: string,
 ) {
-  return { __typename: 'DashboardWidget' as const, id, type, size, x, y, title };
+  return {
+    __typename: 'DashboardWidget' as const,
+    id,
+    type,
+    contribution: null,
+    size,
+    x,
+    y,
+    title,
+  };
 }
 
 type Widget = ReturnType<typeof widget>;

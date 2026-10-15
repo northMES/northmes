@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 import { describe, expect, it } from 'vitest';
-import { dashboardLayout, dashboardWidget, saveDashboardTab } from '../src/dashboard.ts';
+import {
+  dashboardLayout,
+  dashboardWidget,
+  dashboardWidgetSlot,
+  saveDashboardTab,
+} from '../src/dashboard.ts';
 
 /** A List widget at the top left, with the overrides. */
 function list(overrides: Record<string, unknown> = {}) {
@@ -35,6 +40,38 @@ describe('dashboardWidget (design shell-454)', () => {
   it('refuses an unknown type and an empty title', () => {
     expect(dashboardWidget.safeParse(list({ type: 'gauge' })).success).toBe(false);
     expect(dashboardWidget.safeParse(list({ settings: { title: ' ' } })).success).toBe(false);
+  });
+});
+
+describe('a contributed widget (ADR 0068, M-32)', () => {
+  /** A widget of the contribution example-article-count.count, with the overrides. */
+  function contributed(overrides: Record<string, unknown> = {}) {
+    return list({
+      type: 'contribution',
+      contribution: 'example-article-count.count',
+      ...overrides,
+    });
+  }
+
+  it('names its contribution to core/dashboard/widgets/v1, at any size', () => {
+    expect(dashboardWidgetSlot).toBe('core/dashboard/widgets/v1');
+    for (const size of ['small', 'medium', 'large', 'tall', 'wide']) {
+      expect(dashboardWidget.safeParse(contributed({ size })).success).toBe(true);
+    }
+  });
+
+  it('refuses a contributed widget without its contribution, and a built-in type with one', () => {
+    const missing = dashboardWidget.safeParse(contributed({ contribution: undefined }));
+    const extra = dashboardWidget.safeParse(list({ contribution: 'example-article-count.count' }));
+
+    expect(missing.error?.issues.map(({ path }) => path)).toEqual([['contribution']]);
+    expect(extra.error?.issues.map(({ path }) => path)).toEqual([['contribution']]);
+  });
+
+  it('refuses a contribution id that is not a module id and a name', () => {
+    for (const contribution of ['count', 'Example.count', '../x.count', `a.${'b'.repeat(128)}`]) {
+      expect(dashboardWidget.safeParse(contributed({ contribution })).success).toBe(false);
+    }
   });
 });
 

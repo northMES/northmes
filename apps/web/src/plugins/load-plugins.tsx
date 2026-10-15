@@ -2,7 +2,7 @@
 import { defineWebModule, type PlantRoute, type WebModule } from '@northmes/web-sdk';
 import { createRoute } from '@tanstack/react-router';
 import { RotateCw } from 'lucide-react';
-import type { ShellModule } from '../modules.ts';
+import type { ShellContribution, ShellModule } from '../modules.ts';
 import { PageFrame } from '../ui/components/page-frame/index.ts';
 import type { NavIconName } from '../ui/lib/nav-icon-names.ts';
 import { Button } from '../ui/primitives/button.tsx';
@@ -18,7 +18,17 @@ export interface PluginListing {
   readonly icon?: string;
   readonly order: number;
   readonly permission?: string;
-  readonly contributes: readonly unknown[];
+  /** The manifest's web.contributes: each contribution's data, read before any plugin code. */
+  readonly contributes: readonly PluginContribution[];
+}
+
+/** One entry of a plugin manifest's web.contributes (ADR 0068). */
+export interface PluginContribution {
+  readonly id: string;
+  readonly slot: string;
+  readonly label: string;
+  readonly order: number;
+  readonly permission: string;
 }
 
 export interface LoadPluginsOptions {
@@ -81,7 +91,7 @@ function isWebModuleOf(value: unknown, listing: PluginListing): value is WebModu
   return (
     module.id === listing.id &&
     module.version === listing.version &&
-    typeof module.routes === 'function'
+    (module.routes === undefined || typeof module.routes === 'function')
   );
 }
 
@@ -135,21 +145,38 @@ function unavailableModule({ id, version, label }: PluginListing): WebModule {
   });
 }
 
-/** A plugin's sidebar group: its label at its order, with one entry to its page. */
+/**
+ * A plugin as a module of the shell: its sidebar group, its label at its order with one entry to
+ * its page when it has one, and its contributions, each with the component its web part supplies
+ * under the contribution's id, if any.
+ */
 function shellModuleOf(listing: PluginListing, module: WebModule, entry: string): ShellModule {
   const { id, label, icon, order, permission } = listing;
+  const contributions: ShellContribution[] = listing.contributes.map((contribution) => {
+    const Component = module.contributions?.[contribution.id];
+    return {
+      ...contribution,
+      moduleId: id,
+      moduleLabel: label,
+      ...(Component === undefined ? {} : { Component }),
+    };
+  });
   return {
     module,
     label,
     order,
-    links: [
-      {
-        label: entry,
-        icon: (icon ?? 'Shapes') as NavIconName,
-        link: ({ plant }) => ({ href: `/${plant}/${id}` }),
-        ...(permission === undefined ? {} : { permission }),
-      },
-    ],
+    links:
+      module.routes === undefined
+        ? []
+        : [
+            {
+              label: entry,
+              icon: (icon ?? 'Shapes') as NavIconName,
+              link: ({ plant }) => ({ href: `/${plant}/${id}` }),
+              ...(permission === undefined ? {} : { permission }),
+            },
+          ],
+    contributions,
   };
 }
 

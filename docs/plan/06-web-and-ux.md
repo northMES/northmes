@@ -311,7 +311,7 @@ Slot ids follow `<module>/<area>/<name>/v<N>`. Slots that the shell renders carr
 | `planning/orders/columns/v1` | field | planning | `{ plantId }`; items are the rows of the page | a column, not sortable or filterable | the table container scrolls horizontally | later |
 | `planning/order/actions/v1` | action | planning | `{ plantId, productionOrderId, version }` | a page action | the page's overflow menu | later |
 | `production-start/station/panels/v1` | region | production-start | `{ plantId, stationId, jobOrderId: string \| null }` | the station layout, 44 px targets | stacked | later |
-| `core/dashboard/widgets/v1` | region | core | open (M-32) | open | open | undecided |
+| `core/dashboard/widgets/v1` | region | core | `{ plant }` | a dashboard widget's frame, sized by the user | the one-column list | release 1, `example-article-count` (M-32) |
 
 Slot prop types stay in `@northmes/web-sdk` in release 1, in one `SlotProps` map that also holds each slot's kind, so a plugin types its contribution without importing AGPL code and a wrong slot id or kind fails to compile. A contribution reaches the slot's props and the host's services through `useHost(slot)`; release 1 builds it with `props` only, and each other member (`plant`, `layout`, `size`, `time`, `can`, `live`, `announce`) arrives with its first reader ([0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)). A field's `render` runs once per item and cannot call a hook, so the owner calls `usePlantTime()` once and passes the result as `render(value, { time })`. That argument follows the same rule: it arrives with its first reader, the Pyramid connector's header line ("Pyramid data as of {time}"), if M-31 gives the connector a remote, and until then `render` takes the value only.
 
@@ -877,7 +877,7 @@ Board, station and AI panel work is listed in [07-production-planning.md](07-pro
 | OS and browser versions on station and planner PCs; the planner PC class for the board spike and NVDA passes | Pilot IT | Browser floor above |
 | Gloves, screen size and badge reader model at stations | Pilot IT | `--nm-target-min` 44 px at stations |
 | Where the UI of the Pyramid connector (integration card, import log, import inbox) and of the AI provider settings (integration cards) lives | Maintainer | Not decided. Core cannot render another module's screens, because dependencies point toward core; the options are a remote per module or contributions to a core Integrations page slot |
-| Whether release 1 ships a dashboard and its slot `core/dashboard/widgets/v1` | Maintainer | Not decided; the web spike's contract declared the slot |
+| Whether release 1 ships a dashboard and its slot `core/dashboard/widgets/v1` | Maintainer | Working default yes (M-32): the dashboard ships, and the slot is built for the article count example |
 | Which module owns scrap reasons, a register in the kit | Maintainer | Not decided |
 | Codes case-insensitive; archived rows keep their code | Product owner ([0009](../adr/0009-code-uniqueness-per-scope-with-an-exclusion-constraint.md)) | The kit assumes both |
 | Whether "pieces per hour" counts pieces or cycles in the cycle time input | Product owner ([0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md)) | Not decided |

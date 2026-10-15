@@ -2,6 +2,7 @@
 import { cn } from 'cn';
 import { type ReactNode, useId } from 'react';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
+import { ContributedWidget } from './dashboard-contributed-widget.tsx';
 import { demoChartBars, demoListItems, demoTableRows, demoValue } from './dashboard-demo-data.ts';
 import type { DashboardWidget as Widget } from './dashboard-tabs.graphql.ts';
 
@@ -89,8 +90,22 @@ const contents = {
   CHART: ChartContent,
 } as const;
 
+/** The fictional content of one of core's four demo types. */
+function DemoContent({
+  widget,
+  type,
+}: {
+  readonly widget: Shown;
+  readonly type: keyof typeof contents;
+}) {
+  const Content = contents[type];
+  return <Content widget={widget} />;
+}
+
 export interface DashboardWidgetProps {
-  readonly widget: Pick<Widget, 'id' | 'type' | 'title'>;
+  readonly widget: Pick<Widget, 'id' | 'type' | 'title'> & {
+    readonly contribution?: string | null;
+  };
   readonly className?: string;
   /** Before the title in edit mode: the move button (design shell-454, A7). */
   readonly leading?: ReactNode;
@@ -99,14 +114,15 @@ export interface DashboardWidgetProps {
 }
 
 /**
- * One widget of a tab: a region named by its title, with a Demo badge, since release 1's four
- * types show fictional data (design shell-454, question 15). In the grid it fills its cell and
+ * One widget of a tab: a region named by its title. Core's four types carry a Demo badge, since
+ * they show fictional data (design shell-454, question 15); a widget that a module or plugin
+ * contributes shows its own content (ADR 0068). In the grid it fills its cell and
  * scrolls inside; in the one-column list its height grows with its content (WCAG 1.4.10). In edit
  * mode its border is dashed, with the move button before the title and Widget actions after it.
  */
 export function DashboardWidget({ widget, className, leading, trailing }: DashboardWidgetProps) {
   const titleId = useId();
-  const Content = contents[widget.type];
+  const contributed = widget.type === 'CONTRIBUTION';
   return (
     <section
       aria-labelledby={titleId}
@@ -120,13 +136,19 @@ export function DashboardWidget({ widget, className, leading, trailing }: Dashbo
         <h2 id={titleId} className="mr-auto self-center text-sm leading-snug font-semibold">
           {widget.title}
         </h2>
-        <Badge variant="outline" className="self-center">
-          Demo
-        </Badge>
+        {!contributed && (
+          <Badge variant="outline" className="self-center">
+            Demo
+          </Badge>
+        )}
         {trailing}
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
-        <Content widget={widget} />
+        {contributed ? (
+          <ContributedWidget contribution={widget.contribution} title={widget.title} />
+        ) : (
+          <DemoContent widget={widget} type={widget.type} />
+        )}
       </div>
     </section>
   );

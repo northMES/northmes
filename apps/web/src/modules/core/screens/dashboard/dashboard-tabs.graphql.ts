@@ -28,6 +28,7 @@ if (false) {
         widgets {
           id
           type
+          contribution
           size
           x
           y

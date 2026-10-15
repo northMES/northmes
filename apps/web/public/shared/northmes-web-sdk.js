@@ -2,6 +2,7 @@
 const shared = globalThis[Symbol.for('northmes.shared')]["@northmes/web-sdk"];
 export default shared.default ?? shared;
 export const {
+  ContributionsProvider,
   HOST_PROVIDED_WEB,
   ShellProvider,
   classifyError,
@@ -12,5 +13,6 @@ export const {
   defineWebModule,
   isHostProvidedWeb,
   settingsPath,
+  useContributions,
   useShell,
 } = shared;

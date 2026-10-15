@@ -2,6 +2,7 @@
 import type { ApolloClient } from '@apollo/client';
 import { ApolloProvider, useQuery } from '@apollo/client/react';
 import {
+  ContributionsProvider,
   companySettingsHref,
   createNorthmesClient,
   createShellRoutes,
@@ -373,7 +374,8 @@ function PlantLayout({
   const gated = modules.some(
     (module) =>
       menuLinks(module).some(({ permission }) => permission !== undefined) ||
-      (module.settingsLinks ?? []).length > 0,
+      (module.settingsLinks ?? []).length > 0 ||
+      (module.contributions ?? []).length > 0,
   );
   const { data: viewer } = useQuery(CoreViewer, { client: clientFor(plant), skip: !gated });
   const permissions = useMemo(
@@ -398,6 +400,11 @@ function PlantLayout({
     .flatMap(plantSettingsLinks)
     .some(({ link }) => currentOf(link({ plant }).href, pathname) !== undefined);
   const shown = shownTo(permissions);
+  // The contributions the user may see at the plant: the slots render these (ADR 0068).
+  const contributions = useMemo(
+    () => modules.flatMap((module) => module.contributions ?? []).filter(shownTo(permissions)),
+    [modules, permissions],
+  );
   const settingsGroups: SettingsGroup[] = settingsGroupsOf(
     modules.map((module) => ({
       moduleId: module.module.id,
@@ -515,7 +522,9 @@ function PlantLayout({
                 tabIndex={-1}
                 className="flex-1 px-4 py-6 md:px-7 focus-visible:outline-offset-[-4px]"
               >
-                <PageGroupsProvider value={pageGroups}>{page}</PageGroupsProvider>
+                <PageGroupsProvider value={pageGroups}>
+                  <ContributionsProvider value={contributions}>{page}</ContributionsProvider>
+                </PageGroupsProvider>
               </main>
             </PageFrameTopBar>
           </SidebarInset>

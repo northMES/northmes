@@ -248,7 +248,7 @@ Block fields and list columns share one kind. Both are a value per item, loaded 
 | `planning/orders/columns/v1` | field | planning | `{ plantId }`; items are the rows of the page | a column | the table container scrolls horizontally ([ADR 0021][adr-0021]) | later |
 | `planning/order/actions/v1` | action | planning | `{ plantId, productionOrderId, version }` | a page action | the page's overflow menu | later |
 | `production-start/station/panels/v1` | region | production-start | `{ plantId, stationId, jobOrderId: string \| null }` | the station layout, 44 px targets | stacked | later |
-| `core/dashboard/widgets/v1` | region | core | open (M-32) | open | open | undecided |
+| `core/dashboard/widgets/v1` | region | core | `{ plant }` | a dashboard widget's frame, sized by the user | the one-column list | release 1, `example-article-count` (M-32) |
 
 The aside and the banner slot carry the owner id `core` for the same reason as the top bar slot: the shell is not a module, and every module depends on core ([ADR 0067][adr-0067]).
 
@@ -449,7 +449,6 @@ D2 needs no built slot beyond these pieces; [D2 coverage](#d2-coverage) lists wh
 | `grants` of plugin permissions to module default roles | the first plugin whose permissions belong in a module's default role |
 | MCP tools from plugins, in a toolset named after the plugin, off by default, outside planning's limit of eight tools ([ADR 0034][adr-0034]) | the first plugin tool |
 | `@public` points and compatibility by point catalog | 1.0 |
-| Dashboard widgets | M-32 |
 | A point kind with an owner-marked `next` chain | a need that validators, consumers, contributed fields and answer points cannot meet |
 
 ### D2 coverage

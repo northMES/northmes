@@ -6,6 +6,11 @@ export {
 } from './apollo.ts';
 export { type ClassifiedError, classifyError, type ErrorPage } from './classify-error.ts';
 export {
+  ContributionsProvider,
+  type SlotContribution,
+  useContributions,
+} from './contributions.tsx';
+export {
   HOST_PROVIDED_WEB,
   type HostProvidedWeb,
   isHostProvidedWeb,

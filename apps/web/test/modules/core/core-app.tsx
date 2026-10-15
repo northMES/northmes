@@ -2,7 +2,12 @@
 import type { MockLink } from '@apollo/client/testing';
 import { MockedProvider } from '@apollo/client/testing/react';
 import { coreLinks } from '@northmes/core-contracts';
-import { createShellRoutes, ShellProvider } from '@northmes/web-sdk';
+import {
+  ContributionsProvider,
+  createShellRoutes,
+  ShellProvider,
+  type SlotContribution,
+} from '@northmes/web-sdk';
 import {
   createMemoryHistory,
   createRouter,
@@ -46,10 +51,14 @@ function SettingsStub() {
 
 /**
  * Renders the core module's routes at href, at a plant or in company settings, with a
- * MockedProvider that answers each of mocks once, and returns the router, whose state.location
- * shows the URL.
+ * MockedProvider that answers each of mocks once and the contributions the shell would give the
+ * slots, and returns the router, whose state.location shows the URL.
  */
-export function renderCoreAt(href: string, mocks: readonly MockLink.MockedResponse[]) {
+export function renderCoreAt(
+  href: string,
+  mocks: readonly MockLink.MockedResponse[],
+  { contributions = [] }: { readonly contributions?: readonly SlotContribution[] } = {},
+) {
   const router = createRouter({
     routeTree: createShellRoutes({
       modules: [coreModule],
@@ -60,7 +69,9 @@ export function renderCoreAt(href: string, mocks: readonly MockLink.MockedRespon
   });
   render(
     <MockedProvider mocks={mocks}>
-      <RouterProvider router={router} />
+      <ContributionsProvider value={contributions}>
+        <RouterProvider router={router} />
+      </ContributionsProvider>
     </MockedProvider>,
   );
   return router;
