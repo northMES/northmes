@@ -24,6 +24,7 @@ if (false) {
         name
         scope
         version
+        canEdit
         widgets {
           id
           type

@@ -7,6 +7,7 @@
 export const corePermissions = {
   'core.article': ['read', 'create', 'update', 'archive', 'assign'],
   'core.articleGroup': ['read', 'create', 'update', 'archive'],
+  'core.dashboardTab': ['manage'],
   'core.role': ['read', 'manage'],
   'core.roleAssignment': ['manage'],
   'core.user': ['read', 'create', 'block', 'resetPassword'],

@@ -130,6 +130,26 @@ function authorizeAtRow(
 }
 
 /**
+ * The locked row of a command whose target names an owner, when the owner is the principal's own
+ * user: the bus runs the command on it without the contract's permission (ADR 0078). undefined for
+ * a target without ownerOf, a principal without a user id, a row it does not find, and a row of no
+ * one or of another user, which the permission step then judges.
+ */
+async function ownRow<Input, Result, Target extends TargetRow | undefined>(
+  command: Command<Input, Result, Target>,
+  id: string,
+  principal: Principal,
+  context: { readonly tx: Transaction<unknown>; readonly plantId: string | undefined },
+): Promise<Target | undefined> {
+  const ownerOf = command.target?.ownerOf;
+  if (!command.target || !ownerOf) return undefined;
+  // Fails closed: an empty user id, or a row without an owner, is never the principal's own.
+  if (principal.userId === '') return undefined;
+  const row = await command.target.load(id, context);
+  return row !== undefined && ownerOf(row) === principal.userId ? row : undefined;
+}
+
+/**
  * The permission step (ADR 0010, ADR 0012 step 3), with the load of the target. The principal must
  * hold the contract's permission at the scope of the row the command changes. For a command
  * without a target, such as a create, the scope is the one its scope hook returns, or else the
@@ -161,6 +181,8 @@ async function authorizeAndLoad<Input, Result, Target extends TargetRow | undefi
     const { id } = input as ExistingInput;
     const scopeId = await scopeOf(id, context);
     if (scopeId === undefined) throw notFound(entity, id);
+    const own = await ownRow(command, id, principal, context);
+    if (own) return own;
     authorizeAtRow(principal, permission, { entity, id, scopeId });
     const row = await load(id, context);
     // scopeOf read the row, so the lock found it outside the request's write scopes: a principal
