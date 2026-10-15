@@ -45,7 +45,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Block and unblock limited to users who hold no more than the actor | gap | [#478](https://github.com/northMES/northmes/issues/478) |
 | Only the auth routes the web uses are open | gap | [#475](https://github.com/northMES/northmes/issues/475) |
 | Sign-in throttling and account lockout | gap | [#476](https://github.com/northMES/northmes/issues/476) |
-| Session absolute lifetime, and JWTs ended with their session | gap | [#479](https://github.com/northMES/northmes/issues/479) |
+| Session absolute lifetime (24 hours from sign-in, whatever its use), and JWTs ended with their session: a JWT is refused once its session signed out, was revoked or expired | built | `auth-options.ts`; `auth.service.ts`; `auth-options.test.ts`, `sign-in.int.test.ts` |
 | The auth design (ADR 0011) matches the code | gap | [#485](https://github.com/northMES/northmes/issues/485) |
 | MFA and a password policy | accepted | ADR 0051 B2: deferred until the pilot's NIS2 status is known |
 

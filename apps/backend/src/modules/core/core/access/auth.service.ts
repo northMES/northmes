@@ -2,6 +2,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Inject, Injectable } from '@nestjs/common';
 import { toNodeHandler } from 'better-auth/node';
+import { sessionIsLive } from '../../infrastructure/auth/auth-options.ts';
 import { BetterAuth } from '../../infrastructure/auth/better-auth.ts';
 
 /** A user to create: the email they sign in with, their username and their first password. */
@@ -33,13 +34,10 @@ export interface PasswordOptions {
   readonly temporary?: boolean;
 }
 
-/**
- * The user of a JWT and the Better Auth session it was minted from. A JWT that the server signed
- * itself names no session.
- */
+/** The user of a JWT and the live Better Auth session it was minted from. */
 export interface TokenSession {
   readonly userId: string;
-  readonly sessionId: string | undefined;
+  readonly sessionId: string;
 }
 
 /** Why the new password step refused a password, by NorthMES code. */
@@ -156,8 +154,7 @@ export class AuthService {
    * The new password step (D2, SI16): a user marked as needing a new password replaces the
    * temporary one, which they give as currentPassword, and the mark is cleared. Every other session
    * of the user ends, so a session that someone else opened with the temporary password mints no
-   * more JWTs. The caller's session stays; when the caller's JWT names no session, every session
-   * ends. A JWT already minted from an ended session works until it expires (JWT_LIFETIME). It answers
+   * more JWTs, and a JWT already minted from one is refused. The caller's session stays. It answers
    * the refusal's code, or undefined once the password is set: a wrong current password, a new one
    * shorter than Better Auth's minimum of 8 characters or longer than its maximum, one equal to the
    * temporary password, or a user who is not marked.
@@ -286,9 +283,11 @@ export class AuthService {
   }
 
   /**
-   * The user id of a JWT that Better Auth signed for this API and that has not expired, or null
-   * for any other token: a session token, an expired JWT, a JWT with another signature, issuer or
-   * audience, or text that is no JWT.
+   * The user id of a JWT that Better Auth signed for this API, that has not expired and whose
+   * session is live, or null for any other token: a session token, an expired JWT, a JWT with
+   * another signature, issuer or audience, a JWT whose session signed out, was revoked, expired or
+   * reached its absolute lifetime, or text that is no JWT. Checking the session ends a JWT with it,
+   * instead of up to JWT_LIFETIME later.
    */
   async userOfToken(token: string): Promise<string | null> {
     return (await this.sessionOfToken(token))?.userId ?? null;
@@ -296,14 +295,24 @@ export class AuthService {
 
   /**
    * The user of a JWT that userOfToken accepts and the session that minted it, which
-   * /api/auth/token names as sid, or null for a token that userOfToken refuses.
+   * /api/auth/token names as sid, or null for a token that userOfToken refuses. A JWT that names no
+   * session, or a session of another user, is refused.
    */
   async sessionOfToken(token: string): Promise<TokenSession | null> {
     const { payload } = await this.betterAuth.auth.api.verifyJWT({ body: { token } });
-    if (typeof payload?.sub !== 'string') return null;
-    return {
-      userId: payload.sub,
-      sessionId: typeof payload.sid === 'string' ? payload.sid : undefined,
-    };
+    const userId = payload?.sub;
+    const sessionId = payload?.sid;
+    if (typeof userId !== 'string' || typeof sessionId !== 'string') return null;
+    const { adapter } = await this.betterAuth.auth.$context;
+    const session = await adapter.findOne<{ userId: string; createdAt: Date; expiresAt: Date }>({
+      model: 'session',
+      where: [{ field: 'id', value: sessionId }],
+    });
+    if (!session || session.userId !== userId) return null;
+    const live = sessionIsLive(
+      { createdAt: new Date(session.createdAt), expiresAt: new Date(session.expiresAt) },
+      new Date(),
+    );
+    return live ? { userId, sessionId } : null;
   }
 }
