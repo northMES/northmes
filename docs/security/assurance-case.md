@@ -1,0 +1,67 @@
+# Assurance case
+
+The argument that NorthMES meets its security requirements, and the evidence for each step. It answers the OpenSSF silver criterion `assurance_case`: the threat model, the trust boundaries, how secure design principles are applied, and how common implementation weaknesses are countered.
+
+A claim here is only as strong as its evidence. The status words are those of the [controls index](README.md#controls-index): **built** (code, a test or a CI job shows it), **decided** (an ADR or plan holds it, no code yet), **gap** (an issue tracks it) and **accepted** (in the [risk register](risks.md) with a reason). Only a built control counts as met. The internal audit before each release ([ADR 0076](../adr/0076-secure-development-lifecycle-with-a-security-note-per-change-a-controls-index-and-an-internal-audit-each-release.md)) checks this page with the controls index.
+
+## Claim
+
+For release 1, every control that the controls index marks built meets the threat it is listed against, and every threat in the threat model that no built control meets is either tracked by an issue or recorded as an accepted risk with an owner and a review date.
+
+The case does not claim that NorthMES is free of vulnerabilities. Known vulnerabilities in dependencies and in NorthMES's own code are handled by the [vulnerability remediation policy](vulnerability-policy.md).
+
+## Security requirements
+
+The requirements come from three places:
+
+- ADR 0076's rules for every change: secure by default, a security note per pull request, security tests first, the threat model kept current, logs and audit trails, the supply chain and vulnerability management.
+- The decisions those rules cite: row-level security ([ADR 0008](../adr/0008-row-level-security-with-transaction-local-scopes.md)), identity and permissions ([ADR 0010](../adr/0010-identity-with-better-auth-roles-and-permissions-in-core-tables.md), [ADR 0011](../adr/0011-principals-credentials-and-same-origin-rules.md)), commands as the single write path ([ADR 0012](../adr/0012-commands-as-the-single-write-path.md)), the audit trail ([ADR 0013](../adr/0013-audit-trail-written-in-the-command-transaction.md)), input contracts ([ADR 0017](../adr/0017-zod-contracts-as-the-single-source-for-inputs.md)), deployment ([ADR 0044](../adr/0044-on-prem-deployment-with-docker-compose-and-mandatory-tls.md)), secrets ([ADR 0047](../adr/0047-secrets-and-the-installation-key.md), [ADR 0060](../adr/0060-configuration-with-nestjs-config-one-zod-environment-schema-and-secret-files.md)) and the supply chain ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md), [ADR 0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md)).
+- The Security section of `AGENTS.md`, which states the same rules for every contributor and coding agent.
+
+The controls index maps each requirement to its evidence.
+
+## Threat model and trust boundaries
+
+The [threat model](threat-model.md) holds the full analysis. In short:
+
+- One installation serves one customer on one host. Caddy terminates TLS, one NorthMES server process serves the API and the web app, and Postgres holds every record.
+- Four zones: the plant network (Z1, untrusted), the host (Z2), the database (Z3) and the build and supply chain (Z4).
+- Seven conduits cross them: the browser to the server (C1), the server to the database (C2), the host operator (C3), plugins (C4), the ERP and other systems (C5), source to the running image (C6) and CI to third-party services (C7).
+- Each surface has a row with its conduit and the credential it accepts, and each conduit has a STRIDE table with the controls that meet each threat and their status.
+
+The trust boundary that matters most is C1: any device on the plant network can send requests. Every request across it is authenticated, checked against a permission and limited by row-level security, as the principles below show. Plugins (C4) are trusted fully by design, which the risk register records as A-03.
+
+## Secure design principles
+
+| Principle | How NorthMES applies it | Status | Evidence |
+|---|---|---|---|
+| Least privilege | The server connects as `nm_app` and `nm_auth`, which own nothing and have no SUPERUSER, CREATEDB, REPLICATION or BYPASSRLS; `nm_owner` only migrates. Roles grant permissions per scope. Containers run as a non-root user, read-only, with no capabilities. Every CI job reads the repository and nothing more unless it must write | built; gap for row-level security on the identity tables ([#483](https://github.com/northMES/northmes/issues/483)) | `apps/backend/src/db/bootstrap.ts`, `bootstrap.int.test.ts`; `permissions.ts`; `Dockerfile`, `deploy/compose.yaml`, `test/meta/compose.test.ts`; `test/meta/workflows.test.ts`; [project credentials](project-credentials.md) |
+| Deny by default | A global principal guard refuses every request without a principal, field resolvers included. Only the auth routes the web uses are open. Row-level security shows `nm_app` no row outside the scopes of the transaction | built; gap for a permission check on every read ([#474](https://github.com/northMES/northmes/issues/474)) | `access-api.module.ts`, `graphql.module.ts`; `auth-options.ts` (`openPaths`), `auth-routes.int.test.ts`; `access-policies.int.test.ts` |
+| Complete mediation | The principal is re-read on every request. A JWT lives five minutes and is refused once its session ends. The command bus checks the permission at the target row's scope for every write. Scopes are set per transaction from bound values | built | `principal.service.ts`; `auth.service.ts`, `sign-in.int.test.ts`; `packages/sdk/src/commands/command-bus.ts`, `role-assignment-commands.int.test.ts`; `apps/backend/src/db/scoped-database.ts`, `scoped-database.int.test.ts` |
+| Defense in depth | Row-level security sits under the permission check, so a missed check still shows no other company's rows. Zod contracts and bound SQL values both guard against injection. GraphQL size, depth and cost limits sit beside a rate limit, and sign-in throttling beside an account lockout | built; gaps [#480](https://github.com/northMES/northmes/issues/480) (security headers) and [#483](https://github.com/northMES/northmes/issues/483) | `access-policies.int.test.ts`; `apps/backend/src/graphql/limits.ts`, `limits.int.test.ts`, `rate-limit.test.ts`; `sign-in-lockout.ts`, `sign-in.int.test.ts` |
+| Fail safe | The server refuses to boot with secret files that others can read, dev secrets in production, an auth secret under 32 bytes or the seed's dev users in production. An error reaches a client masked, with a code and a correlation id. `CI / gate` fails when a job it needs failed, was cancelled or was skipped | built | `packages/sdk/src/config/secrets.ts`, `secrets.test.ts`, `config.int.test.ts`; `apps/backend/src/boot/dev-users.ts`, `boot.int.test.ts`; `packages/sdk/src/errors/exception-filter.ts`, `apps/backend/src/graphql/server.ts`; `test/meta/workflows.test.ts` |
+| Economy of mechanism | One write path, the command bus, checks permissions and versions for every change (ADR 0012). One kind of input contract, Zod, parses every input (ADR 0017). One backend process with one GraphQL schema serves one static web app ([ADR 0070](../adr/0070-one-nestjs-backend-with-one-graphql-schema-and-one-static-web-app.md)). Module boundaries are enforced, so a module reaches another only through its public API | built | `packages/sdk/src/commands/command-bus.ts`, `mutation-field.ts`; `scripts/lint/module-boundaries.mjs`, `test/meta/module-boundaries.test.ts` |
+
+## Common implementation weaknesses
+
+Each category of the OWASP Top 10 2021, the controls that counter it and their evidence. The status column gives the status of the main control first; gaps and accepted risks in the same category follow.
+
+| Id | Category | Status | Controls and evidence |
+|---|---|---|---|
+| A01 | Broken access control | built; gaps [#474](https://github.com/northMES/northmes/issues/474), [#478](https://github.com/northMES/northmes/issues/478), [#483](https://github.com/northMES/northmes/issues/483) | Deny by default, permissions per scope checked by the command bus, row-level security on module tables and on a user's own rows, no grant of a permission the actor lacks, the last Company admin protected, setup only from the CLI (`command-bus.ts`, `access-policies.int.test.ts`, `dashboard-tab-policies.int.test.ts`, `role-rules.ts`, `user-rules.ts`, `cli.test.ts`). Open: a permission check on every read, the block rule and row-level security on the identity tables |
+| A02 | Cryptographic failures | built for tokens and the auth secret; decided for stored secrets and TLS | EdDSA JWTs with issuer and audience pinned, signing keys rotated every 30 days and encrypted with the auth secret, an auth secret of at least 32 bytes, an HTTPS public origin required in production (`auth-options.ts`, `sign-in.int.test.ts`, `secrets.test.ts`, `packages/sdk/src/config/server-env.ts`). Decided: AES-256-GCM for stored secrets (ADR 0047) and TLS 1.2 or later at the proxy (ADR 0044) |
+| A03 | Injection | built | Every input parsed by a Zod contract; SQL through Kysely with bound values, `sql.raw` on constants only; list search escapes LIKE patterns (`command-bus.ts`, `mutation-field.ts`, `packages/sdk/src/lists/define-list.ts`; CodeRabbit path instructions in `.coderabbit.yaml`). The strict CSP against script injection is marked built in the threat model (C1) and has no row in the controls index yet, so this case does not count it |
+| A04 | Insecure design | built | A threat model per surface and conduit, kept current by ADR 0076 rule 4 and checked by `test/meta/security-docs.test.ts`; decisions recorded as ADRs (`test/meta/adr.test.ts`); a Security section in every pull request (`scripts/ci/pr-security.mjs`); security tests written first (ADR 0041) |
+| A05 | Security misconfiguration | built; gap [#480](https://github.com/northMES/northmes/issues/480) | Masked errors, static file errors without paths, dev users and dev secrets refused in production, hardened containers, GraphQL limits (`exception-filter.ts`, `apps/backend/src/web/static-mounts.ts`, `boot.int.test.ts`, `test/meta/compose.test.ts`, `limits.test.ts`). Open: security headers on every response. Decided: the hardening guidance of plan 12 and ADR 0044 |
+| A06 | Vulnerable and outdated components | built for pinning; decided for the dependency audit and CodeQL as required checks ([#7](https://github.com/northMES/northmes/issues/7), [#197](https://github.com/northMES/northmes/issues/197)); gap [#482](https://github.com/northMES/northmes/issues/482); accepted A-05 | Exact catalog versions, a 14-day release age and install scripts denied (`pnpm-workspace.yaml`); remediation time frames and the release rule in the [vulnerability remediation policy](vulnerability-policy.md). Open: automated dependency updates. Accepted: braces without a fixed release (A-05) |
+| A07 | Identification and authentication failures | built; accepted A-01 | Five-minute JWTs ended with their session, a 24-hour absolute session lifetime, sign-in throttling per client address and an account lockout, admin recovery only from the CLI (`auth-options.ts`, `auth.service.ts`, `sign-in-lockout.ts`, `sign-in.int.test.ts`, `reset-password.int.test.ts`). Accepted: no MFA and Better Auth's default password policy (A-01) |
+| A08 | Software and data integrity failures | built for CI; decided for signed images ([#157](https://github.com/northMES/northmes/issues/157)); accepted A-03 | Actions pinned by SHA, read-only tokens, no `pull_request_target`, inputs through `env` (`test/meta/workflows.test.ts`); `pnpm install --frozen-lockfile` in every CI job that installs. Decided: signed and attested images and an SBOM (ADR 0040, ADR 0050). Accepted: plugins run with full trust (A-03) |
+| A09 | Security logging and monitoring failures | decided ([#443](https://github.com/northMES/northmes/issues/443), [#147](https://github.com/northMES/northmes/issues/147)); accepted A-02 | Built: no secrets in logs, password statements unlogged and pool errors without credentials (`bootstrap.ts`, `pool.ts`). Decided: the audit trail and security events in the command transaction (ADR 0013) and structured JSON logs with a correlation id ([ADR 0046](../adr/0046-observability-structured-logs-host-checks-and-optional-opentelemetry.md)). Accepted: no tamper-evident seals (A-02) |
+| A10 | Server-side request forgery | not applicable | The server makes no outbound request to an address a user supplies. The AI provider with a customer-configured base URL ([ADR 0035](../adr/0035-ai-provider-port-with-customer-configured-providers.md)) and an ERP connector over an API (ADR 0031) would; each adds its row to the threat model before it is built (ADR 0076 rule 4) |
+
+## How the case stays current
+
+- Every pull request names the controls it touches in its Security section, and `CI / pr security` fails one without it (ADR 0076 rule 2).
+- A new surface, trust boundary or integration adds its row to the threat model in the same pull request (rule 4).
+- The internal audit before each release and each quarter reads the code, the CI and the documents against the controls index and this page, and writes its report to `docs/security/audits/`.
+- A control moves to built only with the code, test or CI job that shows it, and this page moves with it.
