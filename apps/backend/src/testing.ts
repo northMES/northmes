@@ -13,6 +13,7 @@ import { migrate } from './migrate/runner.ts';
 import { AuthService } from './modules/core/core/access/auth.service.ts';
 import { PLANT_HEADER } from './principal.ts';
 import { imageVersion } from './version.ts';
+import { pluginWebParts } from './web/plugin-web.ts';
 import { builtShellDir } from './web/static-mounts.ts';
 import { serveWeb } from './web/web.module.ts';
 
@@ -40,6 +41,8 @@ export function hostFactoryWithShell(shellDir: string): HostFactory {
 export interface SourcePlugin {
   readonly manifest: ModuleManifest;
   readonly migrationsDir: string;
+  /** The web/ folder that pnpm plugin:build writes, for a plugin with screens (ADR 0075). */
+  readonly webDir?: string;
 }
 
 /** The catalog of the in-repo modules that `modules` names and of `plugins`, checked as boot does. */
@@ -92,7 +95,7 @@ function createHostFactory(
         abortOnError: false,
       },
     );
-    serveWeb(app, { shellDir });
+    serveWeb(app, { shellDir, plugins: pluginWebParts(plugins) }, { webOrigins });
     return { app, modules: catalog.map(({ manifest }) => manifest.id) };
   };
 }

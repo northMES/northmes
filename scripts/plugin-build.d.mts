@@ -1,7 +1,10 @@
 // The types of plugin-build.mjs, for the TypeScript tests that build a plugin.
 
 export interface BuiltPlugin {
-  /** The files the build wrote, relative to the plugin's folder, such as dist/server.js. */
+  /**
+   * The files the build wrote, relative to the plugin's folder, such as dist/server.js and, for a
+   * plugin with screens, web/entry.js.
+   */
   readonly files: readonly string[];
   /**
    * Per built file, the package specifiers its code still imports, such as the host-provided
@@ -10,9 +13,13 @@ export interface BuiltPlugin {
   readonly imports: Readonly<Record<string, readonly string[]>>;
 }
 
+/** A plugin that cannot be built, with the reason pnpm plugin:build prints. */
+export class PluginBuildError extends Error {}
+
 /**
- * Builds the plugin package in `dir` into its dist/ folder and copies the installable package
- * (package.json, dist/ and migrations/) to `outDir`, which it empties first.
+ * Builds the plugin package in `dir` into its dist/ folder, and its web part into web/, and copies
+ * the installable package (package.json, dist/, web/ and migrations/) to `outDir`, which it empties
+ * first. A web part that imports a package the host does not share throws PluginBuildError.
  */
 export function buildPlugin(dir: string, outDir: string): Promise<BuiltPlugin>;
 
