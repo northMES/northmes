@@ -11,6 +11,7 @@ import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { sharedShims } from './shared-web.mjs';
 
 const repositoryRoot = fileURLToPath(new URL('..', import.meta.url));
 
@@ -71,8 +72,21 @@ const webDocumentsStage = {
   },
 };
 
+/**
+ * apps/web/public/shared/*.js: the files the web's import map maps the shared web specifiers to,
+ * so a plugin's screens share the web build's React, router and Apollo (ADR 0075).
+ * @type {Stage}
+ */
+const sharedWebStage = {
+  name: 'shared web',
+  outputs: ['apps/web/public/shared/*.js'],
+  async generate(outDir) {
+    for (const { path, content } of sharedShims()) await writeUnder(outDir, path, content);
+  },
+};
+
 /** @type {readonly Stage[]} */
-export const stages = Object.freeze([schemaStage, webDocumentsStage]);
+export const stages = Object.freeze([schemaStage, webDocumentsStage, sharedWebStage]);
 
 /** The files under dir that match the globs, as sorted paths relative to dir. */
 function filesMatching(dir, globs) {

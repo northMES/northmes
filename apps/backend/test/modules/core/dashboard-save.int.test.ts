@@ -129,6 +129,29 @@ describe('core.saveDashboardTab, one edit session of a tab (ADR 0078)', () => {
     expect(mine?.widgets.map(({ id }) => id)).toEqual(['w1', 'w2']);
   });
 
+  it('saves and answers a widget that a plugin contributes, with its contribution (M-32)', async () => {
+    const { slug, viewer, viewerTab } = await given();
+    const count = {
+      ...widget('w3', 'contribution', 'small', 3, 0, 'Article count'),
+      contribution: 'example-article-count.count',
+    };
+
+    const answer = await save(viewer.authorization, slug, viewerTab, [lateOrders, count]);
+
+    expect(answer.errors).toBeUndefined();
+    const client = await clientAs(viewer.authorization, slug);
+    const read = await client.send<{
+      coreDashboardTabs: {
+        id: string;
+        widgets: { id: string; type: string; contribution: string | null }[];
+      }[];
+    }>('{ coreDashboardTabs { id widgets { id type contribution } } }');
+    expect(read.data?.coreDashboardTabs.find(({ id }) => id === viewerTab)?.widgets).toEqual([
+      { id: 'w1', type: 'VALUE', contribution: null },
+      { id: 'w3', type: 'CONTRIBUTION', contribution: 'example-article-count.count' },
+    ]);
+  });
+
   it('refuses a shared tab to a user without core.dashboardTab:manage, and keeps it', async () => {
     const { slug, viewer, plantTab } = await given();
 

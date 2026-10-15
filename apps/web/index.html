@@ -14,6 +14,24 @@
     <meta name="color-scheme" content="light dark" />
     <link rel="stylesheet" href="/src/styles/app.css" />
     <script vite-ignore src="/src/boot/theme-boot.js"></script>
+    <!--
+      Plugin screens import the shared packages by name and get the web build's own copies
+      (ADR 0075). pnpm gen writes the files under /shared/; the Content-Security-Policy admits this
+      map by its hash.
+    -->
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "/shared/react.js",
+          "react-dom": "/shared/react-dom.js",
+          "react/jsx-runtime": "/shared/react-jsx-runtime.js",
+          "@tanstack/react-router": "/shared/tanstack-react-router.js",
+          "@apollo/client": "/shared/apollo-client.js",
+          "@apollo/client/react": "/shared/apollo-client-react.js",
+          "@northmes/web-sdk": "/shared/northmes-web-sdk.js"
+        }
+      }
+    </script>
   </head>
   <body>
     <!--

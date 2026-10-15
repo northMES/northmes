@@ -26,7 +26,16 @@ function widget(
   y: number,
   title: string,
 ) {
-  return { __typename: 'DashboardWidget' as const, id, type, size, x, y, title };
+  return {
+    __typename: 'DashboardWidget' as const,
+    id,
+    type,
+    contribution: null,
+    size,
+    x,
+    y,
+    title,
+  };
 }
 
 /** A fictional tab with an id made from its name. */

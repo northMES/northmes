@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { type DashboardWidgetType, dashboardSizesOf } from '@northmes/core-contracts';
-import { ChartColumn, Hash, List, type LucideIcon, Search, Table2 } from 'lucide-react';
+import {
+  type DashboardWidgetType,
+  dashboardSizesOf,
+  dashboardWidgetSlot,
+} from '@northmes/core-contracts';
+import { type SlotContribution, useContributions } from '@northmes/web-sdk';
+import { ChartColumn, Hash, List, type LucideIcon, Puzzle, Search, Table2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button } from '../../../../ui/primitives/button.tsx';
@@ -24,6 +29,13 @@ interface CatalogEntry {
   readonly name: string;
   readonly description: string;
   readonly Icon: LucideIcon;
+}
+
+/** What Add puts on the tab: a type, and for a contributed widget its contribution and name. */
+export interface CatalogChoice {
+  readonly type: DashboardWidgetType;
+  readonly contribution?: string;
+  readonly title: string;
 }
 
 /** Release 1's widget types, each with fictional data, under core's label. */
@@ -56,7 +68,32 @@ const entries: readonly CatalogEntry[] = [
 
 /** The name of a widget type, such as List, the title of a widget it adds. */
 export function typeName(type: DashboardWidgetType): string {
+  if (type === 'contribution') return 'module widget';
   return entries.find((entry) => entry.type === type)?.name ?? type;
+}
+
+/** The contributions of one module, under its label. */
+interface ContributionGroup {
+  readonly moduleId: string;
+  readonly moduleLabel: string;
+  readonly contributions: readonly SlotContribution[];
+}
+
+/** The contributions grouped by module, in the order of each module's first contribution. */
+function byModule(contributions: readonly SlotContribution[]): ContributionGroup[] {
+  const groups = new Map<string, ContributionGroup>();
+  for (const contribution of contributions) {
+    const group = groups.get(contribution.moduleId) ?? {
+      moduleId: contribution.moduleId,
+      moduleLabel: contribution.moduleLabel,
+      contributions: [],
+    };
+    groups.set(contribution.moduleId, {
+      ...group,
+      contributions: [...group.contributions, contribution],
+    });
+  }
+  return [...groups.values()];
 }
 
 export interface DashboardCatalogProps {
@@ -64,16 +101,17 @@ export interface DashboardCatalogProps {
   readonly onOpenChange: (open: boolean) => void;
   /** The name of the tab in edit mode, which the widget goes to. */
   readonly tabName: string;
-  /** Adds a widget of the type; the catalog then closes. */
-  readonly onAdd: (type: DashboardWidgetType) => void;
+  /** Adds the widget; the catalog then closes. */
+  readonly onAdd: (choice: CatalogChoice) => void;
   /** Where focus goes when the catalog closes, such as the new widget's Widget actions. */
   readonly finalFocus: () => HTMLElement | null;
 }
 
 /**
  * The catalog of widgets (design shell-454, A2): a Sheet from the right with a search over the
- * names and descriptions and a card per widget type, with its sizes and Add. In release 1 every
- * widget shows demo data, and they all come from core.
+ * names and descriptions and a card per widget type, with its sizes and Add. Core's widgets show
+ * demo data; after them, each module or plugin that contributes widgets to the slot
+ * core/dashboard/widgets/v1 has its group under its label (ADR 0068).
  */
 export function DashboardCatalog({
   open,
@@ -88,6 +126,15 @@ export function DashboardCatalog({
   const shown = entries.filter(({ name, description }) =>
     `${name} ${description}`.toLowerCase().includes(words),
   );
+  const offered = useContributions(dashboardWidgetSlot);
+  const contributed = byModule(
+    offered.filter(({ label, moduleLabel }) =>
+      `${label} ${moduleLabel}`.toLowerCase().includes(words),
+    ),
+  );
+  const contributedSizes = dashboardSizesOf.contribution
+    .map((size) => sizeName(size.toUpperCase() as Uppercase<typeof size>))
+    .join(', ');
   return (
     <Sheet
       open={open}
@@ -100,7 +147,9 @@ export function DashboardCatalog({
         <SheetHeader className="border-b">
           <SheetTitle className="text-lg">Add widget</SheetTitle>
           <SheetDescription>
-            To {tabName}. In this release every widget shows demo data.
+            {offered.length === 0
+              ? `To ${tabName}. In this release every widget shows demo data.`
+              : `To ${tabName}. In this release core's widgets show demo data.`}
           </SheetDescription>
         </SheetHeader>
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
@@ -120,9 +169,10 @@ export function DashboardCatalog({
             <span className="font-semibold text-foreground">Core</span> {entries.length} widgets,
             demo data
           </p>
-          {shown.length === 0 ? (
+          {shown.length === 0 && contributed.length === 0 && (
             <p className="text-sm text-muted-foreground">No widget matches “{search.trim()}”.</p>
-          ) : (
+          )}
+          {shown.length > 0 && (
             <ul aria-labelledby={groupId} className="flex flex-col gap-2">
               {shown.map(({ type, name, description, Icon }) => (
                 <li
@@ -145,17 +195,55 @@ export function DashboardCatalog({
                         .join(', ')}
                     </p>
                   </div>
-                  <Button variant="outline" aria-label={`Add ${name}`} onClick={() => onAdd(type)}>
+                  <Button
+                    variant="outline"
+                    aria-label={`Add ${name}`}
+                    onClick={() => onAdd({ type, title: name })}
+                  >
                     Add
                   </Button>
                 </li>
               ))}
             </ul>
           )}
-          <p className="text-xs text-muted-foreground">
-            Modules and plugins add their own widgets to this catalog in later releases, grouped by
-            their label.
-          </p>
+          {contributed.map(({ moduleId, moduleLabel, contributions }) => (
+            <div key={moduleId} className="flex flex-col gap-2">
+              <p id={`${groupId}-${moduleId}`} className="text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">{moduleLabel}</span>{' '}
+                {contributions.length === 1 ? '1 widget' : `${contributions.length} widgets`}
+              </p>
+              <ul aria-labelledby={`${groupId}-${moduleId}`} className="flex flex-col gap-2">
+                {contributions.map(({ id, label }) => (
+                  <li
+                    key={id}
+                    className="flex items-start gap-3 rounded-lg p-3 ring-1 ring-foreground/10"
+                  >
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                      <Puzzle aria-hidden className="size-4" />
+                    </span>
+                    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <h3 className="text-sm font-semibold">{label}</h3>
+                      <p className="text-muted-foreground">Sizes {contributedSizes}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      aria-label={`Add ${label}`}
+                      onClick={() =>
+                        onAdd({ type: 'contribution', contribution: id, title: label })
+                      }
+                    >
+                      Add
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          {offered.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              Modules and plugins add their own widgets to this catalog, grouped by their label.
+            </p>
+          )}
         </div>
       </SheetContent>
     </Sheet>

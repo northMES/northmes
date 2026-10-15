@@ -11,6 +11,13 @@ interface Service {
   secrets?: (string | { source: string })[];
   environment?: Record<string, string>;
   ports?: string[];
+  volumes?: string[];
+  read_only?: boolean;
+  tmpfs?: string[];
+  cap_drop?: string[];
+  security_opt?: string[];
+  mem_limit?: string;
+  healthcheck?: { test: string[] };
 }
 
 interface Compose {
@@ -30,8 +37,15 @@ const secretsOf = (service: Service | undefined) =>
   (service?.secrets ?? []).map((secret) => (typeof secret === 'string' ? secret : secret.source));
 
 describe('the Compose bundle (ADR 0080)', () => {
-  it('runs db, bootstrap, migrate, app and caddy', () => {
-    expect(Object.keys(services).sort()).toEqual(['app', 'bootstrap', 'caddy', 'db', 'migrate']);
+  it('runs db, bootstrap, migrate, app and caddy, and backup when its profile is on', () => {
+    expect(Object.keys(services).sort()).toEqual([
+      'app',
+      'backup',
+      'bootstrap',
+      'caddy',
+      'db',
+      'migrate',
+    ]);
   });
 
   it('every NorthMES service reads its image from the one NORTHMES_VERSION line in .env', () => {
@@ -55,13 +69,14 @@ describe('the Compose bundle (ADR 0080)', () => {
     expect(services.migrate?.command).toEqual(['migrate']);
   });
 
-  it('gives the superuser password only to db and bootstrap', () => {
+  // backup dumps as the admin, which reads every table past row-level security (ADR 0045).
+  it('gives the superuser password only to db, bootstrap and backup', () => {
     const holders = Object.entries(services)
       .filter(([, service]) => secretsOf(service).includes('postgres_password'))
       .map(([name]) => name)
       .sort();
 
-    expect(holders).toEqual(['bootstrap', 'db']);
+    expect(holders).toEqual(['backup', 'bootstrap', 'db']);
   });
 
   it('gives the nm_owner password only to bootstrap and migrate, never to app', () => {
@@ -94,6 +109,25 @@ describe('the Compose bundle (ADR 0080)', () => {
     expect(services.app?.environment?.NORTHMES_PUBLIC_ORIGIN).toMatch(/^https:\/\//);
     // app listens on the Compose network, which only caddy publishes.
     expect(services.app?.environment?.NORTHMES_LISTEN_HOST).toBe('0.0.0.0');
+    // caddy is the one proxy in front of app, so sign-in is throttled per client it reports (#476).
+    expect(services.app?.environment?.NORTHMES_TRUSTED_PROXY_HOPS).toBe('1');
+  });
+
+  it('runs bootstrap, migrate and app read-only, with no capabilities and no new privileges (ADR 0044)', () => {
+    for (const name of ['bootstrap', 'migrate', 'app']) {
+      const service = services[name];
+      expect(service?.read_only, name).toBe(true);
+      expect(service?.tmpfs, name).toEqual(['/tmp']);
+      expect(service?.cap_drop, name).toEqual(['ALL']);
+      expect(service?.security_opt, name).toEqual(['no-new-privileges:true']);
+    }
+  });
+
+  it('caps app memory from .env and checks app health with node, which the image has', () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
+    expect(services.app?.mem_limit).toBe('${NORTHMES_APP_MEM_LIMIT:-2g}');
+    expect(services.app?.healthcheck?.test.slice(0, 2)).toEqual(['CMD', 'node']);
+    expect(read('deploy/northmes.env.example')).toContain('# NORTHMES_APP_MEM_LIMIT=2g');
   });
 
   it('bootstrap, migrate and app reach the bundled db unless NORTHMES_DATABASE_URL names another server', () => {
@@ -121,6 +155,29 @@ describe('the Compose bundle (ADR 0080)', () => {
     expect(read('deploy/northmes.env.example')).toContain(
       '# COMPOSE_FILE=compose.yaml:compose.external-db.yaml',
     );
+  });
+
+  it('ADR0045 backup starts only under the backup profile, on the pinned Postgres image, and writes to ./backups', () => {
+    const backup = services.backup;
+
+    expect(backup?.profiles).toEqual(['backup']);
+    expect(backup?.image).toBe(pgImage);
+    expect(backup?.command).toEqual(['nightly']);
+    expect(backup?.environment?.DATABASE_URL).toBe(
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
+      '${NORTHMES_DATABASE_URL:-postgres://db:5432/northmes}',
+    );
+    expect(backup?.volumes).toEqual(
+      expect.arrayContaining(['.:/bundle:ro', './backups:/backups', 'caddy-data:/data']),
+    );
+    expect(read('deploy/backup.sh')).toContain('-mtime +6 -delete');
+  });
+
+  it('ADR0045 the example .env turns the backup profile on for the bundled db, and the own-Postgres lines turn it off', () => {
+    const example = read('deploy/northmes.env.example');
+
+    expect(example.split('\n')).toContain('COMPOSE_PROFILES=backup');
+    expect(example).toContain('# COMPOSE_PROFILES=');
   });
 
   it('the example .env holds the version line and no secret', () => {

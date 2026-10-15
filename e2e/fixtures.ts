@@ -1,10 +1,14 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { unitOf } from '@northmes/contracts';
 import { coreLinks } from '@northmes/core-contracts';
 import { test as base, expect } from '@playwright/test';
 import pg from 'pg';
+import { main as buildPlugin } from '../scripts/plugin-build.mjs';
 import { readSecret } from '../scripts/stack/config.mjs';
 import { freePort } from '../scripts/stack/ports.mjs';
 import { devAdmin, seedPlants } from '../scripts/stack/seed.mjs';
@@ -18,6 +22,9 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 
 /** The seed's plant A, where the specs work. */
 export const plant = seedPlants[0]?.slug ?? '';
+
+/** How many times this worker's signIn has signed in. */
+let signIns = 0;
 
 /** How many codes each running test has taken so far. */
 const codesTaken = new WeakMap<object, number>();
@@ -40,6 +47,39 @@ export function uniqueCode(prefix: string): string {
 /** A worker's own server: its origin, on a database cloned from the stack's seeded one. */
 interface Stack {
   readonly origin: string;
+}
+
+interface WorkerOptions {
+  /**
+   * The example plugins under examples/ that the worker's server loads, by id, such as
+   * example-sidebar-page. The worker builds each with pnpm plugin:build and lists it in a
+   * northmes.config.json of its own. A spec sets it with test.use, which gives it its own worker.
+   */
+  readonly plugins: readonly string[];
+}
+
+/**
+ * Builds the example plugins `ids` into plugins/ and writes a northmes.config.json that lists them
+ * into a fresh folder, and returns its path and a function that removes the folder. With no
+ * plugins it returns no file, and the server reads the repository's.
+ */
+async function configWithPlugins(
+  ids: readonly string[],
+): Promise<{ file?: string; remove: () => void }> {
+  if (ids.length === 0) return { remove: () => {} };
+  const errors: string[] = [];
+  for (const id of ids) {
+    const exitCode = await buildPlugin([id], {
+      log: () => {},
+      error: (line) => errors.push(line),
+      root,
+    });
+    if (exitCode !== 0) throw new Error(`pnpm plugin:build ${id} failed:\n${errors.join('\n')}`);
+  }
+  const dir = mkdtempSync(join(tmpdir(), 'northmes-e2e-config-'));
+  const file = join(dir, 'northmes.config.json');
+  writeFileSync(file, JSON.stringify({ plugins: ids.map((id) => join(root, 'plugins', id)) }));
+  return { file, remove: () => rmSync(dir, { recursive: true, force: true }) };
 }
 
 interface Fixtures {
@@ -100,10 +140,10 @@ function listening(server: ChildProcess): Promise<void> {
   });
 }
 
-export const test = base.extend<Fixtures, { stack: Stack }>({
+export const test = base.extend<Fixtures, { stack: Stack } & WorkerOptions>({
+  plugins: [[], { option: true, scope: 'worker' }],
   stack: [
-    // biome-ignore lint/correctness/noEmptyPattern: Playwright reads a fixture's dependencies from the destructured first parameter, and this one has none.
-    async ({}, use, workerInfo) => {
+    async ({ plugins }, use, workerInfo) => {
       const env = stackEnv();
       const database = `e2e_${workerInfo.parallelIndex}`;
       // A worker that replaces a failed one gets the same parallelIndex, so an earlier clone goes
@@ -120,6 +160,7 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
       // fixture takes a free port rather than PORT=0.
       const port = await freePort();
       const origin = `http://127.0.0.1:${port}`;
+      const config = await configWithPlugins(plugins);
       const server = spawn('node', ['apps/backend/dist/main.js'], {
         cwd: root,
         env: {
@@ -129,6 +170,9 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
           NORTHMES_ROLE: 'all',
           PORT: String(port),
           NORTHMES_PUBLIC_ORIGIN: origin,
+          ...(config.file ? { NORTHMES_CONFIG: config.file } : {}),
+          // The specs sit behind a pretend proxy, so signIn can name a client of its own (#476).
+          NORTHMES_TRUSTED_PROXY_HOPS: '1',
         },
       });
       try {
@@ -143,6 +187,7 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
           await exited;
         }
         await asSuperuser(env, `drop database if exists ${database} with (force)`);
+        config.remove();
       }
     },
     { scope: 'worker' },
@@ -156,6 +201,12 @@ export const test = base.extend<Fixtures, { stack: Stack }>({
   },
   signIn: async ({ page }, use) => {
     await use(async (href) => {
+      // Each sign-in comes from a client address of its own, so the server's throttle of 3
+      // sign-ins in 10 seconds per client does not refuse a fast run of specs (#476).
+      signIns += 1;
+      await page.setExtraHTTPHeaders({
+        'x-forwarded-for': `10.0.${(signIns >> 8) & 255}.${signIns & 255}`,
+      });
       await page.goto(href);
       await page.getByLabel('Email').fill(devAdmin.email);
       await page.getByLabel('Password', { exact: true }).fill(devAdmin.password);

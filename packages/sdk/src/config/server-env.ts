@@ -5,6 +5,7 @@ import { configFile, databaseUrl, nodeEnv, rule, secretFile } from './keys.ts';
 
 const PORT_RULE = 'an integer from 0 to 65535';
 const LISTEN_HOST_RULE = 'an IPv4 or IPv6 address';
+const PROXY_HOPS_RULE = 'an integer from 0 to 9';
 const ORIGIN_RULE =
   'an origin with no path, https:// in production, and in development and test also http://localhost or http://127.0.0.1 with a port';
 
@@ -40,6 +41,15 @@ export const serverEnvSchema = z
       .string(rule(LISTEN_HOST_RULE))
       .refine((value) => isIP(value) !== 0, rule(LISTEN_HOST_RULE))
       .default('127.0.0.1'),
+    // How many reverse proxies stand between the clients and the server, such as 1 for the Caddy
+    // of the Compose bundle (ADR 0044). The server takes the client's address from the
+    // X-Forwarded-For entry that the outermost of them wrote, and with 0 from the connection, so a
+    // client that reaches the server directly cannot choose its address (#476).
+    NORTHMES_TRUSTED_PROXY_HOPS: z
+      .string(rule(PROXY_HOPS_RULE))
+      .refine((value) => /^\d$/.test(value), rule(PROXY_HOPS_RULE))
+      .default('0')
+      .transform(Number),
     NORTHMES_PUBLIC_ORIGIN: z.string(rule(ORIGIN_RULE)),
     // The server logs in to DATABASE_URL as nm_app with the password in this file (ADR 0060).
     DATABASE_URL: databaseUrl,

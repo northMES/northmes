@@ -3,7 +3,7 @@ title: Install NorthMES
 description: Run NorthMES on one Linux host with Docker Compose, from a fresh host to the first sign-in.
 ---
 
-NorthMES runs on one host as five Docker Compose services. The release bundle holds everything the host needs: `compose.yaml`, `Caddyfile` and `northmes.env.example`.
+NorthMES runs on one host as Docker Compose services. The release bundle holds everything the host needs: `compose.yaml`, `Caddyfile`, `backup.sh` and `northmes.env.example`.
 
 | Service | What it does |
 |---|---|
@@ -12,10 +12,7 @@ NorthMES runs on one host as five Docker Compose services. The release bundle ho
 | `migrate` | Applies the pending database migrations, then exits. `app` starts only after it succeeds |
 | `app` | NorthMES itself: the API and the web app, reachable only inside the Compose network |
 | `caddy` | Serves HTTPS on port 443, and redirects port 80 to it |
-
-<Warning>
-  Release 0.0.1 has no backups and no offline install yet. Do not keep production data in it.
-</Warning>
+| `backup` | Every night, writes the database and the site's files to `./backups`. Starts only when `.env` turns it on |
 
 ## Before you start
 
@@ -42,7 +39,7 @@ NorthMES runs its own Postgres in the `db` service by default. To use a Postgres
 
     - `NORTHMES_VERSION`: paste the line from the release notes, for example `NORTHMES_VERSION=0.0.1@sha256:...`. The digest pins the exact image.
     - `NORTHMES_HOST`: the host name browsers use.
-    - `NORTHMES_BIND_IP`: the address Caddy listens on. Keep `0.0.0.0` to listen on every address of the host.
+    - `NORTHMES_BIND_IP`: the address Caddy listens on. `0.0.0.0` opens ports 80 and 443 on every network interface of the host; if the host has more than one, set the address the plant network uses.
   </Step>
   <Step title="Create the secret files">
     Each file holds one random value. Only the user the NorthMES image runs as (uid 1000) can read them.
@@ -55,6 +52,7 @@ NorthMES runs its own Postgres in the `db` service by default. To use a Postgres
     done
     sudo chown 1000:1000 secrets/*
     chmod 600 secrets/*
+    mkdir backups
     ```
 
     Keep a copy of `secrets/` somewhere safe. Without it you cannot reach the database in the `db-data` volume.
@@ -126,11 +124,71 @@ The browser warns about the certificate on the first visit, because Caddy signed
 docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./northmes-root.crt
 ```
 
+## Back up
+
+Your backups are yours to keep, as with any self-hosted app. NorthMES writes them on the host; copying them somewhere safe is up to you.
+
+`northmes.env.example` turns the `backup` service on with `COMPOSE_PROFILES=backup`. Every night at 02:00 UTC it writes three files to `./backups` and deletes those older than 7 days: the database (`northmes-<time>.dump`), the database roles without their passwords (`northmes-<time>-roles.sql`), and `secrets/`, `.env`, `compose.override.yaml` and Caddy's data (`northmes-<time>-files.tar.gz`). Only the owner of the `backups` folder can read them, because they hold personal data and every secret of the installation.
+
+To take a backup now:
+
+```sh
+docker compose run --rm backup now
+```
+
+What stays yours:
+
+- Copy `./backups` off the host every day and encrypt that copy.
+- Keep the copies as long as your plant needs; the host keeps 7 days.
+- Restore a backup on another machine now and then, to know that it works.
+
+With [your own Postgres](#use-your-own-postgres), your provider backs the database up: Azure Database for PostgreSQL, for example, keeps 7 to 35 days with point-in-time restore. Comment out `COMPOSE_PROFILES=backup` in `.env` and back up `secrets/`, `.env` and `compose.override.yaml` with the rest of the host. The bundle's `README.md` says how to keep a dump of your own as well.
+
+## Restore
+
+To restore onto a new host, or after losing the `db-data` volume:
+
+<Steps>
+  <Step title="Copy the bundle and the backups">
+    Copy the bundle to the host as in [Install](#install), without creating `.env` or `secrets/`, and copy your backups into `backups/`.
+  </Step>
+  <Step title="Put back the files">
+    Name the backup by the time in its file names:
+
+    ```sh
+    time=20261015T020000Z
+    sudo tar -xzf "backups/northmes-$time-files.tar.gz" --exclude=data
+    ```
+  </Step>
+  <Step title="Restore the database and Caddy's data">
+    ```sh
+    docker compose run --rm bootstrap
+    docker compose run --rm backup restore "$time"
+    ```
+  </Step>
+  <Step title="Start NorthMES">
+    ```sh
+    docker compose up -d
+    ```
+  </Step>
+</Steps>
+
+With your own Postgres, restore the server with your provider's tools instead, for example Azure's point-in-time restore, which creates a new server. Put the new server's host name in `NORTHMES_DATABASE_URL` in `.env` and run `docker compose up -d`.
+
 ## Upgrade
 
 <Steps>
   <Step title="Read the release notes">
     They give the new `NORTHMES_VERSION` line, and say whether the release adds database migrations.
+  </Step>
+  <Step title="Take a backup">
+    With the bundled database, run:
+
+    ```sh
+    docker compose run --rm backup now
+    ```
+
+    With your own Postgres, take your provider's on-demand backup, and back up `secrets/`, `.env` and `compose.override.yaml`.
   </Step>
   <Step title="Change the version">
     Put the new line in `.env` in place of the old one.
@@ -159,14 +217,26 @@ docker compose up -d
 
 This works only while the newer release added no migration. The release notes say whether it did.
 
+When it added one, going back means restoring the backup you took before the upgrade, which loses what was written since. Put the previous `NORTHMES_VERSION` line back in `.env`, then:
+
+```sh
+time=20261015T020000Z  # the backup you took before the upgrade
+docker compose down
+docker volume rm northmes_db-data
+docker compose run --rm bootstrap
+docker compose run --rm backup restore "$time"
+docker compose up -d
+```
+
 ## Files that stay yours
 
-`.env`, `secrets/` and a `compose.override.yaml` you add are never part of a release. Copying a newer bundle over the folder keeps them.
+`.env`, `secrets/`, `backups/` and a `compose.override.yaml` you add are never part of a release. Copying a newer bundle over the folder keeps them.
 
 ## When something goes wrong
 
 | What you see | Where to look |
 |---|---|
 | `app` does not start | `docker compose logs migrate`, then `docker compose logs app` |
+| `app` keeps restarting, and its log reports it ran out of memory | Raise `NORTHMES_APP_MEM_LIMIT` in `.env` (2 GB by default, for example `NORTHMES_APP_MEM_LIMIT=4g`), then run `docker compose up -d` |
 | The browser cannot connect | `docker compose ps caddy`, and that ports 80 and 443 are open on the host's firewall |
 | A secret file error at start | The owner and mode of the files in `secrets/` (uid 1000, mode 600) |

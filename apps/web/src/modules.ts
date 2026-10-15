@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { coreLinks } from '@northmes/core-contracts';
 import { planningLinks } from '@northmes/planning-contracts';
-import type { WebModule } from '@northmes/web-sdk';
+import type { SlotContribution, WebModule } from '@northmes/web-sdk';
 import { coreModule } from './modules/core/index.ts';
 import { planningModule } from './modules/planning/index.ts';
 import type { NavIconName } from './ui/lib/nav-icon-names.ts';
@@ -67,6 +67,13 @@ export interface ShellModule {
   readonly links?: readonly MenuItem[];
   /** The module's entries in the company settings navigation, in their order. */
   readonly settingsLinks?: readonly SettingsLink[];
+  /** The module's contributions to slots, each shown only to a user who holds its permission. */
+  readonly contributions?: readonly ShellContribution[];
+}
+
+/** A contribution to a slot (ADR 0068), with the permission the user needs to see it. */
+export interface ShellContribution extends SlotContribution {
+  readonly permission: string;
 }
 
 /**

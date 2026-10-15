@@ -38,6 +38,8 @@ export interface CreateTestAppOptions {
   readonly database?: Pick<TestDatabase, 'appUrl' | 'authUrl'>;
   /** The origins of the web app, webOrigins in northmes.config.json. It defaults to none. */
   readonly webOrigins?: readonly string[];
+  /** Server settings on top of configForTest's defaults, such as NORTHMES_TRUSTED_PROXY_HOPS. */
+  readonly env?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -53,18 +55,19 @@ function passwordOf(url: string): string {
 
 /**
  * The configuration of a test app whose pools log in to `database`: DATABASE_URL without a login
- * and the passwords of nm_app and nm_auth as secrets, as the server reads them (ADR 0060). Without
- * a database, only Better Auth's secret is set.
+ * and the passwords of nm_app and nm_auth as secrets, as the server reads them (ADR 0060), with
+ * `env` on top. Without a database, only Better Auth's secret is set.
  */
 function configForDatabase(
   database: Pick<TestDatabase, 'appUrl' | 'authUrl'> | undefined,
+  env: Readonly<Record<string, string>>,
 ): Promise<DynamicModule> {
-  if (!database) return configForTest({}, { NORTHMES_AUTH_SECRET: testAuthSecret });
+  if (!database) return configForTest(env, { NORTHMES_AUTH_SECRET: testAuthSecret });
   const url = new URL(database.appUrl);
   url.username = '';
   url.password = '';
   return configForTest(
-    { DATABASE_URL: url.href },
+    { DATABASE_URL: url.href, ...env },
     {
       NORTHMES_DB_APP_PASSWORD: passwordOf(database.appUrl),
       NORTHMES_DB_AUTH_PASSWORD: passwordOf(database.authUrl),
@@ -85,8 +88,9 @@ export async function createTestApp({
   hostFactory,
   database,
   webOrigins = [],
+  env = {},
 }: CreateTestAppOptions): Promise<TestApp> {
-  const config = await configForDatabase(database);
+  const config = await configForDatabase(database, env);
   const testApp = await hostFactory({ modules, config, webOrigins });
   try {
     await testApp.app.init();

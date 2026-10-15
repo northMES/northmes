@@ -1,5 +1,5 @@
 import { randomUUIDv7 } from 'node:crypto';
-import { hostFactory, queryAsCore } from '@northmes/backend/testing';
+import { fromNewClient, hostFactory, queryAsCore } from '@northmes/backend/testing';
 import { createTestApp, gqlClient, query, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { devAdmin, devUsers, seed, seedCompany, seedPlants } from './seed.mjs';
@@ -29,7 +29,7 @@ describe('the seed', () => {
   async function tokenOf({ email, password }: { email: string; password: string }) {
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...fromNewClient() },
       body: JSON.stringify({ email, password }),
     });
     expect(signedIn.status).toBe(200);
@@ -175,6 +175,12 @@ describe('the seed', () => {
       true,
       true,
     ]);
+    // A production boot refuses every user in this id range (apps/backend/src/boot/dev-users.ts).
+    expect(
+      [devAdmin, ...Object.values(devUsers)].filter(
+        ({ id }) => !id.startsWith('019a0000-0000-7000-8000-0000000d'),
+      ),
+    ).toEqual([]);
     expect(roles).toEqual(
       [
         { username: devUsers.plantAdmin.username, key: 'core-plant-admin' },

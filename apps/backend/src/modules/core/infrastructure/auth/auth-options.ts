@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { apiKey } from '@better-auth/api-key';
-import type { BetterAuthOptions } from 'better-auth';
+import type { BetterAuthOptions, BetterAuthPlugin } from 'better-auth';
 import { admin, bearer, jwt, organization, username } from 'better-auth/plugins';
 import type { Dialect } from 'kysely';
+import { signInLockout } from './sign-in-lockout.ts';
+
+export { SIGN_IN_LOCKOUT_FAILURES, SIGN_IN_LOCKOUT_SECONDS } from './sign-in-lockout.ts';
 
 /** The schema that holds Better Auth's tables, which core's migrations create (ADR 0010). */
 export const AUTH_SCHEMA = 'auth';
@@ -10,8 +13,23 @@ export const AUTH_SCHEMA = 'auth';
 /** Where Better Auth's handler answers on the Nest app. */
 export const AUTH_BASE_PATH = '/api/auth';
 
+/**
+ * The header that carries the client's address to Better Auth. AuthService sets it on every request
+ * to /api/auth/* from req.ip, which follows NORTHMES_TRUSTED_PROXY_HOPS, and replaces any value the
+ * client sent (#476). Better Auth reads no socket, only headers.
+ */
+export const CLIENT_ADDRESS_HEADER = 'x-northmes-client-address';
+
 /** How long a JWT for the web lives. The web gets a new one from /api/auth/token. */
 export const JWT_LIFETIME = '5m';
+
+/**
+ * How long Better Auth signs with one JWT key, in seconds: after 30 days the next JWT gets a new
+ * key, and the old key still verifies the JWTs it signed (audit B12). Better Auth's own rotation
+ * replaces a keyring of NorthMES's own (ADR 0047), since the keys live in auth.jwks encrypted with
+ * the auth secret.
+ */
+export const JWT_KEY_ROTATION_SECONDS = 30 * 24 * 60 * 60;
 
 /**
  * How long a session lives after sign-in or its last renewal, in seconds. The session token from
@@ -91,6 +109,30 @@ export const disabledPaths: readonly string[] = [
   '/update-user',
 ];
 
+/**
+ * The Better Auth routes that answer over HTTP: the ones the web calls, which are sign-in, the JWT
+ * and sign-out. Every other route answers 404, the organization plugin's among them, which would
+ * show a member every colleague's email and let them leave the company (ADR 0011). NorthMES calls
+ * those plugins only on the server, through auth.api.
+ */
+export const openPaths: readonly string[] = ['/sign-in/email', '/sign-out', '/token'];
+
+/**
+ * Answers 404 for a request to any route outside openPaths, before the route runs. disabledPaths
+ * alone is not enough: it matches exact paths, so it cannot close a route with a parameter such as
+ * /callback/:id, and a route that a Better Auth upgrade adds would answer until someone listed it.
+ */
+function onlyOpenPaths(): BetterAuthPlugin {
+  return {
+    id: 'northmes-open-paths',
+    onRequest: async (request) => {
+      const { pathname } = new URL(request.url);
+      if (openPaths.some((path) => pathname === `${AUTH_BASE_PATH}${path}`)) return;
+      return { response: new Response('Not Found', { status: 404 }) };
+    },
+  };
+}
+
 export interface AuthOptionsInput {
   /** The database Better Auth reads and writes, through its own pool as nm_auth. */
   readonly dialect: Dialect;
@@ -106,8 +148,9 @@ export interface AuthOptionsInput {
  * Better Auth's options in NorthMES (ADR 0010): the username plugin for the never-reassigned
  * handle (its sign-in path is disabled), the organization, admin and api-key plugins, and the bearer and jwt plugins that give the web a short-lived JWT, since the web and
  * the API may be on different origins. The session token that mints the JWTs lives
- * SESSION_LIFETIME_SECONDS after its last renewal and SESSION_ABSOLUTE_LIFETIME_SECONDS at most. Sign-up is disabled, ids are uuids and the tables are in the
- * auth schema. The same options build the runtime instance and core's migration, and the drift
+ * SESSION_LIFETIME_SECONDS after its last renewal and SESSION_ABSOLUTE_LIFETIME_SECONDS at most. Only openPaths answer over HTTP. Sign-up is disabled, ids are uuids and the tables are in the
+ * auth schema. Sign-in is throttled per client address and an account locks after repeated
+ * failures (#476). The same options build the runtime instance and core's migration, and the drift
  * test compares the two.
  */
 export function authOptions({ dialect, baseURL, secret, webOrigins }: AuthOptionsInput) {
@@ -148,9 +191,13 @@ export function authOptions({ dialect, baseURL, secret, webOrigins }: AuthOption
         },
       },
     },
-    rateLimit: { storage: 'database' },
+    // On whatever NODE_ENV is: Better Auth's default throttles only in production, and NorthMES
+    // treats an unset NODE_ENV as production (#476). Its rules apply per client address: 3
+    // sign-ins in 10 seconds, and 100 requests in 10 seconds on the other paths.
+    rateLimit: { enabled: true, storage: 'database' },
     telemetry: { enabled: false },
     advanced: {
+      ipAddress: { ipAddressHeaders: [CLIENT_ADDRESS_HEADER] },
       database: { generateId: 'uuid' },
       defaultCookieAttributes: { sameSite: 'strict' },
     },
@@ -162,7 +209,10 @@ export function authOptions({ dialect, baseURL, secret, webOrigins }: AuthOption
       admin(),
       apiKey(),
       bearer(),
+      onlyOpenPaths(),
+      signInLockout(),
       jwt({
+        jwks: { rotationInterval: JWT_KEY_ROTATION_SECONDS },
         jwt: {
           expirationTime: JWT_LIFETIME,
           // The subject is the user's id; the JWT carries nothing else about the user.

@@ -27,6 +27,10 @@ services:
     image: ghcr.io/northmes/northmes:${NORTHMES_VERSION:?set NORTHMES_VERSION in .env}
     command: ["db", "bootstrap"]
     restart: "no"
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     depends_on:
       db:
         condition: service_healthy
@@ -44,6 +48,10 @@ services:
     image: ghcr.io/northmes/northmes:${NORTHMES_VERSION:?set NORTHMES_VERSION in .env}
     command: ["migrate"]
     restart: "no"
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
     depends_on:
       bootstrap:
         condition: service_completed_successfully
@@ -58,6 +66,20 @@ services:
     restart: unless-stopped
     init: true
     stop_grace_period: 45s
+    # Least privilege (ADR 0044): the image's files cannot change and only /tmp is writable. A
+    # volume mounted read-only, such as the plugin volume of ADR 0075, still works.
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: ${NORTHMES_APP_MEM_LIMIT:-2g}
+    # The image has node and no curl. The shell answers 200 once the server is up.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -66,6 +88,8 @@ services:
       NORTHMES_ROLE: all
       PORT: "3000"
       NORTHMES_LISTEN_HOST: 0.0.0.0
+      # caddy is the one proxy in front of app: the client address is the one it reports.
+      NORTHMES_TRUSTED_PROXY_HOPS: "1"
       NORTHMES_PUBLIC_ORIGIN: https://${NORTHMES_HOST:-localhost}
       DATABASE_URL: ${NORTHMES_DATABASE_URL:-postgres://db:5432/northmes}
       NORTHMES_DB_APP_PASSWORD_FILE: /run/secrets/db_app_password
@@ -85,6 +109,27 @@ services:
       - ${NORTHMES_BIND_IP:-0.0.0.0}:443:443
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+  # Starts only when .env has COMPOSE_PROFILES=backup. Every night at 02:00 UTC it writes the
+  # database and the site's files to ./backups and keeps 7 days; copying them off the host is yours
+  # (ADR 0045). backup.sh says what it does; README.md has "Back up" and "Restore".
+  backup:
+    image: postgres:18@sha256:8ff36f3c66371cba71d20ceedccfc3de9669a68737607888c4ef0af93abe8e39
+    profiles: [backup]
+    restart: unless-stopped
+    entrypoint: ["sh", "/bundle/backup.sh"]
+    command: ["nightly"]
+    environment:
+      DATABASE_URL: ${NORTHMES_DATABASE_URL:-postgres://db:5432/northmes}
+      NORTHMES_DB_ADMIN_USER: ${NORTHMES_DB_ADMIN_USER:-postgres}
+      # With your own Postgres and sslmode=verify-full, pg_dump checks the server's certificate
+      # against this file (README.md, "Back up").
+      PGSSLROOTCERT: /bundle/db-root.crt
+    secrets: [postgres_password]
+    volumes:
+      - .:/bundle:ro
+      - ./backups:/backups
       - caddy-data:/data
 
 secrets:

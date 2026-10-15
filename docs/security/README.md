@@ -3,7 +3,8 @@
 This is the entry point for an auditor and for anyone who changes NorthMES. [ADR 0076](../adr/0076-secure-development-lifecycle-with-a-security-note-per-change-a-controls-index-and-an-internal-audit-each-release.md) decides the working rules: a security note in every pull request, security tests first, the threat model kept current, and an internal audit before each release. The guidelines follow IEC 62443-4-1, the development controls of ISO 27001 and SOC 2, and OpenSSF Best Practices, with ISA-95 terms where practical.
 
 - [Controls index](#controls-index): each control, its decision, and the evidence that it is built, or the issue that will build it.
-- Threat model: `threat-model.md`, written by [#485](https://github.com/northMES/northmes/issues/485).
+- [Threat model](threat-model.md): the assets, zones and conduits, surfaces, and the STRIDE threats at each boundary with their controls.
+- [Risk register](risks.md): each accepted risk with an owner, a review date and its ADR or issue.
 - Audit reports: [2026-10-11](audits/2026-10-11.md), tracked in [#473](https://github.com/northMES/northmes/issues/473).
 - Architecture and data flows: [plan 02](../plan/02-architecture.md). Deployment and operations: [plan 12](../plan/12-operations-and-security.md). Risks: [plan 17](../plan/17-risks.md).
 - Reporting a vulnerability: [`SECURITY.md`](../../SECURITY.md) at the repository root.
@@ -21,9 +22,10 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Row-level security on a user's own rows (own dashboard tabs), by the signed-in user's id set per transaction from a bound value | built | ADR 0078 (proposed); `apps/backend/src/db/scoped-database.ts`; `dashboard-tab-policies.int.test.ts`, `scoped-database.int.test.ts` |
 | Row-level security on writes to the scope tree and companies: `nm_app` adds a node or a company only at a company among its write scopes | built | ADR 0008; `20261014214627_scope_company_policies.sql`; `access-policies.int.test.ts` |
 | Row-level security on reads of the identity and company tables, and a closed `principal_grants` | gap | [#483](https://github.com/northMES/northmes/issues/483) |
-| Least privilege in containers (non-root, read-only, no capabilities) | decided | ADR 0044; no container files yet |
+| Least privilege in containers (non-root, read-only, no capabilities, a memory limit) | built | ADR 0044; `Dockerfile` (`USER node`), `deploy/compose.yaml`; `test/meta/compose.test.ts` |
 | No secrets in code: secret files only, files readable by others refused, dev secrets refused in production | built | ADR 0060, ADR 0047; `packages/sdk/src/config/secrets.ts`; `config.int.test.ts` |
-| A minimum strength for the auth secret | gap | [#484](https://github.com/northMES/northmes/issues/484) |
+| A minimum strength for the auth secret: at least 32 bytes, or the boot is refused | built | `packages/sdk/src/config/secrets.ts`; `secrets.test.ts` |
+| The stack seed's dev users, whose passwords are public, refused in production: the boot stops while one exists | built | `apps/backend/src/boot/dev-users.ts`; `boot.int.test.ts` |
 | Every input parsed by a Zod contract | built | ADR 0017; `packages/sdk/src/commands/command-bus.ts`, `mutation-field.ts` |
 | Parameterized SQL only (Kysely with bound values; `sql.raw` on constants only) | built | `packages/sdk/src/lists/define-list.ts`; CodeRabbit path instructions in `.coderabbit.yaml` |
 | Errors masked: GraphQL `maskedErrors`, only HTTP exceptions pass the filter, static file errors hide paths | built | `apps/backend/src/graphql/server.ts`; `packages/sdk/src/errors/exception-filter.ts`; `apps/backend/src/web/static-mounts.ts` |
@@ -37,16 +39,18 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 |---|---|---|
 | Deny by default: a global principal guard, which also runs on field resolvers | built | ADR 0011 (proposed); `access-api.module.ts`, `graphql.module.ts` |
 | Short-lived JWTs (5 minutes, EdDSA, issuer and audience pinned), principal re-read on every request | built | `auth-options.ts`; `principal.service.ts`; `sign-in.int.test.ts` |
+| JWT signing keys rotated every 30 days by Better Auth's own rotation, encrypted with the auth secret in `auth.jwks` | built | `auth-options.ts`; `sign-in.int.test.ts` |
+| The sign-in return path stays on the web's origin: resolved as a URL, any other origin leads to the root | built | `apps/web/src/auth/sign-in-link.ts`; `sign-in-link.test.ts` |
 | Role-based access control with permissions per scope, checked by the command bus at the row's scope | built | ADR 0010, ADR 0012; `permissions.ts`; `command-bus.ts`; `role-assignment-commands.int.test.ts` |
 | A user's own row changed without a permission: the command bus skips the permission only for a row its target names as the principal's own, which row-level security keeps from every other user, and still checks the version | built | ADR 0078 (proposed); `packages/sdk/src/commands/command-bus.ts`, `apps/backend/src/commands/command-bus.ts`; `command-bus.test.ts`, `dashboard-save.int.test.ts` |
 | A permission check on every read | gap | [#474](https://github.com/northMES/northmes/issues/474) (production orders) |
 | No one grants a permission they lack; the last Company admin is protected | built | `role-rules.ts`, `user-rules.ts`; `last-admin` tests |
 | No web setup route: companies, their first Company admins and admin recovery only from the CLI on the host, which writes as `nm_app` and `nm_auth`, never prompts and takes no password as a flag | built | ADR 0011, ADR 0066, ADR 0072; `apps/backend/src/admin/`, `administration.service.ts`; `cli.test.ts`, `company.int.test.ts`, `reset-password.int.test.ts`. The command row and security event wait on the audit trail ([#443](https://github.com/northMES/northmes/issues/443)) |
 | Block and unblock limited to users who hold no more than the actor | gap | [#478](https://github.com/northMES/northmes/issues/478) |
-| Only the auth routes the web uses are open | gap | [#475](https://github.com/northMES/northmes/issues/475) |
-| Sign-in throttling and account lockout | gap | [#476](https://github.com/northMES/northmes/issues/476) |
+| Only the auth routes the web uses are open: sign-in, the JWT and sign-out | built | ADR 0011 (proposed); `auth-options.ts` (`openPaths`); `auth-routes.int.test.ts` |
+| Sign-in throttling and account lockout | built | [#476](https://github.com/northMES/northmes/issues/476); `auth-options.ts` (Better Auth's rate limit on every `NODE_ENV`, per client address), `sign-in-lockout.ts`, `trusted-proxy.module.ts`; `sign-in.int.test.ts`. The lockout is logged once the audit trail lands ([#443](https://github.com/northMES/northmes/issues/443)) |
 | Session absolute lifetime (24 hours from sign-in, whatever its use), and JWTs ended with their session: a JWT is refused once its session signed out, was revoked or expired | built | `auth-options.ts`; `auth.service.ts`; `auth-options.test.ts`, `sign-in.int.test.ts` |
-| The auth design (ADR 0011) matches the code | gap | [#485](https://github.com/northMES/northmes/issues/485) |
+| The auth design (ADR 0011) matches the code | built | ADR 0011 and ADR 0070: a bearer session in `sessionStorage`, five-minute JWTs, CORS for `webOrigins` without credentials; `apps/backend/src/http/web-origins.module.ts` |
 | MFA and a password policy | accepted | ADR 0051 B2: deferred until the pilot's NIS2 status is known |
 
 ### 3. Logging, monitoring and audit trails
@@ -66,6 +70,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | TLS in transit through the proxy, with HTTPS required for the public origin in production | decided (origin check built) | ADR 0044; `packages/sdk/src/config/server-env.ts` |
 | Security headers on every response | gap | [#480](https://github.com/northMES/northmes/issues/480) |
 | Encryption of stored secrets and of offsite backups | decided | ADR 0047, ADR 0045 |
+| Nightly backups of the database and the site's files, mode 600, with the restore run in CI; the off-host copy and its encryption are the customer's | built | ADR 0045; `deploy/backup.sh`; `scripts/ci/backup-restore.sh` |
 | Append-only production facts, corrections as new records, no hard deletes | decided | ADR 0051 rules 4, 5 and 24 |
 | Retention and erasure | decided | ADR 0013, plan 12 (GDPR basics) |
 
@@ -86,7 +91,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 |---|---|---|
 | `SECURITY.md` with reporting, response target, supported versions and the plugin trust model | built | `SECURITY.md`; `test/meta/security-policy.test.ts` |
 | Patch releases for security fixes | decided | ADR 0038, ADR 0051 |
-| Accepted risks recorded | built | the audit reports in `audits/`; [plan 17](../plan/17-risks.md) |
+| Accepted risks recorded with an owner and a review date | built | the [risk register](risks.md); `test/meta/security-docs.test.ts` |
 
 ### 7. Architecture and industrial standards
 
@@ -101,7 +106,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Control | Status | Evidence |
 |---|---|---|
 | Architecture and data-flow diagrams | built | [plan 02](../plan/02-architecture.md), [plan 12](../plan/12-operations-and-security.md) |
-| Threat model | gap | [#485](https://github.com/northMES/northmes/issues/485) |
+| Threat model | built | [threat-model.md](threat-model.md); `test/meta/security-docs.test.ts` |
 | Hardening guidance | decided | plan 12 go-live checklist, ADR 0044; the install guide of ADR 0048 |
 | This controls index and the audit reports | built | this page |
 

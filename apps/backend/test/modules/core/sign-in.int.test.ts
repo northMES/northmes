@@ -4,12 +4,21 @@ import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northm
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { NEW_PASSWORD_PATH } from '../../../src/modules/core/api/access/new-password.controller.ts';
 import {
+  JWT_KEY_ROTATION_SECONDS,
   SESSION_ABSOLUTE_LIFETIME_SECONDS,
   SESSION_LIFETIME_SECONDS,
   SESSION_RENEWAL_SECONDS,
+  SIGN_IN_LOCKOUT_FAILURES,
+  SIGN_IN_LOCKOUT_SECONDS,
 } from '../../../src/modules/core/infrastructure/auth/auth-options.ts';
 import { BetterAuth } from '../../../src/modules/core/infrastructure/auth/better-auth.ts';
-import { givenCompany, hostFactory, signIn } from '../../../src/testing.ts';
+import {
+  fromNewClient,
+  givenCompany,
+  hostFactory,
+  queryAsCore,
+  signIn,
+} from '../../../src/testing.ts';
 
 /** The web app's origin in these tests, as webOrigins in northmes.config.json would list it. */
 const webOrigin = 'http://localhost:5173';
@@ -60,7 +69,7 @@ describe('sign-in with Better Auth', () => {
 
     const response = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...fromNewClient() },
       body: JSON.stringify({ email: user.email, password: `${user.password}x` }),
     });
 
@@ -73,7 +82,7 @@ describe('sign-in with Better Auth', () => {
 
     const response = await fetch(`${url}/api/auth/sign-in/username`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...fromNewClient() },
       body: JSON.stringify({ username: user.username, password: user.password }),
     });
 
@@ -84,7 +93,7 @@ describe('sign-in with Better Auth', () => {
   it('E05-S05 sign-up is disabled', async () => {
     const response = await fetch(`${url}/api/auth/sign-up/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...fromNewClient() },
       body: JSON.stringify({
         email: 'new.user@example.invalid',
         password: 'a-long-enough-password',
@@ -102,11 +111,42 @@ describe('sign-in with Better Auth', () => {
     expect(answer.errors?.[0]?.extensions).toEqual({ code: 'UNAUTHENTICATED' });
   });
 
+  /** The id of the key that signed the JWT in an Authorization header. */
+  function kidOf(authorization: string): string {
+    const [header = ''] = authorization.replace(/^Bearer /, '').split('.');
+    return (JSON.parse(Buffer.from(header, 'base64url').toString()) as { kid: string }).kid;
+  }
+
+  it('E05-S05 a JWT key signs for 30 days, then the next JWT gets a new key and the JWTs of the old key still read', async () => {
+    expect(JWT_KEY_ROTATION_SECONDS).toBe(30 * 24 * 60 * 60);
+    const { user, plant } = await reader();
+    const oldKid = kidOf(user.authorization);
+    const [key] = await queryAsCore<{ lifetime: number }>(
+      db.ownerUrl,
+      'select extract(epoch from "expiresAt" - "createdAt")::int as lifetime from auth.jwks where id = $1',
+      [oldKid],
+    );
+
+    await queryAsCore(
+      db.ownerUrl,
+      'update auth.jwks set "expiresAt" = now() - interval \'1 second\' where id = $1',
+      [oldKid],
+    );
+    const { user: next } = await reader();
+    const old = await gqlClient(url, {
+      headers: { authorization: user.authorization, 'x-northmes-plant': plant },
+    }).send(articlesQuery);
+
+    expect(key?.lifetime).toBe(JWT_KEY_ROTATION_SECONDS);
+    expect(kidOf(next.authorization)).not.toBe(oldKid);
+    expect(old).toEqual({ status: 200, data: { coreArticles: { edges: [] } } });
+  });
+
   it('E05-S05 a session token is no bearer token for the API: only the JWT is', async () => {
     const { user, plant } = await reader();
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...fromNewClient() },
       body: JSON.stringify({ email: user.email, password: user.password }),
     });
 
@@ -124,19 +164,19 @@ describe('sign-in with Better Auth', () => {
   async function sessionTokenOf(user: { email: string; password: string }) {
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...fromNewClient() },
       body: JSON.stringify({ email: user.email, password: user.password }),
     });
     return signedIn.headers.get('set-auth-token') ?? '';
   }
 
-  /** The session and user that /api/auth/get-session answers for a session token. */
+  /** The session and user of a session token, read on the server: /get-session is closed over HTTP. */
   async function sessionOf(sessionToken: string) {
-    const response = await fetch(`${url}/api/auth/get-session`, {
-      headers: { authorization: `Bearer ${sessionToken}` },
+    const answer = await testApp.app.get(BetterAuth).auth.api.getSession({
+      headers: new Headers({ authorization: `Bearer ${sessionToken}` }),
     });
-    return (await response.json()) as {
-      session: { id: string; expiresAt: string };
+    return answer as {
+      session: { id: string; expiresAt: Date };
       user: { username: string };
     };
   }
@@ -292,12 +332,12 @@ describe('sign-in with Better Auth', () => {
     });
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', origin: webOrigin },
+      headers: { 'content-type': 'application/json', origin: webOrigin, ...fromNewClient() },
       body: JSON.stringify({ email: user.email, password: user.password }),
     });
     const refused = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', origin: webOrigin },
+      headers: { 'content-type': 'application/json', origin: webOrigin, ...fromNewClient() },
       body: JSON.stringify({ email: user.email, password: `${user.password}!` }),
     });
 
@@ -448,6 +488,115 @@ describe('sign-in with Better Auth', () => {
     expect(answer.status).toBe(401);
   });
 
+  /** A sign-in on /api/auth/sign-in/email from the client that `client` names. */
+  function signInFrom(
+    client: { readonly 'x-forwarded-for': string },
+    email: string,
+    password: string,
+  ) {
+    return fetch(`${url}/api/auth/sign-in/email`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...client },
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
+  /** An email that no user has. */
+  const unknownEmail = () => `nobody_${randomUUIDv7().slice(-12)}@example.test`;
+
+  it('B3 sign-in is throttled with NODE_ENV unset: a client gets 429 on its fourth try in 10 seconds, where Better Auth by default throttles only in production', async () => {
+    // The test app runs with NODE_ENV test, which Better Auth, like an unset NODE_ENV, does not
+    // count as production.
+    const client = fromNewClient();
+
+    const responses = [];
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      responses.push(await signInFrom(client, unknownEmail(), 'a wrong password'));
+    }
+
+    expect(responses.map(({ status }) => status)).toEqual([401, 401, 401, 429]);
+    expect(Number(responses[3]?.headers.get('x-retry-after'))).toBeGreaterThan(0);
+  });
+
+  it('B3 two clients behind the trusted proxy are throttled apart', async () => {
+    const { user } = await reader();
+    const crowded = fromNewClient();
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await signInFrom(crowded, unknownEmail(), 'a wrong password');
+    }
+
+    const fromCrowded = await signInFrom(crowded, user.email, user.password);
+    const fromOther = await signInFrom(fromNewClient(), user.email, user.password);
+
+    expect(fromCrowded.status).toBe(429);
+    expect(fromOther.status).toBe(200);
+    expect(fromOther.headers.get('set-auth-token')).toBeTruthy();
+  });
+
+  it(`B3 an account locks after ${SIGN_IN_LOCKOUT_FAILURES} failed sign-ins, also against the right password, and unlocks after the window`, async () => {
+    const { user } = await reader();
+    for (let attempt = 0; attempt < SIGN_IN_LOCKOUT_FAILURES; attempt += 1) {
+      const failed = await signInFrom(fromNewClient(), user.email, `${user.password}x`);
+      expect(failed.status).toBe(401);
+    }
+
+    const locked = await signInFrom(fromNewClient(), user.email, user.password);
+    const lockedBody = (await locked.json()) as { code?: string };
+    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() + SIGN_IN_LOCKOUT_SECONDS * 1000 + 1000 });
+    let unlocked: Response;
+    try {
+      unlocked = await signInFrom(fromNewClient(), user.email, user.password);
+    } finally {
+      vi.useRealTimers();
+    }
+
+    expect(locked.status).toBe(429);
+    expect(locked.headers.get('set-auth-token')).toBeNull();
+    expect(Number(locked.headers.get('x-retry-after'))).toBeGreaterThan(
+      SIGN_IN_LOCKOUT_SECONDS - 60,
+    );
+    expect(lockedBody.code).toBe('ACCOUNT_LOCKED');
+    expect(unlocked.status).toBe(200);
+  });
+
+  it(`B3 ${SIGN_IN_LOCKOUT_FAILURES} failed sign-ins at the same moment each count, so the account locks`, async () => {
+    const { user } = await reader();
+    await Promise.all(
+      Array.from({ length: SIGN_IN_LOCKOUT_FAILURES }, () =>
+        signInFrom(fromNewClient(), user.email, `${user.password}x`),
+      ),
+    );
+
+    const locked = await signInFrom(fromNewClient(), user.email, user.password);
+
+    expect(locked.status).toBe(429);
+  });
+
+  it('B3 a successful sign-in clears the failures before it, so only failures in a row lock', async () => {
+    const { user } = await reader();
+    const fail = () => signInFrom(fromNewClient(), user.email, `${user.password}x`);
+    for (let attempt = 1; attempt < SIGN_IN_LOCKOUT_FAILURES; attempt += 1) await fail();
+    const between = await signInFrom(fromNewClient(), user.email, user.password);
+    for (let attempt = 1; attempt < SIGN_IN_LOCKOUT_FAILURES; attempt += 1) await fail();
+
+    const after = await signInFrom(fromNewClient(), user.email, user.password);
+
+    expect(between.status).toBe(200);
+    expect(after.status).toBe(200);
+  });
+
+  it('B3 an email that no user has locks as an account does, so the lockout tells nobody which emails exist', async () => {
+    const email = unknownEmail();
+    for (let attempt = 0; attempt < SIGN_IN_LOCKOUT_FAILURES; attempt += 1) {
+      await signInFrom(fromNewClient(), email, 'a wrong password');
+    }
+
+    const locked = await signInFrom(fromNewClient(), email.toUpperCase(), 'a wrong password');
+
+    expect(locked.status).toBe(429);
+    expect(((await locked.json()) as { code?: string }).code).toBe('ACCOUNT_LOCKED');
+  });
+
   it('signIn fails with the status and body when /api/auth/token refuses the session token', async () => {
     const { plants } = await givenCompany(db.ownerUrl);
     const [plant = ''] = plants;
@@ -467,5 +616,43 @@ describe('sign-in with Better Auth', () => {
     } finally {
       fetchSpy.mockRestore();
     }
+  });
+});
+
+describe('sign-in without a trusted proxy', () => {
+  const db = useTestDatabase();
+  let testApp: TestApp;
+  let url: string;
+
+  beforeAll(async () => {
+    testApp = await createTestApp({
+      modules: ['core'],
+      hostFactory,
+      database: db,
+      env: { NORTHMES_TRUSTED_PROXY_HOPS: '0' },
+    });
+    await testApp.app.listen(0, '127.0.0.1');
+    url = await testApp.app.getUrl();
+  });
+
+  afterAll(async () => {
+    await testApp.app.close();
+  });
+
+  it('B3 a client that names another address in X-Forwarded-For on each try is still throttled by its own address', async () => {
+    const statuses = [];
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      const response = await fetch(`${url}/api/auth/sign-in/email`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...fromNewClient() },
+        body: JSON.stringify({
+          email: `nobody_${randomUUIDv7().slice(-12)}@example.test`,
+          password: 'a wrong password',
+        }),
+      });
+      statuses.push(response.status);
+    }
+
+    expect(statuses).toEqual([401, 401, 401, 429]);
   });
 });

@@ -11,15 +11,29 @@ import type { WebFiles } from './served-web.ts';
 export const builtShellDir = fileURLToPath(new URL('../../../web/dist/', import.meta.url));
 
 /** The Cache-Control of a file with a content hash in its name. */
-const IMMUTABLE = 'public, max-age=31536000, immutable';
+export const IMMUTABLE = 'public, max-age=31536000, immutable';
 
 /**
- * Serves the web app's hashed assets at /assets/. A file missing under the mount is a 404 with an
- * empty body, and a path whose real path lies outside the folder, through a symlink, answers 404.
+ * Serves the web app's hashed assets at /assets/, immutable, and the shared files of plugin
+ * screens at /shared/ (ADR 0075). Their names stay the same across versions, so a browser
+ * revalidates them. A file missing under a mount is a 404 with an empty body, and a path whose
+ * real path lies outside the folder, through a symlink, answers 404.
  */
 export function mountStatic(app: NestExpressApplication, { shellDir }: WebFiles): void {
-  const dir = join(shellDir, 'assets');
-  const prefix = '/assets/';
+  mountFolder(app, '/assets/', join(shellDir, 'assets'), { 'Cache-Control': IMMUTABLE });
+  mountFolder(app, '/shared/', join(shellDir, 'shared'), {
+    'Cache-Control': 'no-cache',
+    'X-Content-Type-Options': 'nosniff',
+  });
+}
+
+/** Serves the files of `dir` at `prefix` with `headers`, as mountStatic describes. */
+function mountFolder(
+  app: NestExpressApplication,
+  prefix: string,
+  dir: string,
+  headers: Readonly<Record<string, string>>,
+): void {
   app.use(prefix, (request: Request, response: Response, next: NextFunction) => {
     if (escapesThroughSymlink(dir, request.path)) response.status(404).end();
     else next();
@@ -28,7 +42,9 @@ export function mountStatic(app: NestExpressApplication, { shellDir }: WebFiles)
     prefix,
     index: false,
     fallthrough: false,
-    setHeaders: (response: ServerResponse) => response.setHeader('Cache-Control', IMMUTABLE),
+    setHeaders: (response: ServerResponse) => {
+      for (const [name, value] of Object.entries(headers)) response.setHeader(name, value);
+    },
   });
   app.use(prefix, answerWithStatus);
 }
@@ -37,7 +53,7 @@ export function mountStatic(app: NestExpressApplication, { shellDir }: WebFiles)
  * Whether the file that requestPath names under dir exists and its real path lies outside the real
  * path of dir. A path that does not resolve is left to the static mount, which answers it.
  */
-function escapesThroughSymlink(dir: string, requestPath: string): boolean {
+export function escapesThroughSymlink(dir: string, requestPath: string): boolean {
   let root: string;
   let target: string;
   try {
@@ -55,7 +71,7 @@ function escapesThroughSymlink(dir: string, requestPath: string): boolean {
  * error's message, which names the file's absolute path, in the body and log it with a stack.
  * Express takes a handler with four parameters as an error handler.
  */
-function answerWithStatus(
+export function answerWithStatus(
   error: { status?: number },
   _request: Request,
   response: Response,

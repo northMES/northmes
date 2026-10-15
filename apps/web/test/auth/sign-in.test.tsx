@@ -123,6 +123,25 @@ describe('sign-in', () => {
     );
   });
 
+  it('ADR 0075 with onSignedIn, signing in hands it the return path instead of navigating in place, so the boot loads the plugins with the session', async () => {
+    const user = userEvent.setup();
+    const onSignedIn = vi.fn();
+    const history = createMemoryHistory({ initialEntries: ['/plant-a/quality?tab=open'] });
+    const router = createShellRouter([quality], {
+      session: fakeSession({ signedIn: false }),
+      fetch: vi.fn<typeof globalThis.fetch>(async () => pong()),
+      history,
+      onSignedIn,
+    });
+    render(<RouterProvider router={router} />);
+
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+    await signIn(user, alexEmail, 'correct horse');
+
+    await waitFor(() => expect(onSignedIn).toHaveBeenCalledWith('/plant-a/quality?tab=open'));
+    expect(router.state.location.pathname).toBe('/sign-in');
+  });
+
   it('E05-S05 the sign-in form names its fields for password managers', async () => {
     renderAt('/sign-in', fakeSession({ signedIn: false }));
 

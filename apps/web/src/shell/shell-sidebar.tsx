@@ -129,6 +129,9 @@ export function ShellSidebar({
         <SidebarContent>
           {modules.map((each) => {
             const { module, label } = each;
+            // A module whose screens are only contributions, such as a dashboard widget, has no
+            // routes and so no group (ADR 0068).
+            if (module.routes === undefined) return null;
             const labelId = `sidebar-group-${module.id}`;
             return (
               <SidebarGroup key={module.id}>

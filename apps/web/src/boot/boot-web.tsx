@@ -10,8 +10,11 @@ export interface BootWebOptions {
   readonly fetch: (url: string) => Promise<Response>;
   /** The page's origin, the API's URL when config.json names none. */
   readonly origin: string;
-  /** The web, once its config loaded, such as the router's provider. */
-  readonly app: (config: WebConfig) => ReactNode;
+  /**
+   * The web, once its config loaded, such as the router's provider. It may load more first, such
+   * as the plugins' screens, while index.html still shows Loading NorthMES.
+   */
+  readonly app: (config: WebConfig) => ReactNode | Promise<ReactNode>;
   /** Reloads the page, for Reload page. */
   readonly reload: () => void;
   /** How long no answer waits before boot tries again: 10 seconds (shell-306, BO6). */
@@ -37,7 +40,7 @@ export async function bootWeb(root: HTMLElement, options: BootWebOptions): Promi
   const attempt = async (): Promise<void> => {
     try {
       const config = await loadWebConfig(fetch, origin);
-      view.render(app(config));
+      view.render(await app(config));
     } catch (error) {
       // The page never shows the reason; the console keeps it for whoever runs the host.
       console.error('NorthMES could not start:', error);

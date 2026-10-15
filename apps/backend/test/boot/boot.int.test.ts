@@ -10,6 +10,7 @@ import { useTestDatabase } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { AppModule } from '../../src/app.module.ts';
 import { type BootOptions, boot } from '../../src/boot/boot.ts';
+import { queryAsCore } from '../../src/testing.ts';
 import { imageVersion } from '../../src/version.ts';
 import { dispatch } from '../fixtures/commands/dispatch.ts';
 import { strayRules } from '../fixtures/commands/misplaced-validators.ts';
@@ -116,6 +117,36 @@ describe('boot', () => {
       ['refused to start (1 problem)\n- Module beta depends on "quality", which is not installed'],
     ]);
     expect(log.info).not.toHaveBeenCalled();
+  });
+
+  it('E05-S08 production refuses to boot while a seeded dev user exists', async () => {
+    // The id of the stack seed's planner, whose password is in the repository (audit W8).
+    const devUserId = '019a0000-0000-7000-8000-0000000d0003';
+    await queryAsCore(
+      db.ownerUrl,
+      `insert into auth."user" (id, name, email, "emailVerified", username)
+       values ($1, 'Planner', 'planner@northmes.test', true, 'planner')`,
+      [devUserId],
+    );
+    onTestFinished(async () => {
+      await queryAsCore(db.ownerUrl, 'delete from auth."user" where id = $1', [devUserId]);
+    });
+    const log = recordingLog();
+    const exit = vi.fn<(code: number) => void>();
+
+    app = await boot({
+      env: { ...env, NODE_ENV: 'production', NORTHMES_PUBLIC_ORIGIN: 'https://northmes.example' },
+      exit,
+      log,
+    });
+
+    expect(app).toBeUndefined();
+    expect(exit.mock.calls).toEqual([[1]]);
+    expect(log.error.mock.calls).toEqual([
+      [
+        `refused to start (1 problem)\n- auth.user holds the dev user ${devUserId} of the stack seed, whose password is public; NODE_ENV production refuses it. Use a database that pnpm dev never seeded`,
+      ],
+    ]);
   });
 
   it("E02-S04 a northmes.config.json that names a version other than the image's exits 1 naming both", async () => {

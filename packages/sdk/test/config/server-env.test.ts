@@ -141,6 +141,24 @@ describe('serverEnvSchema', () => {
     expect(error.problems).toHaveLength(1);
     expect(error.problems[0]).toMatch(/^NORTHMES_LISTEN_HOST: /);
   });
+
+  it('B3 the server trusts no proxy unless NORTHMES_TRUSTED_PROXY_HOPS counts them, and a count that is no small integer fails naming the key', () => {
+    const base = { PORT: '0', NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com', ...databaseKeys };
+
+    expect(loadEnv(serverEnvSchema)(base).NORTHMES_TRUSTED_PROXY_HOPS).toBe(0);
+    expect(
+      loadEnv(serverEnvSchema)({ ...base, NORTHMES_TRUSTED_PROXY_HOPS: '1' })
+        .NORTHMES_TRUSTED_PROXY_HOPS,
+    ).toBe(1);
+    for (const value of ['true', '-1', '10', '172.18.0.0/16']) {
+      const error = configErrorOf(() =>
+        loadEnv(serverEnvSchema)({ ...base, NORTHMES_TRUSTED_PROXY_HOPS: value }),
+      );
+      expect(error.problems, value).toEqual([
+        'NORTHMES_TRUSTED_PROXY_HOPS: must be an integer from 0 to 9',
+      ]);
+    }
+  });
 });
 
 describe('migrateEnvSchema and bootstrapEnvSchema', () => {

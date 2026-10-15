@@ -1,0 +1,24 @@
+# Ops checks of the Compose bundle in deploy/. Ops / backup restore builds the NorthMES image and
+# runs scripts/ci/backup-restore.sh, which backs an installation up, throws it away and restores it
+# by the steps of deploy/README.md (ADR 0045). The main ruleset does not require it yet.
+name: Ops
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  backup-restore:
+    name: backup restore
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: docker build --tag ghcr.io/northmes/northmes:ci .
+      - run: scripts/ci/backup-restore.sh

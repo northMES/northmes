@@ -198,10 +198,11 @@ export function createShellRoutes({
     path: '/',
     component: settingsIndexComponent,
   });
-  const plantRoutes = modules.map((module) => ({
-    module,
-    route: placed(module, module.routes(plantRoute), 'routes'),
-  }));
+  const plantRoutes = modules.flatMap((module) =>
+    module.routes === undefined
+      ? []
+      : [{ module, route: placed(module, module.routes(plantRoute), 'routes') }],
+  );
   const settingsRoutes = modules.map((module) => ({
     module,
     routes: settingsRoutesOf(module, settingsRoute),
