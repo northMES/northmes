@@ -1,0 +1,14 @@
+{
+  "number": 701,
+  "user": { "login": "renovate[bot]", "id": 29139614, "type": "Bot" },
+  "head": {
+    "ref": "renovate/vitest-5.x",
+    "sha": "9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d",
+    "repo": { "full_name": "northMES/northmes", "fork": false }
+  },
+  "base": {
+    "ref": "main",
+    "repo": { "full_name": "northMES/northmes", "default_branch": "main" }
+  },
+  "commits": 1
+}
