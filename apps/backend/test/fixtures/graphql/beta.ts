@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Fixture module beta: owns Crate, whose thing field reads alpha's Thing through alpha's API, and a
 // subscription that announces one crate at the plant its argument names.
 import { Inject, Module } from '@nestjs/common';

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { INestApplication } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boot } from '../../src/boot/boot.ts';
