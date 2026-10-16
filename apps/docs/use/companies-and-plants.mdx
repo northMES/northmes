@@ -1,0 +1,63 @@
+---
+title: Companies and plants
+description: How a NorthMES company and its plants relate, where company settings and plant settings live, and the host commands that create a company and recover its admin.
+---
+
+A company is the business that uses NorthMES. It owns its plants, its articles and article groups, its users and its roles. A plant is one production site of the company. One installation can hold several companies, and each user sees only the companies where they hold a role.
+
+Roles are given at a place: at the company, where they apply at every plant of the company, also plants it gets later, or at one plant. See [Users, roles and permissions](/use/users-and-roles).
+
+## Plant addresses
+
+Each plant has a short name in its address, its slug, such as `plant-a` in `https://<NORTHMES_HOST>/plant-a`. The slug is unique in the installation. Every page at a plant sits below it, such as `/plant-a/articles`.
+
+## Settings
+
+The **Settings** button (the gear in the top bar) leads to the settings you may open:
+
+- **Plant settings** hold **People**, who holds a role at the plant. They open from the gear at a plant, for a user who may read users there. Their navigation ends with a link to the company's settings.
+- **Company settings** hold **Users** and **Roles**. Their address is `/settings/<company id>`. They have no plant, so the sidebar is replaced by the company settings navigation, with **Back to** the plant you came from above it.
+
+The company settings landing lists only the pages you may open. A page you may not open says so and names the permission it needs.
+
+## Create a company
+
+The hosting partner creates each company on the host with the `company create` command, as in [Install NorthMES](/install#install). The command creates the company with its default roles and its first Company admin, and prints the admin's temporary password once. The admin signs in with it and chooses their own password.
+
+```sh
+docker compose run --rm app company create --name "Your company" \
+  --admin-username admin --admin-email admin@example.com --reason "first install"
+```
+
+To see the companies of the installation, with their ids, their number of plants and the usernames of their Company admins:
+
+```sh
+docker compose run --rm app company list
+```
+
+The id is the one in the company settings address.
+
+## When a company has no admin left
+
+NorthMES refuses to remove the last Company admin of a company in the web app. If the company still loses every admin, for example because each admin left and was blocked, the hosting partner gives a user the Company admin role on the host:
+
+```sh
+docker compose run --rm app company add-admin --company <company id> \
+  --username lena.ek --email lena.ek@example.com --reason "admin left"
+```
+
+A username that no user has creates the user with that email and prints a temporary password once. A blocked user is refused.
+
+The hosting partner can also give a locked-out user a new temporary password. The user's sessions end, and the old password stops working. A blocked user is refused: unblock them first.
+
+```sh
+docker compose run --rm app admin reset-password --username lena.ek --reason "locked out"
+```
+
+Every command requires `--reason`.
+
+## Limits in release 0.1.0
+
+- Neither the web app nor the host commands can add a plant, so a company created with `company create` has no plants. Its admin can manage users and roles in company settings, but cannot open a plant's pages.
+- Company settings have no page to rename the company or to list its plants.
+- The company settings address uses the company id, which `company list` prints.

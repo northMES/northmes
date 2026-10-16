@@ -1,0 +1,150 @@
+---
+title: Users, roles and permissions
+description: Create users with a temporary password, give and remove roles at the company or at one plant, write custom roles, and block users or reset their passwords.
+---
+
+What a user may do in NorthMES comes from their roles. A role is a named set of permissions, and a user holds a role at a place: at the company, where it applies at every plant of the company, or at one plant. A role at one plant grants nothing at the company or at other plants.
+
+Users and roles live in company settings, at `/settings/<company id>/users` and `/settings/<company id>/roles`. A plant's own people live in plant settings, under **People**. See [Companies and plants](/use/companies-and-plants#settings) for the way there.
+
+## Default roles
+
+Each company has the default roles of its modules. A default role cannot be edited, and a module or plugin installed later adds its permissions to Company admin and Plant admin.
+
+| Role | Module | Permissions |
+|---|---|---|
+| Company admin | Core | Every installed permission. |
+| Plant admin | Core | Every installed permission except the company-level ones in the table below. |
+| Planner | Planning | Read articles, read production orders and release production orders. |
+| Viewer | Planning | Read articles and read production orders. |
+
+## Permissions
+
+Each permission has an id, such as `core.article:read`, which the role pages show beside its plain name. At a plant, a permission counts through a role at that plant or at the company. Company settings check permissions at the company, so only roles at the company count there. The company-level permissions count only through a role at the company.
+
+| Permission | What it allows | Where it counts |
+|---|---|---|
+| `core.article:read` | Read articles | At the plant or the company |
+| `core.article:create` | Create articles | At the plant or the company |
+| `core.article:update` | Change articles | At the plant or the company, see [Who may change an article](/use/articles#who-may-change-an-article) |
+| `core.article:archive` | Archive and restore articles | At the plant or the company |
+| `core.article:assign` | Choose an article's plants | Company only |
+| `core.articleGroup:read` | Read article groups | At the plant or the company |
+| `core.articleGroup:create` | Create article groups | Company only |
+| `core.articleGroup:update` | Change article groups | Company only |
+| `core.articleGroup:archive` | Archive and restore article groups | Company only |
+| `core.dashboardTab:manage` | Change the company's and the plant's shared dashboard tabs | At the plant or the company |
+| `core.role:read` | Read roles | At the plant or the company |
+| `core.role:manage` | Create and change custom roles | Company only |
+| `core.roleAssignment:manage` | Give and remove roles | At the place of the role |
+| `core.user:read` | Read users and People | At the plant or the company |
+| `core.user:create` | Create users | Company only |
+| `core.user:block` | Block and unblock users | Company only |
+| `core.user:resetPassword` | Reset passwords | Company only |
+| `planning.productionOrder:read` | Read production orders | At the plant or the company |
+| `planning.productionOrder:release` | Release production orders | At the plant or the company |
+
+A change to someone's roles, or to a role they hold, applies from their next action.
+
+### The grant rule
+
+You can give or remove a role at a place only when you hold `core.roleAssignment:manage` there and also hold every permission of the role there. In the same way, you can add a permission to a custom role only when you hold it at every place where the role is given. So a Plant admin can give any role but Company admin at their plant, and nobody can hand out more than they hold.
+
+When a role is out of your reach, the role list still shows it, disabled, with the permissions you lack at that place. NorthMES also refuses to remove the last Company admin of a company.
+
+## Users
+
+![The users of the company in company settings, with their roles as chips and their status](/images/use/users.png)
+
+The **Users** list shows each user's name, username, roles with their places, and status, 25 to a page. **Search users** finds a user by name or username, and the **Role** and **Status** filters narrow the list. **Name** and **Username** sort it. The search, filters, sort and page are part of the address, so a copied link shows the same rows.
+
+**Actions for** a user, at the end of their row, holds **Reset password** and **Block user** or **Unblock user**, as your permissions allow. Your own row has no actions.
+
+### Create a user
+
+<Steps>
+  <Step title="Open New user">
+    In **Users**, select **New user**. It shows when you may create users.
+  </Step>
+  <Step title="Fill in the person">
+    - **Name**: the name others see, up to 120 characters.
+    - **Username**: 3 to 30 characters of lowercase letters, digits, dots and underscores. It cannot be changed later, and no other user can ever take it.
+    - **Email**: the address the user signs in with.
+  </Step>
+  <Step title="Give a first role">
+    When you may give roles, **Role and place** offers **Where**, one plant or the company and all its plants, then **Role**. You can also leave both empty and give roles later.
+  </Step>
+  <Step title="Create the user">
+    Add a **Reason** if you like, up to 500 characters without personal data, and select **Create user**. The user's page opens with the **Temporary password** dialog.
+  </Step>
+  <Step title="Hand over the temporary password">
+    Select **Copy password**, or copy it by hand, then **Done**. NorthMES shows the temporary password only this once. Give it to the user in person. They choose their own password at the first sign-in.
+  </Step>
+</Steps>
+
+A username that is taken, or that a user had before, is refused, and the form keeps what you typed. If the connection drops after the user was created and you select **Create user** again, the form says that the user was created and offers **Open user**, because NorthMES cannot show that temporary password again. Reset the user's password to get a new temporary one.
+
+### A user's page
+
+A user's page has two tabs:
+
+- **General** shows the name, the username and the status.
+- **Access** lists the user's roles at the company and at each plant, with **Add role** and **Remove**, and what the user can do at the company, by module. **Show every permission** also lists the permissions they do not hold.
+
+![The Access tab of a user, with the role Planner at Plant A](/images/use/user-access.png)
+
+To give a role, select **Add role**, choose **Where** and **Role**, and confirm. To take one away, select **Remove** on its row. The dialog says which permissions the user loses at that place, and which of their other roles still grant some of them.
+
+### Reset a password
+
+**Reset password** on the user's page, or in their row's actions, replaces the password with a temporary one. NorthMES shows it once, the old password stops working, and the user's sessions end. Hand the new password over in person. A blocked user's password cannot be reset; unblock them first.
+
+### Block and unblock a user
+
+**Block user** stops the user from signing in, and their next request is refused. Their roles stay, so **Unblock user** gives the same access back. A blocked user shows **Blocked** in the list and on their page.
+
+## Roles
+
+![The roles of the company, custom roles first, then the default roles from modules](/images/use/roles.png)
+
+The **Roles** list shows the custom roles of the company, then the default roles from modules. Each row shows who defines the role, how many of the installed permissions it holds, such as 3 of 19, and how many people hold it. **Search roles** and **Defined by** narrow the list.
+
+A role's page has two tabs: **Permissions**, by module with each permission's id, and **Holders**, who holds the role at the company and at each plant.
+
+### Create a custom role
+
+<Steps>
+  <Step title="Open New role">
+    In **Roles**, select **New role**. It shows when you may manage roles. **New role from it** in a role's actions starts from that role.
+  </Step>
+  <Step title="Name the role and choose where to start">
+    Type a **Role name**, up to 80 characters and unique in the company. **Start from** copies the permissions of an existing role once; **No role** starts empty.
+  </Step>
+  <Step title="Tick the permissions">
+    The checklist groups the installed permissions by module. A permission you do not hold at the company can be unticked but not ticked. When you started from a role, the form shows the difference from it.
+  </Step>
+  <Step title="Create the role">
+    Select **Create role**. The role's page opens.
+  </Step>
+</Steps>
+
+**Edit role** on a custom role's page changes its name and permissions, with an optional reason. The form lists who holds the role and where, since a saved change applies to them from their next action. A permission you would add is locked when you do not hold it at every place where the role is given. If someone saved the role while you edited it, the save is refused and your changes stay in the form.
+
+## People at a plant
+
+**People** in plant settings lists who holds a role at the plant, one row per role. A Plant admin manages the plant's people here.
+
+![People at Plant A, each with their role and Remove](/images/use/people.png)
+
+- **Add role** gives a user of the company a role at this plant. **Person** searches the company's users by name or username.
+- **Remove** takes a role at this plant away, after the same dialog as on a user's page.
+- A person's page shows their roles at the plant and at the company, and what they can do at the plant. Roles at the company are given and removed in company settings.
+
+Blocking users and resetting passwords stay in company settings.
+
+## Limits in release 0.1.0
+
+- A user's name and email cannot be changed in the web app.
+- A role cannot be deleted in the web app.
+- Company admin cannot be edited or used as the start of a new role.
+- The user and role pages have no history yet. A reason you type is not shown anywhere in the web app.
