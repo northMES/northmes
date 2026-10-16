@@ -1,4 +1,4 @@
-# NorthMES Corporate Contributor License Agreement
+# NorthMES corporate contributor license agreement
 
 Version 0.1, 2026-10-15
 
