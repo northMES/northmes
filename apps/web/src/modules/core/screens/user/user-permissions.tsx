@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { ErrorLike } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { Building2, Factory, Lock, type LucideIcon, ShieldCheck } from 'lucide-react';

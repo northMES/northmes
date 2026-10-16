@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 
 /** Where an article is used, as the API answers it (ADR 0073). */
 export interface ArticlePlants {

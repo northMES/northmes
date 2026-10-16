@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useState } from 'react';
 
 /** Where the browser keeps the hidden columns of the articles list (design ui-222, question 5). */
