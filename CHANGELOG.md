@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.1.0](https://github.com/northMES/northmes/compare/v0.0.1...v0.1.0) (2026-10-16)
+
+
+### Features
+
+* **core:** end a session after 24 hours and end its JWTs at sign-out ([#592](https://github.com/northMES/northmes/issues/592)) ([62a000d](https://github.com/northMES/northmes/commit/62a000dca6dab940c80eb2ef59c8f50b35c83c7b))
+* **core:** throttle sign-in per client and lock an account after failed sign-ins ([#597](https://github.com/northMES/northmes/issues/597)) ([0f6b4b9](https://github.com/northMES/northmes/commit/0f6b4b926e54468af1b6ec81f4a5e96a34e35e9d))
+* **core:** write article events to the event log ([#571](https://github.com/northMES/northmes/issues/571)) ([b0f4341](https://github.com/northMES/northmes/commit/b0f4341cba2f04eb6337d634e8d3590d6c8543e2))
+* **deploy:** back up through an opt-in Compose profile and prove the restore in CI ([#594](https://github.com/northMES/northmes/issues/594)) ([eef3757](https://github.com/northMES/northmes/commit/eef3757dd526f648384e6700673e7df53377bc83))
+* **deploy:** run NorthMES on a Postgres server of your own ([#567](https://github.com/northMES/northmes/issues/567)) ([2cf9923](https://github.com/northMES/northmes/commit/2cf9923888ebb75a5c80d766991f5784b1e7d5ce))
+* **deploy:** run the NorthMES containers read-only with no capabilities ([#583](https://github.com/northMES/northmes/issues/583)) ([a0339c1](https://github.com/northMES/northmes/commit/a0339c1d2d6289ca324d077eb3fec0124456ebae))
+* **docs:** claim the northmes/northmes library on Context7 ([#585](https://github.com/northMES/northmes/issues/585)) ([0e7356f](https://github.com/northMES/northmes/commit/0e7356f9630a2770476b942b9cfc55b0d1273145))
+* **examples:** add an article log example plugin ([#580](https://github.com/northMES/northmes/issues/580)) ([67672a5](https://github.com/northMES/northmes/commit/67672a5244e46573a4e0cb649167a48e297e0641))
+* **plugins:** build and serve plugin web parts, and list the plugins with screens ([#596](https://github.com/northMES/northmes/issues/596)) ([1e91e2f](https://github.com/northMES/northmes/commit/1e91e2fac4341009c4096a67b0c04e489efbca35))
+* **plugins:** run event consumers on pg-boss ([#578](https://github.com/northMES/northmes/issues/578)) ([fe15e3d](https://github.com/northMES/northmes/commit/fe15e3d5ec3685ee4e3c2ff0eca69d43fca40d2b))
+* **repo:** add the draft contributor license agreements and a CLA check ([#620](https://github.com/northMES/northmes/issues/620)) ([fa7cc5d](https://github.com/northMES/northmes/commit/fa7cc5dc762ce7f7782ae018253d26fb25513802))
+* **web:** load plugin screens at run time, with a sidebar page example ([#598](https://github.com/northMES/northmes/issues/598)) ([d4eb457](https://github.com/northMES/northmes/commit/d4eb4573802f2b41810f0880a3bccb1617dfc2ef))
+* **web:** show plugin widgets on the dashboard, with an article count example ([#602](https://github.com/northMES/northmes/issues/602)) ([0a3914c](https://github.com/northMES/northmes/commit/0a3914c9952dfb7c9e3950d869c20f4798982fb8))
+
+
+### Bug Fixes
+
+* **core:** close every Better Auth route the web does not call ([#595](https://github.com/northMES/northmes/issues/595)) ([7adcd46](https://github.com/northMES/northmes/commit/7adcd462eab5b91a030e3c0c34ce78fa27b7e31a))
+* **core:** refuse weak auth secrets and seeded dev users in production, and rotate JWT keys ([#593](https://github.com/northMES/northmes/issues/593)) ([59bef37](https://github.com/northMES/northmes/commit/59bef37b3c4fac7d38ecdea0735ff7734620d807))
+* **deps:** raise shell-quote, source-map-js and the MCP SDK packages to fixed versions ([#590](https://github.com/northMES/northmes/issues/590)) ([3036313](https://github.com/northMES/northmes/commit/3036313da2d451435043f7d650a5a8d47b7edd13))
+* **image:** pin pnpm in the image build and record the accepted braces advisory for Scorecard ([#603](https://github.com/northMES/northmes/issues/603)) ([9370927](https://github.com/northMES/northmes/commit/93709278d0919a9ccf5da3e5965303cde7183688))
+* **planning:** check core.article:read on a production order's article ([#600](https://github.com/northMES/northmes/issues/600)) ([e78b5cd](https://github.com/northMES/northmes/commit/e78b5cdee0d4907e8ddf8b90caa80cb65d148f51))
+* **planning:** check planning.productionOrder:read on the production order list ([#587](https://github.com/northMES/northmes/issues/587)) ([e1ee8aa](https://github.com/northMES/northmes/commit/e1ee8aabf0e30314961f695d5bb3b509513b53b1))
+* **plugins:** let the example plugins run on every 0.x release ([#633](https://github.com/northMES/northmes/issues/633)) ([cb4d5de](https://github.com/northMES/northmes/commit/cb4d5de6dfe57413707e4e7d0eb3fcb0ceca14bb))
+
 ## 0.0.1 (2026-10-15)
 
 
