@@ -28,6 +28,7 @@ Read the glossary first and the documents in this order. Each document links the
 | 16 | [14-roadmap.md](14-roadmap.md) | The checkpoints that set the pilot date, the weekly ledger row, the epics in dependency order with their stories, the tasks of E00 and E01, the cut list and the critical path. |
 | 17 | [16-open-questions.md](16-open-questions.md) | Open questions grouped by who answers them, each with a working default, the ADR or plan section it affects and the date it is needed by. |
 | 18 | [17-risks.md](17-risks.md) | The risk register for release 1 and the pilot: likelihood, impact, mitigations, warning signals, owners and ADRs. |
+| 19 | [18-gantt-timeline.md](18-gantt-timeline.md) | The Gantt timeline: the order Gantt as a second view on the timeline core, calendars on the timeline, constraints and deadlines, cascade and plan this order, float and the critical chain, workload, and the work breakdown. |
 
 Where each reader starts:
 
