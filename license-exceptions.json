@@ -23,13 +23,13 @@
       "package": "@fontsource/ibm-plex-sans",
       "class": "core",
       "license": "OFL-1.1",
-      "reason": "The IBM Plex Sans font files ship unmodified in the web app's bundle. OFL-1.1 allows bundling and redistributing fonts with any software as long as the fonts are not sold by themselves and keep their notice, and it puts no terms on the code they ship with. ADR 0040's core table does not list OFL-1.1; awaiting the maintainer's confirmation."
+      "reason": "The IBM Plex Sans font files ship unmodified in the web app's bundle. OFL-1.1 allows bundling and redistributing fonts with any software as long as the fonts are not sold by themselves and keep their notice, and it puts no terms on the code they ship with. ADR 0040's core table does not list OFL-1.1; Krister Johansson confirmed this exception on 2026-10-16 (#643)."
     },
     {
       "package": "@fontsource/ibm-plex-mono",
       "class": "core",
       "license": "OFL-1.1",
-      "reason": "The IBM Plex Mono font files ship unmodified in the web app's bundle. OFL-1.1 allows bundling and redistributing fonts with any software as long as the fonts are not sold by themselves and keep their notice, and it puts no terms on the code they ship with. ADR 0040's core table does not list OFL-1.1; awaiting the maintainer's confirmation."
+      "reason": "The IBM Plex Mono font files ship unmodified in the web app's bundle. OFL-1.1 allows bundling and redistributing fonts with any software as long as the fonts are not sold by themselves and keep their notice, and it puts no terms on the code they ship with. ADR 0040's core table does not list OFL-1.1; Krister Johansson confirmed this exception on 2026-10-16 (#643)."
     }
   ]
 }
