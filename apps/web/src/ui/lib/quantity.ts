@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 
 /** A decimal as the API sends a numeric column, such as "1200.000000". */
 const decimal = /^-?\d+(\.\d+)?$/;

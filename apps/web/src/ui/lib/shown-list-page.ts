@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 
 /** The part of a list's page that decides whether it can stand in for the next one. */
 interface ListPage {
