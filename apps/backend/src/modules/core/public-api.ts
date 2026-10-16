@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // What other modules may import from core. The module boundary check refuses any other file.
 export { Article } from './api/article/types/article.type.ts';
 export { readIn, requestScope } from './core/access/request-scope.ts';

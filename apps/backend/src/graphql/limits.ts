@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { maxAliasesPlugin } from '@escape.tech/graphql-armor-max-aliases';
 import { maxDepthPlugin } from '@escape.tech/graphql-armor-max-depth';
 import { maxTokensPlugin } from '@escape.tech/graphql-armor-max-tokens';

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Fixture plugins with command validators on the in-repo modules' commands. The in-repo modules
 // carry no manifest, so the host learns which commands accept validators from their contracts.
 import { Module } from '@nestjs/common';

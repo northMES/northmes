@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Fixture modules whose validators the host refuses at boot (ADR 0037): hold-rules validates a
 // command whose contract dispatch does not make validatable, stray-rules validates dispatch.releaseJob
 // without depending on dispatch, patient-rules gives its validators time limits that the host

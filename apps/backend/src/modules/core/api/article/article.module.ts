@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Module } from '@nestjs/common';
 import { ArticleGroupServiceModule } from '../../core/article-group-service.module.ts';
 import { ArticleServiceModule } from '../../core/article-service.module.ts';
