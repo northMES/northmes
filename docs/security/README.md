@@ -89,7 +89,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | MIT packages import no AGPL code | built | `scripts/lint/mit-imports.mjs`; `test/meta/mit-imports.test.ts` |
 | Project credentials: short-lived workflow tokens with per-job permissions, every stored secret listed with who can change it and when it is rotated | built | [project-credentials.md](project-credentials.md); `test/meta/security-docs.test.ts` checks the list against the workflows |
 | Origin and license of third-party components | built | `LICENSE`, `NOTICE`, `skills-lock.json`, SPDX headers |
-| Contributions under a signed CLA: `CI / cla` checks the pull request author and every commit author against `.github/cla/signed.json` on the default branch, with no checkout and a read-only token; it joins `CI / gate` before the first outside pull request | built | ADR 0039; `scripts/cla/check.mjs`, `.github/workflows/ci.yml`; `scripts/cla/check.test.ts`, `test/meta/workflows.test.ts`. The CLA texts wait for legal review |
+| Contributions under a signed CLA: `CI / cla` checks the pull request author and every commit author against `.github/cla/signed.json` on the default branch, with no checkout and a read-only token. It runs outside `CI / gate` for now, and joins `CI / gate` and the main ruleset before the first outside pull request | built | ADR 0039; `scripts/cla/check.mjs`, `.github/workflows/ci.yml`; `scripts/cla/check.test.ts`, `test/meta/workflows.test.ts`. The CLA texts wait for legal review |
 
 ### 6. Vulnerability management
 
