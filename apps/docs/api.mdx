@@ -1,9 +1,13 @@
 ---
 title: GraphQL API
-description: Call the NorthMES GraphQL API at /graphql. Sign in for a bearer token, name the plant, page through lists, read errors and stay within the limits.
+description: The GraphQL API at /graphql that the NorthMES web app and plugin screens use. How a request is authenticated, which plant it names, how lists page, what errors look like and the limits.
 ---
 
-NorthMES has one GraphQL API. The web app uses it, and your own clients can use it the same way. This page covers the endpoint, signing in, plants, lists, errors and limits. Every type, field, argument, query and mutation is described in the schema itself.
+The GraphQL API is the web app's own API. The NorthMES web app and the screens of installed plugins call it on behalf of the person who is signed in. This page covers the endpoint, how a request is authenticated, plants, lists, errors and limits, for people who build plugin screens or debug the web app. Every type, field, argument, query and mutation is described in the schema itself.
+
+<Note>
+NorthMES does not support scripts or outside systems that sign in with a person's email and password. Integrations will use the REST API with OAuth client credentials or integration tokens, which are not built yet ([ADR 0073](https://github.com/northMES/northmes/blob/main/docs/adr/0073-one-module-contract-for-rest-webmcp-and-later-mcp-with-oauth-clients-and-tokens.md)).
+</Note>
 
 ## The schema
 
@@ -16,7 +20,7 @@ The full schema is in [`schema/api.graphql`](https://github.com/northMES/northme
 
 ## Endpoint
 
-Send every operation to `/graphql` on your NorthMES host, as an HTTP `POST` with a JSON body:
+Every operation goes to `/graphql` on your NorthMES host, as an HTTP `POST` with a JSON body. A request from the web app looks like this:
 
 ```sh
 curl https://<NORTHMES_HOST>/graphql \
@@ -28,38 +32,17 @@ curl https://<NORTHMES_HOST>/graphql \
 
 The API answers in JSON. It does not serve GraphiQL or another landing page. File uploads (multipart requests) are refused.
 
-## Sign in
+## How a request is authenticated
 
-The API takes a short-lived JWT as a bearer token. A client gets one in two steps, as the web app does.
-
-<Steps>
-  <Step title="Sign in with email and password">
-    ```sh
-    curl -i https://<NORTHMES_HOST>/api/auth/sign-in/email \
-      -H 'content-type: application/json' \
-      -d '{"email":"planner@example.com","password":"..."}'
-    ```
-
-    The `set-auth-token` header of the answer holds the session token. Keep it secret: it lets its holder act as the user until the session ends.
-  </Step>
-  <Step title="Get a JWT with the session token">
-    ```sh
-    curl https://<NORTHMES_HOST>/api/auth/token \
-      -H "authorization: Bearer $SESSION_TOKEN"
-    ```
-
-    The answer is `{"token":"..."}`. Send that JWT as `authorization: Bearer <JWT>` with every GraphQL request. It lives five minutes, so get a new one from `/api/auth/token` before it expires.
-  </Step>
-</Steps>
+A request carries a short-lived JWT of the signed-in person as a bearer token. The web app gets it for you: when a person signs in on the sign-in page, the web app keeps the session token in the browser tab and mints a JWT from it at `/api/auth/token`, which lives five minutes and is renewed before it expires. A plugin screen calls the API through the web SDK, which adds the same JWT, so a plugin never handles a password or a session token itself.
 
 - The session token is not a bearer token for `/graphql`; only the JWT is.
 - A session lives 12 hours after sign-in or after its last renewal, and renews after an hour of use. It ends 24 hours after sign-in however much it is used.
-- `POST /api/auth/sign-out` with the session token as bearer token ends the session. The API then refuses the session's JWTs as well.
+- Signing out ends the session, and the API then refuses the session's JWTs as well.
 - Sign-in is throttled per client address, and an account locks after repeated failed sign-ins.
 - A request without a valid JWT, or with the JWT of a blocked user, has no user. Its fields fail with `UNAUTHENTICATED`.
-- A user who signed in with a temporary password must choose a new one in the web app first. Until then every request is refused with `FORBIDDEN` and `core.password_change_required`.
-
-The API has no integration tokens yet, so a client signs in as a user and can do what that user's roles allow.
+- A person who signed in with a temporary password must choose a new one first. Until then every request is refused with `FORBIDDEN` and `core.password_change_required`.
+- A request can do what the person's roles allow, and nothing more.
 
 ## Choose the plant
 
