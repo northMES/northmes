@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { Consumer, EventConsumerProvider } from '@northmes/sdk/events';
 import { BootError } from '../boot/boot-error.ts';
 import type { ValidatorScope } from '../commands/discover-validators.ts';

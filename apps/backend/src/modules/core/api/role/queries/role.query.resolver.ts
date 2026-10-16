@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Inject } from '@nestjs/common';
 import { Args, ID, Query, Resolver } from '@nestjs/graphql';
 import { PlantFree } from '@northmes/sdk/graphql';
@@ -19,31 +20,31 @@ import { Role } from '../types/role.type.ts';
 export class RoleQueryResolver {
   constructor(@Inject(RoleService) private readonly roles: RoleService) {}
 
-  /**
-   * The roles of the company: its custom roles, then the default roles of the modules, each by
-   * name.
-   */
-  @Query(() => [Role])
+  @Query(() => [Role], {
+    description:
+      'The roles of the company: its custom roles, then the default roles of the modules, each by name. Needs core.role:read.',
+  })
   @PlantFree()
   coreRoles(@Args('companyId', companyIdArg) companyId?: string | null): Promise<RoleRecord[]> {
     return this.roles.roles(companyId ?? undefined);
   }
 
-  /** The role with this id of the company, or null. */
-  @Query(() => Role, { nullable: true })
+  @Query(() => Role, {
+    nullable: true,
+    description: 'The role with this id of the company, or null. Needs core.role:read.',
+  })
   @PlantFree()
   coreRole(
-    @Args('id', { type: () => ID }) id: string,
+    @Args('id', { type: () => ID, description: "The role's id." }) id: string,
     @Args('companyId', companyIdArg) companyId?: string | null,
   ): Promise<RoleRecord | null> {
     return this.roles.byId(id, companyId ?? undefined);
   }
 
-  /**
-   * Every permission of the catalog, installed or not, grouped by module, core first, and by
-   * resource.
-   */
-  @Query(() => [PermissionModule])
+  @Query(() => [PermissionModule], {
+    description:
+      'Every permission of the catalog, installed or not, grouped by module, core first, and by resource. Needs core.role:read.',
+  })
   @PlantFree()
   corePermissionCatalog(
     @Args('companyId', companyIdArg) companyId?: string | null,

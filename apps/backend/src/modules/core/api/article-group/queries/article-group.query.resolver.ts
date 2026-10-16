@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Inject } from '@nestjs/common';
 import { Args, ID, Query, Resolver } from '@nestjs/graphql';
 import { PlantFree } from '@northmes/sdk/graphql';
@@ -19,18 +20,23 @@ import { type ArticleGroupListArgs, articleGroupList } from './article-group.lis
 export class ArticleGroupQueryResolver {
   constructor(@Inject(ArticleGroupService) private readonly groups: ArticleGroupService) {}
 
-  /** The article group with this id among the company's, or null. */
-  @Query(() => ArticleGroup, { nullable: true })
+  @Query(() => ArticleGroup, {
+    nullable: true,
+    description:
+      "The article group with this id among the company's, or null. Needs core.articleGroup:read.",
+  })
   @PlantFree()
   coreArticleGroup(
-    @Args('id', { type: () => ID }) id: string,
+    @Args('id', { type: () => ID, description: "The article group's id." }) id: string,
     @Args('companyId', companyIdArg) companyId?: string | null,
   ): Promise<ArticleGroupRecord | null> {
     return this.groups.byId(id, companyId ?? undefined);
   }
 
-  /** One page of the company's article groups, with search, orderBy and paging. */
-  @Query(() => articleGroupList.Connection)
+  @Query(() => articleGroupList.Connection, {
+    description:
+      "One page of the company's article groups, with search, orderBy and paging. Needs core.articleGroup:read.",
+  })
   @PlantFree()
   coreArticleGroups(
     @Args({ type: () => articleGroupList.Args }) args: ArticleGroupListArgs,

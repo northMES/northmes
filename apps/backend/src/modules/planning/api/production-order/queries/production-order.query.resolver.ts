@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Inject } from '@nestjs/common';
 import { Query, Resolver } from '@nestjs/graphql';
 import {
@@ -12,8 +13,10 @@ import { ProductionOrder } from '../types/production-order.type.ts';
 export class ProductionOrderQueryResolver {
   constructor(@Inject(ProductionOrderService) private readonly orders: ProductionOrderService) {}
 
-  /** The production orders at the request's plant, by number. */
-  @Query(() => [ProductionOrder])
+  @Query(() => [ProductionOrder], {
+    description:
+      "The production orders at the request's plant, by number. Needs planning.productionOrder:read.",
+  })
   planningProductionOrders(): Promise<ProductionOrderRecord[]> {
     return this.orders.list();
   }

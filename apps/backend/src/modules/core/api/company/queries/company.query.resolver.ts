@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Inject } from '@nestjs/common';
 import { Query, Resolver } from '@nestjs/graphql';
 import { PlantFree } from '@northmes/sdk/graphql';
@@ -10,12 +11,10 @@ import { Company } from '../types/company.type.ts';
 export class CompanyQueryResolver {
   constructor(@Inject(CompanyService) private readonly companies: CompanyService) {}
 
-  /**
-   * The companies where the signed-in user holds a role, sorted by name, each with the plants the
-   * user may open (ADR 0066). The answer is the same at every plant and without x-northmes-plant,
-   * so it is plant-free.
-   */
-  @Query(() => [Company])
+  @Query(() => [Company], {
+    description:
+      'The companies where the signed-in user holds a role, sorted by name, each with the plants the user may open. The answer is the same with or without x-northmes-plant.',
+  })
   @PlantFree()
   coreCompanies(): Promise<CompanyRecord[]> {
     return this.companies.companies();

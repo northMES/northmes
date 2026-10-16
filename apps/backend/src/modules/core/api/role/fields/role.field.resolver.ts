@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Inject } from '@nestjs/common';
 import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { loaderFor, type RequestContext } from '@northmes/sdk/graphql';
@@ -15,12 +16,11 @@ import { Role } from '../types/role.type.ts';
 export class RoleFieldResolver {
   constructor(@Inject(RoleAssignmentService) private readonly assignments: RoleAssignmentService) {}
 
-  /**
-   * Who holds the role where the request runs, those at the company first, then by name: at a
-   * plant, at its company and the plant, never at another plant; in company settings, at the
-   * company and every plant of it. The holders of every role in an answer are read in one query.
-   */
-  @ResolveField(() => [RoleAssignment])
+  /** The holders of every role in an answer are read in one query. */
+  @ResolveField(() => [RoleAssignment], {
+    description:
+      'Who holds the role where the request runs, those at the company first, then by name: at a plant, at its company and the plant, never at another plant; in company settings, at the company and every plant of it.',
+  })
   holders(
     @Parent() role: RoleRecord,
     @Context() context: RequestContext,

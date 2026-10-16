@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Inject } from '@nestjs/common';
 import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { loaderFor, type RequestContext } from '@northmes/sdk/graphql';
@@ -17,13 +18,11 @@ import { User } from '../types/user.type.ts';
 export class UserFieldResolver {
   constructor(@Inject(RoleAssignmentService) private readonly assignments: RoleAssignmentService) {}
 
-  /**
-   * The user's roles where the request runs, those at the company first: at a plant, at its
-   * company and the plant, never at another plant; in company settings, at the company and every
-   * plant of it. The roles of every user in an answer are read in one query. It needs
-   * core.user:read there, and each assignment's role core.role:read.
-   */
-  @ResolveField(() => [RoleAssignment])
+  /** The roles of every user in an answer are read in one query. */
+  @ResolveField(() => [RoleAssignment], {
+    description:
+      "The user's roles where the request runs, those at the company first: at a plant, at its company and the plant, never at another plant; in company settings, at the company and every plant of it. It needs core.user:read there, and each assignment's role core.role:read.",
+  })
   roleAssignments(
     @Parent() user: UserRecord,
     @Context() context: RequestContext,
@@ -34,12 +33,10 @@ export class UserFieldResolver {
     ).load(user.id);
   }
 
-  /**
-   * What the user may do where the request runs: every installed permission, by key, with the
-   * assignments that grant it, at the plant or at its company, or in company settings at the
-   * company. It names roles, so it needs core.role:read there.
-   */
-  @ResolveField(() => [EffectivePermission])
+  @ResolveField(() => [EffectivePermission], {
+    description:
+      'What the user may do where the request runs: every installed permission, by key, with the assignments that grant it, at the plant or at its company, or in company settings at the company. It names roles, so it needs core.role:read there.',
+  })
   effectivePermissions(@Parent() user: UserRecord): Promise<EffectivePermissionRecord[]> {
     return this.assignments.effectivePermissions(user.id, user.companyId);
   }

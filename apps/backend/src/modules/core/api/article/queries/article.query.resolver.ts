@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Inject } from '@nestjs/common';
 import { Args, ID, Query, Resolver } from '@nestjs/graphql';
 import type { StockUnitCode } from '@northmes/contracts';
@@ -39,24 +40,23 @@ const sourcesArg = {
 export class ArticleQueryResolver {
   constructor(@Inject(ArticleService) private readonly articles: ArticleService) {}
 
-  /**
-   * The article with this id among the articles of the company, or null, also one that is not
-   * assigned to the request's plant.
-   */
-  @Query(() => Article, { nullable: true })
+  @Query(() => Article, {
+    nullable: true,
+    description:
+      "The article with this id among the articles of the company, or null, also one that is not assigned to the request's plant. Needs core.article:read.",
+  })
   @PlantFree()
   coreArticle(
-    @Args('id', { type: () => ID }) id: string,
+    @Args('id', { type: () => ID, description: "The article's id." }) id: string,
     @Args('companyId', companyIdArg) companyId?: string | null,
   ): Promise<ArticleRecord | null> {
     return this.articles.byId(id, companyId ?? undefined);
   }
 
-  /**
-   * One page of the articles, with search, orderBy and paging: at a plant, those assigned to it or
-   * to All plants; in company settings, every article of the company.
-   */
-  @Query(() => articleList.Connection)
+  @Query(() => articleList.Connection, {
+    description:
+      'One page of the articles, with search, orderBy, filters and paging: at a plant, those assigned to it or to All plants; in company settings, every article of the company. Needs core.article:read.',
+  })
   @PlantFree()
   coreArticles(
     @Args({ type: () => articleList.Args }) args: ArticleListArgs,
@@ -80,17 +80,26 @@ export class ArticleQueryResolver {
     });
   }
 
-  /**
-   * The values of the articles list's filter fields with how many articles have each, for the
-   * same search, Show archived and filters as coreArticles: each field counted under the others'
-   * filters but not its own (design ui-222, LI3).
-   */
-  @Query(() => ArticleFacets)
+  /** Each field is counted under the others' filters but not its own (design ui-222, LI3). */
+  @Query(() => ArticleFacets, {
+    description:
+      "The values of the articles list's filter fields with how many articles have each, for the same search, archived rows and filters as coreArticles. Needs core.article:read.",
+  })
   @PlantFree()
   async coreArticleFacets(
     @Args('companyId', companyIdArg) companyId?: string | null,
-    @Args('search', { type: () => String, nullable: true }) search?: string | null,
-    @Args('includeArchived', { type: () => Boolean, nullable: true, defaultValue: false })
+    @Args('search', {
+      type: () => String,
+      nullable: true,
+      description: 'The search of coreArticles: only the articles whose text contains this.',
+    })
+    search?: string | null,
+    @Args('includeArchived', {
+      type: () => Boolean,
+      nullable: true,
+      defaultValue: false,
+      description: 'Counts archived articles too.',
+    })
     includeArchived?: boolean | null,
     @Args('articleGroupIds', articleGroupIdsArg) articleGroupIds?: (string | null)[] | null,
     @Args('stockUnits', stockUnitsArg) stockUnits?: StockUnitCode[] | null,

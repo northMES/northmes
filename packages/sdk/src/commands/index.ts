@@ -17,7 +17,7 @@ export {
   type RegisteredCommandDefinition,
   registerCommand,
 } from './define-command.ts';
-export { commandInput } from './mutation-field.ts';
+export { commandInput, commandInputArg } from './mutation-field.ts';
 export { parseCommandInput } from './parse-input.ts';
 export {
   CommandValidator,

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { dashboardMaxWidgets } from '@northmes/core-contracts';
 import { ArrowDown, ArrowUp, Ellipsis, GripVertical, Plus, Settings2, Trash2 } from 'lucide-react';
 import { type KeyboardEvent, type ReactNode, useEffect, useState } from 'react';

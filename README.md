@@ -3,13 +3,14 @@
 [![CI](https://github.com/northMES/northmes/actions/workflows/ci.yml/badge.svg)](https://github.com/northMES/northmes/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/northMES/northmes/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/northMES/northmes/actions/workflows/github-code-scanning/codeql)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/northMES/northmes/badge)](https://scorecard.dev/viewer/?uri=github.com/northMES/northmes)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15524/badge)](https://www.bestpractices.dev/projects/15524)
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg)](LICENSE)
 
 NorthMES is an open source, developer-first manufacturing execution system. It plans production and follows it on the shop floor. Production planning is its first module: production orders and their operations, the job orders a planner places on machines, plant calendars, the planning board and a minimal operator station. It is built first for manufacturers without an ERP; an ERP connects through its own connector module. One installation serves one customer, on the customer's own server.
 
 ## Status
 
-NorthMES is in development and has no release yet. The plan for release 1 is in [docs/plan](docs/plan/README.md), and the decisions behind it are in [docs/adr](docs/adr/README.md).
+NorthMES is in development. Version 0.0.1 was released on 2026-10-15 ([CHANGELOG.md](CHANGELOG.md)). It is not for production use: its Compose bundle has no backups and no offline install, so do not keep production data in it. The plan for release 1 is in [docs/plan](docs/plan/README.md), and the decisions behind it are in [docs/adr](docs/adr/README.md).
 
 ## Getting started
 
@@ -24,6 +25,10 @@ pnpm e2e      # the end-to-end specs in Chromium against the built server
 
 `pnpm dev` prints the address of the web app and the dev admin to sign in as. The dev passwords are in `scripts/stack/seed.mjs`; they only ever reach the dev and test databases.
 
+## Report a bug or ask for a feature
+
+Open an issue with the [bug report or feature request form](https://github.com/northMES/northmes/issues/new/choose). Report a security vulnerability privately as [SECURITY.md](SECURITY.md) describes, never in a public issue.
+
 ## Where to read more
 
 - [docs/plan](docs/plan/README.md): what NorthMES is, the modules, release 1 and the roadmap.
@@ -32,6 +37,8 @@ pnpm e2e      # the end-to-end specs in Chromium against the built server
 - [GLOSSARY.md](GLOSSARY.md): the project's terms.
 - [AGENTS.md](AGENTS.md): how work is done here, for people and coding agents.
 - [SECURITY.md](SECURITY.md): how to report a vulnerability, and what happens next.
+- [GOVERNANCE.md](GOVERNANCE.md): who decides, how decisions are recorded, how a change gets in and who gets elevated access.
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md): how everyone in the project behaves, and where to report a problem.
 
 ## License
 

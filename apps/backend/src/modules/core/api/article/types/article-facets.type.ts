@@ -1,30 +1,54 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
 import { StockUnit } from './article.type.ts';
 
 /** How many listed articles have one article group, or none when id is null. */
-@ObjectType('ArticleGroupCount')
+@ObjectType('ArticleGroupCount', {
+  description: 'How many listed articles have one article group, or no group when id is null.',
+})
 export class ArticleGroupCount {
-  /** The group's id, or null for the articles of no group. */
-  @Field(() => ID, { nullable: true }) id!: string | null;
-  @Field(() => String, { nullable: true }) code!: string | null;
-  @Field(() => String, { nullable: true }) name!: string | null;
-  @Field(() => Int) count!: number;
+  @Field(() => ID, {
+    nullable: true,
+    description: "The group's id, or null for the articles of no group.",
+  })
+  id!: string | null;
+  @Field(() => String, {
+    nullable: true,
+    description: "The group's code, or null for the articles of no group.",
+  })
+  code!: string | null;
+  @Field(() => String, {
+    nullable: true,
+    description: "The group's name, or null for the articles of no group.",
+  })
+  name!: string | null;
+  @Field(() => Int, { description: 'How many listed articles have the group.' }) count!: number;
 }
 
 /** How many listed articles count in one stock unit. */
-@ObjectType('StockUnitCount')
+@ObjectType('StockUnitCount', {
+  description: 'How many listed articles count in one stock unit.',
+})
 export class StockUnitCount {
-  @Field(() => StockUnit) stockUnit!: string;
-  @Field(() => Int) count!: number;
+  @Field(() => StockUnit, { description: 'The stock unit.' }) stockUnit!: string;
+  @Field(() => Int, { description: 'How many listed articles count in the unit.' })
+  count!: number;
 }
 
 /** How many listed articles came from one source, or from NorthMES when source is null. */
-@ObjectType('SourceCount')
+@ObjectType('SourceCount', {
+  description:
+    'How many listed articles came from one source, or from NorthMES when source is null.',
+})
 export class SourceCount {
-  /** The integration that created the articles, or null for NorthMES. */
-  @Field(() => String, { nullable: true }) source!: string | null;
-  @Field(() => Int) count!: number;
+  @Field(() => String, {
+    nullable: true,
+    description: 'The integration that created the articles, or null for NorthMES.',
+  })
+  source!: string | null;
+  @Field(() => Int, { description: 'How many listed articles came from the source.' })
+  count!: number;
 }
 
 /**
@@ -32,14 +56,19 @@ export class SourceCount {
  * ui-222, LI3): each field counted under the search, Show archived and the other fields' filters,
  * but not its own, so its menu still offers every value.
  */
-@ObjectType('ArticleFacets')
+@ObjectType('ArticleFacets', {
+  description:
+    "The values of the articles list's filter fields with how many articles have each. Each field is counted under the search and the other fields' filters, but not its own.",
+})
 export class ArticleFacets {
-  /** How many articles the list holds with every filter applied. */
-  @Field(() => Int) total!: number;
-  /** By the group's name, then the articles of no group. */
-  @Field(() => [ArticleGroupCount]) articleGroups!: ArticleGroupCount[];
-  /** In the unit catalog's order. */
-  @Field(() => [StockUnitCount]) stockUnits!: StockUnitCount[];
-  /** By name, then NorthMES. */
-  @Field(() => [SourceCount]) sources!: SourceCount[];
+  @Field(() => Int, { description: 'How many articles the list holds with every filter applied.' })
+  total!: number;
+  @Field(() => [ArticleGroupCount], {
+    description: "The article groups, by the group's name, then the articles of no group.",
+  })
+  articleGroups!: ArticleGroupCount[];
+  @Field(() => [StockUnitCount], { description: "The stock units, in the unit catalog's order." })
+  stockUnits!: StockUnitCount[];
+  @Field(() => [SourceCount], { description: 'The sources, by name, then NorthMES.' })
+  sources!: SourceCount[];
 }

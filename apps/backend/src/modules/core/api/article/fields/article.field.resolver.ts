@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Inject } from '@nestjs/common';
 import { Context, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { loaderFor, type RequestContext } from '@northmes/sdk/graphql';
@@ -15,11 +16,11 @@ import { Article } from '../types/article.type.ts';
 export class ArticleFieldResolver {
   constructor(@Inject(ArticleGroupService) private readonly groups: ArticleGroupService) {}
 
-  /**
-   * The article group the article picked, also an archived one, or null. The request's
-   * core.articleGroup loader reads the groups of every article in a list with one query.
-   */
-  @ResolveField(() => ArticleGroup, { nullable: true })
+  /** The request's core.articleGroup loader reads the groups of every article in a list with one query. */
+  @ResolveField(() => ArticleGroup, {
+    nullable: true,
+    description: 'The article group the article picked, also an archived one, or null.',
+  })
   async articleGroup(
     @Parent() article: ArticleRecord,
     @Context() context: RequestContext,

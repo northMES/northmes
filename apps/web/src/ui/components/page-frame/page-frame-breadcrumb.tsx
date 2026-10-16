@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { createLink } from '@tanstack/react-router';
 import { type ComponentProps, Fragment } from 'react';
 import { useIsMobile } from '../../lib/use-mobile.ts';

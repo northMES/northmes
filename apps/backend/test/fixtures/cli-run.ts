@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { vi } from 'vitest';
 import { cli } from '../../src/cli.ts';
 import { serverEnvKeys } from './server-env.ts';

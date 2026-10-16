@@ -6,7 +6,14 @@
   "description": "Open source manufacturing execution system: production planning, job orders on machines, plant calendars and an operator station, self-hosted with Docker Compose and extended with plugins built on MIT SDK packages.",
   "folders": ["apps/docs", "deploy"],
   "excludeFolders": ["./docs", "./.claude"],
-  "excludeFiles": ["AGENTS.md", "CLAUDE.md", "CHANGELOG.md", "LICENSE.md"],
+  "excludeFiles": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "CHANGELOG.md",
+    "LICENSE.md",
+    "GOVERNANCE.md",
+    "CODE_OF_CONDUCT.md"
+  ],
   "rules": [
     "Plugins import only @northmes/sdk, @northmes/web-sdk, @northmes/contracts and module contracts packages such as @northmes/planning-contracts, never the AGPL application code.",
     "Secrets come from secret files only; never put a secret in .env, northmes.config.json or compose.yaml."

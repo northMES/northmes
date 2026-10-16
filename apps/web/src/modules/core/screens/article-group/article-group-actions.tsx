@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useMutation } from '@apollo/client/react';
 import { Archive, ArchiveRestore } from 'lucide-react';
 import { ConfirmDialog } from '../../../../ui/components/confirm-dialog/index.ts';

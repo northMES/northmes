@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Inject } from '@nestjs/common';
 import { Args, ID, Query, Resolver } from '@nestjs/graphql';
 import { PlantFree } from '@northmes/sdk/graphql';
@@ -16,12 +17,10 @@ import { type UserListArgs, userList } from './user.list.ts';
 export class UserQueryResolver {
   constructor(@Inject(UserService) private readonly users: UserService) {}
 
-  /**
-   * One page of the users of the company: the members of the company and everyone who holds one of
-   * its roles, with search, orderBy and paging, narrowed to the holders of a role and to blocked or
-   * active users when roleId or blocked say so (design core-304, US1).
-   */
-  @Query(() => userList.Connection)
+  @Query(() => userList.Connection, {
+    description:
+      'One page of the users of the company: its members and everyone who holds one of its roles, with search, orderBy, filters and paging. Needs core.user:read.',
+  })
   @PlantFree()
   coreUsers(
     @Args({ type: () => userList.Args }) args: UserListArgs,
@@ -46,11 +45,14 @@ export class UserQueryResolver {
     return this.users.list(args, companyId ?? undefined, filter);
   }
 
-  /** The user with this id among the users of the company, or null. */
-  @Query(() => User, { nullable: true })
+  @Query(() => User, {
+    nullable: true,
+    description:
+      'The user with this id among the users of the company, or null. Needs core.user:read.',
+  })
   @PlantFree()
   coreUser(
-    @Args('id', { type: () => ID }) id: string,
+    @Args('id', { type: () => ID, description: "The user's id." }) id: string,
     @Args('companyId', companyIdArg) companyId?: string | null,
   ): Promise<UserRecord | null> {
     return this.users.byId(id, companyId ?? undefined);
