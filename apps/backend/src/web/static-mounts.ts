@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { realpathSync } from 'node:fs';
 import type { ServerResponse } from 'node:http';
 import { isAbsolute, join, relative, sep } from 'node:path';

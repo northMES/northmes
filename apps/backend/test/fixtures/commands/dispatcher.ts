@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Fixture module dispatcher: in an app of fixture modules, which has no core module to sign users
 // in, it resolves every request that names a plant to a dispatcher who releases and holds
 // dispatch's jobs at that plant, so the command bus lets the request run dispatch's commands.
