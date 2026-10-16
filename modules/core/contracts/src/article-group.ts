@@ -14,13 +14,17 @@ export const articleGroupFields = z.object({
     .string()
     .trim()
     .min(1, 'Enter a code.')
-    .max(32, { error: tooLong('Code', 32) }),
+    .max(32, { error: tooLong('Code', 32) })
+    .describe("The group's code, unique within the company, at most 32 characters."),
   name: z
     .string()
     .trim()
     .min(1, 'Enter a name.')
-    .max(200, { error: tooLong('Name', 200) }),
-  translations: translations.optional(),
+    .max(200, { error: tooLong('Name', 200) })
+    .describe("The group's name, at most 200 characters."),
+  translations: translations
+    .describe('The translations of the name. An update that leaves them out keeps them.')
+    .optional(),
 });
 
 /**
@@ -31,6 +35,8 @@ export const articleGroupFields = z.object({
  */
 export const createArticleGroup = defineCommandContract({
   name: 'core.createArticleGroup',
+  description:
+    'Creates an article group of the company. Needs core.articleGroup:create at the company; a code that another group of the company uses is refused with core.code_taken.',
   target: 'new',
   fields: articleGroupFields.extend({ companyId: settingsCompanyId }),
   permission: 'core.articleGroup:create',
@@ -42,6 +48,8 @@ export const createArticleGroup = defineCommandContract({
  */
 export const updateArticleGroup = defineCommandContract({
   name: 'core.updateArticleGroup',
+  description:
+    'Changes the code, name and translations of an article group. Needs core.articleGroup:update; an archived group is refused with core.archived.',
   target: 'existing',
   fields: articleGroupFields,
   permission: 'core.articleGroup:update',
@@ -53,6 +61,8 @@ export const updateArticleGroup = defineCommandContract({
  */
 export const archiveArticleGroup = defineCommandContract({
   name: 'core.archiveArticleGroup',
+  description:
+    'Archives an article group: lists hide it and no article can pick it, while the articles that have it keep it. Needs core.articleGroup:archive.',
   target: 'existing',
   fields: z.object({}),
   permission: 'core.articleGroup:archive',
@@ -61,6 +71,8 @@ export const archiveArticleGroup = defineCommandContract({
 /** Restores an archived article group. A group that is not archived: core.not_archived. */
 export const restoreArticleGroup = defineCommandContract({
   name: 'core.restoreArticleGroup',
+  description:
+    'Restores an archived article group. Needs core.articleGroup:archive; a group that is not archived is refused with core.not_archived.',
   target: 'existing',
   fields: z.object({}),
   permission: 'core.articleGroup:archive',

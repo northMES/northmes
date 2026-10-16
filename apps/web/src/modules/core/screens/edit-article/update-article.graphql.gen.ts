@@ -4,14 +4,23 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
+/** The input of coreUpdateArticle. */
 export type CoreUpdateArticleInput = {
+  /** The id of an active article group of the company; an empty value picks none. */
   readonly articleGroupId?: string | null | undefined;
+  /** The article number, unique within the company, at most 32 characters. */
   readonly code: string;
+  /** The version of the entity that the change was made on; the command is refused when the entity has changed since. */
   readonly expectedVersion: number;
+  /** The id of the entity the command changes. */
   readonly id: string | number;
+  /** The article's name, at most 200 characters. */
   readonly name: string;
+  /** A note on the article, at most 2000 characters; an empty note removes it. */
   readonly note?: string | null | undefined;
+  /** The code of the unit the article's quantities are counted in. A new article without one counts in pieces. */
   readonly stockUnit?: string | null | undefined;
+  /** The translations of the name; an empty list removes them. */
   readonly translations?: ReadonlyArray<TranslationInput> | null | undefined;
 };
 
@@ -26,9 +35,13 @@ export type StockUnit =
   /** Pieces (pcs) */
   | 'PIECE';
 
+/** One translation of a translatable field, as a command takes it. */
 export type TranslationInput = {
+  /** The translated field, such as name. */
   readonly field: string;
+  /** The language as a BCP 47 tag, such as en or de-AT. */
   readonly locale: string;
+  /** The text in that language. */
   readonly text: string;
 };
 

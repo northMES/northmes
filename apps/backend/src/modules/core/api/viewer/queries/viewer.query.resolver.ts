@@ -9,12 +9,10 @@ import { Viewer } from '../types/viewer.type.ts';
 /** core's query on the signed-in user. */
 @Resolver(() => Viewer)
 export class ViewerQueryResolver {
-  /**
-   * The signed-in user and what they hold at the request's plant and at its company, so the web
-   * shows only the actions they can take. It needs no permission. Company settings send it without
-   * a plant and with the company's id, and get what the user holds at the company (ADR 0066).
-   */
-  @Query(() => Viewer)
+  @Query(() => Viewer, {
+    description:
+      "The signed-in user and what they hold at the request's plant and at its company, so a client shows only the actions they can take. Needs no permission. Without a plant, with companyId, it answers what the user holds at the company.",
+  })
   @PlantFree()
   coreViewer(@Args('companyId', companyIdArg) companyId?: string | null): ViewerRecord {
     return viewerAt(companyId ?? undefined);

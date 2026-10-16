@@ -3,29 +3,35 @@
 import { Field, ObjectType } from '@nestjs/graphql';
 
 /** A permission of the catalog, which the installed modules declare (ADR 0010). */
-@ObjectType('Permission')
+@ObjectType('Permission', {
+  description: 'A permission of the catalog, which the installed modules declare.',
+})
 export class Permission {
-  /** `<module>.<entity>:<action>`, such as planning.productionOrder:release. */
-  @Field(() => String) key!: string;
-  @Field(() => String) moduleId!: string;
-  /** `<module>.<entity>`, the key before the colon. */
-  @Field(() => String) resource!: string;
-  /** The key after the colon. */
-  @Field(() => String) action!: string;
-  /** False for a permission no installed module declares any more; it grants nothing. */
-  @Field(() => Boolean) installed!: boolean;
+  @Field(() => String, {
+    description: 'The key, <module>.<entity>:<action>, such as planning.productionOrder:release.',
+  })
+  key!: string;
+  @Field(() => String, { description: 'The id of the module that declares the permission.' })
+  moduleId!: string;
+  @Field(() => String, { description: 'The key before the colon, <module>.<entity>.' })
+  resource!: string;
+  @Field(() => String, { description: 'The key after the colon.' }) action!: string;
+  @Field(() => Boolean, {
+    description: 'False for a permission no installed module declares any more; it grants nothing.',
+  })
+  installed!: boolean;
 }
 
-/** The permissions of one resource. */
-@ObjectType('PermissionResource')
+@ObjectType('PermissionResource', { description: 'The permissions of one resource.' })
 export class PermissionResource {
-  @Field(() => String) resource!: string;
-  @Field(() => [Permission]) permissions!: Permission[];
+  @Field(() => String, { description: 'The resource, <module>.<entity>.' }) resource!: string;
+  @Field(() => [Permission], { description: 'The permissions of the resource.' })
+  permissions!: Permission[];
 }
 
-/** The permissions of one module, by resource. */
-@ObjectType('PermissionModule')
+@ObjectType('PermissionModule', { description: 'The permissions of one module, by resource.' })
 export class PermissionModule {
-  @Field(() => String) moduleId!: string;
-  @Field(() => [PermissionResource]) resources!: PermissionResource[];
+  @Field(() => String, { description: "The module's id." }) moduleId!: string;
+  @Field(() => [PermissionResource], { description: "The module's resources." })
+  resources!: PermissionResource[];
 }
