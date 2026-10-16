@@ -3,6 +3,7 @@
 [![CI](https://github.com/northMES/northmes/actions/workflows/ci.yml/badge.svg)](https://github.com/northMES/northmes/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/northMES/northmes/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/northMES/northmes/actions/workflows/github-code-scanning/codeql)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/northMES/northmes/badge)](https://scorecard.dev/viewer/?uri=github.com/northMES/northmes)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15524/badge)](https://www.bestpractices.dev/projects/15524)
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg)](LICENSE)
 
 NorthMES is an open source, developer-first manufacturing execution system. It plans production and follows it on the shop floor. Production planning is its first module: production orders and their operations, the job orders a planner places on machines, plant calendars, the planning board and a minimal operator station. It is built first for manufacturers without an ERP; an ERP connects through its own connector module. One installation serves one customer, on the customer's own server.
