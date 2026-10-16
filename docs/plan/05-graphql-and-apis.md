@@ -308,7 +308,7 @@ Semantics, each checked against hand-written SQL in tests:
 - An empty `or` is ignored.
 - A column the declaration does not list is not in the input. A new column is not filterable until someone declares it.
 
-Plant-local dates: an instant declared `plantDate` also gets `<field>Date` and `<field>ProductionDay`, both `DateFilter`. The SDK turns each date into the instant where that plant day starts, in TypeScript with Temporal, the plant's zone, its production day start and `resolveWallClock`. SQL never turns local time into an instant ([0024][adr-0024]). Release 1 lists are scoped to the active plant, so one zone applies; company-wide lists across plants with different zones wait.
+Plant-local dates: an instant declared `plantDate` also gets `<field>Date` and `<field>ProductionDay`, both `DateFilter`. The SDK turns each date into the instant where that plant day starts, in TypeScript with Luxon, the plant's zone, its production day start and `resolveWallClock`. SQL never turns local time into an instant ([0024][adr-0024]). Release 1 lists are scoped to the active plant, so one zone applies; company-wide lists across plants with different zones wait.
 
 ### Search
 

@@ -434,18 +434,18 @@ Each plant has `production_day_start`, a `core.plant` column next to the zone. `
 
 ## Time and DST rules
 
-[ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md). Proposed.
+[ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) and [ADR 0082](../adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md). Both proposed.
 
 - Facts are `timestamptz` instants in UTC. Each plant has an IANA zone. Plant-local definitions are wall-clock values plus the plant zone.
-- Temporal is used everywhere, with `temporal-polyfill` loaded only in host entry points. Domain code never calls `Temporal.Now` or `Date.now()`; `now` is an input.
-- One resolver, `resolveWallClock(zone, date, time)`, applies the clamp rule: a time in the spring gap resolves to the first instant after the gap; a repeated autumn time resolves to its first occurrence. It is monotonic, so adjacent windows stay adjacent. Boot throws unless `resolveWallClock('Europe/Stockholm', 2027-03-28, 02:30)` is 01:00Z.
+- Luxon is used everywhere for dates and times: `DateTime` with an explicit zone, `Duration` and `Interval`. The host entries set `Settings.defaultZone` to `utc` and `Settings.throwOnInvalid` to true. Domain code never calls `DateTime.now()` or `Date.now()`; `now` is an input.
+- One resolver, `resolveWallClock(zone, date, time)`, applies the clamp rule: a time in the spring gap resolves to the first instant after the gap; a repeated autumn time resolves to its first occurrence. It is monotonic, so adjacent windows stay adjacent. It is the only path from a wall-clock value to an instant, because Luxon on its own moves a time in the spring gap forward by the length of the gap. Boot throws unless `resolveWallClock('Europe/Stockholm', 2027-03-28, 02:30)` is 01:00Z.
 - SQL converts instants to local time and never local time to instants, because Postgres resolves a repeated time to its second occurrence. A test asserts that no query does `timestamp ... AT TIME ZONE` towards an instant.
-- Session zones are pinned to UTC per database role. The driver returns strings for `date`, `timestamp` and `timestamptz`; repositories convert to Temporal; a Kysely plugin throws on `Date` parameters.
+- Session zones are pinned to UTC per database role. The driver returns strings for `date`, `timestamp` and `timestamptz`; repositories convert instants to a Luxon `DateTime` in zone `utc` and keep plain values as strings; a Kysely plugin throws on `Date` parameters.
 - GraphQL uses the shared scalars `Instant` (offset required), `LocalDate`, `LocalTime` and `LocalDateTime` (no offset). Only the server turns a `LocalDateTime` into an instant ([05-graphql-and-apis.md](05-graphql-and-apis.md)).
 - In the browser, instants stay ISO strings in the Apollo cache and become epoch milliseconds once at the board's data edge.
-- Board time snaps with offset-preserving `ZonedDateTime.round`. Hour ticks come from exact instants; day ticks from `startOfDay()` plus one day.
+- Board time snaps on epoch milliseconds. Hour ticks come from exact instants (`plus({ hours: 1 })`); day ticks from `startOf('day')` plus `{ days: 1 }` in the plant zone.
 - `formatPlantTime` in `@northmes/contracts` (subpath `format`) formats instants in the plant zone with the plant's hour cycle and adds the short zone name when the offset differs from the hour before or after. It uses the pinned base locale `en-GB-u-ca-gregory-nu-latn`, never the process or browser default, so `02:30 CEST` reads the same on every host ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). A lint fails on `Intl.DateTimeFormat`, `Intl.NumberFormat`, `Intl.DurationFormat` and `toLocaleString`, `toLocaleDateString` and `toLocaleTimeString` calls outside `packages/contracts/src/format/`. Screens show plant time with a zone label when the browser zone differs from the plant zone.
-- Autoplan, availability and the board work in epoch milliseconds inside loops and use Temporal only at the edges.
+- Autoplan, availability and the board work in epoch milliseconds inside loops and use Luxon only at the edges, with zone offsets cached per date.
 
 | Case | Input | Expected |
 |---|---|---|
@@ -455,7 +455,7 @@ Each plant has `production_day_start`, a `core.plant` column next to the zone. `
 | TIME4 snapping | `snap(2026-10-25T01:10Z, 15 min)` | 01:15Z; snap is monotone |
 | TIME5 ticks | hour ticks for the plant days 2026-10-25 and 2027-03-28 | 25 and 23 |
 | TIME6 labels | `formatPlantTime` in `Europe/Stockholm` with `h23` for 2026-10-25T00:30Z and 01:30Z, under `LANG=en_US.UTF-8` and `LANG=fi_FI.UTF-8` | `02:30 CEST` and `02:30 CET` under both |
-| TIME7 hostile zone | domain suite under `TZ=UTC`, `Europe/Stockholm` and `Pacific/Chatham`; native Temporal and forced polyfill | identical results |
+| TIME7 hostile zone | domain suite under `TZ=UTC`, `Europe/Stockholm` and `Pacific/Chatham` | identical results |
 
 ## Autoplan
 
@@ -947,7 +947,7 @@ Board settings choose which fields show on a block and which on hover, including
 | Event loop during a 5 000-row run | `monitorEventLoopDelay` max under 100 ms; `/health/live` answers in under 200 ms | ADR 0028 |
 | `resolveWallClock` calls on the seeded pilot fixture | at most about 3 400 | ADR 0028 |
 | Board messages after a 500-row apply | at most 2 messages and 1 board query per subscriber | [ADR 0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md) |
-| Availability for 60 machines over 8 weeks in the browser under the polyfill | under 30 ms on the CI runner | [ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) |
+| Availability for 60 machines over 8 weeks in the browser | under 30 ms on the CI runner | [ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) |
 | Writing an identical board result twice | zero extra block layer renders | ADR 0024 |
 
 A nightly Vitest bench on the CI runner holds the autoplan budgets and records fallback and late counts as a quality baseline. System health shows event-loop delay p99 and heap used ([12-operations-and-security.md](12-operations-and-security.md)). The range limits and realtime thresholds are set from the board spike's measured volumes. For comparison, the earlier attempt's autoplan blocked the event loop for 2.8 s at 500 rows, mostly in time zone offset lookups; a per-date offset cache took a 32 000-call calendar expansion from 3.95 s to 94 to 149 ms, and a lean placement placed 1 549 job orders in 4 to 7 ms.
@@ -956,7 +956,7 @@ A nightly Vitest bench on the CI runner holds the autoplan budgets and records f
 
 [ADR 0030](../adr/0030-a-planning-board-built-in-house.md). Proposed.
 
-- SP3 measures max(2 x pilot weekly job orders x 8 weeks, 5 000) blocks on 60 rows, fed through Apollo from a mocked schema or a stub resolver, on the pilot planner PC class. It also runs once with the Temporal polyfill forced in Chromium. It does not wait for the planning orders epic; the board-core tasks wait only for the SP3 verdict and the board design approval, and only the board's data-wiring task waits for the planning API.
+- SP3 measures max(2 x pilot weekly job orders x 8 weeks, 5 000) blocks on 60 rows, fed through Apollo from a mocked schema or a stub resolver, on the pilot planner PC class. It does not wait for the planning orders epic; the board-core tasks wait only for the SP3 verdict and the board design approval, and only the board's data-wiring task waits for the planning API.
 - Pass criteria:
   - 60 fps while scrolling at day zoom;
   - p95 frame time at most 33 ms while dragging at week zoom;
@@ -1099,7 +1099,7 @@ Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-project
 - `packages/contracts`: `resolve-wall-clock.test.ts` (TIME1 to TIME3, monotonic property in `Europe/Stockholm`, `America/Santiago`, `Australia/Lord_Howe`), `windows.test.ts` (fast-check: work conserved; no segment in non-working time; `subtractWork(addWork(s, d).end, d) >= s`; `null` only when availability is short; additive and monotonic in work), `src/format/plant-time.test.ts` (TIME6).
 - `modules/core`: `availability.test.ts` (CAL1 to CAL6, CAL11), `calendar-version.int.test.ts` (CAL7, TC13), `production-day.test.ts` (CAL8, CAL9).
 - `modules/planning/web`: `time-scale.test.ts` (TIME4, TIME5).
-- The domain suites run under `TZ=UTC`, `Europe/Stockholm` and `Pacific/Chatham`, with native Temporal and with the forced polyfill (TIME7).
+- The domain suites run under `TZ=UTC`, `Europe/Stockholm` and `Pacific/Chatham` (TIME7).
 
 ### Integration tests (`modules/planning/server`, Testcontainers)
 
@@ -1125,7 +1125,7 @@ Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-project
 - `e2e/planning/availability-live.spec.ts`: planner B's board shows CNC1's new Saturday overtime within 5 s.
 - `e2e/a11y/board.axe.spec.ts`: populated, locked block, move mode and paused states, required in `ci / a11y`.
 - `e2e/board-perf.spec.ts`: nightly frame-time regression check.
-- A Chromium project with `globalThis.Temporal` deleted loads the board; hovering a block at 2027-03-28T01:00Z shows 03:00.
+- Hovering a block at 2027-03-28T01:00Z shows 03:00 in `Europe/Stockholm`.
 - The planner flows run once with the browser in `America/New_York` to check plant time with a zone label.
 
 ### Benchmarks
@@ -1185,6 +1185,7 @@ User (plan proposals in this document): split as a draft change, the hard-lock c
 - [ADR 0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) Shared building blocks
 - [ADR 0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md) SI units with a NorthMES unit catalog
 - [ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) Time: UTC instants, plant wall clock, Temporal and the clamp resolver
+- [ADR 0082](../adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md) Luxon for dates and times, with UTC instants, ISO strings at the boundaries and the clamp resolver
 - [ADR 0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md) Plant calendars, shift patterns and the production day
 - [ADR 0026](../adr/0026-planning-domain-names-aligned-with-isa-95.md) Planning domain names aligned with ISA-95
 - [ADR 0027](../adr/0027-planned-duration-formula-and-override-precedence.md) Planned duration formula and override precedence

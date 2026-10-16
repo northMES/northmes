@@ -134,7 +134,7 @@ After a change to the backend's schema, run `pnpm gen` and fix the typecheck err
 
 Each `.gen.ts` reads only its own operation file, so it holds the input and enum types its operation uses, and an operation cannot spread a fragment from another file yet.
 
-A custom scalar gets its TypeScript type from `scalars` in `apps/web/codegen.ts`: `DateTime` is a `string`, the ISO 8601 instant the API sends. A scalar without a mapping is `unknown`, so a new scalar in the schema needs its line there.
+A custom scalar gets its TypeScript type from `scalars` in `apps/web/codegen.ts`: `DateTime` is a `string`, the ISO 8601 instant the API sends. The cache keeps the string; to compute with it or show it, parse it with Luxon, `DateTime.fromISO(value, { zone: 'utc' })`, and move it to the plant's zone with `setZone` (ADR 0082). A scalar without a mapping is `unknown`, so a new scalar in the schema needs its line there.
 
 ## Adding a module's web part
 

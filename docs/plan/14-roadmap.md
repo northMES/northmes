@@ -1072,7 +1072,7 @@ chore(handoff): enable library skills and Context7 in the graphs
 
 Issue: northMES/northmes#11.
 
-Goal: answer five questions that block early work, each inside a timebox with a pass threshold, and record each answer in its ADR. SP0 asks whether handoff plans and runs on an organization-owned repository, which decides when NorthMES moves to the `northMES` organization. SP1 asks whether Temporal with `temporal-polyfill` passes the DST cases of the earlier calendar rules. SP2 asks whether release-please with one root component releases every package in lockstep through draft releases. SP3 asks whether a headless board core meets the frame budget on the pilot's planner PC class. The Node test asks whether the plugin boot tests and the `module.registerHooks` resolve hook pass on Node 26.
+Goal: answer five questions that block early work, each inside a timebox with a pass threshold, and record each answer in its ADR. SP0 asks whether handoff plans and runs on an organization-owned repository, which decides when NorthMES moves to the `northMES` organization. SP1 asks whether Luxon with the clamp resolver passes the DST cases of the earlier calendar rules. SP2 asks whether release-please with one root component releases every package in lockstep through draft releases. SP3 asks whether a headless board core meets the frame budget on the pilot's planner PC class. The Node test asks whether the plugin boot tests and the `module.registerHooks` resolve hook pass on Node 26.
 
 Who it is for: Maintainer. Also: Planner (SP3), Plugin developer (the Node test).
 
@@ -1181,30 +1181,30 @@ none, internal
 - [ ] No container package exists under the personal account
 ```
 
-#### E01-S02 contracts: Port the DST calendar cases to Temporal (SP1)
+#### E01-S02 contracts: Port the DST calendar cases to Luxon (SP1)
 
 Issue: northMES/northmes#14.
 
-As a maintainer, I want the earlier attempt's DST calendar cases to pass on Temporal with `temporal-polyfill`, so that ADR 0024's choice of Temporal holds before the scheduling domain is built on it.
+As a maintainer, I want the earlier attempt's DST calendar cases to pass on Luxon with the clamp resolver, so that ADR 0082's choice of Luxon holds before the scheduling domain is built on it.
 
 Module: contracts. Blocked by: E00-S05. Design: none.
 
-ADRs: [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md).
+ADRs: [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0082](../adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md), [0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md).
 
 Acceptance criteria:
 
-- Every DST case of the earlier `calendar-rules` spec passes on Temporal, natively on Node 26 and with `temporal-polyfill` 1.0.5 forced, under `TZ` set to UTC, Europe/Stockholm and Pacific/Chatham.
+- Every DST case of the earlier `calendar-rules` spec passes on Luxon 3.7.2 under `TZ` set to UTC, Europe/Stockholm and Pacific/Chatham.
 - The clamp resolver gives `2027-03-28T01:00Z` for 02:30 on 2027-03-28 in Europe/Stockholm and `2026-10-25T00:30Z` for 02:30 on 2026-10-25.
 - Europe/Helsinki cases are added for both transition nights.
-- ADR 0024 records the result and the numbers; on a fail it names the fallback.
+- ADR 0082 records the result and the numbers; on a fail it names the fallback.
 
 Tests first:
 
-- `calendar-rules.temporal.test.ts` (spike branch): "Stockholm 2026-03-29 has 23 hours and a 06:00 shift stays at 06:00"; "a break in the missing hour removes nothing from a night shift"; "Stockholm 2026-10-25 has 25 hours and both passes of 02:30 are open"; "a break across the repeated hour closes both passes"; "02:30 on 2027-03-28 resolves to 01:00Z"; "02:30 on 2026-10-25 resolves to its first occurrence, 00:30Z".
+- `calendar-rules.luxon.test.ts` (spike branch): "Stockholm 2026-03-29 has 23 hours and a 06:00 shift stays at 06:00"; "a break in the missing hour removes nothing from a night shift"; "Stockholm 2026-10-25 has 25 hours and both passes of 02:30 are open"; "a break across the repeated hour closes both passes"; "02:30 on 2027-03-28 resolves to 01:00Z"; "02:30 on 2026-10-25 resolves to its first occurrence, 00:30Z".
 
 Notes: the passing cases become the first failing tests of E03-S01, which ports the code test-first into `@northmes/contracts`.
 
-##### E01-S02-T01 contracts: Run the DST cases on Temporal and record the result
+##### E01-S02-T01 contracts: Run the DST cases on Luxon and record the result
 
 Labels: `task`, `human`, `spike`, `area: sdk`. Blocked by: E00-S05-T03.
 
@@ -1212,10 +1212,10 @@ Labels: `task`, `human`, `spike`, `area: sdk`. Blocked by: E00-S05-T03.
 Plan: E01-S02-T01
 
 ## Goal
-Question: does Temporal, native on Node 26 and through temporal-polyfill 1.0.5, pass the DST cases of docs/sources/earlier-attempt/calendar-rules.spec? Decision that waits: docs/adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md. Timebox: one day. Method: port calendar-rules and its DST spec to Temporal on a spike branch, add the clamp resolver resolveWallClock and Europe/Helsinki cases, run under TZ=UTC, Europe/Stockholm and Pacific/Chatham, native and with the polyfill forced. Pass: every case green in every leg.
+Question: do Luxon 3.7.2 and the clamp resolver pass the DST cases of docs/sources/earlier-attempt/calendar-rules.spec? Decision that waits: docs/adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md. Timebox: one day. Method: port calendar-rules and its DST spec to Luxon on a spike branch, add the clamp resolver resolveWallClock of ADR 0082 and Europe/Helsinki cases, run under TZ=UTC, Europe/Stockholm and Pacific/Chatham. Pass: every case green in every leg.
 
 ## Where in the code
-Spike branch only: spike/sp1/calendar-rules.temporal.ts and calendar-rules.temporal.test.ts. On main: the result in docs/adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md.
+Spike branch only: spike/sp1/calendar-rules.luxon.ts and calendar-rules.luxon.test.ts. On main: the result in docs/adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md.
 
 ## Tests first
 - "Stockholm 2026-03-29 has 23 hours and a 06:00 shift stays at 06:00"
@@ -1230,17 +1230,18 @@ none
 
 ## ADRs
 docs/adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md
+docs/adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md
 
 ## Out of scope
 Code in packages/contracts (E03-S01), calendar tables (E06).
 
 ## Changelog
-docs(adr): record the Temporal DST spike in ADR 0024
+docs(adr): record the Luxon DST spike in ADR 0082
 
 ## Acceptance criteria
-- [ ] ADR 0024 states pass or fail per leg, with run times
+- [ ] ADR 0082 states pass or fail per leg, with run times
 - [ ] The spike branch name and commit are in the pull request description
-- [ ] If any leg fails, ADR 0024 names the fallback and E03-S01 is updated before it moves to Ready
+- [ ] If any leg fails, ADR 0082 names the fallback and E03-S01 is updated before it moves to Ready
 ```
 
 #### E01-S03 repo: Release every package in lockstep with release-please (SP2)
@@ -1360,7 +1361,6 @@ Acceptance criteria:
 - A headless board core prototype renders max(2 x the pilot's weekly job orders x 8 weeks, 5 000) blocks on 60 rows, fed through Apollo Client from a mocked schema or a stub resolver, so the normalized-cache write of every block and the refetch of the visible range are part of the measurement.
 - On the planner-class PC the prototype holds 60 fps while scrolling at day zoom, p95 frame time at most 33 ms while dragging at week zoom, and no long task over 50 ms.
 - Keyboard move mode steps one snap and one machine.
-- One run with the Temporal polyfill forced in Chromium is recorded.
 - `e2e/board-perf.spec.ts` is on `main` and samples frame times during a scripted scroll and drag; E18-S05 adds it to `nightly.yml`.
 - ADR 0030 records the verdict on 2026-11-06 with the numbers.
 
@@ -1385,7 +1385,7 @@ Build a headless board core prototype (time scale per zoom preset, culling, hit 
 ## Where in the code
 e2e/fixtures/board-perf/ (new): Vite page, core prototype, mocked schema, seed of N blocks (N from the URL, default 5000)
 e2e/board-perf.spec.ts (new)
-playwright.config.ts (new or extended): a board-perf project, Chromium only; a second run deletes globalThis.Temporal before load to force the polyfill
+playwright.config.ts (new or extended): a board-perf project, Chromium only
 package.json (root devDependencies for the fixture and @playwright/test), pnpm-workspace.yaml (catalog entries), pnpm-lock.yaml
 Seam: the page exposes window.__boardPerf with frame samples; the spec reads them.
 
@@ -1410,7 +1410,6 @@ test(planning): add the board performance spec and spike harness
 ## Acceptance criteria
 - [ ] pnpm exec playwright test --project board-perf runs the three cases and writes frame statistics to the report
 - [ ] The fixture renders 5000 blocks on 60 rows from the mocked schema through Apollo Client
-- [ ] A run with Temporal deleted completes and is reported separately
 - [ ] No file under modules/ or packages/ changes
 ```
 
@@ -1429,7 +1428,6 @@ docs/adr/0030-a-planning-board-built-in-house.md (verdict, numbers, PC model and
 
 ## Tests first
 - Session check: the three board-perf cases run on the planner PC with the block count above
-- Session check: one run with the Temporal polyfill forced
 
 ## Design
 none
@@ -1809,14 +1807,14 @@ As a planner, I want plant times on both daylight saving nights to resolve to th
 
 Module: contracts (`packages/contracts`). Blocked by: E01-S02, E02-S01-T01. Design: none.
 
-ADRs: [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md).
+ADRs: [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0082](../adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md).
 
 Acceptance criteria:
 
 - `resolveWallClock(zone, date, time)` applies the clamp rule: a spring-gap time resolves to the first instant after the gap, a repeated autumn time to its first occurrence.
 - Half-open millisecond windows support `union`, `subtract`, `addWork` and `subtractWork`, and work laid over both DST nights does not drift.
-- The suite runs natively and with `temporal-polyfill` forced, under UTC, Europe/Stockholm and Pacific/Chatham.
-- A lint fails on module-scope Temporal calls in shared packages and on imports of `temporal-polyfill` outside host entry points.
+- `resolveWallClock` and the windows use Luxon, and the suite runs under UTC, Europe/Stockholm and Pacific/Chatham.
+- The resolver is monotonic: a fast-check property over `Europe/Stockholm`, `America/Santiago` and `Australia/Lord_Howe`.
 
 Tests first:
 
@@ -2294,7 +2292,7 @@ Tests first:
 - `packages/web-sdk/test/use-command-form.test.tsx`: "a server error keeps the typed values and focuses the summary".
 - `packages/web-sdk/test/field-errors.test.ts`: "operations.1.cycleTime lands on that field"; "an unknown path lands in the summary".
 - `packages/ui/test/form-exports.test.ts`: "every name on the form export list is exported and appears in the API report".
-- The format tests of ADR 0061's Confirmation (`plant-time`, `plant-date`, `number` and `week` in `packages/contracts/src/format/`) and `packages/ui/test/date-time-text.test.tsx`, under the locale, Temporal and TZ legs; a fixture remote that calls `toLocaleDateString()` fails the lint.
+- The format tests of ADR 0061's Confirmation (`plant-time`, `plant-date`, `number` and `week` in `packages/contracts/src/format/`) and `packages/ui/test/date-time-text.test.tsx`, under the locale and TZ legs; a fixture remote that calls `toLocaleDateString()` fails the lint.
 
 Notes: `formatMeasure` and `formatQuantity` need the unit catalog and arrive with E06-S06. E06-S13 fills `PresentationProvider` with each plant's resolved values.
 
@@ -2640,23 +2638,23 @@ Tests first:
 
 Issue: northMES/northmes#60.
 
-As a plugin developer, I want time columns to arrive as strings that become Temporal values and numeric columns to stay exact, so that no `Date` or float rounding enters business logic.
+As a plugin developer, I want time columns to arrive as strings that become Luxon values and numeric columns to stay exact, so that no `Date` or float rounding enters business logic.
 
 Module: core, sdk, contracts. Blocked by: E02-S02, E03-S01. Design: none.
 
-ADRs: [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md).
+ADRs: [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [0082](../adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md), [0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md), [0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md).
 
 Acceptance criteria:
 
 - String parsers are registered for date, timestamp and timestamptz and their arrays; kysely-codegen maps them to branded string types; `pnpm db:types --verify` fails on any generated `Date` type.
-- One Kysely plugin serializes Temporal parameters and throws on `Date` parameters.
+- One Kysely plugin serializes Luxon `DateTime` parameters with `toISO()` and throws on `Date` parameters.
 - The SDK defines the scalars `Instant` (offset required), `LocalDate`, `LocalTime` and `LocalDateTime`; only the server turns a `LocalDateTime` into an instant, through `resolveWallClock`.
 - `numeric` values are never passed through `parseFloat`; queries never select `numeric[]`.
 
 Tests first:
 
 - `packages/sdk/test/time-scalars.test.ts`: "an Instant without an offset is rejected".
-- `apps/server/test/db/temporal-plugin.int.test.ts`: "a Date parameter throws"; "a timestamptz round-trips as an ISO string".
+- `apps/server/test/db/date-time-plugin.int.test.ts`: "a Date parameter throws"; "a timestamptz round-trips as an ISO string".
 
 #### E05-S13 audit: Drop security event partitions after the retention setting
 
@@ -2868,7 +2866,7 @@ ADRs: [0007](../adr/0007-tenancy-company-plants-and-the-scope-tree.md), [0025](.
 Acceptance criteria:
 
 - The plant record holds the IANA zone (`core.plant.time_zone`) and the production day start (`core.plant.production_day_start`); a start inside the spring gap or the repeated autumn hour of the next 10 years is rejected.
-- The plant form's zone picker lists the ids the server accepts (`pg_timezone_names` filtered by Temporal), served by core. It never uses the browser's `Intl.supportedValuesOf("timeZone")`.
+- The plant form's zone picker lists the ids the server accepts (`pg_timezone_names` filtered by Luxon's `IANAZone.isValidZone`), served by core. It never uses the browser's `Intl.supportedValuesOf("timeZone")`.
 - Equipment always sits at plant level, belongs to a group and carries IsPlannable and IsOee flags; only plannable or OEE equipment appears on the board.
 - Group colors keep an existing color, else the import color, else one of the 20 palette colors; colors group but never carry state.
 - Translatable names use the `localizedText` shape with a translations column from the first migration.
@@ -5397,7 +5395,6 @@ ADRs: [0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [0050](../adr/005
 Acceptance criteria:
 
 - `ci / a11y` runs axe over every board block state and the table view, and `ci / gate` needs it.
-- A Chromium project that deletes `globalThis.Temporal` runs the board spec.
 - A failure names the block state and the axe rule in the job output.
 
 Tests first:

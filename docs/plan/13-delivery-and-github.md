@@ -408,7 +408,7 @@ Plan: E01-S04-T01
 Question: does the in-house board keep 60 fps while scrolling at day zoom with max(2 x weekly job orders x 8 weeks, 5 000) blocks on 60 rows, on the planner-class PC?
 Decision that waits: docs/adr/0030-a-planning-board-built-in-house.md
 Timebox: one week
-Method: headless board core fed through Apollo from a mocked schema; one run with the Temporal polyfill forced
+Method: headless board core fed through Apollo from a mocked schema
 Pass: 60 fps scrolling at day zoom; p95 frame time at most 33 ms while dragging at week zoom; no long task over 50 ms; keyboard move mode steps one snap and one machine
 Output: the ADR with the measured numbers and the verdict
 Out of scope: production code on main
@@ -663,7 +663,7 @@ All workflows set `permissions: contents: read` at the top and raise permissions
 | `ci.yml` `lint` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo lint (Biome in CI mode, the import rules that keep MIT packages free of AGPL code); `pnpm gen --check` |
 | `ci.yml` `typecheck` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo typecheck (`tsc`) |
 | `ci.yml` `build` | pull request, push to `main` | `pnpm install --frozen-lockfile`; turbo build |
-| `ci.yml` `test` | pull request, push to `main` | The UTC leg: Vitest unit, integration, web and types projects with Testcontainers Postgres on the pinned image; coverage; Codecov upload. Then, in the same job and also after a failed UTC leg, the Europe/Stockholm leg: the unit and integration projects with Node and Postgres in Europe/Stockholm, plus the hostile leg (server zone Pacific/Chatham) and the forced-polyfill Temporal project |
+| `ci.yml` `test` | pull request, push to `main` | The UTC leg: Vitest unit, integration, web and types projects with Testcontainers Postgres on the pinned image; coverage; Codecov upload. Then, in the same job and also after a failed UTC leg, the Europe/Stockholm leg: the unit and integration projects with Node and Postgres in Europe/Stockholm, plus the hostile leg (server zone Pacific/Chatham) |
 | `ci.yml` `react doctor` | pull request, push to `main` | `pnpm install --frozen-lockfile`; `pnpm react-doctor`, which runs react-doctor with `--no-telemetry` over `apps/web`, every `modules/*/web` and `packages/web-sdk`, in CI only ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)); `pnpm react-doctor:summary`, which copies the findings into the job summary and the log, also after a failed scan |
 | `ci.yml` `e2e` | pull request, push to `main` | Build, `playwright install --with-deps chromium`, Playwright against the built `all` process; traces on failure. Includes `e2e/skeleton.spec.ts` |
 | `ci.yml` `a11y` | pull request, push to `main` | axe over the board states; a separate job from the first board pull request ([ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md)) |

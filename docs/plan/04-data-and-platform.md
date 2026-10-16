@@ -22,6 +22,7 @@ This document describes the platform layer that every NorthMES module builds on:
 | Settings, master-data kit, generators | [0022](../adr/0022-shared-building-blocks-packages-the-master-data-kit-settings-and-generators.md) | accepted | none |
 | SI units and the unit catalog | [0023](../adr/0023-si-units-with-a-northmes-unit-catalog.md) | accepted | product owner (pieces per hour) |
 | Time storage and driver parsers | [0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) | proposed | none |
+| Luxon for dates and times | [0082](../adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md) | proposed | maintainer (Date.now as the clock source; luxon as a host-provided package; the allowlist of library boundaries; Settings.throwOnInvalid and Settings.defaultZone in the host entries) |
 | Health endpoints | [0043](../adr/0043-health-endpoints-graceful-shutdown-and-the-system-health-page.md) | accepted | none |
 | Secrets and the installation key | [0047](../adr/0047-secrets-and-the-installation-key.md) | proposed | pilot IT (escrow location) |
 | Regulated readiness rules | [0051](../adr/0051-regulated-readiness-no-regret-rules.md) | accepted | lawyer (signature path, CRA role); product owner (regulated profile switch) |
@@ -149,17 +150,17 @@ NorthMES uses Kysely 0.29 with the `pg` 8.23 driver. Drizzle and Prisma are not 
 
 | Postgres type | OID (array OID) | Arrives as | Generated type | Repository converts to |
 |---|---|---|---|---|
-| `timestamptz` | 1184 (1185) | string | `InstantString` | `Temporal.Instant` |
-| `timestamp` | 1114 (1115) | string | `PlainDateTimeString` | `Temporal.PlainDateTime` |
-| `date` | 1082 (1182) | string | `PlainDateString` | `Temporal.PlainDate` |
-| `time` | 1083 | string (pg default) | `PlainTimeString` | `Temporal.PlainTime` |
+| `timestamptz` | 1184 (1185) | string | `InstantString` | Luxon `DateTime` in zone `utc` |
+| `timestamp` | 1114 (1115) | string | `PlainDateTimeString` | stays a string; calendar math on a `DateTime` in zone `utc` |
+| `date` | 1082 (1182) | string | `PlainDateString` | stays a string; calendar math on a `DateTime` in zone `utc` |
+| `time` | 1083 | string (pg default) | `PlainTimeString` | stays a string |
 | `numeric` | 1700 | string | string | a decimal type; never `parseFloat` before arithmetic |
 | `int8` | 20 | string | string | per use |
 
 Rules:
 
 - String parsers are registered for OIDs 1082, 1114 and 1184 and their arrays 1115, 1182 and 1185. OIDs 1083, 1266 and 1270 are left alone. Range types stay text.
-- One Kysely plugin, active in every environment, serializes Temporal parameters with `toString()` and throws on `Date` parameters.
+- One Kysely plugin, active in every environment, serializes Luxon `DateTime` parameters with `toISO()` and throws on `Date` parameters ([ADR 0082](../adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md)).
 - Queries never select `numeric[]`: the driver's array parser turns it into floats and loses digits. Aggregate in SQL, or use `array_agg(x::text)`.
 - Time-of-day columns carry `CHECK (end_time < '24:00')`. `timestamptz` columns carry `CHECK (isfinite(col))`.
 - The server decimal library is not chosen yet (see [open questions](#open-questions)).
@@ -887,10 +888,11 @@ Required tests: every dimension has exactly one canonical unit with scale 1 and 
 
 ## Time in the database
 
-The full time design is in [ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) and, for calendars, [07-production-planning.md](07-production-planning.md). The data-layer rules:
+The full time design is in [ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), with Luxon as the date library ([ADR 0082](../adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md)), and, for calendars, [07-production-planning.md](07-production-planning.md). The data-layer rules:
 
 - Facts are `timestamptz` instants in UTC. Each plant has an IANA time zone. Plant-local definitions (shifts, breaks, deviations, ERP deadlines) are stored as wall-clock `time`, `date` or `timestamp` plus the plant zone.
 - SQL converts instants to local time, never local time to instants. Only TypeScript turns a local time into an instant, through `resolveWallClock`.
+- TypeScript computes and formats dates and times with Luxon. `pnpm check` fails on `new Date`, `Date()`, `Date.parse`, `Date.UTC`, the `Temporal` global and other date libraries outside `scripts/lint/date-time.allow.json`; `Date.now()` stays the clock source.
 - Session zones are pinned to UTC per role. Partition bounds are explicit UTC values. Exports run in UTC and add the plant zone.
 - Machine-readable output (GraphQL, REST, MCP, outbox events, the audit export, the rollback CSV) never uses presentation settings. Instants are ISO 8601 with offset, numbers use a point decimal and no grouping, and units are canonical and named in the key or the argument. A later human-readable report is formatted on the server with the `@northmes/contracts` formatters and the resolved presentation of the plant it covers, and names the zone; release 1 has no such report ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)).
 - Record times come from the database clock; a device's own time is stored as data next to it.

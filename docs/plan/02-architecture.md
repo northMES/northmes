@@ -424,7 +424,7 @@ flowchart TD
 
 Boot also asserts these facts; the step that runs each is fixed by its task:
 
-- `resolveWallClock('Europe/Stockholm', 2027-03-28, 02:30)` resolves to 01:00Z, and the log records whether Temporal is native or the polyfill plus the Node and Postgres tzdata versions ([ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md));
+- `resolveWallClock('Europe/Stockholm', 2027-03-28, 02:30)` resolves to 01:00Z, and the log records the Node and Postgres tzdata versions ([ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [ADR 0082](../adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md));
 - every table in every installed module and plugin schema has the audit capture trigger enabled with arguments that match the manifest, or an allowlist entry with a reason ([ADR 0013](../adr/0013-audit-trail-written-in-the-command-transaction.md));
 - `BETTER_AUTH_TELEMETRY` is not set, `enableSessionForAPIKeys` is false and the api-key client endpoints are disabled ([ADR 0011](../adr/0011-principals-credentials-and-same-origin-rules.md)).
 
@@ -476,7 +476,7 @@ An earlier attempt at the same product ran fourteen services, eleven module subg
 | Breadth: research for eleven modules and about twelve obligations per task | The scope rule; release 1 builds the platform pieces planning needs; a short definition of done | [ADR 0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md), [13 delivery and GitHub](13-delivery-and-github.md) |
 | Documentation drift under parallel sessions, including two ADRs with the same number | ADR numbers from a script or CI check; `test/meta/doc-links.test.ts` fails on a relative Markdown link in `docs/plan`, `docs/adr`, `docs/agents` or `GLOSSARY.md` whose target `git ls-files` does not list, on any Markdown link into the gitignored `docs/research` folder, and on a backticked repository path in `AGENTS.md`, `CLAUDE.md` or `docs/agents` that `git ls-files` does not list and that the test's list of planned paths does not hold (each planned path names the task that creates it; backticked paths in `docs/plan` and `docs/adr` name files that later tasks create and are not checked) | [ADR 0049](../adr/0049-delivery-workflow-handoff-thin-vertical-slices-and-claude-design-per-task.md) |
 | Names stored on rows (a lock holder's name) | Rows store person ids only; names live on the user table | [ADR 0006](../adr/0006-kysely-sql-first-migrations-and-the-northmes-migration-runner.md) |
-| A date library whose choice between the two instants of a repeated autumn time is undefined | Temporal with one clamp resolver, `resolveWallClock` | [ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) |
+| A date library whose choice between the two instants of a repeated autumn time is undefined | Luxon with one clamp resolver, `resolveWallClock` | [ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md), [ADR 0082](../adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md) |
 
 ### From the integration spike
 

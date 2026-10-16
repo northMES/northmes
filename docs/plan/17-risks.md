@@ -124,7 +124,7 @@ The planning board is built in house: a headless TypeScript core, DOM rendering,
 
 Mitigations:
 
-- Spike SP3 measures max(2 x weekly job orders x 8 weeks, 5 000) blocks on 60 rows, fed through Apollo from a mocked schema or a stub resolver, on a PC of the pilot's planner class. It also runs once with the Temporal polyfill forced in Chromium. It passes at 60 fps while scrolling at day zoom, a p95 frame time of at most 33 ms while dragging at week zoom, no long task over 50 ms, and a keyboard move mode that steps one snap and one machine.
+- Spike SP3 measures max(2 x weekly job orders x 8 weeks, 5 000) blocks on 60 rows, fed through Apollo from a mocked schema or a stub resolver, on a PC of the pilot's planner class. It passes at 60 fps while scrolling at day zoom, a p95 frame time of at most 33 ms while dragging at week zoom, no long task over 50 ms, and a keyboard move mode that steps one snap and one machine.
 - The verdict is due on 2026-11-06. On a fail, one more week limits the rendered range: day zoom up to 2 weeks, week zoom aggregated per shift. On a second fail by 2026-11-20, planning runs on the job order table view with the shared Move dialog plus a read-only timeline.
 - Realtime volume is bounded. One `planning.plan.revised` event per apply carries at most 200 changed job order ids, or null to mean "refetch the range". The client debounces for 250 ms and refetches only when the changed ids intersect its loaded range. The board range resolver limits days and rows.
 - Autoplan has a budget at pilot scale (40 machines, 500 orders, about 1 600 job orders, 8 weeks, 4 vCPU): `plan()` at most 1 s, and request to board refetch at most 5 s at p95.
@@ -400,7 +400,7 @@ Mitigations:
 - One resolver, `resolveWallClock`, applies the clamp rule in TypeScript only. A time in the spring gap resolves to the first instant after the gap, and a repeated autumn time resolves to its first occurrence. SQL never converts local time to instants.
 - Boot throws unless `resolveWallClock('Europe/Stockholm', 2027-03-28, 02:30)` gives 01:00Z.
 - A Kysely plugin throws on `Date` parameters, and `pnpm db:types --verify` fails on any generated `Date` type. Every database role pins its session zone to UTC.
-- The time zone matrix runs Node and Postgres under UTC and Europe/Stockholm, plus a hostile leg under Pacific/Chatham. Native-Temporal and forced-polyfill projects run in Vitest, and a Chromium Playwright project deletes `globalThis.Temporal`. Daylight saving and Helsinki fixtures exist from the first calendar test.
+- The time zone matrix runs Node and Postgres under UTC and Europe/Stockholm, plus a hostile leg under Pacific/Chatham. Every runtime runs the same Luxon code, so no polyfill leg is needed ([ADR 0082](../adr/0082-luxon-for-dates-and-times-with-utc-instants-iso-strings-at-the-boundaries-and-the-clamp-resolver.md)). Daylight saving and Helsinki fixtures exist from the first calendar test.
 - A lint fails on `Intl.DateTimeFormat`, `Intl.NumberFormat`, `Intl.DurationFormat` and `toLocale*String` calls outside `packages/contracts/src/format/` ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). The production day start is validated against the zone's transitions for 10 years.
 - Nobody installs or upgrades in a daylight saving week (2027-10-31 and 2028-03-26). If the pilot window covers the night of 2027-10-31, that night runs on the installed system with the daylight saving suites green.
 

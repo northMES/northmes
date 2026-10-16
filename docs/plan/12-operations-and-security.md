@@ -338,7 +338,7 @@ The app cannot see disk space, NTP state or pgBackRest from inside its container
 
 ### The System health page
 
-Admins see, on one page: errors and browser errors grouped by fingerprint; failed and retrying jobs; the last successful Pyramid poll; the last successful backup; database size; certificate expiry; NTP status; versions, the image digest and the supergraph hash; Node and Postgres tzdata versions and whether Temporal is native or the polyfill; event-loop delay p99 and heap used; a "Modules and plugins" table (id, version, range, status, reason); "schema ahead by N"; leftover plugin schemas; stations not seen for 7 days; `pg_stat_archiver` `failed_count` and `last_failed_time`. The app measures clock skew per request from a client time header and warns above 5 seconds.
+Admins see, on one page: errors and browser errors grouped by fingerprint; failed and retrying jobs; the last successful Pyramid poll; the last successful backup; database size; certificate expiry; NTP status; versions, the image digest and the supergraph hash; Node and Postgres tzdata versions; event-loop delay p99 and heap used; a "Modules and plugins" table (id, version, range, status, reason); "schema ahead by N"; leftover plugin schemas; stations not seen for 7 days; `pg_stat_archiver` `failed_count` and `last_failed_time`. The app measures clock skew per request from a client time header and warns above 5 seconds.
 
 ## Logs and optional OpenTelemetry
 
