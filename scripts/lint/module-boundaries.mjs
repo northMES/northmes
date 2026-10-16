@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Keeps each module's code behind its public api. A module's code lives in apps/<app>/src/modules/<id>,
 // such as apps/web/src/modules/planning. A file there may import another module only through that
 // module's public api: in apps/backend, its public-api.ts (ADR 0070); in apps/web, its folder, its

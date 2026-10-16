@@ -4,7 +4,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**"]
+      "outputs": ["dist/**"],
+      "env": ["NORTHMES_SOURCEMAP"]
     },
     "typecheck": {
       "dependsOn": ["^typecheck"]

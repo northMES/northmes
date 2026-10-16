@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The types of plugin-build.mjs, for the TypeScript tests that build a plugin.
 
 export interface BuiltPlugin {

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The last step of the release image job (ADR 0080): adds the line to paste into .env, pinned by
 // the image's digest, and the three upgrade commands to the release notes. The job passes the tag,
 // the version and the digest through the environment, never inside the run script.

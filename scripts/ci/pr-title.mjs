@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The check behind CI / pr title. The pull request title becomes the squash commit subject and the
 // changelog line, so it must be a Conventional Commit with one of the types that release-please
 // sorts into the changelog or hides from it (docs/plan/13-delivery-and-github.md).

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The URL that pnpm dev and pnpm demo print: the seeded plant's planning board (ADR 0062).
 
 import { seedPlants } from './seed.mjs';

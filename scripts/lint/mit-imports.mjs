@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Keeps AGPL code out of the MIT packages (docs/adr/0056-mit-sdk-packages-the-extension-exception-
 // and-the-trademark-policy.md). Every source and test file of a workspace package whose license is
 // MIT, and of every plugin under examples/, is read for its imports. An import of a workspace

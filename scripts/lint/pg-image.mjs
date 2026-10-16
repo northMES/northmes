@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Keeps every Postgres image reference on infra/pg-image.json (docs/adr/0041-test-strategy-tdd-
 // vitest-projects-testcontainers-and-playwright.md). A reference other than the configured one is a
 // finding, so `postgres:17` and `postgres:18` without the digest both fail. Three matchers read

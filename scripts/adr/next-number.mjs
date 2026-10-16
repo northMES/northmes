@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Prints the next free ADR number (docs/adr/README.md, "Adding an ADR"). Two sessions that scan
 // docs/adr/ can take the same number, so the number comes from the index.
 //

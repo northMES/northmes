@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The summary step of CI / react doctor. pnpm react-doctor runs react-doctor with --json, which
 // writes the report to the file named by --json-out and prints nothing else. This script reads that
 // report, the path in its first argument, and writes the findings as Markdown to the file that
