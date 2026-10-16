@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useCallback, useState } from 'react';
 
 /** The D1 themes; the dark variant of theme.css reads data-theme on the html element. */
