@@ -1,0 +1,8 @@
+# Vulnerabilities that OSV-Scanner, and Scorecard's Vulnerabilities check through it, skip in
+# pnpm-lock.yaml. Each entry is an accepted risk in docs/security/risks.md and expires on that
+# row's review date, so the finding returns unless the review keeps it.
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2026-11-15T00:00:00Z
+reason = "Accepted risk A-05: braces has no fixed release, and only CLI tooling reaches it (@nestjs/graphql, ts-morph, fast-glob) with patterns the project writes."

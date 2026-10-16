@@ -3,7 +3,10 @@
 # `northmes migrate` from the same image.
 
 FROM node:26-trixie-slim@sha256:0d1e33586362bb9e608c4e751e7a9e7edb55c9ac11461ed5666af696cc461dd4 AS build
-RUN npm install --global pnpm@12.6.0
+# npm ci installs pnpm from deploy/pnpm's lockfile, which pins the integrity of every package it
+# downloads. Keep its version equal to packageManager in package.json.
+COPY deploy/pnpm/package.json deploy/pnpm/package-lock.json /opt/pnpm/
+RUN npm ci --prefix /opt/pnpm --no-audit --no-fund && ln -s /opt/pnpm/node_modules/.bin/pnpm /usr/local/bin/pnpm
 WORKDIR /src
 COPY . .
 # The workspace packages take zod and Nest as peers from their dev dependencies, so the image keeps
