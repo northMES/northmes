@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 
 /**
  * Skip to main content (D1 Q12, a NorthMES pattern): the page's first stop, hidden until it has
