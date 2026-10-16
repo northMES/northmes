@@ -1,6 +1,9 @@
 # Releases NorthMES (ADR 0038, ADR 0080). release-please keeps a release pull request open on main;
 # merging it tags the release, and the image job then pushes ghcr.io/northmes/northmes:<version>
 # and writes the line to paste into .env, pinned by the image's digest, into the release notes.
+# The attestations job then signs the image's build provenance and its SBOM, pushes both
+# attestations next to the image and attaches the SBOM and the attestation bundles to the release
+# (ADR 0040, ADR 0050).
 name: Release
 
 on:
@@ -35,6 +38,8 @@ jobs:
     permissions:
       contents: write
       packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -60,3 +65,60 @@ jobs:
           VERSION: ${{ needs.release-please.outputs.version }}
           DIGEST: ${{ steps.build.outputs.digest }}
         run: node scripts/release/env-line-notes.mjs
+
+  # Holds id-token: write, so it runs no code from the repository: it checks nothing out and
+  # installs nothing. It runs on a GitHub-hosted runner, so a verifier can pass
+  # --deny-self-hosted-runners. The storage record for the organization's linked artifacts page
+  # needs artifact-metadata: write, which this job does not hold.
+  attestations:
+    name: release attestations
+    needs: [release-please, image]
+    if: needs.release-please.outputs.created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: docker/login-action@371161bbe7024a29a25c5e19bfcbc0804fe9ad2c # v4.5.2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ghcr.io/northmes/northmes
+          subject-digest: ${{ needs.image.outputs.digest }}
+          push-to-registry: true
+          create-storage-record: false
+      - uses: anchore/sbom-action@3ad7283483fc7af8ff2b4ea19663c2d5ca935e26 # v0.24.2
+        with:
+          image: ghcr.io/northmes/northmes@${{ needs.image.outputs.digest }}
+          format: cyclonedx-json
+          output-file: northmes-${{ needs.release-please.outputs.version }}-image.cdx.json
+          syft-version: v1.51.1
+          upload-artifact: false
+          upload-release-assets: false
+      - id: sbom
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-name: ghcr.io/northmes/northmes
+          subject-digest: ${{ needs.image.outputs.digest }}
+          sbom-path: northmes-${{ needs.release-please.outputs.version }}-image.cdx.json
+          push-to-registry: true
+          create-storage-record: false
+      - name: Attach the SBOM and the attestation bundles to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.release-please.outputs.tag }}
+          VERSION: ${{ needs.release-please.outputs.version }}
+          SBOM: northmes-${{ needs.release-please.outputs.version }}-image.cdx.json
+          PROVENANCE_BUNDLE: ${{ steps.provenance.outputs.bundle-path }}
+          SBOM_BUNDLE: ${{ steps.sbom.outputs.bundle-path }}
+        run: |
+          cp "$PROVENANCE_BUNDLE" "northmes-$VERSION-image.intoto.jsonl"
+          cp "$SBOM_BUNDLE" "$SBOM.intoto.jsonl"
+          gh release upload "$TAG" "$SBOM" "northmes-$VERSION-image.intoto.jsonl" "$SBOM.intoto.jsonl" --clobber
