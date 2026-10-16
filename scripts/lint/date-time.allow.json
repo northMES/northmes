@@ -1,0 +1,117 @@
+[
+  {
+    "path": "apps/backend/src/modules/core/core/access/auth.service.ts",
+    "use": "new Date",
+    "reason": "better-auth takes and returns Date values; the arithmetic moves to Luxon in #652"
+  },
+  {
+    "path": "apps/backend/src/modules/core/infrastructure/auth/auth-options.ts",
+    "use": "new Date",
+    "reason": "better-auth takes and returns Date values; the arithmetic moves to Luxon in #652"
+  },
+  {
+    "path": "apps/backend/src/modules/core/infrastructure/auth/gen-auth-migration.ts",
+    "use": "new Date",
+    "reason": "builds the migration file stamp from the current time; moves to Luxon in #652"
+  },
+  {
+    "path": "apps/backend/test/db/scoped-database.int.test.ts",
+    "use": "new Date",
+    "reason": "test builds or compares instants with Date; moves to Luxon in #652"
+  },
+  {
+    "path": "apps/backend/test/migrate/template.int.test.ts",
+    "use": "new Date",
+    "reason": "test builds or compares instants with Date; moves to Luxon in #652"
+  },
+  {
+    "path": "apps/backend/test/modules/core/article-classification.int.test.ts",
+    "use": "Date.parse",
+    "reason": "test builds or compares instants with Date; moves to Luxon in #652"
+  },
+  {
+    "path": "apps/backend/test/modules/core/article-upsert.int.test.ts",
+    "use": "new Date",
+    "reason": "passes a Date to the timestamp contract; moves to a Luxon DateTime in #653"
+  },
+  {
+    "path": "apps/backend/test/modules/core/articles.int.test.ts",
+    "use": "new Date",
+    "reason": "passes a Date to the timestamp contract; moves to a Luxon DateTime in #653"
+  },
+  {
+    "path": "apps/backend/test/modules/core/articles.int.test.ts",
+    "use": "Date.parse",
+    "reason": "test builds or compares instants with Date; moves to Luxon in #652"
+  },
+  {
+    "path": "apps/backend/test/modules/core/auth-options.test.ts",
+    "use": "new Date",
+    "reason": "test builds or compares instants with Date; moves to Luxon in #652"
+  },
+  {
+    "path": "apps/backend/test/modules/core/sign-in.int.test.ts",
+    "use": "new Date",
+    "reason": "test builds or compares instants with Date; moves to Luxon in #652"
+  },
+  {
+    "path": "apps/backend/test/operations/conformance.int.test.ts",
+    "use": "new Date",
+    "reason": "passes a Date to the timestamp contract; moves to a Luxon DateTime in #653"
+  },
+  {
+    "path": "apps/backend/test/operations/runner.int.test.ts",
+    "use": "new Date",
+    "reason": "passes a Date to the timestamp contract; moves to a Luxon DateTime in #653"
+  },
+  {
+    "path": "apps/web/src/ui/lib/date-time.ts",
+    "use": "new Date",
+    "reason": "formats a list time with the browser zone's Date getters; moves to Luxon in #654"
+  },
+  {
+    "path": "apps/web/test/auth/auth-session.test.ts",
+    "use": "Date.UTC",
+    "reason": "test builds instants with Date; moves to Luxon in #654"
+  },
+  {
+    "path": "apps/web/test/modules/core/core-app.tsx",
+    "use": "new Date",
+    "reason": "test builds instants with Date; moves to Luxon in #654"
+  },
+  {
+    "path": "packages/contracts/src/define-command-contract.ts",
+    "use": "new Date",
+    "reason": "the timestamp contract decodes to a Date; moves to a Luxon DateTime in #653"
+  },
+  {
+    "path": "packages/contracts/test/timestamp.test.ts",
+    "use": "new Date",
+    "reason": "passes a Date to the timestamp contract; moves to a Luxon DateTime in #653"
+  },
+  {
+    "path": "packages/sdk/test/operations/runner.test.ts",
+    "use": "new Date",
+    "reason": "passes a Date to the timestamp contract; moves to a Luxon DateTime in #653"
+  },
+  {
+    "path": "scripts/gen-migration.mjs",
+    "use": "new Date",
+    "reason": "builds the migration file stamp from the current time; moves to Luxon in #652"
+  },
+  {
+    "path": "scripts/gen-migration.test.ts",
+    "use": "new Date",
+    "reason": "test builds or compares instants with Date; moves to Luxon in #652"
+  },
+  {
+    "path": "test/meta/adr.test.ts",
+    "use": "new Date",
+    "reason": "test builds or compares instants with Date; moves to Luxon in #652"
+  },
+  {
+    "path": "test/meta/adr.test.ts",
+    "use": "Date.UTC",
+    "reason": "test builds or compares instants with Date; moves to Luxon in #652"
+  }
+]

@@ -88,8 +88,12 @@ describe('date-time', () => {
       { path: 'examples/plugin-validator/src/dates.ts', line: 4, use: 'import @date-fns/tz' },
       { path: 'examples/plugin-validator/src/dates.ts', line: 5, use: 'import dayjs' },
       { path: 'examples/plugin-validator/src/dates.ts', line: 6, use: 'import moment-timezone' },
-      { path: 'examples/plugin-validator/src/dates.ts', line: 7, use: 'import @js-temporal/polyfill' },
       { path: 'examples/plugin-validator/src/dates.ts', line: 7, use: 'Temporal' },
+      {
+        path: 'examples/plugin-validator/src/dates.ts',
+        line: 7,
+        use: 'import @js-temporal/polyfill',
+      },
     ]);
   });
 
