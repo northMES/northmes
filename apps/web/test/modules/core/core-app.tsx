@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import type { MockLink } from '@apollo/client/testing';
+import { ApolloLink } from '@apollo/client/link';
+import { MockLink } from '@apollo/client/testing';
 import { MockedProvider } from '@apollo/client/testing/react';
 import { coreLinks } from '@northmes/core-contracts';
 import {
@@ -17,6 +18,7 @@ import {
   useParams,
 } from '@tanstack/react-router';
 import { render, within } from '@testing-library/react';
+import { from, mergeMap } from 'rxjs';
 import { CoreArticle } from '../../../src/modules/core/article.graphql.ts';
 import { coreModule } from '../../../src/modules/core/index.ts';
 import { CoreArticles } from '../../../src/modules/core/screens/articles/articles.graphql.ts';
@@ -53,12 +55,16 @@ function SettingsStub() {
 /**
  * Renders the core module's routes at href, at a plant or in company settings, with a
  * MockedProvider that answers each of mocks once and the contributions the shell would give the
- * slots, and returns the router, whose state.location shows the URL.
+ * slots, and returns the router, whose state.location shows the URL. A hold from holdRequests
+ * keeps its requests from the mocks until the test releases them.
  */
 export function renderCoreAt(
   href: string,
   mocks: readonly MockLink.MockedResponse[],
-  { contributions = [] }: { readonly contributions?: readonly SlotContribution[] } = {},
+  {
+    contributions = [],
+    hold,
+  }: { readonly contributions?: readonly SlotContribution[]; readonly hold?: ApolloLink } = {},
 ) {
   const router = createRouter({
     routeTree: createShellRoutes({
@@ -69,13 +75,28 @@ export function renderCoreAt(
     history: createMemoryHistory({ initialEntries: [href] }),
   });
   render(
-    <MockedProvider mocks={mocks}>
+    <MockedProvider mocks={mocks} link={hold && ApolloLink.from([hold, new MockLink(mocks)])}>
       <ContributionsProvider value={contributions}>
         <RouterProvider router={router} />
       </ContributionsProvider>
     </MockedProvider>,
   );
   return router;
+}
+
+/**
+ * Holds each request that matches until the test calls release, so a loading state stays on the
+ * screen until the test has checked it, however slow the machine. A request after release goes
+ * to the mocks at once.
+ */
+export function holdRequests(matches: (operation: ApolloLink.Operation) => boolean) {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  const link = new ApolloLink((operation, forward) =>
+    matches(operation)
+      ? from(promise).pipe(mergeMap(() => forward(operation)))
+      : forward(operation),
+  );
+  return { link, release: () => resolve() };
 }
 
 /** A fictional article as the API returns it. */
