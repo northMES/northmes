@@ -20,11 +20,12 @@ All jobs read the repository (`contents: read`) and nothing more, with these exc
 | `gate` | `ci.yml` | none | It reads only the results of the jobs it needs |
 | `release please` | `release.yml` | `contents: write`, `pull-requests: write` | Keeps the release pull request open and tags the release ([ADR 0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md)) |
 | `release image` | `release.yml` | `contents: write`, `packages: write` | Pushes the image to ghcr.io with the job's token and writes the `.env` line into the release notes ([ADR 0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md)) |
+| `release attestations` | `release.yml` | `contents: write`, `packages: write`, `id-token: write`, `attestations: write` | Attests the image's build provenance and its SBOM, pushes both attestations to ghcr.io and attaches the SBOM and the bundles to the release. It checks out nothing and installs nothing ([ADR 0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md)) |
 | `Scorecard analysis` | `scorecard.yml` | `contents: read`, `security-events: write`, `id-token: write` | Uploads the findings to code scanning and publishes the score to the OpenSSF API |
 
 ### OIDC
 
-`Scorecard analysis` is the only job that requests an OIDC token (`id-token: write`). The OpenSSF API uses it to check that the published score comes from this repository's workflow, so publishing needs no stored secret. `test/meta/workflows.test.ts` checks that no job both runs `pnpm install` and holds `id-token: write`. ADR 0050 decides an OIDC upload to Codecov as well; no workflow does it yet.
+Two jobs request an OIDC token (`id-token: write`). `release attestations` uses it to sign the attestations through GitHub Actions OIDC, so signing needs no stored key. `Scorecard analysis` uses it so the OpenSSF API can check that the published score comes from this repository's workflow, so publishing needs no stored secret. `test/meta/workflows.test.ts` checks that no job both runs `pnpm install` and holds `id-token: write`. ADR 0050 decides an OIDC upload to Codecov as well; no workflow does it yet.
 
 ## Stored secrets
 
@@ -32,7 +33,7 @@ The workflows reference one repository secret besides the job token, and no orga
 
 | Secret | Read by | Who can change it | Stored in | Rotated |
 |---|---|---|---|---|
-| `GITHUB_TOKEN` | `release image`, to log in to ghcr.io and to edit the release notes | nobody: GitHub issues it per job | not stored; GitHub creates it for each job | at the end of every job |
+| `GITHUB_TOKEN` | `release image`, to log in to ghcr.io and to edit the release notes; `release attestations`, to log in to ghcr.io and to upload the release assets | nobody: GitHub issues it per job | not stored; GitHub creates it for each job | at the end of every job |
 | `ARGOS_TOKEN` | the `pnpm e2e` step of the `e2e` job only, as an environment variable (ADR 0077; checked by `test/meta/workflows.test.ts`) | the organization owners, through the repository settings | GitHub encrypted secrets, repository level | at least once a year, and at once after a suspected leak or when a person with access leaves |
 
 GitHub does not show a stored secret's value to anyone after it is saved, so whoever changes a secret replaces it rather than reads it. `ARGOS_TOKEN` is Argos's project token: it uploads screenshots to the one NorthMES project and grants nothing in GitHub.
