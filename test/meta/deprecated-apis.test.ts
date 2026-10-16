@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import { existsSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { scan, scanProject } from '../../scripts/lint/deprecated-apis.mjs';
@@ -59,7 +60,14 @@ describe('deprecated-apis', () => {
     ]);
   });
 
-  it('OSPS interfaces_current the web uses no deprecated API', () => {
-    expect(scanProject(root, 'apps/web/tsconfig.json').map(describeFinding)).toEqual([]);
+  it('OSPS interfaces_current the web and the example plugins use no deprecated API', () => {
+    const configs = [
+      'apps/web/tsconfig.json',
+      ...readdirSync(`${root}examples`)
+        .filter((name) => existsSync(`${root}examples/${name}/tsconfig.json`))
+        .map((name) => `examples/${name}/tsconfig.json`),
+    ];
+
+    expect(configs.flatMap((config) => scanProject(root, config)).map(describeFinding)).toEqual([]);
   });
 });
