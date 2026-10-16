@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { fieldErrorsOf, hasErrorCode, refusalMessage } from '../../../../ui/lib/graphql-errors.ts';
 import { setServerErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import { permissionPhrase } from '../../no-access.tsx';

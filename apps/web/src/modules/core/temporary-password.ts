@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 
 // The temporary password of a user just created, kept in memory only, from Create user until the
 // user's page shows it (design core-304, US17). It never goes to the URL, the history or storage.

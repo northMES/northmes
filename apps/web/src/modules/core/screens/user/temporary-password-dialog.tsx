@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Copy } from 'lucide-react';
 import { type RefObject, useId, useRef } from 'react';
 import { announce } from '../../../../ui/lib/announce.ts';

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Module } from '@nestjs/common';
 import { DashboardServiceModule } from '../../core/dashboard-service.module.ts';
 import { SaveDashboardTabMutation } from './mutations/save-dashboard-tab.mutation.ts';

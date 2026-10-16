@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 
 /** The signed-in user and what they hold at the request's plant and at its company (ADR 0010). */

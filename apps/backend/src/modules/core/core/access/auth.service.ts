@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Inject, Injectable } from '@nestjs/common';
 import { toNodeHandler } from 'better-auth/node';
