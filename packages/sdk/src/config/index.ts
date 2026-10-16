@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Server-only: entry points parse their environment with these schemas before Nest starts.
 export { ConfigError } from './config-error.ts';
 export {

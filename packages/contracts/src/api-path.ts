@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 
 /** The major version of the REST API: every REST route lives under /api/v<API_MAJOR>/ (ADR 0064). */
 export const API_MAJOR = 1;

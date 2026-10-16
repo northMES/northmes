@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { AsyncLocalStorage } from 'node:async_hooks';
 
 /** What a run of an operation learned besides its answer. */

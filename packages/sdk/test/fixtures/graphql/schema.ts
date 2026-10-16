@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Builds the schema of fixture modules with Nest's GraphQLModule and a driver that serves nothing,
 // as the host's driver builds the schema of its modules.
 import 'reflect-metadata';

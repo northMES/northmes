@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { createContext, type ReactNode, useContext } from 'react';
 
 /** State the shell owns and every module reads. */

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { z } from 'zod';
 import type { CommandContract } from './define-command-contract.ts';
 import { isListQueryContract, LIST_MAX_PAGE_SIZE } from './define-list-query-contract.ts';
