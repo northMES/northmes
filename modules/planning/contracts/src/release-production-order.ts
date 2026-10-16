@@ -10,6 +10,8 @@ import { z } from 'zod';
  */
 export const releaseProductionOrder = defineCommandContract({
   name: 'planning.releaseProductionOrder',
+  description:
+    'Releases a planned production order. Needs planning.productionOrder:release; command validators of other modules and plugins may veto it.',
   target: 'existing',
   fields: z.object({}),
   permission: 'planning.productionOrder:release',

@@ -108,6 +108,13 @@ function graphqlName(field: string): string {
   return field.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
 }
 
+/** The camelCase name of a GraphQL sort field: UPDATED_AT is updatedAt. */
+function fieldName(sortField: string): string {
+  return sortField
+    .toLowerCase()
+    .replace(/_([a-z0-9])/g, (_match, letter: string) => letter.toUpperCase());
+}
+
 /** The orderBy entry of a sort field as an operation names it, such as -updatedAt. */
 function orderOf(entry: string): OrderBy<string> {
   const descending = entry.startsWith('-');
@@ -311,43 +318,89 @@ function listKit<const SortField extends string>(declaration: ListDeclaration<So
   const { name, node, sortFields } = declaration;
 
   const SortFieldEnum = Object.fromEntries(Object.keys(sortFields).map((field) => [field, field]));
-  registerEnumType(SortFieldEnum, { name: `${name}SortField` });
+  registerEnumType(SortFieldEnum, {
+    name: `${name}SortField`,
+    description: `The fields the ${name} list sorts by.`,
+    valuesMap: Object.fromEntries(
+      Object.keys(sortFields).map((field) => [
+        field,
+        { description: `Sorts by ${fieldName(field)}.` },
+      ]),
+    ),
+  });
 
   const OrderByInput = namedClass(`${name}OrderBy`);
-  Field(() => SortFieldEnum)(OrderByInput.prototype, 'field');
-  Field(() => SortDirection, { nullable: true, defaultValue: SortDirection.ASC })(
+  Field(() => SortFieldEnum, { description: 'The field to sort by.' })(
     OrderByInput.prototype,
-    'direction',
+    'field',
   );
-  InputType(`${name}OrderBy`)(OrderByInput);
+  Field(() => SortDirection, {
+    nullable: true,
+    defaultValue: SortDirection.ASC,
+    description: 'The direction to sort in, ascending by default.',
+  })(OrderByInput.prototype, 'direction');
+  InputType(`${name}OrderBy`, { description: `One entry of the ${name} list's orderBy.` })(
+    OrderByInput,
+  );
 
   const EdgeType = namedClass(`${name}Edge`);
-  Field(() => String)(EdgeType.prototype, 'cursor');
-  Field(node)(EdgeType.prototype, 'node');
-  ObjectType(`${name}Edge`)(EdgeType);
+  Field(() => String, { description: 'The cursor of this item, for after or before.' })(
+    EdgeType.prototype,
+    'cursor',
+  );
+  Field(node, { description: `The ${name}.` })(EdgeType.prototype, 'node');
+  ObjectType(`${name}Edge`, { description: `One ${name} of a page, with its cursor.` })(EdgeType);
 
   const ConnectionType = namedClass(`${name}Connection`);
-  Field(() => [EdgeType])(ConnectionType.prototype, 'edges');
-  Field(() => PageInfo)(ConnectionType.prototype, 'pageInfo');
-  Field(() => Int)(ConnectionType.prototype, 'totalCount');
-  ObjectType(`${name}Connection`)(ConnectionType);
+  Field(() => [EdgeType], { description: "The items of the page in the list's order." })(
+    ConnectionType.prototype,
+    'edges',
+  );
+  Field(() => PageInfo, { description: 'Where the page sits in the list.' })(
+    ConnectionType.prototype,
+    'pageInfo',
+  );
+  Field(() => Int, {
+    description:
+      'How many items the list holds with the same search and filters, across all pages.',
+  })(ConnectionType.prototype, 'totalCount');
+  ObjectType(`${name}Connection`, {
+    description: `One page of the ${name} list, with keyset paging over opaque cursors.`,
+  })(ConnectionType);
 
   const ArgsClass = namedClass(`${name}ListArgs`);
-  const optional = { nullable: true } as const;
-  Field(() => Int, { nullable: true, defaultValue: DEFAULT_PAGE_SIZE })(
-    ArgsClass.prototype,
-    'first',
-  );
-  Field(() => String, optional)(ArgsClass.prototype, 'after');
-  Field(() => Int, optional)(ArgsClass.prototype, 'last');
-  Field(() => String, optional)(ArgsClass.prototype, 'before');
-  Field(() => [OrderByInput], optional)(ArgsClass.prototype, 'orderBy');
-  Field(() => String, optional)(ArgsClass.prototype, 'search');
+  Field(() => Int, {
+    nullable: true,
+    defaultValue: DEFAULT_PAGE_SIZE,
+    description: `How many items to read forward, from 1 to ${MAX_PAGE_SIZE}. Ignored when last or before is given.`,
+  })(ArgsClass.prototype, 'first');
+  Field(() => String, {
+    nullable: true,
+    description: 'Reads the items after this cursor, such as the endCursor of the previous page.',
+  })(ArgsClass.prototype, 'after');
+  Field(() => Int, {
+    nullable: true,
+    description: `How many items to read backward, from 1 to ${MAX_PAGE_SIZE}, ${DEFAULT_PAGE_SIZE} when only before is given.`,
+  })(ArgsClass.prototype, 'last');
+  Field(() => String, {
+    nullable: true,
+    description:
+      'Reads the items before this cursor, such as the startCursor of the next page. Not together with after.',
+  })(ArgsClass.prototype, 'before');
+  Field(() => [OrderByInput], {
+    nullable: true,
+    description: `The order of the list, at most ${MAX_ORDER_BY_ENTRIES} entries; the id breaks ties.`,
+  })(ArgsClass.prototype, 'orderBy');
+  Field(() => String, {
+    nullable: true,
+    description: `Only the items whose text contains this, ignoring case; at most ${MAX_SEARCH_LENGTH} characters.`,
+  })(ArgsClass.prototype, 'search');
   if (declaration.archivable) {
-    Field(() => Boolean, { nullable: true, defaultValue: false })(
-      ArgsClass.prototype,
-      'includeArchived',
-    );
+    Field(() => Boolean, {
+      nullable: true,
+      defaultValue: false,
+      description: 'Lists archived items too. Archived items are hidden by default.',
+    })(ArgsClass.prototype, 'includeArchived');
   }
   ArgsType()(ArgsClass);
 

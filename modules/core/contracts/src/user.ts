@@ -40,17 +40,27 @@ export const username = z
  */
 export const createUser = defineCommandContract({
   name: 'core.createUser',
+  description:
+    'Creates a user of the company with a temporary password, which the answer shows once. Needs core.user:create at the company; with roleId and scopeId the user also gets that role there, as coreAssignRole gives it.',
   target: 'new',
   fields: z.object({
-    username,
+    username: username.describe(
+      'The handle that lists show for the user: 3 to 30 letters, digits, dots and underscores, stored in lower case. It never changes.',
+    ),
     name: z
       .string()
       .trim()
       .min(1, 'Enter a name.')
-      .max(120, { error: tooLong('Name', 120) }),
-    email: z.email('Enter an email address, such as name@example.com.'),
-    roleId: z.uuid().optional(),
-    scopeId: z.uuid().optional(),
+      .max(120, { error: tooLong('Name', 120) })
+      .describe('The name others see, at most 120 characters.'),
+    email: z
+      .email('Enter an email address, such as name@example.com.')
+      .describe('The email address the user signs in with.'),
+    roleId: z.uuid().describe('A role of the company to give the user, with scopeId.').optional(),
+    scopeId: z
+      .uuid()
+      .describe('The company or plant where the user gets roleId, with roleId.')
+      .optional(),
     reason: accessReason,
     companyId: settingsCompanyId,
   }),
@@ -67,8 +77,14 @@ export const createUser = defineCommandContract({
  */
 export const blockUser = defineCommandContract({
   name: 'core.blockUser',
+  description:
+    'Blocks a user of the company: they cannot sign in, and their next request is refused. Needs core.user:block at every company the user belongs to.',
   target: 'none',
-  fields: z.object({ id: z.uuid(), reason: accessReason, companyId: settingsCompanyId }),
+  fields: z.object({
+    id: z.uuid().describe("The user's id."),
+    reason: accessReason,
+    companyId: settingsCompanyId,
+  }),
   permission: 'core.user:block',
   reason: 'optional',
 });
@@ -79,8 +95,14 @@ export const blockUser = defineCommandContract({
  */
 export const unblockUser = defineCommandContract({
   name: 'core.unblockUser',
+  description:
+    'Unblocks a blocked user of the company, who can sign in again. Needs core.user:block at every company the user belongs to.',
   target: 'none',
-  fields: z.object({ id: z.uuid(), reason: accessReason, companyId: settingsCompanyId }),
+  fields: z.object({
+    id: z.uuid().describe("The user's id."),
+    reason: accessReason,
+    companyId: settingsCompanyId,
+  }),
   permission: 'core.user:block',
   reason: 'optional',
 });
@@ -96,8 +118,14 @@ export const unblockUser = defineCommandContract({
  */
 export const resetPassword = defineCommandContract({
   name: 'core.resetPassword',
+  description:
+    "Gives a user of the company a new temporary password, which the answer shows once, and ends the user's sessions. Needs core.user:resetPassword at every company the user belongs to.",
   target: 'none',
-  fields: z.object({ id: z.uuid(), reason: accessReason, companyId: settingsCompanyId }),
+  fields: z.object({
+    id: z.uuid().describe("The user's id."),
+    reason: accessReason,
+    companyId: settingsCompanyId,
+  }),
   permission: 'core.user:resetPassword',
   reason: 'optional',
 });

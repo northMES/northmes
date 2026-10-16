@@ -4,19 +4,31 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
+/** The input of coreCreateUser. */
 export type CoreCreateUserInput = {
+  /** The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company. */
   readonly companyId?: string | null | undefined;
+  /** The email address the user signs in with. */
   readonly email: string;
+  /** The id of the new entity, a UUID the client generates, so a retry finds the first. */
   readonly id: string | number;
+  /** The name others see, at most 120 characters. */
   readonly name: string;
+  /** Why the change is made, at most 500 characters. */
   readonly reason?: string | null | undefined;
+  /** A role of the company to give the user, with scopeId. */
   readonly roleId?: string | null | undefined;
+  /** The company or plant where the user gets roleId, with roleId. */
   readonly scopeId?: string | null | undefined;
+  /** The handle that lists show for the user: 3 to 30 letters, digits, dots and underscores, stored in lower case. It never changes. */
   readonly username: string;
 };
 
+/** The kind of a scope where a role is held. */
 export type ScopeKind =
+  /** A company. */
   | 'COMPANY'
+  /** A plant of a company. */
   | 'PLANT';
 
 export type CoreCreateUserMutationVariables = Exact<{

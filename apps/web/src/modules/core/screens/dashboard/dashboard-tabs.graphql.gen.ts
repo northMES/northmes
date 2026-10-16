@@ -4,23 +4,39 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
+/** Who sees a dashboard tab. */
 export type DashboardTabScope =
+  /** Everyone at the company, at each of its plants. */
   | 'COMPANY'
+  /** The signed-in user alone, at each plant of the company. */
   | 'OWN'
+  /** Everyone at the plant. */
   | 'PLANT';
 
+/** A widget's size, a fixed width and height in grid units. */
 export type DashboardWidgetSize =
+  /** 6 columns wide and 4 rows high. */
   | 'LARGE'
+  /** 4 columns wide and 4 rows high. */
   | 'MEDIUM'
+  /** 3 columns wide and 2 rows high. */
   | 'SMALL'
+  /** 6 columns wide and 6 rows high. */
   | 'TALL'
+  /** 12 columns wide and 4 rows high. */
   | 'WIDE';
 
+/** What a dashboard widget shows. */
 export type DashboardWidgetType =
+  /** A chart, one of the four demo types. */
   | 'CHART'
+  /** A widget that a module or plugin contributes, named by contribution. */
   | 'CONTRIBUTION'
+  /** A list, one of the four demo types. */
   | 'LIST'
+  /** A table, one of the four demo types. */
   | 'TABLE'
+  /** One value, one of the four demo types. */
   | 'VALUE';
 
 export type CoreDashboardTabsQueryVariables = Exact<{ [key: string]: never; }>;

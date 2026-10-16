@@ -58,11 +58,15 @@ function scalarOf(property: z.core.JSONSchema._JSONSchema): ReturnTypeFunc | und
   return undefined;
 }
 
-/** A field of a generated input type: its GraphQL type and whether it may be left out. */
+/**
+ * A field of a generated input type: its GraphQL type, whether it may be left out, and the
+ * description its Zod schema gives it.
+ */
 interface InputField {
   readonly field: string;
   readonly type: ReturnTypeFunc;
   readonly optional: boolean;
+  readonly description: string | undefined;
 }
 
 /** True for the JSON Schema of a list of plain strings. */
@@ -126,17 +130,18 @@ function inputFields(contract: CommandContract): InputField[] {
         `Command ${contract.name}: input field ${field} is not a required ID, string, number, boolean, 32-bit integer or list of strings, an optional string, boolean, 32-bit integer or list of strings, or a list of translations, the kinds a generated mutation input supports so far`,
       );
     }
-    return { field, type, optional: !required.has(field) };
+    const description = typeof property === 'object' ? property.description : undefined;
+    return { field, type, optional: !required.has(field), description };
   });
 }
 
 /** The input type of a command's mutation, with these fields. */
-function inputType(fields: readonly InputField[], typeName: string): Type {
+function inputType(fields: readonly InputField[], typeName: string, fieldName: string): Type {
   const Input = { [typeName]: class {} }[typeName] as Type;
-  for (const { field, type, optional } of fields) {
-    Field(type, { nullable: optional })(Input.prototype, field);
+  for (const { field, type, optional, description } of fields) {
+    Field(type, { nullable: optional, description })(Input.prototype, field);
   }
-  InputType(typeName)(Input);
+  InputType(typeName, { description: `The input of ${fieldName}.` })(Input);
   return Input;
 }
 
@@ -152,12 +157,23 @@ const inputTypes = new WeakMap<CommandContract, Type>();
 export function commandInput(contract: CommandContract): Type {
   const known = inputTypes.get(contract);
   if (known) return known;
-  const Input = inputType(
-    inputFields(contract),
-    `${capitalize(mutationFieldName(contract.name))}Input`,
-  );
+  const fieldName = mutationFieldName(contract.name);
+  const Input = inputType(inputFields(contract), `${capitalize(fieldName)}Input`, fieldName);
   inputTypes.set(contract, Input);
   return Input;
+}
+
+/**
+ * The options of a command mutation's input argument: the command's input type, which this
+ * registers, and its description. A module's own mutation resolver passes them to
+ * `@Args('input', ...)`.
+ */
+export function commandInputArg(contract: CommandContract): {
+  readonly type: () => Type;
+  readonly description: string;
+} {
+  const Input = commandInput(contract);
+  return { type: () => Input, description: `The input of the command ${contract.name}.` };
 }
 
 /**
@@ -171,15 +187,15 @@ export function mutationResolver(
   { plantFree }: { readonly plantFree?: true } = {},
 ): Type {
   const fieldName = mutationFieldName(command.contract.name);
-  const Input = commandInput(command.contract);
+  const inputArg = commandInputArg(command.contract);
 
   @Resolver()
   class CommandResolver {
     constructor(@Inject(COMMAND_BUS) private readonly bus: CommandBus) {}
 
-    @Mutation(returns, { name: fieldName })
+    @Mutation(returns, { name: fieldName, description: command.contract.description })
     @Extensions({ [PLANT_FREE]: plantFree === true })
-    run(@Args('input', { type: () => Input }) input: unknown): Promise<unknown> {
+    run(@Args('input', inputArg) input: unknown): Promise<unknown> {
       return this.bus.run(command, parseCommandInput(command.contract, input));
     }
   }
