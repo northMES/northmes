@@ -48,13 +48,14 @@ const logger = new Logger('WebOrigins');
  * request's correlation id, which the server's log line names too.
  */
 function refuse(
-  request: IncomingMessage,
+  request: IncomingMessage & { originalUrl?: string },
   response: ServerResponse,
   errorCode: 'core.origin_forbidden' | 'core.origin_required',
   message: string,
 ): void {
   const correlationId = randomUUID();
-  const path = (request.url ?? '').split('?')[0];
+  // Express gives a middleware the URL below the path it is mounted on; originalUrl is the whole.
+  const path = (request.originalUrl ?? request.url ?? '').split('?')[0];
   logger.warn(
     `Refused ${request.method} ${path} with ${errorCode}, correlation id ${correlationId}`,
   );
