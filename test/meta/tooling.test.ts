@@ -265,6 +265,33 @@ describe('tooling', () => {
     expect(sdk.dependencies?.dataloader).toBe('catalog:');
   });
 
+  it('luxon 3.7 and @types/luxon 3.7 are in the strict catalog, and the packages that work with dates take them from it', () => {
+    // ADR 0082 chooses Luxon for dates and times. The contracts package, like zod, leaves the copy
+    // to the host and takes luxon as a peer.
+    type Manifest = {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+      peerDependencies?: Record<string, string>;
+    };
+    const manifest = (path: string) => JSON.parse(readText(path)) as Manifest;
+    const catalog = readWorkspace().catalog;
+
+    expect(catalog?.luxon).toMatch(/^3\.7\.\d+$/);
+    expect(catalog?.['@types/luxon']).toMatch(/^3\.7\.\d+$/);
+    for (const path of [
+      'apps/backend/package.json',
+      'apps/web/package.json',
+      'modules/planning/domain/package.json',
+    ]) {
+      expect(manifest(path).dependencies?.luxon, path).toBe('catalog:');
+      expect(manifest(path).devDependencies?.['@types/luxon'], path).toBe('catalog:');
+    }
+    const contracts = manifest('packages/contracts/package.json');
+    expect(contracts.peerDependencies?.luxon).toBe('catalog:');
+    expect(contracts.devDependencies?.luxon).toBe('catalog:');
+    expect(contracts.devDependencies?.['@types/luxon']).toBe('catalog:');
+  });
+
   it('E04-S01 the UI, form and table libraries are catalog entries that apps/web takes from the catalog', () => {
     // ADR 0020 and the articles slice name these packages. Each pin is the newest release that was
     // outside Renovate's 14-day window on 2026-10-09. The shadcn primitives and the rest of the web
