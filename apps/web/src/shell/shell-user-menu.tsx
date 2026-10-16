@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { ChevronsUpDown, LogOut, Moon, Sun } from 'lucide-react';
 import { type Theme, useTheme } from '../ui/lib/theme.ts';
 import { Avatar, AvatarFallback } from '../ui/primitives/avatar.tsx';

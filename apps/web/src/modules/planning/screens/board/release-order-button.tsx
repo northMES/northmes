@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { CombinedGraphQLErrors, type ErrorLike } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { Button } from '../../../../ui/primitives/button.tsx';
