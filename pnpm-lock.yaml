@@ -108,6 +108,9 @@ catalogs:
     '@types/express':
       specifier: 5.0.6
       version: 5.0.6
+    '@types/luxon':
+      specifier: 3.7.6
+      version: 3.7.6
     '@types/ms':
       specifier: 2.1.0
       version: 2.1.0
@@ -171,6 +174,9 @@ catalogs:
     lucide-react:
       specifier: 1.48.0
       version: 1.48.0
+    luxon:
+      specifier: 3.7.2
+      version: 3.7.2
     ms:
       specifier: 2.1.3
       version: 2.1.3
@@ -400,6 +406,9 @@ importers:
       kysely:
         specifier: 'catalog:'
         version: 0.29.6
+      luxon:
+        specifier: 'catalog:'
+        version: 3.7.2
       pg:
         specifier: 'catalog:'
         version: 8.23.0
@@ -440,6 +449,9 @@ importers:
       '@types/express':
         specifier: 'catalog:'
         version: 5.0.6
+      '@types/luxon':
+        specifier: 'catalog:'
+        version: 3.7.6
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
@@ -518,6 +530,9 @@ importers:
       lucide-react:
         specifier: 'catalog:'
         version: 1.48.0(react@19.3.0)
+      luxon:
+        specifier: 'catalog:'
+        version: 3.7.2
       react:
         specifier: 19.3.0
         version: 19.3.0
@@ -573,6 +588,9 @@ importers:
       '@types/culori':
         specifier: 'catalog:'
         version: 4.0.1
+      '@types/luxon':
+        specifier: 'catalog:'
+        version: 3.7.6
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
@@ -790,6 +808,9 @@ importers:
       '@northmes/contracts':
         specifier: workspace:*
         version: link:../../../packages/contracts
+      luxon:
+        specifier: 'catalog:'
+        version: 3.7.2
       zod:
         specifier: 'catalog:'
         version: 4.6.5
@@ -800,6 +821,9 @@ importers:
       '@northmes/testing':
         specifier: workspace:*
         version: link:../../../packages/testing
+      '@types/luxon':
+        specifier: 'catalog:'
+        version: 3.7.6
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
@@ -824,12 +848,18 @@ importers:
       '@biomejs/biome':
         specifier: 'catalog:'
         version: 2.5.14
+      '@types/luxon':
+        specifier: 'catalog:'
+        version: 3.7.6
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.2
       fast-check:
         specifier: 'catalog:'
         version: 4.10.2
+      luxon:
+        specifier: 'catalog:'
+        version: 3.7.2
       temporal-polyfill:
         specifier: 'catalog:'
         version: 1.0.5
@@ -3255,6 +3285,9 @@ packages:
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
+  '@types/luxon@3.7.6':
+    resolution: {integrity: sha512-6KSjliQAXK8ZLgFQO4B7iE4Rpf/B3rItzCFuXezBY/XIAGxOdLd7vRNK9/StRPwiS/yJsVbB7HKpW46B8tcEuQ==}
 
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
@@ -8416,6 +8449,8 @@ snapshots:
   '@types/http-errors@2.0.5': {}
 
   '@types/json-schema@7.0.15': {}
+
+  '@types/luxon@3.7.6': {}
 
   '@types/ms@2.1.0': {}
 

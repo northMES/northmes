@@ -16,12 +16,15 @@
     "build": "tsc -p tsconfig.build.json"
   },
   "peerDependencies": {
+    "luxon": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@types/luxon": "catalog:",
     "@types/node": "catalog:",
     "fast-check": "catalog:",
+    "luxon": "catalog:",
     "temporal-polyfill": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",

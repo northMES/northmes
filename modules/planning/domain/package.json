@@ -13,11 +13,13 @@
   },
   "dependencies": {
     "@northmes/contracts": "workspace:*",
+    "luxon": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
     "@northmes/testing": "workspace:*",
+    "@types/luxon": "catalog:",
     "@types/node": "catalog:",
     "fast-check": "catalog:",
     "graphql": "catalog:",
