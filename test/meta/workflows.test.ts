@@ -1002,4 +1002,18 @@ describe('workflows', () => {
       `.github/workflows/ci.yml e2e pnpm e2e env ARGOS_TOKEN=\${{ ${token} }}`,
     ]);
   });
+
+  // The dependency audit is a required check of its own (docs/adr/0040-dependency-license-policy-ci-gate-and-sbom.md,
+  // docs/security/vulnerability-policy.md). It needs the registry's advisory database, so it is not
+  // part of pnpm check, which handoff's agents run offline.
+  it('ADR0040 CI / dependency audit runs pnpm audit on the production tree for every pull request and push to main', () => {
+    const { workflow, job } = jobNamed('dependency audit');
+    const runs = (job.steps ?? []).flatMap(({ run }) => (run === undefined ? [] : [run.trim()]));
+    const on = workflow.on as Record<string, { branches?: string[] } | null>;
+
+    expect(triggersOf(workflow.on)).toEqual(expect.arrayContaining(['pull_request', 'push']));
+    expect(on.push?.branches).toEqual(['main']);
+    expect(runs).toContain('pnpm audit --prod');
+    expect(job.permissions).toEqual({ contents: 'read' });
+  });
 });
