@@ -5,6 +5,6 @@ import { defineModule } from '@northmes/sdk';
 export default defineModule({
   id: 'throws-on-import',
   version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
+  northmes: '>=0.0.0-0 <1.0.0-0',
   server: () => import('./server.js'),
 });

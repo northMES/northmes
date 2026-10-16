@@ -6,7 +6,7 @@ import packageJson from '../package.json' with { type: 'json' };
 export default defineModule({
   id: 'example-article-count',
   version: packageJson.version,
-  northmes: '>=0.0.0-0 <0.1.0-0',
+  northmes: '>=0.0.0-0 <1.0.0-0',
   dependsOn: ['core'],
   web: {
     label: 'Article count',

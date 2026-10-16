@@ -23,7 +23,7 @@ export class ReleaseCapModule {}
 export const releaseCap = defineModule({
   id: 'release-cap',
   version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
+  northmes: '>=0.0.0-0 <1.0.0-0',
   dependsOn: ['planning'],
   server: async () => ({ default: ReleaseCapModule }),
 });
@@ -50,7 +50,7 @@ export class ArticleGateModule {}
 export const articleGate = defineModule({
   id: 'article-gate',
   version: '0.0.0',
-  northmes: '>=0.0.0-0 <0.1.0-0',
+  northmes: '>=0.0.0-0 <1.0.0-0',
   dependsOn: ['core'],
   server: async () => ({ default: ArticleGateModule }),
 });

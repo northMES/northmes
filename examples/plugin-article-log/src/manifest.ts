@@ -6,7 +6,7 @@ import packageJson from '../package.json' with { type: 'json' };
 export default defineModule({
   id: 'example-article-log',
   version: packageJson.version,
-  northmes: '>=0.0.0-0 <0.1.0-0',
+  northmes: '>=0.0.0-0 <1.0.0-0',
   dependsOn: ['core'],
   // A lazy import, so the host reads the manifest without loading Nest (ADR 0003).
   server: () => import('./server.ts'),

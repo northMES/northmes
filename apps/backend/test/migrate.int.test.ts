@@ -541,7 +541,7 @@ describe('pnpm northmes migrate with a plugin', () => {
       {
         id: 'acme-audit',
         version: '1.2.0',
-        northmes: '>=0.0.0-0 <0.1.0-0',
+        northmes: '>=0.0.0-0 <1.0.0-0',
         dependsOn: ['planning'],
       },
       {

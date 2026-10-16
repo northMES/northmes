@@ -105,7 +105,7 @@ describe('pnpm plugin:build', () => {
     write(join(plugin, 'package.json'), packageJson);
     write(
       join(plugin, 'src/manifest.ts'),
-      "import { defineModule } from '@northmes/sdk';\nexport default defineModule({ id: 'example-labels', version: '0.0.0', northmes: '>=0.0.0-0 <0.1.0-0', server: () => import('./server.ts') });\n",
+      "import { defineModule } from '@northmes/sdk';\nexport default defineModule({ id: 'example-labels', version: '0.0.0', northmes: '>=0.0.0-0 <1.0.0-0', server: () => import('./server.ts') });\n",
     );
     write(join(plugin, 'src/server.ts'), 'export default class ExampleLabelsModule {}\n');
     write(join(plugin, 'migrations/20261008120000_label.sql'), migration);
@@ -146,7 +146,7 @@ describe('pnpm plugin:build', () => {
     );
     write(
       join(plugin, 'src/manifest.ts'),
-      "import { defineModule } from '@northmes/sdk';\nexport default defineModule({ id: 'example-hello', version: '0.0.0', northmes: '>=0.0.0-0 <0.1.0-0', server: () => import('./server.ts') });\n",
+      "import { defineModule } from '@northmes/sdk';\nexport default defineModule({ id: 'example-hello', version: '0.0.0', northmes: '>=0.0.0-0 <1.0.0-0', server: () => import('./server.ts') });\n",
     );
     write(join(plugin, 'src/server.ts'), 'export default class ExampleHelloModule {}\n');
     for (const [file, text] of Object.entries(web)) write(join(plugin, 'src', file), text);
@@ -191,7 +191,7 @@ describe('pnpm plugin:build', () => {
     rmSync(join(plugin, 'src/server.ts'));
     write(
       join(plugin, 'src/manifest.ts'),
-      "import { defineModule } from '@northmes/sdk';\nexport default defineModule({ id: 'example-hello', version: '0.0.0', northmes: '>=0.0.0-0 <0.1.0-0', web: { label: 'Hello', order: 90 } });\n",
+      "import { defineModule } from '@northmes/sdk';\nexport default defineModule({ id: 'example-hello', version: '0.0.0', northmes: '>=0.0.0-0 <1.0.0-0', web: { label: 'Hello', order: 90 } });\n",
     );
 
     const exitCode = await main(['example-hello'], io());
