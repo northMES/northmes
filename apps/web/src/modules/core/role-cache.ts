@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { ApolloCache, Reference } from '@apollo/client';
 
 // After a write, the company's roles and a role's holders change in the cache in place, so the

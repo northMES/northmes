@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useQuery } from '@apollo/client/react';
 import { useCallback, useEffect, useState } from 'react';
 import { CoreArticleGroups } from './article-groups.graphql.ts';

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { CircleAlert, Plus, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useFieldArray, useWatch } from 'react-hook-form';
