@@ -10,8 +10,12 @@ RUN npm ci --prefix /opt/pnpm --no-audit --no-fund && ln -s /opt/pnpm/node_modul
 WORKDIR /src
 COPY . .
 # The workspace packages take zod and Nest as peers from their dev dependencies, so the image keeps
-# the full install. A slimmer image (pnpm deploy) is a later change.
-RUN pnpm install --frozen-lockfile && pnpm build
+# the full install. A slimmer image (pnpm deploy) is a later change. turbo's cache and task logs hold
+# how long each task took and pnpm's install state holds when the install ran, so the build removes
+# them and two builds of one commit give the same image (reproducible.yml).
+RUN pnpm install --frozen-lockfile && pnpm build \
+  && find . -name node_modules -prune -o -name .turbo -type d -prune -exec rm -rf {} + \
+  && rm -f node_modules/.modules.yaml node_modules/.pnpm-workspace-state-v1.json
 
 FROM node:26-trixie-slim@sha256:0d1e33586362bb9e608c4e751e7a9e7edb55c9ac11461ed5666af696cc461dd4
 LABEL org.opencontainers.image.source="https://github.com/northMES/northmes" \
