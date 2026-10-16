@@ -5,6 +5,9 @@ This is the entry point for an auditor and for anyone who changes NorthMES. [ADR
 - [Controls index](#controls-index): each control, its decision, and the evidence that it is built, or the issue that will build it.
 - [Threat model](threat-model.md): the assets, zones and conduits, surfaces, and the STRIDE threats at each boundary with their controls.
 - [Risk register](risks.md): each accepted risk with an owner, a review date and its ADR or issue.
+- [Vulnerability remediation policy](vulnerability-policy.md): time frames for fixing vulnerable dependencies and static analysis findings, dismissals, and what a release may ship with.
+- [Project credentials](project-credentials.md): the workflow tokens, the stored secrets with who can change them and when they are rotated, and the maintainer's tokens.
+- [Assurance case](assurance-case.md): the argument that the security requirements are met, by design principle and by OWASP Top 10 category.
 - Audit reports: [2026-10-11](audits/2026-10-11.md), tracked in [#473](https://github.com/northMES/northmes/issues/473).
 - Architecture and data flows: [plan 02](../plan/02-architecture.md). Deployment and operations: [plan 12](../plan/12-operations-and-security.md). Risks: [plan 17](../plan/17-risks.md).
 - Reporting a vulnerability: [`SECURITY.md`](../../SECURITY.md) at the repository root.
@@ -84,6 +87,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Release image attested: build provenance and SBOM attestations signed on a GitHub-hosted runner, pushed to the registry and attached to the release | built | ADR 0050; `.github/workflows/release.yml`; `test/meta/workflows.test.ts`; `apps/docs/install.mdx` (Verify a release) |
 | Automated dependency updates | gap | [#482](https://github.com/northMES/northmes/issues/482) |
 | MIT packages import no AGPL code | built | `scripts/lint/mit-imports.mjs`; `test/meta/mit-imports.test.ts` |
+| Project credentials: short-lived workflow tokens with per-job permissions, every stored secret listed with who can change it and when it is rotated | built | [project-credentials.md](project-credentials.md); `test/meta/security-docs.test.ts` checks the list against the workflows |
 | Origin and license of third-party components | built | `LICENSE`, `NOTICE`, `skills-lock.json`, SPDX headers |
 
 ### 6. Vulnerability management
@@ -92,6 +96,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 |---|---|---|
 | `SECURITY.md` with reporting, response target, supported versions and the plugin trust model | built | `SECURITY.md`; `test/meta/security-policy.test.ts` |
 | Patch releases for security fixes | decided | ADR 0038, ADR 0051 |
+| Vulnerable dependencies and static analysis findings fixed within set time frames (critical 7 days, high 30, medium 90), or recorded as accepted risks; no release with an open critical or high finding that is neither fixed nor recorded as an accepted risk | decided | [vulnerability-policy.md](vulnerability-policy.md); checked in the release review of ADR 0076 until a CI gate exists ([#197](https://github.com/northMES/northmes/issues/197)) |
 | Accepted risks recorded with an owner and a review date | built | the [risk register](risks.md); `test/meta/security-docs.test.ts` |
 
 ### 7. Architecture and industrial standards
@@ -108,6 +113,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 |---|---|---|
 | Architecture and data-flow diagrams | built | [plan 02](../plan/02-architecture.md), [plan 12](../plan/12-operations-and-security.md) |
 | Threat model | built | [threat-model.md](threat-model.md); `test/meta/security-docs.test.ts` |
+| Assurance case | built | [assurance-case.md](assurance-case.md); `test/meta/security-docs.test.ts` |
 | Hardening guidance | decided | plan 12 go-live checklist, ADR 0044; the install guide of ADR 0048 |
 | This controls index and the audit reports | built | this page |
 
