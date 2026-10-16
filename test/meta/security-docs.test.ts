@@ -103,6 +103,51 @@ describe('security docs', () => {
     }
   });
 
+  // pnpm audit (the dependency audit), OSV-Scanner (Scorecard) and the published VEX document must
+  // agree: an advisory one of them skips is an accepted risk that the VEX document declares
+  // not_affected, with the reason a reader can check.
+  it('OSPS osps_vm_04_02 every advisory the audits skip has a not_affected VEX statement and an accepted risk', () => {
+    const workspace = parse(read('pnpm-workspace.yaml')) as {
+      audit?: { level?: string; ignore?: string[] };
+    };
+    const osvIds = [...read('osv-scanner.toml').matchAll(/^id = "([\w-]+)"$/gm)].map(
+      ([, id]) => id,
+    );
+    const vex = JSON.parse(read('docs/security/vex/northmes.openvex.json')) as {
+      '@context': string;
+      author?: string;
+      timestamp?: string;
+      statements: {
+        vulnerability: { name: string };
+        products: { '@id': string }[];
+        status: string;
+        justification?: string;
+        impact_statement?: string;
+      }[];
+    };
+    const risks = read('docs/security/risks.md');
+
+    expect(workspace.audit?.level, 'pnpm audit fails on high and critical').toBe('high');
+    expect(
+      [...(workspace.audit?.ignore ?? [])].sort(),
+      'pnpm audit and OSV-Scanner skip the same advisories',
+    ).toEqual([...osvIds].sort());
+    expect(vex['@context']).toMatch(/^https:\/\/openvex\.dev\/ns\/v0\.2\.0$/);
+    expect(vex.author).toBeTruthy();
+    expect(vex.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    for (const id of osvIds) {
+      const statement = vex.statements.find(({ vulnerability }) => vulnerability.name === id);
+      expect(statement, `${id} has a VEX statement`).toBeDefined();
+      expect(statement?.status, id).toBe('not_affected');
+      expect(statement?.justification, id).toBeTruthy();
+      expect(statement?.impact_statement, id).toBeTruthy();
+      expect(statement?.products.length, id).toBeGreaterThan(0);
+      expect(risks, `${id} is an accepted risk`).toMatch(
+        new RegExp(`^\\| A-\\d{2} \\|.*\\b${id}\\b`, 'm'),
+      );
+    }
+  });
+
   it('ADR0076 the controls index links every audit report, and each report links its tracking issue', () => {
     const reports = [...trackedFiles()].filter((path) =>
       /^docs\/security\/audits\/\d{4}-\d{2}-\d{2}\.md$/.test(path),

@@ -1,0 +1,25 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://github.com/northMES/northmes/blob/main/docs/security/vex/northmes.openvex.json",
+  "author": "Krister Johansson trading as Flexmatic",
+  "role": "Maintainer",
+  "timestamp": "2026-10-16T12:00:00Z",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GHSA-vfj7-8cjw-p6xm",
+        "aliases": ["CVE-2026-93687"]
+      },
+      "products": [
+        {
+          "@id": "pkg:oci/northmes?repository_url=ghcr.io/northmes/northmes",
+          "subcomponents": [{ "@id": "pkg:npm/braces@3.0.3" }]
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "braces is installed only through @nestjs/graphql, ts-morph, @ts-morph/common, fast-glob and micromatch, which NorthMES uses in CLI tooling with glob patterns the project writes. The server never calls braces with input from a request, so a deeply nested pattern cannot reach it. Accepted risk A-05 in docs/security/risks.md."
+    }
+  ]
+}
