@@ -1,0 +1,12 @@
+[
+  {
+    "sha": "0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d",
+    "author": { "login": "github-actions[bot]", "id": 41898282, "type": "Bot" },
+    "commit": {
+      "author": {
+        "name": "github-actions[bot]",
+        "email": "41898282+github-actions[bot]@users.noreply.github.com"
+      }
+    }
+  }
+]

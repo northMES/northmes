@@ -1,0 +1,16 @@
+[
+  {
+    "sha": "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d",
+    "author": { "login": "a-contributor", "id": 1000001, "type": "User" },
+    "commit": {
+      "author": { "name": "A Contributor", "email": "1000001+a-contributor@users.noreply.github.com" }
+    }
+  },
+  {
+    "sha": "6f1c2a9e0b7d4c3a8e5f1b2d9c0a7e6f4b3d2c1a",
+    "author": null,
+    "commit": {
+      "author": { "name": "A Contributor", "email": "contributor@laptop.example" }
+    }
+  }
+]
