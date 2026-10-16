@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { ConfigError } from '@northmes/sdk/config';
 import { type AdminCommand, runAdminCommand } from './admin/admin-command.ts';
 import {

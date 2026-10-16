@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { type ModuleNames, moduleNames } from '@northmes/sdk';
 import { Client } from 'pg';
 import type { CatalogEntry } from '../catalog/check-catalog.ts';

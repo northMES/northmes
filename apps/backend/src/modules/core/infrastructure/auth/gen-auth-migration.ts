@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // pnpm --filter @northmes/backend gen:auth-migration <slug>: writes Better Auth's schema for the
 // options NorthMES runs with into a new core migration file (ADR 0010). It suits a database
 // without Better Auth's tables; after a Better Auth upgrade, the drift test in

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Controller, Get, Header, Inject } from '@nestjs/common';
 import { listingOf, PLUGIN_WEB_PATH, type PluginListing } from './plugin-web.ts';
 import { ServedWeb } from './served-web.ts';
