@@ -227,7 +227,10 @@ describe('checkCatalog', () => {
 
   it('E02-S01 image 0.5.0 outside range >=0.3.0 <0.5.0 is refused naming both versions', () => {
     const error = refusal(
-      [inRepoModule('planning', [], { northmes: '>=0.3.0 <0.5.0' }), plugin('acme-audit')],
+      [
+        inRepoModule('planning', [], { northmes: '>=0.3.0 <0.5.0' }),
+        plugin('acme-audit', [], { northmes: '>=0.0.0-0 <0.1.0-0' }),
+      ],
       { imageVersion: '0.5.0' },
     );
 

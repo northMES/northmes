@@ -15,7 +15,7 @@ function manifest(id: string, dependsOn: readonly string[], options: ManifestOpt
   return defineModule({
     id,
     version: '0.0.0',
-    northmes: '>=0.0.0-0 <0.1.0-0',
+    northmes: '>=0.0.0-0 <1.0.0-0',
     dependsOn,
     ...options,
   });

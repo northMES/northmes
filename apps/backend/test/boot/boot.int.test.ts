@@ -282,7 +282,7 @@ describe('boot with the in-repo modules as plain Nest modules', () => {
     const audit = writePlugin(dir, {
       id: 'acme-audit',
       version: '1.2.0',
-      northmes: '>=0.0.0-0 <0.1.0-0',
+      northmes: '>=0.0.0-0 <1.0.0-0',
       dependsOn: ['core'],
     });
 
