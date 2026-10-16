@@ -87,13 +87,16 @@ describe('security docs', () => {
     const entries = read('osv-scanner.toml').split('[[IgnoredVulns]]').slice(1);
 
     for (const entry of entries) {
-      const id = /^id = "([\w-]+)"$/m.exec(entry)?.[1] ?? '';
+      // A full GHSA or CVE identifier, so a truncated id such as "GHSA" fails.
+      const id =
+        /^id = "(GHSA(?:-[2-9cfghjmpqrvwx]{4}){3}|CVE-\d{4}-\d{4,})"$/m.exec(entry)?.[1] ?? '';
       const until = /^ignoreUntil = (\d{4}-\d{2}-\d{2})T/m.exec(entry)?.[1];
       const risk = /^reason = "Accepted risk (A-\d{2}):/m.exec(entry)?.[1];
       const row = risks.split('\n').find((line) => line.startsWith(`| ${risk} |`)) ?? '';
 
+      expect(id, 'osv-scanner.toml names a full advisory id').not.toBe('');
       expect(row, `${id} names an accepted risk`).not.toBe('');
-      expect(row, `${risk} names ${id}`).toContain(id);
+      expect(row.split(/[^\w-]+/), `${risk} names ${id}`).toContain(id);
       expect(row.split(' | ')[4], `${id} expires on the review date of ${risk}`).toBe(until);
     }
   });
