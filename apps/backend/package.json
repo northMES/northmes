@@ -59,6 +59,7 @@
     "@types/pg": "catalog:",
     "@types/semver": "catalog:",
     "@types/ws": "catalog:",
+    "fast-check": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
