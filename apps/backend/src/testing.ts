@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { randomBytes, randomUUIDv7 } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { ModuleManifest } from '@northmes/sdk';
@@ -461,6 +462,15 @@ export function fromNewClient(): { readonly 'x-forwarded-for': string } {
   return {
     'x-forwarded-for': `10.${(clients >> 16) & 255}.${(clients >> 8) & 255}.${clients & 255}`,
   };
+}
+
+/**
+ * The Origin header of a request from the web app on the API's own origin,
+ * NORTHMES_PUBLIC_ORIGIN, as a browser sends it on every POST. Password sign-in and the other
+ * Better Auth POST routes refuse a request without it (ADR 0011).
+ */
+export function fromBrowser(app: INestApplication): { readonly origin: string } {
+  return { origin: app.get(ConfigService).getOrThrow<string>('NORTHMES_PUBLIC_ORIGIN') };
 }
 
 /** A user that signIn created and signed in. */
