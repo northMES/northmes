@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { GridLayout, useContainerWidth } from 'react-grid-layout';
 import { columnsFor, gridLayout, readingOrder } from './dashboard-layout.ts';
 import type { DashboardTab } from './dashboard-tabs.graphql.ts';
