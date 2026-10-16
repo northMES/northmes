@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { NotFoundException } from '@nestjs/common';
 import { DEFAULT_STOCK_UNIT } from '@northmes/contracts';
 import { articleCreated, createArticle } from '@northmes/core-contracts';

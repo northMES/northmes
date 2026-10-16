@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { GraphQLSchema } from 'graphql';
 import { createYoga, type YogaServerInstance } from 'graphql-yoga';
 import { type GraphqlLimits, graphqlLimits, limitPlugins, rateLimitPlugin } from './limits.ts';

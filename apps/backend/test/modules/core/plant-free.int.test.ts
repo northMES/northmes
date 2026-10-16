@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { GraphQLSchemaHost } from '@nestjs/graphql';
 import { givenCompany, hostFactory, signIn } from '@northmes/backend/testing';
 import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
