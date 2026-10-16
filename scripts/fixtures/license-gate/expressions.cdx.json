@@ -1,0 +1,55 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "backend",
+      "version": "0.1.0",
+      "purl": "pkg:npm/%40northmes/backend@0.1.0",
+      "bom-ref": "pkg:npm/%40northmes/backend@0.1.0",
+      "group": "@northmes",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "dual-kit",
+      "version": "1.0.0",
+      "purl": "pkg:npm/dual-kit@1.0.0",
+      "bom-ref": "pkg:npm/dual-kit@1.0.0",
+      "licenses": [
+        {
+          "expression": "(MIT OR GPL-3.0-or-later)"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "bundle-kit",
+      "version": "1.0.0",
+      "purl": "pkg:npm/bundle-kit@1.0.0",
+      "bom-ref": "pkg:npm/bundle-kit@1.0.0",
+      "licenses": [
+        {
+          "expression": "MIT AND Zlib"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/%40northmes/backend@0.1.0",
+      "dependsOn": ["pkg:npm/dual-kit@1.0.0", "pkg:npm/bundle-kit@1.0.0"]
+    }
+  ]
+}
