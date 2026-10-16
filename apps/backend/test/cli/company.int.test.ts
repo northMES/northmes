@@ -4,7 +4,13 @@ import { randomBytes, randomUUIDv7 } from 'node:crypto';
 import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AuthService } from '../../src/modules/core/core/access/auth.service.ts';
-import { fromNewClient, givenCompany, hostFactory, queryAsCore } from '../../src/testing.ts';
+import {
+  fromBrowser,
+  fromNewClient,
+  givenCompany,
+  hostFactory,
+  queryAsCore,
+} from '../../src/testing.ts';
 import { runCli } from '../fixtures/cli-run.ts';
 import { useServerEnv } from '../fixtures/server-env.ts';
 
@@ -33,7 +39,11 @@ describe('northmes company', () => {
   async function signInWith(email: string, password: string) {
     const response = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        ...fromNewClient(),
+      },
       body: JSON.stringify({ email, password }),
     });
     return { status: response.status, sessionToken: response.headers.get('set-auth-token') };

@@ -486,7 +486,8 @@ export interface SignedIn {
 
 /**
  * Creates a user with a password through Better Auth, grants it roles, and signs it in the way the
- * web does (ADR 0010): POST /api/auth/sign-in/email, then GET /api/auth/token with the session
+ * web does (ADR 0010): POST /api/auth/sign-in/email from NORTHMES_PUBLIC_ORIGIN, as a browser
+ * sends it, then GET /api/auth/token with the session
  * token from set-auth-token as its bearer token, which answers with a JWT. The app must listen.
  */
 export async function signIn(
@@ -502,7 +503,7 @@ export async function signIn(
   const url = await app.getUrl();
   const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', ...fromNewClient() },
+    headers: { 'content-type': 'application/json', ...fromBrowser(app), ...fromNewClient() },
     body: JSON.stringify({ email, password }),
   });
   const sessionToken = signedIn.headers.get('set-auth-token');

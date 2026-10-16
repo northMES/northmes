@@ -71,7 +71,11 @@ describe('sign-in with Better Auth', () => {
 
     const response = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        ...fromNewClient(),
+      },
       body: JSON.stringify({ email: user.email, password: `${user.password}x` }),
     });
 
@@ -84,7 +88,11 @@ describe('sign-in with Better Auth', () => {
 
     const response = await fetch(`${url}/api/auth/sign-in/username`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        ...fromNewClient(),
+      },
       body: JSON.stringify({ username: user.username, password: user.password }),
     });
 
@@ -95,7 +103,11 @@ describe('sign-in with Better Auth', () => {
   it('E05-S05 sign-up is disabled', async () => {
     const response = await fetch(`${url}/api/auth/sign-up/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        ...fromNewClient(),
+      },
       body: JSON.stringify({
         email: 'new.user@example.invalid',
         password: 'a-long-enough-password',
@@ -148,7 +160,11 @@ describe('sign-in with Better Auth', () => {
     const { user, plant } = await reader();
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        ...fromNewClient(),
+      },
       body: JSON.stringify({ email: user.email, password: user.password }),
     });
 
@@ -166,7 +182,11 @@ describe('sign-in with Better Auth', () => {
   async function sessionTokenOf(user: { email: string; password: string }) {
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        ...fromNewClient(),
+      },
       body: JSON.stringify({ email: user.email, password: user.password }),
     });
     return signedIn.headers.get('set-auth-token') ?? '';
@@ -189,7 +209,11 @@ describe('sign-in with Better Auth', () => {
 
     const renamed = await fetch(`${url}/api/auth/update-user`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${sessionToken}` },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        authorization: `Bearer ${sessionToken}`,
+      },
       body: JSON.stringify({ username: `${user.username}_renamed` }),
     });
 
@@ -287,7 +311,11 @@ describe('sign-in with Better Auth', () => {
     const before = await send();
     const signedOut = await fetch(`${url}/api/auth/sign-out`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${sessionToken}` },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        authorization: `Bearer ${sessionToken}`,
+      },
       body: '{}',
     });
     const after = await send();
@@ -530,7 +558,7 @@ describe('sign-in with Better Auth', () => {
   function setNewPassword(authorization: string, currentPassword: string, newPassword: string) {
     return fetch(`${url}${NEW_PASSWORD_PATH}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization },
+      headers: { 'content-type': 'application/json', ...fromBrowser(testApp.app), authorization },
       body: JSON.stringify({ currentPassword, newPassword }),
     });
   }
@@ -625,7 +653,7 @@ describe('sign-in with Better Auth', () => {
   ) {
     return fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...client },
+      headers: { 'content-type': 'application/json', ...fromBrowser(testApp.app), ...client },
       body: JSON.stringify({ email, password }),
     });
   }
@@ -773,7 +801,11 @@ describe('sign-in without a trusted proxy', () => {
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const response = await fetch(`${url}/api/auth/sign-in/email`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', ...fromNewClient() },
+        headers: {
+          'content-type': 'application/json',
+          ...fromBrowser(testApp.app),
+          ...fromNewClient(),
+        },
         body: JSON.stringify({
           email: `nobody_${randomUUIDv7().slice(-12)}@example.test`,
           password: 'a wrong password',
