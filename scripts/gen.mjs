@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // pnpm gen writes the generated files that the repository commits; pnpm gen --check fails when one
 // of them differs from what pnpm gen would write (plan 06). Each stage generates into one temporary
 // directory, at the files' paths relative to the repository root, so a later stage reads what an

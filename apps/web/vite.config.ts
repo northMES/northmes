@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -66,6 +67,8 @@ function themeBoot(): Plugin {
 export default defineConfig(({ command }) => ({
   // Tailwind builds the one stylesheet, src/styles/app.css, which index.html links.
   plugins: [react(), tailwindcss(), themeBoot()],
+  // NORTHMES_SOURCEMAP=1 pnpm build writes a source map next to each asset, for debugging a build.
+  build: { sourcemap: process.env.NORTHMES_SOURCEMAP === '1' },
   // The dev server resolves workspace packages to their source, as the tests do (ADR 0058).
   ...(command === 'serve' && {
     resolve: { conditions: ['@northmes/source', ...defaultClientConditions] },

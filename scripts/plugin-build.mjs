@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // pnpm plugin:build <id>: builds a drop-in plugin (ADR 0037). Rolldown bundles src/manifest.ts and
 // src/server.ts into dist/, keeps every HOST_PROVIDED package external, so one copy of each exists
 // per process, and bundles everything else. The installable package (package.json, dist/ and

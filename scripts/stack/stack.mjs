@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The stack script (ADR 0058): the steps that pnpm dev, the end-to-end global setup and
 // handoff-demo share. It writes the dev configuration, starts Postgres through Testcontainers,
 // bootstraps the database roles, migrates and seeds.

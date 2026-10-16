@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import config from '../vite.config.ts';
 
@@ -31,5 +32,23 @@ describe("the web's dev server", () => {
     const { server } = config({ command: 'serve', mode: 'development' });
 
     expect(server?.proxy).toEqual({});
+  });
+});
+
+describe("the web's build", () => {
+  it('the web build writes source maps when NORTHMES_SOURCEMAP is 1', () => {
+    vi.stubEnv('NORTHMES_SOURCEMAP', '1');
+
+    const { build } = config({ command: 'build', mode: 'production' });
+
+    expect(build?.sourcemap).toBe(true);
+  });
+
+  it('the web build writes no source maps without NORTHMES_SOURCEMAP', () => {
+    vi.stubEnv('NORTHMES_SOURCEMAP', undefined);
+
+    const { build } = config({ command: 'build', mode: 'production' });
+
+    expect(build?.sourcemap).toBe(false);
   });
 });

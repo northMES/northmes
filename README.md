@@ -23,6 +23,8 @@ pnpm check    # lint, typecheck, generated files and the unit, integration and w
 pnpm e2e      # the end-to-end specs in Chromium against the built server
 ```
 
+`pnpm build` writes source maps for the backend; `NORTHMES_SOURCEMAP=1 pnpm build` writes them for the web app as well.
+
 `pnpm dev` prints the address of the web app and the dev admin to sign in as. The dev passwords are in `scripts/stack/seed.mjs`; they only ever reach the dev and test databases.
 
 ## Report a bug or ask for a feature

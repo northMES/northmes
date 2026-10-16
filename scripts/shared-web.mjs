@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The files the web build serves under /shared/, one per shared web specifier (ADR 0075). The import
 // map in apps/web/index.html maps each specifier to its file, so a plugin's
 // `import { useState } from 'react'` reaches the web build's own React. Each file reads the

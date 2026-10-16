@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The child processes of pnpm dev and pnpm demo: each starts from the repository root in a process
 // group of its own, prints its output under its name and stops with its group.
 
