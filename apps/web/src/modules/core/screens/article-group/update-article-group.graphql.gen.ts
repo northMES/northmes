@@ -4,17 +4,27 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
+/** The input of coreUpdateArticleGroup. */
 export type CoreUpdateArticleGroupInput = {
+  /** The group's code, unique within the company, at most 32 characters. */
   readonly code: string;
+  /** The version of the entity that the change was made on; the command is refused when the entity has changed since. */
   readonly expectedVersion: number;
+  /** The id of the entity the command changes. */
   readonly id: string | number;
+  /** The group's name, at most 200 characters. */
   readonly name: string;
+  /** The translations of the name. An update that leaves them out keeps them. */
   readonly translations?: ReadonlyArray<TranslationInput> | null | undefined;
 };
 
+/** One translation of a translatable field, as a command takes it. */
 export type TranslationInput = {
+  /** The translated field, such as name. */
   readonly field: string;
+  /** The language as a BCP 47 tag, such as en or de-AT. */
   readonly locale: string;
+  /** The text in that language. */
   readonly text: string;
 };
 

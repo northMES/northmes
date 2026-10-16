@@ -1,0 +1,146 @@
+---
+title: GraphQL API
+description: Call the NorthMES GraphQL API at /graphql. Sign in for a bearer token, name the plant, page through lists, read errors and stay within the limits.
+---
+
+NorthMES has one GraphQL API. The web app uses it, and your own clients can use it the same way. This page covers the endpoint, signing in, plants, lists, errors and limits. Every type, field, argument, query and mutation is described in the schema itself.
+
+## The schema
+
+The full schema is in [`schema/api.graphql`](https://github.com/northMES/northmes/blob/main/schema/api.graphql) in the NorthMES repository. The file is generated from the code, so it always matches the version it was committed with. Open the file at the tag of your NorthMES version to see the schema your installation serves.
+
+- Each root field starts with the GraphQL name of the module that owns it: `coreArticles` belongs to core, `planningProductionOrders` to planning.
+- Queries read. Each mutation runs one command, which checks its permission and its input before it changes anything.
+- A mutation takes one argument, `input`. Its fields are described in the schema, and an `expectedVersion` field takes the `version` of the entity you read.
+- Each description names the permission that a query or mutation needs, such as `core.article:read`.
+
+## Endpoint
+
+Send every operation to `/graphql` on your NorthMES host, as an HTTP `POST` with a JSON body:
+
+```sh
+curl https://<NORTHMES_HOST>/graphql \
+  -H 'content-type: application/json' \
+  -H "authorization: Bearer $JWT" \
+  -H 'x-northmes-plant: plant-1' \
+  -d '{"query":"{ coreArticles(first: 10) { edges { node { code name } } } }"}'
+```
+
+The API answers in JSON. It does not serve GraphiQL or another landing page. File uploads (multipart requests) are refused.
+
+## Sign in
+
+The API takes a short-lived JWT as a bearer token. A client gets one in two steps, as the web app does.
+
+<Steps>
+  <Step title="Sign in with email and password">
+    ```sh
+    curl -i https://<NORTHMES_HOST>/api/auth/sign-in/email \
+      -H 'content-type: application/json' \
+      -d '{"email":"planner@example.com","password":"..."}'
+    ```
+
+    The `set-auth-token` header of the answer holds the session token. Keep it secret: it lets its holder act as the user until the session ends.
+  </Step>
+  <Step title="Get a JWT with the session token">
+    ```sh
+    curl https://<NORTHMES_HOST>/api/auth/token \
+      -H "authorization: Bearer $SESSION_TOKEN"
+    ```
+
+    The answer is `{"token":"..."}`. Send that JWT as `authorization: Bearer <JWT>` with every GraphQL request. It lives five minutes, so get a new one from `/api/auth/token` before it expires.
+  </Step>
+</Steps>
+
+- The session token is not a bearer token for `/graphql`; only the JWT is.
+- A session lives 12 hours after sign-in or after its last renewal, and renews after an hour of use. It ends 24 hours after sign-in however much it is used.
+- `POST /api/auth/sign-out` with the session token as bearer token ends the session. The API then refuses the session's JWTs as well.
+- Sign-in is throttled per client address, and an account locks after repeated failed sign-ins.
+- A request without a valid JWT, or with the JWT of a blocked user, has no user. Its fields fail with `UNAUTHENTICATED`.
+- A user who signed in with a temporary password must choose a new one in the web app first. Until then every request is refused with `FORBIDDEN` and `core.password_change_required`.
+
+The API has no integration tokens yet, so a client signs in as a user and can do what that user's roles allow.
+
+## Choose the plant
+
+Most fields work at one plant. Name it by its slug in the `x-northmes-plant` header. The user must be able to open the plant, else the request fails with `FORBIDDEN` and `core.plant_forbidden`, and no field runs.
+
+A request without the header runs only the fields that company settings use: `coreCompanies`, `coreViewer`, and the queries and mutations on articles, article groups, roles and users. Those name the company in their `companyId` argument or input field. Any other root field, such as `coreDashboardTabs` or `planningProductionOrders`, is then refused with `FORBIDDEN` and `core.plant_forbidden`. To find the slugs of the plants a user may open, query `coreCompanies { name plants { slug name } }` without the header.
+
+## Lists and paging
+
+Lists such as `coreArticles`, `coreArticleGroups` and `coreUsers` are Relay connections, paged by opaque cursors.
+
+```graphql
+query Articles($after: String) {
+  coreArticles(first: 50, after: $after, orderBy: [{ field: CODE }]) {
+    totalCount
+    edges {
+      cursor
+      node { id code name }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}
+```
+
+- `first` reads up to that many items forward, from 1 to 100, 25 by default. To read the next page, pass the `endCursor` of the page you have as `after`.
+- `last` and `before` page backward. `before` together with `after` is refused.
+- `orderBy` takes up to three entries; the id breaks ties. A cursor belongs to its order: a cursor from another order is refused with `core.list.invalid_cursor`.
+- `search` takes up to 100 characters and ignores case.
+- `totalCount` counts the whole list with the same search and filters. The API counts only when you select it.
+- Archived rows stay hidden unless `includeArchived` is true.
+
+A refused argument fails with `BAD_USER_INPUT` and `core.list.bad_argument`.
+
+## Errors
+
+Errors follow the GraphQL format: the answer has an `errors` list, and each error has a `message`, a `path` and `extensions`.
+
+```json
+{
+  "errors": [
+    {
+      "message": "Article 01920000-0000-7000-8000-000000000001 is at version 4, and the change was made on version 3",
+      "path": ["coreUpdateArticle"],
+      "extensions": {
+        "code": "CONFLICT",
+        "errorCode": "core.version_conflict"
+      }
+    }
+  ],
+  "data": null
+}
+```
+
+- `extensions.code` is the kind of error: `BAD_USER_INPUT`, `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `PRECONDITION`, `UNAVAILABLE` or `RATE_LIMITED`.
+- `extensions.errorCode` is a stable NorthMES code, such as `core.forbidden` for a missing permission or `core.version_conflict` for a change made on an older version. Codes are never renamed after a release.
+- `extensions.details` holds values that a code documents, such as `retryAfterSeconds` for `core.rate_limited`.
+- An input that its command refuses fails with `BAD_USER_INPUT` and `extensions.fieldErrors`: one entry per problem, each with the `path` of the input field, a `message` and a `code`.
+- Any other failure reaches the client masked, as the message `Unexpected error.` with its `path` and no details.
+
+## Limits
+
+Every request must stay within these limits. Each refusal names the limit, so the client knows what to change.
+
+| Limit | Value | When it is over |
+|---|---|---|
+| Request body | 100,000 bytes | HTTP 413; a `POST` without `Content-Length` gets 411 |
+| Tokens in one document | 2,000 | refused while the document is parsed |
+| Depth of nested fields | 12 | refused while the document is validated |
+| Aliases in one document | 15 | refused while the document is validated |
+| Cost of one operation | 20,000 | `BAD_USER_INPUT` with `core.operation_too_costly` and the cost in `details` |
+| Rate | 200,000 per minute | HTTP 429 with `Retry-After`, `RATE_LIMITED` and `core.rate_limited` |
+
+### Cost
+
+The API prices an operation before it runs any field:
+
+- each object costs 1, and a scalar field costs nothing;
+- a list multiplies the cost of one item by the number of items it may return: `first` or `last` for a connection's edges, else 25.
+
+`coreArticles(first: 50)` with `totalCount`, `pageInfo` and each article's `articleGroup` costs 152: the connection 1, 50 edges times 3 (the edge, the article and its group), and `pageInfo` 1. `coreArticles(first: 100)` that selects only `edges { node { id plants { slug } } }` costs 2,701: the connection 1, then 100 edges times 27 (the edge 1, the article 1 and its `plants` 25, since `plants` takes no `first`).
+
+### Rate
+
+Each operation spends 100 plus its cost from a budget of 200,000 per minute. The budget is per signed-in user, or per client address for a request without a user. That allows about 2,000 small operations a minute, or 9 of the costliest, which spend 20,100 each. Each NorthMES server process counts on its own.

@@ -4,8 +4,11 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
+/** The input of coreRemoveRoleAssignment. */
 export type CoreRemoveRoleAssignmentInput = {
+  /** The id of the role assignment. */
   readonly id: string | number;
+  /** Why the change is made, at most 500 characters. */
   readonly reason?: string | null | undefined;
 };
 

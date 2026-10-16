@@ -4,21 +4,33 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
+/** The kind of a scope where a role is held. */
 export type ScopeKind =
+  /** A company. */
   | 'COMPANY'
+  /** A plant of a company. */
   | 'PLANT';
 
+/** The direction of one orderBy entry of a list. */
 export type SortDirection =
+  /** Ascending: A to Z, oldest first, smallest first. */
   | 'ASC'
+  /** Descending: Z to A, newest first, largest first. */
   | 'DESC';
 
+/** One entry of the User list's orderBy. */
 export type UserOrderBy = {
+  /** The direction to sort in, ascending by default. */
   readonly direction?: SortDirection | null | undefined;
+  /** The field to sort by. */
   readonly field: UserSortField;
 };
 
+/** The fields the User list sorts by. */
 export type UserSortField =
+  /** Sorts by name. */
   | 'NAME'
+  /** Sorts by username. */
   | 'USERNAME';
 
 export type CoreUsersQueryVariables = Exact<{

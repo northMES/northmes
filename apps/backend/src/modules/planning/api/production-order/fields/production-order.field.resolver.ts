@@ -13,11 +13,14 @@ export class ProductionOrderFieldResolver {
   constructor(@Inject(ArticleService) private readonly articles: ArticleService) {}
 
   /**
-   * The article the order makes, or null when core has none at the request's scopes, and
-   * core.forbidden without core.article:read. The request's core.article loader reads the articles
-   * of every order in a list with one query of core's ArticleService.
+   * The request's core.article loader reads the articles of every order in a list with one query
+   * of core's ArticleService.
    */
-  @ResolveField(() => Article, { nullable: true })
+  @ResolveField(() => Article, {
+    nullable: true,
+    description:
+      "The article the order makes, or null when core has none at the request's scopes. Without core.article:read it is null with core.forbidden.",
+  })
   article(
     @Parent() order: ProductionOrderRecord,
     @Context() context: RequestContext,
