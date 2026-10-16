@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { buildSchema } from 'graphql';
 import { describe, expect, it } from 'vitest';
 import { type GraphqlLimits, graphqlLimits } from '../../src/graphql/limits.ts';

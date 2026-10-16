@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 
 import { createHash, createHmac, pbkdf2Sync, randomBytes } from 'node:crypto';
 import { bootstrapEnvSchema, loadEnv, readSecrets } from '@northmes/sdk/config';
