@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Validators of dispatch.releaseJob that fail instead of answering in time: SlowCheck answers after
 // its time limit, and BrokenCheck of the fixture module broken-rules throws on every run.
 import { Module } from '@nestjs/common';

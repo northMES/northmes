@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Fixture modules with consumers of core's article events.
 import { Module } from '@nestjs/common';
 import { articleCreated, articleUpdated } from '@northmes/core-contracts';

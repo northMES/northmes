@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // A fixture plugin whose consumer records each core.article.created event it gets, and whether
 // its transaction reads the event's row, which only a transaction at the event's scope does.
 import { Module } from '@nestjs/common';

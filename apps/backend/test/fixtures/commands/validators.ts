@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Fixture modules release-limits and audit-rules: each vetoes every dispatch.releaseJob.
 import { Module } from '@nestjs/common';
 import { CommandValidator } from '@northmes/sdk/commands';
