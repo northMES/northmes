@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { ComponentProps, ReactNode } from 'react';
 import { Button } from '../../primitives/button.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../primitives/tooltip.tsx';

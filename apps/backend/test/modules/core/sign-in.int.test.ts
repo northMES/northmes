@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { randomUUIDv7 } from 'node:crypto';
 import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';

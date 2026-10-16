@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 
 /**
  * The permissions of the core module, resource to actions (ADR 0010). northmes migrate writes each

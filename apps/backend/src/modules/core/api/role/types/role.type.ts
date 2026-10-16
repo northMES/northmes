@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Field, ID, Int, ObjectType, registerEnumType } from '@nestjs/graphql';
 
 /** Where a role comes from. */

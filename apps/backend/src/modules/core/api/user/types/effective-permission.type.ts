@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Field, ObjectType } from '@nestjs/graphql';
 import { Permission } from '../../role/types/permission.type.ts';
 import { RoleAssignment } from '../../role-assignment/types/role-assignment.type.ts';

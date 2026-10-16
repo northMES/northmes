@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 
 /** A site of a company where production happens (GLOSSARY.md), at a plant node (ADR 0007). */
