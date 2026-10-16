@@ -4,16 +4,27 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
+/** The input of coreCreateArticle. */
 export type CoreCreateArticleInput = {
+  /** Assigns the article to every plant of the company, those created later included. */
   readonly allPlants?: boolean | null | undefined;
+  /** The id of an active article group of the company; an empty value picks none. */
   readonly articleGroupId?: string | null | undefined;
+  /** The article number, unique within the company, at most 32 characters. */
   readonly code: string;
+  /** The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company. */
   readonly companyId?: string | null | undefined;
+  /** The id of the new entity, a UUID the client generates, so a retry finds the first. */
   readonly id: string | number;
+  /** The article's name, at most 200 characters. */
   readonly name: string;
+  /** A note on the article, at most 2000 characters; an empty note removes it. */
   readonly note?: string | null | undefined;
+  /** The slugs of the plants the article is assigned to. Without plants or allPlants, a new article is assigned to the request's plant. */
   readonly plants?: ReadonlyArray<string> | null | undefined;
+  /** The code of the unit the article's quantities are counted in. A new article without one counts in pieces. */
   readonly stockUnit?: string | null | undefined;
+  /** The translations of the name; an empty list removes them. */
   readonly translations?: ReadonlyArray<TranslationInput> | null | undefined;
 };
 
@@ -28,9 +39,13 @@ export type StockUnit =
   /** Pieces (pcs) */
   | 'PIECE';
 
+/** One translation of a translatable field, as a command takes it. */
 export type TranslationInput = {
+  /** The translated field, such as name. */
   readonly field: string;
+  /** The language as a BCP 47 tag, such as en or de-AT. */
   readonly locale: string;
+  /** The text in that language. */
   readonly text: string;
 };
 

@@ -62,7 +62,10 @@ export const translations = z
       }
       seen.add(key);
     });
-  });
+  })
+  .describe(
+    'The translations of the translatable fields, at most one per field and language and 50 in all.',
+  );
 
 /** A translatable text: its value in the company's data language and its translations. */
 export interface LocalizedText {

@@ -16,11 +16,11 @@ import { Article } from '../types/article.type.ts';
 export class ArticleFieldResolver {
   constructor(@Inject(ArticleGroupService) private readonly groups: ArticleGroupService) {}
 
-  /**
-   * The article group the article picked, also an archived one, or null. The request's
-   * core.articleGroup loader reads the groups of every article in a list with one query.
-   */
-  @ResolveField(() => ArticleGroup, { nullable: true })
+  /** The request's core.articleGroup loader reads the groups of every article in a list with one query. */
+  @ResolveField(() => ArticleGroup, {
+    nullable: true,
+    description: 'The article group the article picked, also an archived one, or null.',
+  })
   async articleGroup(
     @Parent() article: ArticleRecord,
     @Context() context: RequestContext,
