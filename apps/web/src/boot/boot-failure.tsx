@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { CircleAlert, RotateCw, WifiOff } from 'lucide-react';
 import { useEffect } from 'react';
 import { SkipLink } from '../ui/components/skip-link/index.ts';

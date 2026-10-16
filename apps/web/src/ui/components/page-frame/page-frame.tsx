@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { classifyError } from '@northmes/web-sdk';
 import { CircleAlert, Copy, type LucideIcon, RotateCw } from 'lucide-react';
 import { type ReactNode, useEffect, useRef, useState } from 'react';

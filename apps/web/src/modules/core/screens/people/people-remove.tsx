@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useLazyQuery } from '@apollo/client/react';
 import { RemoveRole, roleLoss } from '../../components/remove-role/index.ts';
 import { usePlaces } from '../../use-places.ts';
