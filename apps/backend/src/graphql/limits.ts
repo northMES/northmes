@@ -37,7 +37,7 @@ export interface GraphqlLimits {
  * and a cost of 20 000 allows a table of 100 rows with a few related objects but not 100 rows with
  * 100 nested rows each. Express's JSON limit is 100 kB, so the cap for every other type is the same.
  * A budget of 200 000 a minute with a base cost of 100 lets a session load a 100-row list every
- * second, and holds a client to about 2000 cheap or 10 of the costliest operations a minute.
+ * second, and holds a client to about 2000 cheap or 9 of the costliest operations a minute.
  */
 export const graphqlLimits: GraphqlLimits = {
   maxBodyBytes: 100_000,

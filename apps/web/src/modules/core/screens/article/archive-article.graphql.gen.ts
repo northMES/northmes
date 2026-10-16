@@ -4,8 +4,11 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
+/** The input of coreArchiveArticle. */
 export type CoreArchiveArticleInput = {
+  /** The version of the entity that the change was made on; the command is refused when the entity has changed since. */
   readonly expectedVersion: number;
+  /** The id of the entity the command changes. */
   readonly id: string | number;
 };
 

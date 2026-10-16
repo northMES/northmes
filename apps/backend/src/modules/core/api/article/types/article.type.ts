@@ -23,43 +23,59 @@ registerEnumType(StockUnit, {
  * article belongs to the company and is assigned to plants (ADR 0073). Core owns the type; another
  * module returns it from a field of its own through core's API.
  */
-@ObjectType('Article')
+@ObjectType('Article', {
+  description:
+    'Something the company makes or consumes, identified by its article number. Every article belongs to the company and is assigned to plants.',
+})
 export class Article {
-  @Field(() => ID) id!: string;
-  /** The article number, unique within the company. */
-  @Field(() => String) code!: string;
-  @Field(() => String) name!: string;
-  /** The translations of the name, such as into English, in the order they were saved. */
-  @Field(() => [Translation]) translations!: Translation[];
-  /** The unit the article's quantities are counted in, pieces unless someone chose another. */
-  @Field(() => StockUnit) stockUnit!: string;
-  /** A note on the article, or null. */
-  @Field(() => String, { nullable: true }) note!: string | null;
-  /**
-   * The integration that created the article through coreUpsertArticle, such as Pyramid, or null
-   * for an article created in NorthMES.
-   */
-  @Field(() => String, { nullable: true }) source!: string | null;
-  /**
-   * The article is assigned to every plant of the company, those created later included
-   * (ADR 0073). Its plants list is then empty.
-   */
-  @Field(() => Boolean) allPlants!: boolean;
-  /**
-   * The plants the article is assigned to, sorted by name. A plant's lists and pickers show only
-   * the articles assigned to it or to All plants; an article with neither shows only in company
-   * views.
-   */
-  @Field(() => [Plant]) plants!: Plant[];
-  /** Grows by one with every change to the article; an update sends it as expectedVersion. */
-  @Field(() => Int) version!: number;
-  /**
-   * When the article was archived, or null while it is active. An archived article is hidden from
-   * coreArticles unless includeArchived is true, and cannot be changed until it is restored.
-   */
-  @Field(() => GraphQLISODateTime, { nullable: true }) archivedAt!: Date | null;
-  /** When the article was created. */
-  @Field(() => GraphQLISODateTime) createdAt!: Date;
-  /** When the article last changed, its creation included; the articles list sorts by it. */
-  @Field(() => GraphQLISODateTime) updatedAt!: Date;
+  @Field(() => ID, { description: "The article's id." }) id!: string;
+  @Field(() => String, { description: 'The article number, unique within the company.' })
+  code!: string;
+  @Field(() => String, { description: "The article's name." }) name!: string;
+  @Field(() => [Translation], {
+    description:
+      'The translations of the name, such as into English, in the order they were saved.',
+  })
+  translations!: Translation[];
+  @Field(() => StockUnit, {
+    description:
+      "The unit the article's quantities are counted in, pieces unless someone chose another.",
+  })
+  stockUnit!: string;
+  @Field(() => String, { nullable: true, description: 'A note on the article, or null.' })
+  note!: string | null;
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The integration that created the article through coreUpsertArticle, such as Pyramid, or null for an article created in NorthMES.',
+  })
+  source!: string | null;
+  @Field(() => Boolean, {
+    description:
+      'The article is assigned to every plant of the company, those created later included. Its plants list is then empty.',
+  })
+  allPlants!: boolean;
+  @Field(() => [Plant], {
+    description:
+      "The plants the article is assigned to, sorted by name. A plant's lists and pickers show only the articles assigned to it or to All plants; an article with neither shows only in company views.",
+  })
+  plants!: Plant[];
+  @Field(() => Int, {
+    description:
+      'Grows by one with every change to the article; an update sends it as expectedVersion.',
+  })
+  version!: number;
+  @Field(() => GraphQLISODateTime, {
+    nullable: true,
+    description:
+      'When the article was archived, or null while it is active. An archived article is hidden from coreArticles unless includeArchived is true, and cannot be changed until it is restored.',
+  })
+  archivedAt!: Date | null;
+  @Field(() => GraphQLISODateTime, { description: 'When the article was created.' })
+  createdAt!: Date;
+  @Field(() => GraphQLISODateTime, {
+    description:
+      'When the article last changed, its creation included; the articles list sorts by it.',
+  })
+  updatedAt!: Date;
 }
