@@ -139,7 +139,7 @@ The API prices an operation before it runs any field:
 - each object costs 1, and a scalar field costs nothing;
 - a list multiplies the cost of one item by the number of items it may return: `first` or `last` for a connection's edges, else 25.
 
-`coreArticles(first: 50)` with `totalCount`, `pageInfo` and each article's `articleGroup` costs 152: the connection 1, 50 edges times 3 (the edge, the article and its group), and `pageInfo` 1. A list of 100 articles with each article's plants costs 2,701, because each article's `plants` counts as 25.
+`coreArticles(first: 50)` with `totalCount`, `pageInfo` and each article's `articleGroup` costs 152: the connection 1, 50 edges times 3 (the edge, the article and its group), and `pageInfo` 1. `coreArticles(first: 100)` that selects only `edges { node { id plants { slug } } }` costs 2,701: the connection 1, then 100 edges times 27 (the edge 1, the article 1 and its `plants` 25, since `plants` takes no `first`).
 
 ### Rate
 
