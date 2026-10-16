@@ -9,9 +9,15 @@ import { documentFiles, generateDocuments } from '../codegen.ts';
 const webDir = resolve(import.meta.dirname, '..');
 const committedSchema = readFileSync(resolve(webDir, '../../schema/api.graphql'), 'utf8');
 
-/** The committed schema with one field's line replaced inside the block of `type`. */
+/** The description block of a field, which a removed field takes with it. */
+const fieldDescription = String.raw`(?:  """(?:(?!""")[\s\S])*?"""\n)?`;
+
+/**
+ * The committed schema with one field's line, and its description, replaced inside the block of
+ * `type`.
+ */
 function schemaWith(type: string, line: string, replacement: string): string {
-  const block = new RegExp(`(type ${type} \\{[^}]*?)  ${line}\\n`);
+  const block = new RegExp(`(type ${type} \\{[^}]*?)${fieldDescription}  ${line}\\n`);
   expect(committedSchema).toMatch(block);
   return committedSchema.replace(block, (_, head: string) => `${head}${replacement}`);
 }

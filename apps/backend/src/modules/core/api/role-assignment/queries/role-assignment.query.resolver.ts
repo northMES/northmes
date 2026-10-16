@@ -13,12 +13,10 @@ import { RoleAssignment } from '../types/role-assignment.type.ts';
 export class RoleAssignmentQueryResolver {
   constructor(@Inject(RoleAssignmentService) private readonly assignments: RoleAssignmentService) {}
 
-  /**
-   * Every role assignment at the request's plant, by the holder's name: the people of the plant,
-   * whom a plant admin manages in plant settings. Roles at the company are left out. It needs
-   * core.user:read at the plant.
-   */
-  @Query(() => [RoleAssignment])
+  @Query(() => [RoleAssignment], {
+    description:
+      "Every role assignment at the request's plant, by the holder's name. Roles at the company are left out. Needs core.user:read at the plant.",
+  })
   corePlantRoleAssignments(): Promise<RoleAssignmentRecord[]> {
     return this.assignments.atPlant();
   }

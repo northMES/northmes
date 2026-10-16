@@ -4,12 +4,18 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
+/** Where a role comes from. */
 export type RoleOrigin =
+  /** A role the company made from module permissions. */
   | 'CUSTOM'
+  /** A module's default role, which cannot be edited. */
   | 'MODULE';
 
+/** The kind of a scope where a role is held. */
 export type ScopeKind =
+  /** A company. */
   | 'COMPANY'
+  /** A plant of a company. */
   | 'PLANT';
 
 export type CoreRolesQueryVariables = Exact<{
