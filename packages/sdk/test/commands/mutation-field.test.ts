@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';

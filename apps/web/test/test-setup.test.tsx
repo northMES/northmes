@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { getConfig } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { announce } from '../src/ui/lib/announce.ts';

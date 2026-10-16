@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { gql } from '@apollo/client';
 import { createNorthmesClient } from '@northmes/web-sdk';
 import { afterEach, describe, expect, it, vi } from 'vitest';

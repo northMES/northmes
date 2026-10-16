@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { applyDecorators, Controller, SetMetadata } from '@nestjs/common';
 import { API_MAJOR } from '@northmes/contracts';
 

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client';
 import { describe, expect, it } from 'vitest';
 import { classifyError } from '../src/index.ts';

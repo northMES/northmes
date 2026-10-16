@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 export { API_MAJOR, apiPath } from './api-path.ts';
 export {
   type CommandContract,

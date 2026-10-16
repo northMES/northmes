@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { API_MAJOR, apiPath } from '@northmes/contracts';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
