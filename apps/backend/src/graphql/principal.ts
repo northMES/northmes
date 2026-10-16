@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { toGraphQLError } from '@northmes/sdk/errors';
 import type { RequestContext } from '@northmes/sdk/graphql';
 import { isAsyncIterable, type Plugin } from 'graphql-yoga';

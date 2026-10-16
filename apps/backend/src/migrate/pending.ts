@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Client } from 'pg';
 import { BootError } from '../boot/boot-error.ts';
 import type { CatalogEntry } from '../catalog/check-catalog.ts';
