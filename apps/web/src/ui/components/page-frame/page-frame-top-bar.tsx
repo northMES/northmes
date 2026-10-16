@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { createContext, useContext } from 'react';
 
 /** One crumb of the breadcrumb: its label and the href of its page, or plain text without one. */
