@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { CommandContract, EventContract } from '@northmes/contracts';
 import type { Transaction } from 'kysely';
 import type { z } from 'zod';

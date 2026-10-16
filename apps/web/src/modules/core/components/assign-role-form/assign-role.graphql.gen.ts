@@ -4,17 +4,27 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
+/** The input of coreAssignRole. */
 export type CoreAssignRoleInput = {
+  /** The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company. */
   readonly companyId?: string | null | undefined;
+  /** The id of the new entity, a UUID the client generates, so a retry finds the first. */
   readonly id: string | number;
+  /** Why the change is made, at most 500 characters. */
   readonly reason?: string | null | undefined;
+  /** The id of the role of the company. */
   readonly roleId: string | number;
+  /** The id of the company or plant where the user holds the role. */
   readonly scopeId: string | number;
+  /** The id of the user who gets the role. */
   readonly userId: string | number;
 };
 
+/** The kind of a scope where a role is held. */
 export type ScopeKind =
+  /** A company. */
   | 'COMPANY'
+  /** A plant of a company. */
   | 'PLANT';
 
 export type CoreAssignRoleMutationVariables = Exact<{

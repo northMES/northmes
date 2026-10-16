@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { defineCommandContract, stockUnit, translations, version } from '@northmes/contracts';
 import { z } from 'zod';
 import { atMost, tooLong } from './messages.ts';
@@ -17,12 +18,14 @@ export const articleFields = z.object({
     .string()
     .trim()
     .min(1, 'Enter an article number.')
-    .max(32, { error: tooLong('Article number', 32) }),
+    .max(32, { error: tooLong('Article number', 32) })
+    .describe('The article number, unique within the company, at most 32 characters.'),
   name: z
     .string()
     .trim()
     .min(1, 'Enter a name.')
-    .max(200, { error: tooLong('Name', 200) }),
+    .max(200, { error: tooLong('Name', 200) })
+    .describe("The article's name, at most 200 characters."),
 });
 
 /**
@@ -71,8 +74,14 @@ export const articleGroupId = z
  * existing one keeps what it has.
  */
 export const articleClassification = z.object({
-  stockUnit: stockUnit.optional(),
-  note: articleNote.optional(),
+  stockUnit: stockUnit
+    .describe(
+      "The code of the unit the article's quantities are counted in. A new article without one counts in pieces.",
+    )
+    .optional(),
+  note: articleNote
+    .describe('A note on the article, at most 2000 characters; an empty note removes it.')
+    .optional(),
 });
 
 /**
@@ -81,8 +90,12 @@ export const articleClassification = z.object({
  * an existing article's value; an empty list of translations removes them.
  */
 const articleDetails = articleClassification.extend({
-  translations: articleTranslations.optional(),
-  articleGroupId: articleGroupId.optional(),
+  translations: articleTranslations
+    .describe('The translations of the name; an empty list removes them.')
+    .optional(),
+  articleGroupId: articleGroupId
+    .describe('The id of an active article group of the company; an empty value picks none.')
+    .optional(),
 });
 
 /** The refusal of All plants together with a list of plants. */
@@ -93,7 +106,14 @@ const plantsOrAllPlants = 'Choose plants or All plants, not both.';
  * covers plants the company creates later. A list together with All plants is refused on plants.
  */
 const articlePlants = z
-  .object({ allPlants: z.boolean(), plants: z.array(plantSlug) })
+  .object({
+    allPlants: z
+      .boolean()
+      .describe('Assigns the article to every plant of the company, those created later included.'),
+    plants: z
+      .array(plantSlug)
+      .describe('The slugs of the plants the article is assigned to; empty with allPlants.'),
+  })
   .refine(({ allPlants, plants }) => !(allPlants && plants.length > 0), {
     error: plantsOrAllPlants,
     path: ['plants'],
@@ -108,12 +128,24 @@ const articlePlants = z
  */
 export const createArticle = defineCommandContract({
   name: 'core.createArticle',
+  description:
+    "Creates an article of the company, assigned to the plants or to All plants that the input names, else to the request's plant. Needs core.article:create; a code that another article of the company uses is refused with core.code_taken.",
   target: 'new',
   fields: articleFields
     .extend(articleDetails.shape)
     .extend({
-      allPlants: z.boolean().optional(),
-      plants: z.array(plantSlug).optional(),
+      allPlants: z
+        .boolean()
+        .describe(
+          'Assigns the article to every plant of the company, those created later included.',
+        )
+        .optional(),
+      plants: z
+        .array(plantSlug)
+        .describe(
+          "The slugs of the plants the article is assigned to. Without plants or allPlants, a new article is assigned to the request's plant.",
+        )
+        .optional(),
       companyId: settingsCompanyId,
     })
     .refine(({ allPlants, plants }) => !(allPlants === true && (plants?.length ?? 0) > 0), {
@@ -131,6 +163,8 @@ export const createArticle = defineCommandContract({
  */
 export const updateArticle = defineCommandContract({
   name: 'core.updateArticle',
+  description:
+    'Changes the code and name of an article, and its translations, stock unit, note and group when the input names them. Needs core.article:update; a code that another article uses is refused with core.code_taken.',
   target: 'existing',
   fields: articleFields.extend(articleDetails.shape),
   permission: 'core.article:update',
@@ -143,6 +177,8 @@ export const updateArticle = defineCommandContract({
  */
 export const archiveArticle = defineCommandContract({
   name: 'core.archiveArticle',
+  description:
+    'Archives an article: lists hide it, it keeps its code, and it cannot be changed until it is restored. Needs core.article:archive.',
   target: 'existing',
   fields: z.object({}),
   permission: 'core.article:archive',
@@ -154,6 +190,8 @@ export const archiveArticle = defineCommandContract({
  */
 export const restoreArticle = defineCommandContract({
   name: 'core.restoreArticle',
+  description:
+    'Restores an archived article, so lists show it and it can be changed again. Needs core.article:archive.',
   target: 'existing',
   fields: z.object({}),
   permission: 'core.article:archive',
@@ -167,6 +205,8 @@ export const restoreArticle = defineCommandContract({
  */
 export const setArticlePlants = defineCommandContract({
   name: 'core.setArticlePlants',
+  description:
+    'Replaces the plants of an article: a list of plants, All plants, or neither for an article that only company views show. Needs core.article:assign at the company.',
   target: 'existing',
   fields: articlePlants,
   permission: 'core.article:assign',
@@ -204,15 +244,35 @@ export const articleSource = z
  */
 export const upsertArticle = defineCommandContract({
   name: 'core.upsertArticle',
+  description:
+    'Creates or changes the article with this article number in the company, for an ERP that pushes its articles. Needs core.article:create, and core.article:update or core.article:assign for the changes it makes to an existing article.',
   target: 'none',
   fields: articleFields
     .extend(articleDetails.shape)
     .extend({
-      id: z.uuid(),
-      source: articleSource,
-      allPlants: z.boolean().optional(),
-      plants: z.array(plantSlug).optional(),
-      expectedVersion: version.optional(),
+      id: z
+        .uuid()
+        .describe('The id of the article if the command creates it, a UUID the client generates.'),
+      source: articleSource.describe(
+        'The integration that sends the article, such as Pyramid. A new article keeps it as its source.',
+      ),
+      allPlants: z
+        .boolean()
+        .describe(
+          'Assigns the article to every plant of the company, those created later included.',
+        )
+        .optional(),
+      plants: z
+        .array(plantSlug)
+        .describe(
+          "The slugs of the plants the article is assigned to. Without plants or allPlants, a new article is assigned to the request's plant.",
+        )
+        .optional(),
+      expectedVersion: version
+        .describe(
+          'The version a change to an existing article was made on, else the version found.',
+        )
+        .optional(),
       companyId: settingsCompanyId,
     })
     .refine(({ allPlants, plants }) => !(allPlants === true && (plants?.length ?? 0) > 0), {

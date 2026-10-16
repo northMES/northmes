@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { z } from 'zod';
 import { ConfigError } from './config-error.ts';
 

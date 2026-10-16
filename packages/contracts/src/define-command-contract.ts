@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { z } from 'zod';
 
 /**
@@ -23,6 +24,8 @@ type CommandValidation =
 export type CommandContractOptions = {
   /** `<module GraphQL name>.<command>`, such as planning.releaseProductionOrder. */
   readonly name: string;
+  /** What the command does, in a sentence or two: its mutation's description in the schema. */
+  readonly description?: string;
   readonly target: CommandTarget;
   /** The fields a person edits, with their refinements. Forms validate these (ADR 0017). */
   readonly fields: ObjectSchema;
@@ -58,7 +61,13 @@ export const timestamp = z.codec(z.iso.datetime({ offset: true }), z.date(), {
 function withId<Shape extends z.core.$ZodShape, Config extends z.core.$ZodObjectConfig>(
   fields: z.ZodObject<Shape, Config>,
 ) {
-  return fields.extend({ id: z.uuid() });
+  return fields.extend({
+    id: z
+      .uuid()
+      .describe(
+        'The id of the new entity, a UUID the client generates, so a retry finds the first.',
+      ),
+  });
 }
 
 /**
@@ -68,7 +77,12 @@ function withId<Shape extends z.core.$ZodShape, Config extends z.core.$ZodObject
 function withIdAndVersion<Shape extends z.core.$ZodShape, Config extends z.core.$ZodObjectConfig>(
   fields: z.ZodObject<Shape, Config>,
 ) {
-  return fields.extend({ id: z.uuid(), expectedVersion: version });
+  return fields.extend({
+    id: z.uuid().describe('The id of the entity the command changes.'),
+    expectedVersion: version.describe(
+      'The version of the entity that the change was made on; the command is refused when the entity has changed since.',
+    ),
+  });
 }
 
 /**

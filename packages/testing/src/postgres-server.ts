@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { readFileSync } from 'node:fs';
 import { PostgreSqlContainer } from '@testcontainers/postgresql';
 import { newRunCredentials } from './credentials.ts';

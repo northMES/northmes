@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 
 /** The message of a text over its limit: the field, the allowed range and the length typed. */
 export function tooLong(label: string, max: number) {

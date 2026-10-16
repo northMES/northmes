@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Server-only: the binding of a module's operation declarations to its service, and the operation
 // runner that every surface calls (ADR 0073).
 export type {

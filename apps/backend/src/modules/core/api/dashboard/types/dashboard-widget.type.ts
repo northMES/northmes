@@ -15,7 +15,19 @@ export enum DashboardWidgetType {
   CONTRIBUTION = 'contribution',
 }
 
-registerEnumType(DashboardWidgetType, { name: 'DashboardWidgetType' });
+registerEnumType(DashboardWidgetType, {
+  name: 'DashboardWidgetType',
+  description: 'What a dashboard widget shows.',
+  valuesMap: {
+    LIST: { description: 'A list, one of the four demo types.' },
+    TABLE: { description: 'A table, one of the four demo types.' },
+    VALUE: { description: 'One value, one of the four demo types.' },
+    CHART: { description: 'A chart, one of the four demo types.' },
+    CONTRIBUTION: {
+      description: 'A widget that a module or plugin contributes, named by contribution.',
+    },
+  },
+});
 
 /** A widget's size, a fixed width and height in grid units (design shell-454). */
 export enum DashboardWidgetSize {
@@ -26,26 +38,40 @@ export enum DashboardWidgetSize {
   WIDE = 'wide',
 }
 
-registerEnumType(DashboardWidgetSize, { name: 'DashboardWidgetSize' });
+registerEnumType(DashboardWidgetSize, {
+  name: 'DashboardWidgetSize',
+  description: "A widget's size, a fixed width and height in grid units.",
+  valuesMap: {
+    SMALL: { description: '3 columns wide and 2 rows high.' },
+    MEDIUM: { description: '4 columns wide and 4 rows high.' },
+    LARGE: { description: '6 columns wide and 4 rows high.' },
+    TALL: { description: '6 columns wide and 6 rows high.' },
+    WIDE: { description: '12 columns wide and 4 rows high.' },
+  },
+});
 
 /** One widget placed on a dashboard tab, with its place in grid units at 12 columns. */
-@ObjectType('DashboardWidget')
+@ObjectType('DashboardWidget', {
+  description: 'One widget placed on a dashboard tab, with its place in grid units at 12 columns.',
+})
 export class DashboardWidget {
-  /** The widget's id, unique within its tab. */
-  @Field(() => ID) id!: string;
-  @Field(() => DashboardWidgetType) type!: DashboardWidgetType;
-  /**
-   * The id of the contribution a CONTRIBUTION widget shows, such as example-article-count.count;
-   * null for the other types. The web draws the module's widget for it.
-   */
-  @Field(() => String, { nullable: true }) contribution!: string | null;
-  @Field(() => DashboardWidgetSize) size!: DashboardWidgetSize;
-  /** The column of the widget's left edge, from 0. */
-  @Field(() => Int) x!: number;
-  /** The row of the widget's top edge, from 0. */
-  @Field(() => Int) y!: number;
-  /** The title its settings give it, which tells two copies of one type apart. */
-  @Field(() => String) title!: string;
+  @Field(() => ID, { description: "The widget's id, unique within its tab." }) id!: string;
+  @Field(() => DashboardWidgetType, { description: 'What the widget shows.' })
+  type!: DashboardWidgetType;
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The id of the contribution a CONTRIBUTION widget shows, such as example-article-count.count; null for the other types.',
+  })
+  contribution!: string | null;
+  @Field(() => DashboardWidgetSize, { description: "The widget's size." })
+  size!: DashboardWidgetSize;
+  @Field(() => Int, { description: "The column of the widget's left edge, from 0." }) x!: number;
+  @Field(() => Int, { description: "The row of the widget's top edge, from 0." }) y!: number;
+  @Field(() => String, {
+    description: 'The title its settings give it, which tells two copies of one type apart.',
+  })
+  title!: string;
 }
 
 /** A stored widget as the DashboardWidget type answers it. */

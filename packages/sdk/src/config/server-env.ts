@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { isIP } from 'node:net';
 import { z } from 'zod';
 import { configFile, databaseUrl, nodeEnv, rule, secretFile } from './keys.ts';

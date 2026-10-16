@@ -1,295 +1,793 @@
+"""A company or a plant, where a role is held."""
 type AccessScope {
+  """The scope id: the company's or the plant's id."""
   id: ID!
+
+  """Whether the scope is a company or a plant."""
   kind: ScopeKind!
+
+  """The company's or the plant's name."""
   name: String!
 }
 
+"""
+Something the company makes or consumes, identified by its article number. Every article belongs to the company and is assigned to plants.
+"""
 type Article {
+  """
+  The article is assigned to every plant of the company, those created later included. Its plants list is then empty.
+  """
   allPlants: Boolean!
+
+  """
+  When the article was archived, or null while it is active. An archived article is hidden from coreArticles unless includeArchived is true, and cannot be changed until it is restored.
+  """
   archivedAt: DateTime
+
+  """The article group the article picked, also an archived one, or null."""
   articleGroup: ArticleGroup
+
+  """The article number, unique within the company."""
   code: String!
+
+  """When the article was created."""
   createdAt: DateTime!
+
+  """The article's id."""
   id: ID!
+
+  """The article's name."""
   name: String!
+
+  """A note on the article, or null."""
   note: String
+
+  """
+  The plants the article is assigned to, sorted by name. A plant's lists and pickers show only the articles assigned to it or to All plants; an article with neither shows only in company views.
+  """
   plants: [Plant!]!
+
+  """
+  The integration that created the article through coreUpsertArticle, such as Pyramid, or null for an article created in NorthMES.
+  """
   source: String
+
+  """
+  The unit the article's quantities are counted in, pieces unless someone chose another.
+  """
   stockUnit: StockUnit!
+
+  """
+  The translations of the name, such as into English, in the order they were saved.
+  """
   translations: [Translation!]!
+
+  """
+  When the article last changed, its creation included; the articles list sorts by it.
+  """
   updatedAt: DateTime!
+
+  """
+  Grows by one with every change to the article; an update sends it as expectedVersion.
+  """
   version: Int!
 }
 
+"""One page of the Article list, with keyset paging over opaque cursors."""
 type ArticleConnection {
+  """The items of the page in the list's order."""
   edges: [ArticleEdge!]!
+
+  """Where the page sits in the list."""
   pageInfo: PageInfo!
+
+  """
+  How many items the list holds with the same search and filters, across all pages.
+  """
   totalCount: Int!
 }
 
+"""One Article of a page, with its cursor."""
 type ArticleEdge {
+  """The cursor of this item, for after or before."""
   cursor: String!
+
+  """The Article."""
   node: Article!
 }
 
+"""
+The values of the articles list's filter fields with how many articles have each. Each field is counted under the search and the other fields' filters, but not its own.
+"""
 type ArticleFacets {
+  """
+  The article groups, by the group's name, then the articles of no group.
+  """
   articleGroups: [ArticleGroupCount!]!
+
+  """The sources, by name, then NorthMES."""
   sources: [SourceCount!]!
+
+  """The stock units, in the unit catalog's order."""
   stockUnits: [StockUnitCount!]!
+
+  """How many articles the list holds with every filter applied."""
   total: Int!
 }
 
+"""
+A group of articles of the company, such as Flanges or Consumables. Each article has one group or none.
+"""
 type ArticleGroup {
+  """
+  When the group was archived, or null while it is active. An archived group is hidden from coreArticleGroups unless includeArchived is true, and no article can pick it.
+  """
   archivedAt: DateTime
+
+  """The group's code, unique within the company."""
   code: String!
+
+  """The group's id."""
   id: ID!
+
+  """The group's name."""
   name: String!
+
+  """The translations of the name, in the order they were saved."""
   translations: [Translation!]!
+
+  """When the group last changed, its creation included."""
   updatedAt: DateTime!
+
+  """
+  Grows by one with every change to the group; an update sends it as expectedVersion.
+  """
   version: Int!
 }
 
+"""
+One page of the ArticleGroup list, with keyset paging over opaque cursors.
+"""
 type ArticleGroupConnection {
+  """The items of the page in the list's order."""
   edges: [ArticleGroupEdge!]!
+
+  """Where the page sits in the list."""
   pageInfo: PageInfo!
+
+  """
+  How many items the list holds with the same search and filters, across all pages.
+  """
   totalCount: Int!
 }
 
+"""
+How many listed articles have one article group, or no group when id is null.
+"""
 type ArticleGroupCount {
+  """The group's code, or null for the articles of no group."""
   code: String
+
+  """How many listed articles have the group."""
   count: Int!
+
+  """The group's id, or null for the articles of no group."""
   id: ID
+
+  """The group's name, or null for the articles of no group."""
   name: String
 }
 
+"""One ArticleGroup of a page, with its cursor."""
 type ArticleGroupEdge {
+  """The cursor of this item, for after or before."""
   cursor: String!
+
+  """The ArticleGroup."""
   node: ArticleGroup!
 }
 
+"""One entry of the ArticleGroup list's orderBy."""
 input ArticleGroupOrderBy {
+  """The direction to sort in, ascending by default."""
   direction: SortDirection = ASC
+
+  """The field to sort by."""
   field: ArticleGroupSortField!
 }
 
+"""The fields the ArticleGroup list sorts by."""
 enum ArticleGroupSortField {
+  """Sorts by code."""
   CODE
+
+  """Sorts by name."""
   NAME
+
+  """Sorts by updatedAt."""
   UPDATED_AT
 }
 
+"""One entry of the Article list's orderBy."""
 input ArticleOrderBy {
+  """The direction to sort in, ascending by default."""
   direction: SortDirection = ASC
+
+  """The field to sort by."""
   field: ArticleSortField!
 }
 
+"""The fields the Article list sorts by."""
 enum ArticleSortField {
+  """Sorts by code."""
   CODE
+
+  """Sorts by name."""
   NAME
+
+  """Sorts by updatedAt."""
   UPDATED_AT
 }
 
+"""The business that uses NorthMES and owns its plants and master data."""
 type Company {
+  """The company's id, the id of its node in the scope tree."""
   id: ID!
+
+  """The company's name."""
   name: String!
+
+  """
+  The plants of the company that the signed-in user may open, sorted by name.
+  """
   plants: [Plant!]!
 }
 
+"""The input of coreArchiveArticleGroup."""
 input CoreArchiveArticleGroupInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
   expectedVersion: Int!
+
+  """The id of the entity the command changes."""
   id: ID!
 }
 
+"""The input of coreArchiveArticle."""
 input CoreArchiveArticleInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
   expectedVersion: Int!
+
+  """The id of the entity the command changes."""
   id: ID!
 }
 
+"""The input of coreAssignRole."""
 input CoreAssignRoleInput {
+  """
+  The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+  """
   companyId: String
+
+  """
+  The id of the new entity, a UUID the client generates, so a retry finds the first.
+  """
   id: ID!
+
+  """Why the change is made, at most 500 characters."""
   reason: String
+
+  """The id of the role of the company."""
   roleId: ID!
+
+  """The id of the company or plant where the user holds the role."""
   scopeId: ID!
+
+  """The id of the user who gets the role."""
   userId: ID!
 }
 
+"""The input of coreBlockUser."""
 input CoreBlockUserInput {
+  """
+  The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+  """
   companyId: String
+
+  """The user's id."""
   id: ID!
+
+  """Why the change is made, at most 500 characters."""
   reason: String
 }
 
+"""The input of coreCreateArticleGroup."""
 input CoreCreateArticleGroupInput {
+  """The group's code, unique within the company, at most 32 characters."""
   code: String!
+
+  """
+  The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+  """
   companyId: String
+
+  """
+  The id of the new entity, a UUID the client generates, so a retry finds the first.
+  """
   id: ID!
+
+  """The group's name, at most 200 characters."""
   name: String!
+
+  """
+  The translations of the name. An update that leaves them out keeps them.
+  """
   translations: [TranslationInput!]
 }
 
+"""The input of coreCreateArticle."""
 input CoreCreateArticleInput {
+  """
+  Assigns the article to every plant of the company, those created later included.
+  """
   allPlants: Boolean
+
+  """
+  The id of an active article group of the company; an empty value picks none.
+  """
   articleGroupId: String
+
+  """The article number, unique within the company, at most 32 characters."""
   code: String!
+
+  """
+  The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+  """
   companyId: String
+
+  """
+  The id of the new entity, a UUID the client generates, so a retry finds the first.
+  """
   id: ID!
+
+  """The article's name, at most 200 characters."""
   name: String!
+
+  """
+  A note on the article, at most 2000 characters; an empty note removes it.
+  """
   note: String
+
+  """
+  The slugs of the plants the article is assigned to. Without plants or allPlants, a new article is assigned to the request's plant.
+  """
   plants: [String!]
+
+  """
+  The code of the unit the article's quantities are counted in. A new article without one counts in pieces.
+  """
   stockUnit: String
+
+  """The translations of the name; an empty list removes them."""
   translations: [TranslationInput!]
 }
 
+"""The input of coreCreateRole."""
 input CoreCreateRoleInput {
+  """
+  The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+  """
   companyId: String
+
+  """
+  The id of the new entity, a UUID the client generates, so a retry finds the first.
+  """
   id: ID!
+
+  """The role's name, unique within the company, at most 80 characters."""
   name: String!
+
+  """
+  The permission keys the role holds, such as core.article:read, at most 500.
+  """
   permissions: [String!]!
+
+  """Why the change is made, at most 500 characters."""
   reason: String
 }
 
+"""The input of coreCreateUser."""
 input CoreCreateUserInput {
+  """
+  The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+  """
   companyId: String
+
+  """The email address the user signs in with."""
   email: String!
+
+  """
+  The id of the new entity, a UUID the client generates, so a retry finds the first.
+  """
   id: ID!
+
+  """The name others see, at most 120 characters."""
   name: String!
+
+  """Why the change is made, at most 500 characters."""
   reason: String
+
+  """A role of the company to give the user, with scopeId."""
   roleId: String
+
+  """The company or plant where the user gets roleId, with roleId."""
   scopeId: String
+
+  """
+  The handle that lists show for the user: 3 to 30 letters, digits, dots and underscores, stored in lower case. It never changes.
+  """
   username: String!
 }
 
+"""The input of coreDeleteRole."""
 input CoreDeleteRoleInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
   expectedVersion: Int!
+
+  """The id of the entity the command changes."""
   id: ID!
 }
 
+"""The input of coreRemoveRoleAssignment."""
 input CoreRemoveRoleAssignmentInput {
+  """The id of the role assignment."""
   id: ID!
+
+  """Why the change is made, at most 500 characters."""
   reason: String
 }
 
+"""The input of coreResetPassword."""
 input CoreResetPasswordInput {
+  """
+  The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+  """
   companyId: String
+
+  """The user's id."""
   id: ID!
+
+  """Why the change is made, at most 500 characters."""
   reason: String
 }
 
+"""The input of coreRestoreArticleGroup."""
 input CoreRestoreArticleGroupInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
   expectedVersion: Int!
+
+  """The id of the entity the command changes."""
   id: ID!
 }
 
+"""The input of coreRestoreArticle."""
 input CoreRestoreArticleInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
   expectedVersion: Int!
+
+  """The id of the entity the command changes."""
   id: ID!
 }
 
+"""The input of coreSaveDashboardTab."""
 input CoreSaveDashboardTabInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
   expectedVersion: Int!
+
+  """The id of the entity the command changes."""
   id: ID!
+
+  """
+  The tab's widgets as a JSON array of at most 40 widgets, each with its id, type, size, x, y and settings.title.
+  """
   layout: String!
 }
 
+"""The input of coreSetArticlePlants."""
 input CoreSetArticlePlantsInput {
+  """
+  Assigns the article to every plant of the company, those created later included.
+  """
   allPlants: Boolean!
+
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
   expectedVersion: Int!
+
+  """The id of the entity the command changes."""
   id: ID!
+
+  """
+  The slugs of the plants the article is assigned to; empty with allPlants.
+  """
   plants: [String!]!
 }
 
+"""The input of coreUnblockUser."""
 input CoreUnblockUserInput {
+  """
+  The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+  """
   companyId: String
+
+  """The user's id."""
   id: ID!
+
+  """Why the change is made, at most 500 characters."""
   reason: String
 }
 
+"""The input of coreUpdateArticleGroup."""
 input CoreUpdateArticleGroupInput {
+  """The group's code, unique within the company, at most 32 characters."""
   code: String!
+
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
   expectedVersion: Int!
+
+  """The id of the entity the command changes."""
   id: ID!
+
+  """The group's name, at most 200 characters."""
   name: String!
+
+  """
+  The translations of the name. An update that leaves them out keeps them.
+  """
   translations: [TranslationInput!]
 }
 
+"""The input of coreUpdateArticle."""
 input CoreUpdateArticleInput {
+  """
+  The id of an active article group of the company; an empty value picks none.
+  """
   articleGroupId: String
+
+  """The article number, unique within the company, at most 32 characters."""
   code: String!
+
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
   expectedVersion: Int!
+
+  """The id of the entity the command changes."""
   id: ID!
+
+  """The article's name, at most 200 characters."""
   name: String!
+
+  """
+  A note on the article, at most 2000 characters; an empty note removes it.
+  """
   note: String
+
+  """
+  The code of the unit the article's quantities are counted in. A new article without one counts in pieces.
+  """
   stockUnit: String
+
+  """The translations of the name; an empty list removes them."""
   translations: [TranslationInput!]
 }
 
+"""The input of coreUpdateRole."""
 input CoreUpdateRoleInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
   expectedVersion: Int!
+
+  """The id of the entity the command changes."""
   id: ID!
+
+  """The role's name, unique within the company, at most 80 characters."""
   name: String!
+
+  """
+  The permission keys the role holds, such as core.article:read, at most 500.
+  """
   permissions: [String!]!
+
+  """Why the change is made, at most 500 characters."""
   reason: String
 }
 
+"""The input of coreUpsertArticle."""
 input CoreUpsertArticleInput {
+  """
+  Assigns the article to every plant of the company, those created later included.
+  """
   allPlants: Boolean
+
+  """
+  The id of an active article group of the company; an empty value picks none.
+  """
   articleGroupId: String
+
+  """The article number, unique within the company, at most 32 characters."""
   code: String!
+
+  """
+  The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+  """
   companyId: String
+
+  """
+  The version a change to an existing article was made on, else the version found.
+  """
   expectedVersion: Int
+
+  """
+  The id of the article if the command creates it, a UUID the client generates.
+  """
   id: ID!
+
+  """The article's name, at most 200 characters."""
   name: String!
+
+  """
+  A note on the article, at most 2000 characters; an empty note removes it.
+  """
   note: String
+
+  """
+  The slugs of the plants the article is assigned to. Without plants or allPlants, a new article is assigned to the request's plant.
+  """
   plants: [String!]
+
+  """
+  The integration that sends the article, such as Pyramid. A new article keeps it as its source.
+  """
   source: String!
+
+  """
+  The code of the unit the article's quantities are counted in. A new article without one counts in pieces.
+  """
   stockUnit: String
+
+  """The translations of the name; an empty list removes them."""
   translations: [TranslationInput!]
 }
 
+"""
+A user that coreCreateUser created, with the temporary password to pass on once.
+"""
 type CreatedUser {
+  """
+  The user's first password, which only this answer holds. The admin passes it on; it cannot be shown again.
+  """
   temporaryPassword: String!
+
+  """The new user."""
   user: User!
 }
 
+"""A tab of the dashboard, with the widgets of its layout."""
 type DashboardTab {
+  """
+  True when the user may change the tab's layout: an own tab, or a shared tab where the user holds core.dashboardTab:manage.
+  """
   canEdit: Boolean!
+
+  """The tab's id."""
   id: ID!
+
+  """The tab's name."""
   name: String!
+
+  """Who sees the tab."""
   scope: DashboardTabScope!
+
+  """
+  Grows by one with every change to the tab; coreSaveDashboardTab sends it as expectedVersion.
+  """
   version: Int!
+
+  """The widgets of the tab's layout."""
   widgets: [DashboardWidget!]!
 }
 
+"""Who sees a dashboard tab."""
 enum DashboardTabScope {
+  """Everyone at the company, at each of its plants."""
   COMPANY
+
+  """The signed-in user alone, at each plant of the company."""
   OWN
+
+  """Everyone at the plant."""
   PLANT
 }
 
+"""
+One widget placed on a dashboard tab, with its place in grid units at 12 columns.
+"""
 type DashboardWidget {
+  """
+  The id of the contribution a CONTRIBUTION widget shows, such as example-article-count.count; null for the other types.
+  """
   contribution: String
+
+  """The widget's id, unique within its tab."""
   id: ID!
+
+  """The widget's size."""
   size: DashboardWidgetSize!
+
+  """
+  The title its settings give it, which tells two copies of one type apart.
+  """
   title: String!
+
+  """What the widget shows."""
   type: DashboardWidgetType!
+
+  """The column of the widget's left edge, from 0."""
   x: Int!
+
+  """The row of the widget's top edge, from 0."""
   y: Int!
 }
 
+"""A widget's size, a fixed width and height in grid units."""
 enum DashboardWidgetSize {
+  """6 columns wide and 4 rows high."""
   LARGE
+
+  """4 columns wide and 4 rows high."""
   MEDIUM
+
+  """3 columns wide and 2 rows high."""
   SMALL
+
+  """6 columns wide and 6 rows high."""
   TALL
+
+  """12 columns wide and 4 rows high."""
   WIDE
 }
 
+"""What a dashboard widget shows."""
 enum DashboardWidgetType {
+  """A chart, one of the four demo types."""
   CHART
+
+  """A widget that a module or plugin contributes, named by contribution."""
   CONTRIBUTION
+
+  """A list, one of the four demo types."""
   LIST
+
+  """A table, one of the four demo types."""
   TABLE
+
+  """One value, one of the four demo types."""
   VALUE
 }
 
@@ -298,93 +796,338 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+"""
+What a user may do at the request's plant: one permission and the assignments that grant it.
+"""
 type EffectivePermission {
+  """
+  The user's assignments at the plant or at its company whose roles hold the permission. Empty when no role of the user grants it: the user has no access.
+  """
   grantedBy: [RoleAssignment!]!
+
+  """The permission."""
   permission: Permission!
 }
 
+"""
+The writes of the NorthMES API. Each mutation sends one command, which checks its permission and its input before it changes anything.
+"""
 type Mutation {
-  coreArchiveArticle(input: CoreArchiveArticleInput!): Article!
-  coreArchiveArticleGroup(input: CoreArchiveArticleGroupInput!): ArticleGroup!
-  coreAssignRole(input: CoreAssignRoleInput!): RoleAssignment!
-  coreBlockUser(input: CoreBlockUserInput!): User!
-  coreCreateArticle(input: CoreCreateArticleInput!): Article!
-  coreCreateArticleGroup(input: CoreCreateArticleGroupInput!): ArticleGroup!
-  coreCreateRole(input: CoreCreateRoleInput!): Role!
-  coreCreateUser(input: CoreCreateUserInput!): CreatedUser!
-  coreDeleteRole(input: CoreDeleteRoleInput!): Role!
-  coreRemoveRoleAssignment(input: CoreRemoveRoleAssignmentInput!): RoleAssignment!
-  coreResetPassword(input: CoreResetPasswordInput!): PasswordReset!
-  coreRestoreArticle(input: CoreRestoreArticleInput!): Article!
-  coreRestoreArticleGroup(input: CoreRestoreArticleGroupInput!): ArticleGroup!
-  coreSaveDashboardTab(input: CoreSaveDashboardTabInput!): DashboardTab!
-  coreSetArticlePlants(input: CoreSetArticlePlantsInput!): Article!
-  coreUnblockUser(input: CoreUnblockUserInput!): User!
-  coreUpdateArticle(input: CoreUpdateArticleInput!): Article!
-  coreUpdateArticleGroup(input: CoreUpdateArticleGroupInput!): ArticleGroup!
-  coreUpdateRole(input: CoreUpdateRoleInput!): Role!
-  coreUpsertArticle(input: CoreUpsertArticleInput!): Article!
-  planningReleaseProductionOrder(input: PlanningReleaseProductionOrderInput!): ProductionOrder!
+  """
+  Archives an article: lists hide it, it keeps its code, and it cannot be changed until it is restored. Needs core.article:archive.
+  """
+  coreArchiveArticle(
+    """The input of the command core.archiveArticle."""
+    input: CoreArchiveArticleInput!
+  ): Article!
+
+  """
+  Archives an article group: lists hide it and no article can pick it, while the articles that have it keep it. Needs core.articleGroup:archive.
+  """
+  coreArchiveArticleGroup(
+    """The input of the command core.archiveArticleGroup."""
+    input: CoreArchiveArticleGroupInput!
+  ): ArticleGroup!
+
+  """
+  Gives a user a role of the company at the company or at one of its plants. Needs core.roleAssignment:manage at that scope, and every permission of the role held by the assigner there.
+  """
+  coreAssignRole(
+    """The input of the command core.assignRole."""
+    input: CoreAssignRoleInput!
+  ): RoleAssignment!
+
+  """
+  Blocks a user of the company: they cannot sign in, and their next request is refused. Needs core.user:block at every company the user belongs to.
+  """
+  coreBlockUser(
+    """The input of the command core.blockUser."""
+    input: CoreBlockUserInput!
+  ): User!
+
+  """
+  Creates an article of the company, assigned to the plants or to All plants that the input names, else to the request's plant. Needs core.article:create; a code that another article of the company uses is refused with core.code_taken.
+  """
+  coreCreateArticle(
+    """The input of the command core.createArticle."""
+    input: CoreCreateArticleInput!
+  ): Article!
+
+  """
+  Creates an article group of the company. Needs core.articleGroup:create at the company; a code that another group of the company uses is refused with core.code_taken.
+  """
+  coreCreateArticleGroup(
+    """The input of the command core.createArticleGroup."""
+    input: CoreCreateArticleGroupInput!
+  ): ArticleGroup!
+
+  """
+  Creates a custom role of the company. Needs core.role:manage at the company; a name that another role of the company has is refused with core.role_name_taken.
+  """
+  coreCreateRole(
+    """The input of the command core.createRole."""
+    input: CoreCreateRoleInput!
+  ): Role!
+
+  """
+  Creates a user of the company with a temporary password, which the answer shows once. Needs core.user:create at the company; with roleId and scopeId the user also gets that role there, as coreAssignRole gives it.
+  """
+  coreCreateUser(
+    """The input of the command core.createUser."""
+    input: CoreCreateUserInput!
+  ): CreatedUser!
+
+  """
+  Deletes a custom role that nobody holds. Needs core.role:manage at the role's company; a role someone holds is refused with core.role_in_use.
+  """
+  coreDeleteRole(
+    """The input of the command core.deleteRole."""
+    input: CoreDeleteRoleInput!
+  ): Role!
+
+  """
+  Takes a role assignment away from its user, from the user's next request on. Needs core.roleAssignment:manage at the assignment's scope, and every permission of the role held by the remover there.
+  """
+  coreRemoveRoleAssignment(
+    """The input of the command core.removeRoleAssignment."""
+    input: CoreRemoveRoleAssignmentInput!
+  ): RoleAssignment!
+
+  """
+  Gives a user of the company a new temporary password, which the answer shows once, and ends the user's sessions. Needs core.user:resetPassword at every company the user belongs to.
+  """
+  coreResetPassword(
+    """The input of the command core.resetPassword."""
+    input: CoreResetPasswordInput!
+  ): PasswordReset!
+
+  """
+  Restores an archived article, so lists show it and it can be changed again. Needs core.article:archive.
+  """
+  coreRestoreArticle(
+    """The input of the command core.restoreArticle."""
+    input: CoreRestoreArticleInput!
+  ): Article!
+
+  """
+  Restores an archived article group. Needs core.articleGroup:archive; a group that is not archived is refused with core.not_archived.
+  """
+  coreRestoreArticleGroup(
+    """The input of the command core.restoreArticleGroup."""
+    input: CoreRestoreArticleGroupInput!
+  ): ArticleGroup!
+
+  """
+  Saves the layout of one dashboard tab. Changing a shared tab needs core.dashboardTab:manage at the tab's scope; a user's own tab needs none.
+  """
+  coreSaveDashboardTab(
+    """The input of the command core.saveDashboardTab."""
+    input: CoreSaveDashboardTabInput!
+  ): DashboardTab!
+
+  """
+  Replaces the plants of an article: a list of plants, All plants, or neither for an article that only company views show. Needs core.article:assign at the company.
+  """
+  coreSetArticlePlants(
+    """The input of the command core.setArticlePlants."""
+    input: CoreSetArticlePlantsInput!
+  ): Article!
+
+  """
+  Unblocks a blocked user of the company, who can sign in again. Needs core.user:block at every company the user belongs to.
+  """
+  coreUnblockUser(
+    """The input of the command core.unblockUser."""
+    input: CoreUnblockUserInput!
+  ): User!
+
+  """
+  Changes the code and name of an article, and its translations, stock unit, note and group when the input names them. Needs core.article:update; a code that another article uses is refused with core.code_taken.
+  """
+  coreUpdateArticle(
+    """The input of the command core.updateArticle."""
+    input: CoreUpdateArticleInput!
+  ): Article!
+
+  """
+  Changes the code, name and translations of an article group. Needs core.articleGroup:update; an archived group is refused with core.archived.
+  """
+  coreUpdateArticleGroup(
+    """The input of the command core.updateArticleGroup."""
+    input: CoreUpdateArticleGroupInput!
+  ): ArticleGroup!
+
+  """
+  Changes the name and the permissions of a custom role. Needs core.role:manage at the role's company, and each added permission held by the editor wherever the role is assigned.
+  """
+  coreUpdateRole(
+    """The input of the command core.updateRole."""
+    input: CoreUpdateRoleInput!
+  ): Role!
+
+  """
+  Creates or changes the article with this article number in the company, for an ERP that pushes its articles. Needs core.article:create, and core.article:update or core.article:assign for the changes it makes to an existing article.
+  """
+  coreUpsertArticle(
+    """The input of the command core.upsertArticle."""
+    input: CoreUpsertArticleInput!
+  ): Article!
+
+  """
+  Releases a planned production order. Needs planning.productionOrder:release; command validators of other modules and plugins may veto it.
+  """
+  planningReleaseProductionOrder(
+    """The input of the command planning.releaseProductionOrder."""
+    input: PlanningReleaseProductionOrderInput!
+  ): ProductionOrder!
 }
 
+"""
+Where a page of a connection sits in its list, per the Relay specification.
+"""
 type PageInfo {
+  """The cursor of the page's last edge, or null when the page is empty."""
   endCursor: String
+
+  """
+  Whether a page follows this one. Exact when paging forward; when paging backward, whether the page came from a before cursor.
+  """
   hasNextPage: Boolean!
+
+  """
+  Whether a page comes before this one. Exact when paging backward; when paging forward, whether the page came from an after cursor.
+  """
   hasPreviousPage: Boolean!
+
+  """The cursor of the page's first edge, or null when the page is empty."""
   startCursor: String
 }
 
+"""
+A user whose password coreResetPassword reset, with the temporary password to pass on once.
+"""
 type PasswordReset {
+  """
+  The user's new temporary password, which only this answer holds. The admin passes it on; it cannot be shown again, and the user must choose a new password at the next sign-in.
+  """
   temporaryPassword: String!
+
+  """The user."""
   user: User!
 }
 
+"""A permission of the catalog, which the installed modules declare."""
 type Permission {
+  """The key after the colon."""
   action: String!
+
+  """
+  False for a permission no installed module declares any more; it grants nothing.
+  """
   installed: Boolean!
+
+  """
+  The key, <module>.<entity>:<action>, such as planning.productionOrder:release.
+  """
   key: String!
+
+  """The id of the module that declares the permission."""
   moduleId: String!
+
+  """The key before the colon, <module>.<entity>."""
   resource: String!
 }
 
+"""The permissions of one module, by resource."""
 type PermissionModule {
+  """The module's id."""
   moduleId: String!
+
+  """The module's resources."""
   resources: [PermissionResource!]!
 }
 
+"""The permissions of one resource."""
 type PermissionResource {
+  """The permissions of the resource."""
   permissions: [Permission!]!
+
+  """The resource, <module>.<entity>."""
   resource: String!
 }
 
+"""The input of planningReleaseProductionOrder."""
 input PlanningReleaseProductionOrderInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
   expectedVersion: Int!
+
+  """The id of the entity the command changes."""
   id: ID!
 }
 
+"""One production site of a company."""
 type Plant {
+  """The plant's id, the id of its node in the scope tree."""
   id: ID!
+
+  """The plant's name."""
   name: String!
+
+  """
+  The plant's segment of the web's URLs, unique per installation. The x-northmes-plant header names a plant by it.
+  """
   slug: String!
 }
 
+"""An order to make a quantity of one article at one plant."""
 type ProductionOrder {
+  """
+  The article the order makes, or null when core has none at the request's scopes. Without core.article:read it is null with core.forbidden.
+  """
   article: Article
+
+  """The order's id."""
   id: ID!
+
+  """The order number."""
   number: String!
+
+  """
+  The quantity to make in the article's unit, as decimal text with six decimals.
+  """
   quantity: String!
+
+  """Where the order stands: planned or released."""
   status: String!
+
+  """
+  Grows by one with every change to the order; planningReleaseProductionOrder sends it as expectedVersion.
+  """
   version: Int!
 }
 
+"""
+The reads of the NorthMES API. Each root field starts with the GraphQL name of the module that owns it, such as core or planning.
+"""
 type Query {
+  """
+  The article with this id among the articles of the company, or null, also one that is not assigned to the request's plant. Needs core.article:read.
+  """
   coreArticle(
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
     companyId: ID
+
+    """The article's id."""
     id: ID!
   ): Article
+
+  """
+  The values of the articles list's filter fields with how many articles have each, for the same search, archived rows and filters as coreArticles. Needs core.article:read.
+  """
   coreArticleFacets(
     """
     Only the articles of these groups; a null element keeps those of no group.
@@ -395,7 +1138,13 @@ type Query {
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
     companyId: ID
+
+    """Counts archived articles too."""
     includeArchived: Boolean = false
+
+    """
+    The search of coreArticles: only the articles whose text contains this.
+    """
     search: String
 
     """
@@ -406,44 +1155,104 @@ type Query {
     """Only the articles that count in these stock units."""
     stockUnits: [StockUnit!]
   ): ArticleFacets!
+
+  """
+  The article group with this id among the company's, or null. Needs core.articleGroup:read.
+  """
   coreArticleGroup(
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
     companyId: ID
+
+    """The article group's id."""
     id: ID!
   ): ArticleGroup
+
+  """
+  One page of the company's article groups, with search, orderBy and paging. Needs core.articleGroup:read.
+  """
   coreArticleGroups(
+    """
+    Reads the items after this cursor, such as the endCursor of the previous page.
+    """
     after: String
+
+    """
+    Reads the items before this cursor, such as the startCursor of the next page. Not together with after.
+    """
     before: String
 
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
     companyId: ID
+
+    """
+    How many items to read forward, from 1 to 100. Ignored when last or before is given.
+    """
     first: Int = 25
+
+    """Lists archived items too. Archived items are hidden by default."""
     includeArchived: Boolean = false
+
+    """
+    How many items to read backward, from 1 to 100, 25 when only before is given.
+    """
     last: Int
+
+    """The order of the list, at most 3 entries; the id breaks ties."""
     orderBy: [ArticleGroupOrderBy!]
+
+    """
+    Only the items whose text contains this, ignoring case; at most 100 characters.
+    """
     search: String
   ): ArticleGroupConnection!
+
+  """
+  One page of the articles, with search, orderBy, filters and paging: at a plant, those assigned to it or to All plants; in company settings, every article of the company. Needs core.article:read.
+  """
   coreArticles(
+    """
+    Reads the items after this cursor, such as the endCursor of the previous page.
+    """
     after: String
 
     """
     Only the articles of these groups; a null element keeps those of no group.
     """
     articleGroupIds: [ID]
+
+    """
+    Reads the items before this cursor, such as the startCursor of the next page. Not together with after.
+    """
     before: String
 
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
     companyId: ID
+
+    """
+    How many items to read forward, from 1 to 100. Ignored when last or before is given.
+    """
     first: Int = 25
+
+    """Lists archived items too. Archived items are hidden by default."""
     includeArchived: Boolean = false
+
+    """
+    How many items to read backward, from 1 to 100, 25 when only before is given.
+    """
     last: Int
+
+    """The order of the list, at most 3 entries; the id breaks ties."""
     orderBy: [ArticleOrderBy!]
+
+    """
+    Only the items whose text contains this, ignoring case; at most 100 characters.
+    """
     search: String
 
     """
@@ -457,37 +1266,78 @@ type Query {
     """Only the articles assigned to no plant and not to All plants."""
     unassigned: Boolean
   ): ArticleConnection!
+
+  """
+  The companies where the signed-in user holds a role, sorted by name, each with the plants the user may open. The answer is the same with or without x-northmes-plant.
+  """
   coreCompanies: [Company!]!
+
+  """
+  The dashboard's tabs at the request's plant: the company's, then the plant's, then the signed-in user's own, each in its order. Needs no permission beyond opening the plant.
+  """
   coreDashboardTabs: [DashboardTab!]!
+
+  """
+  Every permission of the catalog, installed or not, grouped by module, core first, and by resource. Needs core.role:read.
+  """
   corePermissionCatalog(
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
     companyId: ID
   ): [PermissionModule!]!
+
+  """
+  Every role assignment at the request's plant, by the holder's name. Roles at the company are left out. Needs core.user:read at the plant.
+  """
   corePlantRoleAssignments: [RoleAssignment!]!
+
+  """The role with this id of the company, or null. Needs core.role:read."""
   coreRole(
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
     companyId: ID
+
+    """The role's id."""
     id: ID!
   ): Role
+
+  """
+  The roles of the company: its custom roles, then the default roles of the modules, each by name. Needs core.role:read.
+  """
   coreRoles(
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
     companyId: ID
   ): [Role!]!
+
+  """
+  The user with this id among the users of the company, or null. Needs core.user:read.
+  """
   coreUser(
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
     companyId: ID
+
+    """The user's id."""
     id: ID!
   ): User
+
+  """
+  One page of the users of the company: its members and everyone who holds one of its roles, with search, orderBy, filters and paging. Needs core.user:read.
+  """
   coreUsers(
+    """
+    Reads the items after this cursor, such as the endCursor of the previous page.
+    """
     after: String
+
+    """
+    Reads the items before this cursor, such as the startCursor of the next page. Not together with after.
+    """
     before: String
 
     """Only the blocked users when true, only the active ones when false."""
@@ -497,60 +1347,134 @@ type Query {
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
     companyId: ID
+
+    """
+    How many items to read forward, from 1 to 100. Ignored when last or before is given.
+    """
     first: Int = 25
+
+    """
+    How many items to read backward, from 1 to 100, 25 when only before is given.
+    """
     last: Int
+
+    """The order of the list, at most 3 entries; the id breaks ties."""
     orderBy: [UserOrderBy!]
 
     """
     Only the users who hold this role of the company, at any of its places.
     """
     roleId: ID
+
+    """
+    Only the items whose text contains this, ignoring case; at most 100 characters.
+    """
     search: String
   ): UserConnection!
+
+  """
+  The signed-in user and what they hold at the request's plant and at its company, so a client shows only the actions they can take. Needs no permission. Without a plant, with companyId, it answers what the user holds at the company.
+  """
   coreViewer(
     """
     The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
     """
     companyId: ID
   ): Viewer!
+
+  """
+  The production orders at the request's plant, by number. Needs planning.productionOrder:read.
+  """
   planningProductionOrders: [ProductionOrder!]!
 }
 
+"""A named set of permissions of a company, which users hold at a scope."""
 type Role {
+  """
+  Who holds the role where the request runs, those at the company first, then by name: at a plant, at its company and the plant, never at another plant; in company settings, at the company and every plant of it.
+  """
   holders: [RoleAssignment!]!
+
+  """The role's id."""
   id: ID!
+
+  """
+  The key, unique within the company: <module>-<role> for a default role.
+  """
   key: String!
+
+  """The module of a default role, or null for a custom role."""
   moduleId: String
+
+  """The role's name, unique within the company."""
   name: String!
+
+  """Where the role comes from."""
   origin: RoleOrigin!
+
+  """The permission keys the role holds, sorted."""
   permissions: [String!]!
+
+  """
+  Grows by one with every change to the role; a change sends it as expectedVersion.
+  """
   version: Int!
 }
 
+"""
+A role that a user holds at a scope. The user holds every permission of the role there and at every scope below it.
+"""
 type RoleAssignment {
+  """The assignment's id."""
   id: ID!
+
+  """
+  The role held. It needs core.role:read where the request runs: without it, the field is null with FORBIDDEN and core.forbidden.
+  """
   role: Role
+
+  """The company or plant where the role is held."""
   scope: AccessScope!
+
+  """The user who holds the role."""
   user: User!
 }
 
+"""Where a role comes from."""
 enum RoleOrigin {
+  """A role the company made from module permissions."""
   CUSTOM
+
+  """A module's default role, which cannot be edited."""
   MODULE
 }
 
+"""The kind of a scope where a role is held."""
 enum ScopeKind {
+  """A company."""
   COMPANY
+
+  """A plant of a company."""
   PLANT
 }
 
+"""The direction of one orderBy entry of a list."""
 enum SortDirection {
+  """Ascending: A to Z, oldest first, smallest first."""
   ASC
+
+  """Descending: Z to A, newest first, largest first."""
   DESC
 }
 
+"""
+How many listed articles came from one source, or from NorthMES when source is null.
+"""
 type SourceCount {
+  """How many listed articles came from the source."""
   count: Int!
+
+  """The integration that created the articles, or null for NorthMES."""
   source: String
 }
 
@@ -571,55 +1495,121 @@ enum StockUnit {
   PIECE
 }
 
+"""How many listed articles count in one stock unit."""
 type StockUnitCount {
+  """How many listed articles count in the unit."""
   count: Int!
+
+  """The stock unit."""
   stockUnit: StockUnit!
 }
 
+"""
+One translation of a translatable field, such as an article's name in English.
+"""
 type Translation {
+  """The translated field, such as name."""
   field: String!
+
+  """The language as a BCP 47 tag, such as en or de-AT."""
   locale: String!
+
+  """The text in that language."""
   text: String!
 }
 
+"""One translation of a translatable field, as a command takes it."""
 input TranslationInput {
+  """The translated field, such as name."""
   field: String!
+
+  """The language as a BCP 47 tag, such as en or de-AT."""
   locale: String!
+
+  """The text in that language."""
   text: String!
 }
 
+"""A person who signs in to NorthMES, an operator too."""
 type User {
+  """A blocked user cannot sign in, and their next request is refused."""
   blocked: Boolean!
+
+  """
+  What the user may do where the request runs: every installed permission, by key, with the assignments that grant it, at the plant or at its company, or in company settings at the company. It names roles, so it needs core.role:read there.
+  """
   effectivePermissions: [EffectivePermission!]!
+
+  """The user's id."""
   id: ID!
+
+  """The name others see."""
   name: String!
+
+  """
+  The user's roles where the request runs, those at the company first: at a plant, at its company and the plant, never at another plant; in company settings, at the company and every plant of it. It needs core.user:read there, and each assignment's role core.role:read.
+  """
   roleAssignments: [RoleAssignment!]!
+
+  """
+  The handle lists show for the user. It never changes and is never given to anyone else.
+  """
   username: String!
 }
 
+"""One page of the User list, with keyset paging over opaque cursors."""
 type UserConnection {
+  """The items of the page in the list's order."""
   edges: [UserEdge!]!
+
+  """Where the page sits in the list."""
   pageInfo: PageInfo!
+
+  """
+  How many items the list holds with the same search and filters, across all pages.
+  """
   totalCount: Int!
 }
 
+"""One User of a page, with its cursor."""
 type UserEdge {
+  """The cursor of this item, for after or before."""
   cursor: String!
+
+  """The User."""
   node: User!
 }
 
+"""One entry of the User list's orderBy."""
 input UserOrderBy {
+  """The direction to sort in, ascending by default."""
   direction: SortDirection = ASC
+
+  """The field to sort by."""
   field: UserSortField!
 }
 
+"""The fields the User list sorts by."""
 enum UserSortField {
+  """Sorts by name."""
   NAME
+
+  """Sorts by username."""
   USERNAME
 }
 
+"""
+The signed-in user and what they hold at the request's plant and at its company.
+"""
 type Viewer {
+  """The permission keys the user holds at the plant's company, sorted."""
   companyPermissions: [String!]!
+
+  """
+  The permission keys the user holds at the plant, from roles there or at its company, sorted.
+  """
   plantPermissions: [String!]!
+
+  """The signed-in user's id."""
   userId: ID!
 }

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { NestFactory } from '@nestjs/core';
 import { describe, expect, it } from 'vitest';
 import { createTestApp, type HostFactory } from '../src/create-test-app.ts';

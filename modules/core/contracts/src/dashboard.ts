@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { defineCommandContract } from '@northmes/contracts';
 import { z } from 'zod';
 
@@ -137,11 +138,16 @@ const layoutJsonMax = 32_000;
  */
 export const saveDashboardTab = defineCommandContract({
   name: 'core.saveDashboardTab',
+  description:
+    "Saves the layout of one dashboard tab. Changing a shared tab needs core.dashboardTab:manage at the tab's scope; a user's own tab needs none.",
   target: 'existing',
   fields: z.object({
     layout: z
       .string()
       .max(layoutJsonMax)
+      .describe(
+        "The tab's widgets as a JSON array of at most 40 widgets, each with its id, type, size, x, y and settings.title.",
+      )
       .transform((text, context) => {
         try {
           return JSON.parse(text) as unknown;

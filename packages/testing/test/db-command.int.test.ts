@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { spawnSync } from 'node:child_process';
 import { randomUUIDv7 } from 'node:crypto';
 import { beforeAll, describe, expect, it } from 'vitest';

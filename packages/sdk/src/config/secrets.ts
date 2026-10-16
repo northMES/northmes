@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { readFileSync, statSync } from 'node:fs';
 import { registerAs } from '@nestjs/config';
 import type { z } from 'zod';

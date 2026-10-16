@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import 'reflect-metadata';
 import { PATH_METADATA } from '@nestjs/common/constants';
 import { API_CONTROLLER_METADATA, ApiController } from '@northmes/sdk/rest';

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { defineCommandContract } from '@northmes/contracts';
 import { z } from 'zod';
 import { reasonTooLong, tooLong } from './messages.ts';
@@ -19,13 +20,19 @@ export const accessReason = z
   .string()
   .trim()
   .max(500, { error: reasonTooLong(500) })
+  .describe('Why the change is made, at most 500 characters.')
   .optional();
 
 /**
  * The company of a command sent from company settings, whose request names no plant (ADR 0066). A
  * command sent at a plant leaves it out, or names the plant's company.
  */
-export const settingsCompanyId = z.uuid().optional();
+export const settingsCompanyId = z
+  .uuid()
+  .describe(
+    "The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.",
+  )
+  .optional();
 
 /**
  * The fields a company admin edits on a custom role: its name, unique within the company, and the
@@ -36,8 +43,12 @@ const roleFields = z.object({
     .string()
     .trim()
     .min(1, 'Enter a role name.')
-    .max(80, { error: tooLong('Role name', 80) }),
-  permissions: z.array(permissionKey).max(500, 'A role can hold at most 500 permissions.'),
+    .max(80, { error: tooLong('Role name', 80) })
+    .describe("The role's name, unique within the company, at most 80 characters."),
+  permissions: z
+    .array(permissionKey)
+    .max(500, 'A role can hold at most 500 permissions.')
+    .describe('The permission keys the role holds, such as core.article:read, at most 500.'),
 });
 
 /**
@@ -49,6 +60,8 @@ const roleFields = z.object({
  */
 export const createRole = defineCommandContract({
   name: 'core.createRole',
+  description:
+    'Creates a custom role of the company. Needs core.role:manage at the company; a name that another role of the company has is refused with core.role_name_taken.',
   target: 'new',
   fields: roleFields.extend({ companyId: settingsCompanyId, reason: accessReason }),
   permission: 'core.role:manage',
@@ -64,6 +77,8 @@ export const createRole = defineCommandContract({
  */
 export const updateRole = defineCommandContract({
   name: 'core.updateRole',
+  description:
+    "Changes the name and the permissions of a custom role. Needs core.role:manage at the role's company, and each added permission held by the editor wherever the role is assigned.",
   target: 'existing',
   fields: roleFields.extend({ reason: accessReason }),
   permission: 'core.role:manage',
@@ -77,6 +92,8 @@ export const updateRole = defineCommandContract({
  */
 export const deleteRole = defineCommandContract({
   name: 'core.deleteRole',
+  description:
+    "Deletes a custom role that nobody holds. Needs core.role:manage at the role's company; a role someone holds is refused with core.role_in_use.",
   target: 'existing',
   fields: z.object({}),
   permission: 'core.role:manage',
@@ -92,11 +109,13 @@ export const deleteRole = defineCommandContract({
  */
 export const assignRole = defineCommandContract({
   name: 'core.assignRole',
+  description:
+    'Gives a user a role of the company at the company or at one of its plants. Needs core.roleAssignment:manage at that scope, and every permission of the role held by the assigner there.',
   target: 'new',
   fields: z.object({
-    userId: z.uuid(),
-    roleId: z.uuid(),
-    scopeId: z.uuid(),
+    userId: z.uuid().describe('The id of the user who gets the role.'),
+    roleId: z.uuid().describe('The id of the role of the company.'),
+    scopeId: z.uuid().describe('The id of the company or plant where the user holds the role.'),
     companyId: settingsCompanyId,
     reason: accessReason,
   }),
@@ -112,8 +131,13 @@ export const assignRole = defineCommandContract({
  */
 export const removeRoleAssignment = defineCommandContract({
   name: 'core.removeRoleAssignment',
+  description:
+    "Takes a role assignment away from its user, from the user's next request on. Needs core.roleAssignment:manage at the assignment's scope, and every permission of the role held by the remover there.",
   target: 'none',
-  fields: z.object({ id: z.uuid(), reason: accessReason }),
+  fields: z.object({
+    id: z.uuid().describe('The id of the role assignment.'),
+    reason: accessReason,
+  }),
   permission: 'core.roleAssignment:manage',
   reason: 'optional',
 });

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 
 /**
  * One entry of a module's link manifest: its path below the parent entry, in the router's syntax

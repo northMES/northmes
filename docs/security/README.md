@@ -34,7 +34,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Errors masked: GraphQL `maskedErrors`, only HTTP exceptions pass the filter, static file errors hide paths | built | `apps/backend/src/graphql/server.ts`; `packages/sdk/src/errors/exception-filter.ts`; `apps/backend/src/web/static-mounts.ts` |
 | Request size, depth and cost limits on GraphQL | built | ADR 0070; `apps/backend/src/graphql/limits.ts`, `apps/backend/src/graphql/cost.ts`; `limits.test.ts`, `limits.int.test.ts`, `web-operations.test.ts`. A rate limit per principal, or per client address without one, answers 429 with Retry-After (`rate-limit.test.ts`); its counters live in each replica's memory |
 | Cryptography: AES-256-GCM with a keyring for stored secrets, TLS at the proxy | decided | ADR 0047, ADR 0044 |
-| Pinned dependencies: exact catalog versions, 14-day release age, install scripts denied | built | `pnpm-workspace.yaml` |
+| Pinned dependencies: exact catalog versions, 14-day release age, install scripts denied; the image installs pnpm with `npm ci` from a lockfile | built | `pnpm-workspace.yaml`, `Dockerfile`, `deploy/pnpm/package-lock.json`; `test/meta/image.test.ts` |
 
 ### 2. Authentication, authorization and access control
 
@@ -83,7 +83,8 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 |---|---|---|
 | CI hardening: actions pinned by SHA, read-only tokens, no `pull_request_target`, inputs through `env` | built | `.github/workflows/ci.yml`; `test/meta/workflows.test.ts` |
 | License gate, dependency audit, CodeQL as required checks | decided | ADR 0040, ADR 0050; [#7](https://github.com/northMES/northmes/issues/7), [#197](https://github.com/northMES/northmes/issues/197) |
-| SBOM in CycloneDX per package and image | decided | ADR 0040 |
+| SBOM in CycloneDX per package and image | decided (image SBOM on the release built) | ADR 0040; `.github/workflows/release.yml` |
+| Release image attested: build provenance and SBOM attestations signed on a GitHub-hosted runner, pushed to the registry and attached to the release | built | ADR 0050; `.github/workflows/release.yml`; `test/meta/workflows.test.ts`; `apps/docs/install.mdx` (Verify a release) |
 | Automated dependency updates | gap | [#482](https://github.com/northMES/northmes/issues/482) |
 | MIT packages import no AGPL code | built | `scripts/lint/mit-imports.mjs`; `test/meta/mit-imports.test.ts` |
 | Project credentials: short-lived workflow tokens with per-job permissions, every stored secret listed with who can change it and when it is rotated | built | [project-credentials.md](project-credentials.md); `test/meta/security-docs.test.ts` checks the list against the workflows |

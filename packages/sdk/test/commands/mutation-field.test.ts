@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import 'reflect-metadata';
 import { Module } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';
@@ -13,7 +14,7 @@ import {
   registerCommand,
   type TargetRow,
 } from '@northmes/sdk/commands';
-import { execute, type GraphQLSchema, parse, printSchema } from 'graphql';
+import { execute, type GraphQLSchema, parse, print, printSchema, visit } from 'graphql';
 import type { Transaction } from 'kysely';
 import { afterEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
@@ -48,6 +49,22 @@ class FakeCommandBus implements CommandBus {
 
 const opened: TestingModule[] = [];
 
+/** The schema's SDL without descriptions, so a test compares the shape of its types alone. */
+function shapeOf(schema: GraphQLSchema): string {
+  const strip = (node: object) => ({ ...node, description: undefined });
+  return print(
+    visit(parse(printSchema(schema)), {
+      ObjectTypeDefinition: strip,
+      InputObjectTypeDefinition: strip,
+      EnumTypeDefinition: strip,
+      ScalarTypeDefinition: strip,
+      FieldDefinition: strip,
+      InputValueDefinition: strip,
+      EnumValueDefinition: strip,
+    }),
+  );
+}
+
 afterEach(async () => {
   await Promise.all(opened.splice(0).map((moduleRef) => moduleRef.close()));
 });
@@ -62,7 +79,7 @@ async function buildPlanningSchema() {
     PlanningModule,
   ]);
   opened.push(moduleRef);
-  return { schema, sdl: printSchema(schema), bus };
+  return { schema, sdl: shapeOf(schema), bus };
 }
 
 const RELEASE = parse(`
@@ -83,14 +100,21 @@ function release(schema: GraphQLSchema, input: Record<string, unknown>) {
 
 describe('defineCommand', () => {
   it("E05-S01 defineCommand for planning.releaseProductionOrder adds Mutation.planningReleaseProductionOrder with the contract's input and expectedVersion as Int", async () => {
-    const { sdl } = await buildPlanningSchema();
+    const { schema } = await buildPlanningSchema();
+    const mutation = schema.getMutationType()?.getFields().planningReleaseProductionOrder;
+    const input = schema.getType('PlanningReleaseProductionOrderInput');
+    const fields = input && 'getFields' in input ? input.getFields() : {};
 
-    expect(sdl).toContain(
-      'type Mutation {\n  planningReleaseProductionOrder(input: PlanningReleaseProductionOrderInput!): ProductionOrder!\n}',
-    );
-    expect(sdl).toContain(
-      'input PlanningReleaseProductionOrderInput {\n  expectedVersion: Int!\n  id: ID!\n  note: String!\n  quantity: Float!\n}',
-    );
+    expect(mutation?.args.map((arg) => `${arg.name}: ${arg.type}`)).toEqual([
+      'input: PlanningReleaseProductionOrderInput!',
+    ]);
+    expect(String(mutation?.type)).toBe('ProductionOrder!');
+    expect(Object.values(fields).map((field) => `${field.name}: ${field.type}`)).toEqual([
+      'expectedVersion: Int!',
+      'id: ID!',
+      'note: String!',
+      'quantity: Float!',
+    ]);
   });
 
   it('E02-S04 the generated field sends the parsed input to the command bus', async () => {
@@ -198,7 +222,7 @@ describe('defineCommand', () => {
     const withNullNote = await tag({ tags: [], note: null });
     const withoutNote = await tag({ tags: ['rush'] });
 
-    expect(printSchema(schema)).toContain(
+    expect(shapeOf(schema)).toContain(
       'input PlanningTagProductionOrdersInput {\n  note: String\n  tags: [String!]!\n}',
     );
     expect([withNote.errors, withNullNote.errors, withoutNote.errors]).toEqual([
@@ -256,11 +280,60 @@ describe('defineCommand', () => {
     const full = await flag({ urgent: true, late: false, tags: ['rush'] });
     const nulls = await flag({ urgent: false, late: null, tags: null });
 
-    expect(printSchema(schema)).toContain(
+    expect(shapeOf(schema)).toContain(
       'input PlanningFlagProductionOrdersInput {\n  late: Boolean\n  tags: [String!]\n  urgent: Boolean!\n}',
     );
     expect([full.errors, nulls.errors]).toEqual([undefined, undefined]);
     expect(handled).toEqual([{ urgent: true, late: false, tags: ['rush'] }, { urgent: false }]);
+  });
+
+  it('the generated mutation, its input type and its fields carry the descriptions of the contract and its Zod fields', async () => {
+    const contract = defineCommandContract({
+      name: 'planning.holdProductionOrder',
+      description: 'Holds a production order until someone releases it.',
+      target: 'existing',
+      fields: z.object({ note: z.string().describe('Why the order is held.').optional() }),
+      permission: 'planning.productionOrder:hold',
+    });
+    const HoldProductionOrder = defineCommand(contract, {
+      returns: () => Boolean,
+      target: {
+        entity: 'Production order',
+        scopeOf: async (_id, { plantId }) => plantId,
+        load: async (id, { plantId }) => ({ id, version: 1, scope_id: plantId ?? '' }),
+      },
+      handle: async () => true,
+    });
+    @Module({
+      providers: [{ provide: COMMAND_BUS, useValue: new FakeCommandBus() }],
+      exports: [COMMAND_BUS],
+    })
+    class FakeCommandsModule {}
+    @Module({ providers: [HoldProductionOrder] })
+    class HoldModule {}
+    const { schema, moduleRef } = await buildSchema([
+      { module: FakeCommandsModule, global: true },
+      PlanningModule,
+      HoldModule,
+    ]);
+    opened.push(moduleRef);
+    const mutation = schema.getMutationType()?.getFields().planningHoldProductionOrder;
+    const input = schema.getType('PlanningHoldProductionOrderInput');
+    const fields = input && 'getFields' in input ? input.getFields() : {};
+
+    expect(mutation?.description).toBe('Holds a production order until someone releases it.');
+    expect(mutation?.args[0]?.description).toBe(
+      'The input of the command planning.holdProductionOrder.',
+    );
+    expect(input?.description).toBe('The input of planningHoldProductionOrder.');
+    expect(
+      Object.fromEntries(Object.entries(fields).map(([name, field]) => [name, field.description])),
+    ).toEqual({
+      expectedVersion:
+        'The version of the entity that the change was made on; the command is refused when the entity has changed since.',
+      id: 'The id of the entity the command changes.',
+      note: 'Why the order is held.',
+    });
   });
 
   it('ADR0073-W3 the generated input carries an optional 32-bit integer as Int, and a null for it reaches the bus as absent', async () => {
@@ -302,7 +375,7 @@ describe('defineCommand', () => {
     const given = await flag({ expectedVersion: 3 });
     const nulls = await flag({ expectedVersion: null });
 
-    expect(printSchema(schema)).toContain(
+    expect(shapeOf(schema)).toContain(
       'input PlanningFlagProductionOrdersInput {\n  expectedVersion: Int\n}',
     );
     expect([given.errors, nulls.errors]).toEqual([undefined, undefined]);
@@ -350,7 +423,7 @@ describe('defineCommand', () => {
     });
     const nulls = await name({ translations: null });
 
-    const sdl = printSchema(schema);
+    const sdl = shapeOf(schema);
     expect(sdl).toContain(
       'input PlanningNameProductionOrderInput {\n  translations: [TranslationInput!]\n}',
     );

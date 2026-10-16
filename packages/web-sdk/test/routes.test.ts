@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { createShellRoutes, defineWebModule } from '@northmes/web-sdk';
 import { createMemoryHistory, createRoute, createRouter } from '@tanstack/react-router';
 import { describe, expect, it } from 'vitest';

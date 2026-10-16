@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { type LinkNode, linkEntry } from '@northmes/contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import { createShellRoutes } from '@northmes/web-sdk';

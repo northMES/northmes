@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Server-only: commands, whose mutation fields the SDK generates from their contracts (ADR 0012),
 // and the command validators of other modules that may veto them (ADR 0037).
 export {
@@ -17,7 +18,7 @@ export {
   type RegisteredCommandDefinition,
   registerCommand,
 } from './define-command.ts';
-export { commandInput } from './mutation-field.ts';
+export { commandInput, commandInputArg } from './mutation-field.ts';
 export { parseCommandInput } from './parse-input.ts';
 export {
   CommandValidator,

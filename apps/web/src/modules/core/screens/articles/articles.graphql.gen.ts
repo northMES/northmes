@@ -4,18 +4,28 @@ type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
 import type { TypedDocumentNode as DocumentNode } from '@apollo/client';
+/** One entry of the Article list's orderBy. */
 export type ArticleOrderBy = {
+  /** The direction to sort in, ascending by default. */
   readonly direction?: SortDirection | null | undefined;
+  /** The field to sort by. */
   readonly field: ArticleSortField;
 };
 
+/** The fields the Article list sorts by. */
 export type ArticleSortField =
+  /** Sorts by code. */
   | 'CODE'
+  /** Sorts by name. */
   | 'NAME'
+  /** Sorts by updatedAt. */
   | 'UPDATED_AT';
 
+/** The direction of one orderBy entry of a list. */
 export type SortDirection =
+  /** Ascending: A to Z, oldest first, smallest first. */
   | 'ASC'
+  /** Descending: Z to A, newest first, largest first. */
   | 'DESC';
 
 /** A unit of the unit catalog that an article counts its quantities in (ADR 0023). */

@@ -22,6 +22,7 @@ interface Job {
   needs?: string | string[];
   permissions?: Permissions;
   'runs-on'?: unknown;
+  outputs?: Record<string, string>;
   env?: Record<string, string>;
   steps?: Step[];
 }
@@ -399,14 +400,21 @@ describe('workflows', () => {
   };
 
   // release-please opens the release pull request and tags the release; the image job pushes the
-  // image to ghcr.io and writes the .env line into that release's notes (ADR 0080). Nothing else
-  // writes.
+  // image to ghcr.io and writes the .env line into that release's notes (ADR 0080); the attestations
+  // job signs the image's provenance and SBOM through OIDC, pushes the attestations next to the
+  // image and attaches the SBOM to the release (ADR 0050). Nothing else writes.
   const releasePermissions: Record<string, Record<string, string>> = {
     'release please': { contents: 'write', 'pull-requests': 'write' },
     'release image': { contents: 'write', packages: 'write' },
+    'release attestations': {
+      contents: 'write',
+      packages: 'write',
+      'id-token': 'write',
+      attestations: 'write',
+    },
   };
 
-  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what Scorecard publishes with for its analysis, and what the two release jobs write', () => {
+  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
@@ -433,6 +441,106 @@ describe('workflows', () => {
     const image = Object.values(release?.jobs ?? {}).find(({ name }) => name === 'release image');
     expect(image?.if).toBe("needs.release-please.outputs.created == 'true'");
     expect((image?.steps ?? []).some(installsDependencies)).toBe(false);
+  });
+
+  // The attestations job holds id-token: write, so it runs no code from the repository: it checks
+  // nothing out and installs nothing. It runs on a GitHub-hosted runner, so a verifier can pass
+  // --deny-self-hosted-runners (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md).
+  const imageName = 'ghcr.io/northmes/northmes';
+  const imageDigest = expression('needs.image.outputs.digest');
+
+  function attestationsJob(): { image: Job | undefined; job: Job; steps: Step[] } {
+    const { workflow, job } = jobNamed('release attestations');
+    const image = Object.values(workflow.jobs).find(({ name }) => name === 'release image');
+    return { image, job, steps: job.steps ?? [] };
+  }
+
+  function stepUsing(steps: Step[], action: string): Step | undefined {
+    return steps.find(({ uses }) => uses?.startsWith(`${action}@`));
+  }
+
+  // The step that attaches files to the release, and its gh release upload line.
+  function releaseUpload(steps: Step[]): { step: Step | undefined; line: string } {
+    for (const step of steps) {
+      const line = (step.run ?? '')
+        .split('\n')
+        .map((part) => part.trim())
+        .find((part) => part.startsWith('gh release upload "$TAG" '));
+      if (line !== undefined) {
+        return { step, line };
+      }
+    }
+    return { step: undefined, line: '' };
+  }
+
+  it('ADR0050 the release attestations job runs after the image job on a GitHub-hosted runner, and checks out and installs nothing', () => {
+    const { workflow } = jobNamed('release attestations');
+    const { image, job, steps } = attestationsJob();
+
+    expect(workflow.path).toBe('.github/workflows/release.yml');
+    expect(needsOf(job)).toEqual(expect.arrayContaining(['release-please', 'image']));
+    expect(job.if).toBe(image?.if);
+    expect(runsOnOf(job)).toMatch(/^ubuntu-[\w.]+$/);
+    expect(steps.some(installsDependencies)).toBe(false);
+    expect(stepUsing(steps, 'actions/checkout')).toBeUndefined();
+    expect(image?.outputs?.digest).toBe(expression('steps.build.outputs.digest'));
+  });
+
+  it('ADR0050 the release attestations job attests the build provenance of the image digest and pushes it to the registry', () => {
+    const { steps } = attestationsJob();
+    const provenance = stepUsing(steps, 'actions/attest-build-provenance');
+
+    expect(provenance?.with).toMatchObject({
+      'subject-name': imageName,
+      'subject-digest': imageDigest,
+      'push-to-registry': true,
+    });
+  });
+
+  it('ADR0040 ADR0050 the release attestations job writes a CycloneDX SBOM of the image with a pinned Syft, attests it for the image digest and attaches it to the release', () => {
+    const { steps } = attestationsJob();
+    const sbom = stepUsing(steps, 'anchore/sbom-action');
+    const sbomFile = String(sbom?.with?.['output-file'] ?? '');
+    const attestation = steps.find(
+      ({ uses, with: inputs }) => uses?.startsWith('actions/attest@') && inputs?.['sbom-path'],
+    );
+    const upload = releaseUpload(steps);
+
+    expect(sbom?.with).toMatchObject({
+      image: `${imageName}@${imageDigest}`,
+      format: 'cyclonedx-json',
+      'upload-artifact': false,
+      'upload-release-assets': false,
+    });
+    expect(String(sbom?.with?.['syft-version'] ?? '')).toMatch(/^v\d+\.\d+\.\d+$/);
+    expect(sbomFile).toMatch(/\.cdx\.json$/);
+    expect(attestation?.with).toMatchObject({
+      'subject-name': imageName,
+      'subject-digest': imageDigest,
+      'sbom-path': sbomFile,
+      'push-to-registry': true,
+    });
+    expect(upload.step?.env?.SBOM).toBe(sbomFile);
+    expect(upload.line).toContain('"$SBOM"');
+  });
+
+  // Scorecard's Signed-Releases check credits a release asset named <asset>.intoto.jsonl, and a
+  // plant can take the bundles from the release page to a host without internet.
+  it('ADR0050 the release attestations job attaches both attestation bundles to the release as .intoto.jsonl files', () => {
+    const { steps } = attestationsJob();
+    const ids = steps
+      .filter(({ uses }) => /^actions\/attest(?:-build-provenance)?@/.test(uses ?? ''))
+      .map(({ id }) => id);
+    const upload = releaseUpload(steps);
+    const envValues = Object.values(upload.step?.env ?? {});
+
+    expect(ids).toHaveLength(2);
+    for (const id of ids) {
+      expect(envValues, `bundle of step ${id}`).toContain(
+        expression(`steps.${id}.outputs.bundle-path`),
+      );
+    }
+    expect(upload.line.match(/\.intoto\.jsonl"/g)).toHaveLength(2);
   });
 
   // The score behind the badge stays current: weekly, after every push to main and when the

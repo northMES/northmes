@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { MockLink } from '@apollo/client/testing';
 import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
@@ -12,6 +13,7 @@ import {
   articlesQuery,
   bodyRows,
   firstPage,
+  holdRequests,
   plant,
   renderCoreAt,
   spoken,
@@ -231,16 +233,17 @@ describe('the articles list filters', () => {
   it('E06-S06 an opened group says it is loading, then that its articles did not load, also in the polite region, and opening it again loads them', async () => {
     const user = userEvent.setup();
     const hosesRows = { first: 100, orderBy: firstPage.orderBy, articleGroupIds: [hosesId] };
-    renderCoreAt(coreLinks.articles({ plant }).href, [
-      articlesQuery(firstPage, articlesPage([hose], { totalCount: 6 })),
-      facetsQuery({}, allCounts),
-      {
-        request: { query: CoreArticles, variables: hosesRows },
-        error: new Error('lost'),
-        delay: 50,
-      },
-      articlesQuery(hosesRows, articlesPage([hose, hose2], { totalCount: 2 })),
-    ]);
+    const groupRows = holdRequests(({ variables }) => 'articleGroupIds' in variables);
+    renderCoreAt(
+      coreLinks.articles({ plant }).href,
+      [
+        articlesQuery(firstPage, articlesPage([hose], { totalCount: 6 })),
+        facetsQuery({}, allCounts),
+        { request: { query: CoreArticles, variables: hosesRows }, error: new Error('lost') },
+        articlesQuery(hosesRows, articlesPage([hose, hose2], { totalCount: 2 })),
+      ],
+      { hold: groupRows.link },
+    );
 
     await user.click(await screen.findByRole('button', { name: 'Group by' }));
     await user.click(await screen.findByRole('menuitemradio', { name: 'Article group' }));
@@ -249,6 +252,7 @@ describe('the articles list filters', () => {
     await user.click(toggle);
 
     expect(await within(table).findByText('Loading the articles of Hoses')).toBeDefined();
+    groupRows.release();
     expect(
       await within(table).findByText(
         'Could not load the articles of Hoses. Close the group and open it again to try again.',
