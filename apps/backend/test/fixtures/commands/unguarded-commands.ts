@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Fixture module stock, whose commands the host refuses at boot (ADR 0012): the contract of
 // stock.countBin names no permission, as a plugin in plain JavaScript could ship it, and
 // stock.moveBin checks a permission that stock does not declare.

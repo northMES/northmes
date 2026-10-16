@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Fixture module alpha: owns Thing, and hands out its things through its API module, AlphaApiModule.
 import { Inject, Injectable, Module } from '@nestjs/common';
 import { Args, Field, ID, ObjectType, Query, Resolver } from '@nestjs/graphql';
