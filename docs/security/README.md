@@ -82,7 +82,9 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Control | Status | Evidence |
 |---|---|---|
 | CI hardening: actions pinned by SHA, read-only tokens, no `pull_request_target`, inputs through `env` | built | `.github/workflows/ci.yml`; `test/meta/workflows.test.ts` |
-| License gate, dependency audit, CodeQL as required checks | decided | ADR 0040, ADR 0050; [#7](https://github.com/northMES/northmes/issues/7), [#197](https://github.com/northMES/northmes/issues/197) |
+| Dependency audit on every pull request, push to `main` and week, failing on an unaccepted high or critical advisory | built | ADR 0040, ADR 0050; `.github/workflows/supply-chain.yml`, `pnpm-workspace.yaml`; `test/meta/workflows.test.ts` |
+| A VEX document for each dependency advisory that does not affect NorthMES | built | [vex/northmes.openvex.json](vex/northmes.openvex.json); `test/meta/security-docs.test.ts` |
+| License gate and CodeQL as required checks | decided for the license gate; built for CodeQL | ADR 0040, ADR 0050; [#7](https://github.com/northMES/northmes/issues/7), [#197](https://github.com/northMES/northmes/issues/197) |
 | SBOM in CycloneDX per package and image | decided (image SBOM on the release built) | ADR 0040; `.github/workflows/release.yml` |
 | Release image attested: build provenance and SBOM attestations signed on a GitHub-hosted runner, pushed to the registry and attached to the release | built | ADR 0050; `.github/workflows/release.yml`; `test/meta/workflows.test.ts`; `apps/docs/install.mdx` (Verify a release) |
 | Automated dependency updates | gap | [#482](https://github.com/northMES/northmes/issues/482) |

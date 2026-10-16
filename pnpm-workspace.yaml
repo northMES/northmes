@@ -15,6 +15,15 @@ allowBuilds:
 
 catalogMode: strict
 
+# pnpm audit, which CI / dependency audit runs, fails on a high or critical advisory. An ignored
+# advisory is an accepted risk in docs/security/risks.md with a not_affected statement in
+# docs/security/vex/northmes.openvex.json, and osv-scanner.toml skips the same ids
+# (docs/security/vulnerability-policy.md).
+audit:
+  level: high
+  ignore:
+    - GHSA-vfj7-8cjw-p6xm
+
 # 14 days in minutes. Transitive ranges resolve only to versions outside Renovate's
 # minimumReleaseAge window, as the catalog pins do.
 minimumReleaseAge: 20160

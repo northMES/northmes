@@ -1,0 +1,35 @@
+# Supply-chain checks on the dependency tree (docs/adr/0040-dependency-license-policy-ci-gate-and-sbom.md,
+# docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md). The dependency audit
+# fails on a high or critical advisory in the production tree that pnpm-workspace.yaml does not
+# list as an accepted risk (docs/security/vulnerability-policy.md). It runs weekly too, so an
+# advisory published after the last change still turns it red. The license gate of #197 joins
+# this file later.
+name: Supply chain
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '41 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    name: dependency audit
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      # pnpm audit reads pnpm-lock.yaml and asks the registry's advisory database, so it needs no
+      # install.
+      - run: pnpm audit --prod
