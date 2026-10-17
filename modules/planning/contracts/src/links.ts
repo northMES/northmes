@@ -9,4 +9,6 @@ import { defineModuleLinks } from '@northmes/contracts';
  */
 export const planningLinks = defineModuleLinks('planning', {
   board: { path: 'board' },
+  /** The order Gantt (plan 18), a page of its own beside the board (Krister, 2026-10-17). */
+  gantt: { path: 'gantt' },
 });

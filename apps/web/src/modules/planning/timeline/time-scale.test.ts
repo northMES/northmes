@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { describe, expect, it } from 'vitest';
-import { createTimeScale, rangeLabel, rangeOf, shiftedFrom } from './time-scale.ts';
+import { createTimeScale, naturalWidthPx, rangeLabel, rangeOf, shiftedFrom } from './time-scale.ts';
 
 const stockholm = 'Europe/Stockholm';
 
@@ -175,5 +175,17 @@ describe('createTimeScale (plan 18, Shared pieces)', () => {
     expect(
       rangeLabel(rangeOf('2026-11-02', '4weeks', stockholm, '06:00'), '4weeks', stockholm),
     ).toBe('W45, Mon 2 Nov to Sun 29 Nov');
+  });
+
+  it('gives each preset a natural width wider than a view, and less with closed time hidden', () => {
+    expect(naturalWidthPx(rangeOf('2026-11-04', 'hours', stockholm, '06:00'), 'hours')).toBe(1200);
+    expect(naturalWidthPx(rangeOf('2026-11-04', 'day', stockholm, '06:00'), 'day')).toBe(3456);
+    expect(naturalWidthPx(week45, 'week')).toBe(2688);
+    expect(naturalWidthPx(rangeOf('2026-11-02', '4weeks', stockholm, '06:00'), '4weeks')).toBe(
+      2016,
+    );
+    // Week 45 with the A1 calendar hidden: 41.25 open hours at 16 px plus 16 gaps of 6 px.
+    const night = { fromMs: Date.UTC(2026, 10, 2, 14, 0), toMs: Date.UTC(2026, 10, 3, 5, 0) };
+    expect(naturalWidthPx(week45, 'week', { closed: [night] })).toBe((168 - 15) * 16 + 6);
   });
 });

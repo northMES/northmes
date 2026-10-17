@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { findGantt, renderBoardRoute } from './gantt-fixtures.tsx';
+import { naturalWidthPx, rangeOf } from '../../../src/modules/planning/timeline/time-scale.ts';
+import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -16,7 +17,7 @@ function rowsAtLevel(gantt: HTMLElement, level: number): HTMLElement[] {
 
 describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
   it('GT1 renders G1 as 5 orders, 8 operations and 8 job order rows with their levels, sizes and positions', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     const orders = rowsAtLevel(gantt, 1);
@@ -45,7 +46,7 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
   });
 
   it('GT1 names a summary bar after its row header, its span and whether the order is on time', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     expect(
@@ -66,7 +67,7 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
   });
 
   it('GT1 collapsing an order hides its rows and keeps aria-setsize', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     await userEvent.click(within(gantt).getByRole('button', { name: 'Collapse order 1001' }));
@@ -83,7 +84,7 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
   });
 
   it('GT1 shows the default tree columns and the Columns menu shows and hides one', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     expect(
@@ -107,10 +108,102 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
   });
 
   it('GT1 shows the Not placed row with no job order and an operation says how many it misses when one is unplaced', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     const notPlaced = within(gantt).getByRole('row', { name: /Not placed/ });
     expect(notPlaced.textContent).toContain('No job orders without a place');
+  });
+
+  it("plan 18 the time area takes the preset's natural width and scrolls sideways under the sticky tree cells", async () => {
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
+    const gantt = await findGantt();
+
+    expect(gantt.className).toContain('overflow-auto');
+    const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
+    const tracks = header.style.gridTemplateColumns.split(' ');
+    const timeTrack = Number.parseFloat(tracks[tracks.length - 1] ?? '0');
+    const natural = naturalWidthPx(
+      rangeOf('2026-11-04', 'day', 'Europe/Stockholm', '06:00'),
+      'day',
+    );
+    expect(timeTrack).toBeGreaterThanOrEqual(natural);
+    // The header and every row share the template, so the tree pane stays aligned with the rows.
+    const row = within(gantt).getByRole('row', { name: /^1003 / });
+    expect(row.style.gridTemplateColumns).toBe(header.style.gridTemplateColumns);
+    const [name, deadline] = within(header).getAllByRole('columnheader');
+    expect(name?.className).toContain('sticky');
+    expect(name?.style.insetInlineStart).toBe('0px');
+    expect(deadline?.className).toContain('sticky');
+    expect(deadline?.style.insetInlineStart).toBe(`${Number.parseFloat(tracks[0] ?? '0')}px`);
+    const cells = within(row).getAllByRole('gridcell');
+    expect(cells[0]?.style.insetInlineStart).toBe(deadline?.style.insetInlineStart);
+  });
+
+  it('plan 18 view=gantt fills the viewport height, so the rows scroll inside the grid', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    const fill = gantt.closest<HTMLElement>('[data-gantt-fill]');
+    const top = fill?.getBoundingClientRect().top ?? 0;
+    // The gap under the grid is main's bottom padding, which the test's stylesheet-free page has
+    // as 0; the least height is 15 rem.
+    const main = fill?.closest('main');
+    const gap =
+      main === null || main === undefined
+        ? 0
+        : Number.parseFloat(getComputedStyle(main).paddingBottom) || 0;
+    expect(fill?.style.height).toBe(`${Math.max(15 * 16, window.innerHeight - top - gap)}px`);
+    expect(gantt.className).toContain('min-h-0');
+    expect(gantt.className).toContain('flex-1');
+    const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
+    expect(header.className).toContain('sticky');
+    expect(within(gantt).getByRole('row', { name: /Not placed/ }).className).toContain('sticky');
+  });
+
+  it("WCAG 1.4.10 only the Name column sticks when the shown columns exceed the pane's cap", async () => {
+    // Every column shown: 1320 px of tree against a cap of 40 percent of 1100 px.
+    window.localStorage.setItem(
+      'northmes.planning.gantt.options',
+      JSON.stringify({ hiddenColumns: [] }),
+    );
+    try {
+      renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+      const gantt = await findGantt();
+
+      const headers = within(gantt).getAllByRole('columnheader');
+      expect(headers).toHaveLength(12);
+      expect(headers[0]?.className).toContain('sticky');
+      expect(headers[1]?.className).not.toContain('sticky');
+      const row = within(gantt).getByRole('row', { name: /^1003 / });
+      expect(within(row).getByRole('rowheader').className).toContain('sticky');
+      expect(within(row).getAllByRole('gridcell')[0]?.className).not.toContain('sticky');
+    } finally {
+      window.localStorage.removeItem('northmes.planning.gantt.options');
+    }
+  });
+
+  it('plan 18 the fill height is measured again when the window or the zoom changes', async () => {
+    const { innerHeight } = window;
+    try {
+      renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+      const gantt = await findGantt();
+      const fill = gantt.closest<HTMLElement>('[data-gantt-fill]') as HTMLElement;
+      const before = Number.parseFloat(fill.style.height);
+
+      Object.defineProperty(window, 'innerHeight', {
+        value: innerHeight + 100,
+        configurable: true,
+      });
+      await userEvent.click(
+        within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', { name: 'Day' }),
+      );
+
+      await waitFor(() => {
+        expect(Number.parseFloat(fill.style.height)).toBe(before + 100);
+      });
+    } finally {
+      Object.defineProperty(window, 'innerHeight', { value: innerHeight, configurable: true });
+    }
   });
 });

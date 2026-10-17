@@ -20,6 +20,7 @@ export const navIconNames = [
   'Warehouse',
   'Handshake',
   'ChartGantt',
+  'ChartNoAxesGantt',
   'Table',
   'ClipboardList',
   'ListChecks',

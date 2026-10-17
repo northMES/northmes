@@ -70,7 +70,8 @@ const columns: readonly DataTableColumn<BoardOrder>[] = [
  * The E02 board stub: the plant's production orders in the DataTable as the lists of ui-222 draw
  * it, each with its order number, article, quantity, status and Release for a planned order. Its
  * page frame gives it the h1, the document title, the breadcrumb in the shell's top bar, and the
- * loading, empty and error states. The real board of planning-221 replaces it.
+ * loading, empty and error states. The order Gantt is a page of its own (plan 18). The real board
+ * of planning-221 replaces it.
  */
 export function BoardScreen() {
   const { data, error, refetch } = useQuery(PlanningBoard);
