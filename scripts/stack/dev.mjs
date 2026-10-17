@@ -83,7 +83,11 @@ export async function devPlan({ server, web }) {
  * @param {string} line
  */
 export function completedBuild(line) {
-  return / - Found 0 errors\. Watching for file changes\.$/.test(line);
+  // Without a terminal tsc prints "6:29:00 PM - Found 0 errors. ..."; on one it prints the pretty
+  // form "[6:29:00 PM] Found 0 errors. ..." with color codes around the time.
+  return /(?: - |\] )Found 0 errors\. Watching for file changes\.$/.test(
+    line.replace(/\u001b\[[0-9;]*m/g, ''),
+  );
 }
 
 /** @typedef {Awaited<ReturnType<typeof devPlan>>} DevPlan */
