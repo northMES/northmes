@@ -622,7 +622,39 @@ describe('integration tokens: coreCreateIntegrationToken, coreRevokeIntegrationT
     expect(await credentialRows(company)).toHaveLength(1);
   });
 
-  it('ADR0073-W4 a role that a live token holds cannot be deleted', async () => {
+  it("ADR0073-W4 a create with the id of another company's token is core.not_found and leaves no Better Auth key", async () => {
+    const other = await acme();
+    const id = randomUUIDv7();
+    await other.companyAdmin.client.send<CreateAnswer>(createMutation, {
+      input: {
+        id,
+        companyId: other.company,
+        name: 'ERP import',
+        scopeId: other.company,
+        roleIds: [other.reader],
+      },
+    });
+    const { company, reader, companyAdmin } = await acme();
+    const [org] = await queryAsCore<{ organization_id: string }>(
+      db.ownerUrl,
+      'select organization_id from core.company where id = $1',
+      [company],
+    );
+
+    const answer = await companyAdmin.client.send<CreateAnswer>(createMutation, {
+      input: { id, companyId: company, name: 'ERP import', scopeId: company, roleIds: [reader] },
+    });
+
+    expect(errorCodes(answer)).toEqual(['core.not_found']);
+    expect(
+      await query(
+        db.authUrl,
+        `select id from auth.apikey where "referenceId" = '${org?.organization_id}'`,
+      ),
+    ).toEqual([]);
+  });
+
+  it('ADR0073-W4 a role that a live token holds cannot be deleted, and the message says to revoke the token', async () => {
     const { company, reader, companyAdmin } = await acme();
     await create(companyAdmin.client, {
       companyId: company,
@@ -637,6 +669,9 @@ describe('integration tokens: coreCreateIntegrationToken, coreRevokeIntegrationT
     );
 
     expect(errorCodes(answer)).toEqual(['core.role_in_use']);
+    expect(answer.errors?.[0]?.message).toBe(
+      'Article reader is held by an integration token, so it cannot be deleted. Revoke the tokens that hold it first.',
+    );
   });
 
   it('ADR0073-W4 nm_app reads and writes core.credential only with the company in its scopes', async () => {
