@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cn } from 'cn';
-import { Calendar, ChevronLeft, ChevronRight, Ellipsis, FoldHorizontal } from 'lucide-react';
+import {
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Ellipsis,
+  FoldHorizontal,
+  Pencil,
+} from 'lucide-react';
 import { useId } from 'react';
 import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
 import { IconButton } from '../../../../ui/components/icon-button/index.ts';
@@ -16,6 +23,7 @@ import {
 } from '../../../../ui/primitives/dropdown-menu.tsx';
 import type { ZoomPreset } from '../../gantt-data.ts';
 import { zoomPresetIds, zoomPresets } from '../../timeline/time-scale.ts';
+import { changesText } from './gantt-draft-drawer.tsx';
 import type { GanttOptions } from './gantt-options.ts';
 import { ganttColumnChoices } from './gantt-tree-pane.tsx';
 
@@ -62,12 +70,15 @@ export interface GanttToolbarProps {
   readonly rangeLabel: string;
   readonly options: GanttOptions;
   readonly onOptionsChange: (change: Partial<GanttOptions>) => void;
+  /** The changes in the planner's draft, which the My draft button names. */
+  readonly draftCount: number;
+  readonly onOpenDraft: () => void;
 }
 
 /**
  * The Gantt toolbar of D5: the Zoom group, Earlier, Now and Later, Go to date, the range, the
- * Hide closed time toggle, Columns and Board options. Zoom and from go to the URL; the toggle, the
- * columns and the options stay local.
+ * Hide closed time toggle, My draft, Columns and Board options. Zoom and from go to the URL; the
+ * toggle, the columns and the options stay local.
  */
 export function GanttToolbar({
   zoom,
@@ -80,6 +91,8 @@ export function GanttToolbar({
   rangeLabel,
   options,
   onOptionsChange,
+  draftCount,
+  onOpenDraft,
 }: GanttToolbarProps) {
   const dateId = useId();
   return (
@@ -123,6 +136,10 @@ export function GanttToolbar({
         Hide closed time
       </Button>
       <span className="grow" />
+      <Button variant="outline" className="h-8 px-3" onClick={onOpenDraft} data-draft-button>
+        <Pencil aria-hidden />
+        {draftCount === 0 ? 'My draft' : `My draft, ${changesText(draftCount)}`}
+      </Button>
       <ColumnsMenu
         columns={ganttColumnChoices}
         hidden={options.hiddenColumns}
@@ -143,6 +160,13 @@ export function GanttToolbar({
               onCheckedChange={(workload: boolean) => onOptionsChange({ workload })}
             >
               Workload
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={options.cascade}
+              closeOnClick={false}
+              onCheckedChange={(cascade: boolean) => onOptionsChange({ cascade })}
+            >
+              Cascade
             </DropdownMenuCheckboxItem>
           </DropdownMenuGroup>
         </DropdownMenuContent>

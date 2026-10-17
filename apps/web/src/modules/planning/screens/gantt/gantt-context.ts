@@ -3,6 +3,21 @@
 import { createContext, useContext } from 'react';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { ClosedWindow, TimeScale } from '../../timeline/time-scale.ts';
+import type { MovePreview, MoveState } from './gantt-move.ts';
+
+/** The move in progress and the actions of a block on it (plan 18, Moves on the order Gantt). */
+export interface GanttMoveActions {
+  readonly state: MoveState | undefined;
+  readonly preview: MovePreview | undefined;
+  /** Starts a move of a row; false, with the refusal announced, when the row cannot move. */
+  readonly begin: (jobOrderId: string, source: MoveState['source']) => boolean;
+  /** Holds the moving row at a setup start, on another allowed machine when one is named. */
+  readonly previewAt: (setupStartMs: number, equipment?: string) => void;
+  readonly stepTime: (direction: -1 | 1) => void;
+  readonly stepMachine: (direction: -1 | 1) => void;
+  readonly commit: () => void;
+  readonly cancel: () => void;
+}
 
 /** What every row of the order Gantt reads: the snapshot, the one scale and the view's state. */
 export interface GanttViewContext {
@@ -22,6 +37,9 @@ export interface GanttViewContext {
   readonly chainRowIds: ReadonlySet<string>;
   /** The name of a machine by code, its code when unknown. */
   readonly machineName: (code: string | undefined) => string;
+  /** The rows the planner's draft moved, drawn in the draft style. */
+  readonly draftRowIds?: ReadonlySet<string>;
+  readonly move?: GanttMoveActions;
 }
 
 const GanttContext = createContext<GanttViewContext | undefined>(undefined);

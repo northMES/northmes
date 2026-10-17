@@ -7,7 +7,7 @@ import { type JobOrderRow, latenessText, quantityText, statusLabel } from './gan
 
 /** A state cue of a block (plan 07, Block states): its kind and the words the name carries. */
 export interface BlockState {
-  readonly kind: 'locked' | 'conflict' | 'late' | 'chain';
+  readonly kind: 'locked' | 'conflict' | 'late' | 'chain' | 'draft';
   readonly text: string;
 }
 
@@ -47,10 +47,11 @@ export function startsBeforeRelease(row: JobOrderRow, retoolOverlapsLeadTime: bo
 export function blockStates(
   row: JobOrderRow,
   snapshot: GanttSnapshot,
-  options: { readonly onChain?: boolean } = {},
+  options: { readonly onChain?: boolean; readonly inDraft?: boolean } = {},
 ): BlockState[] {
   const states: BlockState[] = [];
   if (row.operation.isLocked) states.push({ kind: 'locked', text: 'locked' });
+  if (options.inDraft) states.push({ kind: 'draft', text: 'changed in your draft, not saved' });
   const broken = row.analysis?.constraints.filter(
     (line) => !line.holds && line.code !== undefined && conflictCodes.has(line.code),
   );
@@ -111,7 +112,7 @@ export function blockName(
   row: JobOrderRow,
   snapshot: GanttSnapshot,
   machineName: string,
-  options: { readonly onChain?: boolean } = {},
+  options: { readonly onChain?: boolean; readonly inDraft?: boolean } = {},
 ): string {
   const { jobOrder, operation, order } = row;
   const timeZone = snapshot.plant.timeZone;
