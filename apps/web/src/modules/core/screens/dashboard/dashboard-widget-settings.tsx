@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { type DashboardWidgetType, dashboardSizesOf } from '@northmes/core-contracts';
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
-import { type FormEvent, useId, useState } from 'react';
+import { type SubmitEvent, useId, useState } from 'react';
 import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
@@ -66,7 +66,7 @@ function SettingsForm({ widgetId, widgets, onApply }: SettingsFormProps) {
     const moved = next.find(({ id }) => id === widgetId) ?? widget;
     announce(positionText(moved));
   };
-  const apply = (event: FormEvent) => {
+  const apply = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = title.trim();
     if (trimmed === '') return setError('Enter a title.');

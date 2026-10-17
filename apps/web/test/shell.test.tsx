@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { gql } from '@apollo/client';
+import { gql, type TypedDocumentNode } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { defineWebModule, useShell } from '@northmes/web-sdk';
 import {
@@ -142,14 +142,14 @@ const settings: ShellModule = {
   }),
 };
 
-const pingQuery = gql`
+const pingQuery: TypedDocumentNode<{ ping: string }> = gql`
   query Ping {
     ping
   }
 `;
 
 function PingScreen() {
-  const { data, error } = useQuery<{ ping: string }>(pingQuery);
+  const { data, error } = useQuery(pingQuery);
   if (error) return <p>{error.message}</p>;
   return <p>{data ? `The API answered ${data.ping}` : 'Loading'}</p>;
 }
