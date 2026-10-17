@@ -94,6 +94,12 @@ describe('completedBuild', () => {
     // The lines tsc -b --watch --preserveWatchOutput prints, with the time in the locale's format.
     expect(completedBuild('6:29:00 PM - Found 0 errors. Watching for file changes.')).toBe(true);
     expect(completedBuild('18:29:00 - Found 0 errors. Watching for file changes.')).toBe(true);
+    // On a terminal tsc prints the pretty form: a bracketed, colored time and no dash.
+    expect(
+      completedBuild('[\u001b[90m1:52:38 PM\u001b[0m] Found 0 errors. Watching for file changes.'),
+    ).toBe(true);
+    expect(completedBuild('[1:52:38 PM] Found 0 errors. Watching for file changes.')).toBe(true);
+    expect(completedBuild('[1:52:38 PM] Found 2 errors. Watching for file changes.')).toBe(false);
     // A build with errors leaves the server that runs as it is.
     expect(completedBuild('6:29:00 PM - Found 1 error. Watching for file changes.')).toBe(false);
     expect(completedBuild('6:29:00 PM - Found 12 errors. Watching for file changes.')).toBe(false);
