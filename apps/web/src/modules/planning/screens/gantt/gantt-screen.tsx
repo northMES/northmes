@@ -284,6 +284,15 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     else if (spokenChain.current !== undefined) announce('Chain hidden');
     spokenChain.current = announcement;
   }, [chain]);
+  // A chain that appears with no Details open, as from ?order=<id>&chain=1 in a link, opens the
+  // order's Details with the explanation; a chain shown from a row's Details keeps that row.
+  const openedChainFor = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const orderId = chain?.order.id;
+    if (orderId === openedChainFor.current) return;
+    openedChainFor.current = orderId;
+    if (orderId !== undefined) setDetailRowId((current) => current ?? orderId);
+  }, [chain]);
   const rowById = useMemo(() => {
     const map = new Map<string, GanttRow>();
     for (const order of rows) {
@@ -370,10 +379,18 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     selectOrder(row.original.order.id);
     setDetailRowId(row.id);
   };
-  // The drawer closes and focus goes back to the row it opened from, or to a chain row's row.
+  // The drawer closes and focus goes back to the row it opened from, or to the row a chain link
+  // names: the sheet focuses it once its exit has ended, and the roving tabindex follows.
+  const returnRowId = useRef<string | undefined>(undefined);
   const closeDetails = (focusRowId = detailRowId) => {
+    returnRowId.current = focusRowId;
     setDetailRowId(undefined);
-    if (focusRowId !== undefined) requestAnimationFrame(() => focusRow(focusRowId));
+  };
+  const drawerFinalFocus = () => {
+    const rowId = returnRowId.current ?? detailRowId;
+    if (rowId === undefined) return null;
+    setFocusedRowId(rowId);
+    return document.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`);
   };
   // Row focus mode (plan 18, Tree grid semantics): Up and Down move between rows, Right expands a
   // collapsed row or moves into its time cell, Left collapses an expanded row, moves from the cell
@@ -570,6 +587,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             onClose={() => closeDetails()}
             onToggleChain={toggleChain}
             onFocusRow={(rowId) => closeDetails(rowId)}
+            finalFocus={drawerFinalFocus}
           />
         </GanttViewProvider>
       )}

@@ -179,7 +179,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
     expect(screen.queryByRole('complementary', { name: 'Board panel' })).toBeNull();
   });
 
-  it('ADR0021 Escape on a row ends the chain highlight; the drawer handles its own Escape', async () => {
+  it('ADR0021 Escape closes the Details that a chain link opened, then ends the chain highlight', async () => {
     const router = renderBoardRoute({
       view: 'gantt',
       zoom: 'week',
@@ -188,9 +188,21 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
       chain: 1,
     });
     const gantt = await findGantt();
-    expect(detailsOpen()).toBe(false);
+    const drawer = await findDetails();
+    await waitFor(() => {
+      expect(drawer.contains(document.activeElement)).toBe(true);
+    });
 
-    rowOf(gantt, 'po-1003').focus();
+    await userEvent.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(rowOf(gantt, 'po-1003'));
+    });
+    expect(router.state.location.search).toMatchObject({ chain: 1 });
+
     await userEvent.keyboard('{Escape}');
 
     await waitFor(() => {

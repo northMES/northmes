@@ -372,6 +372,8 @@ export interface GanttDetailDrawerProps {
   readonly onToggleChain: (orderId: string) => void;
   /** Runs when a chain row's link is followed: the drawer closes and that row takes focus. */
   readonly onFocusRow: (jobOrderId: string) => void;
+  /** The element that takes focus once the drawer has closed: the row it opened from. */
+  readonly finalFocus: () => HTMLElement | null;
 }
 
 /**
@@ -387,6 +389,7 @@ export function GanttDetailDrawer({
   onClose,
   onToggleChain,
   onFocusRow,
+  finalFocus,
 }: GanttDetailDrawerProps) {
   return (
     <Sheet
@@ -398,6 +401,7 @@ export function GanttDetailDrawer({
       <SheetContent
         side="right"
         data-details-drawer
+        finalFocus={() => finalFocus() ?? undefined}
         className="w-80 gap-3 overflow-y-auto p-4 text-sm sm:max-w-sm"
       >
         <div className="grid content-start gap-3" data-detail-panel>

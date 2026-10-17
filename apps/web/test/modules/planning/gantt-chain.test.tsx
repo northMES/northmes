@@ -45,6 +45,12 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
       .querySelector('[data-block="jo-1003-20"]')
       ?.closest('[role="row"]') as HTMLElement;
     expect(markerTexts(row1003, 'latestEnd')).toEqual(['latest end Wed 4 Nov 15:00']);
+    // The link opens the order's Details with the explanation.
+    const drawer = await findDetails();
+    expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('Order 1003');
+    expect(
+      within(drawer).getByRole('region', { name: 'Critical chain, 3 rows, root 1001.10 on CNC 1' }),
+    ).toBeTruthy();
   });
 
   it('GT2 Show critical chain on order 1003 explains the chain with the text of the spec, each row a link', async () => {
@@ -139,12 +145,9 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
       order: 'po-1001',
       chain: 1,
     });
-    const gantt = await findGantt();
+    await findGantt();
 
-    await userEvent.click(
-      within(within(gantt).getByRole('row', { name: /^1001 / })).getByRole('rowheader'),
-    );
-
+    // The chain in the URL opens the order's Details with its explanation.
     const panel = await findDetails();
     const section = within(panel).getByRole('region', {
       name: 'Critical chain, 2 rows, root 1001.10 on CNC 1',

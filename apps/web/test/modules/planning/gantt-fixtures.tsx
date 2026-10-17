@@ -49,9 +49,12 @@ export function renderBoardRoute(
   return router;
 }
 
-/** The treegrid of the order Gantt, once it has rendered. */
+/**
+ * The treegrid of the order Gantt, once it has rendered; also while the Details drawer, a modal
+ * sheet, keeps the page behind it inert.
+ */
 export async function findGantt(): Promise<HTMLElement> {
-  return screen.findByRole('treegrid', { name: /order Gantt/ });
+  return screen.findByRole('treegrid', { name: /order Gantt/, hidden: true });
 }
 
 /** A data source that answers every load with one snapshot, for a test with changed data. */

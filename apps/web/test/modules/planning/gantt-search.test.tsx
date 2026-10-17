@@ -76,11 +76,12 @@ describe('the board route with view=gantt (plan 18, URL state)', () => {
     expect(gantt.getAttribute('aria-label')).toBe(
       'plant-a order Gantt, W45, Mon 2 Nov to Sun 8 Nov',
     );
-    const row = within(gantt).getByRole('row', { name: /^1003 / });
+    // The chain opens the order's Details, a modal drawer, so the rows are read as hidden.
+    const row = within(gantt).getByRole('row', { name: /^1003 /, hidden: true });
     expect(row.getAttribute('aria-selected')).toBe('true');
     expect(
       within(gantt)
-        .getByRole('row', { name: /^1001 / })
+        .getByRole('row', { name: /^1001 /, hidden: true })
         .getAttribute('aria-selected'),
     ).toBe('false');
     expect(router.state.location.search).toEqual({

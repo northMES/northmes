@@ -35,9 +35,8 @@ test.describe('the order Gantt', () => {
     await page.goto(
       ganttHref({ view: 'gantt', zoom: 'week', from: '2026-11-02', order: 'po-1003', chain: '1' }),
     );
-    await expect(gantt).toBeVisible();
-    // The row's name in Chromium starts with its disclosure button, so the row is found by id.
-    await gantt.locator('[data-row-id="po-1003"] [role="rowheader"]').click();
+    // The chain in the URL opens the order's Details with its explanation; the modal drawer keeps
+    // the grid behind it hidden from the role query until it closes.
     const drawer = page.locator('[role="dialog"][data-details-drawer]');
     await expect(drawer).toBeVisible();
     // The drawer fades in; axe must read its colors once the transition has ended.
@@ -48,6 +47,7 @@ test.describe('the order Gantt', () => {
     await checkA11y('the chain highlight with its explanation in the Details drawer');
     await page.keyboard.press('Escape');
     await expect(drawer).toBeHidden();
+    await expect(gantt).toBeVisible();
     await expect(gantt.locator('[data-row-id="po-1003"]')).toBeFocused();
 
     await gantt.locator('[data-block="jo-1001-20"]').click();
@@ -80,19 +80,25 @@ test.describe('the order Gantt', () => {
     ]) {
       await page.setViewportSize(viewport);
       await expect(gantt).toBeVisible();
-      const scroll = await page.evaluate(() => ({
-        page: document.documentElement.scrollHeight - document.documentElement.clientHeight,
-        grid: (() => {
+      // The grid measures its height again after the resize, so each value is polled.
+      const measure = () =>
+        page.evaluate(() => {
           const grid = document.querySelector('[role="treegrid"]') as HTMLElement;
           return {
+            page: document.documentElement.scrollHeight - document.documentElement.clientHeight,
             x: grid.scrollWidth - grid.clientWidth,
             y: grid.scrollHeight - grid.clientHeight,
           };
-        })(),
-      }));
-      expect(scroll.page, `page scroll at ${viewport.width}`).toBeLessThanOrEqual(0);
-      expect(scroll.grid.x, `sideways scroll at ${viewport.width}`).toBeGreaterThan(0);
-      expect(scroll.grid.y, `row scroll at ${viewport.width}`).toBeGreaterThan(0);
+        });
+      await expect
+        .poll(async () => (await measure()).page, { message: `page scroll at ${viewport.width}` })
+        .toBeLessThanOrEqual(0);
+      await expect
+        .poll(async () => (await measure()).x, { message: `sideways scroll at ${viewport.width}` })
+        .toBeGreaterThan(0);
+      await expect
+        .poll(async () => (await measure()).y, { message: `row scroll at ${viewport.width}` })
+        .toBeGreaterThan(0);
     }
   });
 });
