@@ -67,7 +67,7 @@ In scope, as additions to the release 1 board and as a new view:
 
 Not in scope, with the reason:
 
-- Block resize, multi-select, multi-drag, continuous zoom, undo beyond discarding the draft, the compressed off-hours axis, a minimap: cut from release 1 in [ADR 0030](../adr/0030-a-planning-board-built-in-house.md) and [ADR 0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md). Resize stays cut even on the order Gantt, because a job order's length follows from quantity, rates and the calendar.
+- Block resize, multi-select, multi-drag, continuous zoom, undo beyond discarding the draft, a minimap: cut from release 1 in [ADR 0030](../adr/0030-a-planning-board-built-in-house.md) and [ADR 0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md). Resize stays cut even on the order Gantt, because a job order's length follows from quantity, rates and the calendar. The compressed off-hours axis returns as the local option Hide closed time, on by default, which compresses every closed window to a few pixels (Krister, 2026-10-17; [ADR 0030](../adr/0030-a-planning-board-built-in-house.md) is amended).
 - Start-to-start, finish-to-finish and start-to-finish links: routings carry finish-to-start with lead time and send-ahead quantity only, and [07](07-production-planning.md#graph-algorithms-with-graphology-later) names branching routings as a later trigger.
 - A project-style critical path that ignores machines: it is replaced by the critical chain, which includes reservations.
 - People and crews as resources: crew rotation is HR planning ([ADR 0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md)). Workload is per machine. Tools as a contended resource are a later item ([Open points](#open-points)).
@@ -421,7 +421,7 @@ Case `GT6`: adding a row `1005.10` of 3 600 s on CNC2 at Thu 12:00, over the loc
 
 Plan proposal, following the board's rules in [07](07-production-planning.md#data-loading).
 
-- `planningGantt(plantId, from, to, filter, first, after)` returns production orders with their operations and job orders for the visible range plus a margin, in deadline order, as a Relay connection ([ADR 0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)). Decided for the list conventions. Job orders come as the same GraphQL type the board query returns, so Apollo's normalized cache holds one entry per job order for both views and a draft move shows in both without a refetch.
+- `planningGantt(plantId, from, to, filter, first, after)` returns production orders with their operations and job orders for the visible range plus a margin, in deadline order, as a Relay connection ([ADR 0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)). Decided for the list conventions. Job orders come as the same GraphQL type the board query returns, so Apollo's normalized cache holds one entry per job order for both views and a draft move shows in both without a refetch. When the planner scrolls within one screen of either edge, the view loads the next span of the same preset (another 4 weeks at the 4 weeks preset, another three days at Day), so the loaded range grows in whole spans with a margin; `from` in the URL stays the start the planner chose, and Earlier and Later keep working (Krister, 2026-10-17).
 - The range resolver that limits the board limits the Gantt too, and a load with more than `ganttMaxOrders` (working default 300) orders fails with `planning.gantt.too_many_orders` and the toolbar says "Narrow the filter". The limit is set from the spike measurement.
 - Rows a computation needs outside the loaded set (a chain root in another order, a plan-this-order horizon) are fetched by production order id through `planningProductionOrder` and the board query for the extra range, and merged into the same cache.
 - Availability comes from core's availability query for every machine the loaded rows use, memoized per calendar version. Instants stay ISO strings in the cache and become epoch milliseconds once at the data edge ([ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md)). Proposed.
@@ -436,6 +436,7 @@ Plan proposal.
 |---|---|---|---|
 | the page | route | the board, the Gantt and the job order table under `/$plant/planning/` | the board |
 | Cascade | Board options, local | on, off | on |
+| Hide closed time | Gantt options, local | on, off | on |
 | Workload under machines, Workload panel | Board options, local | on, off | off |
 | Shift strip | Board options, local | on, off | off |
 | Links | Board options, local | expanded orders, selected order | expanded orders, falling back above the link limit |
@@ -592,9 +593,9 @@ These become ADRs at status `proposed`, from `docs/adr/template.md`, before a ta
 |---|---|---|
 | Does the pilot need an earliest start on orders, and does the ERP send a start date for it? | product owner | the column exists, the field is hidden behind `earliestStartEnabled` = false |
 | Do planners want a hand move to anchor a row against autoplan (the planner anchor), or is the hard lock enough? | product owner | off, behind `plannerAnchors` |
-| Is cascade on by default acceptable to planners, or do they want to see breaks first? | product owner | on by default, local switch |
-| Should Save refuse a row before its release, or confirm with a reason as for overlaps (PO-43)? | product owner | confirm with a reason |
-| Workload buckets at Hours and Day zoom: per shift, or per production day always? | product owner | per shift |
+| Is cascade on by default acceptable to planners, or do they want to see breaks first? | product owner; working default confirmed by Krister 2026-10-17 | on by default, local switch |
+| Should Save refuse a row before its release, or confirm with a reason as for overlaps (PO-43)? | product owner; working default confirmed by Krister 2026-10-17: Save never refuses a draft for a broken rule, the conflict stays visible so the planner can fix it later | confirm with a reason |
+| Workload buckets at Hours and Day zoom: per shift, or per production day always? | product owner; working default confirmed by Krister 2026-10-17, with the bucket kinds kept as an extensible list | per shift |
 | Are tools a contended resource the workload must show (two job orders using one tool at the same time)? | product owner | not in scope; a later item that adds a tool reservation check to `validate()` |
 | The link limit and `ganttMaxOrders` | SP3b measurement | 200 links, 300 orders |
 | The planner PC and browser for SP3b and the Gantt NVDA pass | pilot IT | as SP3 |
