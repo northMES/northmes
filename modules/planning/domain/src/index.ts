@@ -29,6 +29,14 @@ export {
   workBetween,
 } from './calendar/windows.ts';
 export {
+  cyclesFor,
+  oneCycleSeconds,
+  plannedSeconds,
+  type Rates,
+  runSecondsFor,
+  setupSeconds,
+} from './duration.ts';
+export {
   type GanttExpected,
   type GanttFixture,
   g1,
