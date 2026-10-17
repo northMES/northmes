@@ -23,6 +23,7 @@ const lines: Readonly<Record<string, string>> = {
   'core.role:read': 'Read roles',
   'core.role:manage': 'Create and edit roles',
   'core.roleAssignment:manage': 'Assign and remove roles',
+  'core.integration:manage': 'Create and revoke integration tokens',
   'core.audit:read': 'Read the audit log',
   'core.settings:manage': 'Change core settings',
   'core.plant:create': 'Create plants',

@@ -3,6 +3,13 @@
 import { apiKey } from '@better-auth/api-key';
 import type { BetterAuthOptions, BetterAuthPlugin } from 'better-auth';
 import { admin, bearer, jwt, organization, username } from 'better-auth/plugins';
+import { createAccessControl } from 'better-auth/plugins/access';
+import {
+  adminAc,
+  defaultStatements,
+  memberAc,
+  ownerAc,
+} from 'better-auth/plugins/organization/access';
 import type { Dialect } from 'kysely';
 import { signInLockout } from './sign-in-lockout.ts';
 
@@ -72,6 +79,54 @@ export function sessionIsLive(
 ): boolean {
   return expiresAt > now && absoluteEnd(createdAt) > now;
 }
+
+/** The api-key configuration of integration tokens (ADR 0073). */
+export const INTEGRATION_KEY_CONFIG = 'integration';
+
+/** The prefix of every integration token's secret, which the credential guard reads (ADR 0073). */
+export const INTEGRATION_KEY_PREFIX = 'nms_int_';
+
+/** How many letters an integration token's secret has after its prefix: Better Auth's default. */
+export const INTEGRATION_KEY_LENGTH = 64;
+
+/** The longest an integration token lives, in days (ADR 0073). */
+export const INTEGRATION_KEY_MAX_DAYS = 365;
+
+/**
+ * The api-key plugin's settings for integration tokens (ADR 0073): keys that belong to the
+ * company's Better Auth organization, with the nms_int_ prefix, stored only as a hash, without the
+ * first characters of the secret, and expiring within INTEGRATION_KEY_MAX_DAYS. The plugin's own
+ * rate limit is off, since NorthMES counts calls per credential in its own throttler (ADR 0073
+ * section 6), and no key ever stands in for a session (ADR 0011).
+ */
+export const integrationKeyOptions = {
+  configId: INTEGRATION_KEY_CONFIG,
+  references: 'organization',
+  defaultPrefix: INTEGRATION_KEY_PREFIX,
+  defaultKeyLength: INTEGRATION_KEY_LENGTH,
+  maximumNameLength: 80,
+  requireName: true,
+  disableKeyHashing: false,
+  startingCharactersConfig: { shouldStore: false },
+  keyExpiration: { minExpiresIn: 1, maxExpiresIn: INTEGRATION_KEY_MAX_DAYS },
+  rateLimit: { enabled: false },
+  enableSessionForAPIKeys: false,
+} as const;
+
+/**
+ * The organization plugin's access control: its default roles, with the apiKey statement added so
+ * that core's createIntegrationToken may create a key of the company's organization on the server.
+ * NorthMES has already checked core.integration:manage with can() by then (ADR 0010); Better Auth
+ * checks only that the creator is a member of the organization. The organization and api-key
+ * plugins answer no HTTP path (openPaths), so these roles reach no client.
+ */
+const organizationAccess = createAccessControl({ ...defaultStatements, apiKey: ['create'] });
+
+const organizationRoles = {
+  owner: organizationAccess.newRole({ ...ownerAc.statements, apiKey: ['create'] }),
+  admin: organizationAccess.newRole({ ...adminAc.statements, apiKey: ['create'] }),
+  member: organizationAccess.newRole({ ...memberAc.statements, apiKey: ['create'] }),
+};
 
 /**
  * The paths of the admin and api-key plugins. NorthMES calls them only on the server, through
@@ -206,9 +261,13 @@ export function authOptions({ dialect, baseURL, secret, webOrigins }: AuthOption
       // A username is never reassigned (ADR 0010, ADR 0051). The flag guards a call that carries
       // the session cookie; /update-user is disabled over HTTP because a bearer request passes it.
       username({ immutableUsername: true }),
-      organization({ allowUserToCreateOrganization: false }),
+      organization({
+        allowUserToCreateOrganization: false,
+        ac: organizationAccess,
+        roles: organizationRoles,
+      }),
       admin(),
-      apiKey(),
+      apiKey([integrationKeyOptions]),
       bearer(),
       onlyOpenPaths(),
       signInLockout(),

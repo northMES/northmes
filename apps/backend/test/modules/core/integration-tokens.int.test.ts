@@ -539,6 +539,71 @@ describe('integration tokens: coreCreateIntegrationToken, coreRevokeIntegrationT
     expect(errorCodes(otherCompany)).toEqual(['core.forbidden']);
   });
 
+  it('ADR0073-W4 core.integration:manage held at a plant only reaches neither the list nor the commands, which need it at the company', async () => {
+    const { company, hel, helSlug, reader, companyAdmin } = await acme();
+    const [plantRole] = await queryAsCore<{ key: string }>(
+      db.ownerUrl,
+      `insert into core.role (company_id, key, name, permissions, origin)
+       values ($1, 'plant-tokens', 'Plant tokens', '{core.integration:manage,core.article:read}', 'custom')
+       returning key`,
+      [company],
+    );
+    const plantManager = await admin(company, plantRole?.key ?? '', hel, helSlug);
+    const created = await create(companyAdmin.client, {
+      companyId: company,
+      name: 'ERP import',
+      scopeId: hel,
+      roleIds: [reader],
+    });
+    const token = created.data?.coreCreateIntegrationToken.token;
+
+    const listed = await plantManager.client.send(listQuery, {});
+    const createdAtPlant = await create(plantManager.client, {
+      name: 'Plant token',
+      scopeId: hel,
+      roleIds: [reader],
+    });
+    const revoked = await plantManager.client.send(revokeMutation, {
+      input: { id: token?.id, expectedVersion: token?.version },
+    });
+
+    expect(errorCodes(listed)).toEqual(['core.forbidden']);
+    expect(errorCodes(createdAtPlant)).toEqual(['core.forbidden']);
+    expect(errorCodes(revoked)).toEqual(['core.forbidden']);
+  });
+
+  it('ADR0073-W4 an editor gets core.role_not_held adding a permission to a role that a token holds where the editor does not hold it', async () => {
+    const { company, reader, companyAdmin } = await acme();
+    const [editorRole] = await queryAsCore<{ key: string }>(
+      db.ownerUrl,
+      `insert into core.role (company_id, key, name, permissions, origin)
+       values ($1, 'role-editor', 'Role editor', '{core.role:manage,core.role:read}', 'custom')
+       returning key`,
+      [company],
+    );
+    const editor = await admin(company, editorRole?.key ?? '', company);
+    await create(companyAdmin.client, {
+      companyId: company,
+      name: 'ERP import',
+      scopeId: company,
+      roleIds: [reader],
+    });
+
+    const answer = await editor.inSettings.send(
+      `mutation ($input: CoreUpdateRoleInput!) { coreUpdateRole(input: $input) { id } }`,
+      {
+        input: {
+          id: reader,
+          expectedVersion: 1,
+          name: 'Article reader',
+          permissions: ['core.article:read', 'core.article:update'],
+        },
+      },
+    );
+
+    expect(errorCodes(answer)).toEqual(['core.role_not_held']);
+  });
+
   it('ADR0073-W4 a retry with the id of a created token is refused with core.integration_token_secret_shown and creates no second token', async () => {
     const { company, reader, companyAdmin } = await acme();
     const input = {

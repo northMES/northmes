@@ -52,6 +52,12 @@ export {
   dashboardWidgetTypes,
   saveDashboardTab,
 } from './dashboard.ts';
+export {
+  createIntegrationToken,
+  integrationTokenDefaultDays,
+  integrationTokenMaxDays,
+  revokeIntegrationToken,
+} from './integration-token.ts';
 export { coreLinks } from './links.ts';
 export { articleOperations } from './operations/article.ts';
 export { articleGroupOperations } from './operations/article-group.ts';

@@ -140,6 +140,8 @@ Each table lists the threats that matter at that conduit, not every STRIDE lette
 | A forged or malformed ERP file changes orders | T | The upload needs a signed-in user with the permission; the file passes a Zod contract; imported rows are records, not code | decided (ADR 0031, ADR 0032) |
 | A connector run acts with more rights than it needs | E | A `system` principal per connector, with its own permissions and audit rows | decided (ADR 0011, ADR 0013) |
 | A public route accepts the wrong credential | S | Integration tokens bound to one scope node, cookies ignored, limits per token | decided (ADR 0064), with the first public route |
+| An integration token's secret leaks from the database, a log or a list | I | Better Auth's api-key plugin stores only its SHA-256 hash and no leading characters; the create answer shows it once; the record holds it as a `Secret` that serializes as `[redacted]`; `coreIntegrationTokens` has no secret field (ADR 0073) | built |
+| An integration token acts with more rights than its creator, or after revoke or expiry | E, S | `core.integration:manage` at the company; the grant rule for each role at the binding; the resolver needs Better Auth's verify and a live `core.credential` row, whose expiry and revocation it checks again; revoke deletes the key at once (ADR 0073) | built (resolver not wired to a route yet) |
 | A machine protocol (OPC UA, MQTT) is spoofed | S, T | Security mode, credentials and access lists in each integration's ADR before code | decided (ADR 0076 rule 4) |
 
 ### Operator station (later, on C1)
