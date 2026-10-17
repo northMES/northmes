@@ -55,6 +55,7 @@ catalog:
   '@nestjs/swagger': 12.0.2
   '@nestjs/terminus': 12.1.0
   '@nestjs/testing': 12.1.0
+  '@nestjs/throttler': 6.7.1
   '@playwright/test': 1.63.0
   '@tailwindcss/vite': 4.3.3
   '@tanstack/react-router': 1.170.39
