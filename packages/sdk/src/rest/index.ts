@@ -25,5 +25,6 @@ export {
 export {
   type PublicOperationCall,
   PublicOperationRunner,
+  publicApiPath,
   toRestRoutes,
 } from './to-rest-routes.ts';

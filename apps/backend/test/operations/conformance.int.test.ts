@@ -81,6 +81,10 @@ describe('core article operations', () => {
 
   operationsConformance(articleOperations, {
     story: 'ADR0073-W3',
+    url: () => {
+      if (!testApp) throw new Error('the test app did not start');
+      return testApp.app.getUrl();
+    },
     async run({ key, surface, permitted }: ConformanceCall) {
       if (!testApp) throw new Error('the test app did not start');
       const at = await place(permitted);
@@ -155,6 +159,10 @@ describe('core article group operations', () => {
 
   operationsConformance(articleGroupOperations, {
     story: 'E06-S06',
+    url: () => {
+      if (!testApp) throw new Error('the test app did not start');
+      return testApp.app.getUrl();
+    },
     async run({ key, surface, permitted }: ConformanceCall) {
       if (!testApp) throw new Error('the test app did not start');
       const { company, headers } = await place(permitted);

@@ -65,6 +65,14 @@ interface RouteResponse {
   end(body: string): unknown;
 }
 
+/**
+ * The full path of a public REST binding in OpenAPI form: the version, the module segment and the
+ * binding's path, so publicApiPath('core', 'articles/{id}') is /api/v1/core/articles/{id}.
+ */
+export function publicApiPath(module: string, path: string): string {
+  return `/api/v${API_MAJOR}/${module}/${path}`;
+}
+
 /** The query parameter that names the request's plant, which no operation's input may use. */
 const PLANT_PARAMETER = 'plant';
 
@@ -308,7 +316,7 @@ export function toRestRoutes(declarations: readonly OperationsDeclaration[]): Ty
       operation: operation.contract.name,
       permission: operation.contract.permission,
       method,
-      path: `/api/v${API_MAJOR}/${module}/${path}`,
+      path: publicApiPath(module, path),
       status,
     })(PublicRoutes.prototype, operationId, descriptor);
     Req()(PublicRoutes.prototype, operationId, 0);
