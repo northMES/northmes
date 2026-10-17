@@ -160,8 +160,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const cap = Math.floor(width * treePaneShare);
   const fixedWidth = columns.slice(1).reduce((sum, column) => sum + column.widthPx, 0);
   const nameWidth = Math.max(160, Math.min(columns[0]?.widthPx ?? 300, cap - fixedWidth));
-  const treeWidth = Math.min(nameWidth + fixedWidth, cap);
-  const timeWidth = Math.max(480, width - treeWidth);
+  // The tree columns' width as the grid lays them out, which may exceed the cap; the overlay
+  // starts where the time column starts.
+  const treeWidth = nameWidth + fixedWidth;
+  const timeWidth = Math.max(480, width - Math.min(treeWidth, cap));
   const gridTemplateColumns = [
     `${nameWidth}px`,
     ...columns.slice(1).map((column) => `${column.widthPx}px`),

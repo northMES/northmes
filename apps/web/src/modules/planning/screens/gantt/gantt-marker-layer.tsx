@@ -149,9 +149,9 @@ export function GanttMarkerLayer({
                 style={{ left: `${marker.x}px` }}
               >
                 <span className="absolute inset-y-0 left-0 w-0.5 bg-foreground" />
-                <Flag className="absolute top-px left-[3px] size-3 fill-current text-foreground" />
+                <Flag className="absolute top-px left-0.75 size-3 fill-current text-foreground" />
                 {marker.label !== undefined && (
-                  <span className="absolute top-px left-4 font-mono text-[0.6875rem] leading-[0.875rem] whitespace-nowrap text-foreground">
+                  <span className="absolute top-px left-4 font-mono text-tick whitespace-nowrap text-foreground">
                     {marker.label}
                   </span>
                 )}
@@ -191,7 +191,7 @@ export function GanttMarkerLayer({
                 key={key}
                 {...common}
                 className={cn(
-                  'absolute top-0 h-[9px] w-0.5',
+                  'absolute top-0 h-2.25 w-0.5',
                   marker.kind === 'latestStart' ? 'bg-foreground' : 'bg-late-foreground',
                 )}
                 style={{ left: `${marker.x}px` }}
@@ -204,7 +204,7 @@ export function GanttMarkerLayer({
                 key={key}
                 {...common}
                 className={cn(
-                  'absolute top-[25px] border-t border-foreground',
+                  'absolute top-6.25 border-t border-foreground',
                   marker.kind === 'wait' ? 'border-dotted opacity-70' : 'opacity-45',
                 )}
                 style={{ left: `${marker.x}px`, width: `${marker.widthPx ?? 0}px` }}

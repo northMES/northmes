@@ -46,7 +46,7 @@ export function GanttTimeHeader({
             'absolute border-s border-border whitespace-nowrap',
             tick.tier === 'top'
               ? 'top-0 h-6 px-1.5 py-0.5 text-xs font-medium'
-              : 'top-6 h-6 px-1 py-1 font-mono text-[0.6875rem] text-muted-foreground',
+              : 'top-6 h-6 px-1 py-1 font-mono text-tick text-muted-foreground',
           )}
           style={{ left: `${tick.x}px` }}
         >
@@ -64,7 +64,7 @@ export function GanttTimeHeader({
       {nowVisible && (
         <div
           aria-hidden
-          className="absolute top-[1.625rem] -translate-x-1/2 rounded-full bg-now px-1.5 font-mono text-[0.6875rem] whitespace-nowrap text-now-foreground"
+          className="absolute top-6.5 -translate-x-1/2 rounded-full bg-now px-1.5 font-mono text-tick whitespace-nowrap text-now-foreground"
           style={{ left: `${scale.x(nowMs)}px` }}
         >
           {formatPlantDateTime(nowMs, timeZone)}

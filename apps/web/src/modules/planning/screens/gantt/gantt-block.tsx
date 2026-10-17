@@ -73,7 +73,7 @@ export function GanttBlock({
             onClick={onSelect}
             className={cn(
               'absolute top-1 h-11 overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-black outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
-              selected && 'border-t-[3px] border-t-black',
+              selected && 'border-t-3 border-t-black',
             )}
             style={{ left: `${left}px`, width: `${width}px`, background: `var(--${order.color})` }}
           />
@@ -101,20 +101,24 @@ export function GanttBlock({
         {locked && (
           <span
             aria-hidden
+            data-locked-outline
             className="pointer-events-none absolute inset-0.5 z-[2] border-2 border-current"
           />
         )}
+        {/* The chain outline differs in shape from the locked one, dashed and further in, so the
+            two read apart below compact density and a locked row on the chain keeps both. */}
         {onChain && (
           <span
             aria-hidden
-            className="pointer-events-none absolute inset-0.5 z-[2] border-2 border-late-foreground"
+            data-chain-outline
+            className="pointer-events-none absolute inset-1.5 z-[2] border-2 border-dashed border-late-foreground"
           />
         )}
         {conflict && (
           <span
             aria-hidden
             data-conflict-edge
-            className="pointer-events-none absolute inset-y-0 right-0 z-[2] w-[7px]"
+            className="pointer-events-none absolute inset-y-0 right-0 z-[2] w-1.75"
             style={{
               background:
                 'repeating-linear-gradient(135deg, var(--late-foreground) 0 3px, transparent 3px 6px)',

@@ -82,7 +82,7 @@ export function GanttHoverCard({
   readonly machineName: string;
 }) {
   return (
-    <div className="grid w-72 gap-1 text-[0.8125rem] leading-[1.125rem]">
+    <div className="grid w-72 gap-1 text-data">
       <p className="font-mono text-sm font-semibold">
         {row.operation.displayNumber} {row.operation.name}
       </p>

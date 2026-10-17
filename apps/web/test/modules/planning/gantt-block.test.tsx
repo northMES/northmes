@@ -79,8 +79,8 @@ describe('the block of a job order row (plan 18, Blocks across closed time)', ()
     renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02', order: 'po-1001' });
     const gantt = await findGantt();
 
-    expect(blockOf(gantt, 'jo-1001-10').className).toContain('border-t-[3px]');
-    expect(blockOf(gantt, 'jo-1001-20').className).toContain('border-t-[3px]');
-    expect(blockOf(gantt, 'jo-1003-10').className).not.toContain('border-t-[3px]');
+    expect(blockOf(gantt, 'jo-1001-10').className).toContain('border-t-3');
+    expect(blockOf(gantt, 'jo-1001-20').className).toContain('border-t-3');
+    expect(blockOf(gantt, 'jo-1003-10').className).not.toContain('border-t-3');
   });
 });

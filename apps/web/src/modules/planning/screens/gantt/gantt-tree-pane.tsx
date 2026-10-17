@@ -445,7 +445,7 @@ export function GanttRowHeader({
       )}
       <span className="grid min-w-0 leading-4">
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className="shrink-0 font-mono text-[0.8125rem] font-semibold">{title}</span>
+          <span className="shrink-0 font-mono text-data font-semibold">{title}</span>
           {badges}
         </span>
         <span className="truncate text-xs text-muted-foreground">{subtext}</span>
