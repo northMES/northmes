@@ -118,6 +118,27 @@ describe('deviations (ADR 0025 rule 7)', () => {
     expect(addWork(cnc1, fri1300, 10_800)?.endMs).toBe(Date.UTC(2026, 10, 9, 6));
   });
 
+  it('a deviation with an empty equipment list applies to the whole plant, as one without the field', () => {
+    const calendar = weeklyCalendar({
+      ...a1Input,
+      deviations: [
+        {
+          kind: 'nonWorking',
+          startsLocal: '2026-11-09T00:00',
+          endsLocal: '2026-11-10T00:00',
+          equipment: [],
+        },
+      ],
+    });
+
+    expect(
+      availabilityOf(calendar, 'MILL1', Date.UTC(2026, 10, 8, 23), Date.UTC(2026, 10, 9, 23)),
+    ).toEqual([]);
+    expect(
+      availabilityOf(calendar, undefined, Date.UTC(2026, 10, 8, 23), Date.UTC(2026, 10, 9, 23)),
+    ).toEqual([]);
+  });
+
   it('a machine deviation overrides a plant-wide one: overtime on Mill 1 stays open on a plant holiday', () => {
     const calendar = weeklyCalendar({
       ...a1Input,
