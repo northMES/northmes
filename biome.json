@@ -124,6 +124,7 @@
               "level": "error",
               "options": {
                 "paths": {
+                  "@northmes/sdk": "The planning domain is pure: no database, no Nest, no React (ADR 0057).",
                   "kysely": "The planning domain is pure: no database, no Nest, no React (ADR 0057).",
                   "pg": "The planning domain is pure: no database, no Nest, no React (ADR 0057).",
                   "react": "The planning domain is pure: no database, no Nest, no React (ADR 0057).",

@@ -29,7 +29,7 @@ export interface CalendarDeviation {
   readonly startsLocal: string;
   readonly endsLocal: string;
   readonly reason?: string;
-  /** The machines it applies to, by code; none means the whole plant. */
+  /** The machines it applies to, by code; none, or an empty list, means the whole plant. */
   readonly equipment?: readonly string[];
 }
 
@@ -175,7 +175,7 @@ export function availabilityOf(
         (deviation) =>
           deviation.kind === kind &&
           (scope === 'plant'
-            ? deviation.equipment === undefined
+            ? deviation.equipment === undefined || deviation.equipment.length === 0
             : equipment !== undefined && deviation.equipment?.includes(equipment) === true),
       )
       .map((deviation) => deviationWindow(timeZone, deviation));

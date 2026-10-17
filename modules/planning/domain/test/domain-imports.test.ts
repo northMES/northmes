@@ -15,6 +15,10 @@ const banned: ReadonlyArray<{ readonly pattern: RegExp; readonly why: string }> 
   { pattern: /from '@nestjs\//, why: 'the domain imports no Nest module' },
   { pattern: /from '(pg|kysely)'/, why: 'the domain reads no database' },
   { pattern: /from 'react(-dom)?'/, why: 'the domain renders nothing' },
+  {
+    pattern: /from '@northmes\/sdk/,
+    why: 'the domain imports @northmes/contracts only (ADR 0057)',
+  },
   { pattern: /process\.env/, why: 'the domain reads no environment' },
   { pattern: /Temporal\.Now|Date\.now\(|new Date\(\)/, why: 'now is an argument' },
   { pattern: /localeCompare|Intl\.Collator/, why: 'comparators compare code units (ADR 0028)' },
