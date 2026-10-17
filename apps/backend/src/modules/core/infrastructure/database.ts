@@ -157,6 +157,31 @@ export interface RoleAssignmentTable {
 }
 
 /**
+ * core.credential: the credential of a principal that is not a person, in release 1 an integration
+ * token (ADR 0073). Better Auth holds its key as a hash; this row holds what NorthMES knows of it.
+ */
+export interface CredentialTable {
+  id: string;
+  /** The company's node: a credential belongs to its company. */
+  scope_id: string;
+  version: Generated<number>;
+  kind: 'integration';
+  name: string;
+  /** The company node or one plant node, where the credential holds its roles. */
+  binding_scope_id: string;
+  /** The roles of the company that the credential holds at its binding. */
+  role_ids: string[];
+  /** The id of the key in auth.apikey, which a revoke deletes. */
+  key_id: string;
+  created_by: string;
+  created_at: Generated<Date>;
+  expires_at: Date;
+  revoked_at: Date | null;
+  revoked_by: string | null;
+  last_used_at: Date | null;
+}
+
+/**
  * The Kysely table types of the core module, by schema-qualified name. They are written by hand
  * until generated types arrive (ADR 0006), so they change with every core migration.
  */
@@ -193,4 +218,5 @@ export interface CoreDatabase {
   'core.user_directory': UserDirectoryView;
   'core.company_user': CompanyUserView;
   'core.dashboard_tab': DashboardTabTable;
+  'core.credential': CredentialTable;
 }
