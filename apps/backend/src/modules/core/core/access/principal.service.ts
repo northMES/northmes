@@ -18,8 +18,11 @@ import { AuthService } from './auth.service.ts';
 /** The bearer token of an Authorization header. */
 const bearer = /^Bearer\s+(\S+)$/i;
 
-/** A row of the principal's query: one scope node and what is granted directly at it. */
-interface GrantRow {
+/**
+ * A row of the principal's query, core.principal_grants or core.credential_grants: one scope node
+ * and what is granted directly at it.
+ */
+export interface GrantRow {
   readonly id: string;
   readonly parent_id: string | null;
   readonly permissions: string[];
@@ -37,6 +40,28 @@ export function plantForbidden(plant: string): DomainError {
     status: HttpStatus.FORBIDDEN,
     message: `You cannot open plant ${plant}. Choose one of your plants.`,
   });
+}
+
+/** What a principal's grant rows decide: its plant, its scope tree and its scope sets. */
+export type PrincipalAccess = Pick<Principal, 'plantId' | 'readScopes' | 'writeScopes' | 'scopes'>;
+
+/**
+ * The access of a principal with these grant rows at the plant whose slug is `plant` (ADR 0008):
+ * its scope tree holds every node of the rows, each with the permissions granted at it, and its
+ * scope sets are narrowed to the plant and its company; without a plant they are empty. A plant the
+ * principal may not open, or no plant with that slug, throws core.plant_forbidden (ADR 0007).
+ */
+export function accessAt(rows: readonly GrantRow[], plant: string | undefined): PrincipalAccess {
+  const nodes: ScopeGrant[] = rows.map((row) => ({
+    id: row.id,
+    parentId: row.parent_id,
+    permissions: row.permissions,
+  }));
+  const access = accessOf(nodes);
+  if (plant === undefined) return { plantId: undefined, ...atPlant(access, undefined) };
+  const plantId = rows.find(({ slug }) => slug === plant)?.id;
+  if (plantId === undefined || !canOpen(access, plantId)) throw plantForbidden(plant);
+  return { plantId, ...atPlant(access, plantId) };
 }
 
 /**
@@ -126,15 +151,6 @@ export class PrincipalService extends PrincipalResolver {
 
   /** The principal of a user with these grant rows at the plant whose slug is `plant`. */
   #principal(userId: string, rows: readonly GrantRow[], plant: string | undefined): Principal {
-    const nodes: ScopeGrant[] = rows.map((row) => ({
-      id: row.id,
-      parentId: row.parent_id,
-      permissions: row.permissions,
-    }));
-    const access = accessOf(nodes);
-    if (plant === undefined) return { userId, plantId: undefined, ...atPlant(access, undefined) };
-    const plantId = rows.find(({ slug }) => slug === plant)?.id;
-    if (plantId === undefined || !canOpen(access, plantId)) throw plantForbidden(plant);
-    return { userId, plantId, ...atPlant(access, plantId) };
+    return { userId, type: 'user', surface: 'web', ...accessAt(rows, plant) };
   }
 }

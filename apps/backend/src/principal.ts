@@ -16,12 +16,34 @@ export interface ScopeGrant {
 }
 
 /**
+ * What kind of principal a request acts as (ADR 0011, ADR 0073): a person, or an outside system
+ * that holds an integration token and acts as itself.
+ */
+export type PrincipalType = 'user' | 'integration';
+
+/**
+ * The surface a request came in on, which the audit trail records with each command (ADR 0013,
+ * ADR 0073): the web app on /graphql, or the public REST API.
+ */
+export type PrincipalSurface = 'web' | 'api';
+
+/**
  * Who a request acts as (ADR 0010, ADR 0011). One principal is resolved per request, from the
- * bearer token, by the core module's PrincipalResolver.
+ * bearer token, by the core module's PrincipalResolver, or, for an integration token, by core's
+ * IntegrationCredentialService.
  */
 export interface Principal {
-  /** The user's id, auth.user.id. */
+  /** The user's id, auth.user.id, or '' for a principal that is no person. */
   readonly userId: string;
+  /** The kind of principal; a principal without one is a user. */
+  readonly type?: PrincipalType;
+  /**
+   * The id of the core.credential row the request came with, for an integration token, which the
+   * audit trail records with each command (ADR 0073).
+   */
+  readonly credentialId?: string;
+  /** The surface the request came in on, which the audit trail records with each command. */
+  readonly surface?: PrincipalSurface;
   /**
    * The scope id of the plant whose slug the request's x-northmes-plant header names, which the
    * principal may open (ADR 0007). A command that creates an entity writes it there.
