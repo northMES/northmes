@@ -39,7 +39,13 @@ describe('planned duration (ADR 0027, plan 07 TC1 to TC12)', () => {
   });
 
   it('G1 1004.10: 1 200 pieces at 30 s with a 30 min retool take 37 800 s, 300 pieces of run 9 000 s', () => {
-    const rates = { ...tc1, cycleSeconds: 30, piecesPerCycle: 1, planningFactor: 1, retoolSeconds: 1800 };
+    const rates = {
+      ...tc1,
+      cycleSeconds: 30,
+      piecesPerCycle: 1,
+      planningFactor: 1,
+      retoolSeconds: 1800,
+    };
 
     expect(plannedSeconds(1200, rates)).toBe(37_800);
     expect(runSecondsFor(300, rates)).toBe(9000);

@@ -44,3 +44,21 @@ export {
   ganttExpected,
   ganttFixture,
 } from './fixtures/gantt.ts';
+export { g1HorizonEndMs, g1OrderId, g1PlanContext } from './fixtures/gantt-context.ts';
+export {
+  availabilityOn,
+  compareCodeUnits,
+  compareRows,
+  type JobOrderSpan,
+  type JobOrderStatus,
+  operationsInSequence,
+  type PlanContext,
+  type PlanJobOrder,
+  type PlanOperation,
+  type PlanOrder,
+  type PlanSettings,
+  type Reservation,
+  reservationsOn,
+  rowsOfOperation,
+} from './plan-context.ts';
+export { lastPieceMinEnd, type Release, releaseOf } from './release.ts';
