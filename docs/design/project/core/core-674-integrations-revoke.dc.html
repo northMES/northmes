@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Revoke a token</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./core-674-integrations-tokens.css">
+<link rel="stylesheet" href="./core-674-integrations-bundle.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;padding:0}
+a{color:var(--link)}a:hover{color:var(--foreground)}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="width: 760px; height: 520px; box-sizing: border-box; display: grid; place-items: center; padding: 32px; background: rgb(0 0 0 / 0.5); font-family: var(--font-sans); font-size: 0.875rem; line-height: 1.25rem; color: var(--foreground)">
+<div class="nm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="rv-title" aria-describedby="rv-desc" style="max-width: 440px">
+<div>
+<h2 id="rv-title" class="nm-dialog-title">Revoke ERP import?</h2>
+<p id="rv-desc" class="nm-dialog-desc">Calls with this token are refused from now on, so the ERP import stops until it gets a new token. You cannot undo this.</p>
+</div>
+<dl style="margin: 0; display: grid; grid-template-columns: max-content 1fr; column-gap: 24px; row-gap: 6px">
+<dt style="color: var(--muted-foreground)">Token</dt><dd style="margin: 0" class="nm-mono">nms_int_7Qk2…</dd>
+<dt style="color: var(--muted-foreground)">Access at</dt><dd style="margin: 0">All plants of Acme AB</dd>
+<dt style="color: var(--muted-foreground)">Last used</dt><dd style="margin: 0" class="nm-mono">2026-10-17 09:42</dd>
+</dl>
+<div class="nm-dialog-footer">
+<a class="nm-btn nm-btn--outline" href="core-674-integrations.dc.html" style="text-decoration: none">Cancel</a>
+<a class="nm-btn nm-btn--destructive" href="core-674-integrations.dc.html" style="text-decoration: none">Revoke token</a>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":760,"height":520}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'light' };
+  }
+}
+</script>
+</body>
+</html>

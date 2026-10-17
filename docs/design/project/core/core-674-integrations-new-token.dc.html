@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New integration token</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./core-674-integrations-tokens.css">
+<link rel="stylesheet" href="./core-674-integrations-bundle.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;padding:0}
+a{color:var(--link)}a:hover{color:var(--foreground)}
+@media (max-width: 767px){.nm-sidebar{display:none}.ct-role{flex-direction:column}}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="min-height: 100vh; background: var(--background); color: var(--foreground); font-family: var(--font-sans); font-size: 0.875rem; line-height: 1.25rem">
+<div class="nm-shell" style="border: 0; border-radius: 0; min-height: 100vh">
+<aside class="nm-sidebar" id="sb">
+<nav aria-label="Main" style="display: contents">
+<div class="nm-sidebar-head">
+<button class="nm-nav-item nm-nav-item--lg" type="button" aria-label="Acme AB, Plant A, switch plant"><span class="nm-mark" aria-hidden="true">A</span><span class="nm-two-line"><span>Acme AB</span><span>Plant A</span></span><svg class="nm-icon nm-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg></button>
+</div>
+<div class="nm-sidebar-body">
+<div class="nm-nav-group"><div class="nm-nav-label" id="g-core">Core</div>
+<ul class="nm-nav" aria-labelledby="g-core">
+<li><a class="nm-nav-item" href="#"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg><span>Dashboard</span></a></li>
+<li><button class="nm-nav-item" type="button" aria-expanded="false"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5V19A9 3 0 0 0 21 19V5"></path><path d="M3 12A9 3 0 0 0 21 12"></path></svg><span>Master data</span><svg class="nm-icon nm-chev nm-chev--right" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button></li>
+</ul></div>
+<div class="nm-nav-group"><div class="nm-nav-label" id="g-planning">Planning</div>
+<ul class="nm-nav" aria-labelledby="g-planning"><li><a class="nm-nav-item" href="#"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6h8"></path><path d="M12 16h6"></path><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M8 11h7"></path></svg><span>Planning board</span></a></li></ul></div>
+</div>
+<div class="nm-sidebar-foot">
+<button class="nm-nav-item nm-nav-item--lg" type="button" aria-label="Admin A, admin.a, account"><span class="nm-avatar" aria-hidden="true">AA</span><span class="nm-two-line"><span>Admin A</span><span>admin.a</span></span><svg class="nm-icon nm-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg></button>
+</div>
+</nav>
+</aside>
+<div class="nm-shell-main">
+<header class="nm-topbar">
+<button class="nm-btn nm-btn--ghost nm-btn--icon" type="button" aria-label="Collapse sidebar" aria-expanded="true" aria-controls="sb"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg></button>
+<nav aria-label="Breadcrumb" style="flex: 1; min-width: 0"><ol class="nm-crumbs"><li><a href="#">Settings</a></li><li aria-hidden="true"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></li><li><a href="core-674-integrations.dc.html">Integrations</a></li><li aria-hidden="true"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></li><li><span aria-current="page">New integration token</span></li></ol></nav>
+<div class="nm-topbar-end">
+<a class="nm-btn nm-btn--ghost nm-btn--icon is-current" href="#" aria-label="Settings" aria-current="true"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg></a>
+<button class="nm-btn nm-btn--ghost nm-btn--icon" type="button" aria-label="Help" aria-haspopup="menu"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><path d="M12 17h.01"></path></svg></button>
+</div>
+</header>
+<div style="display: flex; flex-wrap: wrap; gap: 24px; padding: 24px; align-items: flex-start">
+<nav aria-labelledby="set-title" style="flex: 1 1 220px; max-width: 260px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 0.75rem; line-height: 1rem; color: var(--muted-foreground)">Acme AB</span>
+<h2 id="set-title" style="margin: 0; font-size: 1rem; line-height: 1.5rem; font-weight: 600">Company settings</h2>
+</div>
+<ul class="nm-nav" style="gap: 2px">
+<li><a class="nm-nav-item" href="#"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></svg><span>General</span></a></li>
+<li><a class="nm-nav-item" href="#"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M17 18h1"></path><path d="M12 18h1"></path><path d="M7 18h1"></path></svg><span>Plants</span></a></li>
+<li><a class="nm-nav-item" href="#"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span>Users</span></a></li>
+<li><a class="nm-nav-item" href="#"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg><span>Roles</span></a></li>
+<li><a class="nm-nav-item" href="core-674-integrations.dc.html" aria-current="page"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22v-5"></path><path d="M9 8V2"></path><path d="M15 8V2"></path><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"></path></svg><span>Integrations</span></a></li>
+</ul>
+</nav>
+<main id="main" tabindex="-1" style="flex: 999 1 560px; min-width: 0; max-width: 820px; display: flex; flex-direction: column; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1 class="nm-page-title" tabindex="-1">New integration token</h1>
+<p style="margin: 0; color: var(--muted-foreground)">An integration token lets one system, such as an ERP or a script, call the REST API as itself. You see the token once, after you create it.</p>
+</div>
+
+<sc-if value="{{errors}}" hint-placeholder-val="{{ false }}">
+<div class="nm-alert nm-alert--destructive" role="alert" style="max-width: none">
+<svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+<div class="nm-alert-title">Fix 2 fields to create the token</div>
+<div class="nm-alert-desc"><a href="#ct-name">Token name</a>, <a href="#ct-roles">Roles</a></div>
+</div>
+</sc-if>
+
+<div style="display: flex; flex-direction: column; gap: 20px">
+<div class="nm-field" style="width: 100%; max-width: 420px">
+<label class="nm-label" for="ct-name">Token name</label>
+<sc-if value="{{ok}}" hint-placeholder-val="{{ true }}"><input id="ct-name" class="nm-input" value="ERP import" aria-describedby="ct-name-d"></sc-if>
+<sc-if value="{{errors}}" hint-placeholder-val="{{ false }}"><input id="ct-name" class="nm-input" value="" aria-invalid="true" aria-describedby="ct-name-e ct-name-d"></sc-if>
+<sc-if value="{{errors}}" hint-placeholder-val="{{ false }}"><p class="nm-error" id="ct-name-e"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>Enter a name of 1 to 80 characters.</p></sc-if>
+<p class="nm-desc" id="ct-name-d">Name the system that uses it, so others know what revoking it stops.</p>
+</div>
+
+<div class="nm-field" style="width: 100%; max-width: 420px">
+<label class="nm-label" for="ct-company">Company</label>
+<button id="ct-company" class="nm-select" type="button" aria-haspopup="listbox" aria-expanded="false" aria-describedby="ct-company-d" style="width: 100%"><span style="display: inline-flex; gap: 8px; align-items: center"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></svg>Acme AB</span><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+<p class="nm-desc" id="ct-company-d">The token belongs to this company and never reaches another. The list holds the companies where you manage integrations.</p>
+</div>
+
+<div class="nm-field" style="width: 100%; max-width: 420px; position: relative">
+<label class="nm-label" for="ct-exp">Expiration</label>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+<button id="ct-exp" class="nm-select" type="button" aria-haspopup="listbox" aria-expanded="{{expiryOpenText}}" aria-describedby="ct-exp-d" style="min-width: 240px"><span style="display: inline-flex; gap: 8px; align-items: center"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg>{{expiryLabel}}</span><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+<sc-if value="{{isCustom}}" hint-placeholder-val="{{ false }}">
+<label for="ct-date" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">Expiration date</label>
+<input id="ct-date" class="nm-input nm-mono" value="2027-03-31" aria-describedby="ct-exp-d" style="width: 150px">
+</sc-if>
+</div>
+<p class="nm-desc" id="ct-exp-d">{{expiryHint}}</p>
+<sc-if value="{{expiryOpen}}" hint-placeholder-val="{{ false }}">
+<div class="nm-popover" role="listbox" aria-label="Expiration" style="position: absolute; top: 64px; left: 0; z-index: 2; width: 260px">
+<sc-for list="{{expiryOptions}}" as="o" hint-placeholder-count="7">
+<div class="nm-option {{o.cls}}" role="option" aria-selected="{{o.selected}}"><span>{{o.label}}<span class="nm-mono" style="color: var(--muted-foreground); margin-left: 6px">{{o.date}}</span></span><sc-if value="{{o.isSelected}}" hint-placeholder-val="{{ false }}"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</div>
+
+<section aria-labelledby="ct-access-h" style="display: flex; flex-direction: column; gap: 16px">
+<h2 id="ct-access-h" class="section" style="margin: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border)">Plant access</h2>
+<fieldset style="margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: 14px">
+<legend style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">Plant access</legend>
+<label style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer">
+<input type="radio" name="ct-at" value="all" checked="{{atAll}}" style="width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--primary)">
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 500">All plants</span><span style="color: var(--muted-foreground)">Every current and future plant of Acme AB, and the company's own data.</span></span>
+</label>
+<label style="display: flex; gap: 10px; align-items: flex-start; cursor: pointer">
+<input type="radio" name="ct-at" value="one" checked="{{atOne}}" style="width: 16px; height: 16px; margin: 2px 0 0; accent-color: var(--primary)">
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 500">Only one plant</span><span style="color: var(--muted-foreground)">The token sees nothing of the other plants.</span></span>
+</label>
+<sc-if value="{{atOne}}" hint-placeholder-val="{{ false }}">
+<div style="padding-left: 26px; display: flex; flex-direction: column; gap: 6px">
+<label class="nm-label" for="ct-plant">Plant</label>
+<button id="ct-plant" class="nm-select" type="button" aria-haspopup="listbox" aria-expanded="false" style="width: 240px"><span>Plant A</span><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+</div>
+</sc-if>
+</fieldset>
+</section>
+
+<section aria-labelledby="ct-roles-h" style="display: flex; flex-direction: column; gap: 12px">
+<h2 id="ct-roles-h" class="section" style="margin: 0; padding-bottom: 8px; border-bottom: 1px solid var(--border)">Roles</h2>
+<p style="margin: 0">Give the token only the roles its system needs. You can give only roles you hold where the token has access. <a href="#">Read about roles</a></p>
+<div id="ct-roles" style="position: relative; border: 1px solid {{rolesBorder}}; border-radius: 8.4px; background: var(--card); overflow: visible">
+<div style="display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 12px 10px 16px; background: var(--muted); border-bottom: 1px solid var(--border); border-radius: 8.4px 8.4px 0 0">
+<span style="display: inline-flex; gap: 8px; align-items: center; font-weight: 600">Roles<span class="nm-badge nm-badge--neutral nm-mono" style="padding: 2px 8px">{{roleCount}}</span></span>
+<button class="nm-btn nm-btn--outline" type="button" aria-haspopup="dialog" aria-expanded="{{pickerOpenText}}"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add roles</button>
+</div>
+<sc-if value="{{hasRoles}}" hint-placeholder-val="{{ true }}">
+<ul style="list-style: none; margin: 0; padding: 0">
+<li class="ct-role" style="display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; padding: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
+<span style="font-weight: 600">Article editor</span>
+<span style="color: var(--muted-foreground)">Reads, creates, updates and archives articles, and assigns them to plants.</span>
+<span style="display: flex; flex-wrap: wrap; gap: 6px"><span class="nm-badge nm-badge--neutral nm-mono">core.article:read</span><span class="nm-badge nm-badge--neutral nm-mono">core.article:create</span><span class="nm-badge nm-badge--neutral nm-mono">core.article:update</span><span class="nm-badge nm-badge--neutral nm-mono">core.article:archive</span><span class="nm-badge nm-badge--neutral nm-mono">core.article:assign</span></span>
+</div>
+<button class="nm-btn nm-btn--ghost nm-btn--icon" type="button" aria-label="Remove Article editor"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+</li>
+</ul>
+</sc-if>
+<sc-if value="{{noRoles}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 40px 24px">
+<svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true" style="width: 24px; height: 24px; color: var(--muted-foreground)"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg>
+<span style="font-weight: 600">No roles added yet</span>
+<span style="color: var(--muted-foreground)">A token without roles can call nothing. Add the roles its system needs.</span>
+</div>
+</sc-if>
+<sc-if value="{{pickerOpen}}" hint-placeholder-val="{{ false }}">
+<div class="nm-popover" role="dialog" aria-label="Add roles" style="position: absolute; top: 52px; right: 12px; z-index: 2; width: 340px; display: flex; flex-direction: column; gap: 4px">
+<div style="position: relative; padding: 4px">
+<label for="ct-rs" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">Search roles</label>
+<svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true" style="position: absolute; left: 14px; top: 14px; color: var(--muted-foreground)"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<input id="ct-rs" class="nm-input nm-focus" placeholder="Search roles" style="padding-left: 34px">
+</div>
+<div role="listbox" aria-multiselectable="true" aria-label="Roles" style="display: flex; flex-direction: column">
+<div class="nm-option is-kbd" role="option" aria-selected="true" style="justify-content: flex-start; gap: 10px"><span class="nm-box" data-checked=""><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>Article editor</div>
+<div class="nm-option" role="option" aria-selected="false" style="justify-content: flex-start; gap: 10px"><span class="nm-box"></span>Reader</div>
+<div class="nm-option is-disabled" role="option" aria-selected="false" aria-disabled="true" style="justify-content: flex-start; gap: 10px; align-items: flex-start"><span class="nm-box" style="margin-top: 2px"></span><span style="display: flex; flex-direction: column"><span>Planner</span><span style="font-size: 0.75rem; color: var(--muted-foreground)">You do not hold Planner at Acme AB.</span></span></div></div>
+</div>
+</sc-if>
+</div>
+<sc-if value="{{errors}}" hint-placeholder-val="{{ false }}"><p class="nm-error"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>Add at least one role.</p></sc-if>
+</section>
+
+<div style="display: flex; flex-wrap: wrap; gap: 8px; padding-top: 16px; border-top: 1px solid var(--border)">
+<a class="nm-btn" href="core-674-integrations-token-created.dc.html" style="text-decoration: none">Create token</a>
+<a class="nm-btn nm-btn--outline" href="core-674-integrations.dc.html" style="text-decoration: none">Cancel</a>
+</div>
+</main>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"plantAccess":{"editor":"enum","options":["all","one"],"default":"all"},"expiry":{"editor":"enum","options":["90 days","custom"],"default":"90 days"},"expiryOpen":{"editor":"boolean","default":false},"rolesPicker":{"editor":"boolean","default":false},"noRoles":{"editor":"boolean","default":false},"errors":{"editor":"boolean","default":false},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1440,"height":1400}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const at = this.props.plantAccess ?? 'all';
+    const custom = (this.props.expiry ?? '90 days') === 'custom';
+    const errors = this.props.errors ?? false;
+    const noRoles = errors || (this.props.noRoles ?? false);
+    const expiryOpen = this.props.expiryOpen ?? false;
+    const pickerOpen = !errors && (this.props.rolesPicker ?? false);
+    const chosen = custom ? 'Custom date' : '90 days';
+    const options = [
+      ['7 days', '2026-10-24'],
+      ['30 days', '2026-11-16'],
+      ['60 days', '2026-12-16'],
+      ['90 days', '2027-01-15'],
+      ['180 days', '2027-04-15'],
+      ['365 days', '2027-10-17'],
+      ['Custom date', '']
+    ].map(([label, date]) => ({
+      label,
+      date,
+      isSelected: label === chosen,
+      selected: label === chosen ? 'true' : 'false',
+      cls: label === chosen ? 'is-kbd' : ''
+    }));
+    return {
+      theme: this.props.theme ?? 'light',
+      atAll: at === 'all',
+      atOne: at === 'one',
+      isCustom: custom,
+      expiryLabel: custom ? 'Custom date' : '90 days (2027-01-15)',
+      expiryHint: custom ? 'Choose a date from tomorrow to 2027-10-17.' : 'The token stops working on 2027-01-15. Tokens live at most 365 days.',
+      expiryOpen,
+      expiryOpenText: expiryOpen ? 'true' : 'false',
+      expiryOptions: options,
+      errors,
+      ok: !errors,
+      hasRoles: !noRoles,
+      noRoles,
+      roleCount: noRoles ? '0' : '1',
+      rolesBorder: errors ? 'var(--destructive)' : 'var(--border)',
+      pickerOpen,
+      pickerOpenText: pickerOpen ? 'true' : 'false'
+    };
+  }
+}
+</script>
+</body>
+</html>
