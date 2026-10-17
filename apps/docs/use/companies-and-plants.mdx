@@ -22,12 +22,14 @@ The company settings landing lists only the pages you may open. A page you may n
 
 ## Create a company
 
-The hosting partner creates each company on the host with the `company create` command, as in [Install NorthMES](/install#install). The command creates the company with its default roles and its first Company admin. When it creates the admin's account, it prints a temporary password once; the admin signs in with it and chooses their own password. When the admin already has an account, the command gives that account the role and prints no password, so the admin signs in with their current one. Running the same command again prints no password either.
+The hosting partner creates each company on the host with the `company create` command, as in [Install NorthMES](/install#install). The command creates the company with its default roles and its first Company admin. When it creates the admin's account, it prints a temporary password once; the admin signs in with it and chooses their own password. When the admin already has an account, the command gives that account the role and prints no password, so the admin signs in with their current one.
 
 ```sh
-docker compose run --rm app company create --name "Your company" \
+docker compose run --rm app company create --id <uuidv7> --name "Your company" \
   --admin-username admin --admin-email admin@example.com --reason "first install"
 ```
+
+Give the company an id of your own with `--id`, a UUIDv7, and reuse it if you run the command again, for example after a failed run: a run with the same id finds the company the earlier run created and prints no new password. Without `--id`, every run creates another company.
 
 To see the companies of the installation, with their ids, their number of plants and the usernames of their Company admins:
 
@@ -54,7 +56,7 @@ The hosting partner can also give a locked-out user a new temporary password. Th
 docker compose run --rm app admin reset-password --username lena.ek --reason "locked out"
 ```
 
-Every command requires `--reason`.
+Every command that changes data requires `--reason`. `company list` only reads and takes no flags.
 
 ## Limits in release 0.1.0
 
