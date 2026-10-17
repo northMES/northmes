@@ -3,12 +3,27 @@
 import { linkEntry } from '@northmes/contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import type { PlantRoute } from '@northmes/web-sdk';
-import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
+import { createRoute, lazyRouteComponent, useSearch } from '@tanstack/react-router';
+import { boardSearch } from './gantt-search.ts';
+
+const BoardScreen = lazyRouteComponent(() => import('./screens.ts'), 'BoardScreen');
+const GanttScreen = lazyRouteComponent(() => import('./screens.ts'), 'GanttScreen');
+
+/**
+ * The board route's view (plan 18, URL state): the order Gantt at view=gantt, else the board,
+ * which the E02 stub stands in for until E08 builds it. Both screens load from the lazy
+ * screens.ts, so the switch costs no chunk of its own.
+ */
+function BoardRoute() {
+  const { view } = boardSearch(useSearch({ strict: false }));
+  return view === 'gantt' ? <GanttScreen /> : <BoardScreen />;
+}
 
 /**
  * The planning module's routes under the shell's $plant route. Each route takes its path from its
  * entry in planningLinks, so a path is written once, in the link manifest (ADR 0062). The top
- * route's path is the manifest's own, the module id. The screens load lazily from screens.ts.
+ * route's path is the manifest's own, the module id. The screens load lazily from screens.ts. The
+ * board route keeps its view state in the URL: view, zoom, from, order and chain (plan 18).
  */
 export function planningRoutes(plantRoute: PlantRoute) {
   const planningRoute = createRoute({
@@ -18,7 +33,8 @@ export function planningRoutes(plantRoute: PlantRoute) {
   const boardRoute = createRoute({
     getParentRoute: () => planningRoute,
     path: linkEntry(planningLinks.board).path,
-    component: lazyRouteComponent(() => import('./screens.ts'), 'BoardScreen'),
+    validateSearch: boardSearch,
+    component: BoardRoute,
   });
   return planningRoute.addChildren([boardRoute]);
 }

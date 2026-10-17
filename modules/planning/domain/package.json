@@ -8,8 +8,13 @@
   "exports": {
     ".": {
       "@northmes/source": "./src/index.ts",
-      "default": "./dist/index.js"
+      "default": "./dist/src/index.js"
     }
+  },
+  "scripts": {
+    "lint": "biome check .",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.build.json"
   },
   "dependencies": {
     "@northmes/contracts": "workspace:*",
