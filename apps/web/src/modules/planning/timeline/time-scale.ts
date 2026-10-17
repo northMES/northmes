@@ -148,6 +148,43 @@ export function shiftedFrom(
   return (direction === 'earlier' ? plain.subtract({ days }) : plain.add({ days })).toString();
 }
 
+/**
+ * The loaded range of a preset from a plant date, extended by whole spans before and after it
+ * (#685): the view grows the margin on demand as the planner scrolls towards an edge, so the time
+ * area never ends at the preset's span while `from` stays the chosen start.
+ */
+export function extendedRange(
+  from: string,
+  zoom: ZoomPreset,
+  timeZone: string,
+  productionDayStart: string,
+  extension: { readonly before: number; readonly after: number },
+): TimeRange {
+  const preset = zoomPresets[zoom];
+  // The Hours preset spans hours of one day, so its spans are added as hours; the other presets
+  // step whole dates, as Earlier and Later do.
+  if ('hours' in preset.span) {
+    const chosen = rangeOf(from, zoom, timeZone, productionDayStart);
+    const spanMs = preset.span.hours * hour;
+    return {
+      fromMs: chosen.fromMs - extension.before * spanMs,
+      toMs: chosen.toMs + extension.after * spanMs,
+    };
+  }
+  let first = from;
+  for (let count = 0; count < extension.before; count += 1) {
+    first = shiftedFrom(first, zoom, 'earlier');
+  }
+  let last = from;
+  for (let count = 0; count < extension.after; count += 1) {
+    last = shiftedFrom(last, zoom, 'later');
+  }
+  return {
+    fromMs: rangeOf(first, zoom, timeZone, productionDayStart).fromMs,
+    toMs: rangeOf(last, zoom, timeZone, productionDayStart).toMs,
+  };
+}
+
 /** The plant date of an instant, for the `from` of a range around it. */
 export function plantDateOf(epochMs: number, timeZone: string): string {
   return Temporal.Instant.fromEpochMilliseconds(epochMs)
