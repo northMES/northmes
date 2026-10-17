@@ -32,7 +32,7 @@ export interface CascadeOptions {
   readonly cascade?: boolean;
 }
 
-export type MoveReason = 'moved' | 'snappedToRelease' | 'cascade';
+export type MoveReason = 'moved' | 'snappedToRelease' | 'snappedToLastPiece' | 'cascade';
 
 /** One draft change the cascade writes: a row from its old span to its new one. */
 export interface PlacedMove {
@@ -42,8 +42,16 @@ export interface PlacedMove {
   readonly from?: JobOrderSpan;
   readonly to: JobOrderSpan;
   readonly reason: MoveReason;
-  /** For a drop before the row's release: the release it snapped forward to. */
-  readonly snappedTo?: { readonly fromRow: string; readonly atMs: number };
+  /**
+   * For a drop before the row's release: the release it snapped forward to, with `atMs` the
+   * release instant. For a drop that broke the row's last-piece bound: the setup start it snapped
+   * forward to as `atMs` and the end bound as `minEndMs`.
+   */
+  readonly snappedTo?: {
+    readonly fromRow: string;
+    readonly atMs: number;
+    readonly minEndMs?: number;
+  };
 }
 
 export type ConflictKind = 'LEAD_TIME' | 'SEND_AHEAD' | 'LAST_PIECE' | 'OVERLAP' | 'FROZEN_WINDOW';
@@ -63,8 +71,12 @@ export interface CascadeStop {
   readonly reason: 'hardLock' | 'started' | 'held' | 'frozenWindow' | 'horizon';
 }
 
-/** The refusal of the move itself (plan 07, judgeMove): not confirmable. */
-export type MoveRefusal = 'PINNED' | 'STARTED' | 'LOCKED';
+/**
+ * The refusal of the move itself: `PINNED`, `STARTED` and `LOCKED` from judgeMove (plan 07), and
+ * `NOT_ALLOWED` for a machine the operation's routing forbids, refused before a draft change is
+ * written (plan 18, The constraint kinds). None is confirmable.
+ */
+export type MoveRefusal = 'PINNED' | 'STARTED' | 'LOCKED' | 'NOT_ALLOWED';
 
 export interface CascadeResult {
   /** The draft changes, the moved row first, then the successors in the order they moved. */
@@ -249,6 +261,9 @@ export function cascade(
 
   const equipment = move.equipment ?? moved.equipment;
   if (equipment === undefined) return { moves: [], conflicts: [], order };
+  if (move.equipment !== undefined && !movedOperation.allowedEquipment.includes(move.equipment)) {
+    return { moves: [], conflicts: [], refused: 'NOT_ALLOWED', order };
+  }
   const windows = availabilityOn(context, equipment);
   const moves: PlacedMove[] = [];
   const conflicts: Conflict[] = [];
@@ -272,8 +287,8 @@ export function cascade(
       const shifted = subtractWork(windows, minEndMs, moved.plannedSetupS + moved.plannedRunS);
       if (shifted !== null && shifted.startMs > setupStartMs) {
         setupStartMs = shifted.startMs;
-        reason = 'snappedToRelease';
-        snappedTo = { fromRow: ownRelease.fromRow, atMs: minEndMs };
+        reason = 'snappedToLastPiece';
+        snappedTo = { fromRow: ownRelease.fromRow, atMs: shifted.startMs, minEndMs };
       }
     }
   }

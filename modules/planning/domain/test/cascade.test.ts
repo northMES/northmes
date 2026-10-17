@@ -245,6 +245,37 @@ describe('cascade (plan 18, Cascade)', () => {
     });
   });
 
+  it('refuses a machine the operation may not use as NOT_ALLOWED, before any draft change', () => {
+    const result = cascade(
+      orderOf('1003'),
+      { jobOrderId: 'jo-1003-10', setupStartMs: wed(8), equipment: 'CNC2' },
+      context,
+    );
+
+    expect(result).toMatchObject({ refused: 'NOT_ALLOWED', moves: [], conflicts: [] });
+    expect(result.order).toBe(orderOf('1003'));
+  });
+
+  it('GT4 with cascade on, the moved row itself snaps forward to its last-piece bound, named as such', () => {
+    // 1004.20 dropped at its release Thu 09:45 would end Fri 07:55, before 1004.10's end plus lead
+    // plus one cycle; the drop snaps forward until the bound holds, to Thu 10:20:20.
+    const result = cascade(
+      orderOf('1004'),
+      { jobOrderId: 'jo-1004-20', setupStartMs: thu(8, 45) },
+      context,
+    );
+
+    expect(result.conflicts).toEqual([]);
+    expect(result.moves).toEqual([
+      expect.objectContaining({
+        displayNumber: '1004.20',
+        to: { setupStartMs: thu(9, 20, 20), runStartMs: thu(9, 20, 20), endMs: fri(7, 45, 20) },
+        reason: 'snappedToLastPiece',
+        snappedTo: { fromRow: '1004.10', atMs: thu(9, 20, 20), minEndMs: fri(7, 45, 20) },
+      }),
+    ]);
+  });
+
   it('a move into the frozen window is confirmable: FROZEN_WINDOW is reported and the move stands', () => {
     const result = cascade(
       orderOf('1006'),
