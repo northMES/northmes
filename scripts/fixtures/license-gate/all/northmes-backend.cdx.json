@@ -1,0 +1,59 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "backend",
+      "version": "0.1.0",
+      "purl": "pkg:npm/%40northmes/backend@0.1.0",
+      "bom-ref": "pkg:npm/%40northmes/backend@0.1.0",
+      "group": "@northmes",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "router-kit",
+      "version": "2.1.0",
+      "purl": "pkg:npm/router-kit@2.1.0",
+      "bom-ref": "pkg:npm/router-kit@2.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "test-kit",
+      "version": "5.0.0",
+      "purl": "pkg:npm/test-kit@5.0.0",
+      "bom-ref": "pkg:npm/test-kit@5.0.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-3.0-or-later"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/%40northmes/backend@0.1.0",
+      "dependsOn": ["pkg:npm/router-kit@2.1.0", "pkg:npm/test-kit@5.0.0"]
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+Synthetic fixture for scripts/license-gate.test.ts: a plain MIT package. Its README names the
+enterprise customers that use it, which is no license term.

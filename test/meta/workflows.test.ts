@@ -1157,4 +1157,52 @@ describe('workflows', () => {
     expect(runs).toContain('pnpm audit --prod');
     expect(job.permissions).toEqual({ contents: 'read' });
   });
+
+  // The license gate is a required check of its own on a GitHub-hosted runner
+  // (docs/adr/0040-dependency-license-policy-ci-gate-and-sbom.md,
+  // docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md). It installs the
+  // native binaries of every platform the images ship for, so that their licenses are in the tree.
+  it('ADR0040 Supply chain / license gate installs for linux x64 and arm64, glibc and musl, with the frozen lockfile on every pull request and push to main', () => {
+    const { workflow, job } = jobNamed('license gate');
+    const runs = (job.steps ?? []).flatMap(({ run }) => (run === undefined ? [] : [run.trim()]));
+    const install = runs.find((run) => /^pnpm install\b/.test(run)) ?? '';
+    const values = (flag: string) =>
+      [...install.matchAll(new RegExp(`--${flag} (\\S+)`, 'g'))].map(([, value]) => value).sort();
+    const on = workflow.on as Record<string, { branches?: string[] } | null>;
+
+    expect(workflow.path).toBe('.github/workflows/supply-chain.yml');
+    expect(triggersOf(workflow.on)).toEqual(expect.arrayContaining(['pull_request', 'push']));
+    expect(on.push?.branches).toEqual(['main']);
+    expect(runsOnOf(job)).toBe('ubuntu-24.04');
+    expect(install).toMatch(/^pnpm install --frozen-lockfile /);
+    expect(values('os')).toEqual(['linux']);
+    expect(values('cpu')).toEqual(['arm64', 'x64']);
+    expect(values('libc')).toEqual(['glibc', 'musl']);
+  });
+
+  it('ADR0040 Supply chain / license gate writes a CycloneDX SBOM per package of the production tree and of the full tree, then runs scripts/license-gate.mjs on both', () => {
+    const { job } = jobNamed('license gate');
+    const commands = (job.steps ?? []).flatMap(({ run }) =>
+      run === undefined ? [] : commandsOf(run.trim()),
+    );
+    const sbom = 'pnpm sbom --sbom-format cyclonedx --sbom-type application';
+    const prod = commands.indexOf(`${sbom} --prod --split --out sbom/prod/%s.cdx.json`);
+    const all = commands.indexOf(`${sbom} --split --out sbom/all/%s.cdx.json`);
+    const gate = commands.indexOf('node scripts/license-gate.mjs --prod sbom/prod --all sbom/all');
+
+    expect(prod, commands.join('\n')).toBeGreaterThanOrEqual(0);
+    expect(all, commands.join('\n')).toBeGreaterThan(prod);
+    expect(gate, commands.join('\n')).toBeGreaterThan(all);
+  });
+
+  it('ADR0040 Supply chain / license gate reads only and holds no id-token', () => {
+    const { workflow, job } = jobNamed('license gate');
+
+    expect(job.permissions).toEqual({ contents: 'read' });
+    expect(holdsIdTokenWrite(job.permissions ?? workflow.permissions)).toBe(false);
+    expect(job.env ?? {}).toEqual({});
+    for (const step of job.steps ?? []) {
+      expect(JSON.stringify(step), 'a step that reads a secret').not.toMatch(/secrets\./);
+    }
+  });
 });

@@ -1,0 +1,97 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "northmes",
+      "version": "0.1.0",
+      "purl": "pkg:npm/northmes@0.1.0",
+      "bom-ref": "pkg:npm/northmes@0.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "react-doctor",
+      "version": "0.9.14",
+      "purl": "pkg:npm/react-doctor@0.9.14",
+      "bom-ref": "pkg:npm/react-doctor@0.9.14",
+      "scope": "excluded",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "name": "SEE LICENSE IN LICENSE"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "caniuse-lite",
+      "version": "1.0.30001812",
+      "purl": "pkg:npm/caniuse-lite@1.0.30001812",
+      "bom-ref": "pkg:npm/caniuse-lite@1.0.30001812",
+      "scope": "excluded",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "CC-BY-4.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "lint-kit",
+      "version": "2.0.0",
+      "purl": "pkg:npm/lint-kit@2.0.0",
+      "bom-ref": "pkg:npm/lint-kit@2.0.0",
+      "scope": "excluded",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-3.0-or-later"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/northmes@0.1.0",
+      "dependsOn": [
+        "pkg:npm/react-doctor@0.9.14",
+        "pkg:npm/caniuse-lite@1.0.30001812",
+        "pkg:npm/lint-kit@2.0.0"
+      ]
+    }
+  ]
+}
