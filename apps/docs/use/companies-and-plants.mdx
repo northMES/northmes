@@ -22,7 +22,7 @@ The company settings landing lists only the pages you may open. A page you may n
 
 ## Create a company
 
-The hosting partner creates each company on the host with the `company create` command, as in [Install NorthMES](/install#install). The command creates the company with its default roles and its first Company admin, and prints the admin's temporary password once. The admin signs in with it and chooses their own password.
+The hosting partner creates each company on the host with the `company create` command, as in [Install NorthMES](/install#install). The command creates the company with its default roles and its first Company admin. When it creates the admin's account, it prints a temporary password once; the admin signs in with it and chooses their own password. When the admin already has an account, the command gives that account the role and prints no password, so the admin signs in with their current one. Running the same command again prints no password either.
 
 ```sh
 docker compose run --rm app company create --name "Your company" \

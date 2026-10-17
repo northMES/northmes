@@ -48,7 +48,7 @@ A change to someone's roles, or to a role they hold, applies from their next act
 
 ### The grant rule
 
-You can give or remove a role at a place only when you hold `core.roleAssignment:manage` there and also hold every permission of the role there. In the same way, you can add a permission to a custom role only when you hold it at every place where the role is given. So a Plant admin can give any role but Company admin at their plant, and nobody can hand out more than they hold.
+You can give or remove a role at a place only when you hold `core.roleAssignment:manage` there and also hold every permission of the role there. In the same way, you can add a permission to a custom role only when you hold it at every place where the role is given. So a Plant admin can give, at their plant, the roles whose permissions they hold there; a role with a company-level permission stays out of their reach. Nobody can hand out more than they hold.
 
 When a role is out of your reach, the role list still shows it, disabled, with the permissions you lack at that place. NorthMES also refuses to remove the last Company admin of a company.
 
