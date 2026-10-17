@@ -22,6 +22,7 @@
     "@northmes/contracts": "workspace:*",
     "@northmes/core-contracts": "workspace:*",
     "@northmes/planning-contracts": "workspace:*",
+    "@northmes/planning-domain": "workspace:*",
     "@northmes/web-sdk": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-router": "catalog:",

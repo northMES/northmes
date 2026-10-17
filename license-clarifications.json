@@ -1,0 +1,35 @@
+{
+  "$comment": "The license gate (scripts/license-gate.mjs, docs/adr/0040-dependency-license-policy-ci-gate-and-sbom.md) lets a package whose SBOM entry has no SPDX license pass only when an entry here maps that exact name@version to an SPDX expression after a person read its license file. A new version needs a new entry.",
+  "clarifications": [
+    {
+      "package": "busboy@1.6.0",
+      "license": "MIT",
+      "read": "2026-10-16",
+      "reason": "package.json declares MIT in the deprecated licenses array, which pnpm sbom does not read; LICENSE holds the MIT text (copyright Brian White) and lib/ holds no other notice."
+    },
+    {
+      "package": "streamsearch@1.1.0",
+      "license": "MIT",
+      "read": "2026-10-16",
+      "reason": "package.json declares MIT in the deprecated licenses array, which pnpm sbom does not read; LICENSE holds the MIT text (copyright Brian White) and lib/ holds no other notice."
+    },
+    {
+      "package": "ssh2@1.17.0",
+      "license": "MIT",
+      "read": "2026-10-16",
+      "reason": "package.json declares MIT in the deprecated licenses array, which pnpm sbom does not read; LICENSE holds the MIT text (copyright Brian White) and lib/ holds no other notice."
+    },
+    {
+      "package": "buildcheck@0.0.7",
+      "license": "MIT",
+      "read": "2026-10-16",
+      "reason": "package.json declares MIT in the deprecated licenses array, which pnpm sbom does not read; LICENSE holds the MIT text (copyright Brian White), and the vendored deps/Find-VisualStudio.cs says it is distributed under an MIT style license."
+    },
+    {
+      "package": "cpu-features@0.0.10",
+      "license": "MIT AND Apache-2.0 AND BSD-2-Clause",
+      "read": "2026-10-16",
+      "reason": "package.json declares MIT in the deprecated licenses array, which pnpm sbom does not read; LICENSE holds the MIT text (copyright Brian White). The vendored deps/cpu_features (Google) is Apache-2.0, and its ndk_compat folder carries a two-clause BSD notice of the Android Open Source Project."
+    }
+  ]
+}

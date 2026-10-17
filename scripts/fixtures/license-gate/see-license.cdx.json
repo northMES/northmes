@@ -1,0 +1,45 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "backend",
+      "version": "0.1.0",
+      "purl": "pkg:npm/%40northmes/backend@0.1.0",
+      "bom-ref": "pkg:npm/%40northmes/backend@0.1.0",
+      "group": "@northmes",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "vendor-tool",
+      "version": "3.1.0",
+      "purl": "pkg:npm/vendor-tool@3.1.0",
+      "bom-ref": "pkg:npm/vendor-tool@3.1.0",
+      "licenses": [
+        {
+          "license": {
+            "name": "SEE LICENSE IN LICENSE"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/%40northmes/backend@0.1.0",
+      "dependsOn": ["pkg:npm/vendor-tool@3.1.0"]
+    }
+  ]
+}

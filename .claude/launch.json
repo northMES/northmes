@@ -4,8 +4,19 @@
     {
       "name": "handoff-demo",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["demo"],
+      "runtimeArgs": [
+        "demo"
+      ],
       "port": 4310,
+      "autoPort": true
+    },
+    {
+      "name": "dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "dev"
+      ],
+      "port": 5173,
       "autoPort": true
     }
   ]

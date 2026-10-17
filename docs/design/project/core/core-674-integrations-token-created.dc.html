@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Integrations, token created</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./core-674-integrations-tokens.css">
+<link rel="stylesheet" href="./core-674-integrations-bundle.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;padding:0}
+a{color:var(--link)}a:hover{color:var(--foreground)}
+@media (max-width: 767px){.nm-sidebar{display:none}.int-head{flex-direction:column;align-items:stretch}}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="min-height: 100vh; background: var(--background); color: var(--foreground); font-family: var(--font-sans); font-size: 0.875rem; line-height: 1.25rem">
+<div class="nm-shell" style="border: 0; border-radius: 0; min-height: 100vh">
+<aside class="nm-sidebar" id="sb">
+<nav aria-label="Main" style="display: contents">
+<div class="nm-sidebar-head">
+<button class="nm-nav-item nm-nav-item--lg" type="button" aria-label="Acme AB, Plant A, switch plant"><span class="nm-mark" aria-hidden="true">A</span><span class="nm-two-line"><span>Acme AB</span><span>Plant A</span></span><svg class="nm-icon nm-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg></button>
+</div>
+<div class="nm-sidebar-body">
+<div class="nm-nav-group"><div class="nm-nav-label" id="g-core">Core</div>
+<ul class="nm-nav" aria-labelledby="g-core">
+<li><a class="nm-nav-item" href="#"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg><span>Dashboard</span></a></li>
+<li><button class="nm-nav-item" type="button" aria-expanded="false"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5V19A9 3 0 0 0 21 19V5"></path><path d="M3 12A9 3 0 0 0 21 12"></path></svg><span>Master data</span><svg class="nm-icon nm-chev nm-chev--right" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button></li>
+</ul></div>
+<div class="nm-nav-group"><div class="nm-nav-label" id="g-planning">Planning</div>
+<ul class="nm-nav" aria-labelledby="g-planning"><li><a class="nm-nav-item" href="#"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6h8"></path><path d="M12 16h6"></path><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M8 11h7"></path></svg><span>Planning board</span></a></li></ul></div>
+</div>
+<div class="nm-sidebar-foot">
+<button class="nm-nav-item nm-nav-item--lg" type="button" aria-label="Admin A, admin.a, account"><span class="nm-avatar" aria-hidden="true">AA</span><span class="nm-two-line"><span>Admin A</span><span>admin.a</span></span><svg class="nm-icon nm-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 15 5 5 5-5"></path><path d="m7 9 5-5 5 5"></path></svg></button>
+</div>
+</nav>
+</aside>
+<div class="nm-shell-main">
+<header class="nm-topbar">
+<button class="nm-btn nm-btn--ghost nm-btn--icon" type="button" aria-label="Collapse sidebar" aria-expanded="true" aria-controls="sb"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg></button>
+<nav aria-label="Breadcrumb" style="flex: 1; min-width: 0"><ol class="nm-crumbs"><li><a href="#">Settings</a></li><li aria-hidden="true"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></li><li><span aria-current="page">Integrations</span></li></ol></nav>
+<div class="nm-topbar-end">
+<a class="nm-btn nm-btn--ghost nm-btn--icon is-current" href="#" aria-label="Settings" aria-current="true"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg></a>
+<button class="nm-btn nm-btn--ghost nm-btn--icon" type="button" aria-label="Help" aria-haspopup="menu"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><path d="M12 17h.01"></path></svg></button>
+</div>
+</header>
+<div style="display: flex; flex-wrap: wrap; gap: 24px; padding: 24px; align-items: flex-start">
+<nav aria-labelledby="set-title" style="flex: 1 1 220px; max-width: 260px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 0.75rem; line-height: 1rem; color: var(--muted-foreground)">Acme AB</span>
+<h2 id="set-title" style="margin: 0; font-size: 1rem; line-height: 1.5rem; font-weight: 600">Company settings</h2>
+</div>
+<ul class="nm-nav" style="gap: 2px">
+<li><a class="nm-nav-item" href="#"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"></path><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"></path><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"></path><path d="M10 6h4"></path><path d="M10 10h4"></path><path d="M10 14h4"></path><path d="M10 18h4"></path></svg><span>General</span></a></li>
+<li><a class="nm-nav-item" href="#"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M17 18h1"></path><path d="M12 18h1"></path><path d="M7 18h1"></path></svg><span>Plants</span></a></li>
+<li><a class="nm-nav-item" href="#"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span>Users</span></a></li>
+<li><a class="nm-nav-item" href="#"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path></svg><span>Roles</span></a></li>
+<li><a class="nm-nav-item" href="core-674-integrations.dc.html" aria-current="page"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22v-5"></path><path d="M9 8V2"></path><path d="M15 8V2"></path><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"></path></svg><span>Integrations</span></a></li>
+</ul>
+</nav>
+<main id="main" tabindex="-1" style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 16px; max-width: 1120px">
+<div class="int-head" style="display: flex; gap: 16px; align-items: flex-start; justify-content: space-between">
+<div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+<h1 class="nm-page-title" tabindex="-1">Integrations</h1>
+<p style="margin: 0; color: var(--muted-foreground); max-width: 640px">Integration tokens let an ERP, a script or a dashboard call the REST API at /api/v1. Each token acts as itself, with the roles you give it at the company or at one plant.</p>
+</div>
+<a class="nm-btn nm-btn--outline" href="core-674-integrations-new-token.dc.html" style="text-decoration: none"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>New integration token</a>
+</div>
+
+<section role="status" aria-labelledby="new-h" style="display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--success); border-radius: 8.4px; background: var(--success-subtle)">
+<div style="display: flex; gap: 8px; align-items: flex-start; color: var(--success)">
+<svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true" style="margin-top: 2px"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h2 id="new-h" style="margin: 0; font-size: 0.875rem; line-height: 1.25rem; font-weight: 600">Copy the token for ERP import now</h2>
+<p style="margin: 0">You will not see it again: NorthMES keeps only a hash of it. If you lose it, revoke it and create a new one.</p>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+<label for="new-secret" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">Token for ERP import</label>
+<input id="new-secret" class="nm-input nm-mono" readonly value="nms_int_EXAMPLE0ONLY0NOT0A0REAL0TOKEN0000" style="flex: 1 1 360px; min-width: 0">
+<button class="nm-btn nm-btn--outline" type="button"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>{{copyLabel}}</button>
+</div>
+<p style="margin: 0; color: var(--foreground)">Send it as <span class="nm-mono">Authorization: Bearer &lt;token&gt;</span>. <a href="#">Read the REST API guide</a></p>
+</section>
+
+<div class="nm-table-wrap" style="overflow-x: auto">
+<table class="nm-table" aria-label="Integration tokens">
+<thead><tr><th aria-sort="ascending"><button type="button">Name <svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 7-7 7 7"></path><path d="M12 19V5"></path></svg></button></th><th>Access at</th><th>Roles</th><th>Created by</th><th>Expires</th><th>Last used</th><th>Status</th><th><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)">Actions</span></th></tr></thead>
+<tbody>
+<tr aria-selected="true">
+<td><div style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 500">ERP import</span><span class="nm-mono" style="font-size: 0.75rem; line-height: 1rem; color: var(--muted-foreground)">nms_int_EXAM…</span></div></td>
+<td>All plants</td>
+<td>Article editor</td>
+<td><div style="display: flex; flex-direction: column; gap: 2px"><span>Admin A</span><span class="nm-mono" style="font-size: 0.75rem; line-height: 1rem; color: var(--muted-foreground)">2026-10-17</span></div></td>
+<td><span class="nm-mono">2027-01-15</span></td>
+<td>Never</td>
+<td><span class="nm-badge nm-badge--success"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>Active</span></td>
+<td style="width: 48px; text-align: right"><a class="nm-btn nm-btn--ghost nm-btn--icon" href="core-674-integrations-revoke.dc.html" aria-label="Actions for ERP import" aria-haspopup="menu"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg></a></td>
+</tr>
+<tr>
+<td><div style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 500">Hall dashboard</span><span class="nm-mono" style="font-size: 0.75rem; line-height: 1rem; color: var(--muted-foreground)">nms_int_c81F…</span></div></td>
+<td>Plant A</td>
+<td>Reader</td>
+<td><div style="display: flex; flex-direction: column; gap: 2px"><span>Admin A</span><span class="nm-mono" style="font-size: 0.75rem; line-height: 1rem; color: var(--muted-foreground)">2026-07-25</span></div></td>
+<td><span class="nm-mono">2026-10-23</span></td>
+<td><span class="nm-mono">2026-10-17 09:40</span></td>
+<td><span class="nm-badge nm-badge--warning"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>Expires in 6 days</span></td>
+<td style="width: 48px; text-align: right"><a class="nm-btn nm-btn--ghost nm-btn--icon" href="core-674-integrations-revoke.dc.html" aria-label="Actions for Hall dashboard" aria-haspopup="menu"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg></a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</main>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"copied":{"editor":"boolean","default":false},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      theme: this.props.theme ?? 'light',
+      copyLabel: (this.props.copied ?? false) ? 'Copied' : 'Copy token'
+    };
+  }
+}
+</script>
+</body>
+</html>

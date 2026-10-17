@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { type DynamicModule, Module } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
-import { discoverOperations, type OperationScopeEntry } from './discover-operations.ts';
+import type { DiscoveredOperation } from './discover-operations.ts';
 import { OperationRunner } from './operation-runner.ts';
 
 /** Provides the OperationRunner to the app's adapters (ADR 0073). */
@@ -10,12 +10,10 @@ import { OperationRunner } from './operation-runner.ts';
 // biome-ignore lint/complexity/noStaticOnlyClass: Nest knows a module by its decorated class.
 export class OperationsModule {
   /**
-   * `servers` are the catalog's modules and plugins with a Nest module, in boot order. forRoot finds
-   * the operations each binds before Nest builds any provider, so a BootError from
-   * discoverOperations reaches the caller of AppModule.forRoot.
+   * `operations` are the ones the catalog's modules and plugins bind, which AppModule.forRoot finds
+   * with discoverOperations before Nest builds any provider, so its BootError reaches the caller.
    */
-  static forRoot(servers: readonly OperationScopeEntry[]): DynamicModule {
-    const operations = discoverOperations(servers);
+  static forRoot(operations: ReadonlyMap<string, DiscoveredOperation>): DynamicModule {
     return {
       module: OperationsModule,
       global: true,

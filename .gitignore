@@ -15,6 +15,8 @@ dist/
 !/apps/backend/test/fixtures/plugins/*/dist/
 .turbo/
 coverage/
+# The per-package SBOMs that pnpm license:gate writes and checks.
+/sbom/
 # The JSON report of pnpm react-doctor, which CI / react doctor copies into its job summary.
 /react-doctor-report.json
 # Playwright's results and report of pnpm e2e.

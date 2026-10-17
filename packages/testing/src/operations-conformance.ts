@@ -6,6 +6,7 @@ import type {
   OperationsDeclaration,
   Surface,
 } from '@northmes/sdk/operations';
+import { publicApiPath } from '@northmes/sdk/rest';
 import { describe, expect, it } from 'vitest';
 
 /** One call that the conformance test asks the module's harness to make. */
@@ -28,6 +29,19 @@ export interface OperationsConformanceOptions {
    * article that a fixture wrote for a get, as the principal the call names.
    */
   run(call: ConformanceCall): Promise<OperationResult>;
+  /**
+   * The URL of the listening app, such as await app.getUrl(), whose public REST routes the test
+   * calls to check that every REST operation of the declaration is served.
+   */
+  url(): string | Promise<string>;
+}
+
+/** A value for each path parameter of a REST path, such as {id}: a uuid that names no row. */
+const PATH_PARAMETER_VALUE = '01920000-0000-7000-8000-00000000c0f0';
+
+/** The path of a REST binding under the module segment, with its parameters filled in. */
+function restPath(module: string, path: string): string {
+  return publicApiPath(module, path).replace(/\{[a-zA-Z0-9]+\}/g, PATH_PARAMETER_VALUE);
 }
 
 /** The surfaces an operation reaches that the runner serves so far: REST and WebMCP. */
@@ -39,8 +53,10 @@ function surfacesOf(operation: Operation): Surface[] {
 }
 
 /**
- * The conformance test of one resource's operations (ADR 0073). For every surface each operation
- * reaches, it checks that the operation runs through the operation runner for a principal who holds
+ * The conformance test of one resource's operations (ADR 0073). For every operation the
+ * declaration marks for REST, it checks that the app serves its route: a request without a
+ * credential answers 401 core.unauthenticated as application/problem+json, where a route that is
+ * not served answers 404. For every surface each operation reaches, it checks that the operation runs through the operation runner for a principal who holds
  * its permission, with the status its REST binding names or 200, and that it is refused with 403
  * core.forbidden for one who does not. Call it in the body of a describe of the module's tests.
  */
@@ -52,6 +68,22 @@ export function operationsConformance(
   describe(`the operations of ${module}.${resource}`, () => {
     for (const [key, operation] of Object.entries(declaration.operations)) {
       const { permission } = operation.contract;
+      const { rest } = operation;
+      if (rest) {
+        const path = restPath(module, rest.path);
+        it(`${options.story} ${module}.${resource}.${key} is served at ${rest.method} ${path}`, async () => {
+          const response = await fetch(`${await options.url()}${path}`, {
+            method: rest.method,
+            ...(rest.method === 'POST'
+              ? { headers: { 'content-type': 'application/json' }, body: '{}' }
+              : {}),
+          });
+
+          expect(response.status, `${rest.method} ${path} is not served`).toBe(401);
+          expect(response.headers.get('content-type')).toMatch(/^application\/problem\+json/);
+          expect(await response.json()).toMatchObject({ code: 'core.unauthenticated' });
+        });
+      }
       for (const surface of surfacesOf(operation)) {
         const name = `${module}.${resource}.${key} on ${surface}`;
 

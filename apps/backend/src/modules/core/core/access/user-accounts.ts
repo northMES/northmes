@@ -9,7 +9,10 @@ export type UserAccounts = Pick<
   'createUser' | 'setPassword' | 'addToOrganization' | 'block' | 'unblock'
 >;
 
-let registered: UserAccounts | undefined;
+/** What core's integration token commands ask of Better Auth's api-key plugin (ADR 0073). */
+export type IntegrationKeys = Pick<AuthService, 'createIntegrationKey' | 'deleteIntegrationKey'>;
+
+let registered: AuthService | undefined;
 
 /**
  * The user accounts of the running app. A command handler is a plain object that Nest does not
@@ -22,7 +25,13 @@ export function userAccounts(): UserAccounts {
   return registered;
 }
 
-/** Registers the app's AuthService for userAccounts() while the app runs. */
+/** The integration keys of the running app, which core's token commands create and delete. */
+export function integrationKeys(): IntegrationKeys {
+  if (!registered) throw new Error('No app with core runs, so there are no integration keys');
+  return registered;
+}
+
+/** Registers the app's AuthService for userAccounts() and integrationKeys() while the app runs. */
 @Injectable()
 export class UserAccountsRegistration implements OnModuleInit, OnModuleDestroy {
   constructor(@Inject(AuthService) private readonly auth: AuthService) {}

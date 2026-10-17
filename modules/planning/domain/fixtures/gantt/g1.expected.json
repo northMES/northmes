@@ -1,0 +1,934 @@
+{
+  "dataset": "G1",
+  "durations": {
+    "1001.10": {
+      "plannedSeconds": 19800,
+      "setupSeconds": 1800,
+      "runSeconds": 18000
+    },
+    "1001.20": {
+      "plannedSeconds": 36000,
+      "setupSeconds": 0,
+      "runSeconds": 36000
+    },
+    "1002.10": {
+      "plannedSeconds": 12600,
+      "setupSeconds": 0,
+      "runSeconds": 12600
+    },
+    "1003.10": {
+      "plannedSeconds": 14400,
+      "setupSeconds": 0,
+      "runSeconds": 14400
+    },
+    "1003.20": {
+      "plannedSeconds": 9000,
+      "setupSeconds": 0,
+      "runSeconds": 9000
+    },
+    "1004.10": {
+      "plannedSeconds": 37800,
+      "setupSeconds": 1800,
+      "runSeconds": 36000
+    },
+    "1004.20": {
+      "plannedSeconds": 24000,
+      "setupSeconds": 0,
+      "runSeconds": 24000
+    },
+    "1006.10": {
+      "plannedSeconds": 10800,
+      "setupSeconds": 0,
+      "runSeconds": 10800
+    }
+  },
+  "placements": {
+    "1001.10": {
+      "start": {
+        "instant": "2026-11-03T10:30:00Z",
+        "plantLocal": "2026-11-03T11:30:00"
+      },
+      "end": {
+        "instant": "2026-11-04T07:00:00Z",
+        "plantLocal": "2026-11-04T08:00:00"
+      },
+      "segments": [
+        {
+          "from": "2026-11-03T10:30:00Z",
+          "to": "2026-11-03T14:00:00Z"
+        },
+        {
+          "from": "2026-11-04T05:00:00Z",
+          "to": "2026-11-04T07:00:00Z"
+        }
+      ]
+    },
+    "1001.20": {
+      "start": {
+        "instant": "2026-11-04T08:00:00Z",
+        "plantLocal": "2026-11-04T09:00:00"
+      },
+      "end": {
+        "instant": "2026-11-05T09:45:00Z",
+        "plantLocal": "2026-11-05T10:45:00"
+      },
+      "segments": [
+        {
+          "from": "2026-11-04T08:00:00Z",
+          "to": "2026-11-04T10:00:00Z"
+        },
+        {
+          "from": "2026-11-04T10:30:00Z",
+          "to": "2026-11-04T14:00:00Z"
+        },
+        {
+          "from": "2026-11-05T05:00:00Z",
+          "to": "2026-11-05T07:30:00Z"
+        },
+        {
+          "from": "2026-11-05T07:45:00Z",
+          "to": "2026-11-05T09:45:00Z"
+        }
+      ]
+    },
+    "1002.10": {
+      "start": {
+        "instant": "2026-11-05T10:30:00Z",
+        "plantLocal": "2026-11-05T11:30:00"
+      },
+      "end": {
+        "instant": "2026-11-05T14:00:00Z",
+        "plantLocal": "2026-11-05T15:00:00"
+      },
+      "segments": [
+        {
+          "from": "2026-11-05T10:30:00Z",
+          "to": "2026-11-05T14:00:00Z"
+        }
+      ]
+    },
+    "1003.10": {
+      "start": {
+        "instant": "2026-11-04T07:00:00Z",
+        "plantLocal": "2026-11-04T08:00:00"
+      },
+      "end": {
+        "instant": "2026-11-04T11:45:00Z",
+        "plantLocal": "2026-11-04T12:45:00"
+      },
+      "segments": [
+        {
+          "from": "2026-11-04T07:00:00Z",
+          "to": "2026-11-04T07:30:00Z"
+        },
+        {
+          "from": "2026-11-04T07:45:00Z",
+          "to": "2026-11-04T10:00:00Z"
+        },
+        {
+          "from": "2026-11-04T10:30:00Z",
+          "to": "2026-11-04T11:45:00Z"
+        }
+      ]
+    },
+    "1003.20": {
+      "start": {
+        "instant": "2026-11-04T11:45:00Z",
+        "plantLocal": "2026-11-04T12:45:00"
+      },
+      "end": {
+        "instant": "2026-11-05T05:15:00Z",
+        "plantLocal": "2026-11-05T06:15:00"
+      },
+      "segments": [
+        {
+          "from": "2026-11-04T11:45:00Z",
+          "to": "2026-11-04T14:00:00Z"
+        },
+        {
+          "from": "2026-11-05T05:00:00Z",
+          "to": "2026-11-05T05:15:00Z"
+        }
+      ]
+    },
+    "1004.10": {
+      "start": {
+        "instant": "2026-11-05T05:00:00Z",
+        "plantLocal": "2026-11-05T06:00:00"
+      },
+      "end": {
+        "instant": "2026-11-06T07:15:00Z",
+        "plantLocal": "2026-11-06T08:15:00"
+      },
+      "segments": [
+        {
+          "from": "2026-11-05T05:00:00Z",
+          "to": "2026-11-05T07:30:00Z"
+        },
+        {
+          "from": "2026-11-05T07:45:00Z",
+          "to": "2026-11-05T10:00:00Z"
+        },
+        {
+          "from": "2026-11-05T10:30:00Z",
+          "to": "2026-11-05T14:00:00Z"
+        },
+        {
+          "from": "2026-11-06T05:00:00Z",
+          "to": "2026-11-06T07:15:00Z"
+        }
+      ]
+    },
+    "1004.20": {
+      "start": {
+        "instant": "2026-11-05T09:20:20Z",
+        "plantLocal": "2026-11-05T10:20:20"
+      },
+      "end": {
+        "instant": "2026-11-06T07:45:20Z",
+        "plantLocal": "2026-11-06T08:45:20"
+      },
+      "segments": [
+        {
+          "from": "2026-11-05T09:20:20Z",
+          "to": "2026-11-05T10:00:00Z"
+        },
+        {
+          "from": "2026-11-05T10:30:00Z",
+          "to": "2026-11-05T14:00:00Z"
+        },
+        {
+          "from": "2026-11-06T05:00:00Z",
+          "to": "2026-11-06T07:30:00Z"
+        },
+        {
+          "from": "2026-11-06T07:45:00Z",
+          "to": "2026-11-06T07:45:20Z"
+        }
+      ]
+    },
+    "1006.10": {
+      "start": {
+        "instant": "2026-11-06T12:00:00Z",
+        "plantLocal": "2026-11-06T13:00:00"
+      },
+      "end": {
+        "instant": "2026-11-09T06:00:00Z",
+        "plantLocal": "2026-11-09T07:00:00"
+      },
+      "segments": [
+        {
+          "from": "2026-11-06T12:00:00Z",
+          "to": "2026-11-06T14:00:00Z"
+        },
+        {
+          "from": "2026-11-09T05:00:00Z",
+          "to": "2026-11-09T06:00:00Z"
+        }
+      ]
+    }
+  },
+  "GT1_float_1001": {
+    "deadline": {
+      "instant": "2026-11-06T14:00:00Z",
+      "plantLocal": "2026-11-06T15:00:00"
+    },
+    "latest": {
+      "1001.20": {
+        "start": {
+          "instant": "2026-11-05T12:15:00Z",
+          "plantLocal": "2026-11-05T13:15:00"
+        },
+        "end": {
+          "instant": "2026-11-06T14:00:00Z",
+          "plantLocal": "2026-11-06T15:00:00"
+        }
+      },
+      "1001.10": {
+        "start": {
+          "instant": "2026-11-05T05:00:00Z",
+          "plantLocal": "2026-11-05T06:00:00"
+        },
+        "end": {
+          "instant": "2026-11-05T11:15:00Z",
+          "plantLocal": "2026-11-05T12:15:00"
+        }
+      }
+    },
+    "totalFloatWorkingS": {
+      "1001.10": 42300,
+      "1001.20": 43200
+    },
+    "freeFloatWorkingS": {
+      "1001.10": 0,
+      "1001.20": 900
+    },
+    "critical": {
+      "1001.10": false,
+      "1001.20": false
+    },
+    "slackToDeadlineElapsedS": 101700,
+    "plannedEnd": {
+      "instant": "2026-11-05T09:45:00Z",
+      "plantLocal": "2026-11-05T10:45:00"
+    },
+    "late": false,
+    "freeFloatBoundBy": {
+      "1001.10": {
+        "kind": "precedence",
+        "boundBy": "1001.20"
+      },
+      "1001.20": {
+        "kind": "machine",
+        "boundBy": "1002.10",
+        "float": "free float equals the working time until the next reservation on CNC2"
+      }
+    }
+  },
+  "GT2_late_chain_1003": {
+    "deadline": {
+      "instant": "2026-11-04T14:00:00Z",
+      "plantLocal": "2026-11-04T15:00:00"
+    },
+    "plannedEnd": {
+      "instant": "2026-11-05T05:15:00Z",
+      "plantLocal": "2026-11-05T06:15:00"
+    },
+    "late": true,
+    "lateByElapsedS": 54900,
+    "lateByWorkingSOnMILL1": 900,
+    "chain": [
+      {
+        "row": "1003.20",
+        "freeFloatWorkingS": 0,
+        "binding": {
+          "kind": "precedence",
+          "boundBy": "1003.10"
+        },
+        "critical": true
+      },
+      {
+        "row": "1003.10",
+        "freeFloatWorkingS": 0,
+        "binding": {
+          "kind": "machine",
+          "boundBy": "1001.10",
+          "equipment": "CNC1"
+        },
+        "critical": true
+      },
+      {
+        "row": "1001.10",
+        "otherOrder": true,
+        "note": "chain root: a free row of another order with total float 42 300 s occupies CNC1 before 1003.10",
+        "totalFloatWorkingS": 42300
+      }
+    ],
+    "chainDepth": 2,
+    "whatIf_1003_first_on_CNC1": {
+      "1003.10": {
+        "start": {
+          "instant": "2026-11-03T10:30:00Z",
+          "plantLocal": "2026-11-03T11:30:00"
+        },
+        "end": {
+          "instant": "2026-11-04T05:30:00Z",
+          "plantLocal": "2026-11-04T06:30:00"
+        }
+      },
+      "1003.20": {
+        "start": {
+          "instant": "2026-11-04T05:30:00Z",
+          "plantLocal": "2026-11-04T06:30:00"
+        },
+        "end": {
+          "instant": "2026-11-04T08:15:00Z",
+          "plantLocal": "2026-11-04T09:15:00"
+        }
+      },
+      "late": false
+    },
+    "lateByElapsedSUnderStartOfDayRule": 108900
+  },
+  "GT3_cascade_1003": {
+    "move": {
+      "row": "1003.10",
+      "newSetupStart": {
+        "instant": "2026-11-04T08:00:00Z",
+        "plantLocal": "2026-11-04T09:00:00"
+      },
+      "equipment": "CNC1"
+    },
+    "moved": {
+      "1003.10": {
+        "start": {
+          "instant": "2026-11-04T08:00:00Z",
+          "plantLocal": "2026-11-04T09:00:00"
+        },
+        "end": {
+          "instant": "2026-11-04T12:30:00Z",
+          "plantLocal": "2026-11-04T13:30:00"
+        }
+      }
+    },
+    "cascadeOn": {
+      "1003.20": {
+        "start": {
+          "instant": "2026-11-04T12:30:00Z",
+          "plantLocal": "2026-11-04T13:30:00"
+        },
+        "end": {
+          "instant": "2026-11-05T06:00:00Z",
+          "plantLocal": "2026-11-05T07:00:00"
+        },
+        "reason": "release moved later than the planned start; lead time 0"
+      },
+      "draftChanges": 2,
+      "lateByElapsedS": 57600
+    },
+    "cascadeOff": {
+      "conflicts": [
+        {
+          "kind": "LEAD_TIME",
+          "rows": ["1003.10", "1003.20"],
+          "detail": "1003.20 starts at Wed 12:45 before 1003.10 ends at Wed 13:30"
+        }
+      ],
+      "draftChanges": 1
+    }
+  },
+  "GT4_send_ahead_last_piece_1004": {
+    "setupEnd": {
+      "instant": "2026-11-05T05:30:00Z",
+      "plantLocal": "2026-11-05T06:30:00"
+    },
+    "runSecondsFor300": 9000,
+    "releaseOf300Pieces": {
+      "instant": "2026-11-05T08:15:00Z",
+      "plantLocal": "2026-11-05T09:15:00"
+    },
+    "releaseWithLead1800": {
+      "instant": "2026-11-05T08:45:00Z",
+      "plantLocal": "2026-11-05T09:45:00"
+    },
+    "forwardFromRelease": {
+      "1004.20": {
+        "start": {
+          "instant": "2026-11-05T08:45:00Z",
+          "plantLocal": "2026-11-05T09:45:00"
+        },
+        "end": {
+          "instant": "2026-11-06T06:55:00Z",
+          "plantLocal": "2026-11-06T07:55:00"
+        }
+      },
+      "conflicts": [
+        {
+          "kind": "LAST_PIECE",
+          "detail": "1004.20 ends 2026-11-06T07:55:00 before 1004.10 end 2026-11-06T08:15:00 plus lead 1 800 s plus one cycle 20 s = 2026-11-06T08:45:20"
+        }
+      ]
+    },
+    "lastPieceMinEnd": {
+      "instant": "2026-11-06T07:45:20Z",
+      "plantLocal": "2026-11-06T08:45:20"
+    },
+    "placedByLastPiece": {
+      "1004.20": {
+        "start": {
+          "instant": "2026-11-05T09:20:20Z",
+          "plantLocal": "2026-11-05T10:20:20"
+        },
+        "end": {
+          "instant": "2026-11-06T07:45:20Z",
+          "plantLocal": "2026-11-06T08:45:20"
+        }
+      },
+      "conflicts": []
+    },
+    "overlapOnMILL1DuringLead": "none: 1004.20 run may start at the release; retool overlaps the lead time only when the operation has retool, and 1004.20 has none"
+  },
+  "GT1_GT2_floats": {
+    "1001.10": {
+      "earliestStart": {
+        "instant": "2026-11-03T08:40:00Z",
+        "plantLocal": "2026-11-03T09:40:00"
+      },
+      "waitWorkingS": 4800,
+      "latestStart": {
+        "instant": "2026-11-05T05:00:00Z",
+        "plantLocal": "2026-11-05T06:00:00"
+      },
+      "latestEnd": {
+        "instant": "2026-11-05T11:15:00Z",
+        "plantLocal": "2026-11-05T12:15:00"
+      },
+      "totalFloatWorkingS": 42300,
+      "freeFloatWorkingS": 0,
+      "bindingConstraint": {
+        "kind": "free",
+        "detail": "nothing stops an earlier start: first operation, outside the fence, CNC1 free before it"
+      },
+      "critical": false
+    },
+    "1001.20": {
+      "earliestStart": {
+        "instant": "2026-11-04T08:00:00Z",
+        "plantLocal": "2026-11-04T09:00:00"
+      },
+      "waitWorkingS": 0,
+      "latestStart": {
+        "instant": "2026-11-05T12:15:00Z",
+        "plantLocal": "2026-11-05T13:15:00"
+      },
+      "latestEnd": {
+        "instant": "2026-11-06T14:00:00Z",
+        "plantLocal": "2026-11-06T15:00:00"
+      },
+      "totalFloatWorkingS": 43200,
+      "freeFloatWorkingS": 900,
+      "bindingConstraint": {
+        "kind": "release",
+        "boundBy": "1001.10",
+        "detail": "starts at its release: 1001.10 end plus 1 h lead"
+      },
+      "critical": false
+    },
+    "1003.10": {
+      "earliestStart": {
+        "instant": "2026-11-03T08:40:00Z",
+        "plantLocal": "2026-11-03T09:40:00"
+      },
+      "waitWorkingS": 24600,
+      "latestStart": {
+        "instant": "2026-11-04T06:45:00Z",
+        "plantLocal": "2026-11-04T07:45:00"
+      },
+      "latestEnd": {
+        "instant": "2026-11-04T11:30:00Z",
+        "plantLocal": "2026-11-04T12:30:00"
+      },
+      "totalFloatWorkingS": -900,
+      "freeFloatWorkingS": 0,
+      "bindingConstraint": {
+        "kind": "machine",
+        "boundBy": "1001.10",
+        "equipment": "CNC1",
+        "detail": "starts when 1001.10 ends on CNC1"
+      },
+      "critical": true
+    },
+    "1003.20": {
+      "earliestStart": {
+        "instant": "2026-11-04T11:45:00Z",
+        "plantLocal": "2026-11-04T12:45:00"
+      },
+      "waitWorkingS": 0,
+      "latestStart": {
+        "instant": "2026-11-04T11:30:00Z",
+        "plantLocal": "2026-11-04T12:30:00"
+      },
+      "latestEnd": {
+        "instant": "2026-11-04T14:00:00Z",
+        "plantLocal": "2026-11-04T15:00:00"
+      },
+      "totalFloatWorkingS": -900,
+      "freeFloatWorkingS": 0,
+      "bindingConstraint": {
+        "kind": "release",
+        "boundBy": "1003.10",
+        "detail": "starts at its release: 1003.10 end, lead 0"
+      },
+      "critical": true
+    }
+  },
+  "GT1_chain_1001": {
+    "late": false,
+    "slackToDeadlineElapsedS": 101700,
+    "chain": [
+      {
+        "row": "1001.20",
+        "bindingConstraint": "release from 1001.10"
+      },
+      {
+        "row": "1001.10",
+        "bindingConstraint": "free",
+        "root": true
+      }
+    ],
+    "criticalRows": []
+  },
+  "GT2_chain_1003": {
+    "late": true,
+    "chain": [
+      {
+        "row": "1003.20",
+        "bindingConstraint": "release from 1003.10",
+        "critical": true
+      },
+      {
+        "row": "1003.10",
+        "bindingConstraint": "machine CNC1 occupied by 1001.10",
+        "critical": true
+      },
+      {
+        "row": "1001.10",
+        "otherOrder": "1001",
+        "bindingConstraint": "free",
+        "root": true,
+        "totalFloatWorkingS": 42300
+      }
+    ],
+    "criticalRows": ["1003.10", "1003.20"]
+  },
+  "GT5_workload_week45": [
+    {
+      "productionDay": "2026-11-02",
+      "equipment": "CNC1",
+      "availableS": 29700,
+      "loadedS": 0,
+      "setupS": 0,
+      "runS": 0,
+      "utilizationPermille": 0,
+      "overloadS": 0,
+      "items": []
+    },
+    {
+      "productionDay": "2026-11-02",
+      "equipment": "CNC2",
+      "availableS": 29700,
+      "loadedS": 0,
+      "setupS": 0,
+      "runS": 0,
+      "utilizationPermille": 0,
+      "overloadS": 0,
+      "items": []
+    },
+    {
+      "productionDay": "2026-11-02",
+      "equipment": "MILL1",
+      "availableS": 29700,
+      "loadedS": 0,
+      "setupS": 0,
+      "runS": 0,
+      "utilizationPermille": 0,
+      "overloadS": 0,
+      "items": []
+    },
+    {
+      "productionDay": "2026-11-03",
+      "equipment": "CNC1",
+      "availableS": 29700,
+      "loadedS": 12600,
+      "setupS": 1800,
+      "runS": 10800,
+      "utilizationPermille": 424,
+      "overloadS": 0,
+      "items": [
+        {
+          "jobOrder": "1001.10",
+          "seconds": 12600
+        }
+      ]
+    },
+    {
+      "productionDay": "2026-11-03",
+      "equipment": "CNC2",
+      "availableS": 29700,
+      "loadedS": 0,
+      "setupS": 0,
+      "runS": 0,
+      "utilizationPermille": 0,
+      "overloadS": 0,
+      "items": []
+    },
+    {
+      "productionDay": "2026-11-03",
+      "equipment": "MILL1",
+      "availableS": 29700,
+      "loadedS": 0,
+      "setupS": 0,
+      "runS": 0,
+      "utilizationPermille": 0,
+      "overloadS": 0,
+      "items": []
+    },
+    {
+      "productionDay": "2026-11-04",
+      "equipment": "CNC1",
+      "availableS": 29700,
+      "loadedS": 21600,
+      "setupS": 0,
+      "runS": 21600,
+      "utilizationPermille": 727,
+      "overloadS": 0,
+      "items": [
+        {
+          "jobOrder": "1001.10",
+          "seconds": 7200
+        },
+        {
+          "jobOrder": "1003.10",
+          "seconds": 14400
+        }
+      ]
+    },
+    {
+      "productionDay": "2026-11-04",
+      "equipment": "CNC2",
+      "availableS": 29700,
+      "loadedS": 19800,
+      "setupS": 0,
+      "runS": 19800,
+      "utilizationPermille": 667,
+      "overloadS": 0,
+      "items": [
+        {
+          "jobOrder": "1001.20",
+          "seconds": 19800
+        }
+      ]
+    },
+    {
+      "productionDay": "2026-11-04",
+      "equipment": "MILL1",
+      "availableS": 29700,
+      "loadedS": 8100,
+      "setupS": 0,
+      "runS": 8100,
+      "utilizationPermille": 273,
+      "overloadS": 0,
+      "items": [
+        {
+          "jobOrder": "1003.20",
+          "seconds": 8100
+        }
+      ]
+    },
+    {
+      "productionDay": "2026-11-05",
+      "equipment": "CNC1",
+      "availableS": 29700,
+      "loadedS": 29700,
+      "setupS": 1800,
+      "runS": 27900,
+      "utilizationPermille": 1000,
+      "overloadS": 0,
+      "items": [
+        {
+          "jobOrder": "1004.10",
+          "seconds": 29700
+        }
+      ]
+    },
+    {
+      "productionDay": "2026-11-05",
+      "equipment": "CNC2",
+      "availableS": 29700,
+      "loadedS": 28800,
+      "setupS": 0,
+      "runS": 28800,
+      "utilizationPermille": 970,
+      "overloadS": 0,
+      "items": [
+        {
+          "jobOrder": "1001.20",
+          "seconds": 16200
+        },
+        {
+          "jobOrder": "1002.10",
+          "seconds": 12600
+        }
+      ]
+    },
+    {
+      "productionDay": "2026-11-05",
+      "equipment": "MILL1",
+      "availableS": 29700,
+      "loadedS": 15880,
+      "setupS": 0,
+      "runS": 15880,
+      "utilizationPermille": 535,
+      "overloadS": 0,
+      "items": [
+        {
+          "jobOrder": "1003.20",
+          "seconds": 900
+        },
+        {
+          "jobOrder": "1004.20",
+          "seconds": 14980
+        }
+      ]
+    },
+    {
+      "productionDay": "2026-11-06",
+      "equipment": "CNC1",
+      "availableS": 29700,
+      "loadedS": 8100,
+      "setupS": 0,
+      "runS": 8100,
+      "utilizationPermille": 273,
+      "overloadS": 0,
+      "items": [
+        {
+          "jobOrder": "1004.10",
+          "seconds": 8100
+        }
+      ]
+    },
+    {
+      "productionDay": "2026-11-06",
+      "equipment": "CNC2",
+      "availableS": 29700,
+      "loadedS": 0,
+      "setupS": 0,
+      "runS": 0,
+      "utilizationPermille": 0,
+      "overloadS": 0,
+      "items": []
+    },
+    {
+      "productionDay": "2026-11-06",
+      "equipment": "MILL1",
+      "availableS": 29700,
+      "loadedS": 16220,
+      "setupS": 0,
+      "runS": 16220,
+      "utilizationPermille": 546,
+      "overloadS": 0,
+      "items": [
+        {
+          "jobOrder": "1004.20",
+          "seconds": 9020
+        },
+        {
+          "jobOrder": "1006.10",
+          "seconds": 7200
+        }
+      ]
+    }
+  ],
+  "GT6_overload_definition": {
+    "rule": "loadedS counts every job order segment on the machine, overlapping ones twice; overloadS = max(0, loadedS - availableS) plus work laid in closed time; an overlap pair on one machine is also an OVERLAP conflict",
+    "example": {
+      "equipment": "CNC2",
+      "productionDay": "2026-11-05",
+      "extraRow": {
+        "jobOrder": "1005.10",
+        "start": "2026-11-05T12:00:00 plant time",
+        "seconds": 3600
+      },
+      "loadedS": 32400,
+      "availableS": 29700,
+      "overloadS": 2700
+    }
+  },
+  "GT7_calendar_span_1006": {
+    "base": {
+      "start": {
+        "instant": "2026-11-06T12:00:00Z",
+        "plantLocal": "2026-11-06T13:00:00"
+      },
+      "end": {
+        "instant": "2026-11-09T06:00:00Z",
+        "plantLocal": "2026-11-09T07:00:00"
+      },
+      "segments": [
+        {
+          "from": "2026-11-06T12:00:00Z",
+          "to": "2026-11-06T14:00:00Z"
+        },
+        {
+          "from": "2026-11-09T05:00:00Z",
+          "to": "2026-11-09T06:00:00Z"
+        }
+      ],
+      "workingS": 10800,
+      "elapsedS": 237600,
+      "closedSegmentsDrawnHollow": 1
+    },
+    "withPlantHolidayMon9Nov": {
+      "end": {
+        "instant": "2026-11-10T06:00:00Z",
+        "plantLocal": "2026-11-10T07:00:00"
+      },
+      "segments": [
+        {
+          "from": "2026-11-06T12:00:00Z",
+          "to": "2026-11-06T14:00:00Z"
+        },
+        {
+          "from": "2026-11-10T05:00:00Z",
+          "to": "2026-11-10T06:00:00Z"
+        }
+      ]
+    },
+    "withMILL1OvertimeSat6to10": {
+      "end": {
+        "instant": "2026-11-07T06:00:00Z",
+        "plantLocal": "2026-11-07T07:00:00"
+      },
+      "segments": [
+        {
+          "from": "2026-11-06T12:00:00Z",
+          "to": "2026-11-06T14:00:00Z"
+        },
+        {
+          "from": "2026-11-07T05:00:00Z",
+          "to": "2026-11-07T06:00:00Z"
+        }
+      ]
+    }
+  },
+  "GT8_frozen_window": {
+    "now": {
+      "instant": "2026-11-02T08:40:00Z",
+      "plantLocal": "2026-11-02T09:40:00"
+    },
+    "fence": {
+      "instant": "2026-11-03T08:40:00Z",
+      "plantLocal": "2026-11-03T09:40:00"
+    },
+    "rowsInsideFence": [],
+    "rowsOutsideFence": ["1001.10"],
+    "note": "With now moved to Tue 2026-11-03 09:40 the fence is Wed 09:40, and 1001.10 (setup start Tue 11:30), 1003.10 (Wed 08:00) and 1001.20 (Wed 09:00) are frozen: the cascade stops at them and a pointer move asks for confirmation",
+    "rowsInsideFenceWithNowTue0940": ["1001.10", "1003.10", "1001.20"]
+  },
+  "GT9_deadline_rules": {
+    "endOfShift": {
+      "1001": {
+        "deadline": {
+          "instant": "2026-11-06T14:00:00Z",
+          "plantLocal": "2026-11-06T15:00:00"
+        },
+        "late": false
+      },
+      "1003": {
+        "deadline": {
+          "instant": "2026-11-04T14:00:00Z",
+          "plantLocal": "2026-11-04T15:00:00"
+        },
+        "late": true,
+        "lateByElapsedS": 54900
+      }
+    },
+    "startOfDay": {
+      "1001": {
+        "deadline": {
+          "instant": "2026-11-05T23:00:00Z",
+          "plantLocal": "2026-11-06T00:00:00"
+        },
+        "late": false
+      },
+      "1003": {
+        "deadline": {
+          "instant": "2026-11-03T23:00:00Z",
+          "plantLocal": "2026-11-04T00:00:00"
+        },
+        "late": true,
+        "lateByElapsedS": 108900
+      }
+    }
+  }
+}

@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
-const ignored = ['**/node_modules/**', '**/dist/**', 'docs/sources/**'];
+const ignored = ['**/node_modules/**', '**/dist/**', 'docs/sources/**', '.claude/**'];
 
 // graphql 16 ships index.js (CommonJS, "main") and index.mjs ("module"). Node loads index.js for
 // packages in node_modules, while Vite resolves index.mjs for the code it transforms, and two

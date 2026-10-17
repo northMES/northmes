@@ -375,6 +375,37 @@ input CoreCreateArticleInput {
   translations: [TranslationInput!]
 }
 
+"""The input of coreCreateIntegrationToken."""
+input CoreCreateIntegrationTokenInput {
+  """
+  The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+  """
+  companyId: String
+
+  """How many days the token lives, 1 to 365, 90 unless given."""
+  expiresInDays: Int
+
+  """
+  The id of the new entity, a UUID the client generates, so a retry finds the first.
+  """
+  id: ID!
+
+  """
+  The token's name, such as the system that uses it, at most 80 characters.
+  """
+  name: String!
+
+  """
+  The ids of the roles of the company that the token holds at scopeId, 1 to 20.
+  """
+  roleIds: [String!]!
+
+  """
+  The company or the plant of the company where the token holds its roles.
+  """
+  scopeId: ID!
+}
+
 """The input of coreCreateRole."""
 input CoreCreateRoleInput {
   """
@@ -479,6 +510,17 @@ input CoreRestoreArticleGroupInput {
 
 """The input of coreRestoreArticle."""
 input CoreRestoreArticleInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
+  expectedVersion: Int!
+
+  """The id of the entity the command changes."""
+  id: ID!
+}
+
+"""The input of coreRevokeIntegrationToken."""
+input CoreRevokeIntegrationTokenInput {
   """
   The version of the entity that the change was made on; the command is refused when the entity has changed since.
   """
@@ -676,6 +718,19 @@ input CoreUpsertArticleInput {
 }
 
 """
+An integration token that coreCreateIntegrationToken created, with its secret to pass on once.
+"""
+type CreatedIntegrationToken {
+  """
+  The token's secret, which only this answer holds: NorthMES stores its hash and cannot show it again. The outside system sends it as Authorization: Bearer.
+  """
+  secret: String!
+
+  """The new token."""
+  token: IntegrationToken!
+}
+
+"""
 A user that coreCreateUser created, with the temporary password to pass on once.
 """
 type CreatedUser {
@@ -810,6 +865,45 @@ type EffectivePermission {
 }
 
 """
+A credential that an outside system calls the public API with. It acts as itself, with its roles at the company or at one plant. Its secret is shown once, when it is created.
+"""
+type IntegrationToken {
+  """When the token was created."""
+  createdAt: DateTime!
+
+  """The user who created the token."""
+  createdBy: User!
+
+  """When the token expires."""
+  expiresAt: DateTime!
+
+  """The token's id."""
+  id: ID!
+
+  """
+  When the token was last used, to the minute, or null when it never was.
+  """
+  lastUsedAt: DateTime
+
+  """The token's name, such as the system that uses it."""
+  name: String!
+
+  """When the token was revoked, or null while it is not."""
+  revokedAt: DateTime
+
+  """The roles the token holds at its scope, by name."""
+  roles: [Role!]!
+
+  """The company or the plant where the token holds its roles."""
+  scope: AccessScope!
+
+  """
+  Grows by one with every change to the token; a revoke sends it as expectedVersion.
+  """
+  version: Int!
+}
+
+"""
 The writes of the NorthMES API. Each mutation sends one command, which checks its permission and its input before it changes anything.
 """
 type Mutation {
@@ -860,6 +954,14 @@ type Mutation {
     """The input of the command core.createArticleGroup."""
     input: CoreCreateArticleGroupInput!
   ): ArticleGroup!
+
+  """
+  Creates an integration token of the company that holds roles at the company or at one of its plants. Needs core.integration:manage at the company and every permission of each role at that place. The answer shows the secret once.
+  """
+  coreCreateIntegrationToken(
+    """The input of the command core.createIntegrationToken."""
+    input: CoreCreateIntegrationTokenInput!
+  ): CreatedIntegrationToken!
 
   """
   Creates a custom role of the company. Needs core.role:manage at the company; a name that another role of the company has is refused with core.role_name_taken.
@@ -916,6 +1018,14 @@ type Mutation {
     """The input of the command core.restoreArticleGroup."""
     input: CoreRestoreArticleGroupInput!
   ): ArticleGroup!
+
+  """
+  Revokes an integration token at once and keeps its record. Needs core.integration:manage at the token's company.
+  """
+  coreRevokeIntegrationToken(
+    """The input of the command core.revokeIntegrationToken."""
+    input: CoreRevokeIntegrationTokenInput!
+  ): IntegrationToken!
 
   """
   Saves the layout of one dashboard tab. Changing a shared tab needs core.dashboardTab:manage at the tab's scope; a user's own tab needs none.
@@ -1276,6 +1386,16 @@ type Query {
   The dashboard's tabs at the request's plant: the company's, then the plant's, then the signed-in user's own, each in its order. Needs no permission beyond opening the plant.
   """
   coreDashboardTabs: [DashboardTab!]!
+
+  """
+  The integration tokens of the company, revoked ones too, newest first, without their secrets. Needs core.integration:manage at the company.
+  """
+  coreIntegrationTokens(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+  ): [IntegrationToken!]!
 
   """
   Every permission of the catalog, installed or not, grouped by module, core first, and by resource. Needs core.role:read.

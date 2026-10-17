@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { gql } from '@apollo/client';
+import { gql, type TypedDocumentNode } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { defineWebModule, useShell } from '@northmes/web-sdk';
 import {
@@ -142,14 +142,14 @@ const settings: ShellModule = {
   }),
 };
 
-const pingQuery = gql`
+const pingQuery: TypedDocumentNode<{ ping: string }> = gql`
   query Ping {
     ping
   }
 `;
 
 function PingScreen() {
-  const { data, error } = useQuery<{ ping: string }>(pingQuery);
+  const { data, error } = useQuery(pingQuery);
   if (error) return <p>{error.message}</p>;
   return <p>{data ? `The API answered ${data.ping}` : 'Loading'}</p>;
 }
@@ -332,7 +332,7 @@ describe('the shell', () => {
     ]);
   });
 
-  it("E04-S02 the web's sidebar has Dashboard, Articles and Article groups in the Core group before Planning board in the Planning group", async () => {
+  it("E04-S02 the web's sidebar has Dashboard, Articles and Article groups in the Core group before Planning board and Gantt in the Planning group", async () => {
     // The screen's query never gets an answer; the test reads the sidebar alone.
     const fetch = vi.fn<typeof globalThis.fetch>(() => new Promise(() => {}));
     renderShellAt('/plant-a/articles', shellModules, { fetch });
@@ -345,7 +345,10 @@ describe('the shell', () => {
         ['Articles', '/plant-a/articles'],
         ['Article groups', '/plant-a/article-groups'],
       ],
-      [['Planning board', '/plant-a/planning/board']],
+      [
+        ['Planning board', '/plant-a/planning/board'],
+        ['Gantt', '/plant-a/planning/gantt'],
+      ],
     ]);
   });
 

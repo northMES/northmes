@@ -255,6 +255,7 @@ const companyLevel = [
   'core.articleGroup:archive',
   'core.articleGroup:create',
   'core.articleGroup:update',
+  'core.integration:manage',
   'core.role:manage',
   'core.user:block',
   'core.user:create',

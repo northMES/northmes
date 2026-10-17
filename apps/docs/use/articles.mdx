@@ -1,0 +1,97 @@
+---
+title: Articles and article groups
+description: Find articles with search, filters and grouping, create and edit them, choose the plants that use them, and archive or restore articles and article groups.
+---
+
+An article is a part or a product that a plant makes, buys or keeps in stock. Articles belong to the company, and each article is assigned to the plants that use it, or to all plants. A plant's lists and pickers show the articles assigned to it. Article groups sort the company's articles into families, such as brackets or fasteners.
+
+Both registers sit under **Master data** in the sidebar: **Articles** at `/<plant>/articles` and **Article groups** at `/<plant>/article-groups`.
+
+## Find an article
+
+![The articles of Plant A, newest change first](/images/use/articles.png)
+
+The list shows the articles of the plant, 25 to a page, the most recently changed first. Each row shows the article number, the name, the plants, the article group, the stock unit, the source and when it last changed. The article number opens the article's page.
+
+- **Search articles** finds the articles whose text contains what you type, ignoring case.
+- **Article number**, **Name** and **Last changed** sort the list. **Previous** and **Next** page through it.
+- **Article group**, **Stock unit** and **Source** each open a filter with the values the plant's articles have and how many articles have each. Pick one or more values. Each filter that applies shows as a chip with a button that removes it, and **Clear filters** removes them all while keeping the search.
+- **Show archived** lists the archived articles too, each with the **Archived** badge.
+- **Columns** hides and shows columns. This browser remembers your choice.
+
+The search, the sort, the filters, the grouping and the page are part of the address, so a reload, the browser's Back button or a copied link shows the same rows.
+
+### Group the list
+
+**Group by** groups the list by **Article group**, **Stock unit** or **Source**, and **No grouping** ends it. Each group shows how many articles it holds and starts closed. Select a group to open it and load its first 100 articles in the list's order. The search and the filters apply in every group.
+
+![The articles grouped by stock unit, with the Pieces group open](/images/use/articles-grouped.png)
+
+## An article's page
+
+![The page of article BR-140 with its Identity, Classification, Note and Origin](/images/use/article.png)
+
+The page shows the article in four sections:
+
+- **Identity**: the article number, the name and the translations of the name.
+- **Classification**: the article group and the stock unit.
+- **Note**.
+- **Origin**: the plants, the source, and when the article was created and last changed. The source is NorthMES for an article created in the web app, or the name of the integration that sent it.
+
+**Edit** and **Archive** are at the top of the page, for a user who may use them.
+
+## Create an article
+
+<Steps>
+  <Step title="Open New article">
+    In **Articles**, select **New article**.
+  </Step>
+  <Step title="Fill in the identity">
+    - **Article number**: up to 32 characters, unique in the company.
+    - **Name**: up to 200 characters.
+    - **Translations** (optional): **Add translation** adds a row with a language and the name in it, one per language.
+  </Step>
+  <Step title="Classify the article">
+    - **Article group** (optional).
+    - **Stock unit**: the unit the article's quantities are counted in, such as Pieces (pcs) or Metres (m). The form asks you to choose one.
+    - **Note** (optional): up to 2,000 characters.
+  </Step>
+  <Step title="Choose the plants">
+    The article is assigned to the plant you are at. A user who may assign articles to plants also gets **Plants**: **Chosen plants**, with a checkbox per plant of the company, or **All plants**, which also covers plants the company gets later. Choose at least one plant or All plants.
+  </Step>
+  <Step title="Save">
+    Select **Save article**. The article's page opens.
+  </Step>
+</Steps>
+
+An article number that another article of the company has is refused. When a save fails, the summary at the top lists every field to fix, and the form keeps what you typed.
+
+## Edit an article
+
+Select **Edit** on the article's page, change the fields, and select **Save article**. The same fields as on New article apply, and **Plants** shows to a user who may assign articles to plants.
+
+If someone else saved the article while you edited it, the save is refused and the form keeps your changes. **Reload article** fills the form with the saved article, so you can make your change again on top of it.
+
+### Who may change an article
+
+A role at one plant, such as Plant admin, lets its holder change, archive and restore the articles that only that plant uses. An article that other plants use too, or that is assigned to all plants, belongs to the company, and changing it needs the permission through a role at the company. Choosing an article's plants always needs `core.article:assign` at the company. See [Users, roles and permissions](/use/users-and-roles#permissions).
+
+## Archive and restore an article
+
+Select **Archive** on the article's page and confirm with **Archive article**. An archived article keeps its number, leaves the lists unless **Show archived** is on, and cannot be changed. Its page shows the **Archived** badge and offers **Restore** alone. **Restore** and **Restore article** bring it back, and **Edit** shows again.
+
+## Article groups
+
+**Article groups** lists the company's groups by code, with their name and when they last changed, all on one page. **Show archived** lists the archived groups too.
+
+- **New article group** creates a group with a **Code** of up to 32 characters, unique in the company, and a **Name** of up to 200 characters. Select **Save article group**.
+- A group's code opens its page, which is its form. Change the code or the name and select **Save article group**.
+- **Archive** on a group's page hides it from the lists, and no article can pick it any more. The articles that have it keep it. **Restore** brings it back.
+
+Article groups belong to the company, so creating, changing and archiving them needs the permission through a role at the company. Reading them needs `core.articleGroup:read`.
+
+## Limits in release 0.1.0
+
+- The article's page shows when it was created and last changed, but not by whom, and has no history.
+- An opened group of a grouped list shows its first 100 articles. Use the filters to see the rest of a large group.
+- An article cannot be deleted. Archive it instead.

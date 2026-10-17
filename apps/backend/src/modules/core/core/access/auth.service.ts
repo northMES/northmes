@@ -3,8 +3,13 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Inject, Injectable } from '@nestjs/common';
 import { toNodeHandler } from 'better-auth/node';
-import { CLIENT_ADDRESS_HEADER, sessionIsLive } from '../../infrastructure/auth/auth-options.ts';
+import {
+  CLIENT_ADDRESS_HEADER,
+  INTEGRATION_KEY_CONFIG,
+  sessionIsLive,
+} from '../../infrastructure/auth/auth-options.ts';
 import { BetterAuth } from '../../infrastructure/auth/better-auth.ts';
+import { Secret } from './secret.ts';
 
 /** A user to create: the email they sign in with, their username and their first password. */
 export interface NewUser {
@@ -58,6 +63,35 @@ export class EmailTaken extends Error {
     super('Another user has this email address');
     this.name = 'EmailTaken';
   }
+}
+
+/** Better Auth's code for a creator of an organization's api-key who is not a member of it. */
+const NOT_MEMBER = 'USER_NOT_MEMBER_OF_ORGANIZATION';
+
+/** Thrown by AuthService.createIntegrationKey for a creator outside the company's organization. */
+export class NotOrganizationMember extends Error {
+  constructor() {
+    super("The creator is not a member of the company's organization");
+    this.name = 'NotOrganizationMember';
+  }
+}
+
+/** The api-key of an integration token to create (ADR 0073). */
+export interface NewIntegrationKey {
+  /** The Better Auth organization of the token's company, which the key references. */
+  readonly organizationId: string;
+  /** The user who creates the token, whom Better Auth checks to be a member of the organization. */
+  readonly creatorId: string;
+  readonly name: string;
+  /** How many days the key lives, 1 to INTEGRATION_KEY_MAX_DAYS. */
+  readonly expiresInDays: number;
+}
+
+/** An integration key that Better Auth created, with its secret, which only this answer holds. */
+export interface CreatedIntegrationKey {
+  readonly keyId: string;
+  readonly secret: Secret;
+  readonly expiresAt: Date;
 }
 
 /** A user as Better Auth holds them, for the CLI's commands, which find a user by username. */
@@ -285,6 +319,72 @@ export class AuthService {
       banReason: null,
       banExpires: null,
       updatedAt: new Date(),
+    });
+  }
+
+  /**
+   * Creates the api-key of an integration token through Better Auth's api-key plugin on the server
+   * (ADR 0073): a key of the company's organization with the nms_int_ prefix, which the plugin
+   * stores as a hash. The answer holds the secret, which nothing else holds afterwards, and when
+   * the key expires. Better Auth refuses a creator who is not a member of the organization, which
+   * throws NotOrganizationMember.
+   */
+  async createIntegrationKey({
+    organizationId,
+    creatorId,
+    name,
+    expiresInDays,
+  }: NewIntegrationKey): Promise<CreatedIntegrationKey> {
+    try {
+      const created = await this.betterAuth.auth.api.createApiKey({
+        body: {
+          configId: INTEGRATION_KEY_CONFIG,
+          organizationId,
+          userId: creatorId,
+          name,
+          expiresIn: expiresInDays * 24 * 60 * 60,
+        },
+      });
+      if (!created.expiresAt)
+        throw new Error('Better Auth created an integration key without expiry');
+      return {
+        keyId: created.id,
+        secret: new Secret(created.key),
+        expiresAt: new Date(created.expiresAt),
+      };
+    } catch (error) {
+      if ((error as { body?: { code?: string } }).body?.code === NOT_MEMBER) {
+        throw new NotOrganizationMember();
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * The id of the integration key whose secret this is, when Better Auth's api-key plugin verifies
+   * it: its hash matches a key of the integration configuration that is enabled and has not
+   * expired. Any other text answers null. The plugin deletes a key it finds expired.
+   */
+  async verifyIntegrationKey(secret: string): Promise<string | null> {
+    const { valid, key } = await this.betterAuth.auth.api.verifyApiKey({
+      body: { configId: INTEGRATION_KEY_CONFIG, key: secret },
+    });
+    return valid && key ? key.id : null;
+  }
+
+  /**
+   * Deletes an integration key at once, so Better Auth verifies its secret no more (ADR 0073). It
+   * deletes through Better Auth's adapter, since the plugin's delete endpoint needs a Better Auth
+   * session, which the web's JWT is not. A key that is gone already is no error.
+   */
+  async deleteIntegrationKey(keyId: string): Promise<void> {
+    const { adapter } = await this.betterAuth.auth.$context;
+    await adapter.delete({
+      model: 'apikey',
+      where: [
+        { field: 'id', value: keyId },
+        { field: 'configId', value: INTEGRATION_KEY_CONFIG },
+      ],
     });
   }
 

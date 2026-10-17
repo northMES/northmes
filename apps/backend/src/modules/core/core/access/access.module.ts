@@ -4,22 +4,26 @@ import { Module } from '@nestjs/common';
 import { PrincipalResolver } from '../../../../principal.ts';
 import { BetterAuth } from '../../infrastructure/auth/better-auth.ts';
 import { AuthService } from './auth.service.ts';
+import { IntegrationCredentialService } from './integration-credential.service.ts';
 import { PrincipalService } from './principal.service.ts';
 import { UserAccountsRegistration } from './user-accounts.ts';
 
 /**
- * Provides sign-in and the principal: Better Auth, the AuthService on it, which core's user
- * commands reach through userAccounts(), and the PrincipalService, which is also the host's
- * PrincipalResolver. core's access surface imports it.
+ * Provides sign-in and the principal: Better Auth, the AuthService on it, which core's user and
+ * integration token commands reach through userAccounts() and integrationKeys(), the
+ * PrincipalService, which is also the host's PrincipalResolver, and the
+ * IntegrationCredentialService, which resolves an integration token (ADR 0073). core's access
+ * surface imports it.
  */
 @Module({
   providers: [
     BetterAuth,
     AuthService,
     PrincipalService,
+    IntegrationCredentialService,
     UserAccountsRegistration,
     { provide: PrincipalResolver, useExisting: PrincipalService },
   ],
-  exports: [AuthService, PrincipalService, PrincipalResolver],
+  exports: [AuthService, PrincipalService, IntegrationCredentialService, PrincipalResolver],
 })
 export class AccessModule {}

@@ -29,6 +29,9 @@
   --text-title--line-height: 2.125rem;
   --text-data: 0.8125rem;
   --text-data--line-height: 1.125rem;
+  /* The tick labels of the time header and the marker labels of the timeline (plan 18, D5). */
+  --text-tick: 0.6875rem;
+  --text-tick--line-height: 0.875rem;
 }
 
 @theme inline {
