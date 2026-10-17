@@ -67,6 +67,13 @@ describe('formatDuration (plan 18)', () => {
     expect(formatDuration(0)).toBe('0 min');
   });
 
+  it('GT3 spells the units out for a sentence when asked', () => {
+    expect(formatDuration(2700, { style: 'long' })).toBe('45 minutes');
+    expect(formatDuration(54_900, { style: 'long' })).toBe('15 hours 15 minutes');
+    expect(formatDuration(90_000, { style: 'long' })).toBe('1 day 1 hour');
+    expect(formatDuration(0, { style: 'long' })).toBe('0 minutes');
+  });
+
   it('GT4 keeps the seconds of a duration that is not whole minutes', () => {
     expect(formatDuration(14_980)).toBe('4 h 9 min 40 s');
     expect(formatDuration(20)).toBe('20 s');

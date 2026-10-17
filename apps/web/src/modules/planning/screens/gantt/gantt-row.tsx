@@ -4,6 +4,7 @@ import { cn } from 'cn';
 import type { KeyboardEvent } from 'react';
 import { GanttBlock } from './gantt-block.tsx';
 import { useGanttView } from './gantt-context.ts';
+import { GanttMarkerLayer, rowMarkers } from './gantt-marker-layer.tsx';
 import { jobOrderRowsOf, rowHeightRem, summaryName, summarySpan } from './gantt-rows.ts';
 import { SummaryBar, TimeCellShading } from './gantt-time-area.tsx';
 import { type GanttColumn, GanttRowHeader, type GanttTableRow } from './gantt-tree-pane.tsx';
@@ -46,9 +47,11 @@ export function GanttRowView({
   const view = useGanttView();
   const {
     scale,
+    snapshot,
     closedWindows,
     closedWindowsOf,
     selectedOrderId,
+    chainRowIds,
     timeZone,
     zoneLabel,
     machineName,
@@ -62,6 +65,8 @@ export function GanttRowView({
   const span = summary ? summarySpan(jobOrderRowsOf(original)) : undefined;
   const shading =
     original.kind === 'jobOrder' ? closedWindowsOf(original.jobOrder.equipment) : closedWindows;
+  const onChain = chainRowIds.has(original.id);
+  const markers = rowMarkers(original, snapshot, scale, { onChain });
   return (
     <div
       role="row"
@@ -124,6 +129,7 @@ export function GanttRowView({
           className="relative overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         >
           <TimeCellShading windows={shading} scale={scale} />
+          <GanttMarkerLayer markers={markers} scale={scale} />
           {span !== undefined && (
             <SummaryBar span={span} scale={scale} color={original.order.color} />
           )}
@@ -131,7 +137,8 @@ export function GanttRowView({
       ) : (
         <div role="gridcell" className="relative overflow-hidden">
           <TimeCellShading windows={shading} scale={scale} />
-          <GanttBlock row={original} selected={selected} onSelect={onSelect} />
+          <GanttMarkerLayer markers={markers} scale={scale} />
+          <GanttBlock row={original} selected={selected} onChain={onChain} onSelect={onSelect} />
         </div>
       )}
     </div>

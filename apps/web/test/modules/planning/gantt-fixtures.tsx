@@ -3,7 +3,7 @@
 import { planningLinks } from '@northmes/planning-contracts';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { render, screen } from '@testing-library/react';
-import type { GanttDataSource } from '../../../src/modules/planning/gantt-data.ts';
+import type { GanttDataSource, GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts';
 import { g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { GanttSourceProvider } from '../../../src/modules/planning/gantt-source-context.ts';
 import { shellModules } from '../../../src/modules.ts';
@@ -52,4 +52,16 @@ export function renderBoardRoute(
 /** The treegrid of the order Gantt, once it has rendered. */
 export async function findGantt(): Promise<HTMLElement> {
   return screen.findByRole('treegrid', { name: /order Gantt/ });
+}
+
+/** A data source that answers every load with one snapshot, for a test with changed data. */
+export function sourceOf(snapshot: GanttSnapshot): GanttDataSource {
+  return { load: async () => snapshot };
+}
+
+/** The accessible text of the markers of a kind inside an element, as the layer records it. */
+export function markerTexts(element: HTMLElement, kind: string): string[] {
+  return Array.from(element.querySelectorAll(`[data-marker="${kind}"]`)).map(
+    (marker) => marker.getAttribute('data-accessible-text') ?? '',
+  );
 }

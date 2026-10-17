@@ -27,10 +27,12 @@ import {
   shiftedFrom,
 } from '../../timeline/time-scale.ts';
 import { type GanttViewContext, GanttViewProvider } from './gantt-context.ts';
+import { GanttLinks, linksOf } from './gantt-links.tsx';
+import { GanttMarkerLayer, overlayMarkers } from './gantt-marker-layer.tsx';
 import { GanttNotPlacedRow } from './gantt-not-placed-row.tsx';
 import { useGanttOptions } from './gantt-options.ts';
 import { GanttRowView } from './gantt-row.tsx';
-import { buildGanttRows, notPlacedRows } from './gantt-rows.ts';
+import { buildGanttRows, type JobOrderRow, notPlacedRows, rowHeightRem } from './gantt-rows.ts';
 import { GanttTimeHeader, timeHeaderHeightRem } from './gantt-time-area.tsx';
 import { GanttToolbar } from './gantt-toolbar.tsx';
 import {
@@ -53,6 +55,13 @@ const treePaneShare = 0.4;
 
 /** The width the view assumes before it has measured itself, as in a test. */
 const assumedWidth = 1100;
+
+/** The pixels of one rem, which the row heights are in, read from the document once it exists. */
+function remPx(): number {
+  if (typeof document === 'undefined') return 16;
+  const size = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+  return Number.isFinite(size) && size > 0 ? size : 16;
+}
 
 /** The width of the whole grid, measured through a ResizeObserver where the browser has one. */
 function useMeasuredWidth(): [number, (node: HTMLElement | null) => void] {
@@ -189,6 +198,18 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   });
   const flatRows = table.getRowModel().rows;
   const unplaced = useMemo(() => notPlacedRows(rows), [rows]);
+  // The vertical centre of each visible job order row's block, for the links, from the row heights.
+  const rem = remPx();
+  const linkRows: { row: JobOrderRow; centerY: number }[] = [];
+  let totalHeight = 0;
+  for (const row of flatRows) {
+    const heightPx = rowHeightRem[row.original.kind] * rem;
+    if (row.original.kind === 'jobOrder') {
+      linkRows.push({ row: row.original, centerY: totalHeight + heightPx / 2 });
+    }
+    totalHeight += heightPx;
+  }
+  const chainRowIds = useMemo(() => new Set<string>(), []);
 
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
@@ -206,10 +227,24 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       zoneLabel: browserZone !== timeZone,
       hideClosed: options.hideClosed,
       selectedOrderId: search.order,
+      chainRowIds,
       machineName: (code) =>
         code === undefined ? 'no machine' : (equipment.get(code)?.name ?? code),
     };
-  }, [snapshot, scale, plantClosed, closedByCalendar, timeZone, options.hideClosed, search.order]);
+  }, [
+    snapshot,
+    scale,
+    plantClosed,
+    closedByCalendar,
+    timeZone,
+    options.hideClosed,
+    search.order,
+    chainRowIds,
+  ]);
+  const { links, limited } =
+    snapshot === undefined
+      ? { links: [], limited: false }
+      : linksOf(linkRows, snapshot, scale, search.order);
 
   let state: PageState = { status: 'ready' };
   if (snapshot === undefined && loadError !== undefined) {
@@ -267,7 +302,12 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       }
     >
       <p className="text-xs text-muted-foreground" data-testid="gantt-status">
-        {snapshot?.fixture !== undefined && `Showing fixture ${snapshot.fixture}.`}
+        {[
+          snapshot?.fixture !== undefined ? `Showing fixture ${snapshot.fixture}.` : undefined,
+          limited ? 'Links shown for the selected order.' : undefined,
+        ]
+          .filter((part) => part !== undefined)
+          .join(' ')}
       </p>
       {view !== undefined && snapshot !== undefined && (
         <GanttViewProvider value={view}>
@@ -293,7 +333,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               gridTemplateColumns={gridTemplateColumns}
               columnCount={columns.length}
             />
-            <div>
+            <div className="relative">
               {flatRows.map((row, index) => {
                 const parent = row.getParentRow();
                 const siblings = parent === undefined ? rows.length : parent.subRows.length;
@@ -314,6 +354,19 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                   />
                 );
               })}
+              <div
+                aria-hidden
+                data-overlay
+                className="pointer-events-none absolute top-0"
+                style={{
+                  left: `${treeWidth}px`,
+                  width: `${timeWidth}px`,
+                  height: `${totalHeight}px`,
+                }}
+              >
+                <GanttMarkerLayer markers={overlayMarkers(snapshot)} scale={scale} />
+                <GanttLinks links={links} width={timeWidth} height={totalHeight} />
+              </div>
             </div>
           </div>
         </GanttViewProvider>
