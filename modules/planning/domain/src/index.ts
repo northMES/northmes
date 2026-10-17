@@ -29,6 +29,13 @@ export {
   workBetween,
 } from './calendar/windows.ts';
 export {
+  bindingText,
+  type ChainResult,
+  type ChainRow,
+  chainRowLimit,
+  criticalChain,
+} from './critical-chain.ts';
+export {
   cyclesFor,
   oneCycleSeconds,
   plannedSeconds,
