@@ -92,7 +92,8 @@ function useViewportFill(
   const measure = useCallback(() => {
     const node = element.current;
     if (node === null || typeof window === 'undefined') return;
-    const top = node.getBoundingClientRect().top + window.scrollY;
+    // Viewport coordinates, as innerHeight is: the page may hold a restored scroll position.
+    const top = node.getBoundingClientRect().top;
     setHeight(Math.max(minFillRem * remPx(), window.innerHeight - top - bottomGapOf(node)));
   }, []);
   const ref = useCallback(

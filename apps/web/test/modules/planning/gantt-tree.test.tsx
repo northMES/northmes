@@ -145,7 +145,7 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     const gantt = await findGantt();
 
     const fill = gantt.closest<HTMLElement>('[data-gantt-fill]');
-    const top = (fill?.getBoundingClientRect().top ?? 0) + window.scrollY;
+    const top = fill?.getBoundingClientRect().top ?? 0;
     // The gap under the grid is main's bottom padding, which the test's stylesheet-free page has
     // as 0; the least height is 15 rem.
     const main = fill?.closest('main');
