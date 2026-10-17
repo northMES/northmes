@@ -7,7 +7,7 @@ import type { ShellModule } from '../modules.ts';
 import { SkipLink } from '../ui/components/skip-link/index.ts';
 import { useScrollPaddingTop } from '../ui/lib/use-scroll-padding-top.ts';
 import type { ShellCompany } from './companies.graphql.ts';
-import { mainId, plantHome } from './shell-pages.ts';
+import { mainId, plantLinkHref } from './shell-pages.ts';
 import { ShellAccountMenu, type ShellUser } from './shell-user-menu.tsx';
 
 export interface ShellPlantFreePageProps {
@@ -77,7 +77,7 @@ export interface ShellPlantListProps {
 /**
  * The user's plants by company (D2 ST29, ST38): a heading per company and a list of its plants
  * named by that heading, each with the switcher's Factory mark, the plant link, which opens the
- * plant's first page, and the plant's path. A company with a settings landing gets the link
+ * plant's first page or its root, and the plant's path. A company with a settings landing gets the link
  * "{company} settings" beside its heading (ADR 0066).
  */
 export function ShellPlantList({ modules, companies, level }: ShellPlantListProps) {
@@ -107,7 +107,7 @@ export function ShellPlantList({ modules, companies, level }: ShellPlantListProp
               >
                 <Factory className="size-3.5" />
               </span>
-              <Link to={plantHome(modules, each.slug) ?? '.'} className="text-link underline">
+              <Link to={plantLinkHref(modules, each.slug)} className="text-link underline">
                 {each.name}
               </Link>
               <span className="font-mono text-sm text-muted-foreground">/{each.slug}</span>

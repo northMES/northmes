@@ -115,6 +115,14 @@ export function plantHome(modules: readonly ShellModule[], plant: string): strin
 }
 
 /**
+ * Where a link to a plant from a page without a plant leads: the plant's first page, or the plant's
+ * root when no module has a sidebar entry.
+ */
+export function plantLinkHref(modules: readonly ShellModule[], plant: string): string {
+  return plantHome(modules, plant) ?? `/${encodeURIComponent(plant)}`;
+}
+
+/**
  * The module a path under a plant lies in: the module other than core whose id is the path's first
  * segment under the plant, or else core, whose pages sit at the plant root (ADR 0074), when it is
  * loaded.

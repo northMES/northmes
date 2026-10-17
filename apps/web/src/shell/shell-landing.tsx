@@ -10,7 +10,7 @@ import { applyStoredTheme } from '../ui/lib/theme.ts';
 import { Card } from '../ui/primitives/card.tsx';
 import { CoreCompanies } from './companies.graphql.ts';
 import { ShellHelpMenu } from './shell-help-menu.tsx';
-import { companySettingsEntries, plantHome, useFocusPageHeading } from './shell-pages.ts';
+import { companySettingsEntries, plantLinkHref, useFocusPageHeading } from './shell-pages.ts';
 import {
   type PlantListCompany,
   ShellPlantFreePage,
@@ -73,7 +73,7 @@ export async function landingOf(
   const settings = companies.flatMap(({ settings: href }) => (href === undefined ? [] : [href]));
   const [plant] = plants;
   if (plants.length === 1 && plant !== undefined && settings.length === 0) {
-    return { href: plantHome(modules, plant.slug) ?? `/${plant.slug}` };
+    return { href: plantLinkHref(modules, plant.slug) };
   }
   const [landing] = settings;
   if (plants.length === 0 && settings.length === 1 && landing !== undefined) {
