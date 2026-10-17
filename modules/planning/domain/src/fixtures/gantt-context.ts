@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { availabilityOf, weeklyCalendar } from '../calendar/calendar.ts';
 import type { Windows } from '../calendar/windows.ts';
-import type { PlanContext, PlanOrder } from '../plan-context.ts';
+import type { PlanContext, PlanEquipment, PlanOrder } from '../plan-context.ts';
 import { type GanttFixture, g1 } from './gantt.ts';
 
 /** The loaded horizon of the fixture: from the Monday of its week to three weeks after it. */
@@ -19,7 +19,9 @@ export function g1PlanContext(fixture: GanttFixture = g1): PlanContext {
   const calendar = weeklyCalendar({ timeZone: fixture.plant.timeZone, ...fixture.calendar });
   const nowMs = Date.parse(fixture.now.instant);
   const availability: Record<string, Windows> = {};
+  const equipment: Record<string, PlanEquipment> = {};
   for (const machine of fixture.equipment) {
+    equipment[machine.code] = { isPlannable: machine.isPlannable, calendar: machine.calendar };
     availability[machine.code] = availabilityOf(
       calendar,
       machine.code,
@@ -70,5 +72,6 @@ export function g1PlanContext(fixture: GanttFixture = g1): PlanContext {
     },
     availability,
     orders,
+    equipment,
   };
 }

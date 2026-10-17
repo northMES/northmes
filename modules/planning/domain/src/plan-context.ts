@@ -16,6 +16,15 @@ export interface PlanSettings {
   readonly leadTimeBasis: 'elapsed' | 'working';
   /** Whether the release bounds the run start, so retool may run during the lead time. */
   readonly retoolOverlapsLeadTime: boolean;
+  /** Whether the earliest start of an order applies (plan 18, working default off). */
+  readonly earliestStartEnabled?: boolean;
+}
+
+/** What the constraint list needs to know of a machine. */
+export interface PlanEquipment {
+  readonly isPlannable: boolean;
+  /** The name of the machine's calendar. */
+  readonly calendar?: string;
 }
 
 export interface PlanOperation {
@@ -81,6 +90,8 @@ export interface PlanContext {
   readonly orders: readonly PlanOrder[];
   /** The snap step of the view, within which a reservation's end counts as binding; none means exact. */
   readonly snapStepMs?: number;
+  /** The machines by code; a machine the context does not name is plannable. */
+  readonly equipment?: Readonly<Record<string, PlanEquipment>>;
 }
 
 /** Compares by code units, as every comparator of the domain does (ADR 0028). */

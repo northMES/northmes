@@ -41,6 +41,12 @@ export {
   type PlacedMove,
 } from './cascade.ts';
 export {
+  type ConstraintCode,
+  type ConstraintKind,
+  type ConstraintLine,
+  constraintsOf,
+} from './constraints-of.ts';
+export {
   bindingText,
   type ChainResult,
   type ChainRow,
@@ -85,6 +91,7 @@ export {
   type JobOrderStatus,
   operationsInSequence,
   type PlanContext,
+  type PlanEquipment,
   type PlanJobOrder,
   type PlanOperation,
   type PlanOrder,
