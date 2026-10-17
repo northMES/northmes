@@ -9,6 +9,11 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { type GqlContextType, GqlExecutionContext } from '@nestjs/graphql';
+import {
+  API_CONTROLLER_METADATA,
+  type ApiControllerOptions,
+  PUBLIC_API_OPERATION_METADATA,
+} from '@northmes/sdk/rest';
 import type { Request } from 'express';
 import { IS_PUBLIC, type Principal, PrincipalResolver } from '../../../../principal.ts';
 
@@ -27,8 +32,25 @@ function headersOf(request: Request): Headers {
 }
 
 /**
+ * Whether the handler is a route that toRestRoutes built in the public family: its controller is a
+ * public ApiController and the handler carries PublicApiOperation. Such a route hands every call to
+ * the host's PublicOperationRunner, which resolves the principal through PublicApiCredentials. A
+ * hand-written public controller is no such route, so it keeps this guard and fails closed.
+ */
+function isPublicApiRoute(reflector: Reflector, context: ExecutionContext): boolean {
+  const controller = reflector.get<ApiControllerOptions | undefined>(
+    API_CONTROLLER_METADATA,
+    context.getClass(),
+  );
+  const operation: unknown = reflector.get(PUBLIC_API_OPERATION_METADATA, context.getHandler());
+  return controller?.family === 'public' && operation !== undefined;
+}
+
+/**
  * The guard on every route and every GraphQL field (ADR 0010, ADR 0011): a handler or controller
- * marked Public passes; any other needs a principal, or the request fails with 401
+ * marked Public passes, and so does a route of the public REST family that toRestRoutes built,
+ * which takes no web credential and resolves its principal through its own credential guard,
+ * PublicApiCredentials (ADR 0073); any other needs a principal, or the request fails with 401
  * (UNAUTHENTICATED in GraphQL). For GraphQL the server resolved the principal once when it built
  * the request's context; for an HTTP route the guard builds it from the bearer token and puts it
  * on the request.
@@ -46,6 +68,7 @@ export class PrincipalGuard implements CanActivate {
       context.getClass(),
     ]);
     if (isPublic) return true;
+    if (isPublicApiRoute(this.reflector, context)) return true;
     if (context.getType<GqlContextType>() === 'graphql') {
       const { principal } = GqlExecutionContext.create(context).getContext<{
         principal?: Principal | null;

@@ -14,7 +14,11 @@ import {
   hostFactoryWithPublicApi,
   signIn,
 } from '@northmes/backend/testing';
-import { API_CONTROLLER_METADATA, PROBLEM_TYPE_BASE, publicApiOperationsOf } from '@northmes/sdk/rest';
+import {
+  API_CONTROLLER_METADATA,
+  PROBLEM_TYPE_BASE,
+  publicApiOperationsOf,
+} from '@northmes/sdk/rest';
 import { createTestApp, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -357,18 +361,16 @@ describe('the public article routes', () => {
       .filter(({ operation }) => operation.includes('Article') && !operation.includes('Group'));
     const schema = readFileSync(new URL('../../../../schema/api.graphql', import.meta.url), 'utf8');
 
-    expect(operations.map(({ method, path, operationId }) => [method, path, operationId])).toEqual(
-      [
-        ['GET', '/api/v1/core/articles', 'coreArticles'],
-        ['GET', '/api/v1/core/articles/{id}', 'coreArticle'],
-        ['POST', '/api/v1/core/commands/create-article', 'coreCreateArticle'],
-        ['POST', '/api/v1/core/commands/update-article', 'coreUpdateArticle'],
-        ['POST', '/api/v1/core/commands/set-article-plants', 'coreSetArticlePlants'],
-        ['POST', '/api/v1/core/commands/archive-article', 'coreArchiveArticle'],
-        ['POST', '/api/v1/core/commands/restore-article', 'coreRestoreArticle'],
-        ['POST', '/api/v1/core/commands/upsert-article', 'coreUpsertArticle'],
-      ],
-    );
+    expect(operations.map(({ method, path, operationId }) => [method, path, operationId])).toEqual([
+      ['GET', '/api/v1/core/articles', 'coreArticles'],
+      ['GET', '/api/v1/core/articles/{id}', 'coreArticle'],
+      ['POST', '/api/v1/core/commands/create-article', 'coreCreateArticle'],
+      ['POST', '/api/v1/core/commands/update-article', 'coreUpdateArticle'],
+      ['POST', '/api/v1/core/commands/set-article-plants', 'coreSetArticlePlants'],
+      ['POST', '/api/v1/core/commands/archive-article', 'coreArchiveArticle'],
+      ['POST', '/api/v1/core/commands/restore-article', 'coreRestoreArticle'],
+      ['POST', '/api/v1/core/commands/upsert-article', 'coreUpsertArticle'],
+    ]);
     for (const { operationId } of operations) {
       expect(schema).toMatch(new RegExp(`^  ${operationId}\\(`, 'm'));
     }

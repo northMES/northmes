@@ -9,8 +9,11 @@ import { type DatabaseMode, DatabaseModule } from './db/database.module.ts';
 import { EventsModule } from './events/events.module.ts';
 import { GraphqlModule } from './graphql/graphql.module.ts';
 import { rootFieldProblems, rootFieldsOf } from './graphql/root-fields.ts';
+import { PublicApiModule } from './http/public-api/public-api.module.ts';
+import type { PublicApiCredentials } from './http/public-api/public-api-credentials.ts';
 import { TrustedProxyModule } from './http/trusted-proxy.module.ts';
 import { WebOriginsModule } from './http/web-origins.module.ts';
+import { discoverOperations } from './operations/discover-operations.ts';
 import { OperationsModule } from './operations/operations.module.ts';
 import { WebModule } from './web/web.module.ts';
 
@@ -37,6 +40,12 @@ export interface AppOptions {
   readonly database?: DatabaseMode;
   /** The origins of the web app, webOrigins in northmes.config.json. It defaults to none. */
   readonly webOrigins?: readonly string[];
+  /**
+   * The credential guard of the public REST family (ADR 0073). The server passes none, so its
+   * public routes refuse every request until the integration token guard lands; tests pass one
+   * that maps their own tokens to principals.
+   */
+  readonly publicApiCredentials?: Type<PublicApiCredentials>;
 }
 
 /** The root module of the server. */
@@ -51,7 +60,8 @@ export class AppModule {
    * ScopedDatabase on it, or no pool for pnpm northmes migrate), the command bus, the event
    * sequencer and the event consumers of roles worker and all (ADR 0014), the operation
    * runner with the operations every module binds, the Nest module of
-   * every in-repo module and plugin in boot order, and the GraphQL module that builds one schema from their resolvers and serves it on
+   * every in-repo module and plugin in boot order, the public REST routes of those operations
+   * behind the public family's credential guard (ADR 0073), and the GraphQL module that builds one schema from their resolvers and serves it on
    * /graphql when they declare a Query field. `servers` are in boot order. A root field without its
    * module's prefix throws one BootError before Nest builds anything. The SDK's exception filter is
    * registered here and nowhere else (ADR 0012).
@@ -59,10 +69,14 @@ export class AppModule {
   static forRoot(
     config: DynamicModule,
     servers: readonly ServerEntry[] = [],
-    { database = 'app', webOrigins = [] }: AppOptions = {},
+    { database = 'app', webOrigins = [], publicApiCredentials }: AppOptions = {},
   ): DynamicModule {
     const problems = rootFieldProblems(servers);
     if (problems.length > 0) throw new BootError(problems);
+    // Each forRoot checks its part of the catalog in this order and throws its BootError.
+    const commands = CommandsModule.forRoot(servers);
+    const events = EventsModule.forRoot(servers, database);
+    const operations = discoverOperations(servers);
     // A schema needs a Query field, so a catalog whose modules declare none serves no /graphql.
     const declaresQuery = servers.some((server) =>
       rootFieldsOf(server).some((field) => field.startsWith('Query.')),
@@ -74,10 +88,11 @@ export class AppModule {
         TrustedProxyModule,
         WebOriginsModule.forRoot(webOrigins),
         DatabaseModule.forRoot(database),
-        CommandsModule.forRoot(servers),
-        EventsModule.forRoot(servers, database),
-        OperationsModule.forRoot(servers),
+        commands,
+        events,
+        OperationsModule.forRoot(operations),
         ...servers.map((server) => server.module),
+        PublicApiModule.forRoot(operations, publicApiCredentials),
         ...(declaresQuery ? [GraphqlModule] : []),
         WebModule,
       ],
