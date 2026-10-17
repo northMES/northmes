@@ -160,6 +160,17 @@ export function extendedRange(
   productionDayStart: string,
   extension: { readonly before: number; readonly after: number },
 ): TimeRange {
+  const preset = zoomPresets[zoom];
+  // The Hours preset spans hours of one day, so its spans are added as hours; the other presets
+  // step whole dates, as Earlier and Later do.
+  if ('hours' in preset.span) {
+    const chosen = rangeOf(from, zoom, timeZone, productionDayStart);
+    const spanMs = preset.span.hours * hour;
+    return {
+      fromMs: chosen.fromMs - extension.before * spanMs,
+      toMs: chosen.toMs + extension.after * spanMs,
+    };
+  }
   let first = from;
   for (let count = 0; count < extension.before; count += 1) {
     first = shiftedFrom(first, zoom, 'earlier');

@@ -15,6 +15,14 @@ function timeHeaderText(gantt: HTMLElement): string {
  * Gives the grid the geometry of a scroller the test browser has no layout for: the content
  * width, the visible width and the scroll position.
  */
+/** Scrolls the grid sideways from one position to another, as two scroll events. */
+function scrollSideways(gantt: HTMLElement, fromLeft: number, toLeft: number) {
+  gantt.scrollLeft = fromLeft;
+  fireEvent.scroll(gantt);
+  gantt.scrollLeft = toLeft;
+  fireEvent.scroll(gantt);
+}
+
 function scroller(
   gantt: HTMLElement,
   geometry: { scrollWidth: number; clientWidth: number; scrollLeft: number },
@@ -38,8 +46,8 @@ describe('the time scroller of the order Gantt (#685)', () => {
     expect(timeHeaderText(gantt)).toContain('Fri 6 Nov');
     expect(timeHeaderText(gantt)).not.toContain('Sun 8 Nov');
 
-    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 1500 });
-    fireEvent.scroll(gantt);
+    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
+    scrollSideways(gantt, 0, 1500);
 
     await waitFor(() => {
       expect(timeHeaderText(gantt)).toContain('Sun 8 Nov');
@@ -57,8 +65,8 @@ describe('the time scroller of the order Gantt (#685)', () => {
     );
     expect(timeHeaderText(gantt)).not.toContain('Sun 1 Nov');
 
-    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 200 });
-    fireEvent.scroll(gantt);
+    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 1500 });
+    scrollSideways(gantt, 1500, 200);
 
     await waitFor(() => {
       expect(timeHeaderText(gantt)).toContain('Sun 1 Nov');
@@ -73,11 +81,39 @@ describe('the time scroller of the order Gantt (#685)', () => {
     });
   });
 
+  it('a vertical scroll extends nothing, and a leftward scroll in a narrow range extends the earlier side only', async () => {
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
+    const gantt = await findGantt();
+    // A range under two screens wide: the right edge is within one screen from anywhere, so the
+    // first rightward scroll loads the later span once.
+    scroller(gantt, { scrollWidth: 1200, clientWidth: 800, scrollLeft: 0 });
+    Object.defineProperty(gantt, 'scrollTop', { value: 0, configurable: true, writable: true });
+    scrollSideways(gantt, 0, 300);
+    await waitFor(() => {
+      expect(timeHeaderText(gantt)).toContain('Sun 8 Nov');
+    });
+
+    gantt.scrollTop = 120;
+    fireEvent.scroll(gantt);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(timeHeaderText(gantt)).not.toContain('Wed 11 Nov');
+    expect(timeHeaderText(gantt)).not.toContain('Sun 1 Nov');
+
+    // Scrolling left from 300 to 100 heads for the left edge: the earlier span loads, not another later one.
+    gantt.scrollLeft = 100;
+    fireEvent.scroll(gantt);
+
+    await waitFor(() => {
+      expect(timeHeaderText(gantt)).toContain('Sun 1 Nov');
+    });
+    expect(timeHeaderText(gantt)).not.toContain('Wed 11 Nov');
+  });
+
   it('Later moves from and forgets the extension', async () => {
     const router = renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
-    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 1500 });
-    fireEvent.scroll(gantt);
+    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
+    scrollSideways(gantt, 0, 1500);
     await waitFor(() => {
       expect(timeHeaderText(gantt)).toContain('Sun 8 Nov');
     });

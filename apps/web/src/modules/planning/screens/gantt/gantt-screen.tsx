@@ -330,12 +330,17 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     const grid = gridElement.current;
     if (grid !== null && timeWidth > previous) grid.scrollLeft += timeWidth - previous;
   }, [timeWidth]);
+  // An edge counts only after a horizontal move towards it: a vertical scroll changes nothing,
+  // and a range under two screens wide extends on the side the planner is heading for.
+  const lastScrollLeft = useRef(0);
   const onGridScroll = (grid: HTMLElement) => {
     const { scrollLeft, clientWidth, scrollWidth } = grid;
-    if (clientWidth <= 0) return;
-    if (scrollLeft + clientWidth >= scrollWidth - clientWidth) {
+    const previous = lastScrollLeft.current;
+    lastScrollLeft.current = scrollLeft;
+    if (clientWidth <= 0 || scrollLeft === previous) return;
+    if (scrollLeft > previous && scrollLeft + clientWidth >= scrollWidth - clientWidth) {
       setExtension((current) => ({ ...current, after: current.after + 1 }));
-    } else if (scrollLeft <= clientWidth) {
+    } else if (scrollLeft < previous && scrollLeft <= clientWidth) {
       shiftAfterGrowth.current = true;
       setExtension((current) => ({ ...current, before: current.before + 1 }));
     }
