@@ -13,19 +13,21 @@ beforeEach(() => window.localStorage.clear());
 afterEach(cleanup);
 
 describe('useGanttOptions', () => {
-  it('starts with Hide closed time on, the default columns and the workload panel closed', () => {
+  it('starts with Hide closed time and cascade on, the default columns and the workload panel closed', () => {
     const { result } = renderHook(() => useGanttOptions());
     expect(result.current[0]).toEqual({
       hideClosed: true,
       hiddenColumns: defaultHiddenColumns,
       workload: false,
+      cascade: true,
     });
   });
 
   it('keeps a browser that turned Hide closed time off', () => {
-    window.localStorage.setItem(storageKey, JSON.stringify({ hideClosed: false }));
+    window.localStorage.setItem(storageKey, JSON.stringify({ hideClosed: false, cascade: false }));
     const { result } = renderHook(() => useGanttOptions());
     expect(result.current[0].hideClosed).toBe(false);
+    expect(result.current[0].cascade).toBe(false);
     expect(result.current[0].hiddenColumns).toEqual(defaultHiddenColumns);
   });
 
