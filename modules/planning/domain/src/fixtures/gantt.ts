@@ -214,6 +214,8 @@ export const runCase = z.looseObject({
     }),
   ),
   moved: z.record(z.string(), runPlacement),
+  /** The release of 1005.20 from 1005.10 at its run position. */
+  release_1005_20: timePoint,
   conflicts: z.array(z.object({ kind: z.string(), rows: z.array(z.string()), detail: z.string() })),
   runStart: timePoint,
   runEnd: timePoint,
