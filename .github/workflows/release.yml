@@ -51,11 +51,16 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # The same reproducible build that reproducible.yml checks, so a rebuild of the tag gives the
+      # pushed digest. The attestations job signs the provenance and the SBOM instead of BuildKit.
+      - run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
       - id: build
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
-          push: true
+          outputs: type=image,push=true,rewrite-timestamp=true
+          provenance: false
+          sbom: false
           tags: ghcr.io/northmes/northmes:${{ needs.release-please.outputs.version }}
       - name: Add the .env line to the release notes
         env:
