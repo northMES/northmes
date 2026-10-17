@@ -5,10 +5,14 @@ import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import {
   applyDraft,
   cascadeFromHere,
+  combineInDraft,
+  draftChangeCount,
   draftConflicts,
   emptyDraft,
   moveBack,
   moveInDraft,
+  runPreview,
+  splitRunInDraft,
 } from '../../../src/modules/planning/gantt-draft.ts';
 
 const wed = (hour: number, minute = 0) => Date.UTC(2026, 10, 4, hour, minute);
@@ -204,5 +208,61 @@ describe('the in-memory draft of the order Gantt (plan 18, Resolving a break in 
 
     expect(result.refused).toBe('PINNED');
     expect(draft).toBe(emptyDraft);
+  });
+});
+
+describe('runs in the in-memory draft (ADR 0083, plan 18 Runs)', () => {
+  const committed = g1Snapshot();
+
+  it('GT10 combineInDraft writes the run and its two moves as one change, with the setup of 1005.10 saved', () => {
+    const { draft, result } = combineInDraft(committed, emptyDraft, ['po-1005', 'po-1001']);
+
+    expect(result.refused).toBeUndefined();
+    expect(draft.runs.map((run) => run.id)).toEqual(['run:po-1001+po-1005']);
+    expect(draft.changes.map((change) => [change.displayNumber, change.runId, change.setupS])).toEqual([
+      ['1005.10', 'run:po-1001+po-1005', 0],
+      ['1005.20', 'run:po-1001+po-1005', undefined],
+    ]);
+    expect(draftChangeCount(draft)).toBe(1);
+    const applied = applyDraft(committed, draft);
+    const row = applied.productionOrders.find((o) => o.number === '1005')?.jobOrders[0];
+    expect(row?.plannedSetupS).toBe(0);
+    expect(row?.placement).toEqual({
+      setupStartMs: wed(7),
+      runStartMs: wed(7),
+      endMs: wed(12, 45),
+      segments: [
+        { fromMs: wed(7), toMs: wed(7, 30) },
+        { fromMs: wed(7, 45), toMs: wed(10) },
+        { fromMs: wed(10, 30), toMs: wed(12, 45) },
+      ],
+    });
+    expect(applied.runs).toEqual(draft.runs);
+    expect(draftConflicts(applied, draft).map((conflict) => conflict.text)).toEqual([
+      '1003.10 and 1005.10 overlap on the same machine',
+    ]);
+  });
+
+  it('runPreview computes the same result without writing, and a refusal leaves the draft as it was', () => {
+    const preview = runPreview(committed, emptyDraft, ['po-1001', 'po-1005']);
+    expect(preview.run?.deadlineMs).toBe(Date.UTC(2026, 10, 6, 14));
+    expect(preview.run?.early.map((early) => [early.number, early.earlyByS])).toEqual([
+      ['1005', 604_800],
+    ]);
+
+    const { draft, result } = combineInDraft(committed, emptyDraft, ['po-1001', 'po-1003']);
+    expect(result.refused).toBe('DIFFERENT_ARTICLES');
+    expect(draft).toBe(emptyDraft);
+  });
+
+  it('splitRunInDraft drops the run and its changes, and Move back on a run row does the same', () => {
+    const { draft } = combineInDraft(committed, emptyDraft, ['po-1001', 'po-1005']);
+    const applied = applyDraft(committed, draft);
+    const [conflict] = draftConflicts(applied, draft);
+    if (conflict === undefined) throw new Error('no conflict');
+
+    expect(splitRunInDraft(draft, 'run:po-1001+po-1005')).toEqual(emptyDraft);
+    expect(moveBack(draft, conflict)).toEqual(emptyDraft);
+    expect(applyDraft(committed, splitRunInDraft(draft, 'run:po-1001+po-1005'))).toBe(committed);
   });
 });
