@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { randomUUIDv7 } from 'node:crypto';
 import {
+  fromBrowser,
   fromNewClient,
   type Grant,
   givenAssignment,
@@ -55,11 +56,14 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
   const db = useTestDatabase();
   let testApp: TestApp | undefined;
   let url = '';
+  /** The Origin header of the web app on the API's own origin, which sign-in needs. */
+  let browser = { origin: '' };
 
   beforeAll(async () => {
     testApp = await createTestApp({ modules: ['core', 'planning'], hostFactory, database: db });
     await testApp.app.listen(0, '127.0.0.1');
     url = await testApp.app.getUrl();
+    browser = fromBrowser(testApp.app);
   });
 
   afterAll(async () => {
@@ -90,7 +94,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
   async function signInStatus(email: string, password: string): Promise<number> {
     const answer = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: { 'content-type': 'application/json', ...browser, ...fromNewClient() },
       body: JSON.stringify({ email, password }),
     });
     return answer.status;
@@ -142,7 +146,7 @@ describe('coreCreateUser, coreBlockUser and coreUnblockUser', () => {
   async function clientOf(email: string, password: string): Promise<GqlClient> {
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: { 'content-type': 'application/json', ...browser, ...fromNewClient() },
       body: JSON.stringify({ email, password }),
     });
     const sessionToken = signedIn.headers.get('set-auth-token') ?? '';
@@ -644,11 +648,14 @@ describe('coreResetPassword', () => {
   const db = useTestDatabase();
   let testApp: TestApp | undefined;
   let url = '';
+  /** The Origin header of the web app on the API's own origin, which sign-in needs. */
+  let browser = { origin: '' };
 
   beforeAll(async () => {
     testApp = await createTestApp({ modules: ['core', 'planning'], hostFactory, database: db });
     await testApp.app.listen(0, '127.0.0.1');
     url = await testApp.app.getUrl();
+    browser = fromBrowser(testApp.app);
   });
 
   afterAll(async () => {
@@ -689,7 +696,7 @@ describe('coreResetPassword', () => {
   async function signInStatus(email: string, password: string): Promise<number> {
     const answer = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: { 'content-type': 'application/json', ...browser, ...fromNewClient() },
       body: JSON.stringify({ email, password }),
     });
     return answer.status;
@@ -708,7 +715,7 @@ describe('coreResetPassword', () => {
     const sessionToken = (
       await fetch(`${url}/api/auth/sign-in/email`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', ...fromNewClient() },
+        headers: { 'content-type': 'application/json', ...browser, ...fromNewClient() },
         body: JSON.stringify({ email: operator.email, password: operator.password }),
       })
     ).headers.get('set-auth-token');
@@ -722,7 +729,7 @@ describe('coreResetPassword', () => {
     });
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: { 'content-type': 'application/json', ...browser, ...fromNewClient() },
       body: JSON.stringify({ email: operator.email, password: temporary }),
     });
     const { token } = (await (

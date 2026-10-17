@@ -69,7 +69,7 @@ Each entry point, the conduit it sits on and the credential it accepts. A surfac
 |---|---|---|---|
 | Web app: the shell and its static files | built | C1 | none to load; a strict CSP |
 | GraphQL over HTTP, `/graphql` | built | C1 | a five-minute EdDSA JWT as a bearer token (ADR 0070) |
-| REST: Better Auth at `/api/auth/*`, `/api/account/password`, later `/api/v1/*` | built (auth and password), later (`/api/v1`) | C1 | the session token (bearer) for auth, the JWT for the rest; integration tokens later (ADR 0064) |
+| REST: Better Auth at `/api/auth/*`, `/api/account/password`, later `/api/v1/*` | built (auth and password), later (`/api/v1`) | C1 | the session token (bearer) for auth, the JWT for the rest, and a NorthMES web origin on every POST to auth and password; integration tokens later (ADR 0064) |
 | WebSocket: graphql-ws on `/graphql` | built, latent (no Subscription field yet) | C1 | the JWT, checked at subscribe time |
 | MCP, `/mcp` | later (ADR 0034, ADR 0073) | C1 | bearer JWT or personal access token |
 | CLI: `northmes admin`, `db bootstrap`, `migrate` | built | C3 | shell access to the host and the role passwords in `secrets/` |
@@ -89,6 +89,7 @@ Each table lists the threats that matter at that conduit, not every STRIDE lette
 | Threat | STRIDE | Controls | Status |
 |---|---|---|---|
 | Password guessing or credential stuffing against sign-in | S | Better Auth's limiter; a GraphQL rate limit per principal or address; throttling that does not depend on `NODE_ENV`, a trusted proxy and a lockout per account | gap [#476](https://github.com/northMES/northmes/issues/476) |
+| A script or outside system signs in with a person's email and password, outside the browser that the throttle, the lockout and the web's sign-in screen assume | S | Password sign-in requires the web app's origin: every POST to `/api/auth/*` and `/api/account/password` needs `NORTHMES_PUBLIC_ORIGIN` or a web origin as its `Origin`, refused with 403 `core.origin_required` without one and `core.origin_forbidden` with another, before Better Auth reads the body; `/api/auth/token` refuses a cross-site GET and needs a session token from such a sign-in. A client that forges an allowed `Origin` still passes, and its attempts meet the throttle and the lockout. Integrations get OAuth client credentials or integration tokens later (ADR 0073) | built |
 | A stolen session token or JWT is replayed | S | JWTs live 5 minutes with issuer and audience pinned; the principal and the ban are re-read on every request; the session token stays in the tab's `sessionStorage`; an absolute session lifetime and JWTs ended with their session | gap [#479](https://github.com/northMES/northmes/issues/479) |
 | A script in the page reads the session token from `sessionStorage` | I, S | A strict CSP with no `unsafe-inline` or `unsafe-eval`, no third-party scripts and no HTML injection sinks; the trade-off is recorded in ADR 0011 | built |
 | Another intranet site calls the API as the signed-in user (CSRF, CORS) | S, T | Requests carry a bearer header and no cookies, so a browser sends no ambient credential; the origin rule answers CORS only for `webOrigins`, never with credentials, and refuses other origins with 403 | built |

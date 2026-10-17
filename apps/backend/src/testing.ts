@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { randomBytes, randomUUIDv7 } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { ModuleManifest } from '@northmes/sdk';
@@ -463,6 +464,15 @@ export function fromNewClient(): { readonly 'x-forwarded-for': string } {
   };
 }
 
+/**
+ * The Origin header of a request from the web app on the API's own origin,
+ * NORTHMES_PUBLIC_ORIGIN, as a browser sends it on every POST. Password sign-in and the other
+ * Better Auth POST routes refuse a request without it (ADR 0011).
+ */
+export function fromBrowser(app: INestApplication): { readonly origin: string } {
+  return { origin: app.get(ConfigService).getOrThrow<string>('NORTHMES_PUBLIC_ORIGIN') };
+}
+
 /** A user that signIn created and signed in. */
 export interface SignedIn {
   readonly userId: string;
@@ -476,7 +486,8 @@ export interface SignedIn {
 
 /**
  * Creates a user with a password through Better Auth, grants it roles, and signs it in the way the
- * web does (ADR 0010): POST /api/auth/sign-in/email, then GET /api/auth/token with the session
+ * web does (ADR 0010): POST /api/auth/sign-in/email from NORTHMES_PUBLIC_ORIGIN, as a browser
+ * sends it, then GET /api/auth/token with the session
  * token from set-auth-token as its bearer token, which answers with a JWT. The app must listen.
  */
 export async function signIn(
@@ -492,7 +503,7 @@ export async function signIn(
   const url = await app.getUrl();
   const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', ...fromNewClient() },
+    headers: { 'content-type': 'application/json', ...fromBrowser(app), ...fromNewClient() },
     body: JSON.stringify({ email, password }),
   });
   const sessionToken = signedIn.headers.get('set-auth-token');

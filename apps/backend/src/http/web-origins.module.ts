@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import { randomUUID } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   type DynamicModule,
   Global,
   Inject,
+  Logger,
   type MiddlewareConsumer,
   Module,
   type NestModule,
@@ -14,6 +16,16 @@ import type { ServerEnv } from '@northmes/sdk/config';
 
 /** The injection token of the web app's origins, webOrigins in northmes.config.json. */
 export const WEB_ORIGINS = 'northmes.webOrigins';
+
+/** The injection token of the browser rule, the middleware of the routes the web app calls in a browser. */
+export const BROWSER_ONLY = 'northmes.browserOnly';
+
+/** A Node middleware, as Nest's MiddlewareConsumer applies it. */
+export type NodeMiddleware = (
+  request: IncomingMessage,
+  response: ServerResponse,
+  next: () => void,
+) => void;
 
 /**
  * The headers a web origin may read from an answer: the bearer plugin's session token, the jwt
@@ -28,11 +40,35 @@ const allowedHeaders = 'authorization, content-type, x-northmes-plant';
 /** How long a browser may cache a preflight answer, in seconds. */
 const preflightMaxAge = '600';
 
+/** The log of refused requests, one warning with the correlation id each. */
+const logger = new Logger('WebOrigins');
+
+/**
+ * Answers 403 with the masked error shape of the API: the code, a message without details and the
+ * request's correlation id, which the server's log line names too.
+ */
+function refuse(
+  request: IncomingMessage & { originalUrl?: string },
+  response: ServerResponse,
+  errorCode: 'core.origin_forbidden' | 'core.origin_required',
+  message: string,
+): void {
+  const correlationId = randomUUID();
+  // Express gives a middleware the URL below the path it is mounted on; originalUrl is the whole.
+  const path = (request.originalUrl ?? request.url ?? '').split('?')[0];
+  logger.warn(
+    `Refused ${request.method} ${path} with ${errorCode}, correlation id ${correlationId}`,
+  );
+  response.statusCode = 403;
+  response.setHeader('content-type', 'application/json');
+  response.end(JSON.stringify({ statusCode: 403, errorCode, message, correlationId }));
+}
+
 /**
  * The same-origin rule of the API (ADR 0011): a request without an Origin header, or from the
  * API's own origin, passes as it is. A request from one of the web origins passes with the CORS
  * headers that let the web read the answer, and its preflight is answered here. A request from any
- * other origin is refused with 403 before any route or GraphQL sees it.
+ * other origin is refused with 403 and core.origin_forbidden before any route or GraphQL sees it.
  */
 function originRule(publicOrigin: string, webOrigins: readonly string[]) {
   const allowed = new Set(webOrigins);
@@ -43,11 +79,7 @@ function originRule(publicOrigin: string, webOrigins: readonly string[]) {
       return;
     }
     if (!allowed.has(origin)) {
-      response.statusCode = 403;
-      response.setHeader('content-type', 'application/json');
-      response.end(
-        JSON.stringify({ statusCode: 403, message: 'This origin may not call the API' }),
-      );
+      refuse(request, response, 'core.origin_forbidden', 'This origin may not call the API');
       return;
     }
     response.setHeader('access-control-allow-origin', origin);
@@ -66,8 +98,39 @@ function originRule(publicOrigin: string, webOrigins: readonly string[]) {
 }
 
 /**
- * Provides the web origins under WEB_ORIGINS, which core's Better Auth trusts, and applies the
- * origin rule to every route. AppModule imports it before any module with routes, so the rule runs
+ * The browser rule (ADR 0011): a route that takes a password or starts or ends a session needs the
+ * Origin that the web app's browser sends. The rule does not prove that a request comes from a
+ * browser, since any client can send an allowed Origin; it refuses the scripts and outside systems
+ * that send none or another one, and every request it lets through still meets the sign-in throttle
+ * and the account lockout. Browsers send Origin on every POST, also from the page's own
+ * origin (Fetch standard), so a POST passes only with NORTHMES_PUBLIC_ORIGIN or a web origin as its
+ * Origin; a script or outside system that sends none gets 403 with core.origin_required before
+ * the route reads the body. Browsers send no Origin on a GET from the page's own origin, so a GET
+ * without one passes unless its Sec-Fetch-Site says cross-site, which a browser sends on a request
+ * that another site's page started. The origin rule runs first and refuses any other origin.
+ */
+function browserRule(publicOrigin: string, webOrigins: readonly string[]): NodeMiddleware {
+  const allowed = new Set([publicOrigin, ...webOrigins]);
+  return (request, response, next) => {
+    const origin = request.headers.origin;
+    if (origin !== undefined) {
+      if (allowed.has(origin)) next();
+      else refuse(request, response, 'core.origin_forbidden', 'This origin may not call the API');
+      return;
+    }
+    const read = request.method === 'GET' || request.method === 'HEAD';
+    if (read && request.headers['sec-fetch-site'] !== 'cross-site') {
+      next();
+      return;
+    }
+    refuse(request, response, 'core.origin_required', 'Sign in from the NorthMES web app');
+  };
+}
+
+/**
+ * Provides the web origins under WEB_ORIGINS, which core's Better Auth trusts, and the browser rule
+ * under BROWSER_ONLY, which core applies to its sign-in routes, and applies the origin rule to
+ * every route. AppModule imports it before any module with routes, so the rule runs
  * before GraphqlModule's middleware answers /graphql.
  */
 @Global()
@@ -81,8 +144,16 @@ export class WebOriginsModule implements NestModule {
   static forRoot(webOrigins: readonly string[]): DynamicModule {
     return {
       module: WebOriginsModule,
-      providers: [{ provide: WEB_ORIGINS, useValue: webOrigins }],
-      exports: [WEB_ORIGINS],
+      providers: [
+        { provide: WEB_ORIGINS, useValue: webOrigins },
+        {
+          provide: BROWSER_ONLY,
+          inject: [ConfigService],
+          useFactory: (config: ConfigService<ServerEnv, true>) =>
+            browserRule(config.get('NORTHMES_PUBLIC_ORIGIN', { infer: true }), webOrigins),
+        },
+      ],
+      exports: [WEB_ORIGINS, BROWSER_ONLY],
     };
   }
 

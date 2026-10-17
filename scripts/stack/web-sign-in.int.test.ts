@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { hostFactory } from '@northmes/backend/testing';
+import { fromBrowser, hostFactory } from '@northmes/backend/testing';
 import { createTestApp, type TestApp, useTestDatabase } from '@northmes/testing';
 import { createNorthmesClient } from '@northmes/web-sdk';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -27,6 +27,21 @@ function memoryStorage(): Storage {
   };
 }
 
+/**
+ * fetch as a browser on the API's own origin sends a request: with Origin on every method but GET
+ * and HEAD, which a browser sends without one from the page's own origin (Fetch standard). The
+ * API's sign-in refuses a request without Origin (ADR 0011).
+ */
+function browserFetch(origin: string): typeof fetch {
+  return (input, init = {}) => {
+    const method = (init.method ?? 'GET').toUpperCase();
+    if (method === 'GET' || method === 'HEAD') return fetch(input, init);
+    const headers = new Headers(init.headers);
+    headers.set('origin', origin);
+    return fetch(input, { ...init, headers });
+  };
+}
+
 // The web's own auth session and Apollo client against the server with the dev seed: what pnpm dev
 // runs, without a browser.
 describe("the web's sign-in against the API", () => {
@@ -47,7 +62,11 @@ describe("the web's sign-in against the API", () => {
 
   /** The web's session and the seed plant's Apollo client, signed in through the session. */
   function openWeb(storage = memoryStorage()) {
-    const session = createAuthSession({ apiUrl: url, storage });
+    const session = createAuthSession({
+      apiUrl: url,
+      storage,
+      fetch: browserFetch(fromBrowser(testApp.app).origin),
+    });
     const onUnauthenticated = vi.fn();
     const client = createNorthmesClient({
       plant: seedPlants[0]?.slug ?? '',
