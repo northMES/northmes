@@ -263,17 +263,6 @@
       "1001.10": 0,
       "1001.20": 900
     },
-    "binding": {
-      "1001.10": {
-        "kind": "precedence",
-        "boundBy": "1001.20"
-      },
-      "1001.20": {
-        "kind": "machine",
-        "boundBy": "1002.10",
-        "float": "free float equals the working time until the next reservation on CNC2"
-      }
-    },
     "critical": {
       "1001.10": false,
       "1001.20": false
@@ -283,7 +272,18 @@
       "instant": "2026-11-05T09:45:00Z",
       "plantLocal": "2026-11-05T10:45:00"
     },
-    "late": false
+    "late": false,
+    "freeFloatBoundBy": {
+      "1001.10": {
+        "kind": "precedence",
+        "boundBy": "1001.20"
+      },
+      "1001.20": {
+        "kind": "machine",
+        "boundBy": "1002.10",
+        "float": "free float equals the working time until the next reservation on CNC2"
+      }
+    }
   },
   "GT2_late_chain_1003": {
     "deadline": {
@@ -892,7 +892,8 @@
     },
     "rowsInsideFence": [],
     "rowsOutsideFence": ["1001.10"],
-    "note": "With now moved to Tue 2026-11-03 09:40 the fence is Wed 09:40, and 1001.10 (setup start Tue 11:30) and 1003.10 (Wed 08:00) are frozen: the cascade stops at them and a pointer move asks for confirmation"
+    "note": "With now moved to Tue 2026-11-03 09:40 the fence is Wed 09:40, and 1001.10 (setup start Tue 11:30), 1003.10 (Wed 08:00) and 1001.20 (Wed 09:00) are frozen: the cascade stops at them and a pointer move asks for confirmation",
+    "rowsInsideFenceWithNowTue0940": ["1001.10", "1003.10", "1001.20"]
   },
   "GT9_deadline_rules": {
     "endOfShift": {

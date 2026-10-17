@@ -245,7 +245,7 @@ The constraint kinds a planner can set by hand are the deadline (on a NorthMES-o
 
 Case G1 `1003` (`GT9`): deadline date 2026-11-04. Under `endOfShift` the deadline instant is Wed 15:00 and the order ends Thu 06:15, late by 54 900 s elapsed (15 h 15 min) and 900 s of working time on Mill 1. Under `startOfDay` the deadline is Wed 00:00 and the order is late by 108 900 s (1 day 6 h 15 min). Order `1001` is on time under both rules: it ends Thu 10:45 against Fri 15:00 or Fri 00:00.
 
-Case G1 `GT8`: with `now` Mon 2 Nov 09:40 and `frozenHours` 24 the fence is Tue 3 Nov 09:40 and no row of G1 lies inside it. With `now` moved to Tue 3 Nov 09:40 the band covers Tue 09:40 to Wed 09:40, `1001.10` (setup start Tue 11:30) and `1003.10` (Wed 08:00) are frozen: a pointer move of either asks for confirmation, the cascade of GT3 stops at `1003.10` before it starts, and the chain of GT2 ends at `1003.10` with root `frozenWindow`.
+Case G1 `GT8`: with `now` Mon 2 Nov 09:40 and `frozenHours` 24 the fence is Tue 3 Nov 09:40 and no row of G1 lies inside it. With `now` moved to Tue 3 Nov 09:40 the band covers Tue 09:40 to Wed 09:40, `1001.10` (setup start Tue 11:30), `1003.10` (Wed 08:00) and `1001.20` (Wed 09:00) are frozen: a pointer move of any of them asks for confirmation, the cascade of GT3 stops at `1003.10` before it starts, and the chain of GT2 ends at `1003.10` with root `frozenWindow`.
 
 ### The earliest start of an order
 

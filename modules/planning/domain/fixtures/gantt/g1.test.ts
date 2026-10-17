@@ -175,9 +175,27 @@ describe('fixture G1 (plan 18)', () => {
     for (const order of data.productionOrders) {
       points.push(order.deadlineInstant);
     }
-    for (const row of Object.values(values.placements)) {
-      points.push(row.start, row.end);
-    }
+    const collectPoints = (value: unknown): void => {
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          collectPoints(item);
+        }
+        return;
+      }
+      if (value === null || typeof value !== 'object') {
+        return;
+      }
+      const pair = timePoint.safeParse(value);
+      if (pair.success) {
+        points.push(pair.data);
+        return;
+      }
+      for (const nested of Object.values(value)) {
+        collectPoints(nested);
+      }
+    };
+    collectPoints(values);
+    expect(points.length).toBeGreaterThan(40);
     for (const point of points) {
       expect(toPlantLocal(point.instant, data.plant.timeZone)).toBe(point.plantLocal);
     }
