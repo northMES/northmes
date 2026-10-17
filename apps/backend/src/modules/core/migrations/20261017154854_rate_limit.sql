@@ -1,17 +1,17 @@
 -- migration: expand
 -- The counters of the public API's rate limits (ADR 0064, ADR 0073 section 6): the Postgres
 -- ThrottlerStorage, so that every backend process of an installation counts the same requests.
--- One row per key and throttler, where the key is a credential's core.credential id and the
+-- One row per subject and throttler, where the subject is a credential's core.credential id and the
 -- throttler is reads or writes. A row counts the hits of a fixed window, and blocked_until is set
 -- once the hits pass the limit. Rows hold no scope: the credential guard counts a request before
 -- any transaction of the request's company runs.
 create table core.rate_limit (
-  key text not null,
+  subject text not null,
   throttler text not null,
   hits integer not null constraint rate_limit_hits_check check (hits > 0),
   window_ends_at timestamptz not null,
   blocked_until timestamptz,
-  primary key (key, throttler)
+  primary key (subject, throttler)
 );
 create index rate_limit_window_ends_at_idx on core.rate_limit (window_ends_at);
 
@@ -21,12 +21,12 @@ create index rate_limit_window_ends_at_idx on core.rate_limit (window_ends_at);
 -- allowlist.
 alter table core.rate_limit enable row level security;
 
--- Counts one hit of the key for the throttler and returns the row: the hits of the window, its
--- end, and the end of the block, or null while the key is not blocked. A hit after the window's
--- end starts a new window of p_ttl_ms, and a hit past p_limit blocks the key for p_block_ms. The
+-- Counts one hit of the subject for the throttler and returns the row: the hits of the window, its
+-- end, and the end of the block, or null while the subject is not blocked. A hit after the window's
+-- end starts a new window of p_ttl_ms, and a hit past p_limit blocks the subject for p_block_ms. The
 -- insert takes the row's lock, so hits from several processes count once each.
 create function core.rate_limit_hit(
-  p_key text,
+  p_subject text,
   p_throttler text,
   p_ttl_ms integer,
   p_limit integer,
@@ -43,9 +43,9 @@ declare
   v_window_ends_at timestamptz;
   v_blocked_until timestamptz;
 begin
-  insert into core.rate_limit as r (key, throttler, hits, window_ends_at)
-  values (p_key, p_throttler, 1, v_now + p_ttl_ms * interval '1 millisecond')
-  on conflict (key, throttler) do update
+  insert into core.rate_limit as r (subject, throttler, hits, window_ends_at)
+  values (p_subject, p_throttler, 1, v_now + p_ttl_ms * interval '1 millisecond')
+  on conflict (subject, throttler) do update
     set hits = case when r.window_ends_at <= v_now then 1 else r.hits + 1 end,
         window_ends_at = case when r.window_ends_at <= v_now then excluded.window_ends_at
                               else r.window_ends_at end,
@@ -55,7 +55,7 @@ begin
   if v_hits > p_limit and v_blocked_until is null then
     v_blocked_until := v_now + p_block_ms * interval '1 millisecond';
     update core.rate_limit r set blocked_until = v_blocked_until
-     where r.key = p_key and r.throttler = p_throttler;
+     where r.subject = p_subject and r.throttler = p_throttler;
   end if;
   return query select v_hits, v_window_ends_at, v_blocked_until;
 end;

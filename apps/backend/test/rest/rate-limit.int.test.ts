@@ -202,17 +202,17 @@ describe('the rate limits of the public API', () => {
           set window_ends_at = now() - interval '1 second',
               blocked_until = case when blocked_until is null then null
                                    else now() - interval '1 second' end
-        where key = $1`,
+        where subject = $1`,
       [id],
     );
     await app.get(PostgresThrottlerStorage).prune();
-    const keys = await queryAsCore<{ key: string }>(
+    const subjects = await queryAsCore<{ subject: string }>(
       db.ownerUrl,
-      'select key from core.rate_limit where key = any($1)',
+      'select subject from core.rate_limit where subject = any($1)',
       [[id, kept.id]],
     );
 
-    expect(keys.map(({ key }) => key)).toEqual([kept.id]);
+    expect(subjects.map(({ subject }) => subject)).toEqual([kept.id]);
     expect(await statuses([await write(url, authorization)])).toEqual([201]);
   });
 
@@ -226,7 +226,7 @@ describe('the rate limits of the public API', () => {
     await expect(asApp('select * from core.rate_limit')).rejects.toMatchObject({ code: '42501' });
     await expect(
       asApp(
-        `insert into core.rate_limit (key, throttler, hits, window_ends_at)
+        `insert into core.rate_limit (subject, throttler, hits, window_ends_at)
          values ('k', 'writes', 0, now())`,
       ),
     ).rejects.toMatchObject({ code: '42501' });

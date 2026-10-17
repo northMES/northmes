@@ -55,7 +55,7 @@ The rest of ADR 0073 stands.
 ### Confirmation
 
 * `apps/backend/test/rest/rate-limit.int.test.ts`: the 61st write in a minute from one token returns 429 `core.request.rate_limited` with `Retry-After`; with the limits off, no request is refused; a configured limit replaces the default; reads and writes count apart; two tokens count apart; two backend processes share a token's count.
-* The server's configuration tests: a bad value of any of the three variables fails at boot with its name in the message.
+* `packages/sdk/test/config/server-env.test.ts`: a bad value of any of the three variables fails at boot with its name in the message.
 * `test/meta/compose.test.ts`: the Compose bundle passes the three variables to `app`.
 
 ## Pros and cons of the options
