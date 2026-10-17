@@ -91,6 +91,14 @@ describe('the board route with view=gantt (plan 18, URL state)', () => {
       chain: 1,
     });
     expect(screen.getByText('Showing fixture G1.')).toBeTruthy();
+    await waitFor(() => {
+      expect(document.getElementById(politeRegionId)?.textContent).toBe(
+        'Critical chain of 1003 shown, 3 rows, root 1001.10 on CNC1',
+      );
+    });
+    expect(gantt.querySelector('[data-block="jo-1003-10"]')?.getAttribute('data-states')).toContain(
+      'chain',
+    );
   });
 
   it('ADR0062 chain=1 without order is dropped with the polite status message', async () => {
