@@ -185,9 +185,9 @@ describe('fixture G1 (plan 18)', () => {
       if (value === null || typeof value !== 'object') {
         return;
       }
-      const pair = timePoint.safeParse(value);
-      if (pair.success) {
-        points.push(pair.data);
+      if ('instant' in value || 'plantLocal' in value) {
+        // A malformed pair fails here instead of slipping through as two loose strings.
+        points.push(timePoint.parse(value));
         return;
       }
       for (const nested of Object.values(value)) {
