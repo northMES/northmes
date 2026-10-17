@@ -21,22 +21,22 @@ function rowsAtLevel(gantt: HTMLElement, level: number): HTMLElement[] {
 }
 
 describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
-  it('GT1 renders G1 as 5 orders, 8 operations and 8 job order rows with their levels, sizes and positions', async () => {
+  it('GT1 renders G1 as 6 orders, 10 operations and 10 job order rows with their levels, sizes and positions', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     const orders = rowsAtLevel(gantt, 1);
     const operations = rowsAtLevel(gantt, 2);
     const jobOrders = rowsAtLevel(gantt, 3);
-    expect(orders).toHaveLength(5);
-    expect(operations).toHaveLength(8);
-    expect(jobOrders).toHaveLength(8);
-    expect(gantt.getAttribute('aria-rowcount')).toBe(String(21 + 2));
-    // The autoplan order: deadline, then priority, so 1003 (Wed) comes first and 1006 (next week) last.
+    expect(orders).toHaveLength(6);
+    expect(operations).toHaveLength(10);
+    expect(jobOrders).toHaveLength(10);
+    expect(gantt.getAttribute('aria-rowcount')).toBe(String(26 + 2));
+    // The autoplan order: deadline, then priority, then number, so 1003 (Wed) comes first and 1005 and 1006 (next week, no priority) last.
     expect(
       orders.map((row) => within(row).getByRole('rowheader').textContent?.slice(0, 4)),
-    ).toEqual(['1003', '1002', '1001', '1004', '1006']);
-    expect(orders[0]?.getAttribute('aria-setsize')).toBe('5');
+    ).toEqual(['1003', '1002', '1001', '1004', '1005', '1006']);
+    expect(orders[0]?.getAttribute('aria-setsize')).toBe('6');
     expect(orders[2]?.getAttribute('aria-posinset')).toBe('3');
     expect(orders[0]?.getAttribute('aria-expanded')).toBe('true');
     const op = operations.find((row) =>
@@ -79,13 +79,13 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
 
     const order = within(gantt).getByRole('row', { name: /^1001 / });
     expect(order.getAttribute('aria-expanded')).toBe('false');
-    expect(order.getAttribute('aria-setsize')).toBe('5');
-    expect(rowsAtLevel(gantt, 2)).toHaveLength(6);
-    expect(rowsAtLevel(gantt, 3)).toHaveLength(6);
-    expect(gantt.getAttribute('aria-rowcount')).toBe(String(17 + 2));
+    expect(order.getAttribute('aria-setsize')).toBe('6');
+    expect(rowsAtLevel(gantt, 2)).toHaveLength(8);
+    expect(rowsAtLevel(gantt, 3)).toHaveLength(8);
+    expect(gantt.getAttribute('aria-rowcount')).toBe(String(22 + 2));
     expect(within(gantt).queryByRole('row', { name: /^1001\.10 / })).toBeNull();
     await userEvent.click(within(gantt).getByRole('button', { name: 'Expand order 1001' }));
-    expect(rowsAtLevel(gantt, 3)).toHaveLength(8);
+    expect(rowsAtLevel(gantt, 3)).toHaveLength(10);
   });
 
   it('GT1 shows the default tree columns and the Columns menu shows and hides one', async () => {

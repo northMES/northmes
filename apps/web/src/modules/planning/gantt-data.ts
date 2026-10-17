@@ -144,6 +144,8 @@ export interface GanttOrder {
   /** The order color, a palette token name such as palette-1. */
   readonly color: string;
   readonly status: OrderStatus;
+  /** Who owns the order: the ERP, or NorthMES for an order created in the app. */
+  readonly owner: 'erp' | 'northmes';
   readonly operations: readonly GanttOperation[];
   readonly jobOrders: readonly GanttJobOrder[];
 }

@@ -462,7 +462,7 @@ Case G1 `GT5`, production days in week 45:
 | Thu 5 Nov | 29 700 (setup 1 800), 1 000 permille | 28 800, 970 permille | 15 880, 535 permille |
 | Fri 6 Nov | 8 100, 273 permille | 0 | 16 220, 546 permille |
 
-Case `GT6`: adding a row `1005.10` of 3 600 s on CNC2 at Thu 12:00, over the locked `1002.10`, gives `loadedS` 32 400 against 29 700, `overloadS` 2 700, and an `OVERLAP` conflict on both rows. The lane draws the 2 700 s above its top edge; the conflict is what the planner fixes.
+Case `GT6`: adding a row `1007.10` of 3 600 s on CNC2 at Thu 12:00, over the locked `1002.10`, gives `loadedS` 32 400 against 29 700, `overloadS` 2 700, and an `OVERLAP` conflict on both rows. The lane draws the 2 700 s above its top edge; the conflict is what the planner fixes.
 
 ## Data loading
 
@@ -579,7 +579,7 @@ Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-project
 ### Web tests (`apps/web`, planning module)
 
 - `gantt-search.test.tsx`: `/$plant/planning/gantt?zoom=week&from=2026-11-02&order=<id>&chain=1` opens the Gantt with the order's chain highlighted; `chain=1` without `order` is dropped with the status message; a link to the board page keeps `zoom`, `from` and `order`; `?view=gantt` on the board route redirects to the Gantt page.
-- `gantt-tree.test.tsx`: the G1 dataset renders 5 orders, 8 operations and 8 job order rows; a split operation shows two job order rows; an unplaced job order sits in the Not placed row and the operation row says "1 not placed"; collapsing an order hides its rows and keeps `aria-setsize`.
+- `gantt-tree.test.tsx`: the G1 dataset renders 6 orders, 10 operations and 10 job order rows; a split operation shows two job order rows; an unplaced job order sits in the Not placed row and the operation row says "1 not placed"; collapsing an order hides its rows and keeps `aria-setsize`.
 - `gantt-links.test.tsx`: links for expanded orders; the lead time as a dashed segment; a row before its release draws the conflict style and names it; above 200 links only the selected order's links are drawn and the toolbar says so.
 - `cascade-preview.test.tsx`: dragging `1003.10` to Wed 09:00 shows one ghost span at Wed 13:30 and the tooltip "+1 row moves"; with cascade off no ghost.
 - `workload-lane.test.tsx`: the lane's table equals GT5; the lane is `aria-hidden`; the bar for Thu 5 Nov on CNC1 is full height; GT6 draws the overload above the top edge.

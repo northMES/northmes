@@ -1,6 +1,6 @@
 {
   "id": "G1",
-  "description": "Synthetic Gantt fixture: Plant A, A1 calendar, three machines, six production orders in ISO week 45 of 2026. No clock change falls in the range.",
+  "description": "Synthetic Gantt fixture: Plant A, A1 calendar, three machines, six production orders, five of them in ISO week 45 of 2026 and 1005 in week 46. No clock change falls in the range.",
   "plant": {
     "slug": "plant-a",
     "timeZone": "Europe/Stockholm",
@@ -402,6 +402,101 @@
           "plannedRunS": 24000,
           "rates": {
             "cycleSeconds": 20,
+            "piecesPerCycle": 1,
+            "cyclesPerPiece": 1,
+            "planningFactor": 1,
+            "retoolSeconds": 0,
+            "fixedSeconds": 0
+          }
+        }
+      ]
+    },
+    {
+      "number": "1005",
+      "article": "Bracket L",
+      "quantity": 600,
+      "deadlineDate": "2026-11-13",
+      "deadlineTime": null,
+      "deadlineInstant": {
+        "instant": "2026-11-13T14:00:00Z",
+        "plantLocal": "2026-11-13T15:00:00"
+      },
+      "priority": null,
+      "color": "palette-7",
+      "status": "planned",
+      "owner": "northmes",
+      "operations": [
+        {
+          "displayNumber": "1005.10",
+          "sequence": 10,
+          "name": "Turn",
+          "quantity": 600,
+          "rates": {
+            "cycleSeconds": 30,
+            "piecesPerCycle": 1,
+            "cyclesPerPiece": 1,
+            "planningFactor": 1,
+            "retoolSeconds": 1800,
+            "fixedSeconds": 0
+          },
+          "leadTimeS": 0,
+          "sendAheadQuantity": 0,
+          "isLocked": false,
+          "allowedEquipment": ["CNC1", "CNC2"]
+        },
+        {
+          "displayNumber": "1005.20",
+          "sequence": 20,
+          "name": "Mill",
+          "quantity": 600,
+          "rates": {
+            "cycleSeconds": 60,
+            "piecesPerCycle": 1,
+            "cyclesPerPiece": 1,
+            "planningFactor": 1,
+            "retoolSeconds": 0,
+            "fixedSeconds": 0
+          },
+          "leadTimeS": 3600,
+          "sendAheadQuantity": 0,
+          "isLocked": false,
+          "allowedEquipment": ["CNC2", "MILL1"]
+        }
+      ],
+      "jobOrders": [
+        {
+          "id": "jo-1005-10",
+          "productionOrderOperation": "1005.10",
+          "equipment": "CNC1",
+          "quantity": 600,
+          "status": "planned",
+          "setupStartAt": "2026-11-09T05:00:00Z",
+          "runStartAt": "2026-11-09T05:30:00Z",
+          "endAt": "2026-11-09T11:15:00Z",
+          "plannedSetupS": 1800,
+          "plannedRunS": 18000,
+          "rates": {
+            "cycleSeconds": 30,
+            "piecesPerCycle": 1,
+            "cyclesPerPiece": 1,
+            "planningFactor": 1,
+            "retoolSeconds": 1800,
+            "fixedSeconds": 0
+          }
+        },
+        {
+          "id": "jo-1005-20",
+          "productionOrderOperation": "1005.20",
+          "equipment": "CNC2",
+          "quantity": 600,
+          "status": "planned",
+          "setupStartAt": "2026-11-09T12:15:00Z",
+          "runStartAt": "2026-11-09T12:15:00Z",
+          "endAt": "2026-11-10T14:00:00Z",
+          "plannedSetupS": 0,
+          "plannedRunS": 36000,
+          "rates": {
+            "cycleSeconds": 60,
             "piecesPerCycle": 1,
             "cyclesPerPiece": 1,
             "planningFactor": 1,

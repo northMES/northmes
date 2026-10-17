@@ -40,6 +40,16 @@
       "plannedSeconds": 10800,
       "setupSeconds": 0,
       "runSeconds": 10800
+    },
+    "1005.10": {
+      "plannedSeconds": 19800,
+      "setupSeconds": 1800,
+      "runSeconds": 18000
+    },
+    "1005.20": {
+      "plannedSeconds": 36000,
+      "setupSeconds": 0,
+      "runSeconds": 36000
     }
   },
   "placements": {
@@ -224,6 +234,58 @@
         {
           "from": "2026-11-09T05:00:00Z",
           "to": "2026-11-09T06:00:00Z"
+        }
+      ]
+    },
+    "1005.10": {
+      "start": {
+        "instant": "2026-11-09T05:00:00Z",
+        "plantLocal": "2026-11-09T06:00:00"
+      },
+      "end": {
+        "instant": "2026-11-09T11:15:00Z",
+        "plantLocal": "2026-11-09T12:15:00"
+      },
+      "segments": [
+        {
+          "from": "2026-11-09T05:00:00Z",
+          "to": "2026-11-09T07:30:00Z"
+        },
+        {
+          "from": "2026-11-09T07:45:00Z",
+          "to": "2026-11-09T10:00:00Z"
+        },
+        {
+          "from": "2026-11-09T10:30:00Z",
+          "to": "2026-11-09T11:15:00Z"
+        }
+      ]
+    },
+    "1005.20": {
+      "start": {
+        "instant": "2026-11-09T12:15:00Z",
+        "plantLocal": "2026-11-09T13:15:00"
+      },
+      "end": {
+        "instant": "2026-11-10T14:00:00Z",
+        "plantLocal": "2026-11-10T15:00:00"
+      },
+      "segments": [
+        {
+          "from": "2026-11-09T12:15:00Z",
+          "to": "2026-11-09T14:00:00Z"
+        },
+        {
+          "from": "2026-11-10T05:00:00Z",
+          "to": "2026-11-10T07:30:00Z"
+        },
+        {
+          "from": "2026-11-10T07:45:00Z",
+          "to": "2026-11-10T10:00:00Z"
+        },
+        {
+          "from": "2026-11-10T10:30:00Z",
+          "to": "2026-11-10T14:00:00Z"
         }
       ]
     }
@@ -815,7 +877,7 @@
       "equipment": "CNC2",
       "productionDay": "2026-11-05",
       "extraRow": {
-        "jobOrder": "1005.10",
+        "jobOrder": "1007.10",
         "start": "2026-11-05T12:00:00 plant time",
         "seconds": 3600
       },
@@ -891,7 +953,7 @@
       "plantLocal": "2026-11-03T09:40:00"
     },
     "rowsInsideFence": [],
-    "rowsOutsideFence": ["1001.10"],
+    "rowsOutsideFence": ["1001.10", "1005.10"],
     "note": "With now moved to Tue 2026-11-03 09:40 the fence is Wed 09:40, and 1001.10 (setup start Tue 11:30), 1003.10 (Wed 08:00) and 1001.20 (Wed 09:00) are frozen: the cascade stops at them and a pointer move asks for confirmation",
     "rowsInsideFenceWithNowTue0940": ["1001.10", "1003.10", "1001.20"]
   },
@@ -929,6 +991,141 @@
         "late": true,
         "lateByElapsedS": 108900
       }
+    }
+  },
+  "GT10_run_1001_1005": {
+    "rule": "Orders of one article combined into a run (ADR 0083): ranked by the setup start of their first placed row, the later order's row of an operation with a retool time laid directly after the previous order's row of that operation on its machine with no setup, its other rows under the cascade rules; the run's deadline is the earliest; an order whose own deadline is later is early; breaks are reported",
+    "orders": ["1001", "1005"],
+    "article": "Bracket L",
+    "runOrder": ["1001", "1005"],
+    "deadline": {
+      "instant": "2026-11-06T14:00:00Z",
+      "plantLocal": "2026-11-06T15:00:00"
+    },
+    "early": [
+      {
+        "order": "1005",
+        "deadline": {
+          "instant": "2026-11-13T14:00:00Z",
+          "plantLocal": "2026-11-13T15:00:00"
+        },
+        "earlyByElapsedS": 604800
+      }
+    ],
+    "savedSetups": [
+      {
+        "jobOrder": "1005.10",
+        "after": "1001.10",
+        "equipment": "CNC1",
+        "setupS": 1800
+      }
+    ],
+    "moved": {
+      "1005.10": {
+        "equipment": "CNC1",
+        "start": {
+          "instant": "2026-11-04T07:00:00Z",
+          "plantLocal": "2026-11-04T08:00:00"
+        },
+        "runStart": {
+          "instant": "2026-11-04T07:00:00Z",
+          "plantLocal": "2026-11-04T08:00:00"
+        },
+        "end": {
+          "instant": "2026-11-04T12:45:00Z",
+          "plantLocal": "2026-11-04T13:45:00"
+        },
+        "setupS": 0,
+        "segments": [
+          {
+            "from": "2026-11-04T07:00:00Z",
+            "to": "2026-11-04T07:30:00Z"
+          },
+          {
+            "from": "2026-11-04T07:45:00Z",
+            "to": "2026-11-04T10:00:00Z"
+          },
+          {
+            "from": "2026-11-04T10:30:00Z",
+            "to": "2026-11-04T12:45:00Z"
+          }
+        ],
+        "reason": "directly after 1001.10 on CNC1, the setup saved by the run"
+      },
+      "1005.20": {
+        "equipment": "CNC2",
+        "start": {
+          "instant": "2026-11-06T05:00:00Z",
+          "plantLocal": "2026-11-06T06:00:00"
+        },
+        "runStart": {
+          "instant": "2026-11-06T05:00:00Z",
+          "plantLocal": "2026-11-06T06:00:00"
+        },
+        "end": {
+          "instant": "2026-11-09T06:45:00Z",
+          "plantLocal": "2026-11-09T07:45:00"
+        },
+        "setupS": 0,
+        "segments": [
+          {
+            "from": "2026-11-06T05:00:00Z",
+            "to": "2026-11-06T07:30:00Z"
+          },
+          {
+            "from": "2026-11-06T07:45:00Z",
+            "to": "2026-11-06T10:00:00Z"
+          },
+          {
+            "from": "2026-11-06T10:30:00Z",
+            "to": "2026-11-06T14:00:00Z"
+          },
+          {
+            "from": "2026-11-09T05:00:00Z",
+            "to": "2026-11-09T06:45:00Z"
+          }
+        ],
+        "reason": "cascade: released from 1005.10 at Wed 14:45 (end plus 1 h lead), past 1001.20 and the locked 1002.10 on CNC2"
+      }
+    },
+    "release_1005_20": {
+      "instant": "2026-11-04T13:45:00Z",
+      "plantLocal": "2026-11-04T14:45:00"
+    },
+    "conflicts": [
+      {
+        "kind": "OVERLAP",
+        "rows": ["1003.10", "1005.10"],
+        "detail": "1005.10 Wed 08:00 to 13:45 lies over 1003.10 Wed 08:00 to 12:45 on CNC1; the planner resolves it"
+      }
+    ],
+    "runStart": {
+      "instant": "2026-11-03T10:30:00Z",
+      "plantLocal": "2026-11-03T11:30:00"
+    },
+    "runEnd": {
+      "instant": "2026-11-09T06:45:00Z",
+      "plantLocal": "2026-11-09T07:45:00"
+    },
+    "late": true,
+    "lateByElapsedS": 233100,
+    "split": {
+      "1005.10": {
+        "start": {
+          "instant": "2026-11-04T07:00:00Z",
+          "plantLocal": "2026-11-04T08:00:00"
+        },
+        "runStart": {
+          "instant": "2026-11-04T07:30:00Z",
+          "plantLocal": "2026-11-04T08:30:00"
+        },
+        "end": {
+          "instant": "2026-11-04T13:15:00Z",
+          "plantLocal": "2026-11-04T14:15:00"
+        },
+        "setupS": 1800
+      },
+      "1005.20": "unchanged: Fri 06:00 is after its release Wed 15:15"
     }
   }
 }
