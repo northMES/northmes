@@ -102,6 +102,7 @@ function ChangeLine({
           `; was ${formatPlantDateTime(change.from.setupStartMs, timeZone)}`}
         {change.reason === 'cascade' && '; moved by the cascade'}
         {change.reason === 'snappedToRelease' && '; snapped to its release'}
+        {change.reason === 'snappedToLastPiece' && '; snapped to its last-piece bound'}
       </p>
     </li>
   );

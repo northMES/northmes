@@ -8,6 +8,7 @@ import {
   type Conflict,
   cascade,
   type JobOrderSpan,
+  type MoveReason,
   type MoveRefusal,
 } from '@northmes/planning-domain';
 import { orderOfRow, planContextOf } from '../../gantt-analysis.ts';
@@ -30,8 +31,13 @@ export interface MovePreview {
   /** The ghost spans of the successor rows that would move, by job order id. */
   readonly ghosts: ReadonlyMap<string, JobOrderSpan>;
   readonly count: number;
-  /** The release the drop snapped forward to, when it did. */
-  readonly snappedTo?: { readonly fromRow: string; readonly atMs: number };
+  /** The release, or the last-piece bound, the drop snapped forward to, when it did. */
+  readonly snappedTo?: {
+    readonly fromRow: string;
+    readonly atMs: number;
+    readonly minEndMs?: number;
+  };
+  readonly reason?: MoveReason;
   readonly conflicts: readonly Conflict[];
   readonly refused?: MoveRefusal;
 }
@@ -53,8 +59,12 @@ export function moveRefusalOf(
 
 /** "Cannot move 1002.10: locked." */
 export function refusalMessage(displayNumber: string, refused: MoveRefusal): string {
-  const why =
-    refused === 'PINNED' ? 'locked' : refused === 'STARTED' ? 'started' : 'held by another planner';
+  const why = {
+    PINNED: 'locked',
+    STARTED: 'started',
+    LOCKED: 'held by another planner',
+    NOT_ALLOWED: 'the machine is not allowed for its operation',
+  }[refused];
   return `Cannot move ${displayNumber}: ${why}.`;
 }
 
@@ -97,6 +107,7 @@ export function previewOf(
     ghosts: new Map(rest.map((each) => [each.jobOrderId, each.to])),
     count: rest.length,
     ...(moved.snappedTo !== undefined && { snappedTo: moved.snappedTo }),
+    reason: moved.reason,
     conflicts: result.conflicts,
   };
 }
@@ -110,8 +121,13 @@ function rowsSentence(count: number): string {
 /** The drag tooltip: the span, the release snap and the cascade count (plan 18, Cascade rule 8). */
 export function tooltipText(preview: MovePreview, timeZone: string): string {
   const parts = [formatSpan(preview.span.setupStartMs, preview.span.endMs, timeZone)];
-  if (preview.snappedTo !== undefined)
-    parts.push(`snapped to release from ${preview.snappedTo.fromRow}`);
+  if (preview.snappedTo !== undefined) {
+    parts.push(
+      preview.reason === 'snappedToLastPiece'
+        ? `snapped to the last piece of ${preview.snappedTo.fromRow}`
+        : `snapped to release from ${preview.snappedTo.fromRow}`,
+    );
+  }
   if (preview.count > 0)
     parts.push(
       `+${preview.count} row${preview.count === 1 ? '' : 's'} move${preview.count === 1 ? 's' : ''}`,
