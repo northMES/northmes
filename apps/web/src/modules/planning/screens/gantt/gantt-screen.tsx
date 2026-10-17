@@ -3,21 +3,35 @@
 import { useShell } from '@northmes/web-sdk';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import type { ExpandedState } from '@tanstack/react-table';
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import type { GanttDataSource, GanttSnapshot } from '../../gantt-data.ts';
 import {
   applyDraft,
   cascadeFromHere,
+  combineInDraft,
   type DraftConflict,
   discardChange,
+  draftChangeCount,
   draftConflicts,
   draftRowIds,
   emptyDraft,
   type GanttDraft,
   moveBack,
   moveInDraft,
+  orderNumbersText,
+  runPreview,
+  runSummary,
+  splitRunInDraft,
 } from '../../gantt-draft.ts';
 import {
   droppedKeyMessage,
@@ -33,6 +47,7 @@ import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
   type ClosedWindow,
   createTimeScale,
+  extendedRange,
   naturalWidthPx,
   plantDateOf,
   rangeLabel,
@@ -43,6 +58,7 @@ import {
 import { chainOf } from './gantt-chain.ts';
 import {
   type GanttMoveActions,
+  type GanttRunActions,
   type GanttViewContext,
   GanttViewProvider,
 } from './gantt-context.ts';
@@ -68,6 +84,7 @@ import {
   notPlacedRows,
   rowHeightRem,
 } from './gantt-rows.ts';
+import { GanttRunDialog } from './gantt-run-dialog.tsx';
 import { GanttTimeHeader, timeHeaderHeightRem } from './gantt-time-area.tsx';
 import { GanttToolbar } from './gantt-toolbar.tsx';
 import {
@@ -196,6 +213,11 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const [draft, setDraft] = useState<GanttDraft>(emptyDraft);
   const [moveState, setMoveState] = useState<MoveState | undefined>(undefined);
   const [draftOpen, setDraftOpen] = useState(false);
+  // The orders Shift+click or Shift+Space added to the selection, after the one the URL names
+  // (plan 18, Runs); a plain selection clears them.
+  const [extraSelected, setExtraSelected] = useState<readonly string[]>([]);
+  // The review step of a run: the orders it combines, while it is open.
+  const [runReview, setRunReview] = useState<readonly string[] | undefined>(undefined);
   /** The element that opened the My draft drawer, which takes focus back when it closes. */
   const draftOpener = useRef<HTMLElement | undefined>(undefined);
   const [loadError, setLoadError] = useState<unknown>(undefined);
@@ -222,11 +244,23 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     (committed === undefined
       ? plantDateOf(Date.now(), timeZone)
       : plantDateOf(committed.nowMs, timeZone));
-  const range = useMemo(
+  // The chosen range names the grid and the toolbar; the loaded range grows by whole spans of the
+  // preset as the planner scrolls towards an edge (#685), and shrinks back when from or zoom change.
+  const chosenRange = useMemo(
     () => rangeOf(from, zoom, timeZone, productionDayStart),
     [from, zoom, timeZone, productionDayStart],
   );
-  // Everything the view draws reads the plan with the draft applied, analysed over the visible
+  const [extension, setExtension] = useState({ before: 0, after: 0 });
+  const extendedFor = useRef(`${from}|${zoom}`);
+  if (extendedFor.current !== `${from}|${zoom}`) {
+    extendedFor.current = `${from}|${zoom}`;
+    setExtension({ before: 0, after: 0 });
+  }
+  const range = useMemo(
+    () => extendedRange(from, zoom, timeZone, productionDayStart, extension),
+    [from, zoom, timeZone, productionDayStart, extension],
+  );
+  // Everything the view draws reads the plan with the draft applied, analysed over the loaded
   // range (plan 18, Resolving a break in the draft).
   const snapshot = useMemo(
     () => (committed === undefined ? undefined : applyDraft(committed, draft, range)),
@@ -296,6 +330,29 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     width - Math.min(treeWidth, cap),
     Math.ceil(naturalWidthPx(range, zoom, hideClosed)),
   );
+  // A span added before the range widens the time column on the left: the scroll position moves by
+  // the added width in the same frame, so what was in view stays in view.
+  const lastTimeWidth = useRef<number | undefined>(undefined);
+  const shiftAfterGrowth = useRef(false);
+  const gridElement = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const previous = lastTimeWidth.current;
+    lastTimeWidth.current = timeWidth;
+    if (!shiftAfterGrowth.current || previous === undefined) return;
+    shiftAfterGrowth.current = false;
+    const grid = gridElement.current;
+    if (grid !== null && timeWidth > previous) grid.scrollLeft += timeWidth - previous;
+  }, [timeWidth]);
+  const onGridScroll = (grid: HTMLElement) => {
+    const { scrollLeft, clientWidth, scrollWidth } = grid;
+    if (clientWidth <= 0) return;
+    if (scrollLeft + clientWidth >= scrollWidth - clientWidth) {
+      setExtension((current) => ({ ...current, after: current.after + 1 }));
+    } else if (scrollLeft <= clientWidth) {
+      shiftAfterGrowth.current = true;
+      setExtension((current) => ({ ...current, before: current.before + 1 }));
+    }
+  };
   const gridTemplateColumns = [
     `${nameWidth}px`,
     ...columns.slice(1).map((column) => `${column.widthPx}px`),
@@ -489,12 +546,18 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   }, [snapshot, committed, moveState, preview, draft, options.cascade, zoom, timeZone, range]);
   const rowById = useMemo(() => {
     const map = new Map<string, GanttRow>();
-    for (const order of rows) {
+    const addOrder = (order: GanttRow) => {
       map.set(order.id, order);
+      if (order.kind !== 'order') return;
       for (const operation of order.subRows) {
         map.set(operation.id, operation);
         for (const jobOrder of operation.subRows) map.set(jobOrder.id, jobOrder);
       }
+    };
+    for (const row of rows) {
+      map.set(row.id, row);
+      if (row.kind === 'run') for (const order of row.subRows) addOrder(order);
+      else addOrder(row);
     }
     return map;
   }, [rows]);
@@ -506,6 +569,90 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     returnRowId.current = undefined;
     setDetailRowId(undefined);
   }, [snapshot, detailRowId, rowById]);
+
+  // Show critical chain on an order selects it and turns the chain on; on the shown order it ends.
+  const toggleChain = (orderId: string) => {
+    if (chain?.order.id === orderId) void setSearch(withChain(search, false));
+    else void setSearch(withChain(withOrder(search, orderId), true));
+  };
+  const selectedOrderIds = useMemo(
+    () => new Set(search.order === undefined ? [] : [search.order, ...extraSelected]),
+    [search.order, extraSelected],
+  );
+  const selectOrder = (orderId: string) => {
+    setExtraSelected([]);
+    if (search.order !== orderId) void setSearch(withOrder(search, orderId));
+  };
+  /** A plain click or Enter on an order already in the selection keeps the selection (plan 18, Runs). */
+  const selectUnlessSelected = (orderId: string) => {
+    if (!selectedOrderIds.has(orderId)) selectOrder(orderId);
+  };
+  /** Shift+click or Shift+Space: the order joins the selection, or leaves it when it was in it. */
+  const extendSelection = (orderId: string) => {
+    if (search.order === undefined) {
+      selectOrder(orderId);
+      return;
+    }
+    if (orderId === search.order) return;
+    setExtraSelected((current) =>
+      current.includes(orderId) ? current.filter((id) => id !== orderId) : [...current, orderId],
+    );
+  };
+  /** The orders a run would hold: the selection with the order the action was taken on. */
+  const runCandidates = (orderId: string): string[] =>
+    [...selectedOrderIds, orderId].filter((id, index, all) => all.indexOf(id) === index);
+  const runActions = useMemo<GanttRunActions | undefined>(() => {
+    if (snapshot === undefined || committed === undefined) return undefined;
+    const orderOf = (id: string) => snapshot.productionOrders.find((order) => order.id === id);
+    return {
+      canCombine: (orderId) => {
+        const members = runCandidates(orderId).map(orderOf);
+        const article = orderOf(orderId)?.article ?? '';
+        if (members.length < 2) return { ok: false, reason: `Select another order of ${article}` };
+        if (members.some((order) => order?.article !== article)) {
+          return { ok: false, reason: 'The selected orders are of different articles' };
+        }
+        return { ok: true };
+      },
+      // The review step is a modal dialog beside the Details drawer, so the drawer closes first
+      // and focus comes back to its row once the dialog has closed.
+      combine: (orderId) => {
+        if (detailRowId !== undefined) {
+          returnRowId.current = detailRowId;
+          setDetailRowId(undefined);
+        }
+        setRunReview(runCandidates(orderId));
+      },
+      split: (runId) => {
+        const run = draft.runs.find((each) => each.id === runId);
+        setDraft(splitRunInDraft(draft, runId));
+        if (detailRowId === runId) setDetailRowId(undefined);
+        if (run !== undefined) {
+          announce(
+            `Run of ${run.article} split; ${orderNumbersText(run.orderNumbers)} are separate orders again.`,
+          );
+        }
+      },
+    };
+  }, [snapshot, committed, draft, detailRowId, runCandidates]);
+  const runResult = useMemo(
+    () =>
+      committed === undefined || runReview === undefined
+        ? undefined
+        : runPreview(committed, draft, runReview),
+    [committed, draft, runReview],
+  );
+  const combineRun = () => {
+    if (committed === undefined || runReview === undefined) return;
+    const { draft: next, result } = combineInDraft(committed, draft, runReview);
+    setRunReview(undefined);
+    if (result.run === undefined) return;
+    setDraft(next);
+    setExtraSelected([]);
+    announce(
+      `Run of ${result.run.article} in your draft: ${runSummary(next, result.run)}. Not saved.`,
+    );
+  };
 
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
@@ -523,11 +670,14 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       zoneLabel: browserZone !== timeZone,
       hideClosed: options.hideClosed,
       selectedOrderId: search.order,
+      selectedOrderIds,
       chainRowIds,
       machineName: (code) =>
         code === undefined ? 'no machine' : (equipment.get(code)?.name ?? code),
       draftRowIds: draftIds,
       move: moveActions,
+      runActions,
+      toggleChain,
     };
   }, [
     snapshot,
@@ -537,9 +687,12 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     timeZone,
     options.hideClosed,
     search.order,
+    selectedOrderIds,
     chainRowIds,
     draftIds,
     moveActions,
+    runActions,
+    toggleChain,
   ]);
   const { links, limited } =
     snapshot === undefined
@@ -564,14 +717,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     };
   }
 
-  const selectOrder = (orderId: string) => {
-    if (search.order !== orderId) void setSearch(withOrder(search, orderId));
-  };
-  // Show critical chain on an order selects it and turns the chain on; on the shown order it ends.
-  const toggleChain = (orderId: string) => {
-    if (chain?.order.id === orderId) void setSearch(withChain(search, false));
-    else void setSearch(withChain(withOrder(search, orderId), true));
-  };
   const focusRow = (rowId: string) => {
     setFocusedRowId(rowId);
     document.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`)?.focus();
@@ -581,7 +726,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     if (target !== undefined) focusRow(target.id);
   };
   const openDetails = (row: GanttTableRow) => {
-    selectOrder(row.original.order.id);
+    selectUnlessSelected(row.original.order.id);
     setDetailRowId(row.id);
   };
   // The drawer closes and focus goes back to the row it opened from, or to the row a chain link
@@ -659,6 +804,30 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         if (onRow) openDetails(row);
         else handled = false;
         break;
+      // Space selects the row's order, Shift+Space adds it to the selection (plan 18, Runs); on a
+      // run row, its orders.
+      case ' ':
+        if (!onRow) {
+          handled = false;
+          break;
+        }
+        if (row.original.kind === 'run') {
+          const [first, ...rest] = row.original.run.orderIds;
+          if (first !== undefined) {
+            setExtraSelected(rest);
+            if (search.order !== first) void setSearch(withOrder(search, first));
+          }
+        } else if (event.shiftKey) extendSelection(row.original.order.id);
+        else selectOrder(row.original.order.id);
+        break;
+      case 'F10':
+      case 'ContextMenu':
+        if (event.key === 'F10' && !event.shiftKey) {
+          handled = false;
+          break;
+        }
+        event.currentTarget.querySelector<HTMLElement>('[data-row-menu]')?.click();
+        break;
       case 'Escape':
         if (moveState !== undefined) moveActions?.cancel();
         else if (chain !== undefined) void setSearch(withChain(search, false));
@@ -673,7 +842,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     }
   };
 
-  const gridName = `${plant} order Gantt, ${rangeLabel(range, zoom, timeZone)}`;
+  const gridName = `${plant} order Gantt, ${rangeLabel(chosenRange, zoom, timeZone)}`;
   const rowCount = flatRows.length + 2;
   const focusedId =
     focusedRowId !== undefined && flatRows.some((row) => row.id === focusedRowId)
@@ -695,10 +864,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             void setSearch(withFrom(search, plantDateOf(snapshot?.nowMs ?? Date.now(), timeZone)))
           }
           onLater={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'later')))}
-          rangeLabel={rangeLabel(range, zoom, timeZone)}
+          rangeLabel={rangeLabel(chosenRange, zoom, timeZone)}
           options={options}
           onOptionsChange={setOptions}
-          draftCount={draft.changes.length}
+          draftCount={draftChangeCount(draft)}
           onOpenDraft={() => {
             draftOpener.current = document.activeElement as HTMLElement | undefined;
             setDraftOpen(true);
@@ -723,7 +892,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             style={fillHeight === undefined ? undefined : { height: `${fillHeight}px` }}
           >
             <div
-              ref={gridRef}
+              ref={(node) => {
+                gridElement.current = node;
+                gridRef(node);
+              }}
               role="treegrid"
               aria-label={gridName}
               aria-rowcount={rowCount}
@@ -738,7 +910,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                   void setSearch(withChain(search, false));
                 }
               }}
-              className="min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-card text-sm"
+              onScroll={(event) => onGridScroll(event.currentTarget)}
+              className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
               style={{
                 scrollPaddingTop: `${timeHeaderHeightRem}rem`,
                 scrollPaddingInlineStart: `${stickyTree ? treeWidth : nameWidth}px`,
@@ -782,8 +955,12 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                       focused={row.id === focusedId}
                       onFocus={() => setFocusedRowId(row.id)}
                       onKeyDown={(event) => onRowKeyDown(event, row, index)}
-                      onSelect={() => {
-                        selectOrder(row.original.order.id);
+                      onSelect={(extend) => {
+                        if (extend === true) {
+                          extendSelection(row.original.order.id);
+                          return;
+                        }
+                        selectUnlessSelected(row.original.order.id);
                         setDetailRowId(row.id);
                       }}
                       onToggle={() => row.toggleExpanded()}
@@ -832,8 +1009,18 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             }}
             onMoveBack={(conflict: DraftConflict) => setDraft(moveBack(draft, conflict))}
             onDiscardChange={(jobOrderId) => setDraft(discardChange(draft, jobOrderId))}
+            onSplitRun={(runId) => runActions?.split(runId)}
             onDiscardDraft={() => setDraft(emptyDraft)}
             finalFocus={() => draftOpener.current ?? null}
+          />
+          <GanttRunDialog
+            open={runReview !== undefined}
+            result={runResult}
+            orders={snapshot.productionOrders}
+            timeZone={timeZone}
+            machineName={view.machineName}
+            onCombine={combineRun}
+            onCancel={() => setRunReview(undefined)}
           />
           <GanttDetailDrawer
             row={detailRow}

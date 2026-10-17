@@ -8,12 +8,16 @@ import { formatDuration, formatPlantDateTime } from '@northmes/contracts/format'
 import {
   type CascadeOptions,
   type CascadeResult,
+  type Conflict,
   cascade,
+  combineIntoRun,
   type JobOrderSpan,
   type Move,
   type MoveReason,
   type MoveRefusal,
   type PlacedMove,
+  type Run,
+  type RunResult,
 } from '@northmes/planning-domain';
 import {
   analyzeGantt,
@@ -33,13 +37,19 @@ export interface DraftChange {
   readonly from?: JobOrderSpan;
   readonly to: JobOrderSpan;
   readonly reason: MoveReason;
+  /** The run the change belongs to; the My draft list folds such changes into the run's line. */
+  readonly runId?: string;
+  /** The planned setup the change sets: zero for a setup the run saves (ADR 0083). */
+  readonly setupS?: number;
 }
 
 export interface GanttDraft {
   readonly changes: readonly DraftChange[];
+  /** The runs the planner combined in this draft (ADR 0083). */
+  readonly runs: readonly Run[];
 }
 
-export const emptyDraft: GanttDraft = { changes: [] };
+export const emptyDraft: GanttDraft = { changes: [], runs: [] };
 
 /** A conflict the draft creates, as the My draft list shows it, with the rows its actions act on. */
 export interface DraftConflict {
@@ -74,7 +84,7 @@ export function applyDraft(
     toMs: committed.fenceMs,
   },
 ): GanttSnapshot {
-  if (draft.changes.length === 0) return committed;
+  if (draft.changes.length === 0 && draft.runs.length === 0) return committed;
   const context = planContextOf(committed, range);
   const byRow = new Map(draft.changes.map((change) => [change.jobOrderId, change]));
   const productionOrders: GanttOrder[] = committed.productionOrders.map((order) => ({
@@ -82,31 +92,39 @@ export function applyDraft(
     jobOrders: order.jobOrders.map((row) => {
       const change = byRow.get(row.id);
       if (change === undefined) return row;
+      const plannedSetupS = change.setupS ?? row.plannedSetupS;
       return {
         ...row,
         equipment: change.equipment,
+        plannedSetupS,
         placement: placementWithSegments(
-          row,
+          { plannedSetupS, plannedRunS: row.plannedRunS },
           change.to,
           context.availability[change.equipment] ?? [],
         ),
       };
     }),
   }));
-  const base: GanttSnapshotBase = { ...committed, productionOrders };
+  const base: GanttSnapshotBase = { ...committed, productionOrders, runs: draft.runs };
   return { ...base, analysis: analyzeGantt(base, range) };
 }
 
-/** The draft with the moves of a cascade result added; a row already in the draft keeps its committed origin. */
-function withMoves(draft: GanttDraft, orderId: string, moves: readonly PlacedMove[]): GanttDraft {
+/** The draft with the moves of a cascade or a run added; a row already in the draft keeps its committed origin. */
+function withMoves(
+  draft: GanttDraft,
+  orderOf: (jobOrderId: string) => string,
+  moves: readonly PlacedMove[],
+  runId?: string,
+): GanttDraft {
   const changes = [...draft.changes];
   for (const move of moves) {
     const index = changes.findIndex((change) => change.jobOrderId === move.jobOrderId);
     const existing = changes[index];
+    const setupS = move.setupS ?? existing?.setupS;
     const change: DraftChange = {
       jobOrderId: move.jobOrderId,
       displayNumber: move.displayNumber,
-      orderId,
+      orderId: orderOf(move.jobOrderId),
       equipment: move.equipment,
       ...((existing?.from ?? move.from) !== undefined && { from: existing?.from ?? move.from }),
       to: move.to,
@@ -114,11 +132,13 @@ function withMoves(draft: GanttDraft, orderId: string, moves: readonly PlacedMov
         existing !== undefined && existing.reason !== 'cascade' && move.reason === 'cascade'
           ? existing.reason
           : move.reason,
+      ...((runId ?? existing?.runId) !== undefined && { runId: runId ?? existing?.runId }),
+      ...(setupS !== undefined && { setupS }),
     };
     if (index >= 0) changes[index] = change;
     else changes.push(change);
   }
-  return { changes };
+  return { changes, runs: draft.runs };
 }
 
 /**
@@ -142,23 +162,25 @@ export function moveInDraft(
   const context = planContextOf(applied, { fromMs: applied.nowMs, toMs: applied.fenceMs });
   const result = cascade(order, move, context, options);
   if (result.refused !== undefined || result.moves.length === 0) return { draft, result };
-  return { draft: withMoves(draft, order.id, result.moves), result };
+  return { draft: withMoves(draft, () => order.id, result.moves), result };
 }
 
 /** The display numbers of a conflict line, as its text names the rows. */
-function conflictText(
-  applied: GanttSnapshot,
+export function conflictText(
+  timeZone: string,
   code: ConstraintCode,
   rows: readonly [string, string],
   clearsAtMs: number | undefined,
   beforeByS: number | undefined,
 ): string {
-  const at = (ms: number) => formatPlantDateTime(ms, applied.plant.timeZone);
+  const at = (ms: number) => formatPlantDateTime(ms, timeZone);
   const clears = clearsAtMs === undefined ? '' : `; clears at ${at(clearsAtMs)}`;
   switch (code) {
     case 'LEAD_TIME':
     case 'SEND_AHEAD':
-      return `${rows[1]} starts ${formatDuration(beforeByS ?? 0)} before its release from ${rows[0]}${clears}`;
+      return beforeByS === undefined
+        ? `${rows[1]} starts before its release from ${rows[0]}${clears}`
+        : `${rows[1]} starts ${formatDuration(beforeByS)} before its release from ${rows[0]}${clears}`;
     case 'LAST_PIECE':
       return `${rows[1]} ends before the last piece of ${rows[0]}${clears}`;
     case 'OVERLAP':
@@ -226,7 +248,7 @@ export function draftConflicts(applied: GanttSnapshot, draft: GanttDraft): Draft
           draftRow,
           laterRow: row.id,
           ...(clearsAtMs !== undefined && { clearsAtMs }),
-          text: conflictText(applied, line.code, pair, clearsAtMs, beforeByS),
+          text: conflictText(applied.plant.timeZone, line.code, pair, clearsAtMs, beforeByS),
         });
       }
     }
@@ -273,15 +295,92 @@ export function cascadeFromHere(
       span.endMs !== move.to.endMs
     );
   });
-  return { draft: withMoves(draft, order.id, moved) };
+  return { draft: withMoves(draft, () => order.id, moved) };
 }
 
-/** Move back (plan 18, Resolving a break in the draft): the draft without the change that caused the conflict. */
+/**
+ * Move back (plan 18, Resolving a break in the draft): the draft without the change that caused
+ * the conflict; for a row a run placed, the run and its moves go (ADR 0083 rule 7).
+ */
 export function moveBack(draft: GanttDraft, conflict: DraftConflict): GanttDraft {
-  return discardChange(draft, conflict.draftRow);
+  const runId = draft.changes.find((change) => change.jobOrderId === conflict.draftRow)?.runId;
+  return runId === undefined
+    ? discardChange(draft, conflict.draftRow)
+    : splitRunInDraft(draft, runId);
 }
 
 /** The draft without one row's change. */
 export function discardChange(draft: GanttDraft, jobOrderId: string): GanttDraft {
-  return { changes: draft.changes.filter((change) => change.jobOrderId !== jobOrderId) };
+  return {
+    changes: draft.changes.filter((change) => change.jobOrderId !== jobOrderId),
+    runs: draft.runs,
+  };
+}
+
+/** The changes the My draft list counts: a run is one change, its moves are inside it (plan 18, Runs). */
+export function draftChangeCount(draft: GanttDraft): number {
+  return draft.changes.filter((change) => change.runId === undefined).length + draft.runs.length;
+}
+
+/**
+ * The run of the selected orders as the review step shows it (plan 18, The review step): the
+ * domain's combineIntoRun over the plan with the draft applied, without writing anything.
+ */
+export function runPreview(
+  committed: GanttSnapshot,
+  draft: GanttDraft,
+  orderIds: readonly string[],
+): RunResult {
+  const applied = applyDraft(committed, draft);
+  const context = planContextOf(applied, { fromMs: applied.nowMs, toMs: applied.fenceMs });
+  const orders = applied.productionOrders.filter((order) => orderIds.includes(order.id));
+  return combineIntoRun(orders, context);
+}
+
+/**
+ * Combine into a run (ADR 0083 rule 8): the run becomes a record of the draft and every move it
+ * made a change of the run, so the My draft list shows one line. A refusal leaves the draft as it
+ * was; the result says why.
+ */
+export function combineInDraft(
+  committed: GanttSnapshot,
+  draft: GanttDraft,
+  orderIds: readonly string[],
+): { readonly draft: GanttDraft; readonly result: RunResult } {
+  const result = runPreview(committed, draft, orderIds);
+  const run = result.run;
+  if (result.refused !== undefined || run === undefined) return { draft, result };
+  const orderOf = (jobOrderId: string) =>
+    committed.productionOrders.find((order) => order.jobOrders.some((row) => row.id === jobOrderId))
+      ?.id ?? '';
+  const withRun = withMoves(draft, orderOf, result.moves, run.id);
+  return { draft: { changes: withRun.changes, runs: [...draft.runs, run] }, result };
+}
+
+/** Split run (ADR 0083 rule 7): a run of the draft goes with its moves, so the orders are separate again. */
+export function splitRunInDraft(draft: GanttDraft, runId: string): GanttDraft {
+  return {
+    changes: draft.changes.filter((change) => change.runId !== runId),
+    runs: draft.runs.filter((run) => run.id !== runId),
+  };
+}
+
+/** "1001 and 1005", "1001, 1004 and 1005". */
+export function orderNumbersText(numbers: readonly string[]): string {
+  if (numbers.length <= 1) return numbers.join('');
+  return `${numbers.slice(0, -1).join(', ')} and ${numbers[numbers.length - 1]}`;
+}
+
+/** "1001 and 1005, 2 rows moved, 1 setup saved": what the run did, for its line and its announcement. */
+export function runSummary(draft: GanttDraft, run: Run): string {
+  const moved = draft.changes.filter((change) => change.runId === run.id).length;
+  const saved = run.savedSetups.length;
+  return `${orderNumbersText(run.orderNumbers)}, ${moved === 1 ? '1 row moved' : `${moved} rows moved`}, ${saved === 1 ? '1 setup saved' : `${saved} setups saved`}`;
+}
+
+/** The words of a conflict the domain reports, as the review step and the My draft list show them. */
+export function conflictWords(timeZone: string, conflict: Conflict): string {
+  const [first = '', second = ''] = conflict.rows;
+  if (conflict.kind === 'FROZEN_WINDOW') return `${first} starts inside the frozen window`;
+  return conflictText(timeZone, conflict.kind, [first, second], conflict.clearsAtMs, undefined);
 }

@@ -3,7 +3,7 @@
 import { formatDuration, formatPlantDateTime } from '@northmes/contracts/format';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import { durationsOf } from './gantt-block-states.ts';
-import { type JobOrderRow, quantityText, statusLabel } from './gantt-rows.ts';
+import { type JobOrderRow, quantityText, savedSetupOf, statusLabel } from './gantt-rows.ts';
 
 /** One line of the hover card: a label and its value. */
 export interface HoverField {
@@ -40,9 +40,13 @@ export function hoverFields(
       { label: 'Elapsed', value: durations.elapsed },
     );
   }
+  const saved = savedSetupOf(snapshot, jobOrder.id);
   fields.push({
     label: 'Setup, run',
-    value: `${formatDuration(jobOrder.plannedSetupS)}, ${formatDuration(jobOrder.plannedRunS)}`,
+    value:
+      saved === undefined
+        ? `${formatDuration(jobOrder.plannedSetupS)}, ${formatDuration(jobOrder.plannedRunS)}`
+        : `0 min, saved by the run (${formatDuration(saved.setupS)}), ${formatDuration(jobOrder.plannedRunS)}`,
   });
   if (analysis?.float !== undefined) {
     const free =

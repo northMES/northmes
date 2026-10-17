@@ -2,22 +2,53 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatDuration, formatPlantDate, formatSpan } from '@northmes/contracts/format';
 import type {
+  EarlyOrder,
   GanttJobOrder,
   GanttOperation,
   GanttOrder,
   GanttSnapshot,
   JobOrderAnalysis,
   OrderAnalysis,
+  Run,
+  SavedSetup,
 } from '../../gantt-data.ts';
+import { orderNumbersText } from '../../gantt-draft.ts';
 
-/** The three levels of the order Gantt tree (plan 18, Rows and the tree). */
-export type GanttRow = OrderRow | OperationRow | JobOrderRow;
+/** The levels of the order Gantt tree (plan 18, Rows and the tree): a run above its orders, then operations and job orders. */
+export type GanttRow = RunRow | OrderRow | OperationRow | JobOrderRow;
+
+/** A level 1 row: an order, or a run with its orders under it (plan 18, Runs). */
+export type Level1Row = RunRow | OrderRow;
+
+/** What the run row shows: whether the run ends after its deadline, and its span. */
+export interface RunAnalysis {
+  readonly late: boolean;
+  /** Elapsed seconds the run ends after its deadline; zero when on time. */
+  readonly lateByS: number;
+  readonly plannedStartMs?: number;
+  readonly plannedEndMs?: number;
+}
+
+export interface RunRow {
+  readonly kind: 'run';
+  readonly id: string;
+  readonly run: Run;
+  /** The first order of the run, whose color the summary bar takes and which a click selects. */
+  readonly order: GanttOrder;
+  readonly orders: readonly GanttOrder[];
+  readonly analysis: RunAnalysis;
+  readonly subRows: readonly OrderRow[];
+}
 
 export interface OrderRow {
   readonly kind: 'order';
   readonly id: string;
   readonly order: GanttOrder;
   readonly analysis: OrderAnalysis | undefined;
+  /** The run the order is in, when it is. */
+  readonly runId?: string;
+  /** The early flag of an order whose own deadline is later than its run's (ADR 0083 rule 5). */
+  readonly early?: EarlyOrder;
   readonly subRows: readonly OperationRow[];
 }
 
@@ -41,15 +72,16 @@ export interface JobOrderRow {
   readonly subRows: readonly never[];
 }
 
-/** The ids of the rows: an order by its id, an operation and a job order by theirs. */
+/** The ids of the rows: a run and an order by their ids, an operation and a job order by theirs. */
 export const rowIds = {
+  run: (run: Run) => run.id,
   order: (order: GanttOrder) => order.id,
   operation: (operation: GanttOperation) => `op-${operation.id}`,
   jobOrder: (jobOrder: GanttJobOrder) => jobOrder.id,
 };
 
 /** The row heights of plan 18, in rem: 36 px for summary rows, 52 px for job order rows. */
-export const rowHeightRem = { order: 2.25, operation: 2.25, jobOrder: 3.25 } as const;
+export const rowHeightRem = { run: 2.25, order: 2.25, operation: 2.25, jobOrder: 3.25 } as const;
 
 /** The workload lane's height, 40 px, in rem. */
 export const laneHeightRem = 2.5;
@@ -81,13 +113,15 @@ function compareJobOrders(a: GanttJobOrder, b: GanttJobOrder): number {
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
-/** The tree of a snapshot: orders in the autoplan order, operations by sequence, job orders by start. */
-export function buildGanttRows(snapshot: GanttSnapshot): OrderRow[] {
-  return [...snapshot.productionOrders].sort(compareOrders).map((order) => ({
+function orderRowOf(snapshot: GanttSnapshot, order: GanttOrder, run: Run | undefined): OrderRow {
+  const early = run?.early.find((each) => each.orderId === order.id);
+  return {
     kind: 'order',
     id: rowIds.order(order),
     order,
     analysis: snapshot.analysis.orders[order.id],
+    ...(run !== undefined && { runId: run.id }),
+    ...(early !== undefined && { early }),
     subRows: [...order.operations]
       .sort((a, b) => a.sequence - b.sequence)
       .map((operation) => {
@@ -111,16 +145,90 @@ export function buildGanttRows(snapshot: GanttSnapshot): OrderRow[] {
           })),
         };
       }),
-  }));
+  };
+}
+
+/** The span and the late-by of a run over its orders' placed rows, against the run's deadline. */
+function runAnalysisOf(run: Run, orders: readonly OrderRow[]): RunAnalysis {
+  const span = summarySpan(orders.flatMap((order) => jobOrderRowsOf(order)));
+  const lateByS = span === undefined ? 0 : Math.max(0, (span.toMs - run.deadlineMs) / 1000);
+  return {
+    late: lateByS > 0,
+    lateByS,
+    ...(span !== undefined && { plannedStartMs: span.fromMs, plannedEndMs: span.toMs }),
+  };
+}
+
+/** The autoplan order over level 1 rows: a run sorts by its deadline and its first order's priority, number and id. */
+function compareLevel1(a: Level1Row, b: Level1Row): number {
+  const deadline = (row: Level1Row) =>
+    row.kind === 'run' ? row.run.deadlineMs : row.order.deadlineMs;
+  if (deadline(a) !== deadline(b)) return deadline(a) - deadline(b);
+  return compareOrders(a.order, b.order);
+}
+
+/**
+ * The tree of a snapshot: runs and the orders outside them in the autoplan order, a run's orders
+ * under it, operations by sequence, job orders by start.
+ */
+export function buildGanttRows(snapshot: GanttSnapshot): Level1Row[] {
+  const runs = snapshot.runs ?? [];
+  const byId = new Map(snapshot.productionOrders.map((order) => [order.id, order]));
+  const inRun = new Set(runs.flatMap((run) => run.orderIds));
+  const rows: Level1Row[] = [];
+  for (const run of runs) {
+    const orders = run.orderIds.flatMap((id) => {
+      const order = byId.get(id);
+      return order === undefined ? [] : [order];
+    });
+    const [first] = orders;
+    if (first === undefined) continue;
+    const subRows = orders.map((order) => orderRowOf(snapshot, order, run));
+    rows.push({
+      kind: 'run',
+      id: rowIds.run(run),
+      run,
+      order: first,
+      orders,
+      analysis: runAnalysisOf(run, subRows),
+      subRows,
+    });
+  }
+  for (const order of snapshot.productionOrders) {
+    if (!inRun.has(order.id)) rows.push(orderRowOf(snapshot, order, undefined));
+  }
+  return rows.sort(compareLevel1);
 }
 
 /** Every job order of a snapshot without a placement, for the Not placed row. */
-export function notPlacedRows(rows: readonly OrderRow[]): JobOrderRow[] {
-  return rows.flatMap((order) =>
-    order.subRows.flatMap((operation) =>
-      operation.subRows.filter((row) => row.jobOrder.placement === undefined),
-    ),
+export function notPlacedRows(rows: readonly Level1Row[]): JobOrderRow[] {
+  return rows.flatMap((row) =>
+    jobOrderRowsOf(row).filter((each) => each.jobOrder.placement === undefined),
   );
+}
+
+/** The setup a run saves on a row, if any (ADR 0083 rule 4). */
+export function savedSetupOf(snapshot: GanttSnapshot, jobOrderId: string): SavedSetup | undefined {
+  for (const run of snapshot.runs ?? []) {
+    const saved = run.savedSetups.find((each) => each.jobOrderId === jobOrderId);
+    if (saved !== undefined) return saved;
+  }
+  return undefined;
+}
+
+/** "Run of Bracket L". */
+export function runTitle(run: Run): string {
+  return `Run of ${run.article}`;
+}
+
+/** "late by 2 days 16 h 45 min" for a late run, "on time" otherwise. */
+export function runLatenessText(analysis: RunAnalysis): string {
+  return analysis.late ? `late by ${formatDuration(analysis.lateByS)}` : 'on time';
+}
+
+/** "early by 7 days": the early flag of an order in a run. */
+export function earlyText(early: EarlyOrder): string {
+  return `early by ${formatDuration(early.earlyByS)}`;
 }
 
 /** The span of a summary row: from the earliest setup start to the latest end of its placed rows. */
@@ -140,8 +248,9 @@ export function summarySpan(
   return fromMs === undefined || toMs === undefined ? undefined : { fromMs, toMs };
 }
 
-/** The job order rows under an order. */
-export function jobOrderRowsOf(row: OrderRow | OperationRow): JobOrderRow[] {
+/** The job order rows under a run, an order or an operation. */
+export function jobOrderRowsOf(row: RunRow | OrderRow | OperationRow): JobOrderRow[] {
+  if (row.kind === 'run') return row.subRows.flatMap((order) => jobOrderRowsOf(order));
   return row.kind === 'order'
     ? row.subRows.flatMap((operation) => operation.subRows)
     : [...row.subRows];
@@ -167,9 +276,12 @@ export function latenessText(analysis: OrderAnalysis | undefined): string {
  * the span and, for an order, whether it is on time: "Order 1001, Tue 3 Nov 11:30 to Thu 5 Nov
  * 10:45, on time".
  */
-export function summaryName(row: OrderRow | OperationRow, timeZone: string): string {
+export function summaryName(row: RunRow | OrderRow | OperationRow, timeZone: string): string {
   const span = summarySpan(jobOrderRowsOf(row));
   const spanText = span === undefined ? 'not placed' : formatSpan(span.fromMs, span.toMs, timeZone);
+  if (row.kind === 'run') {
+    return `${runTitle(row.run)}, ${orderNumbersText(row.run.orderNumbers)}, ${spanText}, ${runLatenessText(row.analysis)}`;
+  }
   if (row.kind === 'order') {
     return `Order ${row.order.number}, ${spanText}, ${latenessText(row.analysis)}`;
   }
@@ -184,6 +296,12 @@ export function statusLabel(status: string): string {
 /** "600 pcs": the quantity in the stock unit; G1 counts pieces. */
 export function quantityText(quantity: number): string {
   return `${quantity} pcs`;
+}
+
+/** The second line of a run's row header: quantity, orders and the deadline date. */
+export function runSubtext(row: RunRow, timeZone: string): string {
+  const quantity = row.orders.reduce((sum, order) => sum + order.quantity, 0);
+  return `${quantityText(quantity)}, orders ${orderNumbersText(row.run.orderNumbers)}, deadline ${formatPlantDate(row.run.deadlineMs, timeZone)}`;
 }
 
 /** The second line of an order's row header: article, quantity, deadline date and status. */
