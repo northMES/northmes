@@ -166,9 +166,11 @@ export function GanttBlock({
               data-cell-focus
               data-states={states.map((state) => state.kind).join(' ') || undefined}
               data-move-mode={inMoveMode ? 'true' : undefined}
-              onClick={() => {
+              onClick={(event) => {
+                // The click after a drop reaches neither the block nor the row under it.
                 if (dropped.current) {
                   dropped.current = false;
+                  event.stopPropagation();
                   return;
                 }
                 onSelect();
