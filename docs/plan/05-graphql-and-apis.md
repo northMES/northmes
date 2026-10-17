@@ -41,8 +41,8 @@ Related plan documents: [02-architecture.md](02-architecture.md) (process roles 
 | `/api/v1/web/client-errors` | HTTP POST | session cookie, station cookie | shell and remotes | [0043][adr-0043] |
 | `/api/v1/ai/chat` | HTTP POST, streamed response | session cookie | AI chat panel | [0035][adr-0035] |
 | `/api/v1/station` | HTTP POST | station cookie | station sign-in and sign-out | [0033][adr-0033] |
-| `/api/v1/<module-id>/...` | HTTP, the public REST family | bearer only: integration token or an OAuth access token whose `aud` ends in `/api/v1`; the web's JWT and cookies are refused | ERPs and other outside systems | [0073][adr-0073] |
-| `/api/v1/openapi.json` | HTTP GET | the web's JWT, and every credential the public REST family accepts: an integration token or an OAuth access token whose `aud` ends in `/api/v1`; anonymous requests are refused | API clients and their tooling | [0073][adr-0073] |
+| `/api/v1/<module-id>/...` | HTTP, the public REST family | bearer only: integration token or an OAuth access token whose `aud` is `NORTHMES_PUBLIC_ORIGIN + '/api/v1'`; the web's JWT and cookies are refused | ERPs and other outside systems | [0073][adr-0073] |
+| `/api/v1/openapi.json` | HTTP GET | the web's JWT, and every credential the public REST family accepts: an integration token or an OAuth access token whose `aud` is `NORTHMES_PUBLIC_ORIGIN + '/api/v1'`; anonymous requests are refused | API clients and their tooling | [0073][adr-0073] |
 | `/api/v1/pyramid-connector/import-file` | HTTP POST, multipart | session cookie | company admin (Pyramid XML upload) | [0032][adr-0032] |
 | `/health`, `/health/live`, `/health/ready` | HTTP GET | none (routes marked `@Public`) | customer monitoring, release CI, System health | [0043][adr-0043] |
 | `/modules/<id>/<version>/` | static files, immutable caching | none | shell loading remotes | [0019][adr-0019] |
