@@ -1,6 +1,6 @@
 ---
 status: "accepted"
-date: 2026-10-16
+date: 2026-10-17
 decision-makers: Krister Johansson
 consulted: Krister Johansson; the WebMCP draft of the W3C Web Machine Learning Community Group; the MCP authorization specification; Better Auth's OAuth provider and api-key documentation
 informed: contributors, coding agents, module and plugin authors, pilot IT
@@ -311,7 +311,7 @@ Audit ([ADR 0013][adr-0013]):
 
 Rate limits, counted per credential in the Postgres `ThrottlerStorage` that ADR 0064 requires from the first public route:
 
-* Public REST: 600 reads and 60 writes per minute per credential.
+* Public REST: 600 reads and 60 writes per minute per credential, off by default (Krister Johansson, 2026-10-17). An installation turns them on with the environment variable `NORTHMES_API_RATE_LIMIT`, `on` or `off`, default `off`, and sets them with `NORTHMES_API_RATE_LIMIT_READS`, the requests per minute per credential to GET routes, default 600, and `NORTHMES_API_RATE_LIMIT_WRITES`, the requests per minute per credential to POST routes, default 60. The server refuses to boot when the switch is neither `on` nor `off` or a limit is no positive integer. Like `NORTHMES_WEBMCP`, the three variables put behaviour in the environment, against ADR 0022's rule.
 * `/api/v1/web/tools/{tool}`: 120 calls per minute per session.
 * The OAuth token endpoint: Better Auth's own limiter, with database storage, at 30 requests per minute per client.
 * A refusal is 429 with `core.request.rate_limited` and `Retry-After`; WebMCP gets the same code in the tool error.
