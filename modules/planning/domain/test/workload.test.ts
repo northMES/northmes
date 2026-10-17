@@ -187,6 +187,95 @@ describe('workload (plan 18, Workload)', () => {
     });
   });
 
+  it('overtime added inside a committed span never inflates the load: the run is capped at its planned seconds', () => {
+    // The 11:00 to 11:30 break of Wed 4 Nov becomes plant-wide overtime after 1003.10 was placed
+    // across it: the span now holds 16 200 working seconds, the row still loads its 14 400.
+    const overtime = {
+      ...g1,
+      calendar: {
+        ...g1.calendar,
+        deviations: [
+          {
+            kind: 'overtime' as const,
+            startsLocal: '2026-11-04T11:00',
+            endsLocal: '2026-11-04T11:30',
+          },
+        ],
+      },
+    };
+    const bucket = workload(g1PlanContext(overtime), days).find(
+      (each) => each.equipment === 'CNC1' && each.label === '2026-11-04',
+    );
+
+    expect(bucket).toMatchObject({
+      availableS: 31_500,
+      loadedS: 21_600,
+      runS: 21_600,
+      overloadS: 0,
+      items: [
+        { jobOrder: '1001.10', seconds: 7200 },
+        { jobOrder: '1003.10', seconds: 14_400 },
+      ],
+    });
+  });
+
+  it('work in closed time counts in the bucket where the last laid segment ends, also at a bucket boundary', () => {
+    // 1006.10 committed Fri 13:00 to 15:30 after a calendar change: 7 200 s lie in the shift and
+    // 3 600 s past its end. The shift bucket ends at 15:00, exactly where the last segment ends.
+    const order = orderOf('1006');
+    const past: PlanOrder = {
+      ...order,
+      jobOrders: order.jobOrders.map((row) => ({
+        ...row,
+        placement: {
+          setupStartMs: Date.UTC(2026, 10, 6, 12),
+          runStartMs: Date.UTC(2026, 10, 6, 12),
+          endMs: Date.UTC(2026, 10, 6, 14, 30),
+        },
+      })),
+    };
+    const shifts = shiftBuckets(calendar, Date.UTC(2026, 10, 5, 23), Date.UTC(2026, 10, 6, 23));
+    const friday = workload(withOrder(past), shifts).find((each) => each.equipment === 'MILL1');
+
+    expect(friday).toMatchObject({ label: '2026-11-06 06:00 to 15:00', overloadS: 3600 });
+    expect(friday?.items.find((item) => item.jobOrder === '1006.10')).toEqual({
+      jobOrder: '1006.10',
+      seconds: 7200,
+    });
+  });
+
+  it('a row placed wholly in closed time counts its planned seconds as closed in the bucket of its start', () => {
+    const order = orderOf('1006');
+    const weekend: PlanOrder = {
+      ...order,
+      jobOrders: order.jobOrders.map((row) => ({
+        ...row,
+        placement: {
+          setupStartMs: Date.UTC(2026, 10, 7, 9),
+          runStartMs: Date.UTC(2026, 10, 7, 9),
+          endMs: Date.UTC(2026, 10, 7, 12),
+        },
+      })),
+    };
+    const buckets = productionDayBuckets({
+      timeZone,
+      productionDayStart: '06:00',
+      fromMs: Date.UTC(2026, 10, 6, 5),
+      toMs: Date.UTC(2026, 10, 8, 5),
+    });
+    const saturday = workload(withOrder(weekend), buckets).find(
+      (each) => each.equipment === 'MILL1' && each.label === '2026-11-07',
+    );
+
+    expect(saturday).toMatchObject({
+      availableS: 0,
+      loadedS: 0,
+      overloadS: 10_800,
+      utilizationPermille: null,
+      items: [],
+    });
+  });
+
   it('buckets by shift and by ISO week sum to the same totals as buckets by production day', () => {
     const byDay = workload(
       context,

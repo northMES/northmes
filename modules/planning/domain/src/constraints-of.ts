@@ -13,8 +13,20 @@ import {
   type PlanOperation,
   type PlanOrder,
   reservationsOn,
+  rowsOfOperation,
 } from './plan-context.ts';
 import { lastPieceMinEnd, predecessorOf, releaseOf } from './release.ts';
+
+/** The latest-ending placed row, by end, then the tie order. */
+function latestEndingOf(rows: readonly PlanJobOrder[]): PlanJobOrder | undefined {
+  let latest: PlanJobOrder | undefined;
+  for (const row of rows) {
+    if (row.placement === undefined) continue;
+    if (latest?.placement === undefined || row.placement.endMs > latest.placement.endMs)
+      latest = row;
+  }
+  return latest;
+}
 
 export type ConstraintKind =
   | 'deadline'
@@ -54,6 +66,8 @@ export type ConstraintLine =
   | (Line<'earliestStart'> & { readonly atMs: number })
   | (Line<'release'> & {
       readonly fromRow: string;
+      /** The same row by job order id: the rows of a split operation share a display number. */
+      readonly fromJobOrderId: string;
       readonly pointMs: number;
       readonly atMs: number;
       readonly leadTimeS: number;
@@ -61,7 +75,12 @@ export type ConstraintLine =
       /** When broken, the seconds the row starts before its release. */
       readonly beforeByS?: number;
     })
-  | (Line<'lastPiece'> & { readonly fromRow: string; readonly atMs: number })
+  | (Line<'lastPiece'> & {
+      /** The latest-ending predecessor row, whose end the bound starts from (plan 07 rule 4). */
+      readonly fromRow: string;
+      readonly fromJobOrderId: string;
+      readonly atMs: number;
+    })
   | Line<'hardLock'>
   | (Line<'started'> & { readonly actualStartMs?: number })
   | (Line<'frozenWindow'> & { readonly atMs: number })
@@ -136,6 +155,7 @@ export function constraintsOf(
           : span.setupStartMs;
     const base = {
       fromRow: release.fromRow,
+      fromJobOrderId: release.fromJobOrderId,
       pointMs: release.pointMs,
       atMs: release.atMs,
       leadTimeS: operation.leadTimeS,
@@ -153,19 +173,23 @@ export function constraintsOf(
             beforeByS: (release.atMs - start) / 1000,
           },
     );
+    // The last-piece bound starts from the predecessor's latest end, which with a send-ahead
+    // quantity is not the row that sets the release.
     const minEndMs = lastPieceMinEnd(order, row, context);
-    if (minEndMs !== undefined) {
+    const latest =
+      pair === undefined ? undefined : latestEndingOf(rowsOfOperation(order, pair.predecessor));
+    if (minEndMs !== undefined && latest !== undefined) {
       const holds = span === undefined || span.endMs >= minEndMs;
+      const from = { fromRow: latest.displayNumber, fromJobOrderId: latest.id, atMs: minEndMs };
       lines.push(
         holds
-          ? { kind: 'lastPiece', holds: true, fromRow: release.fromRow, atMs: minEndMs }
+          ? { kind: 'lastPiece', holds: true, ...from }
           : {
               kind: 'lastPiece',
               holds: false,
               code: 'LAST_PIECE',
-              involves: [release.fromRow],
-              fromRow: release.fromRow,
-              atMs: minEndMs,
+              involves: [latest.displayNumber],
+              ...from,
             },
       );
     }

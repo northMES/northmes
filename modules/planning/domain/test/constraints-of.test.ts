@@ -48,6 +48,7 @@ describe('constraintsOf (plan 18, The constraint list of a row)', () => {
       kind: 'release',
       holds: true,
       fromRow: '1004.10',
+      fromJobOrderId: 'jo-1004-10',
       pointMs: thu(8, 15),
       atMs: thu(8, 45),
       leadTimeS: 1800,
@@ -57,6 +58,7 @@ describe('constraintsOf (plan 18, The constraint list of a row)', () => {
       kind: 'lastPiece',
       holds: true,
       fromRow: '1004.10',
+      fromJobOrderId: 'jo-1004-10',
       atMs: fri(7, 45, 20),
     });
     expect(lines[3]).toEqual({ kind: 'allowedMachines', holds: true, equipment: ['MILL1'] });
@@ -67,6 +69,49 @@ describe('constraintsOf (plan 18, The constraint list of a row)', () => {
       next: { row: '1006.10', setupStartMs: fri(12) },
     });
     expect(lines[5]).toEqual({ kind: 'calendar', holds: true, calendar: 'A1' });
+  });
+
+  it('with a split predecessor and a send-ahead, the release names the row that completes the quantity and the last piece the latest-ending row', () => {
+    // 1004.10 split: 600 on CNC1 from Thu 06:00 (ends 12:15, completes the 300 first) and 600 on
+    // CNC2 from Thu 08:45 (ends 14:15, the latest end); 1004.20 keeps its place.
+    const order = orderOf('1004');
+    const turn = rowOf(order, '1004.10');
+    const split: PlanOrder = {
+      ...order,
+      jobOrders: [
+        {
+          ...turn,
+          id: 'jo-1004-10a',
+          quantity: 600,
+          plannedRunS: 18_000,
+          placement: { setupStartMs: thu(5), runStartMs: thu(5, 30), endMs: thu(11, 15) },
+        },
+        {
+          ...turn,
+          id: 'jo-1004-10b',
+          quantity: 600,
+          plannedRunS: 18_000,
+          equipment: 'CNC2',
+          placement: { setupStartMs: thu(7, 45), runStartMs: thu(8, 15), endMs: thu(13, 15) },
+        },
+        rowOf(order, '1004.20'),
+      ],
+    };
+    const lines = constraintsOf(split, rowOf(split, '1004.20'), withOrder(split));
+
+    expect(lines.find((line) => line.kind === 'release')).toMatchObject({
+      fromRow: '1004.10',
+      fromJobOrderId: 'jo-1004-10a',
+      pointMs: thu(8, 15),
+    });
+    // The latest end Thu 14:15 plus 30 min of lead plus one 20 s cycle; 1004.20 ends Friday, so it holds.
+    expect(lines.find((line) => line.kind === 'lastPiece')).toEqual({
+      kind: 'lastPiece',
+      holds: true,
+      fromRow: '1004.10',
+      fromJobOrderId: 'jo-1004-10b',
+      atMs: thu(13, 45, 20),
+    });
   });
 
   it('a row dropped before its release names LEAD_TIME with the instant that clears it, on the hover summary too', () => {
@@ -94,6 +139,7 @@ describe('constraintsOf (plan 18, The constraint list of a row)', () => {
       code: 'LEAD_TIME',
       involves: ['1003.10'],
       fromRow: '1003.10',
+      fromJobOrderId: 'jo-1003-10',
       pointMs: Date.UTC(2026, 10, 4, 11, 45),
       atMs: Date.UTC(2026, 10, 4, 11, 45),
       leadTimeS: 0,

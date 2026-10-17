@@ -160,11 +160,16 @@ export function shiftBuckets(calendar: WorkingCalendar, fromMs: number, toMs: nu
   return clipped(buckets, fromMs, toMs);
 }
 
-/** The working segments of a placed row on its machine: its setup, then its run, as committed. */
+/**
+ * The working segments of a placed row on its machine: its setup, then its run, as committed,
+ * each capped at its planned seconds, so open time a calendar change added inside the span never
+ * inflates the load. `closedS` is the planned work the span no longer holds, anchored where the
+ * last laid segment ends, or at the setup start of a row with no open time at all.
+ */
 function partsOf(
   row: PlanJobOrder,
   windows: Windows,
-): { setup: Windows; run: Windows; closedS: number; endMs: number } | undefined {
+): { setup: Windows; run: Windows; closedS: number; anchorMs: number; laid: boolean } | undefined {
   const span = row.placement;
   if (span === undefined) return undefined;
   const planned = row.plannedSetupS + row.plannedRunS;
@@ -173,14 +178,27 @@ function partsOf(
   const run = addWork(
     windows,
     setup?.endMs ?? span.setupStartMs,
-    Math.max(0, laidWorkingS - row.plannedSetupS),
+    Math.min(row.plannedRunS, Math.max(0, laidWorkingS - row.plannedSetupS)),
   );
+  const segments = [...(setup?.segments ?? []), ...(run?.segments ?? [])];
+  const last = segments[segments.length - 1];
   return {
     setup: setup?.segments ?? [],
     run: run?.segments ?? [],
     closedS: Math.max(0, planned - laidWorkingS),
-    endMs: span.endMs,
+    anchorMs: last?.toMs ?? span.setupStartMs,
+    laid: last !== undefined,
   };
+}
+
+/**
+ * Whether a row's closed time belongs to a bucket: the end of its last laid segment lies in the
+ * bucket, an end on the bucket's own end included; a row with no open time counts by its start.
+ */
+function closedTimeIn(parts: { anchorMs: number; laid: boolean }, bucket: Bucket): boolean {
+  return parts.laid
+    ? parts.anchorMs > bucket.fromMs && parts.anchorMs <= bucket.toMs
+    : parts.anchorMs >= bucket.fromMs && parts.anchorMs < bucket.toMs;
 }
 
 /**
@@ -217,9 +235,7 @@ export function workload(context: PlanContext, buckets: readonly Bucket[]): Work
         if (parts === undefined) continue;
         const rowSetup = workBetween(parts.setup, bucket.fromMs, bucket.toMs);
         const rowRun = workBetween(parts.run, bucket.fromMs, bucket.toMs);
-        if (parts.closedS > 0 && parts.endMs >= bucket.fromMs && parts.endMs < bucket.toMs) {
-          closedS += parts.closedS;
-        }
+        if (parts.closedS > 0 && closedTimeIn(parts, bucket)) closedS += parts.closedS;
         setupS += rowSetup;
         runS += rowRun;
         if (rowSetup + rowRun > 0)
