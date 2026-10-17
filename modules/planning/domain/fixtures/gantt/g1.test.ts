@@ -27,6 +27,7 @@ const caseKeys = [
   'GT7_calendar_span_1006',
   'GT8_frozen_window',
   'GT9_deadline_rules',
+  'GT10_run_1001_1005',
 ] as const;
 
 const secondsBetween = (from: string, to: string): number =>
@@ -145,6 +146,75 @@ describe('fixture G1 (plan 18)', () => {
         expect(operation?.allowedEquipment).toContain(row.equipment);
         expect(data.equipment.map((machine) => machine.code)).toContain(row.equipment);
       }
+    }
+  });
+
+  it('GT10 lays the run of 1001 and 1005 with addWork from each moved setup start, directly after 1001.10 with no setup, and the run is due at the earliest deadline', () => {
+    const run = values.GT10_run_1001_1005;
+    const calendar = weeklyCalendar({ timeZone: data.plant.timeZone, ...data.calendar });
+    const horizon = availabilityOf(
+      calendar,
+      undefined,
+      Date.parse(data.now.instant),
+      Date.parse('2026-11-30T00:00:00Z'),
+    );
+    const orders = run.orders.map((number) => {
+      const order = data.productionOrders.find((each) => each.number === number);
+      expect(order, number).toBeDefined();
+      return order;
+    });
+    expect(new Set(orders.map((order) => order?.article)).size).toBe(1);
+    expect([...run.runOrder].sort()).toEqual([...run.orders].sort());
+    expect(Date.parse(run.deadline.instant)).toBe(
+      Math.min(...orders.map((order) => Date.parse(order?.deadlineInstant.instant ?? ''))),
+    );
+    for (const early of run.early) {
+      const order = data.productionOrders.find((each) => each.number === early.order);
+      expect(order?.deadlineInstant).toEqual(early.deadline);
+      expect(early.earlyByElapsedS).toBe(
+        secondsBetween(run.deadline.instant, early.deadline.instant),
+      );
+    }
+    for (const saved of run.savedSetups) {
+      const row = jobOrders.find((each) => each.productionOrderOperation === saved.jobOrder);
+      expect(row?.plannedSetupS, saved.jobOrder).toBe(saved.setupS);
+      const moved = run.moved[saved.jobOrder];
+      expect(moved?.setupS).toBe(0);
+      expect(moved?.equipment).toBe(saved.equipment);
+      expect(moved?.start.instant).toBe(values.placements[saved.after]?.end.instant);
+    }
+    for (const [displayNumber, moved] of Object.entries(run.moved)) {
+      const row = jobOrders.find((each) => each.productionOrderOperation === displayNumber);
+      expect(row, displayNumber).toBeDefined();
+      const laid = addWork(
+        horizon,
+        Date.parse(moved.start.instant),
+        moved.setupS + (row?.plannedRunS ?? 0),
+      );
+      expect(laid, displayNumber).toEqual({
+        startMs: Date.parse(moved.start.instant),
+        endMs: Date.parse(moved.end.instant),
+        segments: moved.segments.map(({ from, to }) => ({
+          fromMs: Date.parse(from),
+          toMs: Date.parse(to),
+        })),
+      });
+      const setup = addWork(horizon, Date.parse(moved.start.instant), moved.setupS);
+      expect(setup?.endMs, displayNumber).toBe(Date.parse(moved.runStart.instant));
+    }
+    const ends = Object.values(run.moved).map((moved) => Date.parse(moved.end.instant));
+    expect(Date.parse(run.runEnd.instant)).toBe(Math.max(...ends));
+    expect(run.late).toBe(Date.parse(run.runEnd.instant) > Date.parse(run.deadline.instant));
+    expect(run.lateByElapsedS).toBe(secondsBetween(run.deadline.instant, run.runEnd.instant));
+    for (const conflict of run.conflicts) {
+      if (conflict.kind !== 'OVERLAP') continue;
+      const [earlier, later] = conflict.rows;
+      const a = values.placements[earlier ?? ''] ?? run.moved[earlier ?? ''];
+      const b = run.moved[later ?? ''] ?? values.placements[later ?? ''];
+      expect(a, earlier).toBeDefined();
+      expect(b, later).toBeDefined();
+      expect(Date.parse(a?.start.instant ?? '')).toBeLessThan(Date.parse(b?.end.instant ?? ''));
+      expect(Date.parse(b?.start.instant ?? '')).toBeLessThan(Date.parse(a?.end.instant ?? ''));
     }
   });
 

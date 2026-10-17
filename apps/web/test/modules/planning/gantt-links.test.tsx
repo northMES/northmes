@@ -72,9 +72,10 @@ describe('the links of the order Gantt (plan 18, Blocks, links and the selection
         'jo-1001-10-jo-1001-20',
         'jo-1003-10-jo-1003-20',
         'jo-1004-10-jo-1004-20',
+        'jo-1005-10-jo-1005-20',
       ]),
     );
-    expect(linkIds(gantt)).toHaveLength(3);
+    expect(linkIds(gantt)).toHaveLength(4);
     const lead = gantt.querySelector('[data-link="jo-1001-10-jo-1001-20"] [data-lead]');
     expect(lead?.getAttribute('stroke-dasharray')).toBe('4 3');
     expect(gantt.querySelector('[data-link="jo-1003-10-jo-1003-20"] [data-lead]')).toBeNull();
@@ -88,7 +89,7 @@ describe('the links of the order Gantt (plan 18, Blocks, links and the selection
     await userEvent.click(within(gantt).getByRole('button', { name: 'Collapse order 1001' }));
 
     expect(linkIds(gantt)).not.toContain('jo-1001-10-jo-1001-20');
-    expect(linkIds(gantt)).toHaveLength(2);
+    expect(linkIds(gantt)).toHaveLength(3);
   });
 
   it('GT3 draws the link of a row that starts before its release in the conflict style and names it', async () => {

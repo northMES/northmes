@@ -211,14 +211,14 @@ describe('constraintsOf (plan 18, The constraint list of a row)', () => {
       fixedSeconds: 0,
     };
     const extra: PlanOrder = {
-      id: 'po-1005',
-      number: '1005',
+      id: 'po-1007',
+      number: '1007',
       deadlineMs: fri(14),
       priority: null,
       operations: [
         {
-          id: '1005.10',
-          displayNumber: '1005.10',
+          id: '1007.10',
+          displayNumber: '1007.10',
           sequence: 10,
           quantity: 60,
           rates,
@@ -230,9 +230,9 @@ describe('constraintsOf (plan 18, The constraint list of a row)', () => {
       ],
       jobOrders: [
         {
-          id: 'jo-1005-10',
-          operationId: '1005.10',
-          displayNumber: '1005.10',
+          id: 'jo-1007-10',
+          operationId: '1007.10',
+          displayNumber: '1007.10',
           equipment: 'CNC2',
           quantity: 60,
           status: 'planned',
@@ -246,7 +246,7 @@ describe('constraintsOf (plan 18, The constraint list of a row)', () => {
     const ctx = { ...context, orders: [...context.orders, extra] };
 
     expect(
-      constraintsOf(extra, rowOf(extra, '1005.10'), ctx).find(
+      constraintsOf(extra, rowOf(extra, '1007.10'), ctx).find(
         (line) => line.kind === 'oneJobAtATime',
       ),
     ).toEqual({
@@ -264,7 +264,7 @@ describe('constraintsOf (plan 18, The constraint list of a row)', () => {
     ).toMatchObject({
       holds: false,
       code: 'OVERLAP',
-      overlaps: '1005.10',
+      overlaps: '1007.10',
     });
   });
 
