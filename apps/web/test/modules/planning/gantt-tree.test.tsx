@@ -92,7 +92,10 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
         .map((cell) => cell.getAttribute('aria-label') ?? cell.textContent),
     ).toEqual(['Name', 'Deadline', 'Float', 'Time']);
     const order1003 = within(gantt).getByRole('row', { name: /^1003 / });
-    expect(within(order1003).getAllByRole('gridcell')[0]?.textContent).toBe('Wed 4 Nov 15:00');
+    // The zone label shows when the host's zone differs from the plant's, as on a CI runner in UTC.
+    expect(within(order1003).getAllByRole('gridcell')[0]?.textContent).toMatch(
+      /^Wed 4 Nov 15:00( CET)?$/,
+    );
 
     await userEvent.click(screen.getByRole('button', { name: 'Columns' }));
     await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Late by' }));

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Temporal } from 'temporal-polyfill';
 import { describe, expect, it } from 'vitest';
-import { g1, g1Expected } from '../../src/fixtures/gantt.ts';
+import { g1, g1Expected, timePoint } from '../../src/fixtures/gantt.ts';
 
 /**
  * The fixture G1 of docs/plan/18-gantt-timeline.md: a synthetic plant week that every Gantt

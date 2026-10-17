@@ -60,16 +60,15 @@ function stored(): GanttOptions {
 /** The options this browser kept, and a setter that keeps a change. */
 export function useGanttOptions(): [GanttOptions, (change: Partial<GanttOptions>) => void] {
   const [options, setOptions] = useState(stored);
+  // The write to storage stays outside the state updater, which React may run more than once.
   const change = (next: Partial<GanttOptions>) => {
-    setOptions((current) => {
-      const merged = { ...current, ...next };
-      try {
-        window.localStorage.setItem(storageKey, JSON.stringify(merged));
-      } catch {
-        // The choice holds until the page closes.
-      }
-      return merged;
-    });
+    const merged = { ...options, ...next };
+    setOptions(merged);
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(merged));
+    } catch {
+      // The choice holds until the page closes.
+    }
   };
   return [options, change];
 }
