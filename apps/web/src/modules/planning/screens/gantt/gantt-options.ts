@@ -14,6 +14,8 @@ export interface GanttOptions {
   readonly hiddenColumns: readonly string[];
   /** The workload panel under the time area. */
   readonly workload: boolean;
+  /** Cascade after a move (plan 18, Cascade rule 1): on by default, the choice stays local. */
+  readonly cascade: boolean;
 }
 
 const storageKey = 'northmes.planning.gantt.options';
@@ -38,6 +40,7 @@ export const defaultOptions: GanttOptions = {
   hideClosed: true,
   hiddenColumns: defaultHiddenColumns,
   workload: false,
+  cascade: true,
 };
 
 function stored(): GanttOptions {
@@ -51,6 +54,7 @@ function stored(): GanttOptions {
         ? options.hiddenColumns.filter((id): id is string => typeof id === 'string')
         : defaultHiddenColumns,
       workload: options.workload === true,
+      cascade: options.cascade !== false,
     };
   } catch {
     return defaultOptions;

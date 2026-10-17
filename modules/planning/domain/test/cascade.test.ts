@@ -203,6 +203,28 @@ describe('cascade (plan 18, Cascade)', () => {
     ]);
   });
 
+  it('a drop before the release whose working-time snap lands exactly on the release still reads as snapped to it', () => {
+    // 1003.10 placed Wed 10:30 to 15:00 releases 1003.20 at Wed 15:00, which is Thu 06:00 in
+    // working time; a drop at Wed 20:00 lands there by the calendar alone, and the reason says why.
+    const order = withRow(orderOf('1003'), '1003.10', {
+      setupStartMs: wed(9, 30),
+      runStartMs: wed(9, 30),
+      endMs: wed(14),
+    });
+    const result = cascade(
+      order,
+      { jobOrderId: 'jo-1003-20', setupStartMs: wed(19) },
+      withOrder(order),
+    );
+
+    expect(result.moves[0]).toMatchObject({
+      displayNumber: '1003.20',
+      to: { setupStartMs: thu(5) },
+      reason: 'snappedToRelease',
+      snappedTo: { fromRow: '1003.10', atMs: wed(14) },
+    });
+  });
+
   it('a drop in closed time snaps forward to the next working instant on the machine', () => {
     const result = cascade(
       orderOf('1006'),

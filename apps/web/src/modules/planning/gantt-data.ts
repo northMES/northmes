@@ -123,6 +123,10 @@ export interface GanttJobOrder {
   readonly plannedSetupS: number;
   readonly plannedRunS: number;
   readonly rates: GanttRates;
+  /** The actual start of a started row. */
+  readonly actualStartMs?: number;
+  /** Whether another planner's live soft lock holds the row (plan 07, Held). */
+  readonly held?: boolean;
 }
 
 export type OrderStatus = 'planned' | 'released';
@@ -154,6 +158,8 @@ export interface ConstraintLine {
   readonly code?: ConstraintCode;
   /** The other rows or orders a broken line involves, by display number or order number. */
   readonly involves?: readonly string[];
+  /** The instant that clears a broken release or last-piece line. */
+  readonly clearsAtMs?: number;
 }
 
 export interface JobOrderAnalysis {

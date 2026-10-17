@@ -134,6 +134,9 @@ function layFrom(row: PlanJobOrder, setupStartMs: number, windows: Windows): Job
 
 /** The setup start a row needs for its run to start at an instant: the retool laid backward. */
 function setupStartForRun(row: PlanJobOrder, runStartMs: number, windows: Windows): number {
+  // Without retool the setup starts with the run: zero work laid backward from the start of a
+  // window would land at the end of the window before it.
+  if (row.plannedSetupS <= 0) return runStartMs;
   return subtractWork(windows, runStartMs, row.plannedSetupS)?.startMs ?? runStartMs;
 }
 
@@ -275,8 +278,10 @@ export function cascade(
   let snappedTo: PlacedMove['snappedTo'];
   const ownRelease = releaseOf(order, movedOperation.id, context);
   if (cascadeOn && ownRelease !== undefined) {
+    // A drop before the release is a snap to it, also when the working-time snap of the calendar
+    // lands on the release by itself: the reason tells the planner why the row did not go earlier.
     const underRelease = startUnderRelease(moved, ownRelease, windows, context);
-    if (setupStartMs < underRelease) {
+    if (setupStartMs < underRelease || move.setupStartMs < underRelease) {
       setupStartMs = underRelease;
       reason = 'snappedToRelease';
       snappedTo = { fromRow: ownRelease.fromRow, atMs: ownRelease.atMs };
@@ -285,7 +290,10 @@ export function cascade(
     const laid = layFrom(moved, setupStartMs, windows);
     if (minEndMs !== undefined && laid !== null && laid.endMs < minEndMs) {
       const shifted = subtractWork(windows, minEndMs, moved.plannedSetupS + moved.plannedRunS);
-      if (shifted !== null && shifted.startMs > setupStartMs) {
+      if (
+        shifted !== null &&
+        (shifted.startMs > setupStartMs || shifted.startMs > move.setupStartMs)
+      ) {
         setupStartMs = shifted.startMs;
         reason = 'snappedToLastPiece';
         snappedTo = { fromRow: ownRelease.fromRow, atMs: shifted.startMs, minEndMs };

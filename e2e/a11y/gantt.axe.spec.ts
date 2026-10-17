@@ -5,8 +5,8 @@ import { expect, plant, test } from '../fixtures.ts';
 
 // The axe check of ADR 0021 over the states of the order Gantt (plan 18, Gates): populated, an
 // expanded order with its links, the chain highlight and the workload table. The Gantt reads the
-// fixture G1 in phase 1, so every state is the same in every run. Move mode and the 640 px tabs
-// come with the moves of phase 2.
+// fixture G1, so every state is the same in every run. Move mode, a row in the draft and the My
+// draft drawer are checked in e2e/planning/gantt-keyboard.spec.ts; the 640 px tabs are a later story.
 
 /** The Gantt page of the seed plant with its search. */
 function ganttHref(search: Record<string, string>): string {
