@@ -28,7 +28,25 @@ export function rowMarkers(
   const timeZone = snapshot.plant.timeZone;
   const fine = scale.zoom === 'hours' || scale.zoom === 'day';
   const markers: MarkerDescriptor[] = [];
-  if (row.kind === 'order') {
+  if (row.kind === 'run') {
+    const { run, analysis } = row;
+    markers.push({
+      kind: 'deadline',
+      atMs: run.deadlineMs,
+      rowId: row.id,
+      ...(fine && { label: formatPlantTime(run.deadlineMs, timeZone) }),
+      accessibleText: `deadline ${formatPlantDateTime(run.deadlineMs, timeZone)}`,
+    });
+    if (analysis.late && analysis.plannedEndMs !== undefined) {
+      markers.push({
+        kind: 'lateBand',
+        fromMs: run.deadlineMs,
+        toMs: analysis.plannedEndMs,
+        rowId: row.id,
+        accessibleText: `late by ${formatDuration(analysis.lateByS)}, ${formatSpan(run.deadlineMs, analysis.plannedEndMs, timeZone)}`,
+      });
+    }
+  } else if (row.kind === 'order') {
     const { order } = row;
     const analysis: OrderAnalysis | undefined = row.analysis;
     markers.push({
