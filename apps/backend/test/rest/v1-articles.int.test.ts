@@ -42,7 +42,7 @@ const articleRoutes = [
 /** A code no other test uses. */
 const code = () => `RA-${randomBytes(3).toString('hex')}`;
 
-describe('the public article routes without the credential guard', () => {
+describe("the public article routes with the server's credential guard", () => {
   const db = useTestDatabase();
   let testApp: TestApp | undefined;
   let url = '';

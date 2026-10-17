@@ -27,6 +27,11 @@ import { operationIdOf, PublicApiOperation } from './public-api-operation.ts';
 export interface PublicOperationCall {
   /** The operation's contract name, such as core.getArticle. */
   readonly operation: string;
+  /**
+   * The route's method: GET for a query, which counts as a read, and POST for a command, which
+   * counts as a write, as the host's rate limits count them (ADR 0073 section 6).
+   */
+  readonly method: 'GET' | 'POST';
   /** The input as the request carries it: the query and path parameters, or the body. */
   readonly input: unknown;
   /** The request's headers, from which the host's credential guard resolves its principal. */
@@ -98,7 +103,15 @@ function send(response: RouteResponse, status: number, contentType: string, body
   response.end(JSON.stringify(body));
 }
 
+/**
+ * Sends a problem. A 429 problem whose details hold retryAfterSeconds, such as the host's
+ * core.request.rate_limited, also sends it as the Retry-After header (RFC 9110).
+ */
 function sendProblem(response: RouteResponse, problem: Problem): void {
+  const retryAfter = problem.details?.retryAfterSeconds;
+  if (problem.status === 429 && typeof retryAfter === 'number') {
+    response.setHeader('retry-after', String(retryAfter));
+  }
   send(response, problem.status, PROBLEM_CONTENT_TYPE, problem);
 }
 
@@ -300,6 +313,7 @@ export function toRestRoutes(declarations: readonly OperationsDeclaration[]): Ty
         const input = method === 'GET' ? queryInput(operation, request) : request.body;
         result = await this.runner.run({
           operation: operation.contract.name,
+          method,
           input,
           headers: headersOf(request),
           plant,

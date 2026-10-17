@@ -44,7 +44,8 @@ const publicApiTokens = new Map<string, { readonly userId: string; readonly comp
 /**
  * Hands out a test credential of the public API for a user that a test wrote, such as one from
  * givenUser, belonging to the company `companyId`, and returns its Authorization header. Only an app
- * of hostFactoryWithPublicApi accepts it, until the integration tokens of ADR 0073 arrive.
+ * of hostFactoryWithPublicApi accepts it. A test of the server's own credential guard uses a real
+ * integration token from givenIntegrationToken instead.
  */
 export function givenPublicApiToken({
   userId,
@@ -82,7 +83,8 @@ class TestPublicApiCredentials extends PublicApiCredentials {
 
 /**
  * The host factory of hostFactory, whose public API accepts the test credentials of
- * givenPublicApiToken in place of the integration tokens that do not exist yet.
+ * givenPublicApiToken in place of integration tokens, so a route test sets its principal's
+ * permissions directly.
  */
 export const hostFactoryWithPublicApi: HostFactory = createHostFactory(
   builtShellDir,
@@ -142,8 +144,8 @@ export async function migratePlugins(
 /**
  * Builds the app of hostFactory and serves the web app as boot does: the one apps/web builds, or
  * the one in shellDir when it is given. `plugins` load after the in-repo modules, and
- * `publicApiCredentials` is the public API's credential guard, which refuses every request without
- * it.
+ * `publicApiCredentials` is the public API's credential guard, the server's
+ * BearerPublicApiCredentials without it.
  */
 function createHostFactory(
   shellDir = builtShellDir,
@@ -611,4 +613,119 @@ export async function signInAt(
   const plantSlug = slug ?? (await givenCompany(ownerUrl, { plantIds: [plant] })).slugs[0] ?? '';
   const { authorization } = await signIn(app, ownerUrl, [{ scopeId: plant, permissions }]);
   return { authorization, [PLANT_HEADER]: plantSlug };
+}
+
+/** An integration token that givenIntegrationToken created through core.createIntegrationToken. */
+export interface GivenIntegrationToken {
+  /** The id of its core.credential row. */
+  readonly id: string;
+  /** The secret, which only the answer of core.createIntegrationToken holds. */
+  readonly secret: string;
+  /** The Authorization header of a public API request with the token: Bearer and the secret. */
+  readonly authorization: string;
+  /** Revokes the token through core.revokeIntegrationToken, as the Company admin who created it. */
+  revoke(): Promise<void>;
+}
+
+export interface GivenIntegrationTokenOptions {
+  /** The company the token belongs to, such as one from givenCompany. */
+  readonly companyId: string;
+  /** The company node or one plant node of the company, where the token holds its role. */
+  readonly scopeId: string;
+  /** The permissions of the token's one role, a custom role of the company that this writes. */
+  readonly permissions: readonly string[];
+  /** The days until the token expires; without it, core.createIntegrationToken's default. */
+  readonly expiresInDays?: number;
+}
+
+/** Sends one GraphQL document to the app as `authorization` and throws on any error. */
+async function graphqlAs<Data>(
+  app: INestApplication,
+  authorization: string,
+  document: string,
+  variables: Record<string, unknown>,
+): Promise<Data> {
+  const response = await fetch(`${await app.getUrl()}/graphql`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization },
+    body: JSON.stringify({ query: document, variables }),
+  });
+  const answer = (await response.json()) as { data?: Data | null; errors?: unknown[] };
+  if (answer.errors || !answer.data) {
+    throw new Error(`graphqlAs: the answer has errors: ${JSON.stringify(answer.errors)}`);
+  }
+  return answer.data;
+}
+
+/**
+ * Creates an integration token the way a Company admin does under Settings, Integrations (ADR
+ * 0073): it writes a custom role of the company with `permissions`, signs in a user with core's
+ * Company admin role at the company, a member of the company's Better Auth organization, and calls
+ * coreCreateIntegrationToken in company settings with the token bound to `scopeId`. The app must
+ * listen.
+ */
+export async function givenIntegrationToken(
+  app: INestApplication,
+  ownerUrl: string,
+  { companyId, scopeId, permissions, expiresInDays }: GivenIntegrationTokenOptions,
+): Promise<GivenIntegrationToken> {
+  const { roleId, adminRoleId, organizationId } = await asCoreOwner(ownerUrl, async (client) => {
+    const key = `test-${randomBytes(6).toString('hex')}`;
+    const role = await client.query<{ id: string }>(
+      `insert into core.role (company_id, key, name, permissions, origin)
+       values ($1, $2, $2, $3, 'custom') returning id`,
+      [companyId, key, permissions],
+    );
+    const admin = await client.query<{ id: string }>(
+      `select id from core.role where company_id = $1 and key = 'core-company-admin'`,
+      [companyId],
+    );
+    const company = await client.query<{ organization_id: string }>(
+      'select organization_id from core.company where id = $1',
+      [companyId],
+    );
+    return {
+      roleId: role.rows[0]?.id ?? '',
+      adminRoleId: admin.rows[0]?.id ?? '',
+      organizationId: company.rows[0]?.organization_id ?? '',
+    };
+  });
+  const { userId, authorization } = await signIn(app, ownerUrl, []);
+  await givenAssignment(ownerUrl, { userId, roleId: adminRoleId, scopeId: companyId });
+  await app.get(AuthService).addToOrganization(userId, organizationId);
+  const { coreCreateIntegrationToken: created } = await graphqlAs<{
+    coreCreateIntegrationToken: { secret: string; token: { id: string; version: number } };
+  }>(
+    app,
+    authorization,
+    `mutation ($input: CoreCreateIntegrationTokenInput!) {
+      coreCreateIntegrationToken(input: $input) { secret token { id version } }
+    }`,
+    {
+      input: {
+        id: randomUUIDv7(),
+        companyId,
+        name: `Test token ${randomBytes(3).toString('hex')}`,
+        scopeId,
+        roleIds: [roleId],
+        ...(expiresInDays === undefined ? {} : { expiresInDays }),
+      },
+    },
+  );
+  const { secret, token } = created;
+  return {
+    id: token.id,
+    secret,
+    authorization: `Bearer ${secret}`,
+    revoke: async () => {
+      await graphqlAs(
+        app,
+        authorization,
+        `mutation ($input: CoreRevokeIntegrationTokenInput!) {
+          coreRevokeIntegrationToken(input: $input) { id }
+        }`,
+        { input: { id: token.id, expectedVersion: token.version } },
+      );
+    },
+  };
 }

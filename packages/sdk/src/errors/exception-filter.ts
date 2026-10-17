@@ -14,6 +14,7 @@ const graphqlCodes: Readonly<Record<DomainErrorStatus, string>> = {
   [HttpStatus.NOT_FOUND]: 'NOT_FOUND',
   [HttpStatus.CONFLICT]: 'CONFLICT',
   [HttpStatus.PRECONDITION_FAILED]: 'PRECONDITION',
+  [HttpStatus.TOO_MANY_REQUESTS]: 'RATE_LIMITED',
   [HttpStatus.SERVICE_UNAVAILABLE]: 'UNAVAILABLE',
 };
 

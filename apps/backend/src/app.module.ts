@@ -41,9 +41,9 @@ export interface AppOptions {
   /** The origins of the web app, webOrigins in northmes.config.json. It defaults to none. */
   readonly webOrigins?: readonly string[];
   /**
-   * The credential guard of the public REST family (ADR 0073). The server passes none, so its
-   * public routes refuse every request until the integration token guard lands; tests pass one
-   * that maps their own tokens to principals.
+   * The credential guard of the public REST family (ADR 0073). The server passes none and gets
+   * BearerPublicApiCredentials, which verifies integration tokens; tests may pass one that maps
+   * their own tokens to principals.
    */
   readonly publicApiCredentials?: Type<PublicApiCredentials>;
 }
