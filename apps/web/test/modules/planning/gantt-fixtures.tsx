@@ -14,22 +14,27 @@ import { companies, fakeApi, viewer } from '../../settings-fixtures.tsx';
 /** The seed plant the specs work in. */
 export const plant = 'plant-a';
 
-/** The board href of the plant with a search, such as "?view=gantt&zoom=week". */
-export function boardHref(search: Record<string, string | number>): string {
+/** A planning href of the plant with a search, such as the Gantt page with "?zoom=week". */
+export function planningHref(
+  page: 'board' | 'gantt',
+  search: Record<string, string | number>,
+): string {
   const query = new URLSearchParams(
     Object.entries(search).map(([key, value]) => [key, String(value)]),
   ).toString();
-  return `${planningLinks.board({ plant }).href}${query === '' ? '' : `?${query}`}`;
+  return `${planningLinks[page]({ plant }).href}${query === '' ? '' : `?${query}`}`;
 }
 
 /**
- * Renders the shell at a board URL for a signed-in planner, with a fake API that answers the
- * shell's queries and the board stub's with no orders, and returns the router, whose location the
- * tests read for the view state. The Gantt reads the fixture G1 unless a source is given.
+ * Renders the shell at a planning URL for a signed-in planner, the Gantt page unless another is
+ * named, with a fake API that answers the shell's queries and the board stub's with no orders, and
+ * returns the router, whose location the tests read for the view state. The Gantt reads the
+ * fixture G1 unless a source is given.
  */
-export function renderBoardRoute(
+export function renderGanttRoute(
   search: Record<string, string | number>,
   source?: GanttDataSource,
+  page: 'board' | 'gantt' = 'gantt',
 ) {
   const { fetch } = fakeApi({
     CoreCompanies: companies,
@@ -39,7 +44,7 @@ export function renderBoardRoute(
   const router = createShellRouter(shellModules, {
     session: fakeSession(),
     fetch,
-    history: createMemoryHistory({ initialEntries: [boardHref(search)] }),
+    history: createMemoryHistory({ initialEntries: [planningHref(page, search)] }),
   });
   render(
     <GanttSourceProvider value={source ?? g1DataSource}>

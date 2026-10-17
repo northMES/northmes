@@ -14,11 +14,42 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
-import { PressedGroup, ViewSwitch } from '../../components/view-switch/index.ts';
 import type { ZoomPreset } from '../../gantt-data.ts';
 import { zoomPresetIds, zoomPresets } from '../../timeline/time-scale.ts';
 import type { GanttOptions } from './gantt-options.ts';
 import { ganttColumnChoices } from './gantt-tree-pane.tsx';
+
+/** A group of pressed buttons, one pressed: the Zoom group of D3 and D5. */
+function PressedGroup<TValue extends string>({
+  label,
+  choices,
+  value,
+  onChange,
+}: {
+  readonly label: string;
+  readonly choices: readonly { readonly id: TValue; readonly label: string }[];
+  readonly value: TValue;
+  readonly onChange: (value: TValue) => void;
+}) {
+  return (
+    <fieldset aria-label={label} className="flex rounded-lg bg-muted p-0.5">
+      {choices.map((choice) => (
+        <Button
+          key={choice.id}
+          variant="ghost"
+          aria-pressed={choice.id === value}
+          onClick={() => onChange(choice.id)}
+          className={cn(
+            'h-7 px-2.5',
+            choice.id === value && 'bg-card shadow-[inset_0_-2px_0_var(--foreground)]',
+          )}
+        >
+          {choice.label}
+        </Button>
+      ))}
+    </fieldset>
+  );
+}
 
 export interface GanttToolbarProps {
   readonly zoom: ZoomPreset;
@@ -34,9 +65,9 @@ export interface GanttToolbarProps {
 }
 
 /**
- * The Gantt toolbar of D5: the View and Zoom groups, Earlier, Now and Later, Go to date, the range,
- * the Hide closed time toggle, Columns and Board options. Zoom, from and the view go to the URL;
- * the toggle, the columns and the options stay local.
+ * The Gantt toolbar of D5: the Zoom group, Earlier, Now and Later, Go to date, the range, the
+ * Hide closed time toggle, Columns and Board options. Zoom and from go to the URL; the toggle, the
+ * columns and the options stay local.
  */
 export function GanttToolbar({
   zoom,
@@ -53,7 +84,6 @@ export function GanttToolbar({
   const dateId = useId();
   return (
     <div role="toolbar" aria-label="Gantt" className="flex flex-wrap items-center gap-2">
-      <ViewSwitch />
       <PressedGroup
         label="Zoom"
         choices={zoomPresetIds.map((id) => ({ id, label: zoomPresets[id].label }))}

@@ -9,7 +9,7 @@ import {
   findDetails,
   findGantt,
   markerTexts,
-  renderBoardRoute,
+  renderGanttRoute,
 } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
@@ -18,8 +18,7 @@ const spoken = () => document.getElementById(politeRegionId)?.textContent;
 
 describe('the critical chain highlight (plan 18, Float and the critical chain)', () => {
   it('GT2 ?order=po-1003&chain=1 highlights the three chain rows, ticks their latest start and end, and announces it', async () => {
-    renderBoardRoute({
-      view: 'gantt',
+    renderGanttRoute({
       zoom: 'week',
       from: '2026-11-02',
       order: 'po-1003',
@@ -54,7 +53,7 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
   });
 
   it('GT2 Show critical chain on order 1003 explains the chain with the text of the spec, each row a link', async () => {
-    const router = renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     await userEvent.click(
@@ -65,7 +64,6 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
 
     await waitFor(() => {
       expect(router.state.location.search).toEqual({
-        view: 'gantt',
         zoom: 'week',
         from: '2026-11-02',
         order: 'po-1003',
@@ -103,8 +101,7 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
   });
 
   it('GT2 Escape ends the chain highlight and announces it', async () => {
-    const router = renderBoardRoute({
-      view: 'gantt',
+    const router = renderGanttRoute({
       zoom: 'week',
       from: '2026-11-02',
       order: 'po-1003',
@@ -123,7 +120,6 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
 
     await waitFor(() => {
       expect(router.state.location.search).toEqual({
-        view: 'gantt',
         zoom: 'week',
         from: '2026-11-02',
         order: 'po-1003',
@@ -138,8 +134,7 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
   });
 
   it('GT1 the chain of an on-time order says why it lies where it lies', async () => {
-    renderBoardRoute({
-      view: 'gantt',
+    renderGanttRoute({
       zoom: 'week',
       from: '2026-11-02',
       order: 'po-1001',

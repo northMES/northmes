@@ -8,9 +8,9 @@ import { PageFrame, type PageState } from '../../../../ui/components/page-frame/
 import { announce } from '../../../../ui/lib/announce.ts';
 import type { GanttDataSource, GanttSnapshot } from '../../gantt-data.ts';
 import {
-  type BoardSearch,
-  boardSearch,
   droppedKeyMessage,
+  type GanttSearch,
+  ganttSearch,
   withChain,
   withFrom,
   withOrder,
@@ -67,8 +67,16 @@ const treePaneShare = 0.4;
 /** The width the view assumes before it has measured itself, as in a test. */
 const assumedWidth = 1100;
 
-/** The space the page leaves under the grid: main's bottom padding. */
-const bottomGapPx = 24;
+/** The least height the grid keeps, in rem: a few rows under the header and the Not placed row. */
+const minFillRem = 15;
+
+/** The space the page leaves under the grid: the bottom padding of the main area it sits in. */
+function bottomGapOf(node: HTMLElement): number {
+  const main = node.closest('main');
+  const padding =
+    main === null ? Number.NaN : Number.parseFloat(getComputedStyle(main).paddingBottom);
+  return Number.isFinite(padding) ? padding : 0;
+}
 
 /**
  * The height that fills the viewport from an element's top (plan 18, phase 1 findings): the grid
@@ -76,7 +84,6 @@ const bottomGapPx = 24;
  * time header. Measured again when the window resizes.
  */
 function useViewportFill(
-  gapPx: number,
   layoutKey: string,
 ): [number | undefined, (node: HTMLElement | null) => void] {
   const [height, setHeight] = useState<number | undefined>(undefined);
@@ -86,8 +93,8 @@ function useViewportFill(
     const node = element.current;
     if (node === null || typeof window === 'undefined') return;
     const top = node.getBoundingClientRect().top + window.scrollY;
-    setHeight(Math.max(240, window.innerHeight - top - gapPx));
-  }, [gapPx]);
+    setHeight(Math.max(minFillRem * remPx(), window.innerHeight - top - bottomGapOf(node)));
+  }, []);
   const ref = useCallback(
     (node: HTMLElement | null) => {
       element.current = node;
@@ -150,10 +157,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const fromContext = useGanttSource();
   const source = given ?? fromContext;
   const { plant } = useShell();
-  const search = boardSearch(useSearch({ strict: false }));
+  const search = ganttSearch(useSearch({ strict: false }));
   const navigate = useNavigate();
   const setSearch = useCallback(
-    (next: BoardSearch) =>
+    (next: GanttSearch) =>
       navigate({ to: '.', search: next as Record<string, unknown>, replace: true }),
     [navigate],
   );
@@ -171,7 +178,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const [width, gridRef] = useMeasuredWidth();
   const zoom = search.zoom ?? defaultZoom;
   const [fillHeight, fillRef] = useViewportFill(
-    bottomGapPx,
     `${zoom}|${search.from ?? ''}|${options.hideClosed}|${options.workload}`,
   );
 
@@ -416,6 +422,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   };
   const drawerFinalFocus = () => {
     const rowId = returnRowId.current ?? detailRowId;
+    returnRowId.current = undefined;
     if (rowId === undefined) return null;
     setFocusedRowId(rowId);
     return document.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`);
@@ -491,7 +498,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
 
   return (
     <PageFrame
-      title="Planning board"
+      title="Gantt"
       state={state}
       toolbar={
         <GanttToolbar

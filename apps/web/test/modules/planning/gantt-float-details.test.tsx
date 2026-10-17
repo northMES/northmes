@@ -5,7 +5,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GanttDataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { detailsOpen, findDetails, findGantt, renderBoardRoute } from './gantt-fixtures.tsx';
+import { detailsOpen, findDetails, findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -23,7 +23,7 @@ function floatCellOf(gantt: HTMLElement, blockId: string): HTMLElement {
 
 describe('the Float column and Details from the analysis (plan 18, What the timeline shows)', () => {
   it('GT1 shows the free float of 1001.20 as "15 min"', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     expect(floatCellOf(gantt, 'jo-1001-20').textContent).toBe('15 min');
@@ -32,7 +32,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
   });
 
   it('GT2 shows 1003.10 as "0" with the chain glyph and its negative total float "minus 15 min"', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     const cell = floatCellOf(gantt, 'jo-1003-10');
@@ -44,7 +44,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
   });
 
   it('GT4 opens Details on a clicked row with the constraint list of 1004.20, each line holding', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     await userEvent.click(gantt.querySelector('[data-block="jo-1004-20"]') as HTMLElement);
@@ -70,7 +70,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
   });
 
   it('GT1 shows the Float section of 1001.20 with wait, free and total float and the binding constraint', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     await userEvent.click(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
@@ -85,7 +85,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
   });
 
   it('phase 1 draws the fields and the actions of Details disabled with the reason', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     await userEvent.click(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
@@ -109,7 +109,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
   });
 
   it('shows the order details with deadline, slack or late-by and the operations', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     await userEvent.click(
@@ -139,7 +139,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
             };
       },
     };
-    const router = renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' }, source);
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, source);
     const gantt = await findGantt();
     await userEvent.click(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
     await findDetails();

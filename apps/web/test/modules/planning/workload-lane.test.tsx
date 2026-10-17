@@ -6,7 +6,7 @@ import { cleanup, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { findGantt, renderBoardRoute, sourceOf } from './gantt-fixtures.tsx';
+import { findGantt, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -39,7 +39,7 @@ function expectedRows(equipment: string): string[][] {
 
 describe('the workload lane (plan 18, The workload lane)', () => {
   it('GT5 shows a lane per machine, aria-hidden, under the time area when the option is on', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     await findGantt();
 
     const panel = screen.getByRole('region', { name: 'Workload' });
@@ -53,7 +53,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
   });
 
   it('GT5 draws the bar of Thu 5 Nov on CNC1 at full height, the setup part hatched', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     await findGantt();
 
     const lane = screen
@@ -90,7 +90,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
         ),
       },
     };
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' }, sourceOf(overloaded));
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(overloaded));
     await findGantt();
 
     const lane = screen
@@ -111,7 +111,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
   });
 
   it("GT5 opening a second lane's table mounts it anew and moves focus to it", async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     await findGantt();
 
     await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 1' }));
@@ -127,7 +127,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
   });
 
   it('GT5 the lane header button opens the text table with every value, which equals GT5', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     await findGantt();
 
     const button = screen.getByRole('button', { name: 'Workload on CNC 1' });

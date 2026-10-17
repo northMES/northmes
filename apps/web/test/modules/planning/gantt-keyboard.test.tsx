@@ -9,7 +9,7 @@ import {
   detailsOpen,
   findDetails,
   findGantt,
-  renderBoardRoute,
+  renderGanttRoute,
   sourceOf,
 } from './gantt-fixtures.tsx';
 
@@ -46,7 +46,7 @@ function rowOf(gantt: HTMLElement, id: string): HTMLElement {
 
 describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () => {
   it('ADR0021 one row holds the tab stop; Up and Down move between rows, Home and End to the first and last', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     const rows = within(gantt)
@@ -77,7 +77,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
   });
 
   it('ADR0021 Left collapses an expanded row, Right expands it, Left on a leaf row goes to its parent', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     rowOf(gantt, 'po-1003').focus();
@@ -96,7 +96,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
   });
 
   it('ADR0021 Right on an expanded row moves into its time cell and Left comes back to the row', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     rowOf(gantt, 'po-1001').focus();
@@ -116,7 +116,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
   });
 
   it('ADR0021 Right on an unplaced job order row lands on its time cell, named "not placed"', async () => {
-    renderBoardRoute(
+    renderGanttRoute(
       { view: 'gantt', zoom: 'week', from: '2026-11-02' },
       sourceOf(withUnplaced1006()),
     );
@@ -136,7 +136,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
   });
 
   it('ADR0021 Enter opens Details of the row and selects its order', async () => {
-    const router = renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     rowOf(gantt, 'jo-1001-20').focus();
@@ -162,7 +162,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
   });
 
   it('ADR0021 the close button of the Details drawer closes it and returns focus to the row', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     await userEvent.click(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
@@ -180,8 +180,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
   });
 
   it('ADR0021 Escape closes the Details that a chain link opened, then ends the chain highlight', async () => {
-    const router = renderBoardRoute({
-      view: 'gantt',
+    const router = renderGanttRoute({
       zoom: 'week',
       from: '2026-11-02',
       order: 'po-1003',
@@ -207,7 +206,6 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
 
     await waitFor(() => {
       expect(router.state.location.search).toEqual({
-        view: 'gantt',
         zoom: 'week',
         from: '2026-11-02',
         order: 'po-1003',
