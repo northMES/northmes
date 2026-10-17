@@ -61,3 +61,13 @@ describe('agent skills', () => {
     ]);
   });
 });
+
+describe('operating session run checklist', () => {
+  it("ADR0079 step 7 compares the design artifact's current version with the approved version id", () => {
+    const readme = readFileSync(join(root, 'docs/agents/handoff/README.md'), 'utf8');
+    const step = readme.split('\n').find((line) => line.startsWith('7. ')) ?? '';
+
+    expect(step).toContain('design artifact');
+    expect(step).toContain('compares its current version with the approved version id');
+  });
+});
