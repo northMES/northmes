@@ -30,6 +30,7 @@
     "@nestjs/platform-express": "catalog:",
     "@nestjs/swagger": "catalog:",
     "@nestjs/terminus": "catalog:",
+    "@nestjs/throttler": "catalog:",
     "@northmes/contracts": "workspace:*",
     "@northmes/core-contracts": "workspace:*",
     "@northmes/planning-contracts": "workspace:*",
