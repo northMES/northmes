@@ -46,6 +46,14 @@ export {
 } from './fixtures/gantt.ts';
 export { g1HorizonEndMs, g1OrderId, g1PlanContext } from './fixtures/gantt-context.ts';
 export {
+  type BindingConstraint,
+  type BindingConstraintKind,
+  type FloatResult,
+  floatOf,
+  lastRowOf,
+  type RowFloat,
+} from './float.ts';
+export {
   availabilityOn,
   compareCodeUnits,
   compareRows,

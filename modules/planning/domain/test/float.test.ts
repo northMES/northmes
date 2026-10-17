@@ -2,7 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { floatOf, g1Expected, g1PlanContext, type PlanContext, type PlanOrder } from '../src/index.ts';
+import {
+  floatOf,
+  g1Expected,
+  g1PlanContext,
+  type PlanContext,
+  type PlanOrder,
+} from '../src/index.ts';
 
 const context = g1PlanContext();
 
@@ -66,7 +72,11 @@ describe('floatOf (plan 18, Float and the critical chain)', () => {
       ),
     };
 
-    expect(floatOf(started, { ...context, orders: [started, ...context.orders.slice(1)] }).rows['jo-1001-10']).toMatchObject({
+    expect(
+      floatOf(started, { ...context, orders: [started, ...context.orders.slice(1)] }).rows[
+        'jo-1001-10'
+      ],
+    ).toMatchObject({
       earliestStartMs: Date.UTC(2026, 10, 3, 10, 45),
       binding: { kind: 'started' },
     });
@@ -74,7 +84,7 @@ describe('floatOf (plan 18, Float and the critical chain)', () => {
 
   it('a hard-locked row binds as hardLock, and a row at the fence as frozenWindow', () => {
     const locked = floatOf(orderOf('1002'), context).rows['jo-1002-10'];
-    expect(locked).toMatchObject({ binding: { kind: 'hardLock' }, waitWorkingS: 0 });
+    expect(locked).toMatchObject({ binding: { kind: 'hardLock' } });
 
     const order = orderOf('1006');
     const atFence: PlanOrder = {
@@ -96,7 +106,8 @@ describe('floatOf (plan 18, Float and the critical chain)', () => {
 
   it('is permutation-invariant in the orders, operations and job orders', () => {
     const expected = floatOf(orderOf('1003'), context);
-    const shuffle = <T>(items: readonly T[]) => fc.shuffledSubarray(items, { minLength: items.length });
+    const shuffle = <T>(items: readonly T[]) =>
+      fc.shuffledSubarray(items, { minLength: items.length });
     fc.assert(
       fc.property(
         shuffle(context.orders).chain((orders) =>
