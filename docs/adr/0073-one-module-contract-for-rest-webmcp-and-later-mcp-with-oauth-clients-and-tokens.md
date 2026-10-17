@@ -1,6 +1,6 @@
 ---
 status: "accepted"
-date: 2026-10-09
+date: 2026-10-16
 decision-makers: Krister Johansson
 consulted: Krister Johansson; the WebMCP draft of the W3C Web Machine Learning Community Group; the MCP authorization specification; Better Auth's OAuth provider and api-key documentation
 informed: contributors, coding agents, module and plugin authors, pilot IT
@@ -289,12 +289,12 @@ NorthMES runs one OAuth 2.1 authorization server on Better Auth's OAuth provider
 
 #### Credentials by surface
 
-Every bearer credential arrives in `Authorization: Bearer`. The guard reads the prefix: `nms_int_` and `nms_pat_` are verified as api-keys of their `configId`, anything else as a JWT, by its `aud`.
+Every bearer credential arrives in `Authorization: Bearer`. The guard reads the prefix: `nms_int_` (and `nms_pat_`, once personal access tokens come after release 1) is verified as an api-key of its `configId`, anything else as a JWT, by its `aud`.
 
 | Surface | Accepts | Rejects |
 |---|---|---|
 | `/graphql`, `/api/v1/web/*` (including `/api/v1/web/tools/{tool}`) | the web's JWT (`aud` the public origin, with `sid`, without `azp` or `client_id`); the station cookie as [ADR 0011][adr-0011] says | integration tokens, personal access tokens and OAuth access tokens |
-| Public REST, `/api/v1/<module-id>/...` | integration tokens; personal access tokens; OAuth access tokens with `aud` `.../api/v1` | the web's JWT, and cookies, which it ignores |
+| Public REST, `/api/v1/<module-id>/...` | integration tokens; OAuth access tokens with `aud` `.../api/v1`; personal access tokens after release 1 | the web's JWT, and cookies, which it ignores |
 | `GET /api/v1/openapi.json` | the web's JWT, and every credential the public REST row accepts | anonymous requests |
 | Better Auth's routes, including `/oauth2/authorize`, `/oauth2/token`, `/oauth2/revoke` and `/jwks` | as Better Auth defines them; the web's bearer session only at `/api/auth/token` and on the consent continuation | the api-key, admin and registration HTTP paths, which stay in `disabledPaths` |
 | `/.well-known/oauth-authorization-server` | anonymous; metadata only | |
