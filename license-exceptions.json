@@ -1,0 +1,35 @@
+{
+  "$comment": "Reviewed exceptions of the license gate (scripts/license-gate.mjs, docs/adr/0040-dependency-license-policy-ci-gate-and-sbom.md). Each entry holds for one class and the license the package declares, and names either name@version or, for an SPDX license whose terms do not change between versions, the package name.",
+  "exceptions": [
+    {
+      "package": "react-doctor@0.9.14",
+      "class": "dev",
+      "license": "SEE LICENSE IN LICENSE",
+      "reason": "ADR 0040's reviewed exception: the MIT text plus two uses that need the copyright holder's written permission, read for 0.9.14 on 2026-10-08. Only the private root package takes it, as a dev dependency, and CI / react doctor runs it with --no-telemetry; it never ships."
+    },
+    {
+      "package": "oxlint-plugin-react-doctor@0.9.14",
+      "class": "dev",
+      "license": "SEE LICENSE IN LICENSE",
+      "reason": "ADR 0040's reviewed exception: ships the same license text as react-doctor 0.9.14, read on 2026-10-08, and comes in only as react-doctor's dependency in the dev tree; it never ships."
+    },
+    {
+      "package": "caniuse-lite",
+      "class": "dev",
+      "license": "CC-BY-4.0",
+      "reason": "Recorded note: browser support data under CC-BY-4.0, which is not OSI-approved because it is a data license. It comes in through browserslist in the dev tree of the build tools only, and ADR 0040 allows CC-BY-4.0 for data even in core."
+    },
+    {
+      "package": "@fontsource/ibm-plex-sans",
+      "class": "core",
+      "license": "OFL-1.1",
+      "reason": "The IBM Plex Sans font files ship unmodified in the web app's bundle. OFL-1.1 allows bundling and redistributing fonts with any software as long as the fonts are not sold by themselves and keep their notice, and it puts no terms on the code they ship with. ADR 0040's core table does not list OFL-1.1; Krister Johansson confirmed this exception on 2026-10-16 (#643)."
+    },
+    {
+      "package": "@fontsource/ibm-plex-mono",
+      "class": "core",
+      "license": "OFL-1.1",
+      "reason": "The IBM Plex Mono font files ship unmodified in the web app's bundle. OFL-1.1 allows bundling and redistributing fonts with any software as long as the fonts are not sold by themselves and keep their notice, and it puts no terms on the code they ship with. ADR 0040's core table does not list OFL-1.1; Krister Johansson confirmed this exception on 2026-10-16 (#643)."
+    }
+  ]
+}

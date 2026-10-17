@@ -1,0 +1,73 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "northmes",
+      "version": "0.1.0",
+      "purl": "pkg:npm/northmes@0.1.0",
+      "bom-ref": "pkg:npm/northmes@0.1.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "node",
+      "version": "10.0.0",
+      "purl": "pkg:npm/%40sentry/node@10.0.0",
+      "bom-ref": "pkg:npm/%40sentry/node@10.0.0",
+      "group": "@sentry",
+      "scope": "excluded",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "exceljs",
+      "version": "4.4.0",
+      "purl": "pkg:npm/exceljs@4.4.0",
+      "bom-ref": "pkg:npm/exceljs@4.4.0",
+      "scope": "excluded",
+      "properties": [
+        {
+          "name": "cdx:npm:package:development",
+          "value": "true"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/northmes@0.1.0",
+      "dependsOn": ["pkg:npm/%40sentry/node@10.0.0", "pkg:npm/exceljs@4.4.0"]
+    }
+  ]
+}
