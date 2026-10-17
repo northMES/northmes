@@ -3,7 +3,15 @@
 import { useShell } from '@northmes/web-sdk';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import type { ExpandedState } from '@tanstack/react-table';
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import type { GanttDataSource, GanttSnapshot } from '../../gantt-data.ts';
@@ -33,6 +41,7 @@ import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
   type ClosedWindow,
   createTimeScale,
+  extendedRange,
   naturalWidthPx,
   plantDateOf,
   rangeLabel,
@@ -222,11 +231,23 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     (committed === undefined
       ? plantDateOf(Date.now(), timeZone)
       : plantDateOf(committed.nowMs, timeZone));
-  const range = useMemo(
+  // The chosen range names the grid and the toolbar; the loaded range grows by whole spans of the
+  // preset as the planner scrolls towards an edge (#685), and shrinks back when from or zoom change.
+  const chosenRange = useMemo(
     () => rangeOf(from, zoom, timeZone, productionDayStart),
     [from, zoom, timeZone, productionDayStart],
   );
-  // Everything the view draws reads the plan with the draft applied, analysed over the visible
+  const [extension, setExtension] = useState({ before: 0, after: 0 });
+  const extendedFor = useRef(`${from}|${zoom}`);
+  if (extendedFor.current !== `${from}|${zoom}`) {
+    extendedFor.current = `${from}|${zoom}`;
+    setExtension({ before: 0, after: 0 });
+  }
+  const range = useMemo(
+    () => extendedRange(from, zoom, timeZone, productionDayStart, extension),
+    [from, zoom, timeZone, productionDayStart, extension],
+  );
+  // Everything the view draws reads the plan with the draft applied, analysed over the loaded
   // range (plan 18, Resolving a break in the draft).
   const snapshot = useMemo(
     () => (committed === undefined ? undefined : applyDraft(committed, draft, range)),
@@ -296,6 +317,29 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     width - Math.min(treeWidth, cap),
     Math.ceil(naturalWidthPx(range, zoom, hideClosed)),
   );
+  // A span added before the range widens the time column on the left: the scroll position moves by
+  // the added width in the same frame, so what was in view stays in view.
+  const lastTimeWidth = useRef<number | undefined>(undefined);
+  const shiftAfterGrowth = useRef(false);
+  const gridElement = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const previous = lastTimeWidth.current;
+    lastTimeWidth.current = timeWidth;
+    if (!shiftAfterGrowth.current || previous === undefined) return;
+    shiftAfterGrowth.current = false;
+    const grid = gridElement.current;
+    if (grid !== null && timeWidth > previous) grid.scrollLeft += timeWidth - previous;
+  }, [timeWidth]);
+  const onGridScroll = (grid: HTMLElement) => {
+    const { scrollLeft, clientWidth, scrollWidth } = grid;
+    if (clientWidth <= 0) return;
+    if (scrollLeft + clientWidth >= scrollWidth - clientWidth) {
+      setExtension((current) => ({ ...current, after: current.after + 1 }));
+    } else if (scrollLeft <= clientWidth) {
+      shiftAfterGrowth.current = true;
+      setExtension((current) => ({ ...current, before: current.before + 1 }));
+    }
+  };
   const gridTemplateColumns = [
     `${nameWidth}px`,
     ...columns.slice(1).map((column) => `${column.widthPx}px`),
@@ -673,7 +717,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     }
   };
 
-  const gridName = `${plant} order Gantt, ${rangeLabel(range, zoom, timeZone)}`;
+  const gridName = `${plant} order Gantt, ${rangeLabel(chosenRange, zoom, timeZone)}`;
   const rowCount = flatRows.length + 2;
   const focusedId =
     focusedRowId !== undefined && flatRows.some((row) => row.id === focusedRowId)
@@ -695,7 +739,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             void setSearch(withFrom(search, plantDateOf(snapshot?.nowMs ?? Date.now(), timeZone)))
           }
           onLater={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'later')))}
-          rangeLabel={rangeLabel(range, zoom, timeZone)}
+          rangeLabel={rangeLabel(chosenRange, zoom, timeZone)}
           options={options}
           onOptionsChange={setOptions}
           draftCount={draft.changes.length}
@@ -723,7 +767,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             style={fillHeight === undefined ? undefined : { height: `${fillHeight}px` }}
           >
             <div
-              ref={gridRef}
+              ref={(node) => {
+                gridElement.current = node;
+                gridRef(node);
+              }}
               role="treegrid"
               aria-label={gridName}
               aria-rowcount={rowCount}
@@ -738,7 +785,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                   void setSearch(withChain(search, false));
                 }
               }}
-              className="min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-card text-sm"
+              onScroll={(event) => onGridScroll(event.currentTarget)}
+              className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
               style={{
                 scrollPaddingTop: `${timeHeaderHeightRem}rem`,
                 scrollPaddingInlineStart: `${stickyTree ? treeWidth : nameWidth}px`,
