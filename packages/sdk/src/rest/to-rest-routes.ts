@@ -252,6 +252,18 @@ function pascal(id: string): string {
     .join('');
 }
 
+/** The controllers that toRestRoutes built, which only this module can add to. */
+const builtControllers = new WeakSet<object>();
+
+/**
+ * Whether toRestRoutes built the controller. The host's guard lets only such a controller's routes
+ * through without the web's credential, because they resolve their principal through the
+ * PublicOperationRunner; a hand-written controller that copies their metadata is no such route.
+ */
+export function isBuiltByToRestRoutes(controller: unknown): boolean {
+  return typeof controller === 'function' && builtControllers.has(controller);
+}
+
 /**
  * Builds the public REST routes of one module's operation declarations (ADR 0064, ADR 0073): one
  * controller in the public family of ApiController, with a route for every operation that names a
@@ -326,5 +338,6 @@ export function toRestRoutes(declarations: readonly OperationsDeclaration[]): Ty
   UseFilters(new PublicApiProblemFilter())(PublicRoutes);
   // Nest's messages and the route inventory name the class, so it carries the module.
   Object.defineProperty(PublicRoutes, 'name', { value: `${pascal(module)}PublicApiController` });
+  builtControllers.add(PublicRoutes);
   return PublicRoutes;
 }

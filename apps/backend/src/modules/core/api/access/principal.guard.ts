@@ -12,6 +12,7 @@ import { type GqlContextType, GqlExecutionContext } from '@nestjs/graphql';
 import {
   API_CONTROLLER_METADATA,
   type ApiControllerOptions,
+  isBuiltByToRestRoutes,
   PUBLIC_API_OPERATION_METADATA,
 } from '@northmes/sdk/rest';
 import type { Request } from 'express';
@@ -32,15 +33,18 @@ function headersOf(request: Request): Headers {
 }
 
 /**
- * Whether the handler is a route that toRestRoutes built in the public family: its controller is a
- * public ApiController and the handler carries PublicApiOperation. Such a route hands every call to
- * the host's PublicOperationRunner, which resolves the principal through PublicApiCredentials. A
- * hand-written public controller is no such route, so it keeps this guard and fails closed.
+ * Whether the handler is a route that toRestRoutes built in the public family: toRestRoutes built
+ * its controller, a public ApiController, and the handler carries PublicApiOperation. Such a route
+ * hands every call to the host's PublicOperationRunner, which resolves the principal through
+ * PublicApiCredentials. A hand-written public controller is no such route, even with the same
+ * metadata, so it keeps this guard and fails closed.
  */
 function isPublicApiRoute(reflector: Reflector, context: ExecutionContext): boolean {
+  const target = context.getClass();
+  if (!isBuiltByToRestRoutes(target)) return false;
   const controller = reflector.get<ApiControllerOptions | undefined>(
     API_CONTROLLER_METADATA,
-    context.getClass(),
+    target,
   );
   const operation: unknown = reflector.get(PUBLIC_API_OPERATION_METADATA, context.getHandler());
   return controller?.family === 'public' && operation !== undefined;

@@ -23,6 +23,7 @@ export {
   publicApiOperationsOf,
 } from './public-api-operation.ts';
 export {
+  isBuiltByToRestRoutes,
   type PublicOperationCall,
   PublicOperationRunner,
   publicApiPath,
