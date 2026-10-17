@@ -154,6 +154,8 @@ export interface ConstraintLine {
   readonly code?: ConstraintCode;
   /** The other rows or orders a broken line involves, by display number or order number. */
   readonly involves?: readonly string[];
+  /** The instant that clears a broken release or last-piece line. */
+  readonly clearsAtMs?: number;
 }
 
 export interface JobOrderAnalysis {

@@ -174,6 +174,7 @@ export function constraintText(line: DomainConstraintLine, text: TextContext): C
       const head = `Release from ${line.fromRow}: ${at(line.atMs)} (${point})`;
       return {
         ...base,
+        ...(!line.holds && { clearsAtMs: line.atMs }),
         text:
           line.holds || line.beforeByS === undefined
             ? head
@@ -183,6 +184,7 @@ export function constraintText(line: DomainConstraintLine, text: TextContext): C
     case 'lastPiece':
       return {
         ...base,
+        ...(!line.holds && { clearsAtMs: line.atMs }),
         text: `Last piece: ends at or after ${at(line.atMs)} (${line.fromRow} end plus lead plus one cycle)`,
       };
     case 'hardLock':
