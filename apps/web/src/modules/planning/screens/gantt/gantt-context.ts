@@ -18,6 +18,8 @@ export interface GanttViewContext {
   readonly hideClosed: boolean;
   /** The selected order, by id. */
   readonly selectedOrderId: string | undefined;
+  /** The rows of the highlighted critical chain, none while no chain is shown. */
+  readonly chainRowIds: ReadonlySet<string>;
   /** The name of a machine by code, its code when unknown. */
   readonly machineName: (code: string | undefined) => string;
 }

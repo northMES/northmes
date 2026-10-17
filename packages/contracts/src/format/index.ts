@@ -101,31 +101,57 @@ export interface DurationOptions {
    * wait and float), `hours` as "28 h 15 min" (the elapsed and working time of a block, plan 18).
    */
   readonly form?: 'days' | 'hours';
+  /** The units as words, "45 minutes", for a sentence such as a link's relation text. */
+  readonly style?: 'short' | 'long';
 }
+
+/** The unit words of a duration part, short and long, singular and plural. */
+const units = {
+  day: { short: 'day', long: 'day', longPlural: 'days' },
+  hour: { short: 'h', long: 'hour', longPlural: 'hours' },
+  minute: { short: 'min', long: 'minute', longPlural: 'minutes' },
+  second: { short: 's', long: 'second', longPlural: 'seconds' },
+} as const;
 
 /**
  * A number of seconds in words with a unit per part, never a bare number: "15 h 15 min",
  * "1 day 4 h 15 min", "4 h 9 min 40 s", "0 min". A negative duration starts with "minus", as the
  * total float of a row past its latest start does (plan 18).
  */
-export function formatDuration(seconds: number, { form = 'days' }: DurationOptions = {}): string {
+export function formatDuration(
+  seconds: number,
+  { form = 'days', style = 'short' }: DurationOptions = {},
+): string {
   const whole = Math.round(Math.abs(seconds));
-  if (whole === 0) return '0 min';
+  const part = (count: number, unit: keyof typeof units) => {
+    const word =
+      style === 'short'
+        ? unit === 'day'
+          ? count === 1
+            ? units.day.short
+            : units.day.longPlural
+          : units[unit].short
+        : count === 1
+          ? units[unit].long
+          : units[unit].longPlural;
+    return `${count} ${word}`;
+  };
+  if (whole === 0) return part(0, 'minute');
   const parts: string[] = [];
   let rest = whole;
   if (form === 'days' && rest >= 86_400) {
     const days = Math.floor(rest / 86_400);
-    parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
+    parts.push(part(days, 'day'));
     rest -= days * 86_400;
   }
   if (rest >= 3600) {
-    parts.push(`${Math.floor(rest / 3600)} h`);
+    parts.push(part(Math.floor(rest / 3600), 'hour'));
     rest %= 3600;
   }
   if (rest >= 60) {
-    parts.push(`${Math.floor(rest / 60)} min`);
+    parts.push(part(Math.floor(rest / 60), 'minute'));
     rest %= 60;
   }
-  if (rest > 0) parts.push(`${rest} s`);
+  if (rest > 0) parts.push(part(rest, 'second'));
   return `${seconds < 0 ? 'minus ' : ''}${parts.join(' ')}`;
 }

@@ -124,7 +124,7 @@ export function GanttToolbar({
           className="h-8 rounded-md border border-input bg-background px-2 font-mono text-xs"
         />
       </label>
-      <span className="font-mono text-[0.8125rem] font-medium whitespace-nowrap">{rangeLabel}</span>
+      <span className="font-mono text-data font-medium whitespace-nowrap">{rangeLabel}</span>
       <Button
         variant="outline"
         aria-pressed={options.hideClosed}
