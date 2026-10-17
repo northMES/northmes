@@ -40,7 +40,7 @@ New terms this document introduces. They go into [GLOSSARY.md](../../GLOSSARY.md
 |---|---|---|
 | timeline core | The headless TypeScript functions and the React pieces that both views share: the time scale, culling, hit testing, row virtualization, block rendering, the drag preview, the link overlay, the keyboard grid model and the move paths. | board core (that is its release 1 name in [ADR 0030](../adr/0030-a-planning-board-built-in-house.md)), Gantt engine |
 | order Gantt (Gantt) | The view with one row per production order, one row per operation under it and one row per job order under that, on the same time axis as the board, with links between consecutive operations. | project Gantt, order view (ambiguous with the production order page) |
-| view | Which of the two timeline views the URL shows: `board` (one row per machine) or `gantt` (one row per order, operation and job order); the job order table is the third value of the same URL key. | mode, tab |
+| page | Which timeline page is open: the board (`/$plant/planning/board`, one row per machine), the Gantt (`/$plant/planning/gantt`, one row per order, operation and job order) or the job order table, each an entry under Planning in the sidebar. | view (the first round's URL key), mode, tab |
 | release | Between two consecutive operations of one order: the instant at which the later operation may start its run, from the earlier operation's rows, the send-ahead quantity and the lead time ([07](07-production-planning.md#rules-between-operations)). The glossary's "release" of an order is the other meaning, and the UI says "released from <operation>" for this one. | dependency, link date |
 | link | The drawn relation between consecutive operations of one order: from the earlier operation's release point to the later operation's earliest start, with the lead time as its own segment. Every link is finish-to-start, shortened by the send-ahead quantity and lengthened by the lead time. | dependency, arrow, predecessor link |
 | float | The working time a job order can start later without breaking a rule: total float against the order's deadline, free float against its successor and the next reservation on its machine. Measured in working seconds on the job order's machine. | slack (kept for the elapsed time between planned end and deadline), buffer |
@@ -434,7 +434,7 @@ Plan proposal.
 
 | Setting or option | Where | Values | Default |
 |---|---|---|---|
-| `view` | URL | `board`, `gantt`, `table` | `board`, stripped |
+| the page | route | the board, the Gantt and the job order table under `/$plant/planning/` | the board |
 | Cascade | Board options, local | on, off | on |
 | Workload under machines, Workload panel | Board options, local | on, off | off |
 | Shift strip | Board options, local | on, off | off |
@@ -450,7 +450,7 @@ No new permission. Moves, cascade, plan this order and Move all later by need `p
 
 [ADR 0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md). Accepted for the rules; the new keys are a plan proposal.
 
-- `view=gantt` joins `view=table` on the board route `/$plant/planning/board`. `zoom`, `from` and `order` keep their meaning in every view, so switching the view keeps the range and the selected order.
+- The board, the Gantt and the job order table are separate routes under `/$plant/planning/`, each an entry under Planning in the sidebar (Krister, 2026-10-17). `zoom`, `from` and `order` keep their meaning on every page, and a link from one page to another, such as "Show on board" in Details, carries them, so the range and the selected order survive the switch. `?view=gantt` on the board route, the first round's key, redirects to the Gantt page with the other keys carried over.
 - `chain=1` with `order=<id>` opens the view with that order's critical chain highlighted, so "look at why 1003 is late" is one link. Without `order` the key is dropped with the polite status message the ADR prescribes.
 - The table view's filter keys apply to the Gantt unchanged.
 - Collapsed rows, the cascade switch, the workload and shift strip options, the tree columns and the link mode stay local. Earlier and Later replace the history entry.
@@ -528,7 +528,7 @@ Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-project
 
 ### Web tests (`apps/web`, planning module)
 
-- `gantt-search.test.tsx`: `?view=gantt&zoom=week&from=2026-11-02&order=<id>&chain=1` opens the Gantt with the order's chain highlighted; `chain=1` without `order` is dropped with the status message; switching to `view=board` keeps `zoom`, `from` and `order`.
+- `gantt-search.test.tsx`: `/$plant/planning/gantt?zoom=week&from=2026-11-02&order=<id>&chain=1` opens the Gantt with the order's chain highlighted; `chain=1` without `order` is dropped with the status message; a link to the board page keeps `zoom`, `from` and `order`; `?view=gantt` on the board route redirects to the Gantt page.
 - `gantt-tree.test.tsx`: the G1 dataset renders 5 orders, 8 operations and 8 job order rows; a split operation shows two job order rows; an unplaced job order sits in the Not placed row and the operation row says "1 not placed"; collapsing an order hides its rows and keeps `aria-setsize`.
 - `gantt-links.test.tsx`: links for expanded orders; the lead time as a dashed segment; a row before its release draws the conflict style and names it; above 200 links only the selected order's links are drawn and the toolbar says so.
 - `cascade-preview.test.tsx`: dragging `1003.10` to Wed 09:00 shows one ghost span at Wed 13:30 and the tooltip "+1 row moves"; with cascade off no ghost.
@@ -559,7 +559,7 @@ The epic id is assigned by the planning session when the roadmap takes it in; th
 | S01 domain: Compute float, wait and the critical chain | `floatOf` and `criticalChain` pass GT1 and GT2 | `float.test.ts`, `critical-chain.test.ts` |
 | S02 domain: Cascade a move and plan one order | `cascade` passes GT3 and GT4; `plan()` for one order with fixed context passes GT1 latest | `cascade.test.ts`, `plan-this-order.test.ts` |
 | S03 domain: Compute workload per bucket and the constraint list | GT5, GT6, the constraint list cases | `workload.test.ts`, `constraints-of.test.ts` |
-| S04 planning: Draw the order Gantt tree with summary bars and blocks | `view=gantt` shows the G1 tree in plant time with availability shading, the Not placed row and the tree columns | `gantt-tree.test.tsx`, `gantt-search.test.tsx`, `gantt-query.int.test.ts` |
+| S04 planning: Draw the order Gantt tree with summary bars and blocks | the Gantt page shows the G1 tree in plant time with availability shading, the Not placed row and the tree columns | `gantt-tree.test.tsx`, `gantt-search.test.tsx`, `gantt-query.int.test.ts` |
 | S05 planning: Show links, deadlines and the constraint list | links with lead time, the late band, the marker, the constraint list in the panel | `gantt-links.test.tsx`, `deadline-markers.test.tsx` |
 | S06 planning: Move a job order on the Gantt by pointer and without dragging | drag in time, detail panel, Move dialog, move mode with machine steps | `gantt-keyboard.spec.ts` |
 | S07 planning: Cascade after a move with a preview | GT3 end to end, cascade switch, snap to release | `cascade-preview.test.tsx`, `cascade-save.int.test.ts`, `gantt-cascade.spec.ts` |
