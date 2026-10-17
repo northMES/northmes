@@ -20,7 +20,7 @@ The full schema is in [`schema/api.graphql`](https://github.com/northMES/northme
 
 ## Endpoint
 
-Every operation goes to `/graphql` on your NorthMES host, as an HTTP `POST` with a JSON body. A request from the web app looks like this:
+Queries and mutations go to `/graphql` on your NorthMES host, as an HTTP `POST` with a JSON body; subscriptions use a WebSocket at the same path. A request from the web app looks like this:
 
 ```sh
 curl https://<NORTHMES_HOST>/graphql \
