@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { CircleCheck, Info } from 'lucide-react';
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type SubmitEvent, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { ErrorSummary, type SummaryError } from '../../ui/components/error-summary/index.ts';
 import { SkipLink } from '../../ui/components/skip-link/index.ts';
@@ -155,7 +155,7 @@ export function SignInScreen({
     announce(signedOut ? 'You are signed out.' : 'Your session ended. Sign in again to continue.');
   }, [signedOut, sessionEnded]);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy.current) return;
     // The summary takes focus when submits changes, so it changes together with the problem: a
