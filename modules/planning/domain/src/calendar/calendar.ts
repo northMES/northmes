@@ -106,12 +106,19 @@ function spanOn(timeZone: string, date: Temporal.PlainDate, span: ClockSpan): Wi
 }
 
 /** A break of a shift as a window: a break that starts before the shift lies on the next date. */
-function breakOn(timeZone: string, date: Temporal.PlainDate, shift: Shift, pause: ClockSpan): Window {
+function breakOn(
+  timeZone: string,
+  date: Temporal.PlainDate,
+  shift: Shift,
+  pause: ClockSpan,
+): Window {
   const shiftStart = clockOf(shift.start);
   const start = clockOf(pause.start);
   const end = clockOf(pause.end);
-  const startDate = Temporal.PlainTime.compare(start, shiftStart) < 0 ? date.add({ days: 1 }) : date;
-  const endDate = Temporal.PlainTime.compare(end, start) <= 0 ? startDate.add({ days: 1 }) : startDate;
+  const startDate =
+    Temporal.PlainTime.compare(start, shiftStart) < 0 ? date.add({ days: 1 }) : date;
+  const endDate =
+    Temporal.PlainTime.compare(end, start) <= 0 ? startDate.add({ days: 1 }) : startDate;
   return {
     fromMs: resolveWallClock(timeZone, startDate, start),
     toMs: resolveWallClock(timeZone, endDate, end),

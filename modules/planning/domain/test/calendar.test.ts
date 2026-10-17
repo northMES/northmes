@@ -132,10 +132,12 @@ describe('deviations (ADR 0025 rule 7)', () => {
       ],
     });
 
-    expect(availabilityOf(calendar, 'MILL1', Date.UTC(2026, 10, 6, 23), Date.UTC(2026, 10, 7, 23))).toEqual([
-      { fromMs: Date.UTC(2026, 10, 7, 5), toMs: Date.UTC(2026, 10, 7, 9) },
-    ]);
-    expect(availabilityOf(calendar, 'CNC1', Date.UTC(2026, 10, 6, 23), Date.UTC(2026, 10, 7, 23))).toEqual([]);
+    expect(
+      availabilityOf(calendar, 'MILL1', Date.UTC(2026, 10, 6, 23), Date.UTC(2026, 10, 7, 23)),
+    ).toEqual([{ fromMs: Date.UTC(2026, 10, 7, 5), toMs: Date.UTC(2026, 10, 7, 9) }]);
+    expect(
+      availabilityOf(calendar, 'CNC1', Date.UTC(2026, 10, 6, 23), Date.UTC(2026, 10, 7, 23)),
+    ).toEqual([]);
   });
 });
 
@@ -185,7 +187,9 @@ describe('subtractWork, workBetween and nextWorkingInstant', () => {
   });
 
   it('snaps forward to the next working instant: a drop in a break lands at its end, a weekend at Monday 06:00', () => {
-    expect(nextWorkingInstant(cnc, Date.UTC(2026, 10, 4, 7, 35))).toBe(Date.UTC(2026, 10, 4, 7, 45));
+    expect(nextWorkingInstant(cnc, Date.UTC(2026, 10, 4, 7, 35))).toBe(
+      Date.UTC(2026, 10, 4, 7, 45),
+    );
     expect(nextWorkingInstant(cnc, Date.UTC(2026, 10, 6, 15))).toBe(Date.UTC(2026, 10, 9, 5));
     expect(nextWorkingInstant(cnc, Date.UTC(2026, 10, 4, 8))).toBe(Date.UTC(2026, 10, 4, 8));
     expect(nextWorkingInstant(cnc, Date.UTC(2026, 10, 20))).toBeNull();

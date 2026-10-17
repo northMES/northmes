@@ -25,7 +25,8 @@ export function normalizeWindows(windows: readonly Window[]): Window[] {
   for (const window of sorted) {
     const last = merged[merged.length - 1];
     if (last !== undefined && window.fromMs <= last.toMs) {
-      if (window.toMs > last.toMs) merged[merged.length - 1] = { fromMs: last.fromMs, toMs: window.toMs };
+      if (window.toMs > last.toMs)
+        merged[merged.length - 1] = { fromMs: last.fromMs, toMs: window.toMs };
     } else {
       merged.push({ fromMs: window.fromMs, toMs: window.toMs });
     }

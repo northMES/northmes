@@ -12,8 +12,8 @@ export {
   resolveWallClock,
   type Shift,
   type WeeklyCalendarInput,
-  weeklyCalendar,
   type WorkingCalendar,
+  weeklyCalendar,
 } from './calendar/calendar.ts';
 export {
   addWork,
