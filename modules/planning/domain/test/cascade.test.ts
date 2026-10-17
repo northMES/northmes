@@ -176,6 +176,33 @@ describe('cascade (plan 18, Cascade)', () => {
     ]);
   });
 
+  it('a move onto a machine where a successor lies cascades the successor away and reports no overlap', () => {
+    // 1001.10 onto CNC2 at Wed 06:00, over 1001.20 as it lies: the cascade moves 1001.20 under its
+    // release, so the overlap the drop would have caused is gone and only the moves remain.
+    const result = cascade(
+      orderOf('1001'),
+      { jobOrderId: 'jo-1001-10', setupStartMs: wed(5), equipment: 'CNC2' },
+      context,
+    );
+
+    expect(result.conflicts).toEqual([]);
+    expect(
+      result.moves.map(({ displayNumber, equipment, to }) => ({ displayNumber, equipment, to })),
+    ).toEqual([
+      {
+        displayNumber: '1001.10',
+        equipment: 'CNC2',
+        to: { setupStartMs: wed(5), runStartMs: wed(5, 30), endMs: wed(11, 15) },
+      },
+      {
+        displayNumber: '1001.20',
+        equipment: 'CNC2',
+        // Under its release Wed 13:15, past the locked 1002.10 on CNC2, so from Fri 06:00.
+        to: { setupStartMs: fri(5), runStartMs: fri(5), endMs: Date.UTC(2026, 10, 9, 6, 45) },
+      },
+    ]);
+  });
+
   it('a drop in closed time snaps forward to the next working instant on the machine', () => {
     const result = cascade(
       orderOf('1006'),

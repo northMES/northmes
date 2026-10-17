@@ -301,18 +301,6 @@ export function cascade(
   if (span.setupStartMs >= context.nowMs && span.setupStartMs < context.fenceMs) {
     conflicts.push({ kind: 'FROZEN_WINDOW', rows: [moved.displayNumber] });
   }
-  const overlap = overlapOf(span, moved.id, reservationsOn(ctx, equipment));
-  if (overlap !== undefined) {
-    conflicts.push({
-      kind: 'OVERLAP',
-      rows: [overlap.row.displayNumber, moved.displayNumber].sort(),
-    });
-  }
-  const movedRow = working.jobOrders.find((row) => row.id === moved.id);
-  if (ownRelease !== undefined && movedRow !== undefined) {
-    const own = ruleConflict(working, movedRow, ownRelease, ctx);
-    if (own !== undefined) conflicts.push(own);
-  }
 
   // The later operations, each row under its release from the rows as they now lie.
   let stop: CascadeStop | undefined;
@@ -358,6 +346,21 @@ export function cascade(
       working = withPlacement(working, current.id, current.equipment, placed);
       ctx = withOrder(context, working);
     }
+  }
+
+  // The moved row's own breaks, judged once its successors have moved: an overlap with a successor
+  // the cascade carried away is no conflict, one with another order's row is.
+  const movedRow = working.jobOrders.find((row) => row.id === moved.id);
+  const overlap = overlapOf(span, moved.id, reservationsOn(ctx, equipment));
+  if (overlap !== undefined) {
+    conflicts.push({
+      kind: 'OVERLAP',
+      rows: [overlap.row.displayNumber, moved.displayNumber].sort(),
+    });
+  }
+  if (ownRelease !== undefined && movedRow !== undefined) {
+    const own = ruleConflict(working, movedRow, ownRelease, ctx);
+    if (own !== undefined) conflicts.push(own);
   }
 
   return {
