@@ -5,7 +5,7 @@ import { cleanup, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { findGantt, renderBoardRoute, sourceOf } from './gantt-fixtures.tsx';
+import { findGantt, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -79,7 +79,7 @@ function manyOrdersSnapshot(copies: number) {
 
 describe('the links of the order Gantt (plan 18, Blocks, links and the selection)', () => {
   it('GT1 draws a link for every expanded order, the lead time of 1001.20 as a dashed segment', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     expect(linkIds(gantt)).toEqual(
@@ -97,7 +97,7 @@ describe('the links of the order Gantt (plan 18, Blocks, links and the selection
   });
 
   it('GT1 drops the links of a collapsed order', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     await userEvent.click(within(gantt).getByRole('button', { name: 'Collapse order 1001' }));
@@ -107,7 +107,7 @@ describe('the links of the order Gantt (plan 18, Blocks, links and the selection
   });
 
   it('GT3 draws the link of a row that starts before its release in the conflict style and names it', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'day', from: '2026-11-04' }, sourceOf(gt3Snapshot()));
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' }, sourceOf(gt3Snapshot()));
     const gantt = await findGantt();
 
     const link = gantt.querySelector('[data-link="jo-1003-10-jo-1003-20"]');
@@ -122,7 +122,7 @@ describe('the links of the order Gantt (plan 18, Blocks, links and the selection
   });
 
   it("GT1 above 200 links draws the selected order's links only and the toolbar says so", async () => {
-    renderBoardRoute(
+    renderGanttRoute(
       { view: 'gantt', zoom: 'week', from: '2026-11-02', order: 'po-1001-3' },
       sourceOf(manyOrdersSnapshot(70)),
     );

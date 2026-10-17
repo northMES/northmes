@@ -126,6 +126,9 @@ export const shellModules: readonly ShellModule[] = [
     module: planningModule,
     label: 'Planning',
     order: 20,
-    links: [{ label: 'Planning board', icon: 'ChartGantt', link: planningLinks.board }],
+    links: [
+      { label: 'Planning board', icon: 'ChartGantt', link: planningLinks.board },
+      { label: 'Gantt', icon: 'ChartNoAxesGantt', link: planningLinks.gantt },
+    ],
   },
 ];

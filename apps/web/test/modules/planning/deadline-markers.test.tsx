@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cleanup, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { findGantt, markerTexts, renderBoardRoute } from './gantt-fixtures.tsx';
+import { findGantt, markerTexts, renderGanttRoute } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
 describe('deadline markers (plan 18, Deadlines on the timeline)', () => {
   it('GT9 shows the late band of 1003 from Wed 15:00 to Thu 06:15 and "late by 15 h 15 min"', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     const row = within(gantt).getByRole('row', { name: /^1003 / });
@@ -24,7 +24,7 @@ describe('deadline markers (plan 18, Deadlines on the timeline)', () => {
   });
 
   it('GT9 shows the marker of 1001 and no band', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     const row = within(gantt).getByRole('row', { name: /^1001 / });
@@ -33,7 +33,7 @@ describe('deadline markers (plan 18, Deadlines on the timeline)', () => {
   });
 
   it('GT9 labels the deadline marker with the plant time at Day zoom only', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'day', from: '2026-11-04' });
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
 
     const row = within(gantt).getByRole('row', { name: /^1003 / });
@@ -41,7 +41,7 @@ describe('deadline markers (plan 18, Deadlines on the timeline)', () => {
   });
 
   it('GT8 draws the frozen band from now to the fence and the now line over every row', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     const overlay = gantt.querySelector<HTMLElement>('[data-overlay]');
@@ -53,7 +53,7 @@ describe('deadline markers (plan 18, Deadlines on the timeline)', () => {
   });
 
   it('GT9 draws nothing of a marker outside the visible range', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'day', from: '2026-11-04' });
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
 
     const row = within(gantt).getByRole('row', { name: /^1006 / });

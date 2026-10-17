@@ -3,18 +3,13 @@
 import { z } from 'zod';
 import type { ZoomPreset } from './gantt-data.ts';
 
-/** The views of the board route (plan 18, URL state): the board, the order Gantt and the table. */
-export type BoardView = 'board' | 'gantt' | 'table';
-
 /**
- * The view state of the board route in the URL (ADR 0062, plan 18): the view, the zoom preset,
- * the first plant date of the range, the selected order and the chain highlight. zoom, from and
- * order keep their meaning in every view, so switching the view keeps the range and the selected
- * order. The board, the default view, stays out of the URL; chain needs order, and the screen drops
- * it with the polite status message when the order is missing.
+ * The view state of the Gantt page in the URL (ADR 0062, plan 18): the zoom preset, the first
+ * plant date of the range, the selected order and the chain highlight. zoom, from and order mean
+ * the same on the board, so a link between the pages carries them. chain needs order, and the
+ * screen drops it with the polite status message when the order is missing.
  */
-export interface BoardSearch {
-  readonly view?: 'gantt' | 'table';
+export interface GanttSearch {
   readonly zoom?: ZoomPreset;
   /** The first plant date of the visible range, "2026-11-02". */
   readonly from?: string;
@@ -26,7 +21,6 @@ export interface BoardSearch {
 
 /** The URL keys, each of which falls back to its default on its own (ADR 0062). */
 const searchKeys = z.object({
-  view: z.enum(['board', 'gantt', 'table']).optional().catch(undefined),
   zoom: z.enum(['hours', 'day', 'week', '4weeks']).optional().catch(undefined),
   from: z.iso.date().optional().catch(undefined),
   order: z
@@ -42,11 +36,10 @@ const searchKeys = z.object({
     .catch(undefined),
 });
 
-/** The view state that a URL's search describes, for the route's validateSearch, defaults stripped. */
-export function boardSearch(raw: Record<string, unknown>): BoardSearch {
-  const { view, zoom, from, order, chain } = searchKeys.parse(raw);
+/** The view state that a URL's search describes, for the Gantt route's validateSearch. */
+export function ganttSearch(raw: Record<string, unknown>): GanttSearch {
+  const { zoom, from, order, chain } = searchKeys.parse(raw);
   return {
-    ...(view !== undefined && view !== 'board' && { view }),
     ...(zoom !== undefined && { zoom }),
     ...(from !== undefined && { from }),
     ...(order !== undefined && { order }),
@@ -54,28 +47,40 @@ export function boardSearch(raw: Record<string, unknown>): BoardSearch {
   };
 }
 
-/** The same range and order in another view. */
-export function withView(search: BoardSearch, view: BoardView): BoardSearch {
-  const { view: _, ...rest } = search;
-  return view === 'board' ? rest : { ...rest, view };
+/**
+ * The board route's search: the Gantt keys, which the board keeps for a link to the Gantt, and the
+ * view key of the links from before the Gantt had its own page. `view=gantt` on the board route
+ * redirects to the Gantt page with the other keys, so an old link keeps working; any other view
+ * is dropped.
+ */
+export interface BoardSearch extends GanttSearch {
+  readonly view?: 'gantt';
 }
 
-export function withZoom(search: BoardSearch, zoom: ZoomPreset): BoardSearch {
+const legacyView = z.literal('gantt').optional().catch(undefined);
+
+/** The board route's search, for its validateSearch; see BoardSearch. */
+export function boardSearch(raw: Record<string, unknown>): BoardSearch {
+  const view = legacyView.parse(raw.view);
+  return { ...ganttSearch(raw), ...(view !== undefined && { view }) };
+}
+
+export function withZoom(search: GanttSearch, zoom: ZoomPreset): GanttSearch {
   return { ...search, zoom };
 }
 
-export function withFrom(search: BoardSearch, from: string): BoardSearch {
+export function withFrom(search: GanttSearch, from: string): GanttSearch {
   return { ...search, from };
 }
 
 /** The view with an order selected, or none; a change of order ends the chain highlight. */
-export function withOrder(search: BoardSearch, order: string | undefined): BoardSearch {
+export function withOrder(search: GanttSearch, order: string | undefined): GanttSearch {
   const { order: _, chain: __, ...rest } = search;
   return order === undefined ? rest : { ...rest, order };
 }
 
 /** The view with the selected order's chain shown or hidden; without an order it stays hidden. */
-export function withChain(search: BoardSearch, shown: boolean): BoardSearch {
+export function withChain(search: GanttSearch, shown: boolean): GanttSearch {
   const { chain: _, ...rest } = search;
   return shown && search.order !== undefined ? { ...rest, chain: 1 } : rest;
 }
