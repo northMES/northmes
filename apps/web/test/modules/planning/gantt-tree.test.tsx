@@ -3,6 +3,8 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { closedWindows } from '../../../src/modules/planning/timeline/availability-shading.ts';
 import { naturalWidthPx, rangeOf } from '../../../src/modules/planning/timeline/time-scale.ts';
 import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
 
@@ -123,11 +125,14 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
     const tracks = header.style.gridTemplateColumns.split(' ');
     const timeTrack = Number.parseFloat(tracks[tracks.length - 1] ?? '0');
-    const natural = naturalWidthPx(
-      rangeOf('2026-11-04', 'day', 'Europe/Stockholm', '06:00'),
-      'day',
-    );
+    // Hide closed time is on by default, so the natural width is the compressed one.
+    const snapshot = g1Snapshot();
+    const range = rangeOf('2026-11-04', 'day', 'Europe/Stockholm', '06:00');
+    const natural = naturalWidthPx(range, 'day', {
+      closed: closedWindows(snapshot.calendar, 'Europe/Stockholm', range),
+    });
     expect(timeTrack).toBeGreaterThanOrEqual(natural);
+    expect(timeTrack).toBeLessThan(naturalWidthPx(range, 'day'));
     // The header and every row share the template, so the tree pane stays aligned with the rows.
     const row = within(gantt).getByRole('row', { name: /^1003 / });
     expect(row.style.gridTemplateColumns).toBe(header.style.gridTemplateColumns);
