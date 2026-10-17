@@ -3,6 +3,7 @@
 import { cn } from 'cn';
 import type { KeyboardEvent } from 'react';
 import { GanttBlock } from './gantt-block.tsx';
+import { blockName } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
 import { GanttMarkerLayer, rowMarkers } from './gantt-marker-layer.tsx';
 import { jobOrderRowsOf, rowHeightRem, summaryName, summarySpan } from './gantt-rows.ts';
@@ -125,6 +126,7 @@ export function GanttRowView({
         <div
           role="gridcell"
           tabIndex={-1}
+          data-cell-focus
           aria-label={summaryName(original, timeZone)}
           className="relative overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         >
@@ -135,7 +137,17 @@ export function GanttRowView({
           )}
         </div>
       ) : (
-        <div role="gridcell" className="relative overflow-hidden">
+        <div
+          role="gridcell"
+          className="relative overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          // A job order without a placement has no block, so Right lands on the cell itself,
+          // named as the block would be, with "not placed".
+          {...(original.jobOrder.placement === undefined && {
+            tabIndex: -1,
+            'data-cell-focus': true,
+            'aria-label': blockName(original, snapshot, machineName(original.jobOrder.equipment)),
+          })}
+        >
           <TimeCellShading windows={shading} scale={scale} />
           <GanttMarkerLayer markers={markers} scale={scale} />
           <GanttBlock row={original} selected={selected} onChain={onChain} onSelect={onSelect} />

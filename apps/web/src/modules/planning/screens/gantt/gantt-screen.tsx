@@ -11,6 +11,7 @@ import {
   type BoardSearch,
   boardSearch,
   droppedKeyMessage,
+  withChain,
   withFrom,
   withOrder,
   withView,
@@ -26,21 +27,31 @@ import {
   rangeOf,
   shiftedFrom,
 } from '../../timeline/time-scale.ts';
+import { chainOf } from './gantt-chain.ts';
 import { type GanttViewContext, GanttViewProvider } from './gantt-context.ts';
+import { GanttDetailPanel } from './gantt-detail-panel.tsx';
 import { GanttLinks, linksOf } from './gantt-links.tsx';
 import { GanttMarkerLayer, overlayMarkers } from './gantt-marker-layer.tsx';
 import { GanttNotPlacedRow } from './gantt-not-placed-row.tsx';
 import { useGanttOptions } from './gantt-options.ts';
 import { GanttRowView } from './gantt-row.tsx';
-import { buildGanttRows, type JobOrderRow, notPlacedRows, rowHeightRem } from './gantt-rows.ts';
+import {
+  buildGanttRows,
+  type GanttRow,
+  type JobOrderRow,
+  notPlacedRows,
+  rowHeightRem,
+} from './gantt-rows.ts';
 import { GanttTimeHeader, timeHeaderHeightRem } from './gantt-time-area.tsx';
 import { GanttToolbar } from './gantt-toolbar.tsx';
 import {
   type GanttSort,
+  type GanttTableRow,
   GanttTreeHeaderCells,
   useGanttTable,
   visibleColumns,
 } from './gantt-tree-pane.tsx';
+import { GanttWorkloadPanel } from './gantt-workload-panel.tsx';
 
 export interface GanttScreenProps {
   /** Where the Gantt reads from; the fixture G1 until the GraphQL source exists (plan 18). */
@@ -107,6 +118,9 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const [expanded, setExpanded] = useState<ExpandedState>(true);
   const [sort, setSort] = useState<GanttSort | undefined>(undefined);
   const [focusedRowId, setFocusedRowId] = useState<string | undefined>(undefined);
+  // The row the docked panel shows, opened by a click or by Enter, and whether the panel is open.
+  const [detailRowId, setDetailRowId] = useState<string | undefined>(undefined);
+  const [panelOpen, setPanelOpen] = useState(true);
   const [width, gridRef] = useMeasuredWidth();
 
   const zoom = search.zoom ?? defaultZoom;
@@ -211,7 +225,36 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     }
     totalHeight += heightPx;
   }
-  const chainRowIds = useMemo(() => new Set<string>(), []);
+  // The critical chain of the selected order while chain=1 (plan 18, Float and the critical chain).
+  const chain = useMemo(
+    () =>
+      snapshot !== undefined && search.chain !== undefined && search.order !== undefined
+        ? chainOf(snapshot, search.order)
+        : undefined,
+    [snapshot, search.chain, search.order],
+  );
+  const chainRowIds = useMemo(() => chain?.rowIds ?? new Set<string>(), [chain]);
+  // The chain highlight is announced when it appears, and "Chain hidden" when it ends.
+  const spokenChain = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const announcement = chain?.announcement;
+    if (announcement === spokenChain.current) return;
+    if (announcement !== undefined) announce(announcement);
+    else if (spokenChain.current !== undefined) announce('Chain hidden');
+    spokenChain.current = announcement;
+  }, [chain]);
+  const rowById = useMemo(() => {
+    const map = new Map<string, GanttRow>();
+    for (const order of rows) {
+      map.set(order.id, order);
+      for (const operation of order.subRows) {
+        map.set(operation.id, operation);
+        for (const jobOrder of operation.subRows) map.set(jobOrder.id, jobOrder);
+      }
+    }
+    return map;
+  }, [rows]);
+  const detailRow = detailRowId === undefined ? undefined : rowById.get(detailRowId);
 
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
@@ -269,8 +312,89 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const selectOrder = (orderId: string) => {
     if (search.order !== orderId) void setSearch(withOrder(search, orderId));
   };
-  const onRowKeyDown = (_event: KeyboardEvent<HTMLDivElement>) => {
-    // Row focus mode comes with the keyboard behaviour group.
+  // Show critical chain on an order selects it and turns the chain on; on the shown order it ends.
+  const toggleChain = (orderId: string) => {
+    if (chain?.order.id === orderId) void setSearch(withChain(search, false));
+    else void setSearch(withChain(withOrder(search, orderId), true));
+  };
+  const focusRow = (rowId: string) => {
+    setFocusedRowId(rowId);
+    document.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`)?.focus();
+  };
+  const focusRowAt = (index: number) => {
+    const target = flatRows[Math.max(0, Math.min(flatRows.length - 1, index))];
+    if (target !== undefined) focusRow(target.id);
+  };
+  const openDetails = (row: GanttTableRow) => {
+    selectOrder(row.original.order.id);
+    setDetailRowId(row.id);
+    setPanelOpen(true);
+  };
+  // Row focus mode (plan 18, Tree grid semantics): Up and Down move between rows, Right expands a
+  // collapsed row or moves into its time cell, Left collapses an expanded row, moves from the cell
+  // back to the row, or to the parent row, Home and End go to the first and last row, Page Up and
+  // Page Down move ten rows, Enter opens Details. Escape ends what is on top of the stack: the
+  // chain highlight, then the docked panel.
+  const onRowKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    row: GanttTableRow,
+    index: number,
+  ) => {
+    const onRow = event.target === event.currentTarget;
+    const cell = event.currentTarget.querySelector<HTMLElement>('[data-cell-focus]');
+    let handled = true;
+    switch (event.key) {
+      case 'ArrowDown':
+        focusRowAt(index + 1);
+        break;
+      case 'ArrowUp':
+        focusRowAt(index - 1);
+        break;
+      case 'Home':
+        focusRowAt(0);
+        break;
+      case 'End':
+        focusRowAt(flatRows.length - 1);
+        break;
+      case 'PageDown':
+        focusRowAt(index + 10);
+        break;
+      case 'PageUp':
+        focusRowAt(index - 10);
+        break;
+      case 'ArrowRight':
+        if (onRow && row.getCanExpand() && !row.getIsExpanded()) row.toggleExpanded(true);
+        else if (onRow) cell?.focus();
+        else handled = false;
+        break;
+      case 'ArrowLeft':
+        if (!onRow) event.currentTarget.focus();
+        else if (row.getCanExpand() && row.getIsExpanded()) row.toggleExpanded(false);
+        else {
+          const parent = row.getParentRow();
+          if (parent !== undefined) focusRow(parent.id);
+        }
+        break;
+      case 'Enter':
+        if (onRow) openDetails(row);
+        else handled = false;
+        break;
+      case 'Escape':
+        if (chain !== undefined) {
+          void setSearch(withChain(search, false));
+        } else if (panelOpen) {
+          setPanelOpen(false);
+        } else {
+          handled = false;
+        }
+        break;
+      default:
+        handled = false;
+    }
+    if (handled) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
   };
 
   const gridName = `${plant} order Gantt, ${rangeLabel(range, zoom, timeZone)}`;
@@ -313,63 +437,93 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       </p>
       {view !== undefined && snapshot !== undefined && (
         <GanttViewProvider value={view}>
-          <div
-            ref={gridRef}
-            role="treegrid"
-            aria-label={gridName}
-            aria-rowcount={rowCount}
-            aria-busy={state.status === 'loading' || undefined}
-            className="max-h-[75vh] overflow-auto rounded-lg border border-border bg-card text-sm"
-          >
-            <div
-              role="row"
-              aria-rowindex={1}
-              className="sticky top-0 z-20 grid border-b border-border bg-muted"
-              style={{ gridTemplateColumns, height: `${timeHeaderHeightRem}rem` }}
-            >
-              <GanttTreeHeaderCells columns={columns} sort={sort} onSortChange={setSort} />
-              <GanttTimeHeader scale={scale} nowMs={snapshot.nowMs} />
-            </div>
-            <GanttNotPlacedRow
-              rows={unplaced}
-              gridTemplateColumns={gridTemplateColumns}
-              columnCount={columns.length}
-            />
-            <div className="relative">
-              {flatRows.map((row, index) => {
-                const parent = row.getParentRow();
-                const siblings = parent === undefined ? rows.length : parent.subRows.length;
-                return (
-                  <GanttRowView
-                    key={row.id}
-                    row={row}
-                    columns={columns}
-                    gridTemplateColumns={gridTemplateColumns}
-                    rowIndex={index + 3}
-                    setSize={siblings}
-                    posInSet={row.index + 1}
-                    focused={row.id === focusedId}
-                    onFocus={() => setFocusedRowId(row.id)}
-                    onKeyDown={onRowKeyDown}
-                    onSelect={() => selectOrder(row.original.order.id)}
-                    onToggle={() => row.toggleExpanded()}
-                  />
-                );
-              })}
+          <div className="flex items-start gap-3">
+            <div className="flex min-w-0 flex-1 flex-col gap-3">
               <div
-                aria-hidden
-                data-overlay
-                className="pointer-events-none absolute top-0"
-                style={{
-                  left: `${treeWidth}px`,
-                  width: `${timeWidth}px`,
-                  height: `${totalHeight}px`,
+                ref={gridRef}
+                role="treegrid"
+                aria-label={gridName}
+                aria-rowcount={rowCount}
+                aria-busy={state.status === 'loading' || undefined}
+                onKeyDown={(event) => {
+                  // The Escape stack: the chain highlight ends first.
+                  if (event.key === 'Escape' && chain !== undefined) {
+                    event.stopPropagation();
+                    void setSearch(withChain(search, false));
+                  }
                 }}
+                className="max-h-[75vh] overflow-auto rounded-lg border border-border bg-card text-sm"
               >
-                <GanttMarkerLayer markers={overlayMarkers(snapshot)} scale={scale} />
-                <GanttLinks links={links} width={timeWidth} height={totalHeight} />
+                <div
+                  role="row"
+                  aria-rowindex={1}
+                  className="sticky top-0 z-20 grid border-b border-border bg-muted"
+                  style={{ gridTemplateColumns, height: `${timeHeaderHeightRem}rem` }}
+                >
+                  <GanttTreeHeaderCells columns={columns} sort={sort} onSortChange={setSort} />
+                  <GanttTimeHeader scale={scale} nowMs={snapshot.nowMs} />
+                </div>
+                <GanttNotPlacedRow
+                  rows={unplaced}
+                  gridTemplateColumns={gridTemplateColumns}
+                  columnCount={columns.length}
+                />
+                <div className="relative">
+                  {flatRows.map((row, index) => {
+                    const parent = row.getParentRow();
+                    const siblings = parent === undefined ? rows.length : parent.subRows.length;
+                    return (
+                      <GanttRowView
+                        key={row.id}
+                        row={row}
+                        columns={columns}
+                        gridTemplateColumns={gridTemplateColumns}
+                        rowIndex={index + 3}
+                        setSize={siblings}
+                        posInSet={row.index + 1}
+                        focused={row.id === focusedId}
+                        onFocus={() => setFocusedRowId(row.id)}
+                        onKeyDown={(event) => onRowKeyDown(event, row, index)}
+                        onSelect={() => {
+                          selectOrder(row.original.order.id);
+                          setDetailRowId(row.id);
+                        }}
+                        onToggle={() => row.toggleExpanded()}
+                      />
+                    );
+                  })}
+                  <div
+                    aria-hidden
+                    data-overlay
+                    className="pointer-events-none absolute top-0"
+                    style={{
+                      left: `${treeWidth}px`,
+                      width: `${timeWidth}px`,
+                      height: `${totalHeight}px`,
+                    }}
+                  >
+                    <GanttMarkerLayer markers={overlayMarkers(snapshot)} scale={scale} />
+                    <GanttLinks links={links} width={timeWidth} height={totalHeight} />
+                  </div>
+                </div>
               </div>
+              {options.workload && (
+                <GanttWorkloadPanel
+                  snapshot={snapshot}
+                  scale={scale}
+                  treeWidth={treeWidth}
+                  timeWidth={timeWidth}
+                />
+              )}
             </div>
+            <GanttDetailPanel
+              row={detailRow}
+              chain={chain}
+              open={panelOpen}
+              onOpenChange={setPanelOpen}
+              onToggleChain={toggleChain}
+              onFocusRow={focusRow}
+            />
           </div>
         </GanttViewProvider>
       )}
