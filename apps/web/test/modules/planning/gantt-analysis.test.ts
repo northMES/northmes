@@ -28,7 +28,12 @@ describe('the G1 analysis against g1.expected.json (plan 18, phase 2)', () => {
     );
     const expected = Object.fromEntries(
       Object.entries(g1Expected.GT1_GT2_floats).map(([displayNumber, values]) => {
-        const { detail: _detail, ...binding } = values.bindingConstraint;
+        const { detail: _detail, ...named } = values.bindingConstraint;
+        // The fixture names the binding row by display number; the domain adds its job order id.
+        const binding =
+          named.boundBy === undefined
+            ? named
+            : { ...named, boundByJobOrderId: jobOrderId(named.boundBy) };
         return [
           displayNumber,
           {
