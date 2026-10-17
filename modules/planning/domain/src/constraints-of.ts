@@ -32,7 +32,6 @@ export type ConstraintKind =
 
 /** The conflict code a broken line carries (plan 07, Conflicts; plan 18, The constraint kinds). */
 export type ConstraintCode =
-  | 'LATE'
   | 'EARLIEST_START'
   | 'LEAD_TIME'
   | 'SEND_AHEAD'
@@ -97,12 +96,12 @@ export function constraintsOf(
   const last = lastRowOf(order);
   const plannedEndMs = last?.placement?.endMs;
   const slackElapsedS = plannedEndMs === undefined ? 0 : (order.deadlineMs - plannedEndMs) / 1000;
+  // A late order is a warning, never a conflict (plan 07, Conflicts), so the line carries no code.
   lines.push(
     slackElapsedS < 0
       ? {
           kind: 'deadline',
           holds: false,
-          code: 'LATE',
           involves: [order.number],
           atMs: order.deadlineMs,
           slackElapsedS,

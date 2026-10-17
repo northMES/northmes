@@ -100,10 +100,11 @@ describe('constraintsOf (plan 18, The constraint list of a row)', () => {
       sendAheadQuantity: 0,
       beforeByS: 4500,
     });
-    // 1003 is late, so its deadline line is broken too; the last-piece bound of 15 s still holds.
-    expect(lines.filter((line) => !line.holds).map((line) => line.code)).toEqual([
-      'LATE',
-      'LEAD_TIME',
+    // 1003 is late, so its deadline line is broken too, as a warning without a code; the
+    // last-piece bound of 15 s still holds.
+    expect(lines.filter((line) => !line.holds).map((line) => [line.kind, line.code])).toEqual([
+      ['deadline', undefined],
+      ['release', 'LEAD_TIME'],
     ]);
   });
 
