@@ -1,0 +1,12 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "declaration": true,
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src", "fixtures/**/*.json"]
+}

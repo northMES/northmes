@@ -488,6 +488,9 @@ importers:
       '@northmes/planning-contracts':
         specifier: workspace:*
         version: link:../../modules/planning/contracts
+      '@northmes/planning-domain':
+        specifier: workspace:*
+        version: link:../../modules/planning/domain
       '@northmes/web-sdk':
         specifier: workspace:*
         version: link:../../packages/web-sdk

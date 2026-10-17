@@ -1,0 +1,164 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import { cn } from 'cn';
+import { Calendar, ChevronLeft, ChevronRight, Ellipsis, FoldHorizontal } from 'lucide-react';
+import { useId } from 'react';
+import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
+import { IconButton } from '../../../../ui/components/icon-button/index.ts';
+import { Button } from '../../../../ui/primitives/button.tsx';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '../../../../ui/primitives/dropdown-menu.tsx';
+import type { ZoomPreset } from '../../gantt-data.ts';
+import type { BoardView } from '../../gantt-search.ts';
+import { zoomPresetIds, zoomPresets } from '../../timeline/time-scale.ts';
+import type { GanttOptions } from './gantt-options.ts';
+import { ganttColumnChoices } from './gantt-tree-pane.tsx';
+
+const views: readonly { readonly id: BoardView; readonly label: string }[] = [
+  { id: 'board', label: 'Board' },
+  { id: 'gantt', label: 'Gantt' },
+  { id: 'table', label: 'Table' },
+];
+
+/** A group of pressed buttons, one pressed: the View and Zoom groups of D3 and D5. */
+function PressedGroup<TValue extends string>({
+  label,
+  choices,
+  value,
+  onChange,
+}: {
+  readonly label: string;
+  readonly choices: readonly { readonly id: TValue; readonly label: string }[];
+  readonly value: TValue;
+  readonly onChange: (value: TValue) => void;
+}) {
+  return (
+    <div role="group" aria-label={label} className="flex rounded-lg bg-muted p-0.5">
+      {choices.map((choice) => (
+        <Button
+          key={choice.id}
+          variant="ghost"
+          aria-pressed={choice.id === value}
+          onClick={() => onChange(choice.id)}
+          className={cn(
+            'h-7 px-2.5',
+            choice.id === value && 'bg-card shadow-[inset_0_-2px_0_var(--foreground)]',
+          )}
+        >
+          {choice.label}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+export interface GanttToolbarProps {
+  readonly view: BoardView;
+  readonly onViewChange: (view: BoardView) => void;
+  readonly zoom: ZoomPreset;
+  readonly onZoomChange: (zoom: ZoomPreset) => void;
+  readonly from: string;
+  readonly onFromChange: (from: string) => void;
+  readonly onEarlier: () => void;
+  readonly onNow: () => void;
+  readonly onLater: () => void;
+  readonly rangeLabel: string;
+  readonly options: GanttOptions;
+  readonly onOptionsChange: (change: Partial<GanttOptions>) => void;
+}
+
+/**
+ * The Gantt toolbar of D5: the View and Zoom groups, Earlier, Now and Later, Go to date, the range,
+ * the Hide closed time toggle, Columns and Board options. Zoom, from and the view go to the URL;
+ * the toggle, the columns and the options stay local.
+ */
+export function GanttToolbar({
+  view,
+  onViewChange,
+  zoom,
+  onZoomChange,
+  from,
+  onFromChange,
+  onEarlier,
+  onNow,
+  onLater,
+  rangeLabel,
+  options,
+  onOptionsChange,
+}: GanttToolbarProps) {
+  const dateId = useId();
+  return (
+    <div role="toolbar" aria-label="Gantt" className="flex flex-wrap items-center gap-2">
+      <PressedGroup label="View" choices={views} value={view} onChange={onViewChange} />
+      <PressedGroup
+        label="Zoom"
+        choices={zoomPresetIds.map((id) => ({ id, label: zoomPresets[id].label }))}
+        value={zoom}
+        onChange={onZoomChange}
+      />
+      <IconButton label="Show earlier range" variant="outline" size="icon-sm" onClick={onEarlier}>
+        <ChevronLeft />
+      </IconButton>
+      <Button variant="outline" className="h-8 px-3" onClick={onNow}>
+        Now
+      </Button>
+      <IconButton label="Show later range" variant="outline" size="icon-sm" onClick={onLater}>
+        <ChevronRight />
+      </IconButton>
+      <label htmlFor={dateId} className="flex items-center gap-1.5 text-sm">
+        <Calendar aria-hidden className="size-4 text-muted-foreground" />
+        <span className="sr-only">Go to date</span>
+        <input
+          id={dateId}
+          type="date"
+          value={from}
+          onChange={(event) => {
+            if (event.target.value !== '') onFromChange(event.target.value);
+          }}
+          className="h-8 rounded-md border border-input bg-background px-2 font-mono text-xs"
+        />
+      </label>
+      <span className="font-mono text-[0.8125rem] font-medium whitespace-nowrap">{rangeLabel}</span>
+      <Button
+        variant="outline"
+        aria-pressed={options.hideClosed}
+        onClick={() => onOptionsChange({ hideClosed: !options.hideClosed })}
+        className={cn('h-8 px-3', options.hideClosed && 'border-foreground bg-accent')}
+      >
+        <FoldHorizontal aria-hidden />
+        Hide closed time
+      </Button>
+      <span className="grow" />
+      <ColumnsMenu
+        columns={ganttColumnChoices}
+        hidden={options.hiddenColumns}
+        onChange={(hiddenColumns) => onOptionsChange({ hiddenColumns })}
+      />
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<Button variant="outline" size="icon-sm" aria-label="Board options" />}
+        >
+          <Ellipsis aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-56">
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Board options</DropdownMenuLabel>
+            <DropdownMenuCheckboxItem
+              checked={options.workload}
+              closeOnClick={false}
+              onCheckedChange={(workload: boolean) => onOptionsChange({ workload })}
+            >
+              Workload
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}

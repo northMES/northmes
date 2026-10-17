@@ -72,3 +72,24 @@
     transition: none;
   }
 }
+
+/*
+ * The order Gantt's patterns (plan 18): a compressed closed window as a hatched gap, the setup part
+ * of a block as a hatch in the block's text color, and the late band hatched in the late token. A
+ * pattern besides a token, so no state maps to a hue alone (ADR 0021).
+ */
+@layer components {
+  .gantt-gap {
+    background: repeating-linear-gradient(135deg, var(--off-time) 0 2px, var(--input) 2px 3px);
+  }
+
+  .gantt-setup-hatch {
+    background: repeating-linear-gradient(135deg, rgb(0 0 0 / 0.28) 0 3px, transparent 3px 7px);
+  }
+
+  .gantt-late-band {
+    background: repeating-linear-gradient(135deg, var(--late) 0 6px, transparent 6px 12px);
+    border-top: 1px solid var(--late-foreground);
+    border-bottom: 1px solid var(--late-foreground);
+  }
+}
