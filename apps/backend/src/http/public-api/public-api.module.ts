@@ -11,10 +11,12 @@ import type { DiscoveredOperation } from '../../operations/discover-operations.t
 import { OperationRunner } from '../../operations/operation-runner.ts';
 import type { Principal } from '../../principal.ts';
 import { BearerPublicApiCredentials, PublicApiCredentials } from './public-api-credentials.ts';
+import { PostgresThrottlerStorage, PublicApiRateLimit } from './public-api-rate-limit.ts';
 
 /**
  * The host's side of the public routes (ADR 0073): it resolves a call's principal through the
- * public family's credential guard, never through the web's PrincipalResolver, and runs the
+ * public family's credential guard, never through the web's PrincipalResolver, counts the call
+ * against the credential's rate limit, a GET as a read and a POST as a write, and runs the
  * operation through the operation runner with surface api.
  */
 @Injectable()
@@ -24,26 +26,29 @@ export class PublicApiRunner extends PublicOperationRunner {
   constructor(
     @Inject(OperationRunner) private readonly runner: OperationRunner,
     @Inject(PublicApiCredentials) private readonly credentials: PublicApiCredentials,
+    @Inject(PublicApiRateLimit) private readonly rateLimit: PublicApiRateLimit,
   ) {
     super();
   }
 
   async run({
     operation,
+    method,
     input,
     headers,
     plant,
     correlationId,
   }: PublicOperationCall): Promise<OperationResult> {
+    const report = (cause: unknown, id: string) =>
+      this.#logger.error(
+        `The credential of a call of ${operation} failed with correlation id ${id}`,
+        cause instanceof Error ? cause.stack : String(cause),
+      );
     let principal: Principal | null;
     try {
       principal = await this.credentials.resolve({ headers, plant });
+      if (principal) await this.rateLimit.check(principal, method === 'GET' ? 'reads' : 'writes');
     } catch (error) {
-      const report = (cause: unknown, id: string) =>
-        this.#logger.error(
-          `The credential of a call of ${operation} failed with correlation id ${id}`,
-          cause instanceof Error ? cause.stack : String(cause),
-        );
       return { ok: false, error: operationError(error, correlationId, report) };
     }
     if (!principal) {
@@ -99,6 +104,8 @@ export class PublicApiModule {
       providers: [
         { provide: PublicApiCredentials, useClass: credentials },
         { provide: PublicOperationRunner, useClass: PublicApiRunner },
+        PostgresThrottlerStorage,
+        PublicApiRateLimit,
       ],
     };
   }
