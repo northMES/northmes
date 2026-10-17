@@ -162,6 +162,59 @@ describe('serverEnvSchema', () => {
   });
 });
 
+describe('the rate limit settings of the public API in serverEnvSchema', () => {
+  const base = {
+    PORT: '0',
+    NORTHMES_PUBLIC_ORIGIN: 'https://mes.example.com',
+    DATABASE_URL: 'postgres://db.internal:5432/northmes',
+    NORTHMES_DB_APP_PASSWORD_FILE: '/run/secrets/db_app_password',
+    NORTHMES_DB_AUTH_PASSWORD_FILE: '/run/secrets/db_auth_password',
+    NORTHMES_AUTH_SECRET_FILE: '/run/secrets/auth_secret',
+  };
+
+  it('ADR0073-W4 the rate limit is off by default, with 600 reads and 60 writes a minute', () => {
+    const env = loadEnv(serverEnvSchema)(base);
+
+    expect(env.NORTHMES_API_RATE_LIMIT).toBe('off');
+    expect(env.NORTHMES_API_RATE_LIMIT_READS).toBe(600);
+    expect(env.NORTHMES_API_RATE_LIMIT_WRITES).toBe(60);
+  });
+
+  it('ADR0073-W4 an installation turns the rate limit on and sets its limits', () => {
+    const env = loadEnv(serverEnvSchema)({
+      ...base,
+      NORTHMES_API_RATE_LIMIT: 'on',
+      NORTHMES_API_RATE_LIMIT_READS: '1200',
+      NORTHMES_API_RATE_LIMIT_WRITES: '30',
+    });
+
+    expect(env.NORTHMES_API_RATE_LIMIT).toBe('on');
+    expect(env.NORTHMES_API_RATE_LIMIT_READS).toBe(1200);
+    expect(env.NORTHMES_API_RATE_LIMIT_WRITES).toBe(30);
+  });
+
+  it('ADR0073-W4 a switch other than on or off, and a limit that is no positive integer, fail naming the key and its rule', () => {
+    const switchError = configErrorOf(() =>
+      loadEnv(serverEnvSchema)({ ...base, NORTHMES_API_RATE_LIMIT: 'true' }),
+    );
+    expect(switchError.problems).toEqual(['NORTHMES_API_RATE_LIMIT: must be on or off']);
+
+    for (const value of ['0', '-5', '1.5', '60/min', '', '1e3']) {
+      const error = configErrorOf(() =>
+        loadEnv(serverEnvSchema)({
+          ...base,
+          NORTHMES_API_RATE_LIMIT_READS: value,
+          NORTHMES_API_RATE_LIMIT_WRITES: value,
+        }),
+      );
+      expect(error.problems, value).toEqual([
+        'NORTHMES_API_RATE_LIMIT_READS: must be a positive integer of requests per minute',
+        'NORTHMES_API_RATE_LIMIT_WRITES: must be a positive integer of requests per minute',
+      ]);
+    }
+  });
+});
+
 describe('migrateEnvSchema and bootstrapEnvSchema', () => {
   const DATABASE_URL = 'postgres://db.internal:5432/northmes';
   const migrateKeys = {

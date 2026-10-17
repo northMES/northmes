@@ -23,6 +23,7 @@ export type DomainErrorStatus =
   | HttpStatus.NOT_FOUND
   | HttpStatus.CONFLICT
   | HttpStatus.PRECONDITION_FAILED
+  | HttpStatus.TOO_MANY_REQUESTS
   | HttpStatus.SERVICE_UNAVAILABLE;
 
 export interface DomainErrorOptions {
@@ -31,7 +32,7 @@ export interface DomainErrorOptions {
   /**
    * The HTTP status, from which the exception filter takes the GraphQL extensions.code:
    * 400 BAD_USER_INPUT, 401 UNAUTHENTICATED, 403 FORBIDDEN, 404 NOT_FOUND, 409 CONFLICT,
-   * 412 PRECONDITION or 503 UNAVAILABLE.
+   * 412 PRECONDITION, 429 RATE_LIMITED or 503 UNAVAILABLE.
    */
   readonly status: DomainErrorStatus;
   /** The text the person who ran the operation reads. */

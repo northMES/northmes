@@ -183,6 +183,18 @@ The browser warns about the certificate on the first visit, because Caddy signed
 docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt ./northmes-root.crt
 ```
 
+## API rate limits
+
+The REST API under `/api/v1` can limit how many requests each integration token sends per minute. The limits are off by default. Set them in `.env`, then run `docker compose up -d`:
+
+| Variable | Values | Default |
+|---|---|---|
+| `NORTHMES_API_RATE_LIMIT` | `on` or `off` | `off` |
+| `NORTHMES_API_RATE_LIMIT_READS` | requests per minute per token to `GET` routes, a positive integer | `600` |
+| `NORTHMES_API_RATE_LIMIT_WRITES` | requests per minute per token to `POST` routes, a positive integer | `60` |
+
+Reads and writes count apart, and each token counts on its own, whatever address it calls from. The count lives in the database, so every `app` process shares it. A token over its limit gets HTTP 429 with the code `core.request.rate_limited` and a `Retry-After` header with the seconds to wait. `app` does not start with a value outside these rules, and its log names the variable.
+
 ## Back up
 
 Your backups are yours to keep, as with any self-hosted app. NorthMES writes them on the host; copying them somewhere safe is up to you.

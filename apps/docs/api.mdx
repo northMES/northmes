@@ -6,7 +6,7 @@ description: The GraphQL API at /graphql that the NorthMES web app and plugin sc
 The GraphQL API is the web app's own API. The NorthMES web app and the screens of installed plugins call it on behalf of the person who is signed in. This page covers the endpoint, how a request is authenticated, plants, lists, errors and limits, for people who build plugin screens or debug the web app. Every type, field, argument, query and mutation is described in the schema itself.
 
 <Note>
-NorthMES does not support scripts or outside systems that sign in with a person's email and password. Integrations will use the REST API with OAuth client credentials or integration tokens, which are not built yet ([ADR 0073](https://github.com/northMES/northmes/blob/main/docs/adr/0073-one-module-contract-for-rest-webmcp-and-later-mcp-with-oauth-clients-and-tokens.md)).
+NorthMES does not support scripts or outside systems that sign in with a person's email and password. Integrations use the REST API under `/api/v1` with an integration token that a Company admin creates, sent as `Authorization: Bearer`; OAuth client credentials come later ([ADR 0073](https://github.com/northMES/northmes/blob/main/docs/adr/0073-one-module-contract-for-rest-webmcp-and-later-mcp-with-oauth-clients-and-tokens.md)).
 </Note>
 
 ## The schema

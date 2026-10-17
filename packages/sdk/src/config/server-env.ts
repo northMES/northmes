@@ -7,6 +7,7 @@ import { configFile, databaseUrl, nodeEnv, rule, secretFile } from './keys.ts';
 const PORT_RULE = 'an integer from 0 to 65535';
 const LISTEN_HOST_RULE = 'an IPv4 or IPv6 address';
 const PROXY_HOPS_RULE = 'an integer from 0 to 9';
+const RATE_LIMIT_RULE = 'a positive integer of requests per minute';
 const ORIGIN_RULE =
   'an origin with no path, https:// in production, and in development and test also http://localhost or http://127.0.0.1 with a port';
 
@@ -25,6 +26,15 @@ function isPublicOrigin(value: string, env: z.infer<typeof nodeEnv>): boolean {
     LOOPBACK_HOSTS.has(url.hostname) &&
     url.port !== ''
   );
+}
+
+/** A limit of requests per minute, written as a positive integer without sign or exponent. */
+function rateLimit(fallback: string) {
+  return z
+    .string(rule(RATE_LIMIT_RULE))
+    .refine((value) => /^[1-9]\d{0,8}$/.test(value), rule(RATE_LIMIT_RULE))
+    .default(fallback)
+    .transform(Number);
 }
 
 /** The environment of apps/backend in every role (ADR 0060). */
@@ -52,6 +62,11 @@ export const serverEnvSchema = z
       .default('0')
       .transform(Number),
     NORTHMES_PUBLIC_ORIGIN: z.string(rule(ORIGIN_RULE)),
+    // The rate limits of the public REST API, per credential and minute, which an installation
+    // turns on (ADR 0073 section 6): GET routes count as reads and POST routes as writes.
+    NORTHMES_API_RATE_LIMIT: z.enum(['on', 'off'], rule('on or off')).default('off'),
+    NORTHMES_API_RATE_LIMIT_READS: rateLimit('600'),
+    NORTHMES_API_RATE_LIMIT_WRITES: rateLimit('60'),
     // The server logs in to DATABASE_URL as nm_app with the password in this file (ADR 0060).
     DATABASE_URL: databaseUrl,
     NORTHMES_DB_APP_PASSWORD_FILE: secretFile,

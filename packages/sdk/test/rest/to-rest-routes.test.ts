@@ -172,6 +172,7 @@ describe('toRestRoutes', () => {
     expect(runner.calls).toHaveLength(1);
     expect(runner.calls[0]).toMatchObject({
       operation: 'tools.getGauge',
+      method: 'GET',
       input: { id: GAUGE_ID },
       plant: 'hel',
     });
@@ -194,7 +195,12 @@ describe('toRestRoutes', () => {
     expect(response.headers.get('content-type')).toMatch(/^application\/json/);
     expect(await response.json()).toEqual({ id: GAUGE_ID, code: 'G-1', size: 4 });
     expect(runner.calls).toMatchObject([
-      { operation: 'tools.createGauge', input: { id: GAUGE_ID, code: 'G-1' }, plant: undefined },
+      {
+        operation: 'tools.createGauge',
+        method: 'POST',
+        input: { id: GAUGE_ID, code: 'G-1' },
+        plant: undefined,
+      },
     ]);
   });
 
@@ -265,6 +271,42 @@ describe('toRestRoutes', () => {
       errors: [],
       details: { permission: 'tools.gauge:read' },
     });
+  });
+
+  it('ADR0073-W4 a 429 problem sends its details.retryAfterSeconds as Retry-After, and another problem sends none', async () => {
+    const runner = new FakeRunner();
+    runner.answer = {
+      ok: false,
+      error: {
+        status: 429,
+        code: 'core.request.rate_limited',
+        message: 'Too many requests. Try again in 42 seconds.',
+        details: { retryAfterSeconds: 42 },
+        correlationId: 'corr-3',
+      },
+    };
+    const url = await serve(toRestRoutes([gaugeOperations]), runner);
+
+    const limited = await fetch(`${url}/api/v1/tools/commands/create-gauge`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    });
+    runner.answer = {
+      ok: false,
+      error: { status: 403, code: 'core.forbidden', message: 'No', correlationId: 'corr-4' },
+    };
+    const refused = await fetch(`${url}/api/v1/tools/gauges`);
+
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get('retry-after')).toBe('42');
+    expect(limited.headers.get('content-type')).toMatch(/^application\/problem\+json/);
+    expect(await limited.json()).toMatchObject({
+      title: 'Too many requests',
+      code: 'core.request.rate_limited',
+      details: { retryAfterSeconds: 42 },
+    });
+    expect(refused.headers.get('retry-after')).toBeNull();
   });
 
   it('ADR0073-W4 a runner that throws answers 500 core.internal with a correlation id and without its message', async () => {

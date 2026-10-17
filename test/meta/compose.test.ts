@@ -132,6 +132,21 @@ describe('the Compose bundle (ADR 0080)', () => {
     expect(read('deploy/northmes.env.example')).toContain('# NORTHMES_APP_MEM_LIMIT=2g');
   });
 
+  it("passes the public API's rate limits from .env to app, off by default (ADR 0073)", () => {
+    expect(services.app?.environment).toMatchObject({
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
+      NORTHMES_API_RATE_LIMIT: '${NORTHMES_API_RATE_LIMIT:-off}',
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
+      NORTHMES_API_RATE_LIMIT_READS: '${NORTHMES_API_RATE_LIMIT_READS:-600}',
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
+      NORTHMES_API_RATE_LIMIT_WRITES: '${NORTHMES_API_RATE_LIMIT_WRITES:-60}',
+    });
+    const example = read('deploy/northmes.env.example');
+    expect(example).toContain('# NORTHMES_API_RATE_LIMIT=on');
+    expect(example).toContain('# NORTHMES_API_RATE_LIMIT_READS=600');
+    expect(example).toContain('# NORTHMES_API_RATE_LIMIT_WRITES=60');
+  });
+
   it('bootstrap, migrate and app reach the bundled db unless NORTHMES_DATABASE_URL names another server', () => {
     for (const name of ['bootstrap', 'migrate', 'app']) {
       expect(services[name]?.environment?.DATABASE_URL, name).toBe(

@@ -92,6 +92,18 @@ NorthMES refuses a fourth sign-in from one client address within 10 seconds, and
 
 Computers behind one address, such as a plant's NAT, share that limit. NorthMES takes the client address that Caddy reports, so `compose.yaml` sets `NORTHMES_TRUSTED_PROXY_HOPS: "1"` for the one proxy in front of `app`. Keep it at 1 while Caddy is the only proxy.
 
+## API rate limits
+
+The REST API under `/api/v1` limits how many requests each integration token sends per minute, once you turn the limits on. They are off by default. Set them in `.env`:
+
+| Variable | Values | Default |
+|---|---|---|
+| `NORTHMES_API_RATE_LIMIT` | `on` or `off` | `off` |
+| `NORTHMES_API_RATE_LIMIT_READS` | requests per minute per token to `GET` routes, a positive integer | `600` |
+| `NORTHMES_API_RATE_LIMIT_WRITES` | requests per minute per token to `POST` routes, a positive integer | `60` |
+
+Reads and writes count apart, and each token counts on its own, whatever address it calls from. The count lives in the database, so it holds across restarts and across several `app` processes. A token over its limit gets HTTP 429 with the code `core.request.rate_limited` and a `Retry-After` header with the seconds to wait. `app` does not start when the switch is neither `on` nor `off` or a limit is no positive integer, and its log names the variable. Run `docker compose up -d` after you change `.env`.
+
 ## Back up
 
 Your backups are yours to keep, as with any self-hosted app. NorthMES writes them on the host; copying them somewhere safe is up to you.
