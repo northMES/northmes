@@ -1,11 +1,11 @@
 ---
-status: "proposed"
-date: 2026-10-09
-decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
+status: "accepted"
+date: 2026-10-16
+decision-makers: Krister Johansson
 consulted: Krister Johansson; the WebMCP draft of the W3C Web Machine Learning Community Group; the MCP authorization specification; Better Auth's OAuth provider and api-key documentation
 informed: contributors, coding agents, module and plugin authors, pilot IT
 release: "1"
-needs-confirmation: "maintainer (the optional plant parameter on article routes; core.article:assign as a company permission, also for removing a plant; edit_scope_id in core.article's write policies; plants on create and upsert as allPlants and plant slugs, defaulting to the request's plant or to none; an upsert that names no plants leaving an existing article's plants as they are; the company's article list at /settings/$companyId/articles with the unassigned filter; the error code core.article_not_assigned; personal access tokens bound to one company; the WebMCP toolset of the module whose route is open; planning's three read tools; the names webmcp.enabled and NORTHMES_WEBMCP; the audit surface webmcp and the principal type integration; token lifetimes and rate limit numbers; the ADR 0055 ledger row, its estimate and cut order item 3; the navigator.modelContext fallback)"
+needs-confirmation: "maintainer (the optional plant parameter on article routes; core.article:assign as a company permission, also for removing a plant; edit_scope_id in core.article's write policies; plants on create and upsert as allPlants and plant slugs, defaulting to the request's plant or to none; an upsert that names no plants leaving an existing article's plants as they are; the company's article list at /settings/$companyId/articles with the unassigned filter; the error code core.article_not_assigned; the WebMCP toolset of the module whose route is open; planning's three read tools; the names webmcp.enabled and NORTHMES_WEBMCP; the audit surface webmcp and the principal type integration; the ADR 0055 ledger row, its estimate and cut order item 3; the navigator.modelContext fallback)"
 ---
 
 # One module contract for REST, WebMCP and later MCP, with OAuth clients and tokens
@@ -263,6 +263,8 @@ WebMCP is release 1's agent surface (maintainer, 2026-10-09). The web app regist
 
 #### Personal access tokens
 
+Deferred until after release 1 (Krister Johansson, 2026-10-16). Release 1 gives machines integration tokens and OAuth client credentials, so no script needs a person's credential, and password sign-in answers only the web app in a browser ([ADR 0011][adr-0011]). The design below stays for the later release.
+
 * A signed-in user creates them for themselves under their profile with `core.createPersonalAccessToken` and revokes them with `core.revokePersonalAccessToken`. A Company admin lists and revokes any token of the company's users.
 * Release 1 has one kind, for the public REST API: Better Auth api-key `configId` `pat`, prefix `nms_pat_`. A token references the user and one of the user's companies, chosen when it is created, expires within 90 days and is shown once.
 * A personal access token acts as the user. Each call's rights are the token's scopes intersected with a live `can()` ([ADR 0011][adr-0011]).
@@ -287,12 +289,12 @@ NorthMES runs one OAuth 2.1 authorization server on Better Auth's OAuth provider
 
 #### Credentials by surface
 
-Every bearer credential arrives in `Authorization: Bearer`. The guard reads the prefix: `nms_int_` and `nms_pat_` are verified as api-keys of their `configId`, anything else as a JWT, by its `aud`.
+Every bearer credential arrives in `Authorization: Bearer`. The guard reads the prefix: `nms_int_` (and `nms_pat_`, once personal access tokens come after release 1) is verified as an api-key of its `configId`, anything else as a JWT, by its `aud`.
 
 | Surface | Accepts | Rejects |
 |---|---|---|
 | `/graphql`, `/api/v1/web/*` (including `/api/v1/web/tools/{tool}`) | the web's JWT (`aud` the public origin, with `sid`, without `azp` or `client_id`); the station cookie as [ADR 0011][adr-0011] says | integration tokens, personal access tokens and OAuth access tokens |
-| Public REST, `/api/v1/<module-id>/...` | integration tokens; personal access tokens; OAuth access tokens with `aud` `.../api/v1` | the web's JWT, and cookies, which it ignores |
+| Public REST, `/api/v1/<module-id>/...` | integration tokens; OAuth access tokens with `aud` `.../api/v1`; personal access tokens after release 1 | the web's JWT, and cookies, which it ignores |
 | `GET /api/v1/openapi.json` | the web's JWT, and every credential the public REST row accepts | anonymous requests |
 | Better Auth's routes, including `/oauth2/authorize`, `/oauth2/token`, `/oauth2/revoke` and `/jwks` | as Better Auth defines them; the web's bearer session only at `/api/auth/token` and on the consent continuation | the api-key, admin and registration HTTP paths, which stay in `disabledPaths` |
 | `/.well-known/oauth-authorization-server` | anonymous; metadata only | |
@@ -319,7 +321,7 @@ Delivery in waves. Each wave is a set of stories that each pass `pnpm check`:
 1. Dependencies, landed on main: `@nestjs/swagger` 12.0.2 (#423), `zod-openapi` 6.0.2 (#425), `@better-auth/oauth-provider` 1.7.6 (#427), and `@modelcontextprotocol/server` and `@modelcontextprotocol/client` 2.1.0 (#429), which no release 1 code uses.
 2. Where an article lives: `core.article` at the company with `company_id`, `scope_span`, the exclusion constraint, `all_plants` and `edit_scope_id`, its write policies on both scope columns, `core.article_plant`, and the migration that moves existing articles; `allPlants` and `plants` on `core.createArticle`, `core.setArticlePlants` with `core.article:assign` and `coreSetArticlePlants`, the list's `unassigned` filter, the edit scope on update, archive and restore, and the reference check with `core.article_not_assigned`; in the web, the Plants column, the plants choice for a user who holds `core.article:assign` at the company, and the company's article list at `/settings/$companyId/articles`.
 3. The operation contract: `defineQueryContract`, `defineListQueryContract` with core's article list declaration moved into its contracts package, `outsideText()`, `defineOperations`, `bindOperations`, the runner with its tool output rules and error mapping, `context.require` on the command bus, `operationsConformance`, `core.upsertArticle` and the article operations bound in the backend. GraphQL gains `coreUpsertArticle` from the same command.
-4. Public REST and OpenAPI: `toRestRoutes`, the document builder and `northmes openapi print`, `schema/openapi-v1.json`, the oasdiff gate, `GET /api/v1/openapi.json`, the audit surface `api`, the principal type `integration`, integration tokens, personal access tokens, Settings, Integrations, the credential guard and the Postgres throttler.
+4. Public REST and OpenAPI: `toRestRoutes`, the document builder and `northmes openapi print`, `schema/openapi-v1.json`, the oasdiff gate, `GET /api/v1/openapi.json`, the audit surface `api`, the principal type `integration`, integration tokens (personal access tokens wait until after release 1), Settings, Integrations, the credential guard and the Postgres throttler.
 5. WebMCP with core's toolset: `toWebMcpTool`, the tool route, `core_search` and `core_get_article`, toolsets by route, the CI check on toolset size, `webmcp.enabled` and `NORTHMES_WEBMCP`, the `Permissions-Policy` header, the audit surface `webmcp` and the registration lifecycle.
 6. OAuth 2.1 for the public API, starting with the `/token` question under More information: client registration, client credentials, the authorization code flow with PKCE, the consent screen, Connected apps, refresh rotation and the authorization server metadata.
 7. Planning's read tools join as the planning stories that own them land ([ADR 0034][adr-0034]), and `toAgentTool` with the assistant ([ADR 0035][adr-0035]).
