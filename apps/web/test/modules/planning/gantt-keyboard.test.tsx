@@ -3,7 +3,25 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { findGantt, renderBoardRoute } from './gantt-fixtures.tsx';
+import type { GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { findGantt, renderBoardRoute, sourceOf } from './gantt-fixtures.tsx';
+
+/** G1 with 1006.10 taken off its machine, so it sits in the Not placed row. */
+function withUnplaced1006(): GanttSnapshot {
+  const snapshot = g1Snapshot();
+  return {
+    ...snapshot,
+    productionOrders: snapshot.productionOrders.map((order) =>
+      order.number !== '1006'
+        ? order
+        : {
+            ...order,
+            jobOrders: order.jobOrders.map(({ equipment: _, placement: __, ...row }) => row),
+          },
+    ),
+  };
+}
 
 afterEach(cleanup);
 
@@ -89,6 +107,26 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
     expect(await screen.findByRole('tooltip')).toBeTruthy();
     await userEvent.keyboard('{ArrowLeft}');
     expect(document.activeElement).toBe(rowOf(gantt, 'jo-1001-20'));
+  });
+
+  it('ADR0021 Right on an unplaced job order row lands on its time cell, named "not placed"', async () => {
+    renderBoardRoute(
+      { view: 'gantt', zoom: 'week', from: '2026-11-02' },
+      sourceOf(withUnplaced1006()),
+    );
+    const gantt = await findGantt();
+    expect(within(gantt).getByRole('row', { name: /Not placed/ }).textContent).toContain('1006.10');
+
+    rowOf(gantt, 'jo-1006-10').focus();
+    await userEvent.keyboard('{ArrowRight}');
+
+    const cell = document.activeElement;
+    expect(cell?.getAttribute('role')).toBe('gridcell');
+    expect(cell?.getAttribute('aria-label')).toBe(
+      '1006.10 Mill, Shaft 8, 600 pcs, no machine, not placed, setup 0 min, run 3 h, planned',
+    );
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(document.activeElement).toBe(rowOf(gantt, 'jo-1006-10'));
   });
 
   it('ADR0021 Enter opens Details of the row and selects its order', async () => {
