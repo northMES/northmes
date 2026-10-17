@@ -78,6 +78,9 @@ function boundStart(row: PlanJobOrder, context: PlanContext): number | undefined
 
 /** The start of a row whose run starts at an instant: the retool laid backward from it. */
 function setupStartFor(row: PlanJobOrder, runStartMs: number, windows: Windows): number {
+  // Without retool the setup starts with the run: zero work laid backward from the start of a
+  // window would land at the end of the window before it.
+  if (row.plannedSetupS <= 0) return runStartMs;
   return subtractWork(windows, runStartMs, row.plannedSetupS)?.startMs ?? runStartMs;
 }
 

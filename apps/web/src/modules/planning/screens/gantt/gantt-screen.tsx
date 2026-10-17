@@ -439,6 +439,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             for (let count = 0; count < 500 && setupStartMs > floor; count += 1) {
               const next = previewOf(snapshot, { ...current, setupStartMs }, options.cascade);
               if (next === undefined || next.span.setupStartMs < from) break;
+              // The row cannot start before its release or its last-piece bound: it stays.
+              if (next.reason === 'snappedToRelease' || next.reason === 'snappedToLastPiece') {
+                return current;
+              }
               setupStartMs -= stepMs;
             }
           }

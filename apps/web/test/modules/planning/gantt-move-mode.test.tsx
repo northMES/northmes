@@ -87,6 +87,27 @@ describe('keyboard move mode on the order Gantt (plan 18, Tree grid semantics)',
     await userEvent.keyboard('{Escape}');
   });
 
+  it('Left on a row at its release keeps the preview there instead of walking back through the horizon', async () => {
+    // 1003.20 starts at its release Wed 12:45: no earlier start exists with cascade on, so one
+    // Left leaves the preview where it is, at once.
+    renderGanttRoute({ zoom: 'hours', from: '2026-11-04' });
+    const gantt = await findGantt();
+    rowOf(gantt, 'jo-1003-20').focus();
+    await userEvent.keyboard('{ArrowRight}');
+    await userEvent.keyboard('m');
+    const started = Date.now();
+
+    await userEvent.keyboard('{ArrowLeft}');
+
+    await waitFor(() => {
+      expect(
+        gantt.querySelector('[data-move-preview="jo-1003-20"]')?.getAttribute('data-from-ms'),
+      ).toBe(String(Date.UTC(2026, 10, 4, 11, 45)));
+    });
+    expect(Date.now() - started).toBeLessThan(1500);
+    await userEvent.keyboard('{Escape}');
+  });
+
   it('Move in Details starts a move without dragging: Later, Next machine and Apply write the draft and focus the block', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
