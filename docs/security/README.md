@@ -56,7 +56,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Session absolute lifetime (24 hours from sign-in, whatever its use), and JWTs ended with their session: a JWT is refused once its session signed out, was revoked or expired | built | `auth-options.ts`; `auth.service.ts`; `auth-options.test.ts`, `sign-in.int.test.ts` |
 | The auth design (ADR 0011) matches the code | built | ADR 0011 and ADR 0070: a bearer session in `sessionStorage`, five-minute JWTs, CORS for `webOrigins` without credentials; `apps/backend/src/http/web-origins.module.ts` |
 | The public REST API accepts only integration tokens in `Authorization: Bearer`, never the web's JWT or a cookie, and `/graphql` refuses integration tokens | built | ADR 0073 section 5; `apps/backend/src/http/public-api/public-api-credentials.ts`, `integration-credential.service.ts`; `credential-guard.int.test.ts`, `v1-articles.int.test.ts`, `principal-guard.test.ts` |
-| Rate limits per credential on the public REST API, shared by every backend process through Postgres, off unless `NORTHMES_API_RATE_LIMIT=on` | built | ADR 0073 section 6; `apps/backend/src/http/public-api/public-api-rate-limit.ts`, `20261017154854_rate_limit.sql`; `rate-limit.int.test.ts`, `server-env.test.ts` |
+| Rate limits per credential on the public REST API, shared by every backend process through Postgres, off unless `NORTHMES_API_RATE_LIMIT=on` | built | ADR 0073 section 6, ADR 0082; `apps/backend/src/http/public-api/public-api-rate-limit.ts`, `20261017154854_rate_limit.sql`; `rate-limit.int.test.ts`, `server-env.test.ts` |
 | MFA and a password policy | accepted | ADR 0051 B2: deferred until the pilot's NIS2 status is known |
 
 ### 3. Logging, monitoring and audit trails

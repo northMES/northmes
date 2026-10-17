@@ -106,7 +106,7 @@ export class PostgresThrottlerStorage implements ThrottlerStorage {
 export type RateLimitKind = 'reads' | 'writes';
 
 /**
- * The rate limits of the public REST API (ADR 0073 section 6), off unless NORTHMES_API_RATE_LIMIT
+ * The rate limits of the public REST API (ADR 0073 section 6, ADR 0082), off unless NORTHMES_API_RATE_LIMIT
  * is on. Each credential gets NORTHMES_API_RATE_LIMIT_READS reads (GET routes) and
  * NORTHMES_API_RATE_LIMIT_WRITES writes (POST routes) a minute, counted apart, in the
  * PostgresThrottlerStorage. The count is per credential, its core.credential id, never per client
