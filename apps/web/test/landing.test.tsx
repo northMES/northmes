@@ -85,6 +85,17 @@ describe('the landing at /', () => {
     expect(screen.queryByRole('heading', { level: 1, name: 'Page not found' })).toBeNull();
   });
 
+  it("ADR0066 without a module with sidebar entries, each plant link on the plant list opens the plant's root", async () => {
+    const { fetch } = api(() => companiesWith(['plant-a', 'plant-b']));
+    renderShellAt('/', [], { fetch });
+
+    const acme = await screen.findByRole('list', { name: 'Acme AB' });
+    expect(linksIn(acme)).toEqual([
+      ['Plant A', '/plant-a'],
+      ['Plant B', '/plant-b'],
+    ]);
+  });
+
   it("ADR0066 the plant list links each company's settings where the user has a company settings page", async () => {
     const { fetch } = api(() => companiesWith(['plant-a'], [nordic]), companyAdmin);
     renderShellAt('/', shellModules, { fetch });
