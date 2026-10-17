@@ -1,12 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { gql } from '@apollo/client';
+import { gql, type TypedDocumentNode } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { defineWebModule } from '@northmes/web-sdk';
 import packageJson from '../package.json' with { type: 'json' };
 
+interface ArticleCountQuery {
+  readonly coreArticleFacets: { readonly total: number };
+}
+
 /** The number of articles at the plant that are not archived, as the articles list counts them. */
-const ArticleCount = gql`
+const ArticleCount: TypedDocumentNode<ArticleCountQuery> = gql`
   query ExampleArticleCount {
     coreArticleFacets {
       total
@@ -14,16 +18,12 @@ const ArticleCount = gql`
   }
 `;
 
-interface ArticleCountQuery {
-  readonly coreArticleFacets: { readonly total: number };
-}
-
 /**
  * The widget. It reads through the shell's Apollo client, which signs the request in and names the
  * plant, so the API answers with what the signed-in user may read there.
  */
 function ArticleCountWidget({ plant }: { readonly plant: string }) {
-  const { data, error, loading } = useQuery<ArticleCountQuery>(ArticleCount);
+  const { data, error, loading } = useQuery(ArticleCount);
   if (loading) return <p className="text-muted-foreground">Counting articles…</p>;
   if (error !== undefined || data === undefined) {
     return <p className="text-muted-foreground">The articles could not be counted.</p>;
