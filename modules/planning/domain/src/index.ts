@@ -63,7 +63,12 @@ export {
   ganttExpected,
   ganttFixture,
 } from './fixtures/gantt.ts';
-export { g1HorizonEndMs, g1OrderId, g1PlanContext } from './fixtures/gantt-context.ts';
+export {
+  g1HorizonEndMs,
+  g1HorizonStartMs,
+  g1OrderId,
+  g1PlanContext,
+} from './fixtures/gantt-context.ts';
 export {
   type BindingConstraint,
   type BindingConstraintKind,
@@ -89,3 +94,12 @@ export {
   rowsOfOperation,
 } from './plan-context.ts';
 export { lastPieceMinEnd, type Release, releaseOf } from './release.ts';
+export {
+  type Bucket,
+  isoWeekBuckets,
+  productionDayBuckets,
+  shiftBuckets,
+  type WorkloadBucket,
+  type WorkloadItem,
+  workload,
+} from './workload.ts';

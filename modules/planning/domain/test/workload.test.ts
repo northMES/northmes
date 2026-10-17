@@ -200,6 +200,6 @@ describe('workload (plan 18, Workload)', () => {
     expect(byShift[0]).toMatchObject({ label: '2026-11-02 06:00 to 15:00', availableS: 29_700 });
     expect(totalsOf(byShift)).toEqual(totalsOf(byDay));
     expect(totalsOf(byWeek)).toEqual(totalsOf(byDay));
-    expect(totalsOf(byDay)).toEqual({ availableS: 3 * 5 * 29_700, loadedS: 161_100, setupS: 3600 });
+    expect(totalsOf(byDay)).toEqual({ availableS: 3 * 5 * 29_700, loadedS: 160_800, setupS: 3600 });
   });
 });

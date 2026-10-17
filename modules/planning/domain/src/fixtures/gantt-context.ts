@@ -5,7 +5,8 @@ import type { Windows } from '../calendar/windows.ts';
 import type { PlanContext, PlanOrder } from '../plan-context.ts';
 import { type GanttFixture, g1 } from './gantt.ts';
 
-/** The end of the loaded horizon of the fixture, three weeks after its week. */
+/** The loaded horizon of the fixture: from the Monday of its week to three weeks after it. */
+export const g1HorizonStartMs = Date.UTC(2026, 10, 1, 23);
 export const g1HorizonEndMs = Date.UTC(2026, 10, 29, 23);
 
 /** The order id of an order number in the fixture, where the server sends a uuid. */
@@ -19,7 +20,12 @@ export function g1PlanContext(fixture: GanttFixture = g1): PlanContext {
   const nowMs = Date.parse(fixture.now.instant);
   const availability: Record<string, Windows> = {};
   for (const machine of fixture.equipment) {
-    availability[machine.code] = availabilityOf(calendar, machine.code, nowMs, g1HorizonEndMs);
+    availability[machine.code] = availabilityOf(
+      calendar,
+      machine.code,
+      g1HorizonStartMs,
+      g1HorizonEndMs,
+    );
   }
   const orders: PlanOrder[] = fixture.productionOrders.map((order) => ({
     id: g1OrderId(order.number),
