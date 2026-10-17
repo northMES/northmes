@@ -28,11 +28,17 @@ describe('the in-memory draft of the order Gantt (plan 18, Resolving a break in 
     expect(result.refused).toBeUndefined();
     expect(draft.changes.map((change) => change.displayNumber)).toEqual(['1003.10']);
     const applied = applyDraft(committed, draft);
-    expect(applied.productionOrders.find((o) => o.number === '1003')?.jobOrders[0]?.placement).toMatchObject({
+    expect(
+      applied.productionOrders.find((o) => o.number === '1003')?.jobOrders[0]?.placement,
+    ).toMatchObject({
       setupStartMs: wed(8),
       endMs: wed(12, 30),
     });
-    expect(applied.analysis.jobOrders['jo-1003-20']?.constraints.some((line) => line.code === 'LEAD_TIME')).toBe(true);
+    expect(
+      applied.analysis.jobOrders['jo-1003-20']?.constraints.some(
+        (line) => line.code === 'LEAD_TIME',
+      ),
+    ).toBe(true);
     expect(draftConflicts(applied, draft)).toEqual([
       {
         code: 'LEAD_TIME',
@@ -47,17 +53,35 @@ describe('the in-memory draft of the order Gantt (plan 18, Resolving a break in 
   });
 
   it('GT3 with cascade on, the same move is two changes and no conflict', () => {
-    const { draft } = moveInDraft(committed, emptyDraft, { jobOrderId: 'jo-1003-10', setupStartMs: wed(8) });
+    const { draft } = moveInDraft(committed, emptyDraft, {
+      jobOrderId: 'jo-1003-10',
+      setupStartMs: wed(8),
+    });
 
-    expect(draft.changes.map(({ displayNumber, to, reason }) => ({ displayNumber, to, reason }))).toEqual([
-      { displayNumber: '1003.10', to: { setupStartMs: wed(8), runStartMs: wed(8), endMs: wed(12, 30) }, reason: 'moved' },
-      { displayNumber: '1003.20', to: { setupStartMs: wed(12, 30), runStartMs: wed(12, 30), endMs: thu(6) }, reason: 'cascade' },
+    expect(
+      draft.changes.map(({ displayNumber, to, reason }) => ({ displayNumber, to, reason })),
+    ).toEqual([
+      {
+        displayNumber: '1003.10',
+        to: { setupStartMs: wed(8), runStartMs: wed(8), endMs: wed(12, 30) },
+        reason: 'moved',
+      },
+      {
+        displayNumber: '1003.20',
+        to: { setupStartMs: wed(12, 30), runStartMs: wed(12, 30), endMs: thu(6) },
+        reason: 'cascade',
+      },
     ]);
     expect(draftConflicts(applyDraft(committed, draft), draft)).toEqual([]);
   });
 
   it('Cascade from here on the LEAD_TIME line adds the second draft row and clears the conflict', () => {
-    const { draft } = moveInDraft(committed, emptyDraft, { jobOrderId: 'jo-1003-10', setupStartMs: wed(8) }, { cascade: false });
+    const { draft } = moveInDraft(
+      committed,
+      emptyDraft,
+      { jobOrderId: 'jo-1003-10', setupStartMs: wed(8) },
+      { cascade: false },
+    );
     const [conflict] = draftConflicts(applyDraft(committed, draft), draft);
     if (conflict === undefined) throw new Error('no conflict');
 
@@ -69,7 +93,12 @@ describe('the in-memory draft of the order Gantt (plan 18, Resolving a break in 
   });
 
   it('Move back discards the draft change of the row that caused the conflict', () => {
-    const { draft } = moveInDraft(committed, emptyDraft, { jobOrderId: 'jo-1003-10', setupStartMs: wed(8) }, { cascade: false });
+    const { draft } = moveInDraft(
+      committed,
+      emptyDraft,
+      { jobOrderId: 'jo-1003-10', setupStartMs: wed(8) },
+      { cascade: false },
+    );
     const [conflict] = draftConflicts(applyDraft(committed, draft), draft);
     if (conflict === undefined) throw new Error('no conflict');
 
@@ -80,8 +109,14 @@ describe('the in-memory draft of the order Gantt (plan 18, Resolving a break in 
   });
 
   it('a second move of a row in the draft keeps the committed span as its origin', () => {
-    const first = moveInDraft(committed, emptyDraft, { jobOrderId: 'jo-1003-10', setupStartMs: wed(8) }).draft;
-    const second = moveInDraft(committed, first, { jobOrderId: 'jo-1003-10', setupStartMs: wed(9) }).draft;
+    const first = moveInDraft(committed, emptyDraft, {
+      jobOrderId: 'jo-1003-10',
+      setupStartMs: wed(8),
+    }).draft;
+    const second = moveInDraft(committed, first, {
+      jobOrderId: 'jo-1003-10',
+      setupStartMs: wed(9),
+    }).draft;
 
     expect(second.changes.find((change) => change.jobOrderId === 'jo-1003-10')).toMatchObject({
       from: { setupStartMs: wed(7) },
@@ -91,7 +126,10 @@ describe('the in-memory draft of the order Gantt (plan 18, Resolving a break in 
   });
 
   it('a refused move leaves the draft as it was', () => {
-    const { draft, result } = moveInDraft(committed, emptyDraft, { jobOrderId: 'jo-1002-10', setupStartMs: thu(5) });
+    const { draft, result } = moveInDraft(committed, emptyDraft, {
+      jobOrderId: 'jo-1002-10',
+      setupStartMs: thu(5),
+    });
 
     expect(result.refused).toBe('PINNED');
     expect(draft).toBe(emptyDraft);
