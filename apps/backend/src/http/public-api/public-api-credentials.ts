@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
+import { IntegrationCredentialService } from '../../modules/core/core/access/integration-credential.service.ts';
+import { INTEGRATION_KEY_PREFIX } from '../../modules/core/infrastructure/auth/auth-options.ts';
 import type { Principal } from '../../principal.ts';
 
 /** What the credential guard of the public API reads of a request. */
@@ -22,21 +25,45 @@ export interface PublicApiRequest {
  * companyId is the company the credential belongs to; a plant the credential cannot reach throws
  * core.plant_forbidden.
  *
- * The integration token task of wave 4 implements it on core.credential. Until then the server
- * provides RefusingPublicApiCredentials, so no public route answers any request; tests provide
- * their own through AppOptions.publicApiCredentials.
+ * The server provides BearerPublicApiCredentials; tests may provide their own through
+ * AppOptions.publicApiCredentials.
  */
 export abstract class PublicApiCredentials {
   abstract resolve(request: PublicApiRequest): Promise<Principal | null>;
 }
 
+/** The token of an Authorization header in the Bearer scheme. */
+const bearer = /^Bearer\s+(\S+)$/i;
+
 /**
- * The credential guard while no public credential exists: it accepts none, so every public route
- * answers 401 core.unauthenticated, whatever the request carries.
+ * The server's credential guard of the public API (ADR 0073, credentials by surface). The
+ * credential comes only from Authorization: Bearer. A token with the prefix nms_int_ is verified
+ * as an integration token by core's IntegrationCredentialService, which checks its hash, expiry and
+ * revocation and decides the plant: a token bound to a plant acts there only, and one bound to the
+ * company acts at the company or at any of its plants. Any other bearer, such as the web's JWT, a
+ * cookie, another scheme and no header resolve to null. The cookie header is never read. An app
+ * without core verifies no token, so every request resolves to null.
  */
 @Injectable()
-export class RefusingPublicApiCredentials extends PublicApiCredentials {
-  async resolve(): Promise<Principal | null> {
-    return null;
+export class BearerPublicApiCredentials extends PublicApiCredentials {
+  constructor(@Inject(ModuleRef) private readonly moduleRef: ModuleRef) {
+    super();
+  }
+
+  async resolve({ headers, plant }: PublicApiRequest): Promise<Principal | null> {
+    const token = bearer.exec(headers.get('authorization') ?? '')?.[1];
+    if (!token?.startsWith(INTEGRATION_KEY_PREFIX)) return null;
+    const integrations = this.#integrations();
+    if (!integrations) return null;
+    return (await integrations.resolve(token, plant))?.principal ?? null;
+  }
+
+  /** core's resolver of integration tokens, or undefined in an app without core. */
+  #integrations(): IntegrationCredentialService | undefined {
+    try {
+      return this.moduleRef.get(IntegrationCredentialService, { strict: false });
+    } catch {
+      return undefined;
+    }
   }
 }

@@ -10,7 +10,7 @@ import { type PublicOperationCall, PublicOperationRunner, toRestRoutes } from '@
 import type { DiscoveredOperation } from '../../operations/discover-operations.ts';
 import { OperationRunner } from '../../operations/operation-runner.ts';
 import type { Principal } from '../../principal.ts';
-import { PublicApiCredentials, RefusingPublicApiCredentials } from './public-api-credentials.ts';
+import { BearerPublicApiCredentials, PublicApiCredentials } from './public-api-credentials.ts';
 
 /**
  * The host's side of the public routes (ADR 0073): it resolves a call's principal through the
@@ -82,12 +82,13 @@ function restDeclarationsByModule(
 export class PublicApiModule {
   /**
    * One public controller per module, which toRestRoutes builds from the operations the module
-   * binds, and the runner its routes call. `credentials` is the public family's credential guard;
-   * without one, the server refuses every public request (RefusingPublicApiCredentials).
+   * binds, and the runner its routes call. `credentials` is the public family's credential guard:
+   * the server's BearerPublicApiCredentials, which verifies integration tokens, unless a test passes
+   * its own.
    */
   static forRoot(
     operations: ReadonlyMap<string, DiscoveredOperation>,
-    credentials: Type<PublicApiCredentials> = RefusingPublicApiCredentials,
+    credentials: Type<PublicApiCredentials> = BearerPublicApiCredentials,
   ): DynamicModule {
     const controllers = [...restDeclarationsByModule(operations).values()].map((declarations) =>
       toRestRoutes(declarations),

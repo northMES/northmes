@@ -44,7 +44,8 @@ const publicApiTokens = new Map<string, { readonly userId: string; readonly comp
 /**
  * Hands out a test credential of the public API for a user that a test wrote, such as one from
  * givenUser, belonging to the company `companyId`, and returns its Authorization header. Only an app
- * of hostFactoryWithPublicApi accepts it, until the integration tokens of ADR 0073 arrive.
+ * of hostFactoryWithPublicApi accepts it. A test of the server's own credential guard uses a real
+ * integration token from givenIntegrationToken instead.
  */
 export function givenPublicApiToken({
   userId,
@@ -82,7 +83,8 @@ class TestPublicApiCredentials extends PublicApiCredentials {
 
 /**
  * The host factory of hostFactory, whose public API accepts the test credentials of
- * givenPublicApiToken in place of the integration tokens that do not exist yet.
+ * givenPublicApiToken in place of integration tokens, so a route test sets its principal's
+ * permissions directly.
  */
 export const hostFactoryWithPublicApi: HostFactory = createHostFactory(
   builtShellDir,
@@ -142,8 +144,8 @@ export async function migratePlugins(
 /**
  * Builds the app of hostFactory and serves the web app as boot does: the one apps/web builds, or
  * the one in shellDir when it is given. `plugins` load after the in-repo modules, and
- * `publicApiCredentials` is the public API's credential guard, which refuses every request without
- * it.
+ * `publicApiCredentials` is the public API's credential guard, the server's
+ * BearerPublicApiCredentials without it.
  */
 function createHostFactory(
   shellDir = builtShellDir,

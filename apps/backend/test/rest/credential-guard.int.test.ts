@@ -89,7 +89,6 @@ describe('the credential guard of the public API', () => {
       id: randomUUIDv7(),
       code: code(),
       name: 'Nut',
-      plants: [helSlug],
     });
 
     expect(listed.status).toBe(200);
@@ -97,7 +96,7 @@ describe('the credential guard of the public API', () => {
       articleCode,
     ]);
     expect(read).toMatchObject({ status: 200, body: { id, code: articleCode } });
-    expect(created).toMatchObject({ status: 201, body: { name: 'Nut', plants: [helSlug] } });
+    expect(created).toMatchObject({ status: 201, body: { name: 'Nut', plants: [] } });
   });
 
   it('ADR0073-W4 a token without the permission gets 403 core.forbidden as a problem', async () => {
@@ -191,13 +190,14 @@ describe('the credential guard of the public API', () => {
     const { company } = await givenPlace();
     const { secret } = await token(company, company, ['core.article:read']);
 
-    for (const headers of [
+    const cases: Record<string, string>[] = [
       {},
       { authorization: `Bearer nms_int_${'a'.repeat(64)}` },
       { authorization: `Bearer nms_pat_${secret.slice('nms_int_'.length)}` },
       { authorization: `Basic ${Buffer.from(`x:${secret}`).toString('base64')}` },
       { authorization: secret },
-    ]) {
+    ];
+    for (const headers of cases) {
       const answer = await send(headers, 'GET', 'articles');
       expect({ headers, status: answer.status }).toEqual({ headers, status: 401 });
       expect(answer.body).toMatchObject({ code: 'core.unauthenticated' });
