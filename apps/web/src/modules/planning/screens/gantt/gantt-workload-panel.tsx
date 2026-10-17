@@ -113,6 +113,15 @@ function totalsRow(buckets: readonly WorkloadBucket[]): readonly string[] {
   ];
 }
 
+/**
+ * The share of the lane's height a bar at full utilization takes; the rest is headroom where the
+ * overload draws above the bar's top edge without leaving the lane (plan 18, The workload lane).
+ */
+const barShare = 0.75;
+
+/** The overload the headroom can show, as a share of the available seconds. */
+const overloadHeadroom = (1 - barShare) / barShare;
+
 const tableHeaders = [
   'Production day',
   'Available',
@@ -191,17 +200,24 @@ function WorkloadLane({
           }
           const utilization = Math.min(1, bucket.loadedS / bucket.availableS);
           const setupShare = bucket.loadedS === 0 ? 0 : bucket.setupS / bucket.loadedS;
-          const overloadShare = bucket.overloadS / bucket.availableS;
+          // The overload is drawn above the bar's top edge inside the headroom; it is capped there
+          // and the lane's table carries its value.
+          const overloadShare = Math.min(bucket.overloadS / bucket.availableS, overloadHeadroom);
           return (
             <span
               key={bucket.productionDay}
               data-bucket={bucket.productionDay}
               data-full={utilization >= 1 || undefined}
+              data-overloaded={bucket.overloadS > 0 || undefined}
               className={cn(
                 'absolute bottom-0 border-s border-card bg-foreground',
                 utilization >= 1 ? 'opacity-100' : 'opacity-75',
               )}
-              style={{ left: `${left}px`, width: `${width}px`, height: `${utilization * 100}%` }}
+              style={{
+                left: `${left}px`,
+                width: `${width}px`,
+                height: `${utilization * barShare * 100}%`,
+              }}
             >
               {setupShare > 0 && (
                 <span
@@ -219,7 +235,7 @@ function WorkloadLane({
                   data-overload
                   className="absolute inset-x-0 bottom-full"
                   style={{
-                    height: `${overloadShare * laneHeightRem}rem`,
+                    height: `${overloadShare * barShare * laneHeightRem}rem`,
                     background:
                       'repeating-linear-gradient(135deg, var(--late-foreground) 0 3px, var(--late) 3px 6px)',
                   }}
@@ -371,6 +387,7 @@ export function GanttWorkloadPanel({
       </div>
       {open !== undefined && (
         <WorkloadTable
+          key={open.code}
           name={`Workload on ${open.name}`}
           buckets={laneBuckets(snapshot, open.code, scale)}
           dialogId={`${idBase}-${open.code}-table`}
