@@ -47,7 +47,7 @@ describe('the My draft list (plan 18, Resolving a break in the draft)', () => {
     const conflicts = within(drawer).getByRole('list', { name: '1 conflict in your draft' });
     const [line] = within(conflicts).getAllByRole('listitem');
     expect(line?.textContent).toContain(
-      '1003.20 starts 4 h before its release from 1003.10; clears at Wed 4 Nov 16:30',
+      '1003.20 starts 18 h 15 min before its release from 1003.10; clears at Thu 5 Nov 07:00',
     );
     expect(line?.textContent).toContain('LEAD_TIME');
     const save = within(drawer).getByRole('button', { name: 'Save changes' });
