@@ -55,6 +55,8 @@ In release 1: machine rows grouped by equipment group with group colors and coll
 
 Cut from release 1: resize (block length follows from quantity, rates and the calendar), the compressed off-hours axis, multi-select and multi-drag, continuous zoom, undo beyond discarding the draft, the conflict navigator and the minimap. Click-to-place and the ghost outlines of other planners' drafts are cut candidates.
 
+Amended 2026-10-17 (Krister): the compressed off-hours axis returns as the local option Hide closed time on the timeline views, on by default, which compresses every closed calendar window to a few pixels on the same scale ([18-gantt-timeline.md](../plan/18-gantt-timeline.md)). The rest of the cut stands.
+
 ### The job order table view
 
 The table view is the main screen-reader path and a second view for every planner. It is a semantic TanStack Table with order and operation, article, machine, start, end, quantity, status, lock holder, order deadline, planned end and late-by columns, and sortable headers set `aria-sort`. Each row has Move (the shared Move dialog), Lock and Open order. It pages on the server through the Relay connection ([ADR 0016](0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)), because NVDA browse mode stops at the last rendered row of a virtualized table.
