@@ -16,8 +16,10 @@ export {
   type WorkingCalendar,
 } from './calendar/calendar.ts';
 export {
+  addWork,
   clipWindows,
   normalizeWindows,
+  type Placement,
   subtractWindows,
   unionWindows,
   type Window,

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { describe, expect, it } from 'vitest';
-import { availabilityOf, weeklyCalendar } from '../src/index.ts';
+import { addWork, availabilityOf, weeklyCalendar } from '../src/index.ts';
 
 /**
  * The A1 calendar of plan 07 (Monday to Friday 06:00 to 15:00, breaks 08:30 to 08:45 and 11:00
@@ -36,5 +36,22 @@ describe('availabilityOf (ADR 0025)', () => {
     const windows = availabilityOf(a1, undefined, week45.fromMs, week45.toMs);
 
     expect(windows).toEqual([2, 3, 4, 5, 6].flatMap(a1Day));
+  });
+});
+
+describe('addWork (ADR 0025 rule 10)', () => {
+  const mill1 = availabilityOf(a1, 'MILL1', Date.UTC(2026, 10, 1, 23), Date.UTC(2026, 10, 15, 23));
+
+  it('CAL12 lays 1006.10 from Fri 13:00 over the weekend: 10 800 s end Mon 07:00 in two segments', () => {
+    const placed = addWork(mill1, Date.UTC(2026, 10, 6, 12), 10_800);
+
+    expect(placed).toEqual({
+      startMs: Date.UTC(2026, 10, 6, 12),
+      endMs: Date.UTC(2026, 10, 9, 6),
+      segments: [
+        { fromMs: Date.UTC(2026, 10, 6, 12), toMs: Date.UTC(2026, 10, 6, 14) },
+        { fromMs: Date.UTC(2026, 10, 9, 5), toMs: Date.UTC(2026, 10, 9, 6) },
+      ],
+    });
   });
 });

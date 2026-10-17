@@ -65,3 +65,35 @@ export function clipWindows(windows: Windows, fromMs: number, toMs: number): Win
   }
   return clipped;
 }
+
+/** Where work lies once laid over availability: its span and its working segments. */
+export interface Placement {
+  readonly startMs: number;
+  readonly endMs: number;
+  /** The open windows the work occupies, in order; empty for zero work. */
+  readonly segments: readonly Window[];
+}
+
+/**
+ * Work laid forward from an instant (ADR 0025 rule 10): it starts at the first working instant at
+ * or after `fromMs` and fills the windows in order. Null when the windows run out before the work
+ * does, which tells the caller to expand the horizon and try again.
+ */
+export function addWork(windows: Windows, fromMs: number, workS: number): Placement | null {
+  let remainingMs = Math.round(workS * 1000);
+  const segments: Window[] = [];
+  let startMs: number | undefined;
+  for (const window of windows) {
+    if (window.toMs <= fromMs) continue;
+    const segmentFrom = Math.max(window.fromMs, fromMs);
+    startMs ??= segmentFrom;
+    if (remainingMs <= 0) break;
+    const take = Math.min(remainingMs, window.toMs - segmentFrom);
+    segments.push({ fromMs: segmentFrom, toMs: segmentFrom + take });
+    remainingMs -= take;
+    if (remainingMs <= 0) break;
+  }
+  if (startMs === undefined || remainingMs > 0) return null;
+  const last = segments[segments.length - 1];
+  return { startMs, endMs: last === undefined ? startMs : last.toMs, segments };
+}
