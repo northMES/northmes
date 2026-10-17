@@ -18,24 +18,39 @@ import { can } from '../modules/core/core/access/access.ts';
 import { type Principal, PrincipalResolver, runAs } from '../principal.ts';
 import type { DiscoveredOperation } from './discover-operations.ts';
 
-/** One call of an operation as an adapter hands it to the runner. */
-export interface OperationRun {
+/** What every call of an operation names, whichever way its principal is found. */
+interface OperationRunBase {
   readonly surface: Surface;
   /** The operation's contract name, such as core.getArticle. */
   readonly operation: string;
   /** The input as the caller sent it, which the contract parses. */
   readonly input: unknown;
-  /** The request's headers, from which the runner resolves its principal and plant. */
-  readonly headers: Headers;
-  /**
-   * The company a request without a plant acts at, which the adapter takes from outside the
-   * input, such as the company of a public API credential (ADR 0073). A request at a plant acts at
-   * the plant's company and ignores it.
-   */
-  readonly companyId?: string;
   /** The request's correlation id; the runner makes one when the adapter has none. */
   readonly correlationId?: string;
 }
+
+/**
+ * One call of an operation as an adapter hands it to the runner: with the request's headers, from
+ * which the runner resolves the principal through PrincipalResolver, the web's credential; or with
+ * the principal that the adapter's own credential guard resolved, as the public API's does
+ * (ADR 0073).
+ */
+export type OperationRun = OperationRunBase &
+  (
+    | {
+        /** The request's headers, from which the runner resolves its principal and plant. */
+        readonly headers: Headers;
+        /**
+         * The company a request without a plant acts at, which the adapter takes from outside the
+         * input (ADR 0073). A request at a plant acts at the plant's company and ignores it.
+         */
+        readonly companyId?: string;
+      }
+    | {
+        /** The principal of the call, which the adapter resolved from its own credential. */
+        readonly principal: Principal;
+      }
+  );
 
 function refusal(
   status:
@@ -85,7 +100,8 @@ function authorizeAs(principal: Principal): OperationPorts['authorize'] {
 /**
  * The operation runner of the host (ADR 0073), which the REST and WebMCP adapters call, and the
  * /mcp and assistant adapters later. It resolves the principal and plant of a call through the core
- * module's PrincipalResolver (step 1), and then runs the operation's bound handler through the
+ * module's PrincipalResolver, or takes the principal that the adapter's credential guard resolved
+ * (step 1), and then runs the operation's bound handler through the
  * SDK's runOperation as that principal: input parsing, the permission gate, read-only queries,
  * output validation, the tool output rules and the error mapping.
  */
@@ -105,14 +121,8 @@ export class OperationRunner {
   }
 
   /** Runs one call and answers its validated output with its status, or its mapped error. */
-  async run({
-    surface,
-    operation,
-    input,
-    headers,
-    companyId,
-    correlationId = randomUUID(),
-  }: OperationRun): Promise<OperationResult> {
+  async run(call: OperationRun): Promise<OperationResult> {
+    const { surface, operation, input, correlationId = randomUUID() } = call;
     const report = (error: unknown, id: string) =>
       this.#logger.error(
         `Operation ${operation} failed with correlation id ${id}`,
@@ -130,14 +140,7 @@ export class OperationRunner {
         );
       }
       found = discovered;
-      const resolved = await this.#resolver()?.resolve(headers);
-      if (!resolved) {
-        throw refusal(HttpStatus.UNAUTHORIZED, 'core.unauthenticated', 'Sign in to use the API');
-      }
-      principal =
-        resolved.plantId === undefined && companyId !== undefined
-          ? { ...resolved, companyId }
-          : resolved;
+      principal = 'principal' in call ? call.principal : await this.#principalOf(call);
     } catch (error) {
       return { ok: false, error: operationError(error, correlationId, report) };
     }
@@ -160,6 +163,26 @@ export class OperationRunner {
         ports,
       ),
     );
+  }
+
+  /**
+   * The principal of a call with headers, through the core module's PrincipalResolver, acting at
+   * the company the adapter names when the request names no plant.
+   */
+  async #principalOf({
+    headers,
+    companyId,
+  }: {
+    readonly headers: Headers;
+    readonly companyId?: string;
+  }): Promise<Principal> {
+    const resolved = await this.#resolver()?.resolve(headers);
+    if (!resolved) {
+      throw refusal(HttpStatus.UNAUTHORIZED, 'core.unauthenticated', 'Sign in to use the API');
+    }
+    return resolved.plantId === undefined && companyId !== undefined
+      ? { ...resolved, companyId }
+      : resolved;
   }
 
   /** The core module's PrincipalResolver, or undefined in an app without core. */
