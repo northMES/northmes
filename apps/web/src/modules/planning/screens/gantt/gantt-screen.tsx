@@ -379,8 +379,12 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     const timer = setTimeout(() => announce(stepMessage(preview, machine, timeZone)), 300);
     return () => clearTimeout(timer);
   }, [moveState?.source, preview, snapshot, timeZone]);
+  // A block takes focus and scrolls into view past the sticky tree pane and the time header, which
+  // the grid's scroll padding keeps it clear of (WCAG 2.4.11).
   const focusBlock = (jobOrderId: string) => {
-    document.querySelector<HTMLElement>(`[data-block="${jobOrderId}"]`)?.focus();
+    const block = document.querySelector<HTMLElement>(`[data-block="${jobOrderId}"]`);
+    block?.focus({ preventScroll: true });
+    block?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   };
   const moveActions = useMemo<GanttMoveActions | undefined>(() => {
     if (snapshot === undefined || committed === undefined) return undefined;
@@ -709,6 +713,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 }
               }}
               className="min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-card text-sm"
+              style={{
+                scrollPaddingTop: `${timeHeaderHeightRem}rem`,
+                scrollPaddingInlineStart: `${stickyTree ? treeWidth : nameWidth}px`,
+              }}
             >
               <div
                 role="row"

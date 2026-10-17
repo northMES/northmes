@@ -40,22 +40,23 @@ test.describe('keyboard move mode on the order Gantt', () => {
     await page.keyboard.press('m');
     await expect(block).toHaveAttribute('data-move-mode', 'true');
     await checkA11y('move mode on a job order row');
-    // Tue 11:30 plus two Week steps of 4 h is Tue 19:30, closed, so the preview lands at Wed 06:00.
+    // Tue 11:30 plus a Week step of 4 h is Tue 15:30, closed, so the first step lands at Wed 06:00;
+    // the second steps from there to Wed 10:00.
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('ArrowDown');
     await expect(spoken).toHaveText(
-      'CNC 2, Wed 4 Nov 06:00 to Wed 4 Nov 12:15. 1 row moves with it. Not saved.',
+      'CNC 2, Wed 4 Nov 10:00 to Thu 5 Nov 07:00. 1 row moves with it. Not saved.',
     );
 
     await page.keyboard.press('Enter');
 
     await expect(spoken).toHaveText(
-      '1001.10 moved to CNC 2, Wed 4 Nov 06:00 to Wed 4 Nov 12:15. 1 row moves with it. Not saved.',
+      '1001.10 moved to CNC 2, Wed 4 Nov 10:00 to Thu 5 Nov 07:00. 1 row moves with it. Not saved.',
     );
     await expect(block).toBeFocused();
     await expect(block).not.toHaveAttribute('data-move-mode', 'true');
-    await expect(block).toHaveAttribute('aria-label', /CNC 2, Wed 4 Nov 06:00 to Wed 4 Nov 12:15/);
+    await expect(block).toHaveAttribute('aria-label', /CNC 2, Wed 4 Nov 10:00 to Thu 5 Nov 07:00/);
     await expect(block).toHaveAttribute('aria-label', /changed in your draft, not saved/);
     // The moved block lies inside the grid's scroller, not under the sticky tree pane.
     const inside = await block.evaluate((element) => {
