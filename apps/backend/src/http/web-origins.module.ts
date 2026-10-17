@@ -17,7 +17,7 @@ import type { ServerEnv } from '@northmes/sdk/config';
 /** The injection token of the web app's origins, webOrigins in northmes.config.json. */
 export const WEB_ORIGINS = 'northmes.webOrigins';
 
-/** The injection token of the browser rule, the middleware of the routes only a browser calls. */
+/** The injection token of the browser rule, the middleware of the routes the web app calls in a browser. */
 export const BROWSER_ONLY = 'northmes.browserOnly';
 
 /** A Node middleware, as Nest's MiddlewareConsumer applies it. */
@@ -98,8 +98,11 @@ function originRule(publicOrigin: string, webOrigins: readonly string[]) {
 }
 
 /**
- * The browser rule (ADR 0011): a route that takes a password or starts or ends a session answers
- * only the web app in a browser. Browsers send Origin on every POST, also from the page's own
+ * The browser rule (ADR 0011): a route that takes a password or starts or ends a session needs the
+ * Origin that the web app's browser sends. The rule does not prove that a request comes from a
+ * browser, since any client can send an allowed Origin; it refuses the scripts and outside systems
+ * that send none or another one, and every request it lets through still meets the sign-in throttle
+ * and the account lockout. Browsers send Origin on every POST, also from the page's own
  * origin (Fetch standard), so a POST passes only with NORTHMES_PUBLIC_ORIGIN or a web origin as its
  * Origin; a script or outside system that sends none gets 403 with core.origin_required before
  * the route reads the body. Browsers send no Origin on a GET from the page's own origin, so a GET
