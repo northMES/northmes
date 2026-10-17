@@ -46,6 +46,8 @@ export function GanttBlock({
   const press = useRef<{ clientX: number; setupStartMs: number; dragging: boolean } | undefined>(
     undefined,
   );
+  // The click the browser fires after a drop is not a selection.
+  const dropped = useRef(false);
   if (jobOrder.placement === undefined) return null;
   const { placement } = jobOrder;
   const left = scale.x(placement.setupStartMs);
@@ -109,6 +111,7 @@ export function GanttBlock({
     const current = press.current;
     press.current = undefined;
     if (current?.dragging !== true || move === undefined) return;
+    dropped.current = true;
     if (commit) move.commit();
     else move.cancel();
   };
@@ -164,7 +167,11 @@ export function GanttBlock({
               data-states={states.map((state) => state.kind).join(' ') || undefined}
               data-move-mode={inMoveMode ? 'true' : undefined}
               onClick={() => {
-                if (press.current?.dragging !== true) onSelect();
+                if (dropped.current) {
+                  dropped.current = false;
+                  return;
+                }
+                onSelect();
               }}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}

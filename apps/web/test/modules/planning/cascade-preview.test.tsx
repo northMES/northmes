@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
+import { detailsOpen, findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
 
 afterEach(() => {
   cleanup();
@@ -69,10 +69,13 @@ describe('the cascade preview of a pointer move (plan 18, Cascade rule 8)', () =
       pointerId: 1,
       button: 0,
     });
+    // The click a browser fires after the drop is not a selection: Details stays closed.
+    fireEvent.click(blockOf(gantt, 'jo-1003-10'));
 
     await waitFor(() => {
       expect(blockOf(gantt, 'jo-1003-10').getAttribute('data-states')).toContain('draft');
     });
+    expect(detailsOpen()).toBe(false);
     expect(blockOf(gantt, 'jo-1003-20').getAttribute('data-states')).toContain('draft');
     expect(blockOf(gantt, 'jo-1003-10').getAttribute('aria-label')).toContain(
       'changed in your draft, not saved',
