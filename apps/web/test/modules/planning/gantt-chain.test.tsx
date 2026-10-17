@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { politeRegionId } from '../../../src/ui/lib/announce.ts';
-import { findGantt, markerTexts, renderBoardRoute } from './gantt-fixtures.tsx';
+import {
+  detailsOpen,
+  findDetails,
+  findGantt,
+  markerTexts,
+  renderGanttRoute,
+} from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -12,8 +18,7 @@ const spoken = () => document.getElementById(politeRegionId)?.textContent;
 
 describe('the critical chain highlight (plan 18, Float and the critical chain)', () => {
   it('GT2 ?order=po-1003&chain=1 highlights the three chain rows, ticks their latest start and end, and announces it', async () => {
-    renderBoardRoute({
-      view: 'gantt',
+    renderGanttRoute({
       zoom: 'week',
       from: '2026-11-02',
       order: 'po-1003',
@@ -39,21 +44,26 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
       .querySelector('[data-block="jo-1003-20"]')
       ?.closest('[role="row"]') as HTMLElement;
     expect(markerTexts(row1003, 'latestEnd')).toEqual(['latest end Wed 4 Nov 15:00']);
+    // The link opens the order's Details with the explanation.
+    const drawer = await findDetails();
+    expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('Order 1003');
+    expect(
+      within(drawer).getByRole('region', { name: 'Critical chain, 3 rows, root 1001.10 on CNC 1' }),
+    ).toBeTruthy();
   });
 
   it('GT2 Show critical chain on order 1003 explains the chain with the text of the spec, each row a link', async () => {
-    const router = renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     await userEvent.click(
       within(within(gantt).getByRole('row', { name: /^1003 / })).getByRole('rowheader'),
     );
-    const panel = screen.getByRole('complementary', { name: 'Board panel' });
+    const panel = await findDetails();
     await userEvent.click(within(panel).getByRole('button', { name: 'Show critical chain' }));
 
     await waitFor(() => {
       expect(router.state.location.search).toEqual({
-        view: 'gantt',
         zoom: 'week',
         from: '2026-11-02',
         order: 'po-1003',
@@ -81,12 +91,17 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
 
     await userEvent.click(within(section).getByRole('button', { name: '1001.10' }));
 
-    expect(document.activeElement?.getAttribute('data-row-id')).toBe('jo-1001-10');
+    // The link closes the drawer and focuses the row it names.
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+    await waitFor(() => {
+      expect(document.activeElement?.getAttribute('data-row-id')).toBe('jo-1001-10');
+    });
   });
 
   it('GT2 Escape ends the chain highlight and announces it', async () => {
-    const router = renderBoardRoute({
-      view: 'gantt',
+    const router = renderGanttRoute({
       zoom: 'week',
       from: '2026-11-02',
       order: 'po-1003',
@@ -105,7 +120,6 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
 
     await waitFor(() => {
       expect(router.state.location.search).toEqual({
-        view: 'gantt',
         zoom: 'week',
         from: '2026-11-02',
         order: 'po-1003',
@@ -120,20 +134,16 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
   });
 
   it('GT1 the chain of an on-time order says why it lies where it lies', async () => {
-    renderBoardRoute({
-      view: 'gantt',
+    renderGanttRoute({
       zoom: 'week',
       from: '2026-11-02',
       order: 'po-1001',
       chain: 1,
     });
-    const gantt = await findGantt();
+    await findGantt();
 
-    await userEvent.click(
-      within(within(gantt).getByRole('row', { name: /^1001 / })).getByRole('rowheader'),
-    );
-
-    const panel = screen.getByRole('complementary', { name: 'Board panel' });
+    // The chain in the URL opens the order's Details with its explanation.
+    const panel = await findDetails();
     const section = within(panel).getByRole('region', {
       name: 'Critical chain, 2 rows, root 1001.10 on CNC 1',
     });

@@ -15,6 +15,13 @@ export interface GanttRowProps {
   readonly columns: readonly GanttColumn[];
   /** The CSS grid template the header row shares, one track per tree column and one for time. */
   readonly gridTemplateColumns: string;
+  /** The left offset of each tree column, where its cell sticks while the time column scrolls. */
+  readonly cellLefts: readonly number[];
+  /**
+   * Whether every tree cell sticks: only while the pane fits its cap, so a narrow grid (320 px
+   * reflow, 400 percent zoom) keeps the time area reachable with the Name column alone pinned.
+   */
+  readonly stickyTree: boolean;
   readonly rowIndex: number;
   readonly setSize: number;
   readonly posInSet: number;
@@ -36,6 +43,8 @@ export function GanttRowView({
   row,
   columns,
   gridTemplateColumns,
+  cellLefts,
+  stickyTree,
   rowIndex,
   setSize,
   posInSet,
@@ -68,6 +77,12 @@ export function GanttRowView({
     original.kind === 'jobOrder' ? closedWindowsOf(original.jobOrder.equipment) : closedWindows;
   const onChain = chainRowIds.has(original.id);
   const markers = rowMarkers(original, snapshot, scale, { onChain });
+  const background =
+    original.kind === 'order'
+      ? 'bg-muted'
+      : original.kind === 'operation'
+        ? 'bg-lane-alt'
+        : 'bg-lane';
   return (
     <div
       role="row"
@@ -99,13 +114,11 @@ export function GanttRowView({
             key={column.id}
             role="rowheader"
             className={cn(
-              'sticky start-0 z-10 flex min-w-0 items-center gap-1.5 overflow-hidden border-e border-border pe-2',
-              original.kind === 'order' && 'bg-muted',
-              original.kind === 'operation' && 'bg-lane-alt',
-              original.kind === 'jobOrder' && 'bg-lane',
+              'sticky z-10 flex min-w-0 items-center gap-1.5 overflow-hidden border-e border-border pe-2',
+              background,
               selected && 'shadow-[inset_3px_0_0_var(--foreground)]',
             )}
-            style={{ paddingInlineStart: `${0.5 + (level - 1)}rem` }}
+            style={{ paddingInlineStart: `${0.5 + (level - 1)}rem`, insetInlineStart: 0 }}
           >
             <GanttRowHeader row={row} expanded={expanded} onToggle={onToggle} />
           </div>
@@ -115,8 +128,11 @@ export function GanttRowView({
             role="gridcell"
             className={cn(
               'flex min-w-0 items-center overflow-hidden border-e border-border px-2 font-mono text-xs whitespace-nowrap',
+              stickyTree && 'sticky z-10',
+              background,
               column.numeric && 'justify-end tabular-nums',
             )}
+            style={stickyTree ? { insetInlineStart: `${cellLefts[index] ?? 0}px` } : undefined}
           >
             {column.cell(original, { timeZone, zoneLabel, machineName })}
           </div>

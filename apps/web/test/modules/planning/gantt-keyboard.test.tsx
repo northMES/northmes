@@ -5,7 +5,13 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { findGantt, renderBoardRoute, sourceOf } from './gantt-fixtures.tsx';
+import {
+  detailsOpen,
+  findDetails,
+  findGantt,
+  renderGanttRoute,
+  sourceOf,
+} from './gantt-fixtures.tsx';
 
 /** G1 with 1006.10 taken off its machine, so it sits in the Not placed row. */
 function withUnplaced1006(): GanttSnapshot {
@@ -40,7 +46,7 @@ function rowOf(gantt: HTMLElement, id: string): HTMLElement {
 
 describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () => {
   it('ADR0021 one row holds the tab stop; Up and Down move between rows, Home and End to the first and last', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     const rows = within(gantt)
@@ -71,7 +77,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
   });
 
   it('ADR0021 Left collapses an expanded row, Right expands it, Left on a leaf row goes to its parent', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     rowOf(gantt, 'po-1003').focus();
@@ -90,7 +96,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
   });
 
   it('ADR0021 Right on an expanded row moves into its time cell and Left comes back to the row', async () => {
-    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     rowOf(gantt, 'po-1001').focus();
@@ -110,7 +116,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
   });
 
   it('ADR0021 Right on an unplaced job order row lands on its time cell, named "not placed"', async () => {
-    renderBoardRoute(
+    renderGanttRoute(
       { view: 'gantt', zoom: 'week', from: '2026-11-02' },
       sourceOf(withUnplaced1006()),
     );
@@ -130,48 +136,81 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
   });
 
   it('ADR0021 Enter opens Details of the row and selects its order', async () => {
-    const router = renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     rowOf(gantt, 'jo-1001-20').focus();
     await userEvent.keyboard('{Enter}');
 
-    const panel = screen.getByRole('complementary', { name: 'Board panel' });
-    expect(within(panel).getByRole('heading', { level: 2 }).textContent).toBe('1001.20 Mill');
+    const drawer = await findDetails();
+    expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('1001.20 Mill');
     await waitFor(() => {
       expect(router.state.location.search).toMatchObject({ order: 'po-1001' });
     });
-    expect(document.activeElement).toBe(rowOf(gantt, 'jo-1001-20'));
+    await waitFor(() => {
+      expect(drawer.contains(document.activeElement)).toBe(true);
+    });
+
+    await userEvent.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(rowOf(gantt, 'jo-1001-20'));
+    });
   });
 
-  it('ADR0021 Escape ends the chain highlight first, then closes the docked panel', async () => {
-    const router = renderBoardRoute({
-      view: 'gantt',
+  it('ADR0021 the close button of the Details drawer closes it and returns focus to the row', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    await userEvent.click(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
+    const drawer = await findDetails();
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Close' }));
+
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(rowOf(gantt, 'jo-1003-20'));
+    });
+    expect(screen.queryByRole('group', { name: 'Board panel, collapsed' })).toBeNull();
+    expect(screen.queryByRole('complementary', { name: 'Board panel' })).toBeNull();
+  });
+
+  it('ADR0021 Escape closes the Details that a chain link opened, then ends the chain highlight', async () => {
+    const router = renderGanttRoute({
       zoom: 'week',
       from: '2026-11-02',
       order: 'po-1003',
       chain: 1,
     });
     const gantt = await findGantt();
-    expect(screen.getByRole('complementary', { name: 'Board panel' })).toBeTruthy();
+    const drawer = await findDetails();
+    await waitFor(() => {
+      expect(drawer.contains(document.activeElement)).toBe(true);
+    });
 
-    rowOf(gantt, 'po-1003').focus();
     await userEvent.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(rowOf(gantt, 'po-1003'));
+    });
+    expect(router.state.location.search).toMatchObject({ chain: 1 });
+
+    await userEvent.keyboard('{Escape}');
+
     await waitFor(() => {
       expect(router.state.location.search).toEqual({
-        view: 'gantt',
         zoom: 'week',
         from: '2026-11-02',
         order: 'po-1003',
       });
     });
-    expect(screen.getByRole('complementary', { name: 'Board panel' })).toBeTruthy();
-
-    await userEvent.keyboard('{Escape}');
-
-    expect(screen.queryByRole('complementary', { name: 'Board panel' })).toBeNull();
-    expect(screen.getByRole('group', { name: 'Board panel, collapsed' })).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Expand panel' }));
-    expect(screen.getByRole('complementary', { name: 'Board panel' })).toBeTruthy();
+    expect(document.activeElement).toBe(rowOf(gantt, 'po-1003'));
   });
 });

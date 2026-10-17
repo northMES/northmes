@@ -33,6 +33,8 @@ export interface ZoomPresetSpec {
   readonly topTier: 'day' | 'week';
   /** The bottom tier: a tick every so many hours, or one per day. */
   readonly bottomTier: { readonly hours: number } | 'day';
+  /** The width of one hour at the preset's natural size, so the time area scrolls sideways. */
+  readonly pxPerHour: number;
 }
 
 /** The four presets with the snap steps of plan 18 (Day 1 h, Week 4 h, 4 weeks 1 day, Hours 15 min). */
@@ -45,6 +47,7 @@ export const zoomPresets: Readonly<Record<ZoomPreset, ZoomPresetSpec>> = {
     stepMs: 15 * 60_000,
     topTier: 'day',
     bottomTier: { hours: 1 },
+    pxPerHour: 100,
   },
   day: {
     id: 'day',
@@ -54,6 +57,7 @@ export const zoomPresets: Readonly<Record<ZoomPreset, ZoomPresetSpec>> = {
     stepMs: hour,
     topTier: 'day',
     bottomTier: { hours: 3 },
+    pxPerHour: 48,
   },
   week: {
     id: 'week',
@@ -63,6 +67,7 @@ export const zoomPresets: Readonly<Record<ZoomPreset, ZoomPresetSpec>> = {
     stepMs: 4 * hour,
     topTier: 'day',
     bottomTier: { hours: 6 },
+    pxPerHour: 16,
   },
   '4weeks': {
     id: '4weeks',
@@ -72,6 +77,7 @@ export const zoomPresets: Readonly<Record<ZoomPreset, ZoomPresetSpec>> = {
     stepMs: day,
     topTier: 'week',
     bottomTier: 'day',
+    pxPerHour: 3,
   },
 };
 
@@ -108,6 +114,26 @@ export function rangeOf(
       ? start.add({ days: preset.span.days })
       : start.add({ hours: preset.span.hours });
   return { fromMs: start.epochMilliseconds, toMs: end.epochMilliseconds };
+}
+
+/**
+ * The natural width of a range at a preset: its hours at the preset's pixels per hour, or, with
+ * closed time hidden, its open hours plus a gap per closed window. The time area takes this width
+ * when the view is narrower, and scrolls sideways inside its container (plan 18, Reflow).
+ */
+export function naturalWidthPx(
+  range: TimeRange,
+  zoom: ZoomPreset,
+  hideClosed?: { readonly closed: readonly ClosedWindow[]; readonly gapPx?: number },
+): number {
+  const { pxPerHour } = zoomPresets[zoom];
+  if (hideClosed === undefined) return ((range.toMs - range.fromMs) / hour) * pxPerHour;
+  const windows = clippedWindows(hideClosed.closed, range);
+  const closedMs = windows.reduce((sum, window) => sum + (window.toMs - window.fromMs), 0);
+  return (
+    ((range.toMs - range.fromMs - closedMs) / hour) * pxPerHour +
+    windows.length * (hideClosed.gapPx ?? 6)
+  );
 }
 
 /** The plant date one span earlier or later than `from` under a preset, for Earlier and Later. */
