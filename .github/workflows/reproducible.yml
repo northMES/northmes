@@ -1,0 +1,56 @@
+# Checks that the NorthMES image builds reproducibly (OpenSSF Best Practices build_repeatable and
+# build_reproducible): two builds from the same commit must give the same image digest. Both builds
+# set SOURCE_DATE_EPOCH to the commit time, and rewrite-timestamp gives every file in the image that
+# time. The second build runs without BuildKit's cache, so it rebuilds every layer. BuildKit adds no
+# provenance or SBOM attestation, which would hold the build's own times; the release attestations
+# job signs both. The release image job in release.yml builds the same way, so a rebuild of a
+# release tag gives the digest in its release notes. The workflow has no paths filter, so the check
+# can become required.
+name: Reproducible build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  reproducible-image:
+    name: reproducible image
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@594f3bf4285d9ea8dc53c9a0c9c4092420091003 # v4.4.0
+      - run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+      - id: first
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          outputs: type=image,push=false,rewrite-timestamp=true
+          provenance: false
+          sbom: false
+      - id: second
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          outputs: type=image,push=false,rewrite-timestamp=true
+          provenance: false
+          sbom: false
+          no-cache: true
+      - name: Compare the two digests
+        env:
+          FIRST: ${{ steps.first.outputs.digest }}
+          SECOND: ${{ steps.second.outputs.digest }}
+        run: |
+          echo "first build:  $FIRST"
+          echo "second build: $SECOND"
+          if [ -z "$FIRST" ] || [ "$FIRST" != "$SECOND" ]; then
+            echo "::error title=reproducible image::Two builds of one commit gave different image digests."
+            exit 1
+          fi

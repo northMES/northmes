@@ -88,6 +88,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | License gate and CodeQL as required checks | decided for the license gate; built for CodeQL | ADR 0040, ADR 0050; [#7](https://github.com/northMES/northmes/issues/7), [#197](https://github.com/northMES/northmes/issues/197) |
 | SBOM in CycloneDX per package and image | decided (image SBOM on the release built) | ADR 0040; `.github/workflows/release.yml` |
 | Release image attested: build provenance and SBOM attestations signed on a GitHub-hosted runner, pushed to the registry and attached to the release | built | ADR 0050; `.github/workflows/release.yml`; `test/meta/workflows.test.ts`; `apps/docs/install.mdx` (Verify a release) |
+| Reproducible image: two builds of one commit give the same digest, checked on every pull request and push to `main`; the release builds the same way | built | `Dockerfile`, `.github/workflows/reproducible.yml`, `.github/workflows/release.yml`; `test/meta/workflows.test.ts`, `test/meta/image.test.ts` |
 | Automated dependency updates | gap | [#482](https://github.com/northMES/northmes/issues/482) |
 | MIT packages import no AGPL code | built | `scripts/lint/mit-imports.mjs`; `test/meta/mit-imports.test.ts` |
 | Project credentials: short-lived workflow tokens with per-job permissions, every stored secret listed with who can change it and when it is rotated | built | [project-credentials.md](project-credentials.md); `test/meta/security-docs.test.ts` checks the list against the workflows |
