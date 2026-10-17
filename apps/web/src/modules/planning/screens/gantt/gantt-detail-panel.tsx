@@ -5,7 +5,7 @@ import { planningLinks } from '@northmes/planning-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link } from '@tanstack/react-router';
 import { cn } from 'cn';
-import { CircleCheck, Clock, Link2, Lock } from 'lucide-react';
+import { CalendarClock, CircleCheck, Clock, Layers, Link2, Lock } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
@@ -18,12 +18,14 @@ import {
 } from '../../../../ui/primitives/sheet.tsx';
 import { bindingSentence } from '../../gantt-analysis.ts';
 import type { ConstraintLine } from '../../gantt-data.ts';
+import { orderNumbersText } from '../../gantt-draft.ts';
 import { phase1Reason, planReason } from '../../mock-reasons.ts';
 import { durationsOf, releaseText } from './gantt-block-states.ts';
 import type { ChainView } from './gantt-chain.ts';
 import { useGanttView } from './gantt-context.ts';
 import { moveRefusalOf, refusalMessage, stepMessage } from './gantt-move.ts';
 import {
+  earlyText,
   type GanttRow,
   type JobOrderRow,
   jobOrderRowsOf,
@@ -31,6 +33,9 @@ import {
   type OperationRow,
   type OrderRow,
   quantityText,
+  type RunRow,
+  runLatenessText,
+  runTitle,
   statusLabel,
   summarySpan,
 } from './gantt-rows.ts';
@@ -353,10 +358,12 @@ function OrderDetails({
   readonly onToggleChain: () => void;
   readonly onFocusRow: (jobOrderId: string) => void;
 }) {
-  const { snapshot, timeZone, machineName } = useGanttView();
+  const { snapshot, timeZone, machineName, runActions } = useGanttView();
+  const combineReasonId = useId();
   const { order, analysis } = row;
   const span = summarySpan(jobOrderRowsOf(row));
   const shown = chain !== undefined && chain.order.id === order.id;
+  const combine = runActions?.canCombine(order.id);
   const operations = order.operations
     .map((operation) => {
       const machine = order.jobOrders.find(
@@ -376,6 +383,15 @@ function OrderDetails({
       </SheetHeader>
       <div className="flex flex-wrap gap-1.5">
         <Badge variant="outline">{statusLabel(order.status)}</Badge>
+        {row.early !== undefined && (
+          <Badge
+            variant="outline"
+            className="border-warning bg-warning-subtle text-warning-foreground"
+          >
+            <CalendarClock aria-hidden />
+            {earlyText(row.early)}
+          </Badge>
+        )}
         {analysis?.late && (
           <Badge variant="outline" className="border-late-foreground bg-late text-late-foreground">
             <Clock aria-hidden />
@@ -449,10 +465,110 @@ function OrderDetails({
         actions={['Plan this order', 'Move all later by', 'Zoom to order']}
         reason={planReason}
       >
+        {runActions !== undefined && combine !== undefined && (
+          <>
+            <Button
+              variant="outline"
+              className="h-7.5 px-2.5 text-[0.8125rem]"
+              aria-disabled={combine.ok ? undefined : true}
+              aria-describedby={combine.ok ? undefined : combineReasonId}
+              onClick={() => {
+                if (combine.ok) runActions.combine(order.id);
+              }}
+            >
+              Combine into a run
+            </Button>
+            {!combine.ok && (
+              <p id={combineReasonId} className="basis-full text-xs text-muted-foreground">
+                {combine.reason}
+              </p>
+            )}
+          </>
+        )}
         <Button variant="outline" className="h-7.5 px-2.5 text-[0.8125rem]" onClick={onToggleChain}>
           {shown ? 'Hide chain' : 'Show critical chain'}
         </Button>
         <OpenOrder orderId={order.id} />
+      </Actions>
+    </>
+  );
+}
+
+/** The Details of a run row (plan 18, Runs): its orders, deadline, span, saved setups and Split run. */
+function RunDetails({ row }: { readonly row: RunRow }) {
+  const { snapshot, timeZone, machineName, runActions } = useGanttView();
+  const { run, analysis } = row;
+  const quantity = row.orders.reduce((sum, order) => sum + order.quantity, 0);
+  return (
+    <>
+      <SheetHeader className="p-0">
+        <SheetTitle className="font-mono text-base font-semibold">{runTitle(run)}</SheetTitle>
+        <SheetDescription className="text-data">
+          {quantityText(quantity)}, orders {orderNumbersText(run.orderNumbers)}
+        </SheetDescription>
+      </SheetHeader>
+      <div className="flex flex-wrap gap-1.5">
+        <Badge variant="outline">
+          <Layers aria-hidden />
+          Run
+        </Badge>
+        {analysis.late && (
+          <Badge variant="outline" className="border-late-foreground bg-late text-late-foreground">
+            <Clock aria-hidden />
+            {runLatenessText(analysis)}
+          </Badge>
+        )}
+      </div>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[0.8125rem]">
+        <Field label="Deadline">
+          {formatPlantDateTime(run.deadlineMs, timeZone)},{' '}
+          {snapshot.settings.deadlineRule === 'endOfShift' ? 'end of shift' : 'start of day'}
+        </Field>
+        {analysis.plannedStartMs !== undefined && analysis.plannedEndMs !== undefined && (
+          <>
+            <Field label="Planned start">
+              {formatPlantDateTime(analysis.plannedStartMs, timeZone)}
+            </Field>
+            <Field label="Planned end">
+              {formatPlantDateTime(analysis.plannedEndMs, timeZone)}
+            </Field>
+          </>
+        )}
+        {analysis.late && <Field label="Late by">{formatDuration(analysis.lateByS)} elapsed</Field>}
+      </dl>
+      <Section title="Orders">
+        <ul className="grid gap-1 text-[0.8125rem] leading-[1.125rem]">
+          {row.subRows.map((order) => (
+            <li key={order.id}>
+              {`${order.order.number}, ${quantityText(order.order.quantity)}, due ${formatPlantDateTime(order.order.deadlineMs, timeZone)}`}
+              {order.early !== undefined && `, ${earlyText(order.early)}`}
+            </li>
+          ))}
+        </ul>
+      </Section>
+      <Section title="Saved setups">
+        {run.savedSetups.length === 0 ? (
+          <p className="text-[0.8125rem] text-muted-foreground">No setup saved.</p>
+        ) : (
+          <ul className="grid gap-1 text-[0.8125rem] leading-[1.125rem]">
+            {run.savedSetups.map((saved) => (
+              <li key={saved.jobOrderId}>
+                {`${saved.displayNumber} follows ${saved.afterDisplayNumber} on ${machineName(saved.equipment)}, saves ${formatDuration(saved.setupS)}`}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+      <Actions actions={['Zoom to run']} reason={planReason}>
+        {runActions !== undefined && (
+          <Button
+            variant="outline"
+            className="h-7.5 px-2.5 text-[0.8125rem]"
+            onClick={() => runActions.split(run.id)}
+          >
+            Split run
+          </Button>
+        )}
       </Actions>
     </>
   );
@@ -549,6 +665,7 @@ export function GanttDetailDrawer({
             />
           )}
           {row?.kind === 'operation' && <OperationDetails row={row} />}
+          {row?.kind === 'run' && <RunDetails row={row} />}
         </div>
       </SheetContent>
     </Sheet>

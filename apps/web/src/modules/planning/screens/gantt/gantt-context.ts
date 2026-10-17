@@ -19,6 +19,19 @@ export interface GanttMoveActions {
   readonly cancel: () => void;
 }
 
+/** Whether an order can be combined into a run with the selection, and why not (plan 18, Runs). */
+export type CombineCheck = { readonly ok: true } | { readonly ok: false; readonly reason: string };
+
+/** The run actions of the order and run rows (ADR 0083, plan 18 Runs). */
+export interface GanttRunActions {
+  /** Whether Combine into a run is enabled for an order, given the selection it joins. */
+  readonly canCombine: (orderId: string) => CombineCheck;
+  /** Opens the review step for the selection with the order. */
+  readonly combine: (orderId: string) => void;
+  /** Splits a run of the draft: the run and its moves go. */
+  readonly split: (runId: string) => void;
+}
+
 /** What every row of the order Gantt reads: the snapshot, the one scale and the view's state. */
 export interface GanttViewContext {
   readonly snapshot: GanttSnapshot;
@@ -31,8 +44,10 @@ export interface GanttViewContext {
   /** Whether the browser zone differs from the plant zone, so plant times carry a zone label. */
   readonly zoneLabel: boolean;
   readonly hideClosed: boolean;
-  /** The selected order, by id. */
+  /** The selected order, by id: the first of the selection, which the URL names. */
   readonly selectedOrderId: string | undefined;
+  /** Every selected order, the first and the ones Shift+click or Shift+Space added (plan 18, Runs). */
+  readonly selectedOrderIds: ReadonlySet<string>;
   /** The rows of the highlighted critical chain, none while no chain is shown. */
   readonly chainRowIds: ReadonlySet<string>;
   /** The name of a machine by code, its code when unknown. */
@@ -40,6 +55,9 @@ export interface GanttViewContext {
   /** The rows the planner's draft moved, drawn in the draft style. */
   readonly draftRowIds?: ReadonlySet<string>;
   readonly move?: GanttMoveActions;
+  readonly runActions?: GanttRunActions;
+  /** Show critical chain from a row's menu. */
+  readonly toggleChain?: (orderId: string) => void;
 }
 
 const GanttContext = createContext<GanttViewContext | undefined>(undefined);

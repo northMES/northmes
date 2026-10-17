@@ -219,7 +219,9 @@ describe('runs in the in-memory draft (ADR 0083, plan 18 Runs)', () => {
 
     expect(result.refused).toBeUndefined();
     expect(draft.runs.map((run) => run.id)).toEqual(['run:po-1001+po-1005']);
-    expect(draft.changes.map((change) => [change.displayNumber, change.runId, change.setupS])).toEqual([
+    expect(
+      draft.changes.map((change) => [change.displayNumber, change.runId, change.setupS]),
+    ).toEqual([
       ['1005.10', 'run:po-1001+po-1005', 0],
       ['1005.20', 'run:po-1001+po-1005', undefined],
     ]);
