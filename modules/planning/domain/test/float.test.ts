@@ -107,7 +107,7 @@ describe('floatOf (plan 18, Float and the critical chain)', () => {
   it('is permutation-invariant in the orders, operations and job orders', () => {
     const expected = floatOf(orderOf('1003'), context);
     const shuffle = <T>(items: readonly T[]) =>
-      fc.shuffledSubarray(items, { minLength: items.length });
+      fc.shuffledSubarray([...items], { minLength: items.length });
     fc.assert(
       fc.property(
         shuffle(context.orders).chain((orders) =>

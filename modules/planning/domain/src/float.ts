@@ -21,7 +21,7 @@ import {
   reservationsOn,
   rowsOfOperation,
 } from './plan-context.ts';
-import { leadBackward, leadForward, predecessorOf, type Release, releaseOf } from './release.ts';
+import { leadBackward, type Release, releaseOf } from './release.ts';
 
 export type BindingConstraintKind =
   | 'started'
