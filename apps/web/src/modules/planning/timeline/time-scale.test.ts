@@ -168,5 +168,12 @@ describe('createTimeScale (plan 18, Shared pieces)', () => {
     expect(rangeLabel(rangeOf('2026-11-04', 'hours', stockholm, '06:00'), 'hours', stockholm)).toBe(
       'Wed 4 Nov, 06:00 to 18:00',
     );
+    // A Day range ends at the production day start after its last day, Sat 06:00, not on Saturday.
+    expect(rangeLabel(rangeOf('2026-11-04', 'day', stockholm, '06:00'), 'day', stockholm)).toBe(
+      'Wed 4 Nov to Fri 6 Nov',
+    );
+    expect(
+      rangeLabel(rangeOf('2026-11-02', '4weeks', stockholm, '06:00'), '4weeks', stockholm),
+    ).toBe('W45, Mon 2 Nov to Sun 29 Nov');
   });
 });

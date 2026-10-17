@@ -348,7 +348,10 @@ export function createTimeScale({
 /** The range as the toolbar names it: "W45, Mon 2 Nov to Sun 8 Nov". */
 export function rangeLabel(range: TimeRange, zoom: ZoomPreset, timeZone: string): string {
   const start = Temporal.Instant.fromEpochMilliseconds(range.fromMs).toZonedDateTimeISO(timeZone);
-  const last = formatPlantDate(range.toMs - 1, timeZone);
+  // The last day is one wall-clock day before the range end: a Day range ends at the production
+  // day start after its last day, so the instant before its end would name the day after.
+  const end = Temporal.Instant.fromEpochMilliseconds(range.toMs).toZonedDateTimeISO(timeZone);
+  const last = formatPlantDate(end.subtract({ days: 1 }).epochMilliseconds, timeZone);
   const first = formatPlantDate(range.fromMs, timeZone);
   if (zoom === 'hours') {
     return `${first}, ${formatPlantTime(range.fromMs, timeZone)} to ${formatPlantTime(range.toMs, timeZone)}`;
