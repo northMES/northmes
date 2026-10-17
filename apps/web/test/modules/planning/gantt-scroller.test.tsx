@@ -60,13 +60,19 @@ describe('the time scroller of the order Gantt (#685)', () => {
   it('extends the range to the left within one screen of the left edge and keeps the view where it was', async () => {
     renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
+    // The planner first scrolls right, which loads the later span, then heads back left.
+    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
+    scrollSideways(gantt, 0, 1500);
+    await waitFor(() => {
+      expect(timeHeaderText(gantt)).toContain('Sun 8 Nov');
+    });
     const widthBefore = Number.parseFloat(
       (gantt.querySelector('[data-overlay]') as HTMLElement).style.width,
     );
     expect(timeHeaderText(gantt)).not.toContain('Sun 1 Nov');
 
-    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 1500 });
-    scrollSideways(gantt, 1500, 200);
+    gantt.scrollLeft = 200;
+    fireEvent.scroll(gantt);
 
     await waitFor(() => {
       expect(timeHeaderText(gantt)).toContain('Sun 1 Nov');
