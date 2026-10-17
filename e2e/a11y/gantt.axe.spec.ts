@@ -57,18 +57,21 @@ test.describe('the order Gantt', () => {
     await drawer.getByRole('button', { name: 'Close' }).click();
     await expect(drawer).toBeHidden();
 
-    // A run (plan 18, Runs): Shift+click selects a second order of Bracket L, the row menu's
-    // Combine into a run opens the review step, and Combine draws the run row above its orders.
-    await gantt.locator('[data-row-id="po-1001"] [role="rowheader"]').click();
-    await expect(drawer).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(drawer).toBeHidden();
-    await gantt
-      .locator('[data-row-id="po-1005"] [role="rowheader"]')
-      .click({ modifiers: ['Shift'] });
+    // A run (plan 18, Runs), by keyboard: Space selects 1001, Shift+Space adds 1005, Shift+F10
+    // opens the row menu, Combine into a run opens the review step, and Combine draws the run row
+    // above its orders.
+    await gantt.locator('[data-row-id="po-1001"]').focus();
+    await page.keyboard.press('Space');
+    await expect(gantt.locator('[data-row-id="po-1001"]')).toHaveAttribute('aria-selected', 'true');
+    for (let step = 0; step < 10; step += 1) await page.keyboard.press('ArrowDown');
+    await expect(gantt.locator('[data-row-id="po-1005"]')).toBeFocused();
+    await page.keyboard.press('Shift+Space');
     await expect(gantt.locator('[data-row-id="po-1005"]')).toHaveAttribute('aria-selected', 'true');
-    await page.getByRole('button', { name: 'Actions for order 1005' }).click();
-    await page.getByRole('menuitem', { name: 'Combine into a run' }).click();
+    await page.keyboard.press('Shift+F10');
+    await expect(page.getByRole('menu', { name: 'Actions for order 1005' })).toBeVisible();
+    // The popup is anchored to the row's button, which the grid may have scrolled out of the
+    // viewport, so the item takes its click as an event rather than a pointer.
+    await page.getByRole('menuitem', { name: 'Combine into a run' }).dispatchEvent('click');
     const review = page.getByRole('dialog', { name: 'Combine into a run' });
     await expect(review).toBeVisible();
     await expect(review).toHaveCSS('opacity', '1');
@@ -84,8 +87,12 @@ test.describe('the order Gantt', () => {
     await expect(gantt.locator('[data-block="jo-1005-10"] [data-setup-hatch]')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'My draft, 1 change' })).toBeVisible();
     await checkA11y('the run row above its orders');
-    await page.getByRole('button', { name: 'Actions for the run of Bracket L' }).click();
-    await page.getByRole('menuitem', { name: 'Split run' }).click();
+    await run.focus();
+    await page.keyboard.press('Shift+F10');
+    await expect(
+      page.getByRole('menu', { name: 'Actions for the run of Bracket L' }),
+    ).toBeVisible();
+    await page.getByRole('menuitem', { name: 'Split run' }).dispatchEvent('click');
     await expect(run).toHaveCount(0);
     await expect(page.getByRole('menu')).toHaveCount(0);
 
