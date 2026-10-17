@@ -69,5 +69,7 @@ describe('deprecated-apis', () => {
     ];
 
     expect(configs.flatMap((config) => scanProject(root, config)).map(describeFinding)).toEqual([]);
-  });
+    // A language service per tsconfig type-checks each project, which takes up to 35 s on a CI
+    // runner for the web and the four examples.
+  }, 60_000);
 });
