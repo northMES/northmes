@@ -19,6 +19,15 @@ export const timePoint = z.object({
 /** A clock of the plant, "06:00". */
 export const clock = z.string().regex(/^\d{2}:\d{2}$/);
 
+/** A deviation of the calendar as src/calendar/calendar.ts reads it; G1 has none. */
+export const calendarDeviation = z.object({
+  kind: z.enum(['overtime', 'nonWorking']),
+  startsLocal: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
+  endsLocal: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
+  reason: z.string().optional(),
+  equipment: z.array(z.string()).nonempty().optional(),
+});
+
 export const rates = z.object({
   cycleSeconds: z.number().positive(),
   piecesPerCycle: z.number().int().positive(),
@@ -89,7 +98,7 @@ export const ganttFixture = z.object({
     shift: z.object({ start: clock, end: clock }),
     breaks: z.array(z.object({ start: clock, end: clock })),
     workingSecondsPerDay: z.number().int().positive(),
-    deviations: z.array(z.unknown()),
+    deviations: z.array(calendarDeviation),
   }),
   equipmentGroups: z.array(z.object({ code: z.string(), name: z.string(), color: z.string() })),
   equipment: z.array(

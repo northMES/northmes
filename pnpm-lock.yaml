@@ -799,6 +799,9 @@ importers:
       '@northmes/contracts':
         specifier: workspace:*
         version: link:../../../packages/contracts
+      temporal-polyfill:
+        specifier: 'catalog:'
+        version: 1.0.5
       zod:
         specifier: 'catalog:'
         version: 4.6.5
@@ -818,9 +821,6 @@ importers:
       graphql:
         specifier: 16.14.2
         version: 16.14.2
-      temporal-polyfill:
-        specifier: 'catalog:'
-        version: 1.0.5
       typescript:
         specifier: 'catalog:'
         version: 6.0.3

@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@northmes/contracts": "workspace:*",
+    "temporal-polyfill": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -26,7 +27,6 @@
     "@types/node": "catalog:",
     "fast-check": "catalog:",
     "graphql": "catalog:",
-    "temporal-polyfill": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
