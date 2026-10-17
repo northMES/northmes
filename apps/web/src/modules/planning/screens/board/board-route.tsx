@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useSearch } from '@tanstack/react-router';
+import { ViewSwitch } from '../../components/view-switch/index.ts';
 import { boardSearch } from '../../gantt-search.ts';
 import { GanttScreen } from '../gantt/index.ts';
 import { BoardScreen } from './board-screen.tsx';
@@ -12,5 +13,5 @@ import { BoardScreen } from './board-screen.tsx';
  */
 export function BoardRoute() {
   const { view } = boardSearch(useSearch({ strict: false }));
-  return view === 'gantt' ? <GanttScreen /> : <BoardScreen />;
+  return view === 'gantt' ? <GanttScreen /> : <BoardScreen toolbar={<ViewSwitch />} />;
 }

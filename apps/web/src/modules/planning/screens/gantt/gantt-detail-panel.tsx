@@ -2,11 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatDuration, formatPlantDateTime } from '@northmes/contracts/format';
 import { cn } from 'cn';
-import { CircleCheck, Clock, Link2, Lock, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { CircleCheck, Clock, Link2, Lock } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { IconButton } from '../../../../ui/components/icon-button/index.ts';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button } from '../../../../ui/primitives/button.tsx';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '../../../../ui/primitives/sheet.tsx';
 import type { ConstraintLine } from '../../gantt-data.ts';
 import { durationsOf, releaseText } from './gantt-block-states.ts';
 import type { ChainView } from './gantt-chain.ts';
@@ -129,13 +135,15 @@ function JobOrderDetails({
         ];
   return (
     <>
-      <h2 className="font-mono text-base font-semibold">
-        {operation.displayNumber} {operation.name}
-      </h2>
-      <p className="text-[0.8125rem] text-muted-foreground">
-        {order.article}, {quantityText(jobOrder.quantity)}, order {order.number}, deadline{' '}
-        {formatPlantDateTime(order.deadlineMs, timeZone)}
-      </p>
+      <SheetHeader className="p-0">
+        <SheetTitle className="font-mono text-base font-semibold">
+          {operation.displayNumber} {operation.name}
+        </SheetTitle>
+        <SheetDescription className="text-data">
+          {order.article}, {quantityText(jobOrder.quantity)}, order {order.number}, deadline{' '}
+          {formatPlantDateTime(order.deadlineMs, timeZone)}
+        </SheetDescription>
+      </SheetHeader>
       <div className="flex flex-wrap gap-1.5">
         <Badge variant="outline">{statusLabel(jobOrder.status)}</Badge>
         {operation.isLocked && (
@@ -241,11 +249,13 @@ function OrderDetails({
     .join(', ');
   return (
     <>
-      <h2 className="font-mono text-base font-semibold">Order {order.number}</h2>
-      <p className="text-[0.8125rem] text-muted-foreground">
-        {order.article}, {quantityText(order.quantity)}
-        {order.priority !== null && `, priority ${order.priority}`}
-      </p>
+      <SheetHeader className="p-0">
+        <SheetTitle className="font-mono text-base font-semibold">Order {order.number}</SheetTitle>
+        <SheetDescription className="text-data">
+          {order.article}, {quantityText(order.quantity)}
+          {order.priority !== null && `, priority ${order.priority}`}
+        </SheetDescription>
+      </SheetHeader>
       <div className="flex flex-wrap gap-1.5">
         <Badge variant="outline">{statusLabel(order.status)}</Badge>
         {analysis?.late && (
@@ -331,12 +341,14 @@ function OperationDetails({ row }: { readonly row: OperationRow }) {
   const { operation, order } = row;
   return (
     <>
-      <h2 className="font-mono text-base font-semibold">
-        {operation.displayNumber} {operation.name}
-      </h2>
-      <p className="text-[0.8125rem] text-muted-foreground">
-        {order.article}, {quantityText(operation.quantity)}, order {order.number}
-      </p>
+      <SheetHeader className="p-0">
+        <SheetTitle className="font-mono text-base font-semibold">
+          {operation.displayNumber} {operation.name}
+        </SheetTitle>
+        <SheetDescription className="text-data">
+          {order.article}, {quantityText(operation.quantity)}, order {order.number}
+        </SheetDescription>
+      </SheetHeader>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[0.8125rem]">
         <Field label="Machines">{machinesText(operation, machineName)}</Field>
         <Field label="Lead time">{formatDuration(operation.leadTimeS)}</Field>
@@ -351,86 +363,62 @@ function OperationDetails({ row }: { readonly row: OperationRow }) {
   );
 }
 
-export interface GanttDetailPanelProps {
-  /** The row the panel shows, none until a row is opened. */
+export interface GanttDetailDrawerProps {
+  /** The row the drawer shows; none keeps it closed. */
   readonly row: GanttRow | undefined;
   readonly chain: ChainView | undefined;
-  readonly open: boolean;
-  readonly onOpenChange: (open: boolean) => void;
+  /** Runs when the close button or Escape closes the drawer. */
+  readonly onClose: () => void;
   readonly onToggleChain: (orderId: string) => void;
+  /** Runs when a chain row's link is followed: the drawer closes and that row takes focus. */
   readonly onFocusRow: (jobOrderId: string) => void;
 }
 
 /**
- * The docked panel beside the grid (D3 option A, D5): Details of the opened row with the board's
- * fields, the Constraints and Float sections of plan 18 and, for an order, the critical chain
- * explanation with a link per row. Collapsed, it is the 48 px strip with Expand panel. In phase 1
- * the fields and the actions are drawn but disabled, with the reason under them.
+ * The Details drawer (plan 18, phase 1 findings; Krister, 2026-10-17): a Sheet from the right
+ * that opens from a row or a block with the board's fields, the Constraints and Float sections of
+ * plan 18 and, for an order, the critical chain explanation with a link per row. Its close
+ * button and Escape close it, and focus returns to the row. The grid keeps the full width. In
+ * phase 1 the fields and the actions are drawn but disabled, with the reason under them.
  */
-export function GanttDetailPanel({
+export function GanttDetailDrawer({
   row,
   chain,
-  open,
-  onOpenChange,
+  onClose,
   onToggleChain,
   onFocusRow,
-}: GanttDetailPanelProps) {
-  if (!open) {
-    return (
-      <div
-        role="group"
-        aria-label="Board panel, collapsed"
-        className="flex w-12 shrink-0 flex-col items-center gap-1 rounded-lg border border-border bg-card py-2"
-      >
-        <IconButton
-          label="Expand panel"
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => onOpenChange(true)}
-        >
-          <PanelRightOpen />
-        </IconButton>
-      </div>
-    );
-  }
+}: GanttDetailDrawerProps) {
   return (
-    <aside
-      aria-label="Board panel"
-      className="flex w-80 shrink-0 flex-col overflow-hidden rounded-lg border border-border bg-card"
+    <Sheet
+      open={row !== undefined}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      <div className="flex items-center gap-1 border-b border-border bg-muted px-2 py-1.5">
-        <span className="px-1 text-sm font-semibold">Details</span>
-        <span className="grow" />
-        <IconButton
-          label="Collapse panel"
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => onOpenChange(false)}
-        >
-          <PanelRightClose />
-        </IconButton>
-      </div>
-      <div className="grid content-start gap-3 overflow-y-auto p-3 text-sm" data-detail-panel>
-        {row === undefined && (
-          <p className="text-[0.8125rem] text-muted-foreground">Select a row to see its details.</p>
-        )}
-        {row?.kind === 'jobOrder' && (
-          <JobOrderDetails
-            row={row}
-            chain={chain}
-            onToggleChain={() => onToggleChain(row.order.id)}
-          />
-        )}
-        {row?.kind === 'order' && (
-          <OrderDetails
-            row={row}
-            chain={chain}
-            onToggleChain={() => onToggleChain(row.order.id)}
-            onFocusRow={onFocusRow}
-          />
-        )}
-        {row?.kind === 'operation' && <OperationDetails row={row} />}
-      </div>
-    </aside>
+      <SheetContent
+        side="right"
+        data-details-drawer
+        className="w-80 gap-3 overflow-y-auto p-4 text-sm sm:max-w-sm"
+      >
+        <div className="grid content-start gap-3" data-detail-panel>
+          {row?.kind === 'jobOrder' && (
+            <JobOrderDetails
+              row={row}
+              chain={chain}
+              onToggleChain={() => onToggleChain(row.order.id)}
+            />
+          )}
+          {row?.kind === 'order' && (
+            <OrderDetails
+              row={row}
+              chain={chain}
+              onToggleChain={() => onToggleChain(row.order.id)}
+              onFocusRow={onFocusRow}
+            />
+          )}
+          {row?.kind === 'operation' && <OperationDetails row={row} />}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

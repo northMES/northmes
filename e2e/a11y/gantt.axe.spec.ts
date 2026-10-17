@@ -38,10 +38,25 @@ test.describe('the order Gantt', () => {
     await expect(gantt).toBeVisible();
     // The row's name in Chromium starts with its disclosure button, so the row is found by id.
     await gantt.locator('[data-row-id="po-1003"] [role="rowheader"]').click();
+    const drawer = page.locator('[role="dialog"][data-details-drawer]');
+    await expect(drawer).toBeVisible();
+    // The drawer fades in; axe must read its colors once the transition has ended.
+    await expect(drawer).toHaveCSS('opacity', '1');
     await expect(
       page.getByRole('region', { name: 'Critical chain, 3 rows, root 1001.10 on CNC 1' }),
     ).toBeVisible();
-    await checkA11y('the chain highlight with its explanation');
+    await checkA11y('the chain highlight with its explanation in the Details drawer');
+    await page.keyboard.press('Escape');
+    await expect(drawer).toBeHidden();
+    await expect(gantt.locator('[data-row-id="po-1003"]')).toBeFocused();
+
+    await gantt.locator('[data-block="jo-1001-20"]').click();
+    await expect(drawer).toBeVisible();
+    await expect(drawer).toHaveCSS('opacity', '1');
+    await expect(drawer.getByRole('heading', { level: 2 })).toHaveText('1001.20 Mill');
+    await checkA11y('the Details drawer of a job order');
+    await drawer.getByRole('button', { name: 'Close' }).click();
+    await expect(drawer).toBeHidden();
 
     await page.getByRole('button', { name: 'Board options' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Workload' }).click();
@@ -51,5 +66,33 @@ test.describe('the order Gantt', () => {
     await page.getByRole('button', { name: 'Workload on CNC 1' }).click();
     await expect(page.getByRole('dialog', { name: 'Workload on CNC 1' })).toBeVisible();
     await checkA11y('the workload panel with the table of CNC 1 open');
+  });
+
+  test('plan 18 view=gantt fits the viewport without a page scrollbar and the time area scrolls sideways', async ({
+    page,
+    signIn,
+  }) => {
+    await signIn(ganttHref({ view: 'gantt', zoom: 'day', from: '2026-11-04' }));
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+    for (const viewport of [
+      { width: 1440, height: 900 },
+      { width: 1280, height: 800 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await expect(gantt).toBeVisible();
+      const scroll = await page.evaluate(() => ({
+        page: document.documentElement.scrollHeight - document.documentElement.clientHeight,
+        grid: (() => {
+          const grid = document.querySelector('[role="treegrid"]') as HTMLElement;
+          return {
+            x: grid.scrollWidth - grid.clientWidth,
+            y: grid.scrollHeight - grid.clientHeight,
+          };
+        })(),
+      }));
+      expect(scroll.page, `page scroll at ${viewport.width}`).toBeLessThanOrEqual(0);
+      expect(scroll.grid.x, `sideways scroll at ${viewport.width}`).toBeGreaterThan(0);
+      expect(scroll.grid.y, `row scroll at ${viewport.width}`).toBeGreaterThan(0);
+    }
   });
 });

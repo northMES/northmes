@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { planningLinks } from '@northmes/planning-contracts';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import type { GanttDataSource, GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts';
 import { g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { GanttSourceProvider } from '../../../src/modules/planning/gantt-source-context.ts';
@@ -64,4 +64,18 @@ export function markerTexts(element: HTMLElement, kind: string): string[] {
   return Array.from(element.querySelectorAll(`[data-marker="${kind}"]`)).map(
     (marker) => marker.getAttribute('data-accessible-text') ?? '',
   );
+}
+
+/** The Details drawer, once it has opened; it is named after the row it shows. */
+export async function findDetails(): Promise<HTMLElement> {
+  return waitFor(() => {
+    const drawer = document.querySelector<HTMLElement>('[role="dialog"][data-details-drawer]');
+    if (drawer === null) throw new Error('The Details drawer is not open');
+    return drawer;
+  });
+}
+
+/** Whether the Details drawer is open. */
+export function detailsOpen(): boolean {
+  return document.querySelector('[role="dialog"][data-details-drawer]') !== null;
 }

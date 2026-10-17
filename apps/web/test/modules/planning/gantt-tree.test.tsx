@@ -3,6 +3,7 @@
 import { cleanup, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import { naturalWidthPx, rangeOf } from '../../../src/modules/planning/timeline/time-scale.ts';
 import { findGantt, renderBoardRoute } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
@@ -112,5 +113,44 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
 
     const notPlaced = within(gantt).getByRole('row', { name: /Not placed/ });
     expect(notPlaced.textContent).toContain('No job orders without a place');
+  });
+
+  it("plan 18 the time area takes the preset's natural width and scrolls sideways under the sticky tree cells", async () => {
+    renderBoardRoute({ view: 'gantt', zoom: 'day', from: '2026-11-04' });
+    const gantt = await findGantt();
+
+    expect(gantt.className).toContain('overflow-auto');
+    const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
+    const tracks = header.style.gridTemplateColumns.split(' ');
+    const timeTrack = Number.parseFloat(tracks[tracks.length - 1] ?? '0');
+    const natural = naturalWidthPx(
+      rangeOf('2026-11-04', 'day', 'Europe/Stockholm', '06:00'),
+      'day',
+    );
+    expect(timeTrack).toBeGreaterThanOrEqual(natural);
+    // The header and every row share the template, so the tree pane stays aligned with the rows.
+    const row = within(gantt).getByRole('row', { name: /^1003 / });
+    expect(row.style.gridTemplateColumns).toBe(header.style.gridTemplateColumns);
+    const [name, deadline] = within(header).getAllByRole('columnheader');
+    expect(name?.className).toContain('sticky');
+    expect(name?.style.insetInlineStart).toBe('0px');
+    expect(deadline?.className).toContain('sticky');
+    expect(deadline?.style.insetInlineStart).toBe(`${Number.parseFloat(tracks[0] ?? '0')}px`);
+    const cells = within(row).getAllByRole('gridcell');
+    expect(cells[0]?.style.insetInlineStart).toBe(deadline?.style.insetInlineStart);
+  });
+
+  it('plan 18 view=gantt fills the viewport height, so the rows scroll inside the grid', async () => {
+    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    const fill = gantt.closest<HTMLElement>('[data-gantt-fill]');
+    const top = (fill?.getBoundingClientRect().top ?? 0) + window.scrollY;
+    expect(fill?.style.height).toBe(`${Math.max(240, window.innerHeight - top - 24)}px`);
+    expect(gantt.className).toContain('min-h-0');
+    expect(gantt.className).toContain('flex-1');
+    const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
+    expect(header.className).toContain('sticky');
+    expect(within(gantt).getByRole('row', { name: /Not placed/ }).className).toContain('sticky');
   });
 });

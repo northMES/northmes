@@ -318,10 +318,13 @@ const ariaSort = { asc: 'ascending', desc: 'descending' } as const;
 /** The header cells of the tree pane: a sort button with aria-sort on a sortable column. */
 export function GanttTreeHeaderCells({
   columns,
+  cellLefts,
   sort,
   onSortChange,
 }: {
   readonly columns: readonly GanttColumn[];
+  /** The left offset of each column, where its header sticks while the time column scrolls. */
+  readonly cellLefts: readonly number[];
   readonly sort: GanttSort | undefined;
   readonly onSortChange: (sort: GanttSort) => void;
 }) {
@@ -338,10 +341,10 @@ export function GanttTreeHeaderCells({
               column.sortable ? (sorted === undefined ? 'none' : ariaSort[sorted]) : undefined
             }
             className={cn(
-              'flex items-center border-e border-border px-2 text-xs font-semibold text-muted-foreground',
-              index === 0 && 'sticky start-0 z-10 bg-muted',
+              'sticky z-10 flex items-center border-e border-border bg-muted px-2 text-xs font-semibold text-muted-foreground',
               column.numeric && 'justify-end',
             )}
+            style={{ insetInlineStart: `${cellLefts[index] ?? 0}px` }}
           >
             {column.sortable ? (
               <Button

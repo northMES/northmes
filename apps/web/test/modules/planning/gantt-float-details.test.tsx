@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { findGantt, renderBoardRoute } from './gantt-fixtures.tsx';
+import { findDetails, findGantt, renderBoardRoute } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -47,7 +47,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
 
     await userEvent.click(gantt.querySelector('[data-block="jo-1004-20"]') as HTMLElement);
 
-    const panel = screen.getByRole('complementary', { name: 'Board panel' });
+    const panel = await findDetails();
     expect(within(panel).getByRole('heading', { level: 2 }).textContent).toBe('1004.20 Mill');
     const constraints = within(panel).getByRole('region', { name: 'Constraints, 6 of 6 hold' });
     const lines = within(constraints).getAllByRole('listitem');
@@ -73,7 +73,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
 
     await userEvent.click(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
 
-    const panel = screen.getByRole('complementary', { name: 'Board panel' });
+    const panel = await findDetails();
     const float = within(panel).getByRole('region', { name: 'Float' });
     expect(float.textContent).toContain('Wait 0 min. Free float 15 min. Total float 12 h.');
     expect(float.textContent).toContain('Starts at its release: 1001.10 end plus 1 h lead.');
@@ -88,7 +88,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
 
     await userEvent.click(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
 
-    const panel = screen.getByRole('complementary', { name: 'Board panel' });
+    const panel = await findDetails();
     const machine = within(panel).getByLabelText('Machine') as HTMLSelectElement;
     expect(machine.disabled).toBe(true);
     expect(machine.value).toBe('CNC2');
@@ -114,7 +114,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
       within(within(gantt).getByRole('row', { name: /^1003 / })).getByRole('rowheader'),
     );
 
-    const panel = screen.getByRole('complementary', { name: 'Board panel' });
+    const panel = await findDetails();
     expect(within(panel).getByRole('heading', { level: 2 }).textContent).toBe('Order 1003');
     expect(panel.textContent).toContain('Wed 4 Nov 15:00, end of shift');
     expect(panel.textContent).toContain('15 h 15 min elapsed');

@@ -14,53 +14,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
+import { PressedGroup, ViewSwitch } from '../../components/view-switch/index.ts';
 import type { ZoomPreset } from '../../gantt-data.ts';
-import type { BoardView } from '../../gantt-search.ts';
 import { zoomPresetIds, zoomPresets } from '../../timeline/time-scale.ts';
 import type { GanttOptions } from './gantt-options.ts';
 import { ganttColumnChoices } from './gantt-tree-pane.tsx';
 
-const views: readonly { readonly id: BoardView; readonly label: string }[] = [
-  { id: 'board', label: 'Board' },
-  { id: 'gantt', label: 'Gantt' },
-  { id: 'table', label: 'Table' },
-];
-
-/** A group of pressed buttons, one pressed: the View and Zoom groups of D3 and D5. */
-function PressedGroup<TValue extends string>({
-  label,
-  choices,
-  value,
-  onChange,
-}: {
-  readonly label: string;
-  readonly choices: readonly { readonly id: TValue; readonly label: string }[];
-  readonly value: TValue;
-  readonly onChange: (value: TValue) => void;
-}) {
-  return (
-    <div role="group" aria-label={label} className="flex rounded-lg bg-muted p-0.5">
-      {choices.map((choice) => (
-        <Button
-          key={choice.id}
-          variant="ghost"
-          aria-pressed={choice.id === value}
-          onClick={() => onChange(choice.id)}
-          className={cn(
-            'h-7 px-2.5',
-            choice.id === value && 'bg-card shadow-[inset_0_-2px_0_var(--foreground)]',
-          )}
-        >
-          {choice.label}
-        </Button>
-      ))}
-    </div>
-  );
-}
-
 export interface GanttToolbarProps {
-  readonly view: BoardView;
-  readonly onViewChange: (view: BoardView) => void;
   readonly zoom: ZoomPreset;
   readonly onZoomChange: (zoom: ZoomPreset) => void;
   readonly from: string;
@@ -79,8 +39,6 @@ export interface GanttToolbarProps {
  * the toggle, the columns and the options stay local.
  */
 export function GanttToolbar({
-  view,
-  onViewChange,
   zoom,
   onZoomChange,
   from,
@@ -95,7 +53,7 @@ export function GanttToolbar({
   const dateId = useId();
   return (
     <div role="toolbar" aria-label="Gantt" className="flex flex-wrap items-center gap-2">
-      <PressedGroup label="View" choices={views} value={view} onChange={onViewChange} />
+      <ViewSwitch />
       <PressedGroup
         label="Zoom"
         choices={zoomPresetIds.map((id) => ({ id, label: zoomPresets[id].label }))}

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useQuery } from '@apollo/client/react';
 import { EyeOff } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { StatusBadge, type StatusTone } from '../../../../ui/components/status-badge/index.ts';
@@ -70,9 +71,10 @@ const columns: readonly DataTableColumn<BoardOrder>[] = [
  * The E02 board stub: the plant's production orders in the DataTable as the lists of ui-222 draw
  * it, each with its order number, article, quantity, status and Release for a planned order. Its
  * page frame gives it the h1, the document title, the breadcrumb in the shell's top bar, and the
- * loading, empty and error states. The real board of planning-221 replaces it.
+ * loading, empty and error states; the route hands it the View control that leads to the order
+ * Gantt (plan 18). The real board of planning-221 replaces it.
  */
-export function BoardScreen() {
+export function BoardScreen({ toolbar }: { readonly toolbar?: ReactNode }) {
   const { data, error, refetch } = useQuery(PlanningBoard);
   const orders = data?.planningProductionOrders;
   let state: PageState = { status: 'ready' };
@@ -93,7 +95,7 @@ export function BoardScreen() {
     };
   }
   return (
-    <PageFrame title="Planning board" state={state}>
+    <PageFrame title="Planning board" state={state} toolbar={toolbar}>
       <DataTable
         label="Production orders"
         columns={columns}

@@ -5,7 +5,13 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { findGantt, renderBoardRoute, sourceOf } from './gantt-fixtures.tsx';
+import {
+  detailsOpen,
+  findDetails,
+  findGantt,
+  renderBoardRoute,
+  sourceOf,
+} from './gantt-fixtures.tsx';
 
 /** G1 with 1006.10 taken off its machine, so it sits in the Not placed row. */
 function withUnplaced1006(): GanttSnapshot {
@@ -136,15 +142,44 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
     rowOf(gantt, 'jo-1001-20').focus();
     await userEvent.keyboard('{Enter}');
 
-    const panel = screen.getByRole('complementary', { name: 'Board panel' });
-    expect(within(panel).getByRole('heading', { level: 2 }).textContent).toBe('1001.20 Mill');
+    const drawer = await findDetails();
+    expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('1001.20 Mill');
     await waitFor(() => {
       expect(router.state.location.search).toMatchObject({ order: 'po-1001' });
     });
-    expect(document.activeElement).toBe(rowOf(gantt, 'jo-1001-20'));
+    await waitFor(() => {
+      expect(drawer.contains(document.activeElement)).toBe(true);
+    });
+
+    await userEvent.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(rowOf(gantt, 'jo-1001-20'));
+    });
   });
 
-  it('ADR0021 Escape ends the chain highlight first, then closes the docked panel', async () => {
+  it('ADR0021 the close button of the Details drawer closes it and returns focus to the row', async () => {
+    renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    await userEvent.click(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
+    const drawer = await findDetails();
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Close' }));
+
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(rowOf(gantt, 'jo-1003-20'));
+    });
+    expect(screen.queryByRole('group', { name: 'Board panel, collapsed' })).toBeNull();
+    expect(screen.queryByRole('complementary', { name: 'Board panel' })).toBeNull();
+  });
+
+  it('ADR0021 Escape on a row ends the chain highlight; the drawer handles its own Escape', async () => {
     const router = renderBoardRoute({
       view: 'gantt',
       zoom: 'week',
@@ -153,10 +188,11 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
       chain: 1,
     });
     const gantt = await findGantt();
-    expect(screen.getByRole('complementary', { name: 'Board panel' })).toBeTruthy();
+    expect(detailsOpen()).toBe(false);
 
     rowOf(gantt, 'po-1003').focus();
     await userEvent.keyboard('{Escape}');
+
     await waitFor(() => {
       expect(router.state.location.search).toEqual({
         view: 'gantt',
@@ -165,13 +201,6 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
         order: 'po-1003',
       });
     });
-    expect(screen.getByRole('complementary', { name: 'Board panel' })).toBeTruthy();
-
-    await userEvent.keyboard('{Escape}');
-
-    expect(screen.queryByRole('complementary', { name: 'Board panel' })).toBeNull();
-    expect(screen.getByRole('group', { name: 'Board panel, collapsed' })).toBeTruthy();
-    await userEvent.click(screen.getByRole('button', { name: 'Expand panel' }));
-    expect(screen.getByRole('complementary', { name: 'Board panel' })).toBeTruthy();
+    expect(document.activeElement).toBe(rowOf(gantt, 'po-1003'));
   });
 });

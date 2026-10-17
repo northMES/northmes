@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { politeRegionId } from '../../../src/ui/lib/announce.ts';
-import { findGantt, markerTexts, renderBoardRoute } from './gantt-fixtures.tsx';
+import {
+  detailsOpen,
+  findDetails,
+  findGantt,
+  markerTexts,
+  renderBoardRoute,
+} from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -48,7 +54,7 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
     await userEvent.click(
       within(within(gantt).getByRole('row', { name: /^1003 / })).getByRole('rowheader'),
     );
-    const panel = screen.getByRole('complementary', { name: 'Board panel' });
+    const panel = await findDetails();
     await userEvent.click(within(panel).getByRole('button', { name: 'Show critical chain' }));
 
     await waitFor(() => {
@@ -81,7 +87,13 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
 
     await userEvent.click(within(section).getByRole('button', { name: '1001.10' }));
 
-    expect(document.activeElement?.getAttribute('data-row-id')).toBe('jo-1001-10');
+    // The link closes the drawer and focuses the row it names.
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+    await waitFor(() => {
+      expect(document.activeElement?.getAttribute('data-row-id')).toBe('jo-1001-10');
+    });
   });
 
   it('GT2 Escape ends the chain highlight and announces it', async () => {
@@ -133,7 +145,7 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
       within(within(gantt).getByRole('row', { name: /^1001 / })).getByRole('rowheader'),
     );
 
-    const panel = screen.getByRole('complementary', { name: 'Board panel' });
+    const panel = await findDetails();
     const section = within(panel).getByRole('region', {
       name: 'Critical chain, 2 rows, root 1001.10 on CNC 1',
     });
