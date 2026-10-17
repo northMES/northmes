@@ -1,9 +1,10 @@
 # Supply-chain checks on the dependency tree (docs/adr/0040-dependency-license-policy-ci-gate-and-sbom.md,
-# docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md). The dependency audit
+# docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md). The license gate
+# applies the license policy per package class to a CycloneDX SBOM of each workspace package and
+# fails on a package from the never-install list or with an ee/ folder. The dependency audit
 # fails on a high or critical advisory in the production tree that pnpm-workspace.yaml does not
-# list as an accepted risk (docs/security/vulnerability-policy.md). It runs weekly too, so an
-# advisory published after the last change still turns it red. The license gate of #197 joins
-# this file later.
+# list as an accepted risk (docs/security/vulnerability-policy.md). Both run weekly too, so an
+# advisory published after the last change still turns the audit red.
 name: Supply chain
 
 on:
@@ -17,6 +18,27 @@ permissions:
   contents: read
 
 jobs:
+  license-gate:
+    name: license gate
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      # The native binaries of every platform the images ship for, so that their packages are in
+      # the tree the gate scans. pnpm sbom itself reads supportedArchitectures from
+      # pnpm-workspace.yaml only.
+      - run: pnpm install --frozen-lockfile --os linux --cpu x64 --cpu arm64 --libc glibc --libc musl
+      # Writes the production and the full SBOM of each workspace package under sbom/, then runs
+      # scripts/license-gate.mjs, which writes its summary to the job summary.
+      - run: pnpm license:gate
+
   dependency-audit:
     name: dependency audit
     permissions:

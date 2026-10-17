@@ -1,0 +1,55 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "backend",
+      "version": "0.1.0",
+      "purl": "pkg:npm/%40northmes/backend@0.1.0",
+      "bom-ref": "pkg:npm/%40northmes/backend@0.1.0",
+      "group": "@northmes",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "mixed-kit",
+      "version": "1.0.0",
+      "purl": "pkg:npm/mixed-kit@1.0.0",
+      "bom-ref": "pkg:npm/mixed-kit@1.0.0",
+      "licenses": [
+        {
+          "expression": "MIT AND GPL-3.0-or-later"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "choice-kit",
+      "version": "1.0.0",
+      "purl": "pkg:npm/choice-kit@1.0.0",
+      "bom-ref": "pkg:npm/choice-kit@1.0.0",
+      "licenses": [
+        {
+          "expression": "(GPL-2.0-only OR SSPL-1.0)"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/%40northmes/backend@0.1.0",
+      "dependsOn": ["pkg:npm/mixed-kit@1.0.0", "pkg:npm/choice-kit@1.0.0"]
+    }
+  ]
+}
