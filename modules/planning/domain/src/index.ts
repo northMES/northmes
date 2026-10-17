@@ -41,6 +41,12 @@ export {
   type PlacedMove,
 } from './cascade.ts';
 export {
+  type ConstraintCode,
+  type ConstraintKind,
+  type ConstraintLine,
+  constraintsOf,
+} from './constraints-of.ts';
+export {
   bindingText,
   type ChainResult,
   type ChainRow,
@@ -63,7 +69,12 @@ export {
   ganttExpected,
   ganttFixture,
 } from './fixtures/gantt.ts';
-export { g1HorizonEndMs, g1OrderId, g1PlanContext } from './fixtures/gantt-context.ts';
+export {
+  g1HorizonEndMs,
+  g1HorizonStartMs,
+  g1OrderId,
+  g1PlanContext,
+} from './fixtures/gantt-context.ts';
 export {
   type BindingConstraint,
   type BindingConstraintKind,
@@ -80,6 +91,7 @@ export {
   type JobOrderStatus,
   operationsInSequence,
   type PlanContext,
+  type PlanEquipment,
   type PlanJobOrder,
   type PlanOperation,
   type PlanOrder,
@@ -89,3 +101,12 @@ export {
   rowsOfOperation,
 } from './plan-context.ts';
 export { lastPieceMinEnd, type Release, releaseOf } from './release.ts';
+export {
+  type Bucket,
+  isoWeekBuckets,
+  productionDayBuckets,
+  shiftBuckets,
+  type WorkloadBucket,
+  type WorkloadItem,
+  workload,
+} from './workload.ts';
