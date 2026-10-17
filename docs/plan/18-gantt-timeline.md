@@ -52,7 +52,7 @@ New terms this document introduces. They go into [GLOSSARY.md](../../GLOSSARY.md
 | earliest start | An instant before which no job order of a production order may start: material arrival, a customer's release, a tooling date. | release date (ambiguous), start constraint |
 | workload | For one machine and one time bucket: the available working seconds from the calendar, the seconds loaded by job orders, their split into setup and run, and the seconds above availability. | capacity (that is availability alone), utilization (that is one ratio of the workload) |
 | bucket | One cell of the workload lane: a production day, a shift or an ISO week, following the zoom preset. | period, slot (that is a snap step) |
-| run | Two or more production orders of one article that a planner has combined to plan together: each later order's job orders follow the earlier order's on one machine without a second setup, and the run is due at the earliest deadline of its orders ([ADR 0083](../adr/0083-runs-of-production-orders-of-one-article.md)). | campaign, merged order, batch |
+| run | Two or more production orders of one article at one plant that a planner has combined to plan together: a later order's job order of an operation with a setup follows the earlier order's job order of that operation on its machine without a second setup, when the operation allows that machine, while its other job orders keep their setup, and the run is due at the earliest deadline of its orders ([ADR 0083](../adr/0083-runs-of-production-orders-of-one-article.md)). | campaign, merged order, batch |
 
 ## Scope
 
@@ -187,12 +187,12 @@ Sorting on a column sorts level 1 rows and keeps the tree under each. The width 
 
 ## Runs
 
-Plan proposal, from Krister Johansson's decision of 2026-10-17 and [ADR 0083](../adr/0083-runs-of-production-orders-of-one-article.md). A run is two or more production orders of one article that a planner has combined to plan together: each later order's job orders follow the earlier order's on one machine without a second setup, and the run is due at the earliest deadline of its orders. The ADR holds the rules; this section says how the order Gantt offers, reviews, draws and undoes a run. The design frames PR1 to PR3 of the planning pages round (issue 689) show the review step and the run on the Gantt.
+Plan proposal, from Krister Johansson's decision of 2026-10-17 and [ADR 0083](../adr/0083-runs-of-production-orders-of-one-article.md). A run is two or more production orders of one article at one plant that a planner has combined to plan together: a later order's job order of an operation with a setup follows the earlier order's job order of that operation on its machine without a second setup, when the operation allows that machine, while its other job orders keep their setup, and the run is due at the earliest deadline of its orders. The orders are at one plant by construction: the Gantt page is a plant's page and loads that plant's orders only. The ADR holds the rules; this section says how the order Gantt offers, reviews, draws and undoes a run. The design frames PR1 to PR3 of the planning pages round (issue 689) show the review step and the run on the Gantt.
 
 ### Selecting the orders
 
 - Order rows can be multi-selected: Shift+click adds an order row to the selection, and in row focus mode Shift+Space does the same; a click or Space without Shift selects that one row, as the treegrid pattern. Blocks and operation rows are never multi-selected ([Scope](#scope)). `order=<id>` in the URL keeps naming one selected order, the first of the selection; the rest of the selection stays local.
-- "Combine into a run" is in the order row's menu and in the Details drawer of an order row. It is enabled when two or more orders of one article are selected. With one order selected it says why it is disabled ("Select another order of Bracket L"); with orders of different articles selected it says "The selected orders are of different articles". The action needs `planning.jobOrder:schedule`.
+- "Combine into a run" is in the order row's menu and in the Details drawer of an order row. It is enabled when two or more orders of one article are selected. With one order selected it says why it is disabled ("Select another order of Bracket L"); with orders of different articles selected it says "The selected orders are of different articles". An order with a job order in the Not placed row, or with a started, held or hard-locked job order, cannot join (ADR 0083 rule 1): the review step then refuses with the reason. The action needs `planning.jobOrder:schedule`.
 
 ### The review step
 
@@ -224,11 +224,11 @@ Case G1 `GT10`: `1001` (Bracket L, 600 pcs, deadline Fri 6 Nov 15:00) and `1005`
 
 ### Open product owner questions
 
-- May a run hold an order with a started or hard-locked job order? Working default: no, the review step refuses with the reason.
-- Does the ERP learn of a run, as a note or a field on the orders, or is it NorthMES-internal? Working default: internal.
-- May a planner set the run's deadline by hand, or is it always the earliest of its orders? Working default: the earliest.
-- Is the saved setup the whole retool, or does a run of one article still need a shorter setup, such as a fixture change? Working default: the whole retool.
-- Does the run take every operation of its orders, or only the operations with a setup to save? Working default: every operation of the orders sits under the run, and the setup is saved where there is one.
+- PO-81: may a run hold an order with a started or hard-locked job order? Working default: no, the review step refuses with the reason.
+- PO-82: does the ERP learn of a run, as a note or a field on the orders, or is it NorthMES-internal? Working default: internal.
+- PO-83: may a planner set the run's deadline by hand, or is it always the earliest of its orders? Working default: the earliest.
+- PO-84: is the saved setup the whole retool, or does a run of one article still need a shorter setup, such as a fixture change? Working default: the whole retool.
+- PO-85: does the run take every operation of its orders, or only the operations with a setup to save? Working default: every operation of the orders sits under the run, and the setup is saved where there is one.
 
 ## Working-time calendars on the timeline
 
@@ -648,7 +648,7 @@ These become ADRs at status `proposed`, from `docs/adr/template.md`, before a ta
 | The link limit and `ganttMaxOrders` | SP3b measurement | 200 links, 300 orders |
 | The planner PC and browser for SP3b and the Gantt NVDA pass | pilot IT | as SP3 |
 | Release placement of each story | Krister | as [Decisions this document needs](#decisions-this-document-needs), item 1 |
-| The run questions of [Runs](#runs): a started or hard-locked order in a run, the ERP, a hand-set run deadline, the saved setup's size, which operations a run takes | product owner | as the section's working defaults |
+| The run questions of [Runs](#runs), PO-81 to PO-85: a started or hard-locked order in a run, the ERP, a hand-set run deadline, the saved setup's size, which operations a run takes; the rules of ADR 0083, M-94 | product owner; Krister | as the section's working defaults |
 
 ## Provenance
 
