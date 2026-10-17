@@ -38,6 +38,12 @@ function secretShown(id: string): DomainError {
   });
 }
 
+/** Whether an insert failed because core.credential already holds its id. */
+function isCredentialIdTaken(error: unknown): boolean {
+  const { code, constraint } = error as { code?: unknown; constraint?: unknown };
+  return code === '23505' && constraint === 'credential_pkey';
+}
+
 /**
  * The handler of core.createIntegrationToken (ADR 0073), which the mutation
  * coreCreateIntegrationToken sends through the command bus after it checked
@@ -72,12 +78,8 @@ export const createIntegrationTokenHandler = {
       .select('scope_id')
       .where('id', '=', id)
       .executeTakeFirst();
-    if (first) {
-      if (first.scope_id !== companyId) {
-        throw new NotFoundException(`Integration token ${id} was not found`);
-      }
-      throw secretShown(id);
-    }
+    // Row-level security hides another company's token, so its id reaches the insert below.
+    if (first) throw secretShown(id);
     const binding = await tx
       .selectFrom('core.scope')
       .select('id')
@@ -134,6 +136,10 @@ export const createIntegrationTokenHandler = {
         .execute();
     } catch (error) {
       await keys.deleteIntegrationKey(key.keyId);
+      // Another company's token holds this id, and row-level security hid it from the lookup.
+      if (isCredentialIdTaken(error)) {
+        throw new NotFoundException(`Integration token ${id} was not found`);
+      }
       throw error;
     }
     return { token: await integrationTokenById(tx, id), secret: key.secret };

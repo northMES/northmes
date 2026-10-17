@@ -42,7 +42,9 @@ export const deleteRoleHandler = {
       throw new DomainError({
         code: 'core.role_in_use',
         status: HttpStatus.PRECONDITION_FAILED,
-        message: `${target.name} is held by someone, so it cannot be deleted. Remove it from everyone who holds it first.`,
+        message: held
+          ? `${target.name} is held by someone, so it cannot be deleted. Remove it from everyone who holds it first.`
+          : `${target.name} is held by an integration token, so it cannot be deleted. Revoke the tokens that hold it first.`,
       });
     }
     return tx
