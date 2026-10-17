@@ -123,6 +123,10 @@ export interface GanttJobOrder {
   readonly plannedSetupS: number;
   readonly plannedRunS: number;
   readonly rates: GanttRates;
+  /** The actual start of a started row. */
+  readonly actualStartMs?: number;
+  /** Whether another planner's live soft lock holds the row (plan 07, Held). */
+  readonly held?: boolean;
 }
 
 export type OrderStatus = 'planned' | 'released';

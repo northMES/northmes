@@ -34,6 +34,10 @@ import {
 export const phase1Reason =
   'Moves and changes come with the live data; this view reads the fixture G1.';
 
+/** Why Plan this order and Move all later by are drawn but disabled (plan 18, phase 2). */
+export const planReason =
+  'Plan this order and Move all later by wait for plan() in the planning domain; Zoom to order and Open order come with the live data.';
+
 /** A label and its value in the fields grid. */
 function Field({ label, children }: { readonly label: string; readonly children: ReactNode }) {
   return (
@@ -86,12 +90,14 @@ function ConstraintList({ lines }: { readonly lines: readonly ConstraintLine[] }
   );
 }
 
-/** The disabled actions of phase 1 with the one reason under them. */
+/** The disabled actions with the one reason under them. */
 function Actions({
   actions,
+  reason = phase1Reason,
   children,
 }: {
   readonly actions: readonly string[];
+  readonly reason?: string;
   readonly children?: ReactNode;
 }) {
   return (
@@ -104,7 +110,7 @@ function Actions({
           </Button>
         ))}
       </div>
-      <p className="text-xs text-muted-foreground">{phase1Reason}</p>
+      <p className="text-xs text-muted-foreground">{reason}</p>
     </Section>
   );
 }
@@ -333,7 +339,10 @@ function OrderDetails({
           </p>
         </Section>
       )}
-      <Actions actions={['Plan this order', 'Move all later by', 'Zoom to order', 'Open order']}>
+      <Actions
+        actions={['Plan this order', 'Move all later by', 'Zoom to order', 'Open order']}
+        reason={planReason}
+      >
         <Button variant="outline" className="h-7.5 px-2.5 text-[0.8125rem]" onClick={onToggleChain}>
           {shown ? 'Hide chain' : 'Show critical chain'}
         </Button>

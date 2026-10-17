@@ -17,7 +17,7 @@ function rowOf(gantt: HTMLElement, id: string): HTMLElement {
   return row;
 }
 
-/** Moves 1003.10 one Week snap step later, Wed 08:00 to Wed 12:00, through keyboard move mode. */
+/** Moves 1003.10 one Day snap step later, Wed 08:00 to Wed 09:00 (GT3), through keyboard move mode. */
 async function moveLaterByKeyboard(gantt: HTMLElement) {
   rowOf(gantt, 'jo-1003-10').focus();
   await userEvent.keyboard('{ArrowRight}');
@@ -33,7 +33,7 @@ describe('the My draft list (plan 18, Resolving a break in the draft)', () => {
       'northmes.planning.gantt.options',
       JSON.stringify({ cascade: false }),
     );
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
 
     await moveLaterByKeyboard(gantt);
@@ -47,7 +47,7 @@ describe('the My draft list (plan 18, Resolving a break in the draft)', () => {
     const conflicts = within(drawer).getByRole('list', { name: '1 conflict in your draft' });
     const [line] = within(conflicts).getAllByRole('listitem');
     expect(line?.textContent).toContain(
-      '1003.20 starts 18 h 15 min before its release from 1003.10; clears at Thu 5 Nov 07:00',
+      '1003.20 starts 45 min before its release from 1003.10; clears at Wed 4 Nov 13:30',
     );
     expect(line?.textContent).toContain('LEAD_TIME');
     const save = within(drawer).getByRole('button', { name: 'Save changes' });
@@ -78,7 +78,7 @@ describe('the My draft list (plan 18, Resolving a break in the draft)', () => {
       'northmes.planning.gantt.options',
       JSON.stringify({ cascade: false }),
     );
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
     await moveLaterByKeyboard(gantt);
     await userEvent.click(await screen.findByRole('button', { name: 'My draft, 1 change' }));
@@ -98,6 +98,7 @@ describe('the My draft list (plan 18, Resolving a break in the draft)', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'My draft, 1 change' }));
     const again = await screen.findByRole('dialog', { name: /My draft/ });
     await userEvent.click(within(again).getByRole('button', { name: 'Discard draft' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Discard 1 change' }));
     await waitFor(() => {
       expect(within(again).getByText('No changes in your draft')).toBeTruthy();
     });

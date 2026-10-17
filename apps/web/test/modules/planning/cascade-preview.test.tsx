@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
 
@@ -40,9 +40,10 @@ function drag(block: HTMLElement, dx: number, options: { readonly drop?: boolean
   }
 }
 
+// At Day zoom the snap step is 1 h, so the GT3 drop at Wed 09:00 lies on the grid.
 describe('the cascade preview of a pointer move (plan 18, Cascade rule 8)', () => {
   it('GT3 dragging 1003.10 to Wed 09:00 shows one ghost span at Wed 13:30 and the tooltip "+1 row moves"', async () => {
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
     // 1001.20 starts Wed 09:00: its left edge is where 1003.10 is dragged to.
     const dx = leftOf(blockOf(gantt, 'jo-1001-20')) - leftOf(blockOf(gantt, 'jo-1003-10'));
@@ -85,7 +86,7 @@ describe('the cascade preview of a pointer move (plan 18, Cascade rule 8)', () =
       'northmes.planning.gantt.options',
       JSON.stringify({ cascade: false }),
     );
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
     const dx = leftOf(blockOf(gantt, 'jo-1001-20')) - leftOf(blockOf(gantt, 'jo-1003-10'));
 
@@ -111,7 +112,7 @@ describe('the cascade preview of a pointer move (plan 18, Cascade rule 8)', () =
   });
 
   it('a drop before the release snaps to it and says so; Escape during a drag cancels it', async () => {
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
     // 1003.20 dragged back to where 1001.20 starts, Wed 09:00, before its release at Wed 12:45.
     const dx = leftOf(blockOf(gantt, 'jo-1001-20')) - leftOf(blockOf(gantt, 'jo-1003-20'));
@@ -128,6 +129,6 @@ describe('the cascade preview of a pointer move (plan 18, Cascade rule 8)', () =
       expect(gantt.querySelector('[data-move-preview]')).toBeNull();
     });
     expect(screen.queryByRole('button', { name: /My draft, \d+ change/ })).toBeNull();
-    expect(within(gantt).getByText('1003.20 Mill')).toBeTruthy();
+    expect(blockOf(gantt, 'jo-1003-20').getAttribute('data-states') ?? '').not.toContain('draft');
   });
 });
