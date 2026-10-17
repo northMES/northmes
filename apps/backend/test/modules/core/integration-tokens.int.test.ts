@@ -622,7 +622,7 @@ describe('integration tokens: coreCreateIntegrationToken, coreRevokeIntegrationT
     expect(await credentialRows(company)).toHaveLength(1);
   });
 
-  it("ADR0073-W4 a create with the id of another company's token is core.not_found and leaves no Better Auth key", async () => {
+  it("ADR0073-W4 a create with the id of another company's token is NOT_FOUND and leaves no Better Auth key", async () => {
     const other = await acme();
     const id = randomUUIDv7();
     await other.companyAdmin.client.send<CreateAnswer>(createMutation, {
@@ -645,7 +645,9 @@ describe('integration tokens: coreCreateIntegrationToken, coreRevokeIntegrationT
       input: { id, companyId: company, name: 'ERP import', scopeId: company, roleIds: [reader] },
     });
 
-    expect(errorCodes(answer)).toEqual(['core.not_found']);
+    expect(answer.errors?.map(({ extensions }) => extensions)).toEqual([
+      expect.objectContaining({ code: 'NOT_FOUND' }),
+    ]);
     expect(
       await query(
         db.authUrl,
