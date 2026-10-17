@@ -32,7 +32,7 @@ export interface CascadeOptions {
   readonly cascade?: boolean;
 }
 
-export type MoveReason = 'moved' | 'snappedToRelease' | 'snappedToLastPiece' | 'cascade';
+export type MoveReason = 'moved' | 'snappedToRelease' | 'snappedToLastPiece' | 'cascade' | 'run';
 
 /** One draft change the cascade writes: a row from its old span to its new one. */
 export interface PlacedMove {
@@ -52,6 +52,8 @@ export interface PlacedMove {
     readonly atMs: number;
     readonly minEndMs?: number;
   };
+  /** The planned setup the move sets on the row: zero for a setup a run saves, the full setup when a split gives it back (ADR 0083). */
+  readonly setupS?: number;
 }
 
 export type ConflictKind = 'LEAD_TIME' | 'SEND_AHEAD' | 'LAST_PIECE' | 'OVERLAP' | 'FROZEN_WINDOW';
@@ -178,9 +180,10 @@ const placementAttempts = 200;
 /**
  * The span of a successor row under its release and its last-piece bound: from the earliest start
  * under the release, moved right past every reservation it overlaps on its machine, and right again
- * until the last-piece bound holds (plan 18, Cascade rule 4). Null past the horizon.
+ * until the last-piece bound holds (plan 18, Cascade rule 4). Null past the horizon. A run places
+ * the rows it saves no setup on the same way (ADR 0083).
  */
-function placeSuccessor(
+export function placeUnderRelease(
   order: PlanOrder,
   row: PlanJobOrder,
   release: Release,
@@ -352,7 +355,7 @@ export function cascade(
         stop = { row: current.displayNumber, jobOrderId: current.id, reason: fixed };
         break;
       }
-      const placed = placeSuccessor(working, current, release, ctx);
+      const placed = placeUnderRelease(working, current, release, ctx);
       if (placed === null || current.equipment === undefined) {
         conflicts.push(broken);
         stop = { row: current.displayNumber, jobOrderId: current.id, reason: 'horizon' };

@@ -70,6 +70,8 @@ export interface PlanJobOrder {
 export interface PlanOrder {
   readonly id: string;
   readonly number: string;
+  /** The article the order makes; a run holds orders of one article (ADR 0083). */
+  readonly article?: string;
   /** The deadline instant the server computed with the plant's deadline rule. */
   readonly deadlineMs: number;
   /** The earliest start of the order, when the plant setting enables it (plan 18). */
