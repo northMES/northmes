@@ -106,8 +106,12 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     const machine = within(panel).getByLabelText('Machine') as HTMLSelectElement;
     expect(machine.disabled).toBe(true);
     expect(machine.value).toBe('CNC2');
+    // Move works from Details without dragging (WCAG 2.5.7); the other actions wait for the server.
     expect(
       (within(panel).getByRole('button', { name: 'Move' }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+    expect(
+      (within(panel).getByRole('button', { name: 'Lock' }) as HTMLButtonElement).disabled,
     ).toBe(true);
     expect(
       (within(panel).getByRole('button', { name: 'Show critical chain' }) as HTMLButtonElement)

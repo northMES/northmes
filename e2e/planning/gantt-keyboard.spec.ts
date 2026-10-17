@@ -80,5 +80,25 @@ test.describe('keyboard move mode on the order Gantt', () => {
       'true',
     );
     await checkA11y('the My draft drawer');
+    await page.keyboard.press('Escape');
+    await expect(drawer).toBeHidden();
+
+    // Moving without dragging (WCAG 2.5.7): Move in Details, Later, Apply.
+    await gantt.locator('[data-block="jo-1003-10"]').click();
+    const details = page.locator('[role="dialog"][data-details-drawer]');
+    await expect(details).toBeVisible();
+    await expect(details).toHaveCSS('opacity', '1');
+    await details.getByRole('button', { name: 'Move' }).click();
+    const controls = details.getByRole('group', { name: 'Move 1003.10' });
+    await expect(controls).toBeVisible();
+    await controls.getByRole('button', { name: 'Later' }).click();
+    await expect(controls).toContainText(
+      'CNC 1, Wed 4 Nov 12:00 to Thu 5 Nov 07:00. 1 row moves with it.',
+    );
+    await checkA11y('the Move controls in Details');
+    await controls.getByRole('button', { name: 'Apply' }).click();
+    await expect(details).toBeHidden();
+    await expect(gantt.locator('[data-block="jo-1003-10"]')).toBeFocused();
+    await expect(page.getByRole('button', { name: 'My draft, 4 changes' })).toBeVisible();
   });
 });

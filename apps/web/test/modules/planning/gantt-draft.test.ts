@@ -85,7 +85,7 @@ describe('the in-memory draft of the order Gantt (plan 18, Resolving a break in 
     const [conflict] = draftConflicts(applyDraft(committed, draft), draft);
     if (conflict === undefined) throw new Error('no conflict');
 
-    const cascaded = cascadeFromHere(committed, draft, conflict);
+    const { draft: cascaded } = cascadeFromHere(committed, draft, conflict);
 
     expect(cascaded.changes.map((change) => change.displayNumber)).toEqual(['1003.10', '1003.20']);
     expect(cascaded.changes[1]?.from).toMatchObject({ setupStartMs: wed(11, 45) });
@@ -106,6 +106,77 @@ describe('the in-memory draft of the order Gantt (plan 18, Resolving a break in 
 
     expect(restored.changes).toEqual([]);
     expect(applyDraft(committed, restored).productionOrders).toEqual(committed.productionOrders);
+  });
+
+  it('applies the draft and analyses it over the view range, so the workload keeps every visible day', () => {
+    const { draft } = moveInDraft(committed, emptyDraft, {
+      jobOrderId: 'jo-1003-10',
+      setupStartMs: wed(8),
+    });
+    const week45 = { fromMs: Date.UTC(2026, 10, 1, 23), toMs: Date.UTC(2026, 10, 8, 23) };
+
+    const applied = applyDraft(committed, draft, week45);
+
+    expect(applied.analysis.workload).toHaveLength(21);
+    expect(
+      applied.analysis.workload.find((b) => b.equipment === 'MILL1' && b.label === '2026-11-05'),
+    ).toMatchObject({
+      loadedS: 18_580,
+    });
+  });
+
+  it('Cascade from here adds only the rows that move: the earlier row stays out of the draft unless it was in it', () => {
+    // 1003.20 dropped before its release with cascade off: the earlier row 1003.10 never moved.
+    const { draft } = moveInDraft(
+      committed,
+      emptyDraft,
+      { jobOrderId: 'jo-1003-20', setupStartMs: wed(10) },
+      { cascade: false },
+    );
+    const [conflict] = draftConflicts(applyDraft(committed, draft), draft);
+    if (conflict === undefined) throw new Error('no conflict');
+
+    const { draft: cascaded, refused } = cascadeFromHere(committed, draft, conflict);
+
+    expect(refused).toBeUndefined();
+    expect(cascaded.changes.map(({ displayNumber, to }) => ({ displayNumber, to }))).toEqual([
+      {
+        displayNumber: '1003.20',
+        to: { setupStartMs: wed(11, 45), runStartMs: wed(11, 45), endMs: thu(5, 15) },
+      },
+    ]);
+    expect(draftConflicts(applyDraft(committed, cascaded), cascaded)).toEqual([]);
+  });
+
+  it('Cascade from here on a conflict whose earlier row is locked returns the refusal and the draft as it was', () => {
+    const order = committed.productionOrders.find((each) => each.number === '1003');
+    if (order === undefined) throw new Error('no 1003');
+    const locked = {
+      ...committed,
+      productionOrders: committed.productionOrders.map((each) =>
+        each.id !== order.id
+          ? each
+          : {
+              ...each,
+              operations: each.operations.map((op) =>
+                op.displayNumber === '1003.10' ? { ...op, isLocked: true } : op,
+              ),
+            },
+      ),
+    };
+    const { draft } = moveInDraft(
+      locked,
+      emptyDraft,
+      { jobOrderId: 'jo-1003-20', setupStartMs: wed(10) },
+      { cascade: false },
+    );
+    const [conflict] = draftConflicts(applyDraft(locked, draft), draft);
+    if (conflict === undefined) throw new Error('no conflict');
+
+    const result = cascadeFromHere(locked, draft, conflict);
+
+    expect(result.refused).toBe('PINNED');
+    expect(result.draft).toBe(draft);
   });
 
   it('a second move of a row in the draft keeps the committed span as its origin', () => {

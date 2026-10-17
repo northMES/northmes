@@ -3,7 +3,7 @@
 import { formatDuration, formatPlantDateTime } from '@northmes/contracts/format';
 import { cn } from 'cn';
 import { CircleCheck, Clock, Link2, Lock } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useId } from 'react';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import {
@@ -18,6 +18,7 @@ import type { ConstraintLine } from '../../gantt-data.ts';
 import { durationsOf, releaseText } from './gantt-block-states.ts';
 import type { ChainView } from './gantt-chain.ts';
 import { useGanttView } from './gantt-context.ts';
+import { moveRefusalOf, refusalMessage, stepMessage } from './gantt-move.ts';
 import {
   type GanttRow,
   type JobOrderRow,
@@ -115,14 +116,106 @@ function Actions({
   );
 }
 
+/**
+ * Moving without dragging (plan 07, Moving without dragging; WCAG 2.5.7): Move starts a move of
+ * the row as keyboard move mode does, and the controls step the start and the machine, Apply
+ * writes the draft and Cancel ends it; the status line carries the step message.
+ */
+function MoveControls({
+  row,
+  onApplied,
+}: {
+  readonly row: JobOrderRow;
+  readonly onApplied: (jobOrderId: string) => void;
+}) {
+  const { snapshot, timeZone, machineName, move } = useGanttView();
+  const reasonId = useId();
+  const refused = moveRefusalOf(snapshot, row.id);
+  const moving = move?.state?.jobOrderId === row.id;
+  if (move === undefined) return null;
+  if (!moving) {
+    return (
+      <>
+        <Button
+          variant="outline"
+          className="h-7.5 px-2.5 text-[0.8125rem]"
+          aria-disabled={refused !== undefined || undefined}
+          aria-describedby={refused === undefined ? undefined : reasonId}
+          onClick={() => {
+            if (refused === undefined) move.begin(row.id, 'keyboard');
+          }}
+        >
+          Move
+        </Button>
+        {refused !== undefined && (
+          <p id={reasonId} className="basis-full text-xs text-muted-foreground">
+            {refusalMessage(row.jobOrder.displayNumber, refused)}
+          </p>
+        )}
+      </>
+    );
+  }
+  const preview = move.preview;
+  const status =
+    preview === undefined
+      ? 'Computing the move.'
+      : stepMessage(preview, machineName(preview.equipment), timeZone);
+  return (
+    <fieldset
+      aria-label={`Move ${row.jobOrder.displayNumber}`}
+      className="grid basis-full gap-1.5 rounded-md border border-border p-2"
+    >
+      <p className="text-[0.8125rem]" aria-live="polite">
+        {status}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        <Button variant="outline" className="h-7 px-2.5 text-xs" onClick={() => move.stepTime(-1)}>
+          Earlier
+        </Button>
+        <Button variant="outline" className="h-7 px-2.5 text-xs" onClick={() => move.stepTime(1)}>
+          Later
+        </Button>
+        <Button
+          variant="outline"
+          className="h-7 px-2.5 text-xs"
+          onClick={() => move.stepMachine(-1)}
+        >
+          Previous machine
+        </Button>
+        <Button
+          variant="outline"
+          className="h-7 px-2.5 text-xs"
+          onClick={() => move.stepMachine(1)}
+        >
+          Next machine
+        </Button>
+        <Button
+          className="h-7 px-2.5 text-xs"
+          onClick={() => {
+            move.commit();
+            onApplied(row.id);
+          }}
+        >
+          Apply
+        </Button>
+        <Button variant="ghost" className="h-7 px-2.5 text-xs" onClick={() => move.cancel()}>
+          Cancel
+        </Button>
+      </div>
+    </fieldset>
+  );
+}
+
 function JobOrderDetails({
   row,
   chain,
   onToggleChain,
+  onMoveApplied,
 }: {
   readonly row: JobOrderRow;
   readonly chain: ChainView | undefined;
   readonly onToggleChain: () => void;
+  readonly onMoveApplied: (jobOrderId: string) => void;
 }) {
   const { snapshot, timeZone, machineName, chainRowIds } = useGanttView();
   const { jobOrder, operation, order, analysis } = row;
@@ -225,7 +318,8 @@ function JobOrderDetails({
           {release !== undefined && <li>{release.charAt(0).toUpperCase() + release.slice(1)}.</li>}
         </ul>
       </Section>
-      <Actions actions={['Move', 'Lock', 'Split', 'Open order']}>
+      <Actions actions={['Lock', 'Split', 'Open order']}>
+        <MoveControls row={row} onApplied={onMoveApplied} />
         <Button variant="outline" className="h-7.5 px-2.5 text-[0.8125rem]" onClick={onToggleChain}>
           {chain !== undefined && chain.order.id === order.id
             ? 'Hide chain'
@@ -387,6 +481,8 @@ export interface GanttDetailDrawerProps {
   readonly onToggleChain: (orderId: string) => void;
   /** Runs when a chain row's link is followed: the drawer closes and that row takes focus. */
   readonly onFocusRow: (jobOrderId: string) => void;
+  /** Runs when a move applied from the drawer: the drawer closes and the block takes focus. */
+  readonly onMoveApplied: (jobOrderId: string) => void;
   /** The element that takes focus once the drawer has closed: the row it opened from. */
   readonly finalFocus: () => HTMLElement | null;
 }
@@ -404,6 +500,7 @@ export function GanttDetailDrawer({
   onClose,
   onToggleChain,
   onFocusRow,
+  onMoveApplied,
   finalFocus,
 }: GanttDetailDrawerProps) {
   return (
@@ -425,6 +522,7 @@ export function GanttDetailDrawer({
               row={row}
               chain={chain}
               onToggleChain={() => onToggleChain(row.order.id)}
+              onMoveApplied={onMoveApplied}
             />
           )}
           {row?.kind === 'order' && (

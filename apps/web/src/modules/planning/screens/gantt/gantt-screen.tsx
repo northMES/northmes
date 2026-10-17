@@ -198,11 +198,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const [draftOpen, setDraftOpen] = useState(false);
   /** The element that opened the My draft drawer, which takes focus back when it closes. */
   const draftOpener = useRef<HTMLElement | undefined>(undefined);
-  // Everything the view draws reads the plan with the draft applied (plan 18, Resolving a break).
-  const snapshot = useMemo(
-    () => (committed === undefined ? undefined : applyDraft(committed, draft)),
-    [committed, draft],
-  );
   const [loadError, setLoadError] = useState<unknown>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [options, setOptions] = useGanttOptions();
@@ -219,17 +214,23 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     `${zoom}|${search.from ?? ''}|${options.hideClosed}|${options.workload}`,
   );
 
-  const timeZone = snapshot?.plant.timeZone ?? 'UTC';
-  const productionDayStart = snapshot?.plant.productionDayStart ?? '06:00';
+  const timeZone = committed?.plant.timeZone ?? 'UTC';
+  const productionDayStart = committed?.plant.productionDayStart ?? '06:00';
   // The range starts at the date in the URL, else at the snapshot's now, else at today.
   const from =
     search.from ??
-    (snapshot === undefined
+    (committed === undefined
       ? plantDateOf(Date.now(), timeZone)
-      : plantDateOf(snapshot.nowMs, timeZone));
+      : plantDateOf(committed.nowMs, timeZone));
   const range = useMemo(
     () => rangeOf(from, zoom, timeZone, productionDayStart),
     [from, zoom, timeZone, productionDayStart],
+  );
+  // Everything the view draws reads the plan with the draft applied, analysed over the visible
+  // range (plan 18, Resolving a break in the draft).
+  const snapshot = useMemo(
+    () => (committed === undefined ? undefined : applyDraft(committed, draft, range)),
+    [committed, draft, range],
   );
 
   useEffect(() => {
@@ -424,17 +425,25 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             : { ...current, setupStartMs, equipment: equipment ?? current.equipment },
         ),
       // A step moves one snap step; the preview then snaps forward to working time on the machine.
+      // A step moves one snap step from the snapped preview. Backwards, the forward snap of the
+      // calendar can land on the same instant again, so the step keeps going back until the
+      // preview is earlier, or the horizon ends (plan 18, Snapping and the calendar).
       stepTime: (direction) =>
-        setMoveState((current) =>
-          current === undefined
-            ? current
-            : {
-                ...current,
-                setupStartMs:
-                  (preview?.span.setupStartMs ?? current.setupStartMs) +
-                  direction * zoomPresets[zoom].stepMs,
-              },
-        ),
+        setMoveState((current) => {
+          if (current === undefined) return current;
+          const stepMs = zoomPresets[zoom].stepMs;
+          const from = preview?.span.setupStartMs ?? current.setupStartMs;
+          let setupStartMs = from + direction * stepMs;
+          if (direction < 0) {
+            const floor = range.fromMs - 28 * 86_400_000;
+            for (let count = 0; count < 500 && setupStartMs > floor; count += 1) {
+              const next = previewOf(snapshot, { ...current, setupStartMs }, options.cascade);
+              if (next === undefined || next.span.setupStartMs < from) break;
+              setupStartMs -= stepMs;
+            }
+          }
+          return { ...current, setupStartMs };
+        }),
       stepMachine: (direction) =>
         setMoveState((current) => {
           if (current === undefined) return current;
@@ -473,7 +482,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         requestAnimationFrame(() => focusBlock(moveState.jobOrderId));
       },
     };
-  }, [snapshot, committed, moveState, preview, draft, options.cascade, zoom, timeZone]);
+  }, [snapshot, committed, moveState, preview, draft, options.cascade, zoom, timeZone, range]);
   const rowById = useMemo(() => {
     const map = new Map<string, GanttRow>();
     for (const order of rows) {
@@ -577,12 +586,25 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     returnRowId.current = focusRowId;
     setDetailRowId(undefined);
   };
+  /** The block that takes focus when the drawer closes after a move applied from it (D3 TA12). */
+  const returnBlockId = useRef<string | undefined>(undefined);
+  const closeDetailsToBlock = (jobOrderId: string) => {
+    returnBlockId.current = jobOrderId;
+    closeDetails(jobOrderId);
+  };
   const drawerFinalFocus = () => {
     const rowId = returnRowId.current ?? detailRowId;
+    const blockId = returnBlockId.current;
     returnRowId.current = undefined;
+    returnBlockId.current = undefined;
     if (rowId === undefined) return null;
     setFocusedRowId(rowId);
-    return document.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`);
+    return (
+      (blockId === undefined
+        ? null
+        : document.querySelector<HTMLElement>(`[data-block="${blockId}"]`)) ??
+      document.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`)
+    );
   };
   // Row focus mode (plan 18, Tree grid semantics): Up and Down move between rows, Right expands a
   // collapsed row or moves into its time cell, Left collapses an expanded row, moves from the cell
@@ -795,9 +817,15 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             conflicts={conflicts}
             timeZone={timeZone}
             machineName={view.machineName}
-            onCascadeFromHere={(conflict: DraftConflict) =>
-              setDraft(cascadeFromHere(committed ?? snapshot, draft, conflict))
-            }
+            onCascadeFromHere={(conflict: DraftConflict) => {
+              const { draft: next, refused } = cascadeFromHere(
+                committed ?? snapshot,
+                draft,
+                conflict,
+              );
+              if (refused !== undefined) announce(refusalMessage(conflict.rows[0], refused));
+              else setDraft(next);
+            }}
             onMoveBack={(conflict: DraftConflict) => setDraft(moveBack(draft, conflict))}
             onDiscardChange={(jobOrderId) => setDraft(discardChange(draft, jobOrderId))}
             onDiscardDraft={() => setDraft(emptyDraft)}
@@ -809,6 +837,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             onClose={() => closeDetails()}
             onToggleChain={toggleChain}
             onFocusRow={(rowId) => closeDetails(rowId)}
+            onMoveApplied={closeDetailsToBlock}
             finalFocus={drawerFinalFocus}
           />
         </GanttViewProvider>

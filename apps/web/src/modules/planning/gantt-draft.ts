@@ -12,6 +12,7 @@ import {
   type JobOrderSpan,
   type Move,
   type MoveReason,
+  type MoveRefusal,
   type PlacedMove,
 } from '@northmes/planning-domain';
 import {
@@ -65,9 +66,16 @@ export function draftRowIds(draft: GanttDraft): ReadonlySet<string> {
  * its segments laid over the calendar, and the analysis computed again over the result, so the
  * floats, links, constraint lists and workload follow the draft (plan 18).
  */
-export function applyDraft(committed: GanttSnapshot, draft: GanttDraft): GanttSnapshot {
+export function applyDraft(
+  committed: GanttSnapshot,
+  draft: GanttDraft,
+  range: { readonly fromMs: number; readonly toMs: number } = {
+    fromMs: committed.nowMs,
+    toMs: committed.fenceMs,
+  },
+): GanttSnapshot {
   if (draft.changes.length === 0) return committed;
-  const context = planContextOf(committed, { fromMs: committed.nowMs, toMs: committed.fenceMs });
+  const context = planContextOf(committed, range);
   const byRow = new Map(draft.changes.map((change) => [change.jobOrderId, change]));
   const productionOrders: GanttOrder[] = committed.productionOrders.map((order) => ({
     ...order,
@@ -86,10 +94,7 @@ export function applyDraft(committed: GanttSnapshot, draft: GanttDraft): GanttSn
     }),
   }));
   const base: GanttSnapshotBase = { ...committed, productionOrders };
-  return {
-    ...base,
-    analysis: analyzeGantt(base, { fromMs: committed.nowMs, toMs: committed.fenceMs }),
-  };
+  return { ...base, analysis: analyzeGantt(base, range) };
 }
 
 /** The draft with the moves of a cascade result added; a row already in the draft keeps its committed origin. */
@@ -232,17 +237,18 @@ export function draftConflicts(applied: GanttSnapshot, draft: GanttDraft): Draft
 /**
  * Cascade from here (plan 18, Resolving a break in the draft): the cascade of the conflict's order
  * from the earlier row at its draft position, so the later rows move under their release and the
- * line disappears.
+ * line disappears. Only rows that move, or that the draft already holds, become changes; a refused
+ * cascade (the earlier row is locked, started or held) leaves the draft as it was and says why.
  */
 export function cascadeFromHere(
   committed: GanttSnapshot,
   draft: GanttDraft,
   conflict: DraftConflict,
-): GanttDraft {
+): { readonly draft: GanttDraft; readonly refused?: MoveRefusal } {
   const applied = applyDraft(committed, draft);
   const order = applied.productionOrders.find((each) => each.id === conflict.orderId);
   const earlier = order?.jobOrders.find((row) => row.displayNumber === conflict.rows[0]);
-  if (order === undefined || earlier?.placement === undefined) return draft;
+  if (order === undefined || earlier?.placement === undefined) return { draft };
   const context = planContextOf(applied, { fromMs: applied.nowMs, toMs: applied.fenceMs });
   const result = cascade(
     order,
@@ -254,8 +260,20 @@ export function cascadeFromHere(
     context,
     { cascade: true },
   );
-  if (result.refused !== undefined) return draft;
-  return withMoves(draft, order.id, result.moves);
+  if (result.refused !== undefined) return { draft, refused: result.refused };
+  const inDraft = draftRowIds(draft);
+  const moved = result.moves.filter((move) => {
+    if (inDraft.has(move.jobOrderId)) return true;
+    const row = order.jobOrders.find((each) => each.id === move.jobOrderId);
+    const span = row?.placement;
+    return (
+      span === undefined ||
+      row?.equipment !== move.equipment ||
+      span.setupStartMs !== move.to.setupStartMs ||
+      span.endMs !== move.to.endMs
+    );
+  });
+  return { draft: withMoves(draft, order.id, moved) };
 }
 
 /** Move back (plan 18, Resolving a break in the draft): the draft without the change that caused the conflict. */
