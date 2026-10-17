@@ -105,7 +105,7 @@ describe('cascade (plan 18, Cascade)', () => {
       },
       {
         displayNumber: '1004.20',
-        to: { setupStartMs: thu(10, 20, 20), runStartMs: thu(10, 20, 20), endMs: fri(7, 45, 20) },
+        to: { setupStartMs: thu(9, 20, 20), runStartMs: thu(9, 20, 20), endMs: fri(7, 45, 20) },
         reason: 'cascade',
       },
     ]);

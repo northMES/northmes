@@ -29,6 +29,18 @@ export {
   workBetween,
 } from './calendar/windows.ts';
 export {
+  type CascadeOptions,
+  type CascadeResult,
+  type CascadeStop,
+  type Conflict,
+  type ConflictKind,
+  cascade,
+  type Move,
+  type MoveReason,
+  type MoveRefusal,
+  type PlacedMove,
+} from './cascade.ts';
+export {
   bindingText,
   type ChainResult,
   type ChainRow,
