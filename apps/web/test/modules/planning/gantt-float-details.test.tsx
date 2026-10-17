@@ -28,7 +28,8 @@ describe('the Float column and Details from the analysis (plan 18, What the time
 
     expect(floatCellOf(gantt, 'jo-1001-20').textContent).toBe('15 min');
     expect(floatCellOf(gantt, 'jo-1001-10').textContent).toBe('0');
-    expect(floatCellOf(gantt, 'jo-1002-10').textContent).toBe('unknown');
+    // The locked 1002.10 ends at its deadline, so it is critical with zero free float.
+    expect(floatCellOf(gantt, 'jo-1002-10').textContent).toBe('0');
   });
 
   it('GT2 shows 1003.10 as "0" with the chain glyph and its negative total float "minus 15 min"', async () => {
@@ -82,6 +83,17 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     expect(float.textContent).toContain(
       'Latest start Thu 5 Nov 13:15, latest end Fri 6 Nov 15:00.',
     );
+  });
+
+  it('GT2 names the machine of a machine binding as the rest of Details does: "ends on CNC 1"', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    await userEvent.click(gantt.querySelector('[data-block="jo-1003-10"]') as HTMLElement);
+
+    const panel = await findDetails();
+    const float = within(panel).getByRole('region', { name: 'Float' });
+    expect(float.textContent).toContain('Starts when 1001.10 ends on CNC 1.');
   });
 
   it('phase 1 draws the fields and the actions of Details disabled with the reason', async () => {

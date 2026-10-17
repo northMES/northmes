@@ -45,24 +45,9 @@ function g1AfterGt3(): GanttFixture {
   } as GanttFixture;
 }
 
-/** G1 with the GT3 placement of 1003.10 in the expected placements too. */
+/** G1 after the GT3 move, its segments laid over the calendar by the source. */
 function gt3Snapshot() {
-  const moved = g1Expected.GT3_cascade_1003.moved['1003.10'];
-  if (moved === undefined) throw new Error('GT3 has no moved 1003.10');
-  return g1Snapshot(g1AfterGt3(), {
-    ...g1Expected,
-    placements: {
-      ...g1Expected.placements,
-      '1003.10': {
-        start: moved.start,
-        end: moved.end,
-        segments: [
-          { from: moved.start.instant, to: '2026-11-04T10:00:00Z' },
-          { from: '2026-11-04T10:30:00Z', to: moved.end.instant },
-        ],
-      },
-    },
-  });
+  return g1Snapshot(g1AfterGt3());
 }
 
 /** G1 with its orders cloned until the visible links exceed the limit. */

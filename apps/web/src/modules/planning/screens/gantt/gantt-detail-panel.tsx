@@ -13,6 +13,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../../../../ui/primitives/sheet.tsx';
+import { bindingSentence } from '../../gantt-analysis.ts';
 import type { ConstraintLine } from '../../gantt-data.ts';
 import { durationsOf, releaseText } from './gantt-block-states.ts';
 import type { ChainView } from './gantt-chain.ts';
@@ -123,14 +124,19 @@ function JobOrderDetails({
   const float = analysis?.float;
   const release = releaseText(row, timeZone, snapshot.settings.retoolOverlapsLeadTime);
   const onChain = chainRowIds.has(row.id);
+  const predecessorSendAhead =
+    order.operations.find((each) => each.displayNumber === analysis?.release?.fromRow)
+      ?.sendAheadQuantity ?? 0;
   const floatLines =
     float === undefined
       ? ['Float unknown.']
       : [
           `Wait ${float.waitWorkingS === 0 ? '0 min' : formatDuration(float.waitWorkingS)}. Free float ${float.freeFloatWorkingS === 0 ? '0' : formatDuration(float.freeFloatWorkingS)}. Total float ${formatDuration(float.totalFloatWorkingS)}.`,
-          float.binding.detail !== undefined
-            ? `${float.binding.detail.charAt(0).toUpperCase()}${float.binding.detail.slice(1)}.`
-            : `Binding constraint: ${float.binding.kind}.`,
+          `${bindingSentence(float, analysis?.release, operation.leadTimeS, predecessorSendAhead, {
+            timeZone,
+            machineName,
+            calendarName: snapshot.calendar.name,
+          })}.`,
           `Earliest start ${formatPlantDateTime(float.earliestStartMs, timeZone)}. Latest start ${formatPlantDateTime(float.latestStartMs, timeZone)}, latest end ${formatPlantDateTime(float.latestEndMs, timeZone)}.`,
         ];
   return (

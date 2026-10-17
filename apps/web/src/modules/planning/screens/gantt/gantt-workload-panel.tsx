@@ -7,7 +7,6 @@ const hours: DurationOptions = { form: 'hours' };
 
 import { cn } from 'cn';
 import { useEffect, useId, useRef, useState } from 'react';
-import { Temporal } from 'temporal-polyfill';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import type { GanttSnapshot, WorkloadBucket } from '../../gantt-data.ts';
 import { visibleItems } from '../../timeline/culling.ts';
@@ -21,20 +20,6 @@ interface PlacedBucket {
   readonly toMs: number;
 }
 
-/** The span of a production day in the plant zone, from the day start to the next (ADR 0025). */
-function productionDaySpan(
-  day: string,
-  timeZone: string,
-  productionDayStart: string,
-): { readonly fromMs: number; readonly toMs: number } {
-  const [hour = 0, minute = 0] = productionDayStart.split(':').map(Number);
-  const start = Temporal.PlainDate.from(day).toZonedDateTime({
-    timeZone,
-    plainTime: { hour, minute },
-  });
-  return { fromMs: start.epochMilliseconds, toMs: start.add({ days: 1 }).epochMilliseconds };
-}
-
 /** The buckets of a machine inside the visible range, sorted by day. */
 export function laneBuckets(
   snapshot: GanttSnapshot,
@@ -43,14 +28,7 @@ export function laneBuckets(
 ): PlacedBucket[] {
   const placed = snapshot.analysis.workload
     .filter((bucket) => bucket.equipment === equipment)
-    .map((bucket) => ({
-      bucket,
-      ...productionDaySpan(
-        bucket.productionDay,
-        snapshot.plant.timeZone,
-        snapshot.plant.productionDayStart,
-      ),
-    }))
+    .map((bucket) => ({ bucket, fromMs: bucket.fromMs, toMs: bucket.toMs }))
     .sort((a, b) => a.fromMs - b.fromMs);
   return visibleItems(placed, scale.range);
 }
@@ -77,14 +55,16 @@ export function laneMachines(
 
 /** "42 %" from a permille, "closed" for a bucket without availability. */
 export function utilizationText(bucket: WorkloadBucket): string {
-  return bucket.availableS === 0 ? 'closed' : `${Math.round(bucket.utilizationPermille / 10)} %`;
+  return bucket.utilizationPermille === null
+    ? 'closed'
+    : `${Math.round(bucket.utilizationPermille / 10)} %`;
 }
 
 /** One row of the lane's text table: the bucket's values as durations. */
 export function bucketRow(bucket: WorkloadBucket): readonly string[] {
   const free = Math.max(0, bucket.availableS - bucket.loadedS);
   return [
-    formatPlantDay(bucket.productionDay),
+    formatPlantDay(bucket.label),
     formatDuration(bucket.availableS, hours),
     formatDuration(bucket.loadedS, hours),
     formatDuration(bucket.setupS, hours),
@@ -190,8 +170,8 @@ function WorkloadLane({
           if (bucket.availableS === 0) {
             return (
               <span
-                key={bucket.productionDay}
-                data-bucket={bucket.productionDay}
+                key={bucket.label}
+                data-bucket={bucket.label}
                 data-closed
                 className="absolute inset-y-0 bg-off-time"
                 style={{ left: `${left}px`, width: `${width}px` }}
@@ -205,8 +185,8 @@ function WorkloadLane({
           const overloadShare = Math.min(bucket.overloadS / bucket.availableS, overloadHeadroom);
           return (
             <span
-              key={bucket.productionDay}
-              data-bucket={bucket.productionDay}
+              key={bucket.label}
+              data-bucket={bucket.label}
               data-full={utilization >= 1 || undefined}
               data-overloaded={bucket.overloadS > 0 || undefined}
               className={cn(
@@ -329,7 +309,7 @@ function WorkloadTable({
         </thead>
         <tbody>
           {buckets.map(({ bucket }) => (
-            <tr key={bucket.productionDay} className="border-t border-border">
+            <tr key={bucket.label} className="border-t border-border">
               <TableCells cells={bucketRow(bucket)} />
             </tr>
           ))}

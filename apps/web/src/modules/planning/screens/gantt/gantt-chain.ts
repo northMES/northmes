@@ -76,14 +76,14 @@ export function chainOf(snapshot: GanttSnapshot, orderId: string): ChainView | u
       text = `on ${machine} starts when ${float.binding.boundBy} ends.`;
     } else if (kind === 'machine' && float?.binding.boundBy !== undefined) {
       text = `on ${machine} waits ${formatDuration(float.waitWorkingS)} for ${float.binding.boundBy}.`;
-    } else if (kind === 'free' || row.bindingConstraint === 'free') {
+    } else if (kind === 'free' || row.bindingText === 'free') {
       const total = float?.totalFloatWorkingS ?? row.totalFloatWorkingS;
       text =
         total === undefined
           ? 'is free.'
           : `is free and has ${formatDuration(total)} of total float.`;
     } else {
-      text = `on ${machine} is bound by ${row.bindingConstraint}.`;
+      text = `on ${machine} is bound by ${row.bindingText}.`;
     }
     sentences.push({
       row: row.row,

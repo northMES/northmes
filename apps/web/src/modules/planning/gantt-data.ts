@@ -6,6 +6,30 @@
 // of @northmes/planning-domain with its expected values as the analysis; the GraphQL source of
 // planningGantt and the domain functions replace it value by value in phase 2.
 
+import type {
+  BindingConstraint,
+  BindingConstraintKind,
+  CalendarDeviation,
+  ChainRow,
+  ConstraintCode,
+  ConstraintKind,
+  RowFloat,
+  Release as RowRelease,
+  WorkloadBucket,
+} from '@northmes/planning-domain';
+
+export type {
+  BindingConstraint,
+  BindingConstraintKind,
+  CalendarDeviation,
+  ChainRow,
+  ConstraintCode,
+  ConstraintKind,
+  RowFloat,
+  RowRelease,
+  WorkloadBucket,
+};
+
 /** The zoom presets of the approved board design D3, by their URL ids (plan 18, Shared pieces). */
 export type ZoomPreset = 'hours' | 'day' | 'week' | '4weeks';
 
@@ -33,6 +57,8 @@ export interface GanttCalendar {
   readonly shift: { readonly start: string; readonly end: string };
   readonly breaks: readonly { readonly start: string; readonly end: string }[];
   readonly workingSecondsPerDay: number;
+  /** The plant's deviations: overtime and non-working time, plant-wide or per machine (ADR 0025). */
+  readonly deviations?: readonly CalendarDeviation[];
 }
 
 export interface GanttEquipment {
@@ -118,70 +144,14 @@ export interface GanttOrder {
   readonly jobOrders: readonly GanttJobOrder[];
 }
 
-export type BindingConstraintKind =
-  | 'started'
-  | 'hardLock'
-  | 'frozenWindow'
-  | 'earliestStart'
-  | 'release'
-  | 'machine'
-  | 'calendar'
-  | 'free';
-
-/** What stops a row from starting earlier than it does (plan 18, Float and the critical chain). */
-export interface BindingConstraint {
-  readonly kind: BindingConstraintKind;
-  /** The row that binds it, by display number. */
-  readonly boundBy?: string;
-  readonly equipment?: string;
-  readonly detail?: string;
-}
-
-/** The float values of one job order row, in working seconds on its machine. */
-export interface RowFloat {
-  readonly earliestStartMs: number;
-  readonly waitWorkingS: number;
-  readonly latestStartMs: number;
-  readonly latestEndMs: number;
-  readonly totalFloatWorkingS: number;
-  readonly freeFloatWorkingS: number;
-  readonly binding: BindingConstraint;
-  readonly critical: boolean;
-}
-
-/** The release of a row from its predecessor operation, which the link draws (plan 18). */
-export interface RowRelease {
-  /** The predecessor row that sets the release, by display number. */
-  readonly fromRow: string;
-  readonly fromJobOrderId: string;
-  /** The release point: the predecessor's end, or the instant its send-ahead quantity is complete. */
-  readonly pointMs: number;
-  /** The release instant: the release point plus the lead time. */
-  readonly atMs: number;
-}
-
-export type ConstraintKind =
-  | 'deadline'
-  | 'earliestStart'
-  | 'release'
-  | 'lastPiece'
-  | 'hardLock'
-  | 'started'
-  | 'frozenWindow'
-  | 'held'
-  | 'allowedMachines'
-  | 'oneJobAtATime'
-  | 'calendar'
-  | 'notPlannable';
-
-/** One line of a row's constraint list (plan 18, The constraint list of a row). */
+/** One line of a row's constraint list (plan 18, The constraint list of a row), rendered as text. */
 export interface ConstraintLine {
   readonly kind: ConstraintKind;
   /** The line as text: the kind, its value in plant time, and whether it holds. */
   readonly text: string;
   readonly holds: boolean;
   /** The conflict code of a broken line, such as LEAD_TIME. */
-  readonly code?: string;
+  readonly code?: ConstraintCode;
   /** The other rows or orders a broken line involves, by display number or order number. */
   readonly involves?: readonly string[];
 }
@@ -193,25 +163,12 @@ export interface JobOrderAnalysis {
   readonly constraints: readonly ConstraintLine[];
 }
 
-/** One row of an order's critical chain, from the last operation back to the root. */
-export interface ChainRow {
-  /** The display number. */
-  readonly row: string;
-  readonly jobOrderId: string;
-  readonly orderId: string;
-  /** The binding constraint as text, such as "release from 1003.10". */
-  readonly bindingConstraint: string;
-  readonly critical: boolean;
-  readonly root: boolean;
-  /** Set on a row of another order, with that order's number. */
-  readonly otherOrder?: string;
-  readonly totalFloatWorkingS?: number;
-}
-
 export interface OrderChain {
   readonly rows: readonly ChainRow[];
   /** The display numbers of the order's critical rows. */
   readonly criticalRows: readonly string[];
+  /** Whether the chain stopped at the row limit before it reached a root. */
+  readonly continues: boolean;
 }
 
 export interface OrderAnalysis {
@@ -223,20 +180,6 @@ export interface OrderAnalysis {
   readonly plannedStartMs?: number;
   readonly plannedEndMs?: number;
   readonly chain?: OrderChain;
-}
-
-/** Workload of one machine in one bucket (plan 18, Workload). */
-export interface WorkloadBucket {
-  /** The production day as a plant date. */
-  readonly productionDay: string;
-  readonly equipment: string;
-  readonly availableS: number;
-  readonly loadedS: number;
-  readonly setupS: number;
-  readonly runS: number;
-  readonly utilizationPermille: number;
-  readonly overloadS: number;
-  readonly items: readonly { readonly jobOrder: string; readonly seconds: number }[];
 }
 
 export interface GanttAnalysis {
