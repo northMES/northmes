@@ -97,3 +97,51 @@ export function addWork(windows: Windows, fromMs: number, workS: number): Placem
   const last = segments[segments.length - 1];
   return { startMs, endMs: last === undefined ? startMs : last.toMs, segments };
 }
+
+/**
+ * Work laid backward from an instant: it ends at the last working instant at or before `untilMs`
+ * and fills the windows in reverse order. Null when the windows run out before the work does.
+ */
+export function subtractWork(windows: Windows, untilMs: number, workS: number): Placement | null {
+  let remainingMs = Math.round(workS * 1000);
+  const segments: Window[] = [];
+  let endMs: number | undefined;
+  for (let index = windows.length - 1; index >= 0; index -= 1) {
+    const window = windows[index];
+    if (window === undefined || window.fromMs >= untilMs) continue;
+    const segmentTo = Math.min(window.toMs, untilMs);
+    endMs ??= segmentTo;
+    if (remainingMs <= 0) break;
+    const take = Math.min(remainingMs, segmentTo - window.fromMs);
+    segments.unshift({ fromMs: segmentTo - take, toMs: segmentTo });
+    remainingMs -= take;
+    if (remainingMs <= 0) break;
+  }
+  if (endMs === undefined || remainingMs > 0) return null;
+  const first = segments[0];
+  return { startMs: first === undefined ? endMs : first.fromMs, endMs, segments };
+}
+
+/** The working seconds inside [fromMs, toMs); zero when the span is empty or inverted. */
+export function workBetween(windows: Windows, fromMs: number, toMs: number): number {
+  if (toMs <= fromMs) return 0;
+  let ms = 0;
+  for (const window of windows) {
+    if (window.toMs <= fromMs) continue;
+    if (window.fromMs >= toMs) break;
+    ms += Math.min(window.toMs, toMs) - Math.max(window.fromMs, fromMs);
+  }
+  return ms / 1000;
+}
+
+/**
+ * The first working instant at or after an instant: the forward snap of plan 18, so a drop in a
+ * break lands at the break's end. Null past the last window.
+ */
+export function nextWorkingInstant(windows: Windows, atMs: number): number | null {
+  for (const window of windows) {
+    if (window.toMs <= atMs) continue;
+    return Math.max(window.fromMs, atMs);
+  }
+  return null;
+}

@@ -18,12 +18,15 @@ export {
 export {
   addWork,
   clipWindows,
+  nextWorkingInstant,
   normalizeWindows,
   type Placement,
   subtractWindows,
+  subtractWork,
   unionWindows,
   type Window,
   type Windows,
+  workBetween,
 } from './calendar/windows.ts';
 export {
   type GanttExpected,
