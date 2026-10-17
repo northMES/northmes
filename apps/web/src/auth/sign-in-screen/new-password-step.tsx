@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { CircleAlert, Eye, EyeOff } from 'lucide-react';
-import { type FormEvent, useEffect, useId, useRef, useState } from 'react';
+import { type SubmitEvent, useEffect, useId, useRef, useState } from 'react';
 import { ErrorSummary, type SummaryError } from '../../ui/components/error-summary/index.ts';
 import { fieldId } from '../../ui/lib/field-id.ts';
 import { Button } from '../../ui/primitives/button.tsx';
@@ -115,7 +115,7 @@ export function NewPasswordStep({
     field.current?.focus();
   }, []);
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy.current) return;
     setShown(false);
