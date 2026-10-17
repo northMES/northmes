@@ -95,7 +95,19 @@ function orderOf(
  */
 export function g1Snapshot(fixture: GanttFixture = g1, range = g1Week): GanttSnapshot {
   const calendar = workingCalendarOf(fixture.calendar, fixture.plant.timeZone);
-  const horizon = { fromMs: range.fromMs - 7 * 86_400_000, toMs: range.toMs + 28 * 86_400_000 };
+  // The windows cover the fixture's placements and deadlines as well as the asked range, so a load
+  // of a later week still lays every placement over the calendar it was planned on.
+  const day = 86_400_000;
+  let fromMs = Math.min(range.fromMs, ms(fixture.now.instant));
+  let toMs = Math.max(range.toMs, ms(fixture.fence.instant));
+  for (const order of fixture.productionOrders) {
+    toMs = Math.max(toMs, ms(order.deadlineInstant.instant));
+    for (const row of order.jobOrders) {
+      fromMs = Math.min(fromMs, ms(row.setupStartAt));
+      toMs = Math.max(toMs, ms(row.endAt));
+    }
+  }
+  const horizon = { fromMs: fromMs - 7 * day, toMs: toMs + 28 * day };
   const windows = new Map<string, ReturnType<typeof availabilityOf>>();
   const windowsOf = (equipment: string) => {
     const known = windows.get(equipment);

@@ -263,7 +263,7 @@ export function bindingSentence(
         : `Starts at its release: ${from} end${lead}`;
     }
     case 'machine':
-      return `Starts when ${binding.boundBy ?? '?'} ends on ${binding.equipment ?? text.machineName(undefined)}`;
+      return `Starts when ${binding.boundBy ?? '?'} ends on ${text.machineName(binding.equipment)}`;
     case 'calendar':
       return `Starts at the next working instant after its release from ${binding.boundBy ?? '?'}`;
     case 'free':

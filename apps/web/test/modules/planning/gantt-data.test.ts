@@ -32,6 +32,27 @@ describe('g1DataSource (plan 18, Data loading)', () => {
     expect(snapshot.productionOrders[0]?.deadlineMs).toBe(Date.UTC(2026, 10, 6, 14, 0));
   });
 
+  it('a load of a later week keeps every placement where the fixture puts it, segments included', async () => {
+    // Week 47 lies after every G1 placement: the segments still come from the calendar around
+    // the placements, not from the requested range.
+    const { productionOrders } = await g1DataSource.load({
+      from: '2026-11-15T23:00:00Z',
+      to: '2026-11-22T23:00:00Z',
+      filter: {},
+    });
+    const row = productionOrders.find((order) => order.number === '1001')?.jobOrders[0];
+
+    expect(row?.placement).toEqual({
+      setupStartMs: Date.UTC(2026, 10, 3, 10, 30),
+      runStartMs: Date.UTC(2026, 10, 3, 11, 0),
+      endMs: Date.UTC(2026, 10, 4, 7, 0),
+      segments: [
+        { fromMs: Date.UTC(2026, 10, 3, 10, 30), toMs: Date.UTC(2026, 10, 3, 14, 0) },
+        { fromMs: Date.UTC(2026, 10, 4, 5, 0), toMs: Date.UTC(2026, 10, 4, 7, 0) },
+      ],
+    });
+  });
+
   it('GT7 carries the working segments of each placed row, so 1006.10 has one closed gap', async () => {
     const { productionOrders } = await g1DataSource.load(week45);
     const row = productionOrders.find((order) => order.number === '1006')?.jobOrders[0];

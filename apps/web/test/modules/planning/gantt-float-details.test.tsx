@@ -85,6 +85,17 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     );
   });
 
+  it('GT2 names the machine of a machine binding as the rest of Details does: "ends on CNC 1"', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    await userEvent.click(gantt.querySelector('[data-block="jo-1003-10"]') as HTMLElement);
+
+    const panel = await findDetails();
+    const float = within(panel).getByRole('region', { name: 'Float' });
+    expect(float.textContent).toContain('Starts when 1001.10 ends on CNC 1.');
+  });
+
   it('phase 1 draws the fields and the actions of Details disabled with the reason', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
