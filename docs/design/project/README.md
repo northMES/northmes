@@ -21,7 +21,7 @@ The files moved from the project root into these folders on 2026-10-05. The root
 
 Standalone Claude Design closes on 2026-12-14, so this folder holds the project as it was exported on 2026-10-14, with the root copies and the project thumbnail left out. The etags in the table are the Claude Design etags of each file at approval; the repository copies are byte for byte the exported files. The pages load React, Babel, lucide and the fonts from unpkg and Google Fonts and their part files over `fetch`, so open them through a local web server, not from disk.
 
-New pages are Design artifacts built on the NorthMES design system (https://claude.ai/artifact/65vYss7WbTHUytBjyWEJHy). When Krister approves one, the design session exports the approved version's page source to its area folder as `<area>-<issue>-<slug>.html` and adds its row below with the version id in place of an etag and the artifact URL in the last column (ADR 0079 in `docs/adr/`).
+New pages are Design artifacts built on the NorthMES design system (https://claude.ai/artifact/65vYss7WbTHUytBjyWEJHy). When Krister approves one, the design session exports the approved version's artboards to its area folder as `<area>-<issue>-<slug>.dc.html` and `<area>-<issue>-<slug>-<artboard>.dc.html`, with the links between artboards renamed to match, and copies the design system's `tokens.css` and component `bundle.css` that the artboards link as part files of the page. The artboards keep the canvas's `.dc.html` format and render with the folder's `support.js`. The session adds a row below for each file, with the version id in place of an etag and the artifact URL in the last column (ADR 0079 in `docs/adr/`).
 
 ## Pages
 
@@ -198,3 +198,9 @@ New pages are Design artifacts built on the NorthMES design system (https://clau
 | shell/ | shell-454-dashboard-variations-compare.dc.html | #454 | part of shell/shell-454-dashboard-variations.dc.html: comparison and recommendation, frame R | |  |
 | shell/ | shell-454-dashboard-variations.css | #454 | part of shell/shell-454-dashboard-variations.dc.html: the shared styles of its frames and parts | |  |
 | shell/ | shell-454-dashboard-variations-data.js | #454 | part of shell/shell-454-dashboard-variations.dc.html: the tabs, the widgets and their layouts in grid units, and the scene of every option frame; every value is fictional | |  |
+| core/ | core-674-integrations.dc.html | #674 | approved by Krister Johansson, 2026-10-17: the Integrations list, its empty, loading and no-access states | 1792238173-7118 | https://claude.ai/artifact/YN3cfDk3geATsw5THiBJqz |
+| core/ | core-674-integrations-new-token.dc.html | #674 | approved as part of core/core-674-integrations.dc.html: the New integration token page | 1792238173-7118 | https://claude.ai/artifact/YN3cfDk3geATsw5THiBJqz |
+| core/ | core-674-integrations-token-created.dc.html | #674 | approved as part of core/core-674-integrations.dc.html: the list with the new token shown once | 1792238173-7118 | https://claude.ai/artifact/YN3cfDk3geATsw5THiBJqz |
+| core/ | core-674-integrations-revoke.dc.html | #674 | approved as part of core/core-674-integrations.dc.html: the revoke confirm | 1792238173-7118 | https://claude.ai/artifact/YN3cfDk3geATsw5THiBJqz |
+| core/ | core-674-integrations-tokens.css | #674 | approved as part of core/core-674-integrations.dc.html: the design system's tokens at version 1792228248-e3ae | 1792238173-7118 | https://claude.ai/artifact/YN3cfDk3geATsw5THiBJqz |
+| core/ | core-674-integrations-bundle.css | #674 | approved as part of core/core-674-integrations.dc.html: the design system's component styles at version 1792228248-e3ae | 1792238173-7118 | https://claude.ai/artifact/YN3cfDk3geATsw5THiBJqz |
