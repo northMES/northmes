@@ -36,10 +36,8 @@ test.describe('the order Gantt', () => {
       ganttHref({ view: 'gantt', zoom: 'week', from: '2026-11-02', order: 'po-1003', chain: '1' }),
     );
     await expect(gantt).toBeVisible();
-    await gantt
-      .getByRole('row', { name: /^1003 / })
-      .getByRole('rowheader')
-      .click();
+    // The row's name in Chromium starts with its disclosure button, so the row is found by id.
+    await gantt.locator('[data-row-id="po-1003"] [role="rowheader"]').click();
     await expect(
       page.getByRole('region', { name: 'Critical chain, 3 rows, root 1001.10 on CNC 1' }),
     ).toBeVisible();
@@ -48,6 +46,8 @@ test.describe('the order Gantt', () => {
     await page.getByRole('button', { name: 'Board options' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Workload' }).click();
     await page.keyboard.press('Escape');
+    // The menu fades out; axe must not read its text mid-transition.
+    await expect(page.getByRole('menu')).toHaveCount(0);
     await page.getByRole('button', { name: 'Workload on CNC 1' }).click();
     await expect(page.getByRole('dialog', { name: 'Workload on CNC 1' })).toBeVisible();
     await checkA11y('the workload panel with the table of CNC 1 open');

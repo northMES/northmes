@@ -299,7 +299,8 @@ function WorkloadTable({
       id={dialogId}
       role="dialog"
       aria-label={name}
-      tabIndex={-1}
+      // A tab stop: the table scrolls sideways inside it, so the keyboard must reach it (WCAG 2.1.1).
+      tabIndex={0}
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
           event.stopPropagation();
