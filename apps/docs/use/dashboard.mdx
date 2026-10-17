@@ -1,0 +1,91 @@
+---
+title: The dashboard
+description: Read the dashboard tabs of a plant, and arrange the widgets of a tab in edit mode with the mouse or the keyboard.
+---
+
+The dashboard is the first page of a plant, at the plant's own address, such as `/plant-a`. It holds tabs of widgets, and each tab says who sees it.
+
+![The plant dashboard with the tab Company overview open](/images/dashboard.png)
+
+## Tabs
+
+The row of tabs under **Dashboard** shows, in this order:
+
+- the company's tabs, which everyone at the company sees;
+- the plant's tabs, which everyone at this plant sees;
+- your own tabs, which only you see, at every plant of the company.
+
+The line above the widgets repeats who sees the open tab. The open tab is part of the address, so a copied link opens the same tab. On a narrow screen the tabs become a list to choose from.
+
+The arrow keys move between the tabs, and Enter or Space opens the one in focus.
+
+## Change a tab
+
+You may change your own tabs, and the company's and the plant's shared tabs when you hold `core.dashboardTab:manage`. **Edit layout** shows on a tab you may change.
+
+![My shift in edit mode, with the edit bar, the widgets with dashed borders and the Add widget tile](/images/use/dashboard-edit.png)
+
+<Steps>
+  <Step title="Start edit mode">
+    Open the tab and select **Edit layout**. The edit bar says which tab you edit and who sees it.
+  </Step>
+  <Step title="Add, arrange and set up widgets">
+    Change the tab as the sections below describe. Your changes stay on the page until you save them.
+  </Step>
+  <Step title="Save or cancel">
+    **Done** saves every change of the session at once. **Cancel** drops them. Leaving the page or opening another tab with unsaved changes asks first.
+  </Step>
+</Steps>
+
+If someone else saved the tab while you edited it, **Done** is refused and your changes stay. **Reload** starts the session again from the saved tab, without your changes.
+
+### Add a widget
+
+Select the **Add widget** tile, which sits at the first free place on the grid. The catalog opens with a search over the widgets' names and descriptions. Select **Add** on a widget to put it on the tab.
+
+![The widget catalog with the core widgets List, Table, Value and Chart](/images/use/widget-catalog.png)
+
+Core offers four widget types. In release 0.1.0 they show demo data and carry a **Demo** badge:
+
+| Widget | Shows | Sizes |
+|---|---|---|
+| List | Rows from one data source, with a status on each row | Medium, Large, Tall |
+| Table | Columns from one data source | Large, Tall, Wide |
+| Value | One number | Small |
+| Chart | Bars over time | Medium, Large, Wide |
+
+After core's widgets, the catalog lists the widgets that installed modules and plugins add, each group under its module's name. Those widgets show their own data.
+
+A widget's size counts in grid units, on a grid 12 columns wide:
+
+| Size | Columns | Rows |
+|---|---|---|
+| Small | 3 | 2 |
+| Medium | 4 | 4 |
+| Large | 6 | 4 |
+| Tall | 6 | 6 |
+| Wide | 12 | 4 |
+
+### Set up a widget
+
+**Widget actions** (the three dots on a widget) holds **Settings**, **Move up**, **Move down** and **Remove**. **Settings** opens a panel with:
+
+- **Title**, up to 80 characters;
+- **Size**, among the sizes the widget type allows;
+- **Position**, with **Move up**, **Move down**, **Move left** and **Move right**, which say the widget's new column and row.
+
+**Apply** puts the settings on the grid. **Cancel** or Escape drops them.
+
+### Move a widget
+
+On a grid of 12 columns, drag a widget by its move handle, the dots before its title. The widgets in its way move down.
+
+With the keyboard, focus the move handle and press Enter or Space to pick the widget up. The arrow keys move it one step, Enter drops it, and Escape puts it back where it was. NorthMES reads each step out to a screen reader.
+
+Where the dashboard is narrower, it shows 6 columns and widgets move only through **Widget actions**. Below 600 pixels the widgets form a single list in reading order.
+
+## Limits in release 0.1.0
+
+- The web app cannot create, rename or delete a tab. A plant without tabs shows **No dashboard tabs yet**.
+- Core's widgets show demo data, not your plant's figures. Only widgets that modules and plugins add show real data.
+- A tab holds at most 40 widgets.

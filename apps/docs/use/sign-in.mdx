@@ -1,0 +1,58 @@
+---
+title: Sign in and find your way
+description: Sign in to the NorthMES web app, choose your own password, switch between plants, and find every page you can open.
+---
+
+Everyone uses NorthMES in a web browser. You sign in with your email address and password, and then work at one plant at a time. The plant is part of the page address, such as `https://northmes.plant.local/plant-a`, so a copied link opens the same page at the same plant.
+
+## Sign in
+
+<Steps>
+  <Step title="Open a NorthMES page">
+    Open the address your administrator gave you, such as the plant's dashboard at `https://<NORTHMES_HOST>/plant-a`. Without a session, every page shows the sign-in page first, and you return to the page you opened once you are signed in.
+  </Step>
+  <Step title="Enter your email and password">
+    Type the email address of your user and your password, then select **Sign in**. Passwords are case-sensitive. After a wrong password the page keeps the email and clears the password.
+  </Step>
+  <Step title="Choose your own password the first time">
+    A new user, and a user whose password an administrator reset, signs in with a temporary password. NorthMES then asks for a new password before anything else. Type at least 8 characters, different from the temporary password, and select **Save and continue**. **Sign out** on this step leaves without saving.
+  </Step>
+</Steps>
+
+If the sign-in is refused, the page says why:
+
+| Message | What it means |
+|---|---|
+| The email or password is wrong | Check both and try again. |
+| Too many sign-in attempts | Five failed sign-ins in a row lock the email for 15 minutes after the last failure. The lock holds even for the right password. |
+| This account is blocked | An administrator blocked your user. Ask them if you still need access. |
+
+## Your session
+
+- Each browser tab signs in on its own. Closing the tab forgets its session.
+- A session ends 12 hours after sign-in or after its last renewal, and renews after an hour of use. It ends 24 hours after sign-in however much it is used. When it ends, NorthMES shows the sign-in page with "Your session ended. Sign in again to continue."
+- To sign out, open the account menu with your name at the foot of the sidebar and select **Sign out**. The same menu switches the theme between **Light** and **Dark**.
+
+## Switch plants
+
+The plant switcher at the top of the sidebar shows your company and the plant you are at. Select it to open the list of plants you may open, and choose another plant.
+
+![The plant switcher open on the dashboard, with Plant A checked and Plant B below it](/images/use/plant-switcher.png)
+
+- You land on the same page at the other plant, with its search and filters, when that page exists there. From a page of one record, such as an article, you land on the list it belongs to.
+- When your plants belong to more than one company, the list groups them under each company's name.
+- With only one plant, the switcher shows the company and the plant as text, with no list.
+- A role at the company lets you open every plant of the company. A role at one plant lets you open that plant only.
+
+## Find a page
+
+- The sidebar lists the pages of each module you may open, such as **Dashboard**, **Master data** with **Articles** and **Article groups**, and **Planning board**. **Collapse sidebar** at the start of the top bar narrows it to icons. On a narrow screen the sidebar opens from **Open navigation**.
+- The breadcrumb in the top bar shows where you are, such as Plant A > Master data > Articles.
+- **Help** (the question mark at the end of the top bar) holds **All pages**, a list of every page you can open at the plant, plant settings included.
+- **Settings** (the gear in the top bar) opens the plant's settings, or your company's settings when you may open only those. See [Companies and plants](/use/companies-and-plants).
+
+## Limits in release 0.1.0
+
+- You sign in with your email address only. Signing in with a username is turned off.
+- NorthMES has no "forgot password" link. Ask an administrator to reset your password; see [Users, roles and permissions](/use/users-and-roles#reset-a-password).
+- The address `/` has no page of its own and shows **Page not found**. Opening the sign-in page directly at `/sign-in` leads there after you sign in. Open a plant's address instead. An address with a plant you cannot open shows **Page not found** with the list of your plants, each a link.
