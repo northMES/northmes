@@ -42,7 +42,7 @@ Chosen option: "A run as a planning record over the orders, with one job order p
 6. A run reports what it breaks and repairs nothing: an overlap with another order's row on the machine, a successor it could not place, a fixed row it stops at. The review step lists them before the combine, and the My draft list holds them after it, with the actions of [plan 18, Resolving a break in the draft](../plan/18-gantt-timeline.md#resolving-a-break-in-the-draft).
 7. Splitting a run reverses it: the run record goes, every saved setup comes back, and each such row is laid again from its setup start with its full setup, with the cascade for the later operations. A run that exists only in the planner's draft is split by discarding its changes.
 8. A run is a planning record in the planner's draft until Save. Save commits it as a grouping on the plan under the orders' soft locks, as a draft change of kind `run` beside `move` and `split` ([plan 07, Splitting and hard-locking by hand](../plan/07-production-planning.md#splitting-and-hard-locking-by-hand-plan-proposal)). The plan server's tables follow when the plan server is built; until then the run lives in the browser's in-memory draft of the order Gantt on mock data.
-9. `combineIntoRun(orders, context)` and `splitRun(run, context)` are pure functions in `@northmes/planning-domain`, tested against the fixture case GT10 and with property tests: deterministic, permutation-invariant in the orders and in their rows, and no row moves earlier than its placement before the combine.
+9. `combineIntoRun(orders, context)` and `splitRun(run, context)` are pure functions in `@northmes/planning-domain`, tested against the fixture case GT10 and with property tests: deterministic, permutation-invariant in the orders and in their rows; the first order's rows keep their placements; every row of a later order lies on a machine its operation allows, at or after its release; a saved-setup row starts where the row it follows ends; and the split gives every saved setup back.
 
 ### Consequences
 
@@ -55,7 +55,7 @@ Chosen option: "A run as a planning record over the orders, with one job order p
 
 ### Confirmation
 
-* `modules/planning/domain/test/run.test.ts`: GT10 (1001 and 1005 combined: 1005.10 directly after 1001.10 on CNC1 with no setup, 1005.20 after the locked 1002.10 on CNC2, the run's deadline Fri 6 Nov 15:00, 1005 early by 7 days, the overlap with 1003.10 reported); a property test over shuffled orders and rows; `splitRun` restores every saved setup.
+* `modules/planning/domain/test/run.test.ts`: GT10 (1001 and 1005 combined: 1005.10 directly after 1001.10 on CNC1 with no setup, 1005.20 after the locked 1002.10 on CNC2, the run's deadline Fri 6 Nov 15:00, 1005 early by 7 days, the overlap with 1003.10 reported); a property test over shuffled orders and rows for the invariants of rule 9; `splitRun` restores every saved setup.
 * `modules/planning/domain/fixtures/gantt/g1.test.ts`: the placements of GT10 equal `addWork` over the A1 calendar.
 * `apps/web/test/modules/planning/gantt-run.test.tsx`: the multi-select, the review step, the run row with its summary bar, the saved-setup cue, Split run, and the My draft list with the run as one change.
 * `e2e/a11y/gantt.axe.spec.ts`: the review step and the run row.
