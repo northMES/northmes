@@ -12,6 +12,16 @@
           {
             "group": "Install and upgrade",
             "pages": ["index", "install", "plugins"]
+          },
+          {
+            "group": "Use NorthMES",
+            "pages": [
+              "use/sign-in",
+              "use/companies-and-plants",
+              "use/users-and-roles",
+              "use/articles",
+              "use/dashboard"
+            ]
           }
         ]
       },
