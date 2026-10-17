@@ -31,14 +31,21 @@ function pageRows(): PageRow[] {
     }));
 }
 
-const artifactRows = pageRows().filter(({ url }) => url !== '');
+/** The version id of an artifact publish; a Claude Design etag is digits only. */
+const artifactVersion = /^\d+-[0-9a-f]{4}$/;
+
+// A row is an artifact row when it names an artifact URL or an artifact version id, so a row that
+// lost either one still fails the checks below.
+const artifactRows = pageRows().filter(
+  ({ version, url }) => url !== '' || artifactVersion.test(version),
+);
 
 describe('design index', () => {
   it('ADR0079 every artifact row names a claude.ai artifact URL and the version id of the approved publish', () => {
     expect(artifactRows.length).toBeGreaterThan(0);
     for (const { page, version, url } of artifactRows) {
       expect(url, page).toMatch(/^https:\/\/claude\.ai\/artifact\/[A-Za-z0-9]+$/);
-      expect(version, page).toMatch(/^\d+-[0-9a-f]{4}$/);
+      expect(version, page).toMatch(artifactVersion);
     }
   });
 

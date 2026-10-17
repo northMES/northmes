@@ -1,4 +1,4 @@
-# Settings, Integrations
+# Integrations in company settings
 
 This is the approval record of the Integrations page, issue [northMES/northmes#674](https://github.com/northMES/northmes/issues/674), in wave 4 of [ADR 0073](../../adr/0073-one-module-contract-for-rest-webmcp-and-later-mcp-with-oauth-clients-and-tokens.md). The page lets a Company admin list, create and revoke integration tokens under Settings, Integrations, on the commands and query of pull request #673. It is the first page approved as a Design artifact on the NorthMES design system ([ADR 0079](../../adr/0079-design-pages-as-artifacts-on-the-northmes-design-system-with-the-approved-source-in-the-repository.md)).
 
