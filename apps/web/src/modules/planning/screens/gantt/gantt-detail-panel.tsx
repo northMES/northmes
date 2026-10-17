@@ -15,7 +15,6 @@ import {
   type GanttRow,
   type JobOrderRow,
   jobOrderRowsOf,
-  latenessText,
   machinesText,
   type OperationRow,
   type OrderRow,

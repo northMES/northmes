@@ -125,6 +125,7 @@ export function GanttRowView({
         <div
           role="gridcell"
           tabIndex={-1}
+          data-cell-focus
           aria-label={summaryName(original, timeZone)}
           className="relative overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         >
