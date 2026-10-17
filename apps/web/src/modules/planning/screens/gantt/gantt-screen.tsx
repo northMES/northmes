@@ -237,15 +237,22 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     () => rangeOf(from, zoom, timeZone, productionDayStart),
     [from, zoom, timeZone, productionDayStart],
   );
-  const [extension, setExtension] = useState({ before: 0, after: 0 });
-  const extendedFor = useRef(`${from}|${zoom}`);
-  if (extendedFor.current !== `${from}|${zoom}`) {
-    extendedFor.current = `${from}|${zoom}`;
-    setExtension({ before: 0, after: 0 });
-  }
+  // The extension belongs to one chosen start and zoom; a change of either resets it in the same
+  // render, through state, as React's rule for state derived from props says.
+  const extensionKey = `${from}|${zoom}`;
+  const [extended, setExtended] = useState({ key: extensionKey, before: 0, after: 0 });
+  if (extended.key !== extensionKey) setExtended({ key: extensionKey, before: 0, after: 0 });
+  const extension = extended.key === extensionKey ? extended : { before: 0, after: 0 };
+  const setExtension = (
+    update: (current: { before: number; after: number }) => { before: number; after: number },
+  ) =>
+    setExtended((current) => {
+      const base = current.key === extensionKey ? current : { before: 0, after: 0 };
+      return { key: extensionKey, ...update(base) };
+    });
   const range = useMemo(
     () => extendedRange(from, zoom, timeZone, productionDayStart, extension),
-    [from, zoom, timeZone, productionDayStart, extension],
+    [from, zoom, timeZone, productionDayStart, extension.before, extension.after],
   );
   // Everything the view draws reads the plan with the draft applied, analysed over the loaded
   // range (plan 18, Resolving a break in the draft).
