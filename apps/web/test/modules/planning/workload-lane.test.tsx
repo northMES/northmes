@@ -78,7 +78,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
       analysis: {
         ...snapshot.analysis,
         workload: snapshot.analysis.workload.map((bucket) =>
-          bucket.equipment === 'CNC2' && bucket.productionDay === '2026-11-05'
+          bucket.equipment === 'CNC2' && bucket.label === '2026-11-05'
             ? {
                 ...bucket,
                 loadedS: 32_400,
@@ -143,7 +143,18 @@ describe('the workload lane (plan 18, The workload lane)', () => {
       .slice(1)
       .map((row) => Array.from(row.querySelectorAll('th, td')).map((cell) => cell.textContent));
     expect(rows.slice(0, 5)).toEqual(expectedRows('CNC1'));
+    // The weekend's production days are closed buckets, drawn as nothing and named closed.
     expect(rows[5]).toEqual([
+      'Sat 7 Nov',
+      '0 min',
+      '0 min',
+      '0 min',
+      '0 min',
+      '0 min',
+      'closed',
+      '0 min',
+    ]);
+    expect(rows[7]).toEqual([
       'Visible range',
       '41 h 15 min',
       '20 h',

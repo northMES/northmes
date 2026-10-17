@@ -59,7 +59,12 @@ describe('g1DataSource (plan 18, Data loading)', () => {
       binding: { kind: 'machine', boundBy: '1001.10', equipment: 'CNC1' },
       critical: true,
     });
-    expect(analysis.jobOrders['jo-1002-10']?.float).toBeUndefined();
+    // The locked 1002.10 ends at its deadline: a just-in-time row with zero float, bound by its lock.
+    expect(analysis.jobOrders['jo-1002-10']?.float).toMatchObject({
+      binding: { kind: 'hardLock' },
+      totalFloatWorkingS: 0,
+      critical: true,
+    });
   });
 
   it('GT1 GT4 sets the release of a successor row: the predecessor end plus the lead time, or the send-ahead instant', async () => {
@@ -115,10 +120,14 @@ describe('g1DataSource (plan 18, Data loading)', () => {
   it('GT5 carries the workload buckets of week 45', async () => {
     const { analysis } = await g1DataSource.load(week45);
 
-    expect(analysis.workload).toHaveLength(15);
+    // The seven production days whose start lies in week 45, the closed weekend included.
+    expect(analysis.workload).toHaveLength(21);
     expect(
-      analysis.workload.find((b) => b.equipment === 'CNC1' && b.productionDay === '2026-11-05'),
+      analysis.workload.find((b) => b.equipment === 'CNC1' && b.label === '2026-11-05'),
     ).toMatchObject({ loadedS: 29_700, utilizationPermille: 1000 });
+    expect(
+      analysis.workload.find((b) => b.equipment === 'CNC1' && b.label === '2026-11-07'),
+    ).toMatchObject({ availableS: 0, utilizationPermille: null });
   });
 
   it('GT4 lists the constraints of 1004.20 as release, last piece, allowed machines and calendar, each holding', async () => {

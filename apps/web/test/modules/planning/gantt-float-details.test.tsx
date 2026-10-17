@@ -28,7 +28,8 @@ describe('the Float column and Details from the analysis (plan 18, What the time
 
     expect(floatCellOf(gantt, 'jo-1001-20').textContent).toBe('15 min');
     expect(floatCellOf(gantt, 'jo-1001-10').textContent).toBe('0');
-    expect(floatCellOf(gantt, 'jo-1002-10').textContent).toBe('unknown');
+    // The locked 1002.10 ends at its deadline, so it is critical with zero free float.
+    expect(floatCellOf(gantt, 'jo-1002-10').textContent).toBe('0');
   });
 
   it('GT2 shows 1003.10 as "0" with the chain glyph and its negative total float "minus 15 min"', async () => {
