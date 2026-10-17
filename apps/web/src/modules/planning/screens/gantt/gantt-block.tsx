@@ -69,6 +69,7 @@ export function GanttBlock({
             tabIndex={-1}
             aria-label={name}
             data-block={jobOrder.id}
+            data-cell-focus
             data-states={states.map((state) => state.kind).join(' ') || undefined}
             onClick={onSelect}
             className={cn(

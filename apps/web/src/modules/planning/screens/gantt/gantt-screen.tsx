@@ -46,6 +46,7 @@ import { GanttTimeHeader, timeHeaderHeightRem } from './gantt-time-area.tsx';
 import { GanttToolbar } from './gantt-toolbar.tsx';
 import {
   type GanttSort,
+  type GanttTableRow,
   GanttTreeHeaderCells,
   useGanttTable,
   visibleColumns,
@@ -320,8 +321,80 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     setFocusedRowId(rowId);
     document.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`)?.focus();
   };
-  const onRowKeyDown = (_event: KeyboardEvent<HTMLDivElement>) => {
-    // Row focus mode comes with the keyboard behaviour group.
+  const focusRowAt = (index: number) => {
+    const target = flatRows[Math.max(0, Math.min(flatRows.length - 1, index))];
+    if (target !== undefined) focusRow(target.id);
+  };
+  const openDetails = (row: GanttTableRow) => {
+    selectOrder(row.original.order.id);
+    setDetailRowId(row.id);
+    setPanelOpen(true);
+  };
+  // Row focus mode (plan 18, Tree grid semantics): Up and Down move between rows, Right expands a
+  // collapsed row or moves into its time cell, Left collapses an expanded row, moves from the cell
+  // back to the row, or to the parent row, Home and End go to the first and last row, Page Up and
+  // Page Down move ten rows, Enter opens Details. Escape ends what is on top of the stack: the
+  // chain highlight, then the docked panel.
+  const onRowKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    row: GanttTableRow,
+    index: number,
+  ) => {
+    const onRow = event.target === event.currentTarget;
+    const cell = event.currentTarget.querySelector<HTMLElement>('[data-cell-focus]');
+    let handled = true;
+    switch (event.key) {
+      case 'ArrowDown':
+        focusRowAt(index + 1);
+        break;
+      case 'ArrowUp':
+        focusRowAt(index - 1);
+        break;
+      case 'Home':
+        focusRowAt(0);
+        break;
+      case 'End':
+        focusRowAt(flatRows.length - 1);
+        break;
+      case 'PageDown':
+        focusRowAt(index + 10);
+        break;
+      case 'PageUp':
+        focusRowAt(index - 10);
+        break;
+      case 'ArrowRight':
+        if (onRow && row.getCanExpand() && !row.getIsExpanded()) row.toggleExpanded(true);
+        else if (onRow) cell?.focus();
+        else handled = false;
+        break;
+      case 'ArrowLeft':
+        if (!onRow) event.currentTarget.focus();
+        else if (row.getCanExpand() && row.getIsExpanded()) row.toggleExpanded(false);
+        else {
+          const parent = row.getParentRow();
+          if (parent !== undefined) focusRow(parent.id);
+        }
+        break;
+      case 'Enter':
+        if (onRow) openDetails(row);
+        else handled = false;
+        break;
+      case 'Escape':
+        if (chain !== undefined) {
+          void setSearch(withChain(search, false));
+        } else if (panelOpen) {
+          setPanelOpen(false);
+        } else {
+          handled = false;
+        }
+        break;
+      default:
+        handled = false;
+    }
+    if (handled) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
   };
 
   const gridName = `${plant} order Gantt, ${rangeLabel(range, zoom, timeZone)}`;
@@ -410,7 +483,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                         posInSet={row.index + 1}
                         focused={row.id === focusedId}
                         onFocus={() => setFocusedRowId(row.id)}
-                        onKeyDown={onRowKeyDown}
+                        onKeyDown={(event) => onRowKeyDown(event, row, index)}
                         onSelect={() => {
                           selectOrder(row.original.order.id);
                           setDetailRowId(row.id);
