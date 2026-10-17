@@ -34,7 +34,7 @@ The API answers in JSON. It does not serve GraphiQL or another landing page. Fil
 
 ## How a request is authenticated
 
-A request carries a short-lived JWT of the signed-in person as a bearer token. The web app gets it for you: when a person signs in on the sign-in page, the web app keeps the session token in the browser tab and mints a JWT from it at `/api/auth/token`, which lives five minutes and is renewed before it expires. A plugin screen calls the API through the web SDK, which adds the same JWT, so a plugin never handles a password or a session token itself.
+A request carries a short-lived JWT of the signed-in person as a bearer token. The web app gets it for you: when a person signs in on the sign-in page, the web app keeps the session token in the browser tab and requests a JWT with it from `/api/auth/token`, where NorthMES's authentication service signs it. The JWT lives five minutes, and the web app requests a new one before it expires. A plugin screen calls the API through the web SDK, which adds the same JWT, so a plugin never handles a password or a session token itself.
 
 - The session token is not a bearer token for `/graphql`; only the JWT is.
 - A session lives 12 hours after sign-in or after its last renewal, and renews after an hour of use. It ends 24 hours after sign-in however much it is used.
@@ -43,6 +43,7 @@ A request carries a short-lived JWT of the signed-in person as a bearer token. T
 - A request without a valid JWT, or with the JWT of a blocked user, has no user. Its fields fail with `UNAUTHENTICATED`.
 - A person who signed in with a temporary password must choose a new one first. Until then every request is refused with `FORBIDDEN` and `core.password_change_required`.
 - A request can do what the person's roles allow, and nothing more.
+- GraphQL subscriptions run over a WebSocket at `/graphql`. The server reads the person from the socket's handshake headers, and a browser cannot set `Authorization` on a WebSocket, so today a subscription field that needs a signed-in person answers `UNAUTHENTICATED` ([#480](https://github.com/northMES/northmes/issues/480)).
 
 ## Choose the plant
 
