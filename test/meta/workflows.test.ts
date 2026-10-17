@@ -553,6 +553,91 @@ describe('workflows', () => {
     expect(upload.line.match(/\.intoto\.jsonl"/g)).toHaveLength(2);
   });
 
+  // Two builds of the image from one commit give the same digest (OpenSSF Best Practices
+  // build_repeatable and build_reproducible). BuildKit reads SOURCE_DATE_EPOCH, set to the commit
+  // time, and rewrite-timestamp gives every file in the image that time. A provenance or SBOM
+  // attestation from BuildKit would hold the build's own start and end times and change the digest,
+  // so the build adds none; the release attestations job signs both for the digest instead.
+  const commitTime = 'echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"';
+  const reproducibleImage = { context: '.', provenance: false, sbom: false };
+
+  function imageBuilds(steps: Step[]): Step[] {
+    return steps.filter(({ uses }) => uses?.startsWith('docker/build-push-action@'));
+  }
+
+  function exporterOf(step: Step | undefined): string[] {
+    return String(step?.with?.outputs ?? '').split(',');
+  }
+
+  function expectReproducibleBuilds(steps: Step[], where: string): void {
+    const epoch = steps.findIndex(({ run }) => run?.trim() === commitTime);
+    const builds = imageBuilds(steps);
+
+    expect(epoch, `${where} sets SOURCE_DATE_EPOCH to the commit time`).not.toBe(-1);
+    expect(builds, `${where} image builds`).not.toHaveLength(0);
+    for (const build of builds) {
+      expect(steps.indexOf(build), `${where} sets SOURCE_DATE_EPOCH first`).toBeGreaterThan(epoch);
+      expect(build.with, where).toMatchObject(reproducibleImage);
+      expect(exporterOf(build), where).toEqual(
+        expect.arrayContaining(['type=image', 'rewrite-timestamp=true']),
+      );
+      expect(build.with?.push, `${where} pushes through the exporter`).toBeUndefined();
+    }
+  }
+
+  // The check builds on every pull request and push to main, with no paths filter, so it can become
+  // a required check. The second build starts without BuildKit's cache, so it rebuilds every layer.
+  it('reproducible.yml builds the image twice from one commit, the second time without cache, and fails when the two digests differ', () => {
+    const { workflow, job } = jobNamed('reproducible image');
+    const steps = job.steps ?? [];
+    const [first, second] = imageBuilds(steps);
+    const compare = steps.at(-1);
+    const on = workflow.on as Record<string, Record<string, unknown> | null>;
+
+    expect(workflow.path).toBe('.github/workflows/reproducible.yml');
+    expect(Object.keys(on).sort()).toEqual(['pull_request', 'push']);
+    expect(on.pull_request).toBeNull();
+    expect(on.push).toEqual({ branches: ['main'] });
+    expect(workflow.permissions).toEqual({ contents: 'read' });
+    expect(runsOnOf(job)).toMatch(/^ubuntu-[\w.]+$/);
+    expect(steps.map(({ uses, run }) => uses?.replace(/@.*$/, '') ?? run?.trim())).toEqual([
+      'actions/checkout',
+      'docker/setup-buildx-action',
+      commitTime,
+      'docker/build-push-action',
+      'docker/build-push-action',
+      compare?.run?.trim(),
+    ]);
+    expectReproducibleBuilds(steps, workflow.path);
+    expect(exporterOf(first)).toContain('push=false');
+    expect(second?.with).toEqual({ ...first?.with, 'no-cache': true });
+    expect(compare?.env).toEqual({
+      FIRST: expression(`steps.${first?.id}.outputs.digest`),
+      SECOND: expression(`steps.${second?.id}.outputs.digest`),
+    });
+    expect(compare?.run).toContain('if [ -z "$FIRST" ] || [ "$FIRST" != "$SECOND" ]; then');
+    expect(compare?.run).toContain('exit 1');
+  });
+
+  // The release pushes the digest that a rebuild of the tagged commit gives, so anyone can check
+  // the released image against the source.
+  it('the release image job builds the image the way reproducible image checks it, and pushes it', () => {
+    const { job: check } = jobNamed('reproducible image');
+    const { job } = jobNamed('release image');
+    const steps = job.steps ?? [];
+    const [build] = imageBuilds(steps);
+    const [checked] = imageBuilds(check.steps ?? []);
+
+    expect(imageBuilds(steps)).toHaveLength(1);
+    expectReproducibleBuilds(steps, 'release image');
+    expect(exporterOf(build).sort()).toEqual(
+      exporterOf(checked)
+        .map((option) => (option === 'push=false' ? 'push=true' : option))
+        .sort(),
+    );
+    expect(build?.id).toBe('build');
+  });
+
   // The score behind the badge stays current: weekly, after every push to main and when the
   // branch protection changes. Scorecard refuses to publish from a workflow with workflow-level
   // write permissions, env or defaults, so the workflow holds none of them.
