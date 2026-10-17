@@ -26,6 +26,27 @@ describe('the NorthMES image (ADR 0080)', () => {
     expect(runLines.some((line) => /\bnpm ci\b/.test(line))).toBe(true);
   });
 
+  // turbo's cache and task logs hold how long each task took, and pnpm's install state holds when the
+  // install ran, so two builds of one commit would differ in them (OpenSSF Best Practices
+  // build_reproducible). The image runs none of them.
+  it('removes the turbo cache and logs and the pnpm install state after the build, before the image copies /src', () => {
+    const buildStage = dockerfile.split(/^FROM /m)[1] ?? '';
+    const commands = buildStage
+      .replace(/\\\n\s*/g, ' ')
+      .split('\n')
+      .filter((line) => /^RUN\b/.test(line))
+      .flatMap((line) => line.replace(/^RUN\s+/, '').split(' && '))
+      .map((command) => command.trim());
+
+    expect(commands).toContain('pnpm build');
+    expect(commands.slice(commands.indexOf('pnpm build') + 1)).toEqual(
+      expect.arrayContaining([
+        'find . -name node_modules -prune -o -name .turbo -type d -prune -exec rm -rf {} +',
+        'rm -f node_modules/.modules.yaml node_modules/.pnpm-workspace-state-v1.json',
+      ]),
+    );
+  });
+
   it('pins the pnpm version that the root packageManager names, with the integrity of each package', () => {
     const { packages } = JSON.parse(read('deploy/pnpm/package-lock.json')) as PackageLock;
     const installed = Object.entries(packages).filter(([path]) => path !== '');
