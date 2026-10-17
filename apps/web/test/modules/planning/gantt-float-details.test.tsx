@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, within } from '@testing-library/react';
+import { cleanup, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { findDetails, findGantt, renderBoardRoute } from './gantt-fixtures.tsx';
+import type { GanttDataSource } from '../../../src/modules/planning/gantt-data.ts';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { detailsOpen, findDetails, findGantt, renderBoardRoute } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -120,5 +122,48 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     expect(panel.textContent).toContain('15 h 15 min elapsed');
     expect(panel.textContent).toContain('15 min on Mill 1');
     expect(panel.textContent).toContain('2: Turn on CNC 1, Mill on Mill 1');
+  });
+
+  it('closes Details and forgets the row when a reload drops it, and opens again for another row', async () => {
+    // Week 45 answers G1; the week after, reached with Later, answers G1 without order 1003.
+    const source: GanttDataSource = {
+      load: async ({ from }) => {
+        const snapshot = g1Snapshot();
+        return Date.parse(from) < Date.UTC(2026, 10, 8)
+          ? snapshot
+          : {
+              ...snapshot,
+              productionOrders: snapshot.productionOrders.filter(
+                (order) => order.number !== '1003',
+              ),
+            };
+      },
+    };
+    const router = renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' }, source);
+    const gantt = await findGantt();
+    await userEvent.click(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
+    await findDetails();
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+    await userEvent.click(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
+    await findDetails();
+
+    // A reload while Details is open, as a realtime refetch gives: the next week drops 1003.
+    await router.navigate({
+      to: '.',
+      search: { view: 'gantt', zoom: 'week', from: '2026-11-09' } as Record<string, unknown>,
+    });
+
+    await waitFor(() => {
+      expect(gantt.querySelector('[data-block="jo-1003-20"]')).toBeNull();
+    });
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+    await userEvent.click(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
+    const panel = await findDetails();
+    expect(within(panel).getByRole('heading', { level: 2 }).textContent).toBe('1001.20 Mill');
   });
 });

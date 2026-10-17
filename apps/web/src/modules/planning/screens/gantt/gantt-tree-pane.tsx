@@ -319,12 +319,15 @@ const ariaSort = { asc: 'ascending', desc: 'descending' } as const;
 export function GanttTreeHeaderCells({
   columns,
   cellLefts,
+  stickyTree,
   sort,
   onSortChange,
 }: {
   readonly columns: readonly GanttColumn[];
   /** The left offset of each column, where its header sticks while the time column scrolls. */
   readonly cellLefts: readonly number[];
+  /** Whether every header cell sticks, or the Name column alone (see GanttRowView). */
+  readonly stickyTree: boolean;
   readonly sort: GanttSort | undefined;
   readonly onSortChange: (sort: GanttSort) => void;
 }) {
@@ -341,10 +344,15 @@ export function GanttTreeHeaderCells({
               column.sortable ? (sorted === undefined ? 'none' : ariaSort[sorted]) : undefined
             }
             className={cn(
-              'sticky z-10 flex items-center border-e border-border bg-muted px-2 text-xs font-semibold text-muted-foreground',
+              'flex items-center border-e border-border bg-muted px-2 text-xs font-semibold text-muted-foreground',
+              (index === 0 || stickyTree) && 'sticky z-10',
               column.numeric && 'justify-end',
             )}
-            style={{ insetInlineStart: `${cellLefts[index] ?? 0}px` }}
+            style={
+              index === 0 || stickyTree
+                ? { insetInlineStart: `${cellLefts[index] ?? 0}px` }
+                : undefined
+            }
           >
             {column.sortable ? (
               <Button

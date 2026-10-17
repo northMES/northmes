@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { naturalWidthPx, rangeOf } from '../../../src/modules/planning/timeline/time-scale.ts';
@@ -152,5 +152,51 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
     expect(header.className).toContain('sticky');
     expect(within(gantt).getByRole('row', { name: /Not placed/ }).className).toContain('sticky');
+  });
+
+  it("WCAG 1.4.10 only the Name column sticks when the shown columns exceed the pane's cap", async () => {
+    // Every column shown: 1320 px of tree against a cap of 40 percent of 1100 px.
+    window.localStorage.setItem(
+      'northmes.planning.gantt.options',
+      JSON.stringify({ hiddenColumns: [] }),
+    );
+    try {
+      renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+      const gantt = await findGantt();
+
+      const headers = within(gantt).getAllByRole('columnheader');
+      expect(headers).toHaveLength(12);
+      expect(headers[0]?.className).toContain('sticky');
+      expect(headers[1]?.className).not.toContain('sticky');
+      const row = within(gantt).getByRole('row', { name: /^1003 / });
+      expect(within(row).getByRole('rowheader').className).toContain('sticky');
+      expect(within(row).getAllByRole('gridcell')[0]?.className).not.toContain('sticky');
+    } finally {
+      window.localStorage.removeItem('northmes.planning.gantt.options');
+    }
+  });
+
+  it('plan 18 the fill height is measured again when the window or the zoom changes', async () => {
+    const { innerHeight } = window;
+    try {
+      renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
+      const gantt = await findGantt();
+      const fill = gantt.closest<HTMLElement>('[data-gantt-fill]') as HTMLElement;
+      const before = Number.parseFloat(fill.style.height);
+
+      Object.defineProperty(window, 'innerHeight', {
+        value: innerHeight + 100,
+        configurable: true,
+      });
+      await userEvent.click(
+        within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', { name: 'Day' }),
+      );
+
+      await waitFor(() => {
+        expect(Number.parseFloat(fill.style.height)).toBe(before + 100);
+      });
+    } finally {
+      Object.defineProperty(window, 'innerHeight', { value: innerHeight, configurable: true });
+    }
   });
 });

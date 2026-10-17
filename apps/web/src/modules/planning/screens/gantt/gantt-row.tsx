@@ -17,6 +17,11 @@ export interface GanttRowProps {
   readonly gridTemplateColumns: string;
   /** The left offset of each tree column, where its cell sticks while the time column scrolls. */
   readonly cellLefts: readonly number[];
+  /**
+   * Whether every tree cell sticks: only while the pane fits its cap, so a narrow grid (320 px
+   * reflow, 400 percent zoom) keeps the time area reachable with the Name column alone pinned.
+   */
+  readonly stickyTree: boolean;
   readonly rowIndex: number;
   readonly setSize: number;
   readonly posInSet: number;
@@ -39,6 +44,7 @@ export function GanttRowView({
   columns,
   gridTemplateColumns,
   cellLefts,
+  stickyTree,
   rowIndex,
   setSize,
   posInSet,
@@ -121,11 +127,12 @@ export function GanttRowView({
             key={column.id}
             role="gridcell"
             className={cn(
-              'sticky z-10 flex min-w-0 items-center overflow-hidden border-e border-border px-2 font-mono text-xs whitespace-nowrap',
+              'flex min-w-0 items-center overflow-hidden border-e border-border px-2 font-mono text-xs whitespace-nowrap',
+              stickyTree && 'sticky z-10',
               background,
               column.numeric && 'justify-end tabular-nums',
             )}
-            style={{ insetInlineStart: `${cellLefts[index] ?? 0}px` }}
+            style={stickyTree ? { insetInlineStart: `${cellLefts[index] ?? 0}px` } : undefined}
           >
             {column.cell(original, { timeZone, zoneLabel, machineName })}
           </div>

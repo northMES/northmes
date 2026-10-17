@@ -75,9 +75,13 @@ const bottomGapPx = 24;
  * takes it, so the page itself never scrolls and the rows scroll inside the grid under the sticky
  * time header. Measured again when the window resizes.
  */
-function useViewportFill(gapPx: number): [number | undefined, (node: HTMLElement | null) => void] {
+function useViewportFill(
+  gapPx: number,
+  layoutKey: string,
+): [number | undefined, (node: HTMLElement | null) => void] {
   const [height, setHeight] = useState<number | undefined>(undefined);
   const element = useRef<HTMLElement | null>(null);
+  const observer = useRef<ResizeObserver | undefined>(undefined);
   const measure = useCallback(() => {
     const node = element.current;
     if (node === null || typeof window === 'undefined') return;
@@ -87,7 +91,14 @@ function useViewportFill(gapPx: number): [number | undefined, (node: HTMLElement
   const ref = useCallback(
     (node: HTMLElement | null) => {
       element.current = node;
+      observer.current?.disconnect();
+      observer.current = undefined;
       measure();
+      // The toolbar above wraps its controls, so the parent's height changes move the grid's top.
+      if (node?.parentElement && typeof ResizeObserver !== 'undefined') {
+        observer.current = new ResizeObserver(() => measure());
+        observer.current.observe(node.parentElement);
+      }
     },
     [measure],
   );
@@ -95,6 +106,10 @@ function useViewportFill(gapPx: number): [number | undefined, (node: HTMLElement
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, [measure]);
+  // A zoom or range change redraws the toolbar's range label, which may wrap or unwrap.
+  useEffect(() => {
+    measure();
+  }, [measure, layoutKey]);
   return [height, ref];
 }
 
@@ -151,10 +166,15 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const [focusedRowId, setFocusedRowId] = useState<string | undefined>(undefined);
   // The row the docked panel shows, opened by a click or by Enter, and whether the panel is open.
   const [detailRowId, setDetailRowId] = useState<string | undefined>(undefined);
+  /** The row that takes focus when the drawer closes: the opened row, or the row a chain link named. */
+  const returnRowId = useRef<string | undefined>(undefined);
   const [width, gridRef] = useMeasuredWidth();
-  const [fillHeight, fillRef] = useViewportFill(bottomGapPx);
-
   const zoom = search.zoom ?? defaultZoom;
+  const [fillHeight, fillRef] = useViewportFill(
+    bottomGapPx,
+    `${zoom}|${search.from ?? ''}|${options.hideClosed}|${options.workload}`,
+  );
+
   const timeZone = snapshot?.plant.timeZone ?? 'UTC';
   const productionDayStart = snapshot?.plant.productionDayStart ?? '06:00';
   // The range starts at the date in the URL, else at the snapshot's now, else at today.
@@ -200,14 +220,16 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const rows = useMemo(() => (snapshot === undefined ? [] : buildGanttRows(snapshot)), [snapshot]);
   const columns = useMemo(() => visibleColumns(options.hiddenColumns), [options.hiddenColumns]);
   // The tree pane takes its columns' widths up to 40 percent of the view; the Name column gives
-  // way first. Columns beyond the cap keep their width and the grid scrolls sideways under the
-  // sticky Name column, so the time area keeps at least 60 percent of the view.
+  // way first. While the pane fits the cap every tree cell sticks and the time column scrolls under
+  // it; beyond the cap only the Name column sticks and the rest scrolls with the time, so the
+  // time area stays reachable on a narrow grid (WCAG 1.4.10).
   const cap = Math.floor(width * treePaneShare);
   const fixedWidth = columns.slice(1).reduce((sum, column) => sum + column.widthPx, 0);
   const nameWidth = Math.max(160, Math.min(columns[0]?.widthPx ?? 300, cap - fixedWidth));
   // The tree columns' width as the grid lays them out, which may exceed the cap; the overlay
   // starts where the time column starts.
   const treeWidth = nameWidth + fixedWidth;
+  const stickyTree = treeWidth <= cap;
   // The left offset of each tree column, where its cells stick while the time column scrolls.
   const cellLefts = columns.map((_, index) =>
     index === 0 ? 0 : nameWidth + columns.slice(1, index).reduce((sum, c) => sum + c.widthPx, 0),
@@ -305,6 +327,13 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     return map;
   }, [rows]);
   const detailRow = detailRowId === undefined ? undefined : rowById.get(detailRowId);
+  // A reload that drops the opened row closes the drawer and forgets the row, so the sheet's
+  // final focus falls back to its own default instead of a row that is gone.
+  useEffect(() => {
+    if (snapshot === undefined || detailRowId === undefined || rowById.has(detailRowId)) return;
+    returnRowId.current = undefined;
+    setDetailRowId(undefined);
+  }, [snapshot, detailRowId, rowById]);
 
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
@@ -381,7 +410,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   };
   // The drawer closes and focus goes back to the row it opened from, or to the row a chain link
   // names: the sheet focuses it once its exit has ended, and the roving tabindex follows.
-  const returnRowId = useRef<string | undefined>(undefined);
   const closeDetails = (focusRowId = detailRowId) => {
     returnRowId.current = focusRowId;
     setDetailRowId(undefined);
@@ -522,6 +550,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 <GanttTreeHeaderCells
                   columns={columns}
                   cellLefts={cellLefts}
+                  stickyTree={stickyTree}
                   sort={sort}
                   onSortChange={setSort}
                 />
@@ -543,6 +572,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                       columns={columns}
                       gridTemplateColumns={gridTemplateColumns}
                       cellLefts={cellLefts}
+                      stickyTree={stickyTree}
                       rowIndex={index + 3}
                       setSize={siblings}
                       posInSet={row.index + 1}
