@@ -13,7 +13,8 @@ NorthMES serves its web app through one GraphQL endpoint, `/graphql`, inside the
 | Zod contracts for inputs | [0017][adr-0017] | accepted | none |
 | Principals, credentials, same-origin rules | [0011][adr-0011] | proposed | none |
 | Identity, roles, one plant per request | [0010][adr-0010] | accepted | product owner (who edits and assigns roles); maintainer (operator placeholder email) |
-| No integration REST API in release 1 | [0031][adr-0031] | proposed | product owner (field ownership, spread rule) |
+| ERP integration through connector modules (its "no integration REST API in release 1" no longer holds, see ADR 0073) | [0031][adr-0031] | proposed | product owner (field ownership, spread rule) |
+| One module contract for REST, WebMCP and later MCP; public REST with integration tokens and OAuth 2.1 in release 1, personal access tokens later | [0073][adr-0073] | accepted | maintainer (see the ADR's list) |
 | Pyramid file upload | [0032][adr-0032] | proposed | pilot IT (write method, Pyramid field meanings); product owner (fallback write path, plant moves) |
 | MCP endpoint and toolset | [0034][adr-0034] | accepted | maintainer (off by default per installation; personal access tokens before OAuth) |
 | AI chat route and tool runner | [0035][adr-0035] | accepted | lawyer (AI Act Article 50); maintainer (Google in release 1) |
@@ -40,6 +41,8 @@ Related plan documents: [02-architecture.md](02-architecture.md) (process roles 
 | `/api/v1/web/client-errors` | HTTP POST | session cookie, station cookie | shell and remotes | [0043][adr-0043] |
 | `/api/v1/ai/chat` | HTTP POST, streamed response | session cookie | AI chat panel | [0035][adr-0035] |
 | `/api/v1/station` | HTTP POST | station cookie | station sign-in and sign-out | [0033][adr-0033] |
+| `/api/v1/<module-id>/...` | HTTP, the public REST family | bearer only: integration token or an OAuth access token whose `aud` is `NORTHMES_PUBLIC_ORIGIN + '/api/v1'`; the web's JWT and cookies are refused | ERPs and other outside systems | [0073][adr-0073] |
+| `/api/v1/openapi.json` | HTTP GET | the web's JWT, and every credential the public REST family accepts: an integration token or an OAuth access token whose `aud` is `NORTHMES_PUBLIC_ORIGIN + '/api/v1'`; anonymous requests are refused | API clients and their tooling | [0073][adr-0073] |
 | `/api/v1/pyramid-connector/import-file` | HTTP POST, multipart | session cookie | company admin (Pyramid XML upload) | [0032][adr-0032] |
 | `/health`, `/health/live`, `/health/ready` | HTTP GET | none (routes marked `@Public`) | customer monitoring, release CI, System health | [0043][adr-0043] |
 | `/modules/<id>/<version>/` | static files, immutable caching | none | shell loading remotes | [0019][adr-0019] |
@@ -942,5 +945,6 @@ Further open questions are collected in [16-open-questions.md](16-open-questions
 [adr-0061]: ../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md
 [adr-0062]: ../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md
 [adr-0064]: ../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md
+[adr-0073]: ../adr/0073-one-module-contract-for-rest-webmcp-and-later-mcp-with-oauth-clients-and-tokens.md
 [adr-0066]: ../adr/0066-companies-created-by-the-cli-plant-slugs-unique-per-installation-company-settings-at-settings-and-an-onboarding-wizard-before-a-plant-opens.md
 [adr-0067]: ../adr/0067-plant-switcher-across-companies-nav-icons-by-lucide-name-and-a-top-bar-slot.md
