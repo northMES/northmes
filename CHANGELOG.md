@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.2.0](https://github.com/northMES/northmes/compare/v0.1.0...v0.2.0) (2026-10-17)
+
+
+### Features
+
+* **core:** accept integration tokens on the public REST API, with optional rate limits per credential ([#684](https://github.com/northMES/northmes/issues/684)) ([28b6cf0](https://github.com/northMES/northmes/commit/28b6cf06854ba8d6eab2a589826e57b91ed458b7))
+* **core:** create, list and revoke integration tokens ([#673](https://github.com/northMES/northmes/issues/673)) ([b02464b](https://github.com/northMES/northmes/commit/b02464bff7552d74f14c4baa49d5272b0028fb34))
+* **core:** serve article operations as public REST routes under /api/v1/core ([#671](https://github.com/northMES/northmes/issues/671)) ([6b4bf7e](https://github.com/northMES/northmes/commit/6b4bf7e4f916ca47f5f98caccdc1181f5f6b4810))
+* **planning:** cascade a move through the later operations of an order ([#696](https://github.com/northMES/northmes/issues/696)) ([13de319](https://github.com/northMES/northmes/commit/13de3191a48cd8d62f2f61ae0ed34d83de081a14))
+* **planning:** float, wait, the binding constraint and the critical chain as domain functions ([#694](https://github.com/northMES/northmes/issues/694)) ([93046ca](https://github.com/northMES/northmes/commit/93046cafe4108a43e65ea059cc98ace97d9f1f10))
+* **planning:** move a job order on the Gantt, with the cascade preview and the My draft drawer ([#701](https://github.com/northMES/northmes/issues/701)) ([d34d123](https://github.com/northMES/northmes/commit/d34d123495f205198a02e567f89d000f58befe80))
+* **planning:** order Gantt on mock data, blocks, links and markers ([#662](https://github.com/northMES/northmes/issues/662)) ([845b5cb](https://github.com/northMES/northmes/commit/845b5cb738f48bcd640ec1015fafbe51f385b1f4))
+* **planning:** order Gantt on mock data, Details, chain and workload ([#667](https://github.com/northMES/northmes/issues/667)) ([93fc400](https://github.com/northMES/northmes/commit/93fc40011df7b2fb807f08a2997c37d183c6c500))
+* **planning:** order Gantt on mock data, keyboard and the axe spec ([#664](https://github.com/northMES/northmes/issues/664)) ([8c1c202](https://github.com/northMES/northmes/commit/8c1c2020dfe02934a88b87bfd41c357a1a508859))
+* **planning:** order Gantt on mock data, search and tree ([#661](https://github.com/northMES/northmes/issues/661)) ([640ef9c](https://github.com/northMES/northmes/commit/640ef9ca395f4a97838e4f92c8919c03fc205c9f))
+* **planning:** the calendar kernel of the planning domain, windows and work over availability ([#692](https://github.com/northMES/northmes/issues/692)) ([3efbcdf](https://github.com/northMES/northmes/commit/3efbcdf618d20ebccd1a8da7d158030952f7f1d2))
+* **planning:** the Gantt's analysis from the domain functions, with g1.expected.json as the oracle ([#700](https://github.com/northMES/northmes/issues/700)) ([bad32c3](https://github.com/northMES/northmes/commit/bad32c3c4f9c4093fc25ab21df9c1fa5d8a047a1))
+* **planning:** the order Gantt as its own page, with time scrolling, page height and a Details drawer ([#680](https://github.com/northMES/northmes/issues/680)) ([fb9bd9a](https://github.com/northMES/northmes/commit/fb9bd9acf5e991ad766863636594000770f8f379))
+* **planning:** workload per bucket and the constraint list of a row as domain functions ([#698](https://github.com/northMES/northmes/issues/698)) ([e9ea615](https://github.com/northMES/northmes/commit/e9ea6157ea401a14af51e24610889090ccba87c1))
+
+
+### Bug Fixes
+
+* **core:** require a browser origin for password sign-in ([#645](https://github.com/northMES/northmes/issues/645)) ([600f21a](https://github.com/northMES/northmes/commit/600f21a28d4455833e84894ef9a02f19b6838fd7))
+* **dev:** start the server after a pretty-printed tsc build ([#677](https://github.com/northMES/northmes/issues/677)) ([8d19bf8](https://github.com/northMES/northmes/commit/8d19bf8d0def97f5c70cfb06979b0f5b4680d854))
+
 ## [0.1.0](https://github.com/northMES/northmes/compare/v0.0.1...v0.1.0) (2026-10-16)
 
 
