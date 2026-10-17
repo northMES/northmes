@@ -1,0 +1,158 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.7",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "backend",
+      "version": "0.1.0",
+      "purl": "pkg:npm/%40northmes/backend@0.1.0",
+      "bom-ref": "pkg:npm/%40northmes/backend@0.1.0",
+      "group": "@northmes",
+      "licenses": [
+        {
+          "license": {
+            "id": "AGPL-3.0-or-later"
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "nestjs-federation",
+      "version": "3.0.0",
+      "purl": "pkg:npm/%40graphql-yoga/nestjs-federation@3.0.0",
+      "bom-ref": "pkg:npm/%40graphql-yoga/nestjs-federation@3.0.0",
+      "group": "@graphql-yoga",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "gateway",
+      "version": "2.10.0",
+      "purl": "pkg:npm/%40apollo/gateway@2.10.0",
+      "bom-ref": "pkg:npm/%40apollo/gateway@2.10.0",
+      "group": "@apollo",
+      "licenses": [
+        {
+          "license": {
+            "id": "Elastic-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "exceljs",
+      "version": "4.4.0",
+      "purl": "pkg:npm/exceljs@4.4.0",
+      "bom-ref": "pkg:npm/exceljs@4.4.0",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "xlsx",
+      "version": "0.18.5",
+      "purl": "pkg:npm/xlsx@0.18.5",
+      "bom-ref": "pkg:npm/xlsx@0.18.5",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "node",
+      "version": "11.0.0",
+      "purl": "pkg:npm/%40sentry/node@11.0.0",
+      "bom-ref": "pkg:npm/%40sentry/node@11.0.0",
+      "group": "@sentry",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "core",
+      "version": "0.10.0",
+      "purl": "pkg:npm/%40mastra/core@0.10.0",
+      "bom-ref": "pkg:npm/%40mastra/core@0.10.0",
+      "group": "@mastra",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "cli",
+      "version": "1.4.0",
+      "purl": "pkg:npm/%40better-auth/cli@1.4.0",
+      "bom-ref": "pkg:npm/%40better-auth/cli@1.4.0",
+      "group": "@better-auth",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "react",
+      "version": "1.0.0",
+      "purl": "pkg:npm/%40base-ui-components/react@1.0.0",
+      "bom-ref": "pkg:npm/%40base-ui-components/react@1.0.0",
+      "group": "@base-ui-components",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "pkg:npm/%40northmes/backend@0.1.0",
+      "dependsOn": [
+        "pkg:npm/%40graphql-yoga/nestjs-federation@3.0.0",
+        "pkg:npm/%40apollo/gateway@2.10.0",
+        "pkg:npm/exceljs@4.4.0",
+        "pkg:npm/xlsx@0.18.5",
+        "pkg:npm/%40sentry/node@11.0.0",
+        "pkg:npm/%40mastra/core@0.10.0",
+        "pkg:npm/%40better-auth/cli@1.4.0",
+        "pkg:npm/%40base-ui-components/react@1.0.0"
+      ]
+    }
+  ]
+}

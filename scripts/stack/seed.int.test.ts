@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { randomUUIDv7 } from 'node:crypto';
-import { fromNewClient, hostFactory, queryAsCore } from '@northmes/backend/testing';
+import { fromBrowser, fromNewClient, hostFactory, queryAsCore } from '@northmes/backend/testing';
 import { createTestApp, gqlClient, query, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { devAdmin, devUsers, seed, seedCompany, seedPlants } from './seed.mjs';
@@ -31,7 +31,11 @@ describe('the seed', () => {
   async function tokenOf({ email, password }: { email: string; password: string }) {
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        ...fromNewClient(),
+      },
       body: JSON.stringify({ email, password }),
     });
     expect(signedIn.status).toBe(200);

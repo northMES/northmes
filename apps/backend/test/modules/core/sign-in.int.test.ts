@@ -14,6 +14,7 @@ import {
 } from '../../../src/modules/core/infrastructure/auth/auth-options.ts';
 import { BetterAuth } from '../../../src/modules/core/infrastructure/auth/better-auth.ts';
 import {
+  fromBrowser,
   fromNewClient,
   givenCompany,
   hostFactory,
@@ -70,7 +71,11 @@ describe('sign-in with Better Auth', () => {
 
     const response = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        ...fromNewClient(),
+      },
       body: JSON.stringify({ email: user.email, password: `${user.password}x` }),
     });
 
@@ -83,7 +88,11 @@ describe('sign-in with Better Auth', () => {
 
     const response = await fetch(`${url}/api/auth/sign-in/username`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        ...fromNewClient(),
+      },
       body: JSON.stringify({ username: user.username, password: user.password }),
     });
 
@@ -94,7 +103,11 @@ describe('sign-in with Better Auth', () => {
   it('E05-S05 sign-up is disabled', async () => {
     const response = await fetch(`${url}/api/auth/sign-up/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        ...fromNewClient(),
+      },
       body: JSON.stringify({
         email: 'new.user@example.invalid',
         password: 'a-long-enough-password',
@@ -147,7 +160,11 @@ describe('sign-in with Better Auth', () => {
     const { user, plant } = await reader();
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        ...fromNewClient(),
+      },
       body: JSON.stringify({ email: user.email, password: user.password }),
     });
 
@@ -165,7 +182,11 @@ describe('sign-in with Better Auth', () => {
   async function sessionTokenOf(user: { email: string; password: string }) {
     const signedIn = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...fromNewClient() },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        ...fromNewClient(),
+      },
       body: JSON.stringify({ email: user.email, password: user.password }),
     });
     return signedIn.headers.get('set-auth-token') ?? '';
@@ -188,7 +209,11 @@ describe('sign-in with Better Auth', () => {
 
     const renamed = await fetch(`${url}/api/auth/update-user`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${sessionToken}` },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        authorization: `Bearer ${sessionToken}`,
+      },
       body: JSON.stringify({ username: `${user.username}_renamed` }),
     });
 
@@ -286,7 +311,11 @@ describe('sign-in with Better Auth', () => {
     const before = await send();
     const signedOut = await fetch(`${url}/api/auth/sign-out`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${sessionToken}` },
+      headers: {
+        'content-type': 'application/json',
+        ...fromBrowser(testApp.app),
+        authorization: `Bearer ${sessionToken}`,
+      },
       body: '{}',
     });
     const after = await send();
@@ -359,6 +388,133 @@ describe('sign-in with Better Auth', () => {
     expect(signedIn.headers.get('access-control-allow-credentials')).toBeNull();
   });
 
+  /** The failed sign-ins in a row that the lockout holds for an email, 0 without a row. */
+  async function failuresOf(email: string) {
+    const [row] = await queryAsCore<{ count: number }>(
+      db.ownerUrl,
+      'select count from auth."signInFailure" where key = $1',
+      [email.toLowerCase()],
+    );
+    return row?.count ?? 0;
+  }
+
+  /** A sign-in on /api/auth/sign-in/email with the headers given. */
+  function signInWith(headers: Record<string, string>, email: string, password: string) {
+    return fetch(`${url}/api/auth/sign-in/email`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', ...headers },
+      body: JSON.stringify({ email, password }),
+    });
+  }
+
+  /** The masked refusal of a request that no NorthMES web origin sent. */
+  const originRefusal = (errorCode: string) => ({
+    statusCode: 403,
+    errorCode,
+    message: expect.any(String),
+    correlationId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+  });
+
+  it('E05-S05 a sign-in without an Origin header is refused with 403 core.origin_required before Better Auth reads it, so it counts toward neither the throttle nor the lockout', async () => {
+    const { user } = await reader();
+    const client = fromNewClient();
+    const browser = { ...client, ...fromBrowser(testApp.app) };
+    await signInWith(browser, user.email, `${user.password}x`);
+    const before = await failuresOf(user.email);
+
+    const refused = [];
+    for (let attempt = 0; attempt < SIGN_IN_LOCKOUT_FAILURES; attempt += 1) {
+      refused.push(await signInWith(client, user.email, `${user.password}x`));
+    }
+    const bodies = await Promise.all(refused.map((response) => response.json()));
+    const after = await failuresOf(user.email);
+    const signedIn = await signInWith(browser, user.email, user.password);
+
+    expect(refused.map(({ status }) => status)).toEqual(
+      Array.from({ length: SIGN_IN_LOCKOUT_FAILURES }, () => 403),
+    );
+    expect(bodies).toEqual(bodies.map(() => originRefusal('core.origin_required')));
+    expect(refused[0]?.headers.get('set-auth-token')).toBeNull();
+    expect(before).toBe(1);
+    expect(after).toBe(1);
+    expect(signedIn.status).toBe(200);
+  });
+
+  it('E05-S05 a sign-in from an origin that webOrigins does not list is refused with 403 core.origin_forbidden and counts toward no lockout', async () => {
+    const { user } = await reader();
+
+    const refused = await signInWith(
+      { origin: 'https://intranet.example.com', ...fromNewClient() },
+      user.email,
+      `${user.password}x`,
+    );
+
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toEqual(originRefusal('core.origin_forbidden'));
+    expect(await failuresOf(user.email)).toBe(0);
+  });
+
+  it('E05-S05 a sign-in from NORTHMES_PUBLIC_ORIGIN or from a web origin succeeds', async () => {
+    const { user } = await reader();
+
+    const fromPublic = await signInWith(
+      { ...fromBrowser(testApp.app), ...fromNewClient() },
+      user.email,
+      user.password,
+    );
+    const fromWeb = await signInWith(
+      { origin: webOrigin, ...fromNewClient() },
+      user.email,
+      user.password,
+    );
+
+    expect(fromPublic.status).toBe(200);
+    expect(fromPublic.headers.get('set-auth-token')).toBeTruthy();
+    expect(fromWeb.status).toBe(200);
+    expect(fromWeb.headers.get('set-auth-token')).toBeTruthy();
+  });
+
+  it('E05-S05 sign-out and the new password step without an Origin header are refused with 403 core.origin_required', async () => {
+    const { user } = await reader();
+    const sessionToken = await sessionTokenOf(user);
+
+    const signedOut = await fetch(`${url}/api/auth/sign-out`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${sessionToken}` },
+      body: '{}',
+    });
+    const newPassword = await fetch(`${url}${NEW_PASSWORD_PATH}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: user.authorization },
+      body: JSON.stringify({ currentPassword: user.password, newPassword: 'a new password' }),
+    });
+
+    expect(signedOut.status).toBe(403);
+    expect(await signedOut.json()).toEqual(originRefusal('core.origin_required'));
+    expect(newPassword.status).toBe(403);
+    expect(await newPassword.json()).toEqual(originRefusal('core.origin_required'));
+  });
+
+  it('E05-S05 /api/auth/token mints a JWT on a GET without Origin, as a browser sends one from its own origin, and refuses a cross-site GET that names no web origin', async () => {
+    const { user } = await reader();
+    const sessionToken = await sessionTokenOf(user);
+    const mint = (headers: Record<string, string>) =>
+      fetch(`${url}/api/auth/token`, {
+        headers: { authorization: `Bearer ${sessionToken}`, ...headers },
+      });
+
+    const sameOrigin = await mint({ 'sec-fetch-site': 'same-origin' });
+    const withoutFetchMetadata = await mint({});
+    const crossSite = await mint({ 'sec-fetch-site': 'cross-site' });
+    const crossSiteFromWeb = await mint({ 'sec-fetch-site': 'cross-site', origin: webOrigin });
+
+    expect(sameOrigin.status).toBe(200);
+    expect(withoutFetchMetadata.status).toBe(200);
+    expect(crossSite.status).toBe(403);
+    expect(await crossSite.json()).toEqual(originRefusal('core.origin_required'));
+    expect(crossSiteFromWeb.status).toBe(200);
+  });
+
   /**
    * A user that a company's user admin created with coreCreateUser, with the temporary password
    * from its answer, and the slug of the company's plant.
@@ -402,7 +558,7 @@ describe('sign-in with Better Auth', () => {
   function setNewPassword(authorization: string, currentPassword: string, newPassword: string) {
     return fetch(`${url}${NEW_PASSWORD_PATH}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', authorization },
+      headers: { 'content-type': 'application/json', ...fromBrowser(testApp.app), authorization },
       body: JSON.stringify({ currentPassword, newPassword }),
     });
   }
@@ -497,7 +653,7 @@ describe('sign-in with Better Auth', () => {
   ) {
     return fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', ...client },
+      headers: { 'content-type': 'application/json', ...fromBrowser(testApp.app), ...client },
       body: JSON.stringify({ email, password }),
     });
   }
@@ -645,7 +801,11 @@ describe('sign-in without a trusted proxy', () => {
     for (let attempt = 0; attempt < 4; attempt += 1) {
       const response = await fetch(`${url}/api/auth/sign-in/email`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', ...fromNewClient() },
+        headers: {
+          'content-type': 'application/json',
+          ...fromBrowser(testApp.app),
+          ...fromNewClient(),
+        },
         body: JSON.stringify({
           email: `nobody_${randomUUIDv7().slice(-12)}@example.test`,
           password: 'a wrong password',
