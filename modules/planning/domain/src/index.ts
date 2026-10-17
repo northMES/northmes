@@ -39,6 +39,7 @@ export {
   type MoveReason,
   type MoveRefusal,
   type PlacedMove,
+  placeUnderRelease,
 } from './cascade.ts';
 export {
   type ConstraintCode,
@@ -101,6 +102,16 @@ export {
   rowsOfOperation,
 } from './plan-context.ts';
 export { lastPieceMinEnd, type Release, releaseOf } from './release.ts';
+export {
+  combineIntoRun,
+  type EarlyOrder,
+  type Run,
+  type RunRefusal,
+  type RunResult,
+  type SavedSetup,
+  type SplitResult,
+  splitRun,
+} from './run.ts';
 export {
   type Bucket,
   isoWeekBuckets,
