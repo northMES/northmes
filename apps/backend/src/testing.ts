@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { randomBytes, randomUUIDv7 } from 'node:crypto';
-import type { INestApplication } from '@nestjs/common';
+import { type INestApplication, Inject, Injectable, type Type } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { NestFactory } from '@nestjs/core';
+import { ModuleRef, NestFactory } from '@nestjs/core';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import type { ModuleManifest } from '@northmes/sdk';
 import type { HostFactory } from '@northmes/testing';
@@ -11,9 +11,14 @@ import { Client, Pool, type PoolClient } from 'pg';
 import { AppModule } from './app.module.ts';
 import { importServers, inRepoCatalog } from './boot/boot.ts';
 import { type CatalogEntry, checkCatalog } from './catalog/check-catalog.ts';
+import {
+  PublicApiCredentials,
+  type PublicApiRequest,
+} from './http/public-api/public-api-credentials.ts';
 import { migrate } from './migrate/runner.ts';
 import { AuthService } from './modules/core/core/access/auth.service.ts';
-import { PLANT_HEADER } from './principal.ts';
+import { PrincipalService } from './modules/core/core/access/principal.service.ts';
+import { PLANT_HEADER, type Principal } from './principal.ts';
 import { imageVersion } from './version.ts';
 import { pluginWebParts } from './web/plugin-web.ts';
 import { builtShellDir } from './web/static-mounts.ts';
@@ -29,6 +34,61 @@ import { serveWeb } from './web/web.module.ts';
  * it.
  */
 export const hostFactory: HostFactory = createHostFactory();
+
+/**
+ * The holders of the test credentials of the public API that givenPublicApiToken handed out in this
+ * process, by token.
+ */
+const publicApiTokens = new Map<string, { readonly userId: string; readonly companyId: string }>();
+
+/**
+ * Hands out a test credential of the public API for a user that a test wrote, such as one from
+ * givenUser, belonging to the company `companyId`, and returns its Authorization header. Only an app
+ * of hostFactoryWithPublicApi accepts it, until the integration tokens of ADR 0073 arrive.
+ */
+export function givenPublicApiToken({
+  userId,
+  companyId,
+}: {
+  readonly userId: string;
+  readonly companyId: string;
+}): string {
+  const token = `nms_test_${randomBytes(16).toString('hex')}`;
+  publicApiTokens.set(token, { userId, companyId });
+  return `Bearer ${token}`;
+}
+
+/**
+ * The public family's credential guard in tests (ADR 0073): it accepts the tokens of
+ * givenPublicApiToken and nothing else, the web's JWT included. A token acts as its user, with the
+ * user's role assignments, at the plant the request names or else at the token's company; a plant
+ * the user cannot open throws core.plant_forbidden, as PrincipalService does for the web.
+ */
+@Injectable()
+class TestPublicApiCredentials extends PublicApiCredentials {
+  constructor(@Inject(ModuleRef) private readonly moduleRef: ModuleRef) {
+    super();
+  }
+
+  async resolve({ headers, plant }: PublicApiRequest): Promise<Principal | null> {
+    const token = /^Bearer\s+(\S+)$/i.exec(headers.get('authorization') ?? '')?.[1];
+    const holder = token === undefined ? undefined : publicApiTokens.get(token);
+    if (!holder) return null;
+    const principals = this.moduleRef.get(PrincipalService, { strict: false });
+    const principal = await principals.forUser(holder.userId, plant);
+    return plant === undefined ? { ...principal, companyId: holder.companyId } : principal;
+  }
+}
+
+/**
+ * The host factory of hostFactory, whose public API accepts the test credentials of
+ * givenPublicApiToken in place of the integration tokens that do not exist yet.
+ */
+export const hostFactoryWithPublicApi: HostFactory = createHostFactory(
+  builtShellDir,
+  [],
+  TestPublicApiCredentials,
+);
 
 /** The host factory of hostFactory, whose app serves the web app built into shellDir. */
 export function hostFactoryWithShell(shellDir: string): HostFactory {
@@ -81,17 +141,23 @@ export async function migratePlugins(
 
 /**
  * Builds the app of hostFactory and serves the web app as boot does: the one apps/web builds, or
- * the one in shellDir when it is given. `plugins` load after the in-repo modules.
+ * the one in shellDir when it is given. `plugins` load after the in-repo modules, and
+ * `publicApiCredentials` is the public API's credential guard, which refuses every request without
+ * it.
  */
 function createHostFactory(
   shellDir = builtShellDir,
   plugins: readonly SourcePlugin[] = [],
+  publicApiCredentials?: Type<PublicApiCredentials>,
 ): HostFactory {
   return async ({ modules, config, webOrigins }) => {
     const catalog = catalogWith(plugins, modules);
     const servers = await importServers(catalog);
     const app = await NestFactory.create<NestExpressApplication>(
-      AppModule.forRoot(config, servers, { webOrigins }),
+      AppModule.forRoot(config, servers, {
+        webOrigins,
+        ...(publicApiCredentials ? { publicApiCredentials } : {}),
+      }),
       {
         logger: ['error', 'warn'],
         abortOnError: false,

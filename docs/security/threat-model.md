@@ -70,6 +70,7 @@ Each entry point, the conduit it sits on and the credential it accepts. A surfac
 | Web app: the shell and its static files | built | C1 | none to load; a strict CSP |
 | GraphQL over HTTP, `/graphql` | built | C1 | a five-minute EdDSA JWT as a bearer token (ADR 0070) |
 | REST: Better Auth at `/api/auth/*`, `/api/account/password`, later `/api/v1/*` | built (auth and password), later (`/api/v1`) | C1 | the session token (bearer) for auth, the JWT for the rest, and a NorthMES web origin on every POST to auth and password; integration tokens later (ADR 0064) |
+| Public REST, `/api/v1/<module>/...`: core's article routes, built from the operation declarations by `toRestRoutes` | built, refusing every request | C1, C5 | none accepted yet: `PublicApiCredentials` is the seam for integration tokens and OAuth access tokens (ADR 0073); the web's JWT and cookies are refused |
 | WebSocket: graphql-ws on `/graphql` | built, latent (no Subscription field yet) | C1 | the JWT, checked at subscribe time |
 | MCP, `/mcp` | later (ADR 0034, ADR 0073) | C1 | bearer JWT or personal access token |
 | CLI: `northmes admin`, `db bootstrap`, `migrate` | built | C3 | shell access to the host and the role passwords in `secrets/` |
@@ -139,7 +140,7 @@ Each table lists the threats that matter at that conduit, not every STRIDE lette
 |---|---|---|---|
 | A forged or malformed ERP file changes orders | T | The upload needs a signed-in user with the permission; the file passes a Zod contract; imported rows are records, not code | decided (ADR 0031, ADR 0032) |
 | A connector run acts with more rights than it needs | E | A `system` principal per connector, with its own permissions and audit rows | decided (ADR 0011, ADR 0013) |
-| A public route accepts the wrong credential | S | Integration tokens bound to one scope node, cookies ignored, limits per token | decided (ADR 0064), with the first public route |
+| A public route accepts the wrong credential, or none | S, E | Every route that `toRestRoutes` builds hands its call to `PublicApiRunner`, which resolves the principal only through `PublicApiCredentials`, the public family's credential guard, and never through the web's `PrincipalResolver`; `PrincipalGuard` passes only handlers that carry `PublicApiOperation` in a public `ApiController`, so a hand-written public controller still needs the web's JWT. Until the integration token guard lands, the server's `RefusingPublicApiCredentials` accepts no credential, and every public route answers 401 `core.unauthenticated`, the web's JWT included (`apps/backend/test/rest/v1-articles.int.test.ts`). Integration tokens bound to one scope node, cookies ignored and limits per token come with the guard | built (refusal), decided (ADR 0064, ADR 0073) for the tokens |
 | A machine protocol (OPC UA, MQTT) is spoofed | S, T | Security mode, credentials and access lists in each integration's ADR before code | decided (ADR 0076 rule 4) |
 
 ### Operator station (later, on C1)
