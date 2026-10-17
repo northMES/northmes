@@ -105,6 +105,7 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | stock balance | The quantity of an article in a warehouse at a point in time. Pyramid sends it as `StockQuantity`. | inventory |
 | planned movement | A dated future change to an article's stock in a warehouse: a purchase, a purchase requisition, a consumption, an output, a customer demand or a transfer. Pyramid sends them as stock rows of type I, A, T, R, O, M and N. | transaction |
 | proposal | A set of suggested job order moves that an AI agent writes for one planner, who alone can accept them into a draft. | suggestion, AI plan |
+| run | Two or more production orders of one article at one plant that a planner has combined to plan together: each later order's job orders follow the earlier order's on one machine without a second setup, and the run is due at the earliest deadline of its orders. Each order keeps its own job orders, quantity, demand rows and progress; splitting the run separates them again. | campaign, merged order, batch |
 | planning board (Board) | The screen with one row per machine and job orders as blocks along a time axis. | Gantt (a project Gantt has one task per row) |
 | block | A job order as drawn on the planning board. | bar, card |
 | job order table view | The table of job orders with the same filters and actions as the board. | list view |
