@@ -215,6 +215,38 @@ describe('the rate limits of the public API', () => {
     expect(keys.map(({ key }) => key)).toEqual([kept.id]);
     expect(await statuses([await write(url, authorization)])).toEqual([201]);
   });
+
+  it('ADR0073-W4 nm_app reaches core.rate_limit only through its definer functions, which pin their search_path', async () => {
+    const asApp = (statement: string) =>
+      db.command(
+        { principal: { type: 'user', id: 'adr0073-w4' }, scopes: [], reason: 'probe' },
+        (tx) => tx.query(statement),
+      );
+
+    await expect(asApp('select * from core.rate_limit')).rejects.toMatchObject({ code: '42501' });
+    await expect(
+      asApp(
+        `insert into core.rate_limit (key, throttler, hits, window_ends_at)
+         values ('k', 'writes', 0, now())`,
+      ),
+    ).rejects.toMatchObject({ code: '42501' });
+    const functions = await queryAsCore<{ name: string; prosecdef: boolean; proconfig: string[] }>(
+      db.ownerUrl,
+      `select proname as name, prosecdef, proconfig from pg_proc
+        where pronamespace = 'core'::regnamespace and proname like 'rate_limit%'
+        order by proname`,
+    );
+    const [table] = await queryAsCore<{ relrowsecurity: boolean }>(
+      db.ownerUrl,
+      `select relrowsecurity from pg_class where oid = 'core.rate_limit'::regclass`,
+    );
+
+    expect(functions).toEqual([
+      { name: 'rate_limit_hit', prosecdef: true, proconfig: ['search_path=pg_catalog, pg_temp'] },
+      { name: 'rate_limit_prune', prosecdef: true, proconfig: ['search_path=pg_catalog, pg_temp'] },
+    ]);
+    expect(table).toEqual({ relrowsecurity: true });
+  });
 });
 
 /** fn's promise, made on the first call and shared by every later one. */
