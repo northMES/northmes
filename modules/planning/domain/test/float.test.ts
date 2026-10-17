@@ -22,7 +22,12 @@ function orderOf(number: string, from: PlanContext = context): PlanOrder {
 function expectedFloat(displayNumber: string) {
   const values = g1Expected.GT1_GT2_floats[displayNumber];
   if (values === undefined) throw new Error(`no expected float for ${displayNumber}`);
-  const { detail: _detail, ...binding } = values.bindingConstraint;
+  const { detail: _detail, ...named } = values.bindingConstraint;
+  // The fixture names the binding row by display number; the domain adds its job order id.
+  const binding =
+    named.boundBy === undefined
+      ? named
+      : { ...named, boundByJobOrderId: `jo-${named.boundBy.replace('.', '-')}` };
   return {
     earliestStartMs: Date.parse(values.earliestStart.instant),
     waitWorkingS: values.waitWorkingS,

@@ -10,6 +10,8 @@ import {
 } from '../src/index.ts';
 
 const context = g1PlanContext();
+const thuAt = (hour: number, minute = 0) => Date.UTC(2026, 10, 5, hour, minute);
+const friAt = (hour: number, minute = 0) => Date.UTC(2026, 10, 6, hour, minute);
 
 function orderOf(number: string, from: PlanContext = context): PlanOrder {
   const found = from.orders.find((each) => each.number === number);
@@ -169,6 +171,67 @@ describe('criticalChain (plan 18, Float and the critical chain)', () => {
         { row: '1001.10', kind: 'frozenWindow', root: true },
       ],
     );
+  });
+
+  it('follows a split operation by job order id: the release names the latest-ending row, the machine its sibling', () => {
+    // 1004.10 split into two rows of 600 on CNC1, back to back, no send-ahead: 1004.20 is released
+    // by the second row, which starts when the first ends, and the first is the free root.
+    const order = orderOf('1004');
+    const turn = order.jobOrders.find((row) => row.displayNumber === '1004.10');
+    if (turn === undefined) throw new Error('no 1004.10');
+    const first = { ...turn, id: 'jo-1004-10a', quantity: 600, plannedRunS: 18_000 };
+    const second = {
+      ...first,
+      id: 'jo-1004-10b',
+      placement: { setupStartMs: thuAt(11, 15), runStartMs: thuAt(11, 45), endMs: friAt(8) },
+    };
+    const mill = order.jobOrders.find((row) => row.displayNumber === '1004.20');
+    if (mill === undefined) throw new Error('no 1004.20');
+    const split: PlanOrder = {
+      ...order,
+      operations: order.operations.map((operation) =>
+        operation.displayNumber === '1004.10' ? { ...operation, sendAheadQuantity: 0 } : operation,
+      ),
+      jobOrders: [
+        {
+          ...first,
+          placement: { setupStartMs: thuAt(5), runStartMs: thuAt(5, 30), endMs: thuAt(11, 15) },
+        },
+        second,
+        {
+          ...mill,
+          placement: {
+            setupStartMs: friAt(8, 30),
+            runStartMs: friAt(8, 30),
+            endMs: Date.UTC(2026, 10, 9, 6, 40),
+          },
+        },
+      ],
+    };
+    const chain = criticalChain(split, withOrder(split));
+
+    expect(
+      chain.rows.map(({ row, jobOrderId, binding, root }) => ({ row, jobOrderId, binding, root })),
+    ).toEqual([
+      {
+        row: '1004.20',
+        jobOrderId: 'jo-1004-20',
+        binding: { kind: 'release', boundBy: '1004.10', boundByJobOrderId: 'jo-1004-10b' },
+        root: false,
+      },
+      {
+        row: '1004.10',
+        jobOrderId: 'jo-1004-10b',
+        binding: {
+          kind: 'machine',
+          boundBy: '1004.10',
+          boundByJobOrderId: 'jo-1004-10a',
+          equipment: 'CNC1',
+        },
+        root: false,
+      },
+      { row: '1004.10', jobOrderId: 'jo-1004-10a', binding: { kind: 'free' }, root: true },
+    ]);
   });
 
   it('a chain longer than 20 rows ends with "chain continues"', () => {

@@ -26,7 +26,8 @@ function resultsUnder(timeZone: string): string {
   const child = spawnSync(process.execPath, ['--input-type=module', '--eval', script], {
     cwd: packageRoot,
     encoding: 'utf8',
-    env: { ...process.env, TZ: timeZone },
+    // The child needs the zone alone: the domain reads no environment (ADR 0057).
+    env: { TZ: timeZone },
   });
   expect(child.status, child.stderr).toBe(0);
   return child.stdout;

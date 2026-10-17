@@ -65,13 +65,13 @@ export function bindingText(binding: BindingConstraint): string {
   }
 }
 
-/** The order of a row in the loaded plan, by the row's display number. */
+/** The order of a row in the loaded plan, by job order id: the rows of a split operation share a display number. */
 function orderOfRow(
   context: PlanContext,
-  displayNumber: string,
+  jobOrderId: string,
 ): { order: PlanOrder; row: PlanJobOrder } | undefined {
   for (const order of context.orders) {
-    const row = order.jobOrders.find((each) => each.displayNumber === displayNumber);
+    const row = order.jobOrders.find((each) => each.id === jobOrderId);
     if (row !== undefined) return { order, row };
   }
   return undefined;
@@ -111,9 +111,9 @@ export function criticalChain(order: PlanOrder, context: PlanContext): ChainResu
     const binding = values.binding;
     const next =
       binding.kind === 'release' || binding.kind === 'machine'
-        ? binding.boundBy === undefined
+        ? binding.boundByJobOrderId === undefined
           ? undefined
-          : orderOfRow(context, binding.boundBy)
+          : orderOfRow(context, binding.boundByJobOrderId)
         : undefined;
     const root = next === undefined;
     if (rows.length >= chainRowLimit) {

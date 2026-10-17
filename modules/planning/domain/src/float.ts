@@ -38,6 +38,8 @@ export interface BindingConstraint {
   readonly kind: BindingConstraintKind;
   /** The row that binds it, by display number: the predecessor of a release, the reservation of a machine. */
   readonly boundBy?: string;
+  /** The same row by job order id, which the chain follows, because the rows of a split operation share a display number. */
+  readonly boundByJobOrderId?: string;
   readonly equipment?: string;
 }
 
@@ -165,8 +167,8 @@ function bindingOf(
     const releaseStart = nextWorkingInstant(windows, release.atMs);
     if (bound === release.atMs || bound === releaseStart) {
       return releaseStart === release.atMs || bound === release.atMs
-        ? { kind: 'release', boundBy: release.fromRow }
-        : { kind: 'calendar', boundBy: release.fromRow };
+        ? { kind: 'release', boundBy: release.fromRow, boundByJobOrderId: release.fromJobOrderId }
+        : { kind: 'calendar', boundBy: release.fromRow, boundByJobOrderId: release.fromJobOrderId };
     }
   }
   const step = context.snapStepMs ?? 0;
@@ -181,6 +183,7 @@ function bindingOf(
         return {
           kind: 'machine',
           boundBy: reservation.row.displayNumber,
+          boundByJobOrderId: reservation.row.id,
           equipment: row.equipment,
         };
       }
