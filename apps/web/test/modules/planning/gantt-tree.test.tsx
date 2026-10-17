@@ -82,7 +82,7 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     expect(rowsAtLevel(gantt, 3)).toHaveLength(8);
   });
 
-  it('GT1 shows the default tree columns and the Columns menu hides one', async () => {
+  it('GT1 shows the default tree columns and the Columns menu shows and hides one', async () => {
     renderBoardRoute({ view: 'gantt', zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
@@ -90,16 +90,17 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
       within(gantt)
         .getAllByRole('columnheader')
         .map((cell) => cell.getAttribute('aria-label') ?? cell.textContent),
-    ).toEqual(['Name', 'Machine', 'Start', 'End', 'Deadline', 'Late by', 'Float', 'Time']);
+    ).toEqual(['Name', 'Deadline', 'Float', 'Time']);
     const order1003 = within(gantt).getByRole('row', { name: /^1003 / });
-    const cells = within(order1003).getAllByRole('gridcell');
-    expect(cells[3]?.textContent).toBe('Wed 4 Nov 15:00');
-    expect(cells[4]?.textContent).toBe('15 h 15 min');
+    expect(within(order1003).getAllByRole('gridcell')[0]?.textContent).toBe('Wed 4 Nov 15:00');
 
     await userEvent.click(screen.getByRole('button', { name: 'Columns' }));
-    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Machine' }));
+    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Late by' }));
 
-    expect(within(gantt).queryByRole('columnheader', { name: 'Machine' })).toBeNull();
+    expect(within(gantt).getByRole('columnheader', { name: 'Late by' })).toBeTruthy();
+    expect(within(order1003).getAllByRole('gridcell')[1]?.textContent).toBe('15 h 15 min');
+    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Deadline' }));
+    expect(within(gantt).queryByRole('columnheader', { name: 'Deadline' })).toBeNull();
   });
 
   it('GT1 shows the Not placed row with no job order and an operation says how many it misses when one is unplaced', async () => {

@@ -327,7 +327,7 @@ export function GanttTreeHeaderCells({
 }) {
   return (
     <>
-      {columns.map((column) => {
+      {columns.map((column, index) => {
         const sorted = sort?.id === column.id ? (sort.desc ? 'desc' : 'asc') : undefined;
         const SortIcon = sorted === 'asc' ? ArrowUp : sorted === 'desc' ? ArrowDown : ArrowUpDown;
         return (
@@ -339,6 +339,7 @@ export function GanttTreeHeaderCells({
             }
             className={cn(
               'flex items-center border-e border-border px-2 text-xs font-semibold text-muted-foreground',
+              index === 0 && 'sticky start-0 z-10 bg-muted',
               column.numeric && 'justify-end',
             )}
           >
@@ -444,7 +445,7 @@ export function GanttRowHeader({
       )}
       <span className="grid min-w-0 leading-4">
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate font-mono text-[0.8125rem] font-semibold">{title}</span>
+          <span className="shrink-0 font-mono text-[0.8125rem] font-semibold">{title}</span>
           {badges}
         </span>
         <span className="truncate text-xs text-muted-foreground">{subtext}</span>

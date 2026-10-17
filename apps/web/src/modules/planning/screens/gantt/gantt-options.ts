@@ -18,10 +18,18 @@ export interface GanttOptions {
 
 const storageKey = 'northmes.planning.gantt.options';
 
-/** The columns hidden by default: the seven of plan 18 show, the rest sit in the Columns menu. */
+/**
+ * The columns hidden by default: Name, Deadline and Float show, as the D5 frames draw them (the
+ * row names already carry the machine and the span, and Late by sits in the Name cell); the rest
+ * sit in the Columns menu.
+ */
 export const defaultHiddenColumns: readonly string[] = [
+  'machine',
   'quantity',
+  'start',
+  'end',
   'workingTime',
+  'lateBy',
   'status',
   'lock',
 ];

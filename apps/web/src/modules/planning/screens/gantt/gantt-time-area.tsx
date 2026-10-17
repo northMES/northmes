@@ -22,6 +22,15 @@ export function GanttTimeHeader({
   const { timeZone } = useGanttView();
   const ticks = scale.ticks();
   const nowVisible = nowMs >= scale.range.fromMs && nowMs < scale.range.toMs;
+  // Hour labels keep their minutes while the ticks are at least 48 px apart; closer, they show the
+  // hour alone, as the Week preset of D3 does.
+  const bottom = ticks.filter((tick) => tick.tier === 'bottom');
+  const spacing =
+    bottom.length > 1 ? (bottom[1]?.x ?? 0) - (bottom[0]?.x ?? 0) : Number.POSITIVE_INFINITY;
+  const label = (tick: (typeof ticks)[number]) =>
+    tick.tier === 'bottom' && spacing < 48 && /^\d{2}:00$/.test(tick.label)
+      ? tick.label.slice(0, 2)
+      : tick.label;
   return (
     <div
       role="columnheader"
@@ -41,7 +50,7 @@ export function GanttTimeHeader({
           )}
           style={{ left: `${tick.x}px` }}
         >
-          {tick.label}
+          {label(tick)}
         </div>
       ))}
       {scale.gaps.map((gap) => (

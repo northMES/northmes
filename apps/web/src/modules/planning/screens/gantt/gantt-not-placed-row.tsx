@@ -21,12 +21,12 @@ export function GanttNotPlacedRow({
     <div
       role="row"
       aria-rowindex={2}
-      className="grid h-8 border-b border-border bg-lane-alt"
+      className="sticky top-12 z-10 grid h-8 border-b border-border bg-lane-alt"
       style={{ gridTemplateColumns }}
     >
       <div
         role="rowheader"
-        className="flex items-center border-e border-border px-2 text-xs font-medium"
+        className="sticky start-0 z-10 flex items-center border-e border-border bg-lane-alt px-2 text-xs font-medium"
         style={{ gridColumn: `span ${columnCount}` }}
       >
         Not placed

@@ -145,13 +145,14 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
 
   const rows = useMemo(() => (snapshot === undefined ? [] : buildGanttRows(snapshot)), [snapshot]);
   const columns = useMemo(() => visibleColumns(options.hiddenColumns), [options.hiddenColumns]);
-  const treeWidth = Math.min(
-    columns.reduce((sum, column) => sum + column.widthPx, 0),
-    Math.floor(width * treePaneShare),
-  );
+  // The tree pane takes its columns' widths up to 40 percent of the view; the Name column gives
+  // way first. Columns beyond the cap keep their width and the grid scrolls sideways under the
+  // sticky Name column, so the time area keeps at least 60 percent of the view.
+  const cap = Math.floor(width * treePaneShare);
   const fixedWidth = columns.slice(1).reduce((sum, column) => sum + column.widthPx, 0);
-  const nameWidth = Math.max(160, treeWidth - fixedWidth);
-  const timeWidth = Math.max(200, width - nameWidth - fixedWidth);
+  const nameWidth = Math.max(160, Math.min(columns[0]?.widthPx ?? 300, cap - fixedWidth));
+  const treeWidth = Math.min(nameWidth + fixedWidth, cap);
+  const timeWidth = Math.max(480, width - treeWidth);
   const gridTemplateColumns = [
     `${nameWidth}px`,
     ...columns.slice(1).map((column) => `${column.widthPx}px`),
@@ -276,12 +277,12 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             aria-label={gridName}
             aria-rowcount={rowCount}
             aria-busy={state.status === 'loading' || undefined}
-            className="overflow-hidden rounded-lg border border-border bg-card text-sm"
+            className="max-h-[75vh] overflow-auto rounded-lg border border-border bg-card text-sm"
           >
             <div
               role="row"
               aria-rowindex={1}
-              className="grid border-b border-border bg-muted"
+              className="sticky top-0 z-20 grid border-b border-border bg-muted"
               style={{ gridTemplateColumns, height: `${timeHeaderHeightRem}rem` }}
             >
               <GanttTreeHeaderCells columns={columns} sort={sort} onSortChange={setSort} />
@@ -292,7 +293,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               gridTemplateColumns={gridTemplateColumns}
               columnCount={columns.length}
             />
-            <div className="max-h-[70vh] overflow-y-auto">
+            <div>
               {flatRows.map((row, index) => {
                 const parent = row.getParentRow();
                 const siblings = parent === undefined ? rows.length : parent.subRows.length;

@@ -93,7 +93,10 @@ export function GanttRowView({
             key={column.id}
             role="rowheader"
             className={cn(
-              'flex min-w-0 items-center gap-1.5 overflow-hidden border-e border-border pe-2',
+              'sticky start-0 z-10 flex min-w-0 items-center gap-1.5 overflow-hidden border-e border-border pe-2',
+              original.kind === 'order' && 'bg-muted',
+              original.kind === 'operation' && 'bg-lane-alt',
+              original.kind === 'jobOrder' && 'bg-lane',
               selected && 'shadow-[inset_3px_0_0_var(--foreground)]',
             )}
             style={{ paddingInlineStart: `${0.5 + (level - 1)}rem` }}
