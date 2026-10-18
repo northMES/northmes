@@ -129,6 +129,7 @@ export const shellModules: readonly ShellModule[] = [
     links: [
       { label: 'Planning board', icon: 'ChartGantt', link: planningLinks.board },
       { label: 'Gantt', icon: 'ChartNoAxesGantt', link: planningLinks.gantt },
+      { label: 'Job orders', icon: 'Table', link: planningLinks.jobOrders },
     ],
   },
 ];

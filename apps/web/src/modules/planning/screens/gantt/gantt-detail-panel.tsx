@@ -15,6 +15,7 @@ import {
 } from '../../../../ui/primitives/sheet.tsx';
 import { bindingSentence } from '../../gantt-analysis.ts';
 import type { ConstraintLine } from '../../gantt-data.ts';
+import { phase1Reason, planReason } from '../../mock-reasons.ts';
 import { durationsOf, releaseText } from './gantt-block-states.ts';
 import type { ChainView } from './gantt-chain.ts';
 import { useGanttView } from './gantt-context.ts';
@@ -31,13 +32,7 @@ import {
   summarySpan,
 } from './gantt-rows.ts';
 
-/** Why the fields and the actions of phase 1 are drawn but disabled (plan 18, phase 1). */
-export const phase1Reason =
-  'Moves and changes come with the live data; this view reads the fixture G1.';
-
-/** Why Plan this order and Move all later by are drawn but disabled (plan 18, phase 2). */
-export const planReason =
-  'Plan this order and Move all later by wait for plan() in the planning domain; Zoom to order and Open order come with the live data.';
+export { phase1Reason, planReason };
 
 /** A label and its value in the fields grid. */
 function Field({ label, children }: { readonly label: string; readonly children: ReactNode }) {
