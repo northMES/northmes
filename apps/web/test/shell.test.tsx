@@ -332,7 +332,7 @@ describe('the shell', () => {
     ]);
   });
 
-  it("E04-S02 the web's sidebar has Dashboard, Articles and Article groups in the Core group before Planning board and Gantt in the Planning group", async () => {
+  it("E04-S02 the web's sidebar has Dashboard, Articles and Article groups in the Core group before Planning board, Gantt and Job orders in the Planning group", async () => {
     // The screen's query never gets an answer; the test reads the sidebar alone.
     const fetch = vi.fn<typeof globalThis.fetch>(() => new Promise(() => {}));
     renderShellAt('/plant-a/articles', shellModules, { fetch });
@@ -348,6 +348,7 @@ describe('the shell', () => {
       [
         ['Planning board', '/plant-a/planning/board'],
         ['Gantt', '/plant-a/planning/gantt'],
+        ['Job orders', '/plant-a/planning/job-orders'],
       ],
     ]);
   });

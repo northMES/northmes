@@ -14,11 +14,11 @@ import { companies, fakeApi, viewer } from '../../settings-fixtures.tsx';
 /** The seed plant the specs work in. */
 export const plant = 'plant-a';
 
+/** The planning pages a test renders the shell at. */
+export type PlanningPage = 'board' | 'gantt' | 'jobOrders';
+
 /** A planning href of the plant with a search, such as the Gantt page with "?zoom=week". */
-export function planningHref(
-  page: 'board' | 'gantt',
-  search: Record<string, string | number>,
-): string {
+export function planningHref(page: PlanningPage, search: Record<string, string | number>): string {
   const query = new URLSearchParams(
     Object.entries(search).map(([key, value]) => [key, String(value)]),
   ).toString();
@@ -34,7 +34,7 @@ export function planningHref(
 export function renderGanttRoute(
   search: Record<string, string | number>,
   source?: GanttDataSource,
-  page: 'board' | 'gantt' = 'gantt',
+  page: PlanningPage = 'gantt',
 ) {
   const { fetch } = fakeApi({
     CoreCompanies: companies,
