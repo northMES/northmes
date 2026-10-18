@@ -108,7 +108,7 @@ describe('the landing at /', () => {
     expect(within(main).queryByRole('link', { name: 'Nordic Steel settings' })).toBeNull();
   });
 
-  it('ADR0066 every plant and settings link on the plant list is a target at least --nm-target-min high (WCAG 2.5.8)', async () => {
+  it('ADR0066 every plant and settings link on the plant list is a target at least --nm-target-min wide and high (WCAG 2.5.8)', async () => {
     const { fetch } = api(() => companiesWith(['plant-a'], [nordic]), companyAdmin);
     renderShellAt('/', shellModules, { fetch });
 
@@ -118,7 +118,12 @@ describe('the landing at /', () => {
     expect(links.length).toBeGreaterThan(1);
     for (const link of links) {
       expect(link.className.split(' '), link.textContent ?? '').toEqual(
-        expect.arrayContaining(['inline-flex', 'items-center', 'min-h-(--nm-target-min)']),
+        expect.arrayContaining([
+          'inline-flex',
+          'items-center',
+          'min-h-(--nm-target-min)',
+          'min-w-(--nm-target-min)',
+        ]),
       );
     }
   });
