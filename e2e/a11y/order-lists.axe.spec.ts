@@ -37,6 +37,10 @@ test.describe('the order lists', () => {
 
     await page.getByRole('button', { name: 'Group by' }).click();
     await page.getByRole('menuitemradio', { name: 'Article' }).click();
+    // The radio menu stays open after a choice; Escape closes it, and its backdrop must be gone
+    // before the next click.
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^Bracket L/ })).toBeVisible();
     await expect(page).toHaveURL(/group=article/);
     await checkA11y('the list grouped by article');
