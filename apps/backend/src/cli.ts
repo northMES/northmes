@@ -13,6 +13,7 @@ import { BootError } from './boot/boot-error.ts';
 import { dbBootstrap } from './db/bootstrap.ts';
 import { migrateCommand } from './migrate/command.ts';
 import { MigrationError } from './migrate/migration-error.ts';
+import { openApiJson } from './openapi/print.ts';
 
 /**
  * What main.ts hands a command: process.exit, console and standard output. A test also passes an
@@ -30,6 +31,11 @@ const commands: Readonly<Record<string, (context: CliContext) => Promise<void>>>
   },
   'db bootstrap': dbBootstrap,
   migrate: migrateCommand,
+  // The public API's OpenAPI document of the in-repo modules, which pnpm gen commits (ADR 0064).
+  'openapi print': async (context) => {
+    const print = context.print ?? ((text: string) => process.stdout.write(text));
+    print(await openApiJson());
+  },
 };
 
 /**

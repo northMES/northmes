@@ -56,7 +56,7 @@ function rootScript(name: string | undefined): string | undefined {
 
 // The pull request checks read the pull request instead of the code, so no root script runs them
 // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
-const pullRequestChecks = ['pr title', 'linked issue', 'pr security'];
+const pullRequestChecks = ['pr title', 'linked issue', 'pr security', 'openapi diff'];
 
 // The steps that copy a report of an earlier step into the job summary. They check nothing, so no
 // root script runs them.
@@ -117,6 +117,13 @@ const pullRequestCheckSteps = {
       PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
     },
   },
+  'openapi diff': {
+    run: 'node scripts/ci/openapi-diff.mjs',
+    env: {
+      PR_TITLE: expression('github.event.pull_request.title'),
+      OPENAPI_CHANGES: `${expression('runner.temp')}/openapi-changes.json`,
+    },
+  },
 };
 
 // The jobs of the CI workflow, which GitHub shows as CI / <job name>. The main ruleset requires
@@ -134,6 +141,7 @@ const ciJobs = [
   'pr title',
   'linked issue',
   'pr security',
+  'openapi diff',
   'gate',
 ];
 
@@ -728,7 +736,7 @@ describe('workflows', () => {
 
   // A push to main has no pull request to check. An event value interpolated into a run script
   // could inject shell code, so the scripts read the pull request from environment variables.
-  it('CI / pr title, CI / linked issue and CI / pr security run on pull requests only and read the pull request from environment variables', () => {
+  it('CI / pr title, CI / linked issue, CI / pr security and CI / openapi diff run on pull requests only and read the pull request from environment variables', () => {
     for (const [name, step] of Object.entries(pullRequestCheckSteps)) {
       const { job } = jobNamed(name);
 
@@ -765,7 +773,7 @@ describe('workflows', () => {
 
   // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
   // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
-  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue, pr security, gate and cla', () => {
+  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue, pr security, openapi diff, gate and cla', () => {
     const ci = workflows().find(({ name }) => name === 'CI');
 
     expect(ci, 'a workflow named CI').toBeDefined();
@@ -774,6 +782,30 @@ describe('workflows', () => {
         .map(({ name }) => name)
         .sort(),
     ).toEqual([...ciJobs, ...ungatedCiJobs].sort());
+  });
+
+  // oasdiff compares the base branch's schema/openapi-v1.json with the pull request's (ADR 0064).
+  // It runs from its image pinned by digest, without network, so neither document leaves the runner
+  // and the image cannot change under the job; Renovate updates the tag and digest together.
+  it('ADR0064 CI / openapi diff runs oasdiff from its image pinned by digest, without network, on the base branch document and the pull request one', () => {
+    const { workflow, job } = jobNamed('openapi diff');
+    const steps = job.steps ?? [];
+    const checkouts = steps.filter(({ uses }) => uses?.startsWith('actions/checkout@'));
+    const compare = steps.find(({ run }) => run?.includes('oasdiff') || run?.includes('OASDIFF'));
+
+    expect(workflow.path).toBe('.github/workflows/ci.yml');
+    expect(job.permissions).toEqual({ contents: 'read' });
+    expect(job.env?.OASDIFF_IMAGE).toMatch(/^tufin\/oasdiff:v\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$/);
+    expect(checkouts.map(({ with: inputs }) => inputs?.ref)).toEqual([
+      undefined,
+      expression('github.event.pull_request.base.sha'),
+    ]);
+    expect(checkouts[1]?.with).toMatchObject({ path: 'base', 'sparse-checkout': 'schema' });
+    expect(compare?.run).toContain('docker run --rm --network none');
+    expect(compare?.run).toContain('"$OASDIFF_IMAGE" breaking');
+    expect(compare?.run).toContain('base/schema/openapi-v1.json schema/openapi-v1.json');
+    expect(compare?.run).toContain('--format json > "$RUNNER_TEMP/openapi-changes.json"');
+    expect(steps.at(-1)?.run).toBe('node scripts/ci/openapi-diff.mjs');
   });
 
   // A pull request's own files must not decide its CLA check: a checkout would run the pull

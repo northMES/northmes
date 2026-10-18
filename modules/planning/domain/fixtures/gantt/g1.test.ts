@@ -3,13 +3,14 @@
 import { Temporal } from 'temporal-polyfill';
 import { describe, expect, it } from 'vitest';
 import { g1, g1Expected, timePoint } from '../../src/fixtures/gantt.ts';
+import { addWork, availabilityOf, weeklyCalendar } from '../../src/index.ts';
 
 /**
  * The fixture G1 of docs/plan/18-gantt-timeline.md: a synthetic plant week that every Gantt
  * function is tested against. Both files come from one calculator script, so this test guards
  * their internal consistency, not the calendar arithmetic; their shapes are the ones
- * src/fixtures/gantt.ts parses them with. The regeneration guard through addWork comes with the
- * domain function S01 (plan 18, Domain unit tests).
+ * src/fixtures/gantt.ts parses them with. The regeneration guard lays every placement again with
+ * addWork over the A1 calendar, so the files cannot drift from the calendar kernel.
  */
 
 /** The case keys of plan 18 that each Gantt function's first failing test reads. */
@@ -104,6 +105,32 @@ describe('fixture G1 (plan 18)', () => {
         plannedSeconds: row.plannedSetupS + row.plannedRunS,
         setupSeconds: row.plannedSetupS,
         runSeconds: row.plannedRunS,
+      });
+    }
+  });
+
+  it('places every job order where addWork over the A1 calendar places it (the regeneration guard)', () => {
+    const calendar = weeklyCalendar({ timeZone: data.plant.timeZone, ...data.calendar });
+    const horizon = availabilityOf(
+      calendar,
+      undefined,
+      Date.parse(data.now.instant),
+      Date.parse('2026-11-30T00:00:00Z'),
+    );
+    for (const row of jobOrders) {
+      const placed = values.placements[row.productionOrderOperation];
+      const laid = addWork(
+        horizon,
+        Date.parse(row.setupStartAt),
+        row.plannedSetupS + row.plannedRunS,
+      );
+      expect(laid, row.productionOrderOperation).toEqual({
+        startMs: Date.parse(placed?.start.instant ?? ''),
+        endMs: Date.parse(placed?.end.instant ?? ''),
+        segments: placed?.segments.map(({ from, to }) => ({
+          fromMs: Date.parse(from),
+          toMs: Date.parse(to),
+        })),
       });
     }
   });

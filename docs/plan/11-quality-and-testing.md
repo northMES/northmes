@@ -110,7 +110,7 @@ Root scripts:
 | `pnpm react-doctor:summary` | Copies the findings in `react-doctor-report.json` into the job summary and the log | `CI / react doctor` |
 | `pnpm db:types --verify` | kysely-codegen against a migrated database; fails on any generated `Date` type | `pnpm gen` |
 
-Every CI gate step except the pull request checks (`CI / linked issue`, `CI / pr title` and, from the first public route, `CI / openapi diff`) and `CI / react doctor`, which runs in CI only ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)), runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report. A run of some of the Vitest projects that `pnpm check` runs, such as `pnpm test:int` in `CI / fresh worktree`, counts as contained in it, and the `git worktree add` step of that job only adds the directory its later steps run in.
+Every CI gate step except the pull request checks (`CI / linked issue`, `CI / pr title`, `CI / pr security` and `CI / openapi diff`) and `CI / react doctor`, which runs in CI only ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)), runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report. A run of some of the Vitest projects that `pnpm check` runs, such as `pnpm test:int` in `CI / fresh worktree`, counts as contained in it, and the `git worktree add` step of that job only adds the directory its later steps run in.
 
 ## Testcontainers harness
 
@@ -467,7 +467,7 @@ The ruleset on `main` requires these checks by name, strict (the branch must be 
 | `fresh worktree` | On pull requests: `git worktree add`, then `pnpm install --frozen-lockfile` and `pnpm test:int` in the new worktree, with no build step |
 | `pr title` | The title is a Conventional Commit with an allowed type |
 | `linked issue` | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
-| `gate` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `docs` (once `apps/docs` exists), `cla` (before the first outside pull request) and `openapi diff` (with the first public route). |
+| `gate` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Also `openapi diff`. Later also `docs` (once `apps/docs` exists) and `cla` (before the first outside pull request). |
 | `a11y` | The axe specs over the board states, from the first board pull request |
 | `license gate` | `pnpm sbom` and the license script ([12-operations-and-security.md](12-operations-and-security.md#license-gate)) |
 | `dependency audit` | `pnpm audit --prod --audit-level high` |
@@ -475,14 +475,14 @@ The ruleset on `main` requires these checks by name, strict (the branch must be 
 
 Each job in `ci.yml` is a required check of its own, so the merge box shows each kind of check as required ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)). A job that joins, leaves or changes its name in `ci.yml` needs a ruleset edit: an added name after the merge, a removed or old name just before it ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)), and `test/meta/workflows.test.ts` lists the job names. A required check matches by its name and the app alone, so no two workflows share a job name, which `test/meta/workflows.test.ts` checks. Required workflows have no `paths` filters, because a workflow skipped by a path filter leaves its required check waiting forever; a job that should run only for some paths decides in its first step.
 
-`openapi diff` is a job of `ci.yml` that `CI / gate` needs, and it ships with the first public route; release 1 has none ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)):
+`openapi diff` is a job of `ci.yml` that `CI / gate` needs, which came with core's public article routes ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [ADR 0073](../adr/0073-one-module-contract-for-rest-webmcp-and-later-mcp-with-oauth-clients-and-tokens.md)):
 
-- It runs `oasdiff breaking` on `schema/openapi-v1.json` against the base branch with `--fail-on ERR`, so each pull request sees only its own changes.
-- oasdiff is a release binary pinned and checked against its checksum, or `oasdiff/oasdiff-action/breaking` pinned by digest ([ADR 0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md)).
-- In 0.x an ERR-level break fails unless the pull request title carries `!`, the breaking-change marker of [ADR 0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), which also bumps the minor and puts the break in the changelog. From 1.0 every ERR-level break in the public API fails, with or without `!`, and a break needs a new API major.
-- WARN-level findings are reported and do not block.
-- Like `CI / pr title`, it reads the pull request, so it is not part of `pnpm check`. `pnpm openapi:diff` runs the same comparison locally and only reports.
-- `test/meta/openapi-diff.test.ts` runs the job's script on fixture pairs: a removed response field under a title without `!` exits 1, the same change titled `feat(planning)!:` exits 0, an added optional response field exits 0, and at version 1.0.0 a removed field exits 1 even with `!`.
+- It runs `oasdiff breaking` on the base branch's `schema/openapi-v1.json` and the pull request's, so each pull request sees only its own changes, and passes when the base branch has no document.
+- oasdiff runs from the `tufin/oasdiff` image pinned by digest in the job's `OASDIFF_IMAGE`, with `--network none` and the workspace mounted read-only, and Renovate updates its tag and digest together ([ADR 0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md)). The official action is not used, because it uploads the documents for a review page and sends telemetry by default.
+- `scripts/ci/openapi-diff.mjs` decides from oasdiff's JSON. In 0.x an ERR-level break fails unless the pull request title carries `!`, the breaking-change marker of [ADR 0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), which also bumps the minor and puts the break in the changelog. From 1.0 every ERR-level break in the public API fails, with or without `!`, and a break needs a new API major.
+- WARN-level findings are reported as warnings and do not block.
+- Like `CI / pr title`, it reads the pull request, so it is not part of `pnpm check`.
+- `scripts/ci/openapi-diff.test.ts` runs the job's script on oasdiff findings: a removed required response field under a title without `!` exits 1, the same change titled `feat(planning)!:` exits 0, an added optional response field exits 0, a WARN-level change exits 0 with a warning, and at version 1.0.0 a removed field fails even with `!`.
 
 ### Other checks on pull requests
 

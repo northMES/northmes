@@ -28,7 +28,8 @@ describe('the Float column and Details from the analysis (plan 18, What the time
 
     expect(floatCellOf(gantt, 'jo-1001-20').textContent).toBe('15 min');
     expect(floatCellOf(gantt, 'jo-1001-10').textContent).toBe('0');
-    expect(floatCellOf(gantt, 'jo-1002-10').textContent).toBe('unknown');
+    // The locked 1002.10 ends at its deadline, so it is critical with zero free float.
+    expect(floatCellOf(gantt, 'jo-1002-10').textContent).toBe('0');
   });
 
   it('GT2 shows 1003.10 as "0" with the chain glyph and its negative total float "minus 15 min"', async () => {
@@ -84,6 +85,17 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     );
   });
 
+  it('GT2 names the machine of a machine binding as the rest of Details does: "ends on CNC 1"', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    await userEvent.click(gantt.querySelector('[data-block="jo-1003-10"]') as HTMLElement);
+
+    const panel = await findDetails();
+    const float = within(panel).getByRole('region', { name: 'Float' });
+    expect(float.textContent).toContain('Starts when 1001.10 ends on CNC 1.');
+  });
+
   it('phase 1 draws the fields and the actions of Details disabled with the reason', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
@@ -94,8 +106,12 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     const machine = within(panel).getByLabelText('Machine') as HTMLSelectElement;
     expect(machine.disabled).toBe(true);
     expect(machine.value).toBe('CNC2');
+    // Move works from Details without dragging (WCAG 2.5.7); the other actions wait for the server.
     expect(
       (within(panel).getByRole('button', { name: 'Move' }) as HTMLButtonElement).disabled,
+    ).toBe(false);
+    expect(
+      (within(panel).getByRole('button', { name: 'Lock' }) as HTMLButtonElement).disabled,
     ).toBe(true);
     expect(
       (within(panel).getByRole('button', { name: 'Show critical chain' }) as HTMLButtonElement)

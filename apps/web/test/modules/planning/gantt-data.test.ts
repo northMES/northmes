@@ -32,6 +32,27 @@ describe('g1DataSource (plan 18, Data loading)', () => {
     expect(snapshot.productionOrders[0]?.deadlineMs).toBe(Date.UTC(2026, 10, 6, 14, 0));
   });
 
+  it('a load of a later week keeps every placement where the fixture puts it, segments included', async () => {
+    // Week 47 lies after every G1 placement: the segments still come from the calendar around
+    // the placements, not from the requested range.
+    const { productionOrders } = await g1DataSource.load({
+      from: '2026-11-15T23:00:00Z',
+      to: '2026-11-22T23:00:00Z',
+      filter: {},
+    });
+    const row = productionOrders.find((order) => order.number === '1001')?.jobOrders[0];
+
+    expect(row?.placement).toEqual({
+      setupStartMs: Date.UTC(2026, 10, 3, 10, 30),
+      runStartMs: Date.UTC(2026, 10, 3, 11, 0),
+      endMs: Date.UTC(2026, 10, 4, 7, 0),
+      segments: [
+        { fromMs: Date.UTC(2026, 10, 3, 10, 30), toMs: Date.UTC(2026, 10, 3, 14, 0) },
+        { fromMs: Date.UTC(2026, 10, 4, 5, 0), toMs: Date.UTC(2026, 10, 4, 7, 0) },
+      ],
+    });
+  });
+
   it('GT7 carries the working segments of each placed row, so 1006.10 has one closed gap', async () => {
     const { productionOrders } = await g1DataSource.load(week45);
     const row = productionOrders.find((order) => order.number === '1006')?.jobOrders[0];
@@ -59,7 +80,12 @@ describe('g1DataSource (plan 18, Data loading)', () => {
       binding: { kind: 'machine', boundBy: '1001.10', equipment: 'CNC1' },
       critical: true,
     });
-    expect(analysis.jobOrders['jo-1002-10']?.float).toBeUndefined();
+    // The locked 1002.10 ends at its deadline: a just-in-time row with zero float, bound by its lock.
+    expect(analysis.jobOrders['jo-1002-10']?.float).toMatchObject({
+      binding: { kind: 'hardLock' },
+      totalFloatWorkingS: 0,
+      critical: true,
+    });
   });
 
   it('GT1 GT4 sets the release of a successor row: the predecessor end plus the lead time, or the send-ahead instant', async () => {
@@ -115,10 +141,14 @@ describe('g1DataSource (plan 18, Data loading)', () => {
   it('GT5 carries the workload buckets of week 45', async () => {
     const { analysis } = await g1DataSource.load(week45);
 
-    expect(analysis.workload).toHaveLength(15);
+    // The seven production days whose start lies in week 45, the closed weekend included.
+    expect(analysis.workload).toHaveLength(21);
     expect(
-      analysis.workload.find((b) => b.equipment === 'CNC1' && b.productionDay === '2026-11-05'),
+      analysis.workload.find((b) => b.equipment === 'CNC1' && b.label === '2026-11-05'),
     ).toMatchObject({ loadedS: 29_700, utilizationPermille: 1000 });
+    expect(
+      analysis.workload.find((b) => b.equipment === 'CNC1' && b.label === '2026-11-07'),
+    ).toMatchObject({ availableS: 0, utilizationPermille: null });
   });
 
   it('GT4 lists the constraints of 1004.20 as release, last piece, allowed machines and calendar, each holding', async () => {

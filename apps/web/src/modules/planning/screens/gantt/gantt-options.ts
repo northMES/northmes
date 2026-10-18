@@ -8,12 +8,14 @@ import { useState } from 'react';
  * alone.
  */
 export interface GanttOptions {
-  /** Hide closed time: nights, breaks and weekends compressed to a gap (off until ADR 0030 is amended). */
+  /** Hide closed time: nights, breaks and weekends compressed to a gap, on by default (ADR 0030). */
   readonly hideClosed: boolean;
   /** The ids of the tree columns the Columns menu hides. */
   readonly hiddenColumns: readonly string[];
   /** The workload panel under the time area. */
   readonly workload: boolean;
+  /** Cascade after a move (plan 18, Cascade rule 1): on by default, the choice stays local. */
+  readonly cascade: boolean;
 }
 
 const storageKey = 'northmes.planning.gantt.options';
@@ -35,9 +37,10 @@ export const defaultHiddenColumns: readonly string[] = [
 ];
 
 export const defaultOptions: GanttOptions = {
-  hideClosed: false,
+  hideClosed: true,
   hiddenColumns: defaultHiddenColumns,
   workload: false,
+  cascade: true,
 };
 
 function stored(): GanttOptions {
@@ -46,11 +49,12 @@ function stored(): GanttOptions {
     if (typeof parsed !== 'object' || parsed === null) return defaultOptions;
     const options = parsed as Partial<Record<keyof GanttOptions, unknown>>;
     return {
-      hideClosed: options.hideClosed === true,
+      hideClosed: options.hideClosed !== false,
       hiddenColumns: Array.isArray(options.hiddenColumns)
         ? options.hiddenColumns.filter((id): id is string => typeof id === 'string')
         : defaultHiddenColumns,
       workload: options.workload === true,
+      cascade: options.cascade !== false,
     };
   } catch {
     return defaultOptions;

@@ -3,10 +3,30 @@
 import { useShell } from '@northmes/web-sdk';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import type { ExpandedState } from '@tanstack/react-table';
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import type { GanttDataSource, GanttSnapshot } from '../../gantt-data.ts';
+import {
+  applyDraft,
+  cascadeFromHere,
+  type DraftConflict,
+  discardChange,
+  draftConflicts,
+  draftRowIds,
+  emptyDraft,
+  type GanttDraft,
+  moveBack,
+  moveInDraft,
+} from '../../gantt-draft.ts';
 import {
   droppedKeyMessage,
   type GanttSearch,
@@ -21,17 +41,32 @@ import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
   type ClosedWindow,
   createTimeScale,
+  extendedRange,
   naturalWidthPx,
   plantDateOf,
   rangeLabel,
   rangeOf,
   shiftedFrom,
+  zoomPresets,
 } from '../../timeline/time-scale.ts';
 import { chainOf } from './gantt-chain.ts';
-import { type GanttViewContext, GanttViewProvider } from './gantt-context.ts';
+import {
+  type GanttMoveActions,
+  type GanttViewContext,
+  GanttViewProvider,
+} from './gantt-context.ts';
 import { GanttDetailDrawer } from './gantt-detail-panel.tsx';
+import { GanttDraftDrawer } from './gantt-draft-drawer.tsx';
 import { GanttLinks, linksOf } from './gantt-links.tsx';
 import { GanttMarkerLayer, overlayMarkers } from './gantt-marker-layer.tsx';
+import {
+  type MoveState,
+  movedMessage,
+  moveRefusalOf,
+  previewOf,
+  refusalMessage,
+  stepMessage,
+} from './gantt-move.ts';
 import { GanttNotPlacedRow } from './gantt-not-placed-row.tsx';
 import { useGanttOptions } from './gantt-options.ts';
 import { GanttRowView } from './gantt-row.tsx';
@@ -165,7 +200,13 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       navigate({ to: '.', search: next as Record<string, unknown>, replace: true }),
     [navigate],
   );
-  const [snapshot, setSnapshot] = useState<GanttSnapshot | undefined>(undefined);
+  const [committed, setSnapshot] = useState<GanttSnapshot | undefined>(undefined);
+  // The planner's draft, in memory until the plan server exists, and the move in progress.
+  const [draft, setDraft] = useState<GanttDraft>(emptyDraft);
+  const [moveState, setMoveState] = useState<MoveState | undefined>(undefined);
+  const [draftOpen, setDraftOpen] = useState(false);
+  /** The element that opened the My draft drawer, which takes focus back when it closes. */
+  const draftOpener = useRef<HTMLElement | undefined>(undefined);
   const [loadError, setLoadError] = useState<unknown>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [options, setOptions] = useGanttOptions();
@@ -182,17 +223,42 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     `${zoom}|${search.from ?? ''}|${options.hideClosed}|${options.workload}`,
   );
 
-  const timeZone = snapshot?.plant.timeZone ?? 'UTC';
-  const productionDayStart = snapshot?.plant.productionDayStart ?? '06:00';
+  const timeZone = committed?.plant.timeZone ?? 'UTC';
+  const productionDayStart = committed?.plant.productionDayStart ?? '06:00';
   // The range starts at the date in the URL, else at the snapshot's now, else at today.
   const from =
     search.from ??
-    (snapshot === undefined
+    (committed === undefined
       ? plantDateOf(Date.now(), timeZone)
-      : plantDateOf(snapshot.nowMs, timeZone));
-  const range = useMemo(
+      : plantDateOf(committed.nowMs, timeZone));
+  // The chosen range names the grid and the toolbar; the loaded range grows by whole spans of the
+  // preset as the planner scrolls towards an edge (#685), and shrinks back when from or zoom change.
+  const chosenRange = useMemo(
     () => rangeOf(from, zoom, timeZone, productionDayStart),
     [from, zoom, timeZone, productionDayStart],
+  );
+  // The extension belongs to one chosen start and zoom; a change of either resets it in the same
+  // render, through state, as React's rule for state derived from props says.
+  const extensionKey = `${from}|${zoom}`;
+  const [extended, setExtended] = useState({ key: extensionKey, before: 0, after: 0 });
+  if (extended.key !== extensionKey) setExtended({ key: extensionKey, before: 0, after: 0 });
+  const extension = extended.key === extensionKey ? extended : { before: 0, after: 0 };
+  const setExtension = (
+    update: (current: { before: number; after: number }) => { before: number; after: number },
+  ) =>
+    setExtended((current) => {
+      const base = current.key === extensionKey ? current : { before: 0, after: 0 };
+      return { key: extensionKey, ...update(base) };
+    });
+  const range = useMemo(
+    () => extendedRange(from, zoom, timeZone, productionDayStart, extension),
+    [from, zoom, timeZone, productionDayStart, extension.before, extension.after],
+  );
+  // Everything the view draws reads the plan with the draft applied, analysed over the loaded
+  // range (plan 18, Resolving a break in the draft).
+  const snapshot = useMemo(
+    () => (committed === undefined ? undefined : applyDraft(committed, draft, range)),
+    [committed, draft, range],
   );
 
   useEffect(() => {
@@ -258,6 +324,40 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     width - Math.min(treeWidth, cap),
     Math.ceil(naturalWidthPx(range, zoom, hideClosed)),
   );
+  // A span added before the range widens the time column on the left: the scroll position moves by
+  // the added width in the same frame, so what was in view stays in view.
+  const lastTimeWidth = useRef<number | undefined>(undefined);
+  const shiftAfterGrowth = useRef(false);
+  const gridElement = useRef<HTMLElement | null>(null);
+  // An edge counts only after a horizontal move of the planner towards it: a vertical scroll
+  // changes nothing, a range under two screens wide extends on the side the planner is heading
+  // for, and a move of the position the view makes itself (the shift after a span was added on
+  // the left, the clamp after the range shrank) counts as the new baseline, not as a move.
+  const lastScrollLeft = useRef(0);
+  useLayoutEffect(() => {
+    const previous = lastTimeWidth.current;
+    lastTimeWidth.current = timeWidth;
+    const grid = gridElement.current;
+    if (grid === null) return;
+    if (shiftAfterGrowth.current && previous !== undefined && timeWidth > previous) {
+      grid.scrollLeft += timeWidth - previous;
+    }
+    shiftAfterGrowth.current = false;
+    // The browser has laid the new width out and clamped the position by now.
+    lastScrollLeft.current = grid.scrollLeft;
+  }, [timeWidth]);
+  const onGridScroll = (grid: HTMLElement) => {
+    const { scrollLeft, clientWidth, scrollWidth } = grid;
+    const previous = lastScrollLeft.current;
+    lastScrollLeft.current = scrollLeft;
+    if (clientWidth <= 0 || scrollLeft === previous) return;
+    if (scrollLeft > previous && scrollLeft + clientWidth >= scrollWidth - clientWidth) {
+      setExtension((current) => ({ ...current, after: current.after + 1 }));
+    } else if (scrollLeft < previous && scrollLeft <= clientWidth) {
+      shiftAfterGrowth.current = true;
+      setExtension((current) => ({ ...current, before: current.before + 1 }));
+    }
+  };
   const gridTemplateColumns = [
     `${nameWidth}px`,
     ...columns.slice(1).map((column) => `${column.widthPx}px`),
@@ -322,6 +422,133 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     openedChainFor.current = orderId;
     if (orderId !== undefined) setDetailRowId((current) => current ?? orderId);
   }, [chain]);
+  const conflicts = useMemo(
+    () => (snapshot === undefined ? [] : draftConflicts(snapshot, draft)),
+    [snapshot, draft],
+  );
+  const draftIds = useMemo(() => draftRowIds(draft), [draft]);
+  const preview = useMemo(
+    () =>
+      snapshot === undefined || moveState === undefined
+        ? undefined
+        : previewOf(snapshot, moveState, options.cascade),
+    [snapshot, moveState, options.cascade],
+  );
+  // The step message of keyboard move mode, debounced to about 300 ms (plan 07, Moving without dragging).
+  useEffect(() => {
+    if (moveState?.source !== 'keyboard' || preview === undefined || snapshot === undefined) return;
+    const machine =
+      snapshot.equipment.find((each) => each.code === preview.equipment)?.name ?? preview.equipment;
+    const timer = setTimeout(() => announce(stepMessage(preview, machine, timeZone)), 300);
+    return () => clearTimeout(timer);
+  }, [moveState?.source, preview, snapshot, timeZone]);
+  // A block takes focus and scrolls into view past the sticky tree pane and the time header, which
+  // the grid's scroll padding keeps it clear of (WCAG 2.4.11).
+  const focusBlock = (jobOrderId: string) => {
+    const block = document.querySelector<HTMLElement>(`[data-block="${jobOrderId}"]`);
+    block?.focus({ preventScroll: true });
+    block?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  };
+  const moveActions = useMemo<GanttMoveActions | undefined>(() => {
+    if (snapshot === undefined || committed === undefined) return undefined;
+    const machineOf = (code: string | undefined) =>
+      snapshot.equipment.find((each) => each.code === code)?.name ?? code ?? 'no machine';
+    const rowOf = (jobOrderId: string) => {
+      const order = snapshot.productionOrders.find((each) =>
+        each.jobOrders.some((row) => row.id === jobOrderId),
+      );
+      const row = order?.jobOrders.find((each) => each.id === jobOrderId);
+      const operation = order?.operations.find((each) => each.id === row?.operationId);
+      return { order, row, operation };
+    };
+    return {
+      state: moveState,
+      preview,
+      begin: (jobOrderId, source) => {
+        const { row } = rowOf(jobOrderId);
+        if (row?.placement === undefined || row.equipment === undefined) return false;
+        const refused = moveRefusalOf(snapshot, jobOrderId);
+        if (refused !== undefined) {
+          announce(refusalMessage(row.displayNumber, refused));
+          return false;
+        }
+        setMoveState({
+          jobOrderId,
+          setupStartMs: row.placement.setupStartMs,
+          equipment: row.equipment,
+          source,
+        });
+        return true;
+      },
+      previewAt: (setupStartMs, equipment) =>
+        setMoveState((current) =>
+          current === undefined
+            ? current
+            : { ...current, setupStartMs, equipment: equipment ?? current.equipment },
+        ),
+      // A step moves one snap step; the preview then snaps forward to working time on the machine.
+      // A step moves one snap step from the snapped preview. Backwards, the forward snap of the
+      // calendar can land on the same instant again, so the step keeps going back until the
+      // preview is earlier, or the horizon ends (plan 18, Snapping and the calendar).
+      stepTime: (direction) =>
+        setMoveState((current) => {
+          if (current === undefined) return current;
+          const stepMs = zoomPresets[zoom].stepMs;
+          const from = preview?.span.setupStartMs ?? current.setupStartMs;
+          let setupStartMs = from + direction * stepMs;
+          if (direction < 0) {
+            const floor = range.fromMs - 28 * 86_400_000;
+            for (let count = 0; count < 500 && setupStartMs > floor; count += 1) {
+              const next = previewOf(snapshot, { ...current, setupStartMs }, options.cascade);
+              if (next === undefined || next.span.setupStartMs < from) break;
+              // The row cannot start before its release or its last-piece bound: it stays.
+              if (next.reason === 'snappedToRelease' || next.reason === 'snappedToLastPiece') {
+                return current;
+              }
+              setupStartMs -= stepMs;
+            }
+          }
+          return { ...current, setupStartMs };
+        }),
+      stepMachine: (direction) =>
+        setMoveState((current) => {
+          if (current === undefined) return current;
+          const { operation } = rowOf(current.jobOrderId);
+          const allowed = operation?.allowedEquipment ?? [];
+          const index = allowed.indexOf(current.equipment);
+          const next = allowed[Math.max(0, Math.min(allowed.length - 1, index + direction))];
+          return next === undefined ? current : { ...current, equipment: next };
+        }),
+      commit: () => {
+        if (moveState === undefined || preview === undefined) return;
+        const { draft: next, result } = moveInDraft(
+          committed,
+          draft,
+          {
+            jobOrderId: moveState.jobOrderId,
+            setupStartMs: moveState.setupStartMs,
+            equipment: moveState.equipment,
+          },
+          { cascade: options.cascade },
+        );
+        setMoveState(undefined);
+        if (result.refused !== undefined) {
+          announce(refusalMessage(preview.displayNumber, result.refused));
+          return;
+        }
+        setDraft(next);
+        announce(movedMessage(preview, machineOf(preview.equipment), timeZone));
+        // Focus returns to the block by id once it has drawn at its new place (plan 18).
+        requestAnimationFrame(() => focusBlock(moveState.jobOrderId));
+      },
+      cancel: () => {
+        if (moveState === undefined) return;
+        setMoveState(undefined);
+        announce('Move cancelled.');
+        requestAnimationFrame(() => focusBlock(moveState.jobOrderId));
+      },
+    };
+  }, [snapshot, committed, moveState, preview, draft, options.cascade, zoom, timeZone, range]);
   const rowById = useMemo(() => {
     const map = new Map<string, GanttRow>();
     for (const order of rows) {
@@ -361,6 +588,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       chainRowIds,
       machineName: (code) =>
         code === undefined ? 'no machine' : (equipment.get(code)?.name ?? code),
+      draftRowIds: draftIds,
+      move: moveActions,
     };
   }, [
     snapshot,
@@ -371,6 +600,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     options.hideClosed,
     search.order,
     chainRowIds,
+    draftIds,
+    moveActions,
   ]);
   const { links, limited } =
     snapshot === undefined
@@ -421,12 +652,25 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     returnRowId.current = focusRowId;
     setDetailRowId(undefined);
   };
+  /** The block that takes focus when the drawer closes after a move applied from it (D3 TA12). */
+  const returnBlockId = useRef<string | undefined>(undefined);
+  const closeDetailsToBlock = (jobOrderId: string) => {
+    returnBlockId.current = jobOrderId;
+    closeDetails(jobOrderId);
+  };
   const drawerFinalFocus = () => {
     const rowId = returnRowId.current ?? detailRowId;
+    const blockId = returnBlockId.current;
     returnRowId.current = undefined;
+    returnBlockId.current = undefined;
     if (rowId === undefined) return null;
     setFocusedRowId(rowId);
-    return document.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`);
+    return (
+      (blockId === undefined
+        ? null
+        : document.querySelector<HTMLElement>(`[data-block="${blockId}"]`)) ??
+      document.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`)
+    );
   };
   // Row focus mode (plan 18, Tree grid semantics): Up and Down move between rows, Right expands a
   // collapsed row or moves into its time cell, Left collapses an expanded row, moves from the cell
@@ -478,7 +722,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         else handled = false;
         break;
       case 'Escape':
-        if (chain !== undefined) void setSearch(withChain(search, false));
+        if (moveState !== undefined) moveActions?.cancel();
+        else if (chain !== undefined) void setSearch(withChain(search, false));
         else handled = false;
         break;
       default:
@@ -490,7 +735,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     }
   };
 
-  const gridName = `${plant} order Gantt, ${rangeLabel(range, zoom, timeZone)}`;
+  const gridName = `${plant} order Gantt, ${rangeLabel(chosenRange, zoom, timeZone)}`;
   const rowCount = flatRows.length + 2;
   const focusedId =
     focusedRowId !== undefined && flatRows.some((row) => row.id === focusedRowId)
@@ -512,9 +757,14 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             void setSearch(withFrom(search, plantDateOf(snapshot?.nowMs ?? Date.now(), timeZone)))
           }
           onLater={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'later')))}
-          rangeLabel={rangeLabel(range, zoom, timeZone)}
+          rangeLabel={rangeLabel(chosenRange, zoom, timeZone)}
           options={options}
           onOptionsChange={setOptions}
+          draftCount={draft.changes.length}
+          onOpenDraft={() => {
+            draftOpener.current = document.activeElement as HTMLElement | undefined;
+            setDraftOpen(true);
+          }}
         />
       }
     >
@@ -535,19 +785,30 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             style={fillHeight === undefined ? undefined : { height: `${fillHeight}px` }}
           >
             <div
-              ref={gridRef}
+              ref={(node) => {
+                gridElement.current = node;
+                gridRef(node);
+              }}
               role="treegrid"
               aria-label={gridName}
               aria-rowcount={rowCount}
               aria-busy={state.status === 'loading' || undefined}
               onKeyDown={(event) => {
-                // The Escape stack: the chain highlight ends first.
-                if (event.key === 'Escape' && chain !== undefined) {
+                // The Escape stack: move mode ends first, then the chain highlight.
+                if (event.key === 'Escape' && moveState !== undefined) {
+                  event.stopPropagation();
+                  moveActions?.cancel();
+                } else if (event.key === 'Escape' && chain !== undefined) {
                   event.stopPropagation();
                   void setSearch(withChain(search, false));
                 }
               }}
-              className="min-h-0 flex-1 overflow-auto rounded-lg border border-border bg-card text-sm"
+              onScroll={(event) => onGridScroll(event.currentTarget)}
+              className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
+              style={{
+                scrollPaddingTop: `${timeHeaderHeightRem}rem`,
+                scrollPaddingInlineStart: `${stickyTree ? treeWidth : nameWidth}px`,
+              }}
             >
               <div
                 role="row"
@@ -619,12 +880,34 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               />
             )}
           </div>
+          <GanttDraftDrawer
+            open={draftOpen}
+            onClose={() => setDraftOpen(false)}
+            draft={draft}
+            conflicts={conflicts}
+            timeZone={timeZone}
+            machineName={view.machineName}
+            onCascadeFromHere={(conflict: DraftConflict) => {
+              const { draft: next, refused } = cascadeFromHere(
+                committed ?? snapshot,
+                draft,
+                conflict,
+              );
+              if (refused !== undefined) announce(refusalMessage(conflict.rows[0], refused));
+              else setDraft(next);
+            }}
+            onMoveBack={(conflict: DraftConflict) => setDraft(moveBack(draft, conflict))}
+            onDiscardChange={(jobOrderId) => setDraft(discardChange(draft, jobOrderId))}
+            onDiscardDraft={() => setDraft(emptyDraft)}
+            finalFocus={() => draftOpener.current ?? null}
+          />
           <GanttDetailDrawer
             row={detailRow}
             chain={chain}
             onClose={() => closeDetails()}
             onToggleChain={toggleChain}
             onFocusRow={(rowId) => closeDetails(rowId)}
+            onMoveApplied={closeDetailsToBlock}
             finalFocus={drawerFinalFocus}
           />
         </GanttViewProvider>

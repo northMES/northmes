@@ -115,6 +115,42 @@
     },
     {
       "includes": [
+        "modules/planning/domain/src/**"
+      ],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "@northmes/sdk": "The planning domain is pure: no database, no Nest, no React (ADR 0057).",
+                  "kysely": "The planning domain is pure: no database, no Nest, no React (ADR 0057).",
+                  "pg": "The planning domain is pure: no database, no Nest, no React (ADR 0057).",
+                  "react": "The planning domain is pure: no database, no Nest, no React (ADR 0057).",
+                  "react-dom": "The planning domain is pure: no database, no Nest, no React (ADR 0057)."
+                },
+                "patterns": [
+                  {
+                    "group": [
+                      "@nestjs/**",
+                      "kysely/**",
+                      "pg/**",
+                      "react/**",
+                      "react-dom/**",
+                      "@northmes/sdk/**"
+                    ],
+                    "message": "The planning domain is pure: no database, no Nest, no React (ADR 0057)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
         "apps/backend/src/modules/*/core/**"
       ],
       "linter": {

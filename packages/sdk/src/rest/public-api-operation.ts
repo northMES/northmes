@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { SetMetadata, type Type } from '@nestjs/common';
+import type { z } from 'zod';
 
 /** The metadata key under which PublicApiOperation records a handler's operation. */
 export const PUBLIC_API_OPERATION_METADATA = 'northmes:public-api-operation';
@@ -18,7 +19,22 @@ export interface PublicApiOperationMetadata {
   readonly path: string;
   /** The status of a success: 200, or 201 for an operation that may create. */
   readonly status: 200 | 201;
+  /** The module id, which is the operation's tag in the document. */
+  readonly tag: string;
+  /** The contract's description, when it has one. */
+  readonly description?: string;
+  /**
+   * The contract's input: the query and path parameters of a GET route, the body of a POST route.
+   */
+  readonly input: z.ZodType;
+  /** The schema of the answer, which the runner encodes the result with. */
+  readonly output: z.ZodType;
+  /** The statuses of the problem responses the route may answer, in ascending order. */
+  readonly problems: readonly ProblemStatus[];
 }
+
+/** A status that a public route answers with application/problem+json. */
+export type ProblemStatus = 400 | 401 | 403 | 404 | 409 | 412 | 429;
 
 /**
  * Marks a route handler as one operation of the public API, with what the OpenAPI document builder

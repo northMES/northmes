@@ -11,20 +11,22 @@ import {
 import { z } from 'zod';
 
 /**
- * An article group as core's operations answer it. Its code and name are outside text, since an
- * ERP may name them.
+ * An article group as core's operations answer it, the component CoreArticleGroup of the public
+ * API (ADR 0073). Its code and name are outside text, since an ERP may name them.
  */
-export const articleGroup = z.object({
-  id: z.uuid(),
-  code: outsideText(),
-  name: outsideText(),
-  translations: z
-    .array(z.object({ field: z.string(), locale: z.string(), text: outsideText() }))
-    .readonly(),
-  version,
-  archivedAt: timestamp.nullable(),
-  updatedAt: timestamp,
-});
+export const articleGroup = z
+  .object({
+    id: z.uuid(),
+    code: outsideText(),
+    name: outsideText(),
+    translations: z
+      .array(z.object({ field: z.string(), locale: z.string(), text: outsideText() }))
+      .readonly(),
+    version,
+    archivedAt: timestamp.nullable(),
+    updatedAt: timestamp,
+  })
+  .meta({ id: 'CoreArticleGroup' });
 
 /**
  * The list of the company's article groups (ADR 0016): by code unless orderBy says otherwise, with
