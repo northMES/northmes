@@ -24,6 +24,8 @@ test.describe('the order lists', () => {
     // The filter menu's button, apart from the Article sort header.
     await page.locator('button[aria-haspopup="menu"]', { hasText: /^Article$/ }).click();
     await expect(page.getByRole('menuitemcheckbox', { name: /^Bracket L/ })).toBeVisible();
+    // The menu fades in; axe must read its colors once the transition has ended.
+    await expect(page.getByRole('menu')).toHaveCSS('opacity', '1');
     await checkA11y('the Article filter menu open');
     await page.getByRole('menuitemcheckbox', { name: /^Bracket L/ }).click();
     await page.keyboard.press('Escape');
@@ -64,6 +66,7 @@ test.describe('the order lists', () => {
 
     await page.getByRole('button', { name: 'Actions for customer order 40208 line 1' }).click();
     await expect(page.getByRole('menuitem', { name: 'Open order' })).toBeVisible();
+    await expect(page.getByRole('menu')).toHaveCSS('opacity', '1');
     await checkA11y('the row menu of a supplied line');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);
