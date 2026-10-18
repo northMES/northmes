@@ -202,6 +202,19 @@ describe('fixture G1 (plan 18)', () => {
       const setup = addWork(horizon, Date.parse(moved.start.instant), moved.setupS);
       expect(setup?.endMs, displayNumber).toBe(Date.parse(moved.runStart.instant));
     }
+    // The split puts every moved row back to its committed placement, with its setup.
+    for (const [displayNumber, back] of Object.entries(run.split)) {
+      if (typeof back !== 'object') continue;
+      const row = jobOrders.find((each) => each.productionOrderOperation === displayNumber);
+      expect(row, displayNumber).toBeDefined();
+      expect(back).toEqual({
+        equipment: row?.equipment,
+        start: values.placements[displayNumber]?.start,
+        runStart: expect.objectContaining({ instant: row?.runStartAt }),
+        end: values.placements[displayNumber]?.end,
+        setupS: row?.plannedSetupS,
+      });
+    }
     const ends = Object.values(run.moved).map((moved) => Date.parse(moved.end.instant));
     expect(Date.parse(run.runEnd.instant)).toBe(Math.max(...ends));
     expect(run.late).toBe(Date.parse(run.runEnd.instant) > Date.parse(run.deadline.instant));

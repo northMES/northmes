@@ -994,7 +994,7 @@
     }
   },
   "GT10_run_1001_1005": {
-    "rule": "Orders of one article combined into a run (ADR 0083): ranked by the setup start of their first placed row, the later order's row of an operation with a retool time laid directly after the previous order's row of that operation on its machine with no setup, its other rows under the cascade rules; the run's deadline is the earliest; an order whose own deadline is later is early; breaks are reported",
+    "rule": "Orders of one article combined into a run (ADR 0083): ranked by the setup start of their first placed row, the later order's row of an operation with a retool laid on the machine of the previous order's row of that operation at the later of that row's end and its own release, with no retool and its fixed time kept, its other rows under the cascade rules; the run's deadline is the earliest; an order whose own deadline is later is early; breaks are reported; the split puts every moved row back where it was",
     "orders": ["1001", "1005"],
     "article": "Bracket L",
     "runOrder": ["1001", "1005"],
@@ -1050,7 +1050,7 @@
             "to": "2026-11-04T12:45:00Z"
           }
         ],
-        "reason": "directly after 1001.10 on CNC1, the setup saved by the run"
+        "reason": "directly after 1001.10 on CNC1, the retool saved by the run"
       },
       "1005.20": {
         "equipment": "CNC2",
@@ -1110,22 +1110,39 @@
     "late": true,
     "lateByElapsedS": 233100,
     "split": {
+      "rule": "splitRun puts every row the combine moved back to the placement the run record holds, with its retool back",
       "1005.10": {
+        "equipment": "CNC1",
         "start": {
-          "instant": "2026-11-04T07:00:00Z",
-          "plantLocal": "2026-11-04T08:00:00"
+          "instant": "2026-11-09T05:00:00Z",
+          "plantLocal": "2026-11-09T06:00:00"
         },
         "runStart": {
-          "instant": "2026-11-04T07:30:00Z",
-          "plantLocal": "2026-11-04T08:30:00"
+          "instant": "2026-11-09T05:30:00Z",
+          "plantLocal": "2026-11-09T06:30:00"
         },
         "end": {
-          "instant": "2026-11-04T13:15:00Z",
-          "plantLocal": "2026-11-04T14:15:00"
+          "instant": "2026-11-09T11:15:00Z",
+          "plantLocal": "2026-11-09T12:15:00"
         },
         "setupS": 1800
       },
-      "1005.20": "unchanged: Fri 06:00 is after its release Wed 15:15"
+      "1005.20": {
+        "equipment": "CNC2",
+        "start": {
+          "instant": "2026-11-09T12:15:00Z",
+          "plantLocal": "2026-11-09T13:15:00"
+        },
+        "runStart": {
+          "instant": "2026-11-09T12:15:00Z",
+          "plantLocal": "2026-11-09T13:15:00"
+        },
+        "end": {
+          "instant": "2026-11-10T14:00:00Z",
+          "plantLocal": "2026-11-10T15:00:00"
+        },
+        "setupS": 0
+      }
     }
   }
 }

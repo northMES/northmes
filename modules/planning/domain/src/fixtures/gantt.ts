@@ -219,10 +219,12 @@ export const runCase = z.looseObject({
   runEnd: timePoint,
   late: z.boolean(),
   lateByElapsedS: z.number().int().nonnegative(),
+  /** The split: every moved row back to the placement it had before the combine, by display number. */
   split: z.record(
     z.string(),
     z.union([
       z.object({
+        equipment: z.string(),
         start: timePoint,
         runStart: timePoint,
         end: timePoint,
