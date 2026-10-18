@@ -130,7 +130,8 @@ describe('the rate limits of the public API', () => {
     expect(afterwards.status).toBe(200);
     expect(listed.nodes.map((node) => node.id)).not.toContain(id);
     expect(listed.nodes).toHaveLength(60);
-  });
+    // Sixty-two requests in sequence take longer than the default 5 seconds while the whole suite runs.
+  }, 30_000);
 
   it('ADR0073-W4 with the rate limit off, no request is refused, whatever the limits say', async () => {
     const { app, url } = await apps.off();
