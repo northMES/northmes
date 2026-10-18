@@ -275,6 +275,45 @@ jobs:
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
 
+  # ADR 0064: a pull request that breaks the public API fails, unless NorthMES is still 0.x and the
+  # title marks the break with !. oasdiff compares the base branch's schema/openapi-v1.json with the
+  # pull request's from its image pinned by digest, without network, so neither document leaves the
+  # runner; Renovate updates OASDIFF_IMAGE's tag and digest together. scripts/ci/openapi-diff.mjs
+  # decides from what oasdiff finds, and passes when the base branch has no document yet.
+  openapi-diff:
+    name: openapi diff
+    permissions:
+      contents: read
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    env:
+      OASDIFF_IMAGE: tufin/oasdiff:v1.33.0@sha256:6263a96dd2ef0726c54e21fea9b8e1607eac4841add0079324b424c1f52b819c
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check out the base branch's OpenAPI document
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          sparse-checkout: schema
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - name: Compare the documents with oasdiff
+        run: |
+          if [ -f base/schema/openapi-v1.json ]; then
+            docker run --rm --network none -v "$GITHUB_WORKSPACE:/work:ro" -w /work \
+              "$OASDIFF_IMAGE" breaking base/schema/openapi-v1.json schema/openapi-v1.json \
+              --format json > "$RUNNER_TEMP/openapi-changes.json"
+          fi
+      - run: node scripts/ci/openapi-diff.mjs
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          OPENAPI_CHANGES: ${{ runner.temp }}/openapi-changes.json
+
   # ADR 0039: the pull request author and every commit author signed the contributor license
   # agreement. The job checks out nothing and runs scripts/cla/check.mjs from the default branch,
   # which reads .github/cla/signed.json from there too, so a pull request can neither change the
@@ -318,7 +357,7 @@ jobs:
     # The gate reads only the results of the jobs it needs, so its token gets no permissions.
     permissions: {}
     if: always()
-    needs: [lint, typecheck, build, test, react-doctor, fresh-worktree, e2e, pr-title, linked-issue, pr-security]
+    needs: [lint, typecheck, build, test, react-doctor, fresh-worktree, e2e, pr-title, linked-issue, pr-security, openapi-diff]
     runs-on: ubuntu-24.04
     steps:
       - name: Fail when a job that CI / gate needs did not pass

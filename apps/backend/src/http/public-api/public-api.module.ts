@@ -10,6 +10,7 @@ import { type PublicOperationCall, PublicOperationRunner, toRestRoutes } from '@
 import type { DiscoveredOperation } from '../../operations/discover-operations.ts';
 import { OperationRunner } from '../../operations/operation-runner.ts';
 import type { Principal } from '../../principal.ts';
+import { OpenApiController, PUBLIC_API_CONTROLLERS } from './openapi.controller.ts';
 import { BearerPublicApiCredentials, PublicApiCredentials } from './public-api-credentials.ts';
 import { PostgresThrottlerStorage, PublicApiRateLimit } from './public-api-rate-limit.ts';
 
@@ -87,7 +88,7 @@ function restDeclarationsByModule(
 export class PublicApiModule {
   /**
    * One public controller per module, which toRestRoutes builds from the operations the module
-   * binds, and the runner its routes call. `credentials` is the public family's credential guard:
+   * binds, the runner its routes call, and GET /api/v1/openapi.json, which serves their document. `credentials` is the public family's credential guard:
    * the server's BearerPublicApiCredentials, which verifies integration tokens, unless a test passes
    * its own.
    */
@@ -100,8 +101,9 @@ export class PublicApiModule {
     );
     return {
       module: PublicApiModule,
-      controllers,
+      controllers: [...controllers, OpenApiController],
       providers: [
+        { provide: PUBLIC_API_CONTROLLERS, useValue: controllers },
         { provide: PublicApiCredentials, useClass: credentials },
         { provide: PublicOperationRunner, useClass: PublicApiRunner },
         PostgresThrottlerStorage,

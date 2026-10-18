@@ -4,6 +4,7 @@ import { type ExecutionContext, Post, UnauthorizedException } from '@nestjs/comm
 import { Reflector } from '@nestjs/core';
 import { ApiController, PublicApiOperation } from '@northmes/sdk/rest';
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { PrincipalGuard } from '../../src/modules/core/api/access/principal.guard.ts';
 import type { PrincipalResolver } from '../../src/principal.ts';
 
@@ -19,6 +20,10 @@ class HandWrittenPublicController {
     method: 'POST',
     path: '/api/v1/core/commands/do-something',
     status: 200,
+    tag: 'core',
+    input: z.object({}),
+    output: z.object({}),
+    problems: [400, 401, 403, 429],
   })
   doSomething(): void {}
 }

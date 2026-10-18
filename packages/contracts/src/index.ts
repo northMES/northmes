@@ -60,6 +60,7 @@ export {
   translations,
 } from './localized-text.ts';
 export { isOutsideText, outsideText } from './outside-text.ts';
+export { fieldError, problem } from './problem.ts';
 export {
   DEFAULT_STOCK_UNIT,
   type Dimension,
