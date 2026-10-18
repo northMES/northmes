@@ -2,11 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { closedWindows } from '../../../src/modules/planning/timeline/availability-shading.ts';
 import { naturalWidthPx, rangeOf } from '../../../src/modules/planning/timeline/time-scale.ts';
 import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 /** The rows of the tree at a level, under the treegrid. */
 function rowsAtLevel(gantt: HTMLElement, level: number): HTMLElement[] {
@@ -116,6 +121,18 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
   });
 
   it("plan 18 the time area takes the preset's natural width and scrolls sideways under the sticky tree cells", async () => {
+    // The grid measures 900 px, less than the compressed day, so the natural width wins.
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private readonly report: ResizeObserverCallback) {}
+        observe() {
+          this.report([{ contentRect: { width: 900 } } as ResizeObserverEntry], this);
+        }
+        disconnect() {}
+        unobserve() {}
+      },
+    );
     renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
 
@@ -123,11 +140,14 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
     const tracks = header.style.gridTemplateColumns.split(' ');
     const timeTrack = Number.parseFloat(tracks[tracks.length - 1] ?? '0');
-    const natural = naturalWidthPx(
-      rangeOf('2026-11-04', 'day', 'Europe/Stockholm', '06:00'),
-      'day',
-    );
-    expect(timeTrack).toBeGreaterThanOrEqual(natural);
+    // Hide closed time is on by default, so the natural width is the compressed one.
+    const snapshot = g1Snapshot();
+    const range = rangeOf('2026-11-04', 'day', 'Europe/Stockholm', '06:00');
+    const natural = naturalWidthPx(range, 'day', {
+      closed: closedWindows(snapshot.calendar, 'Europe/Stockholm', range),
+    });
+    expect(timeTrack).toBe(Math.ceil(natural));
+    expect(timeTrack).toBeLessThan(naturalWidthPx(range, 'day'));
     // The header and every row share the template, so the tree pane stays aligned with the rows.
     const row = within(gantt).getByRole('row', { name: /^1003 / });
     expect(row.style.gridTemplateColumns).toBe(header.style.gridTemplateColumns);
