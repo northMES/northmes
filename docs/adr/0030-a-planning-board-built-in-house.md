@@ -53,7 +53,9 @@ Chosen option: "Build in house", because no license-clean library is a resource 
 
 In release 1: machine rows grouped by equipment group with group colors and collapse; a sticky time header and machine column; a linear axis with four zoom presets from hours to weeks, in plant time with a zone label; non-working shading per machine; blocks with settings-driven fields and a hover card that includes ERP free fields, filled with the order color; moves in time and between allowed machines with snapping; the states committed, mine in draft, held by another planner, hard-locked, started, proposed, conflict, late, overdue, finish pending and material warning, each with a cue besides color; break lock with a confirmation that requires a reason; realtime updates ([ADR 0018](0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md)); keyboard navigation, keyboard move mode and the detail panel, in the same increment as dragging; dark mode; the board field slot `planning/board/block-fields/v1` and the header slot `planning/board/header/v1`.
 
-Cut from release 1: resize (block length follows from quantity, rates and the calendar), the compressed off-hours axis, multi-select and multi-drag, continuous zoom, undo beyond discarding the draft, the conflict navigator and the minimap. Click-to-place and the ghost outlines of other planners' drafts are cut candidates.
+Cut from release 1: resize (block length follows from quantity, rates and the calendar), multi-select and multi-drag, continuous zoom, undo beyond discarding the draft, the conflict navigator and the minimap. Click-to-place and the ghost outlines of other planners' drafts are cut candidates.
+
+The order Gantt offers Hide closed time, a local option that is on by default and compresses every closed calendar window to a few pixels on the same scale, so a week of the A1 calendar does not spend 73 percent of its width on nights and weekends ([18-gantt-timeline.md](../plan/18-gantt-timeline.md); decided 2026-10-17).
 
 ### The job order table view
 
