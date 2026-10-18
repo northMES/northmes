@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { describe, expect, it } from 'vitest';
-import { createTimeScale, naturalWidthPx, rangeLabel, rangeOf, shiftedFrom } from './time-scale.ts';
+import {
+  createTimeScale,
+  extendedRange,
+  naturalWidthPx,
+  rangeLabel,
+  rangeOf,
+  shiftedFrom,
+} from './time-scale.ts';
 
 const stockholm = 'Europe/Stockholm';
 
@@ -42,6 +49,33 @@ describe('rangeOf (plan 18, Shared pieces)', () => {
     expect(shiftedFrom('2026-11-02', 'day', 'earlier')).toBe('2026-10-30');
     expect(shiftedFrom('2026-11-02', 'hours', 'later')).toBe('2026-11-03');
     expect(shiftedFrom('2026-11-02', '4weeks', 'later')).toBe('2026-11-30');
+  });
+});
+
+describe('extendedRange (#685)', () => {
+  const stockholm = 'Europe/Stockholm';
+
+  it('extends a Day range by whole spans of three days, before and after', () => {
+    const chosen = rangeOf('2026-11-04', 'day', stockholm, '06:00');
+    const extended = extendedRange('2026-11-04', 'day', stockholm, '06:00', {
+      before: 1,
+      after: 2,
+    });
+
+    expect(extended.fromMs).toBe(chosen.fromMs - 3 * 86_400_000);
+    expect(extended.toMs).toBe(chosen.toMs + 6 * 86_400_000);
+  });
+
+  it("extends an Hours range by the preset's 12 h span, not by a whole date", () => {
+    const chosen = rangeOf('2026-11-04', 'hours', stockholm, '06:00');
+    const extended = extendedRange('2026-11-04', 'hours', stockholm, '06:00', {
+      before: 1,
+      after: 1,
+    });
+
+    expect(chosen.toMs - chosen.fromMs).toBe(12 * 3_600_000);
+    expect(extended.fromMs).toBe(chosen.fromMs - 12 * 3_600_000);
+    expect(extended.toMs).toBe(chosen.toMs + 12 * 3_600_000);
   });
 });
 
