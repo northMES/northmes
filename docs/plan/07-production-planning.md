@@ -303,11 +303,11 @@ runSecondsFor(n, rates) = ceilToSecond( ceil(n * cyclesPerPiece / piecesPerCycle
 plannedSeconds(job)     = setupSeconds + runSecondsFor(job.quantity, job.rates)
 ```
 
-- Planned seconds are working seconds laid over the machine's availability with `addWork`. Breaks and closed time inside the interval extend it. A job order is one contiguous block on its machine: setup, then run, interrupted only by calendar closures, never by another job order.
+- Planned seconds are working seconds laid over the machine's availability with `addWork`. Breaks and closed time inside the interval extend it. A job order is one contiguous block on its machine: setup, then run time, interrupted only by calendar closures, never by another job order.
 - Retool is not divided by the planning factor.
 - A piece exists when its cycle completes, so a partial cycle rounds up.
 - Quantity 0 gives setup only and no send-ahead release.
-- Each job order carries the full retool time. Consecutive job orders of the same article and operation on one machine do not skip the second setup (working default, open).
+- Each job order carries the full retool time. Consecutive job orders of the same article and operation on one machine do not skip the second setup (working default, open), unless a planner has combined their orders into a run, which saves the second and later retool times as its rule (the fixed time stays) ([ADR 0083](../adr/0083-runs-of-production-orders-of-one-article.md), [18](18-gantt-timeline.md#runs)).
 - `fixedSeconds` is Pyramid's `ExtendedTime` when it is mapped as a fixed time; the connector folds a separate setup row into the next operation's retool by default ([08-pyramid-connector.md](08-pyramid-connector.md)).
 - Quantities and rates are parsed into scaled integers at the snapshot boundary (Postgres `numeric` arrives as a string), and every ceiling is taken in integers. No `parseFloat` before arithmetic.
 

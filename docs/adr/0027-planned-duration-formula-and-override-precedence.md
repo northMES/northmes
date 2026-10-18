@@ -45,7 +45,7 @@ runSecondsFor(n, rates) = ceilToSecond( ceil(n * cyclesPerPiece / piecesPerCycle
 plannedSeconds(job)     = setupSeconds + runSecondsFor(job.quantity, job.rates)
 ```
 
-* Planned seconds are working seconds laid over the machine's availability with `addWork` ([ADR 0025](0025-plant-calendars-shift-patterns-and-the-production-day.md)); breaks and closed time inside the interval extend it. A job order is one contiguous block: setup, then run, interrupted only by calendar closures, never by another job order.
+* Planned seconds are working seconds laid over the machine's availability with `addWork` ([ADR 0025](0025-plant-calendars-shift-patterns-and-the-production-day.md)); breaks and closed time inside the interval extend it. A job order is one contiguous block: setup, then run time, interrupted only by calendar closures, never by another job order.
 * Retool is not divided by the planning factor, and retool may be interrupted by breaks and nights.
 * A piece exists when its cycle completes, so a partial cycle rounds up.
 * Each job order carries the full retool time. Consecutive job orders of the same article and operation on one machine do not skip the second setup.

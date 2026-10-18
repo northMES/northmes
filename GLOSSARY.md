@@ -61,10 +61,10 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | retool time | The time to set a machine up for an operation before the first piece. Pyramid sends `RetoolTime`, and some sites send setup as a separate row named "Ställtid". | changeover, toolchange |
 | fixed time | A duration added to an operation whatever the quantity. Pyramid sends it as `ExtendedTime`. | extra time |
 | setup | The first part of a job order: retool time plus fixed time. It is not onboarding, the steps a new company and each new plant go through (see onboarding under Company and plants). | preparation |
-| run | The part of a job order after setup, when pieces are made. | production time |
+| run time | The part of a job order after setup, when pieces are made; setup plus run time is the planned duration. Krister decided the name on 2026-10-18, so that "run" alone is the group of production orders under Planning work. | production time, run (alone) |
 | planning factor | The divisor that stretches run time from the ideal machine speed to the expected real speed; by default the operation's OEE target. | efficiency, speed factor |
 | OEE target | The target overall equipment effectiveness of an operation, as a fraction. Pyramid sends `Oee` as a percentage. | expected OEE |
-| planned duration | The working time a job order needs: setup plus run, laid over the machine's working time. | length |
+| planned duration | The working time a job order needs: setup plus run time, laid over the machine's working time. | length |
 | lead time | The wait that must pass after the previous operation before this operation may start, such as cooling; it belongs to the waiting operation. Pyramid sends `LeadTime` on the waiting operation and `LagTime` on the previous one for the same kind of wait. | lag time, queue time, wait time |
 | send-ahead quantity | The number of pieces an operation must have made before the next operation may start. Pyramid calls it `StartNextAfterQuantity`. | start-after quantity, transfer batch |
 
@@ -105,6 +105,7 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | stock balance | The quantity of an article in a warehouse at a point in time. Pyramid sends it as `StockQuantity`. | inventory |
 | planned movement | A dated future change to an article's stock in a warehouse: a purchase, a purchase requisition, a consumption, an output, a customer demand or a transfer. Pyramid sends them as stock rows of type I, A, T, R, O, M and N. | transaction |
 | proposal | A set of suggested job order moves that an AI agent writes for one planner, who alone can accept them into a draft. | suggestion, AI plan |
+| run | Two or more production orders of one article at one plant that a planner has combined to plan together: a later order's job order of an operation with a retool follows the earlier order's job order of that operation on its machine without a second retool (its fixed time stays), when the operation allows that machine and as soon as its own release allows, while its other job orders keep their setup, and the run is due at the earliest deadline of its orders. Each order keeps its own job orders, quantity, demand rows and progress; splitting the run separates them again. | campaign, merged order, batch |
 | planning board (Board) | The screen with one row per machine and job orders as blocks along a time axis. | Gantt (a project Gantt has one task per row) |
 | block | A job order as drawn on the planning board. | bar, card |
 | job order table view | The table of job orders with the same filters and actions as the board. | list view |

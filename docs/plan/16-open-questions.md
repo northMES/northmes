@@ -65,6 +65,11 @@ This document lists every open question in the release 1 plan, grouped by who an
 | PO-44 | How many machines and job orders per week does the pilot plan? | Budgets use 40 machines, 500 orders and about 1 600 job orders over 8 weeks. The board spike measures max(2 x weekly job orders x 8 weeks, 5 000) blocks on 60 rows | [0030][adr-0030], [0028][adr-0028], [0018][adr-0018], 07 | before the board spike verdict, 2026-11-06 |
 | PO-45 | Is "Pause live updates" on the board wanted? | Built as described in 06 and 07 | [0021][adr-0021], 06, 07 | |
 | PO-46 | Do purchase requisitions (Pyramid `A` rows) count in the material warning, and how does the send-ahead quantity enter it? | Not decided; `countPurchaseRequisitions` is required per plant | [0028][adr-0028], 07, 08 | |
+| PO-81 | May a run of orders of one article hold an order with a started, held or hard-locked job order? | No for all three; the review step refuses with the reason | [0083][adr-0083], 18 | before the run is built on the plan server |
+| PO-82 | Does the ERP learn of a run, as a note or a field on the orders, or is a run NorthMES-internal? | NorthMES-internal; the orders, their quantities and their write-back keys stay their own | [0083][adr-0083], 08, 18 | before the run is built on the plan server |
+| PO-83 | May a planner set a run's deadline by hand, or is it always the earliest deadline of its orders? | The earliest of its orders; an order with a later deadline is flagged early | [0083][adr-0083], 18 | before the run is built on the plan server |
+| PO-84 | Does a run save the whole retool of an operation, or does a run of one article still need a shorter changeover, such as a fixture change? | The whole retool; the fixed time of the operation stays, since it is due for every order and is no changeover | [0083][adr-0083], 07, 18 | before the run is built on the plan server |
+| PO-85 | Does a run take every operation of its orders, or only the operations with a setup to save? | Every operation sits under the run; the setup is saved where there is one, and the other rows are placed under their release with their own setup | [0083][adr-0083], 18 | before the run is built on the plan server |
 | PO-47 | What should resizing a block on the board mean for the pilot? | Resize is not in release 1; block length follows from quantity, rates and the calendar | [0030][adr-0030], 07 | |
 
 ### ERP and Pyramid
@@ -248,6 +253,7 @@ The remaining administrator questions (installation, polling rate, response size
 | M-91 | Which Argos plan does NorthMES use, and who pays for it if the free quota runs out? | The free plan, with the reporter uploading from `main` and from pull requests of the repository; revisit when the quota runs out | [0077][adr-0077], 11 |
 | M-92 | When does the Argos check become a required check of the `main` ruleset? | After two weeks without a flaky snapshot on `main` | [0077][adr-0077], [0050][adr-0050] |
 | M-93 | Which screenshots may leave the repository for Argos? | The e2e specs' pages with the fictional seed and the records the specs create, never pilot exports or recorded customer requests | [0077][adr-0077], 17 |
+| M-94 | Do the rules of ADR 0083 stand: any number of orders of one article at one plant in a run, every job order of each order placed, each order keeping its own job orders, the saved retools as the run's rule, the earliest deadline with the early warning, the split as the reverse, and the run as a draft record until Save and then a committed grouping? | Yes, as ADR 0083 proposes from Krister's direction of 2026-10-17; the order Gantt builds them on mock data in the browser's draft | [0083][adr-0083], [0029][adr-0029], 07, 18 |
 
 ### Later modules
 
@@ -312,3 +318,4 @@ The remaining administrator questions (installation, polling rate, response size
 [adr-0075]: ../adr/0075-plugin-installs-from-signed-archives-into-a-plugin-volume-with-plugin-screens-loaded-at-run-time.md
 [adr-0076]: ../adr/0076-secure-development-lifecycle-with-a-security-note-per-change-a-controls-index-and-an-internal-audit-each-release.md
 [adr-0077]: ../adr/0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md
+[adr-0083]: ../adr/0083-runs-of-production-orders-of-one-article.md

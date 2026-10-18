@@ -29,6 +29,7 @@ The document adds to 07 and never repeats it. Where the board's rules apply to t
 | [0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md) | accepted | Slot kinds; the board field slots keep their kind on the order Gantt |
 | [0077](../adr/0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md) | proposed | Visual snapshots from the Playwright specs |
 | [0079](../adr/0079-design-pages-as-artifacts-on-the-northmes-design-system-with-the-approved-source-in-the-repository.md) | proposed | Design pages as artifacts; the board page D3 is approved and the order Gantt gets its own page |
+| [0083](../adr/0083-runs-of-production-orders-of-one-article.md) | proposed | Runs: orders of one article combined and planned together, the saved retools as the run's rule, the earliest deadline, the split |
 
 When this document and an ADR disagree, the ADR holds and this document gets fixed. Where this document and 07 disagree, 07 holds for the board and this document holds for the order Gantt and the scheduling views.
 
@@ -41,7 +42,7 @@ New terms this document introduces. They go into [GLOSSARY.md](../../GLOSSARY.md
 | timeline core | The headless TypeScript functions and the React pieces that both views share: the time scale, culling, hit testing, row virtualization, block rendering, the drag preview, the link overlay, the keyboard grid model and the move paths. | board core (that is its release 1 name in [ADR 0030](../adr/0030-a-planning-board-built-in-house.md)), Gantt engine |
 | order Gantt (Gantt) | The view with one row per production order, one row per operation under it and one row per job order under that, on the same time axis as the board, with links between consecutive operations. | project Gantt, order view (ambiguous with the production order page) |
 | page | Which timeline page is open: the board (`/$plant/planning/board`, one row per machine), the Gantt (`/$plant/planning/gantt`, one row per order, operation and job order) or the job order table, each an entry under Planning in the sidebar. | view (the first round's URL key), mode, tab |
-| release | Between two consecutive operations of one order: the instant at which the later operation may start its run, from the earlier operation's rows, the send-ahead quantity and the lead time ([07](07-production-planning.md#rules-between-operations)). The glossary's "release" of an order is the other meaning, and the UI says "released from <operation>" for this one. | dependency, link date |
+| release | Between two consecutive operations of one order: the instant at which the later operation may start its run time, from the earlier operation's rows, the send-ahead quantity and the lead time ([07](07-production-planning.md#rules-between-operations)). The glossary's "release" of an order is the other meaning, and the UI says "released from <operation>" for this one. | dependency, link date |
 | link | The drawn relation between consecutive operations of one order: from the earlier operation's release point to the later operation's earliest start, with the lead time as its own segment. Every link is finish-to-start, shortened by the send-ahead quantity and lengthened by the lead time. | dependency, arrow, predecessor link |
 | float | The working time a job order can start later without breaking a rule: total float against the order's deadline, free float against its successor and the next reservation on its machine. Measured in working seconds on the job order's machine. | slack (kept for the elapsed time between planned end and deadline), buffer |
 | binding constraint | The one rule or reservation that stops a job order from starting earlier: the release from its predecessor, a reservation on its machine, a calendar closure, the frozen window, a hard lock, a started row or the earliest start of its order. | bottleneck (that is a machine), reason |
@@ -49,8 +50,9 @@ New terms this document introduces. They go into [GLOSSARY.md](../../GLOSSARY.md
 | cascade | Moving the later operations of one order in the planner's draft so the rules between operations still hold after a move, never earlier than before, never past a fixed row. | auto-schedule (that is autoplan), push |
 | plan this order | Running `plan()` for one production order in the browser against the loaded reservations and writing the result into the draft. | autoplan (that is the plant-wide job) |
 | earliest start | An instant before which no job order of a production order may start: material arrival, a customer's release, a tooling date. | release date (ambiguous), start constraint |
-| workload | For one machine and one time bucket: the available working seconds from the calendar, the seconds loaded by job orders, their split into setup and run, and the seconds above availability. | capacity (that is availability alone), utilization (that is one ratio of the workload) |
+| workload | For one machine and one time bucket: the available working seconds from the calendar, the seconds loaded by job orders, their split into setup and run time, and the seconds above availability. | capacity (that is availability alone), utilization (that is one ratio of the workload) |
 | bucket | One cell of the workload lane: a production day, a shift or an ISO week, following the zoom preset. | period, slot (that is a snap step) |
+| run | Two or more production orders of one article at one plant that a planner has combined to plan together: a later order's job order of an operation with a retool follows the earlier order's job order of that operation on its machine without a second retool (its fixed time stays), when the operation allows that machine and as soon as its own release allows, while its other job orders keep their setup, and the run is due at the earliest deadline of its orders ([ADR 0083](../adr/0083-runs-of-production-orders-of-one-article.md)). | campaign, merged order, batch |
 
 ## Scope
 
@@ -67,13 +69,13 @@ In scope, as additions to the release 1 board and as a new view:
 
 Not in scope, with the reason:
 
-- Block resize, multi-select, multi-drag, continuous zoom, undo beyond discarding the draft, a minimap: cut from release 1 in [ADR 0030](../adr/0030-a-planning-board-built-in-house.md) and [ADR 0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md). Resize stays cut even on the order Gantt, because a job order's length follows from quantity, rates and the calendar. The compressed off-hours axis returns as the local option Hide closed time, on by default, which compresses every closed window to a few pixels (Krister, 2026-10-17; [ADR 0030](../adr/0030-a-planning-board-built-in-house.md) is amended).
+- Block resize, multi-select of blocks, multi-drag, continuous zoom, undo beyond discarding the draft, a minimap: cut from release 1 in [ADR 0030](../adr/0030-a-planning-board-built-in-house.md) and [ADR 0055](../adr/0055-release-1-scope-under-option-b-and-the-scope-rule.md). Resize stays cut even on the order Gantt, because a job order's length follows from quantity, rates and the calendar. The compressed off-hours axis returns as the local option Hide closed time, on by default, which compresses every closed window to a few pixels (Krister, 2026-10-17; [ADR 0030](../adr/0030-a-planning-board-built-in-house.md) is amended). The one multi-select is of order rows on the order Gantt, for [Runs](#runs) (Krister, 2026-10-17).
 - Start-to-start, finish-to-finish and start-to-finish links: routings carry finish-to-start with lead time and send-ahead quantity only, and [07](07-production-planning.md#graph-algorithms-with-graphology-later) names branching routings as a later trigger.
 - A project-style critical path that ignores machines: it is replaced by the critical chain, which includes reservations.
 - People and crews as resources: crew rotation is HR planning ([ADR 0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md)). Workload is per machine. Tools as a contended resource are a later item ([Open points](#open-points)).
 - Resource leveling: autoplan places rows and never moves fixed rows; the planner levels by moving rows with the float and workload the timeline shows.
 - Baselines (a saved earlier plan to compare against): the plan revision and the audit trail hold history, and a baseline view is a later item.
-- A teardown or cleanup time after the run, as a third part of a job order beside setup and run: the routing data of release 1 has no such value. It is a later item that extends the duration function.
+- A teardown or cleanup time after the run time, as a third part of a job order beside setup and run time: the routing data of release 1 has no such value. It is a later item that extends the duration function.
 - Calendar editing: the calendar page of E06-S09 and E06-S10 owns it. The timeline shows the result and links to the page.
 - Export to image or spreadsheet: not requested for release 1.
 
@@ -174,7 +176,7 @@ Sorting on a column sorts level 1 rows and keeps the tree under each. The width 
 - A drag moves a job order in time on its machine. Snapping as the board: first to the preset's step, then forward to the next working instant on the machine ([ADR 0030](../adr/0030-a-planning-board-built-in-house.md)). The preview shows the new span, the frozen window feedback and, with cascade on, the ghost spans of the rows the cascade would move ([Auto-scheduling in a draft](#auto-scheduling-in-a-draft)).
 - The machine changes through the detail panel's machine select or the Move dialog, both limited to the operation's allowed machines. Keyboard move mode steps time with Left and Right; Up and Down step through the allowed machines as on the board, so the keyboard path can change the machine without the dialog.
 - Every move goes through `judgeMove` and lands in the draft as `moveJobOrderInDraft`, as the board. Refusals and confirmable conflicts are the board's ([07](07-production-planning.md#fixed-frozen-held-and-locked-rows)).
-- Summary rows cannot be dragged. Dragging an order or operation row does nothing and the row's menu offers "Zoom to order" (sets the range to the order's span plus one snap step on each side and picks the finest preset that fits the time area), "Show critical chain", "Plan this order" and "Move all later by" ([Auto-scheduling in a draft](#auto-scheduling-in-a-draft)).
+- Summary rows cannot be dragged. Dragging an order or operation row does nothing and the row's menu offers "Zoom to order" (sets the range to the order's span plus one snap step on each side and picks the finest preset that fits the time area), "Show critical chain", "Plan this order" and "Move all later by" ([Auto-scheduling in a draft](#auto-scheduling-in-a-draft)), and "Combine into a run" when two or more orders of one article are selected ([Runs](#runs)).
 
 ### Other row rules
 
@@ -182,6 +184,51 @@ Sorting on a column sorts level 1 rows and keeps the tree under each. The width 
 - Progress: a job order row shows the board's progress bar once started. An operation row shows reported good plus scrap over its quantity as a thin bar inside its summary bar; an order row shows its last operation's progress. The accessible name carries the numbers ("240 of 600 pcs reported").
 - Split: the job order row's menu offers Split, which writes the draft change of kind `split` from [07](07-production-planning.md#splitting-and-hard-locking-by-hand-plan-proposal). The new job order appears as a new row under the operation, in the Not placed row until it is moved, with its own full retool.
 - Hand-set deadline and priority of a NorthMES-owned order are edited in the order's detail panel through `planning.updateProductionOrder`; an ERP-owned order shows them read-only with "from the ERP".
+
+## Runs
+
+Plan proposal, from Krister Johansson's decision of 2026-10-17 and [ADR 0083](../adr/0083-runs-of-production-orders-of-one-article.md). A run is two or more production orders of one article at one plant that a planner has combined to plan together: a later order's job order of an operation with a retool follows the earlier order's job order of that operation on its machine without a second retool (its fixed time stays), when the operation allows that machine and as soon as its own release allows, while its other job orders keep their setup, and the run is due at the earliest deadline of its orders. The orders are at one plant by construction: the Gantt page is a plant's page and loads that plant's orders only. The ADR holds the rules; this section says how the order Gantt offers, reviews, draws and undoes a run. The design frames PR1 to PR3 of the planning pages round (issue 689) show the review step and the run on the Gantt.
+
+### Selecting the orders
+
+- Order rows can be multi-selected: Shift+click adds an order row to the selection, and in row focus mode Shift+Space does the same; a click or Space without Shift selects that one row, as the treegrid pattern. Blocks and operation rows are never multi-selected ([Scope](#scope)). `order=<id>` in the URL keeps naming one selected order, the first of the selection; the rest of the selection stays local.
+- "Combine into a run" is in the order row's menu and in the Details drawer of an order row. It is enabled when two or more orders of one article are selected. With one order selected it says why it is disabled ("Select another order of Bracket L"); with orders of different articles selected it says "The selected orders are of different articles". An order with a job order in the Not placed row, or with a started, held or hard-locked job order, cannot join (ADR 0083 rule 1): the review step then refuses with the reason. The action needs `planning.jobOrder:schedule`.
+
+### The review step
+
+A dialog named "Combine into a run" opens before anything is written (frame PR1). It lists:
+
+- the orders in the run's order, each with its number, quantity, deadline and owner (the ERP or NorthMES);
+- the saved retools, one line per job order whose retool the run saves ("1005.10 follows 1001.10 on CNC 1, saves 30 min of retool");
+- the run's deadline and, for each order whose own deadline is later, the early warning ("1005 is due Fri 13 Nov 15:00; the run is due Fri 6 Nov 15:00, 7 days earlier");
+- the run's planned span and whether it is late against the run's deadline;
+- every break the combine creates, worded as the My draft list will word it ("1005.10 overlaps 1003.10 on CNC 1").
+
+Combine writes the run into the draft; Cancel writes nothing. The dialog takes focus on its first element and returns it to the row's menu button on close; it is on the Escape stack of the board.
+
+### The run on the Gantt
+
+- The run is a row above its orders (frame PR2): a level 1 row "Run of Bracket L" with the summed quantity, the orders' numbers, the run's deadline and late-by, and its own summary bar from the earliest setup start to the latest end over its orders, in the first order's color at reduced opacity with the run cue, a doubled left edge. Its orders are indented under it as its children and keep their operation and job order rows; `aria-level` grows by one under a run. Collapsed, the run row shows the summary bar only.
+- A job order whose retool the run saves draws no retool hatch (a fixed time keeps its part of the hatch). Its accessible name, its hover card and Details show the setup that remains, the fixed time, and name the saved retool: "setup 0 min, retool saved by the run (30 min)" for `1005.10`, which has no fixed time, or "setup 10 min, retool saved by the run (30 min)" for a row with 10 min of fixed time (ADR 0083 rule 4).
+- An order flagged early shows "early by 7 days" in its row header beside the deadline, in the warning token with a glyph, as late-by shows.
+- The run row's menu offers "Split run" and "Zoom to run". Plan this order and Move all later by apply to the run as a whole once `plan()` exists.
+- The My draft list shows the run as one change ("Run of Bracket L: 1001 and 1005, 2 rows moved, 1 retool saved") with Split run as its action, and the breaks it creates as their own lines with the usual actions.
+- Split run removes the run. In the draft it discards the run and its moves; on a committed run it writes the moves of `splitRun` into the draft: every row the combine moved back to the placement the run record holds, every saved retool back.
+- Sorting places a run by its deadline among the orders; a filter that matches any of its orders shows the run with that order.
+
+### What the domain computes
+
+`combineIntoRun(orders, context)` and `splitRun(run, context)` in `@northmes/planning-domain` (ADR 0083, rule 9). A combine returns the run record (its orders in run order, the deadline, the saved retools, the early orders, and the placement each moved row had before the combine), the moves as the cascade reports them, and the conflicts. The web writes the moves into the draft as draft changes and keeps the run record beside them.
+
+Case G1 `GT10`: `1001` (Bracket L, 600 pcs, deadline Fri 6 Nov 15:00) and `1005` (Bracket L, 600 pcs, NorthMES-owned, deadline Fri 13 Nov 15:00, placed in week 46) are combined. `1001` comes first, because its first row starts Tue 11:30. `1005.10` is laid on CNC1 directly after `1001.10`, Wed 08:00 to Wed 13:45, with no retool (30 min saved); it overlaps `1003.10`, which is reported as `OVERLAP`. `1005.20` follows the cascade rules on CNC2: released Wed 14:45, past `1001.20` and the locked `1002.10`, Fri 06:00 to Mon 9 Nov 07:45. The run's deadline is Fri 6 Nov 15:00; `1005` is early by 7 days; the run ends Mon 9 Nov 07:45 and is late by 2 days 16 h 45 min against its deadline. Split run puts both rows back to their week 46 placements, the 30 min retool of `1005.10` with them.
+
+### Open product owner questions
+
+- PO-81: may a run hold an order with a started, held or hard-locked job order? Working default: no for all three, the review step refuses with the reason.
+- PO-82: does the ERP learn of a run, as a note or a field on the orders, or is it NorthMES-internal? Working default: internal.
+- PO-83: may a planner set the run's deadline by hand, or is it always the earliest of its orders? Working default: the earliest.
+- PO-84: does a run save the whole retool, or does a run of one article still need a shorter changeover, such as a fixture change? Working default: the whole retool; the fixed time of the operation stays.
+- PO-85: does the run take every operation of its orders, or only the operations with a setup to save? Working default: every operation of the orders sits under the run, and the setup is saved where there is one.
 
 ## Working-time calendars on the timeline
 
@@ -196,7 +243,7 @@ Calendars, versions, shift patterns, breaks, deviations and the availability fun
 
 ### Blocks across closed time
 
-- A job order is one contiguous block on its machine: setup, then run, interrupted only by calendar closures ([ADR 0027](../adr/0027-planned-duration-formula-and-override-precedence.md)). Proposed. The block is drawn from setup start to end as one target with one accessible name, and the closed segments inside it are drawn hollow (the lane color inside the block's border), so a block across a weekend reads as one job that pauses. At Week and 4 weeks zoom, hollow segments narrower than 2 px are not drawn.
+- A job order is one contiguous block on its machine: setup, then run time, interrupted only by calendar closures ([ADR 0027](../adr/0027-planned-duration-formula-and-override-precedence.md)). Proposed. The block is drawn from setup start to end as one target with one accessible name, and the closed segments inside it are drawn hollow (the lane color inside the block's border), so a block across a weekend reads as one job that pauses. At Week and 4 weeks zoom, hollow segments narrower than 2 px are not drawn.
 - The block's hover card and detail panel show both durations: working time ("3 h working") and elapsed time ("2 days 18 h elapsed"), each with its unit, never the sum without a word. One field names one unit ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). Accepted.
 - The setup part of a block (retool plus fixed time) is drawn as a hatched leading segment when the block is at least 66 px wide, and named in the accessible text ("setup 30 min, run 5 h").
 
@@ -385,7 +432,7 @@ For a machine `m` and a bucket `[a, b)`:
 
 - `availableS`: working seconds of `av(m)` inside `[a, b)`.
 - `loadedS`: the sum over every job order on `m` of its working segments inside `[a, b)`, overlapping rows counted twice. Draft moves count at their draft position; the committed position of a moved row does not count.
-- `setupS` and `runS`: the split of `loadedS` by the setup and run parts of each row.
+- `setupS` and `runS`: the split of `loadedS` by the setup and run time parts of each row.
 - `freeS = max(0, availableS - loadedS)`: the working time still open in the bucket, which is what a planner looks for when placing work.
 - `overloadS = max(0, loadedS - availableS) + closedS`, where `closedS` is work laid in closed time (only after a calendar change on committed rows).
 - `utilization = loadedS / availableS` as a permille integer; undefined when `availableS = 0` (shown as "closed").
@@ -464,7 +511,7 @@ No new permission. Moves, cascade, plan this order and Move all later by need `p
 
 ### Tree grid semantics
 
-- The order Gantt is `role="treegrid"` named after plant, filter and range. Order and operation rows carry `aria-level` 1 and 2, `aria-expanded`, `aria-setsize` and `aria-posinset`; job order rows carry `aria-level` 3. Each row has a `rowheader` (the Name cell) and the tree columns as `gridcell`s, then one `gridcell` for the time area that holds the block or the summary bar.
+- The order Gantt is `role="treegrid"` named after plant, filter and range. Outside a run, order and operation rows carry `aria-level` 1 and 2 and job order rows `aria-level` 3; inside a run ([Runs](#runs)) the run row is level 1 and its orders, operations and job orders are levels 2, 3 and 4. Order, operation and run rows carry `aria-expanded`, `aria-setsize` and `aria-posinset`. Each row has a `rowheader` (the Name cell) and the tree columns as `gridcell`s, then one `gridcell` for the time area that holds the block or the summary bar.
 - Row focus mode, as the ARIA Authoring Practices treegrid pattern: Up and Down move between rows, Right expands a collapsed row or moves into its first cell, Left collapses an expanded row or moves back to the row, Home and End go to the first and last row, Page Up and Page Down move a screenful, Enter opens the detail panel of the row. Inside a row, Left and Right move between cells, and the time area cell holds the block, which takes the block keys of the board (M for move mode, the menu key, Shift+F10).
 - Move mode on a job order row: Left and Right step one snap slot in time; Up and Down step through the operation's allowed machines; the step message names the machine, the span and the cascade count ("Mill 1, Wed 4 Nov 13:30 to Thu 5 Nov 07:00. 1 row moves with it. Not saved."). Enter commits, Escape cancels, focus stays on the block and returns to it by id after a commit.
 - A summary bar cell is focusable for its name only; it has no move keys. Its name carries the span, the status and, for an order row, the slack or late-by.
@@ -486,7 +533,7 @@ No new permission. Moves, cascade, plan this order and Move all later by need `p
 
 ### Gates
 
-- `e2e/a11y/gantt.axe.spec.ts` over the states populated, expanded order with links, chain highlight, workload lane with its table open, move mode and the 640 px tabs, in `ci / a11y`.
+- `e2e/a11y/gantt.axe.spec.ts` over the states populated, expanded order with links, chain highlight, workload lane with its table open, move mode, the review step of a run, the run row and the 640 px tabs, in `ci / a11y`.
 - `e2e/planning/gantt-keyboard.spec.ts`: expand an order with Right, enter move mode on a job order row, step a machine with Down and two snaps with Right, Enter; the moved block is focused, lies inside the scroller, and the spoken text matches the server's start and names the cascade count.
 - One manual NVDA pass on the order Gantt on the pilot planner-class PC, with the board's pass.
 
@@ -510,7 +557,7 @@ The board spike harness (E01-S04-T01) gains a Gantt row model once SP3 has passe
 
 ## Tests
 
-Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md)). Case ids `GT1` to `GT9` serve as requirement ids; every expected value is in `modules/planning/domain/fixtures/gantt/g1.expected.json`, generated with `g1.json` from one script, and a test that loads both files is the first failing test of each function. File paths are plan proposals.
+Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md)). Case ids `GT1` to `GT10` serve as requirement ids; every expected value is in `modules/planning/domain/fixtures/gantt/g1.expected.json`, generated with `g1.json` from one script, and a test that loads both files is the first failing test of each function. File paths are plan proposals.
 
 ### Domain unit tests (`modules/planning/domain`)
 
@@ -521,6 +568,7 @@ Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-project
 - `plan-this-order.test.ts`: `plan()` with every other loaded row fixed places `1001` at the GT1 latest placement; the browser snapshot builder and the server snapshot loader give deep-equal snapshots for G1; Move all later by 1 day of working time shifts both rows and keeps the rules.
 - `workload.test.ts`: GT5 (every bucket of the three machines for the five production days, setup split); GT6 (overload 2 700 s and the `OVERLAP` pair); a bucket with no availability is "closed"; draft positions count and committed positions of moved rows do not; buckets by shift and by ISO week sum to the same totals as buckets by production day.
 - `constraints-of.test.ts`: the constraint list of `1004.20` names release, last piece, allowed machines and calendar as holding; of a row dropped before its release names `LEAD_TIME` with the instant that clears it; of a row of a locked operation names `hardLock`; with `earliestStartEnabled` and an earliest start after the row's start names `EARLIEST_START`; with `plannerAnchors` on, a row anchored at Thu 06:00 is not placed earlier by `plan()` and the list names the anchor and the planner.
+- `run.test.ts`: GT10 (the run of `1001` and `1005`: the placements, the saved retool, the run's deadline, the early flag, the overlap); the orders and their rows shuffled give the same result; the first order's rows stay, every later row lies on an allowed machine at or after its release, a row with a saved retool starts at or after the end of the row it follows; `splitRun` puts every moved row back and restores every saved retool.
 - `domain-imports.test.ts`: unchanged, and the new files pass it.
 
 ### Time and calendar tests
@@ -538,6 +586,7 @@ Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-project
 - `board-drag-feedback.test.tsx`: dragging `1003.10` dims every machine row that is not CNC1 and the drop on Mill 1 is refused with the tooltip naming the machine; with `plannerAnchors` on, the drop records the anchor and the block shows the pin glyph.
 - `draft-conflicts.test.tsx`: after GT3 with cascade off the My draft tab lists one `LEAD_TIME` line with the clearing instant Wed 13:30; Cascade from here removes it and adds the second draft row.
 - `deadline-markers.test.tsx`: `1003` shows the late band from Wed 15:00 to Thu 06:15 and "late by 15 h 15 min"; `1001` shows the marker and no band.
+- `gantt-run.test.tsx`: Shift+click selects `1001` and `1005`; Combine into a run opens the review step with the saved retool, the run's deadline and the early warning; Combine draws the run row above its orders with `1005.10` without a setup hatch; the My draft list shows the run as one change; Split run removes it.
 
 ### Integration tests (`apps/backend`, Testcontainers)
 
@@ -601,6 +650,7 @@ These become ADRs at status `proposed`, from `docs/adr/template.md`, before a ta
 | The link limit and `ganttMaxOrders` | SP3b measurement | 200 links, 300 orders |
 | The planner PC and browser for SP3b and the Gantt NVDA pass | pilot IT | as SP3 |
 | Release placement of each story | Krister | as [Decisions this document needs](#decisions-this-document-needs), item 1 |
+| The run questions of [Runs](#runs), PO-81 to PO-85: a started, held or hard-locked order in a run, the ERP, a hand-set run deadline, the saved retool's size, which operations a run takes; the rules of ADR 0083, M-94 | product owner; Krister | as the section's working defaults |
 
 ## Provenance
 
