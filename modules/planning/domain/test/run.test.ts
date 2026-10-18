@@ -72,6 +72,13 @@ describe('combineIntoRun (ADR 0083, plan 18 Runs)', () => {
           earlyByS: 604_800,
         },
       ],
+      before: orderOf('1005').jobOrders.map((row) => ({
+        jobOrderId: row.id,
+        displayNumber: row.displayNumber,
+        equipment: row.equipment,
+        placement: row.placement,
+        plannedSetupS: row.plannedSetupS,
+      })),
     });
     expect(combined.run?.early[0]?.earlyByS).toBe(gt10.early[0]?.earlyByElapsedS);
   });
@@ -256,41 +263,71 @@ describe('combineIntoRun (ADR 0083, plan 18 Runs)', () => {
 describe('splitRun (ADR 0083 rule 7)', () => {
   const combined = combineIntoRun([orderOf('1001'), orderOf('1005')], context);
 
-  it('GT10 gives 1005.10 its 30 min setup back from Wed 08:00, ending Wed 14:15, and 1005.20 stays after its release', () => {
+  it('GT10 puts both rows of 1005 back to their week 46 placements, the 30 min retool of 1005.10 with them', () => {
     const run = combined.run;
     if (run === undefined) throw new Error('no run');
-    const after = {
-      ...context,
-      orders: context.orders.map(
-        (order) => combined.orders.find((each) => each.id === order.id) ?? order,
-      ),
-    };
-    const split = splitRun(run, combined.orders, after);
+    const split = splitRun(run, combined.orders);
 
-    const expected = gt10.split['1005.10'];
-    if (typeof expected !== 'object') throw new Error('GT10 split of 1005.10');
-    expect(split.moves).toEqual([
-      {
-        jobOrderId: 'jo-1005-10',
-        displayNumber: '1005.10',
-        equipment: 'CNC1',
-        from: spanOf('1005.10'),
+    const back = (key: string) => {
+      const expected = gt10.split[key];
+      if (typeof expected !== 'object') throw new Error(`GT10 split of ${key}`);
+      return {
+        equipment: expected.equipment,
         to: {
           setupStartMs: ms(expected.start.instant),
           runStartMs: ms(expected.runStart.instant),
           endMs: ms(expected.end.instant),
         },
+      };
+    };
+    expect(split.moves).toEqual([
+      {
+        jobOrderId: 'jo-1005-10',
+        displayNumber: '1005.10',
+        from: spanOf('1005.10'),
         reason: 'moved',
         setupS: 1800,
+        ...back('1005.10'),
+      },
+      {
+        jobOrderId: 'jo-1005-20',
+        displayNumber: '1005.20',
+        from: spanOf('1005.20'),
+        reason: 'moved',
+        ...back('1005.20'),
       },
     ]);
-    expect(split.conflicts).toEqual([{ kind: 'OVERLAP', rows: ['1003.10', '1005.10'] }]);
-    const restored = split.orders.flatMap((order) => order.jobOrders);
-    expect(restored.find((row) => row.id === 'jo-1005-10')?.plannedSetupS).toBe(1800);
-    expect(restored.find((row) => row.id === 'jo-1005-20')?.placement).toEqual(spanOf('1005.20'));
+    expect(split.orders).toEqual([orderOf('1001'), orderOf('1005')]);
   });
 
-  it('gives every saved setup back for any run of G1 orders of one article', () => {
+  it('GT10 with a fixed time on 1005.10 the run saves the retool alone and the split gives the whole setup back', () => {
+    const withFixed: PlanOrder = {
+      ...orderOf('1005'),
+      jobOrders: orderOf('1005').jobOrders.map((row, index) =>
+        index === 0
+          ? { ...row, plannedSetupS: 2400, rates: { ...row.rates, fixedSeconds: 600 } }
+          : row,
+      ),
+    };
+    const result = combineIntoRun([orderOf('1001'), withFixed], context);
+
+    expect(result.run?.savedSetups.map((saved) => saved.setupS)).toEqual([1800]);
+    const moved = result.moves[0];
+    expect(moved?.setupS).toBe(600);
+    // The row starts where 1001.10 ends, runs its 10 min of fixed time, then its 5 h.
+    expect(moved?.to).toEqual({
+      setupStartMs: Date.UTC(2026, 10, 4, 7),
+      runStartMs: Date.UTC(2026, 10, 4, 7, 10),
+      endMs: Date.UTC(2026, 10, 4, 12, 55),
+    });
+    expect(rowOf(result, '1005.10').plannedSetupS).toBe(600);
+    const run = result.run;
+    if (run === undefined) throw new Error('no run');
+    const split = splitRun(run, result.orders);
+    expect(split.orders[1]).toEqual(withFixed);
+  });
+
+  it('puts every member of any run of G1 orders of one article back as it was', () => {
     const sameArticle = context.orders.map((order) => ({ ...order, article: 'Bracket L' }));
     const ctx = { ...context, orders: sameArticle };
     const candidates = sameArticle.filter(
@@ -303,19 +340,13 @@ describe('splitRun (ADR 0083 rule 7)', () => {
         const result = combineIntoRun(members, ctx);
         const run = result.run;
         if (run === undefined) throw new Error('no run');
-        const after = {
-          ...ctx,
-          orders: ctx.orders.map((o) => result.orders.find((r) => r.id === o.id) ?? o),
-        };
-        const split = splitRun(run, result.orders, after);
-        for (const saved of run.savedSetups) {
-          const row = split.orders
-            .flatMap((o) => o.jobOrders)
-            .find((r) => r.id === saved.jobOrderId);
-          expect(row?.plannedSetupS).toBe(saved.setupS);
-          const move = split.moves.find((each) => each.jobOrderId === saved.jobOrderId);
-          expect(move?.setupS).toBe(saved.setupS);
+        const split = splitRun(run, result.orders);
+        for (const order of split.orders) {
+          expect(order).toEqual(members.find((each) => each.id === order.id));
         }
+        expect(split.moves.map((move) => move.jobOrderId)).toEqual(
+          result.moves.map((move) => move.jobOrderId),
+        );
       }),
       { numRuns: 40 },
     );

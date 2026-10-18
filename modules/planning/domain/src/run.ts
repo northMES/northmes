@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // Runs of production orders of one article (ADR 0083, plan 18 Runs): two or more orders a planner
 // combines to plan together. The orders are ranked, the first keeps its placement, and each later
-// order's row of an operation with a setup is laid directly after the previous order's row of that
-// operation on its machine with no setup, while its other rows are placed under their release
-// past every reservation. The run's deadline is the earliest of its orders; the split reverses it.
+// order's row of an operation with a retool is laid after the previous order's row of that
+// operation on its machine with no retool (its fixed time stays), at the later of that row's end
+// and its own release, while its other rows are placed under their release past every
+// reservation. The run's deadline is the earliest of its orders; the split puts every moved row
+// back where it was.
 import {
   type CascadeStop,
   type Conflict,
@@ -12,10 +14,10 @@ import {
   type PlacedMove,
   placeUnderRelease,
 } from './cascade.ts';
-import { setupSeconds } from './duration.ts';
 import {
   compareCodeUnits,
   compareRows,
+  type JobOrderSpan,
   operationsInSequence,
   type PlanContext,
   type PlanJobOrder,
@@ -25,7 +27,10 @@ import {
 } from './plan-context.ts';
 import { releaseOf } from './release.ts';
 
-/** A setup the run saves: the row that runs without it, directly after another order's row. */
+/**
+ * A retool the run saves (ADR 0083 rule 4): the row that runs without it, after another order's
+ * row of the same operation on the machine. The row's fixed time stays its planned setup.
+ */
 export interface SavedSetup {
   readonly jobOrderId: string;
   readonly displayNumber: string;
@@ -33,8 +38,17 @@ export interface SavedSetup {
   readonly afterJobOrderId: string;
   readonly afterDisplayNumber: string;
   readonly equipment: string;
-  /** The planned setup seconds the row had before the run. */
+  /** The retool seconds the run saves: the row's planned setup less its fixed time. */
   readonly setupS: number;
+}
+
+/** Where a row the combine moved was before it (ADR 0083 rule 7), so the split puts it back. */
+export interface RowBefore {
+  readonly jobOrderId: string;
+  readonly displayNumber: string;
+  readonly equipment: string;
+  readonly placement: JobOrderSpan;
+  readonly plannedSetupS: number;
 }
 
 /** An order of the run whose own deadline is later than the run's, so the run pulls it forward. */
@@ -58,6 +72,8 @@ export interface Run {
   readonly deadlineMs: number;
   readonly savedSetups: readonly SavedSetup[];
   readonly early: readonly EarlyOrder[];
+  /** Every row the combine moved, with the placement it had before, in the order of the moves. */
+  readonly before: readonly RowBefore[];
 }
 
 /**
@@ -87,11 +103,9 @@ export interface RunResult {
 }
 
 export interface SplitResult {
-  /** The rows laid again with their setup, and the successors that moved with them. */
+  /** The rows the combine moved, back to the placements they had before, with their retool back. */
   readonly moves: readonly PlacedMove[];
-  readonly conflicts: readonly Conflict[];
-  readonly stops: readonly CascadeStop[];
-  /** The orders with the setups back and the moves applied, in the run's order. */
+  /** The orders as they were before the combine, in the run's order. */
   readonly orders: readonly PlanOrder[];
 }
 
@@ -271,14 +285,17 @@ export function combineIntoRun(orders: readonly PlanOrder[], context: PlanContex
       // operation; then each row of a split operation follows the one before it.
       let after = counterpart === undefined ? undefined : latestRowOf(previous, counterpart);
       const saves =
-        setupSeconds(operation.rates) > 0 &&
+        operation.rates.retoolSeconds > 0 &&
         after?.equipment !== undefined &&
         operation.allowedEquipment.includes(after.equipment);
       for (const row of rows) {
         const current = order.jobOrders.find((each) => each.id === row.id) ?? row;
         if (saves && after?.placement !== undefined && after.equipment !== undefined) {
           const equipment = after.equipment;
-          const stripped = withRow(order, current.id, { plannedSetupS: 0 });
+          // The retool goes, the fixed time stays (ADR 0083 rule 4, PO-84).
+          const retoolS = Math.min(current.plannedSetupS, current.rates.retoolSeconds);
+          const fixedS = current.plannedSetupS - retoolS;
+          const stripped = withRow(order, current.id, { plannedSetupS: fixedS });
           const result = cascade(
             stripped,
             { jobOrderId: current.id, setupStartMs: after.placement.endMs, equipment },
@@ -291,14 +308,14 @@ export function combineIntoRun(orders: readonly PlanOrder[], context: PlanContex
           }
           const [own, ...successors] = result.moves;
           if (own !== undefined) {
-            moves.push({ ...own, reason: 'run', setupS: 0 });
+            moves.push({ ...own, reason: 'run', setupS: fixedS });
             savedSetups.push({
               jobOrderId: current.id,
               displayNumber: current.displayNumber,
               afterJobOrderId: after.id,
               afterDisplayNumber: after.displayNumber,
               equipment,
-              setupS: current.plannedSetupS,
+              setupS: retoolS,
             });
           }
           moves.push(...successors);
@@ -343,6 +360,23 @@ export function combineIntoRun(orders: readonly PlanOrder[], context: PlanContex
   const span = spanOf(working);
   const lateByS = span === undefined ? 0 : Math.max(0, (span.endMs - deadlineMs) / 1000);
   const orderIds = ranked.map((order) => order.id);
+  const merged = mergeMoves(moves);
+  const rowsBefore = new Map(
+    ranked.flatMap((order) => order.jobOrders.map((row) => [row.id, row] as const)),
+  );
+  const before: RowBefore[] = merged.flatMap((move) => {
+    const row = rowsBefore.get(move.jobOrderId);
+    if (row?.placement === undefined || row.equipment === undefined) return [];
+    return [
+      {
+        jobOrderId: row.id,
+        displayNumber: row.displayNumber,
+        equipment: row.equipment,
+        placement: row.placement,
+        plannedSetupS: row.plannedSetupS,
+      },
+    ];
+  });
   return {
     run: {
       id: `run:${orderIds.join('+')}`,
@@ -352,8 +386,9 @@ export function combineIntoRun(orders: readonly PlanOrder[], context: PlanContex
       deadlineMs,
       savedSetups,
       early,
+      before,
     },
-    moves: mergeMoves(moves),
+    moves: merged,
     conflicts: mergeConflicts(conflicts),
     stops,
     orders: working,
@@ -364,50 +399,38 @@ export function combineIntoRun(orders: readonly PlanOrder[], context: PlanContex
 }
 
 /**
- * A run split (ADR 0083 rule 7): every saved setup comes back and its row is laid again from its
- * setup start with the full setup, through the cascade, so the later operations follow. The run
- * record is gone once the result is applied; the orders are the run's, with their own deadlines.
+ * A run split (ADR 0083 rule 7): every row the combine moved goes back to the placement the run
+ * record holds, on its machine, with its retool back, so the orders are as they were before the
+ * combine. Nothing is laid again and nothing cascades: the placements were the plan's own.
  */
-export function splitRun(
-  run: Run,
-  orders: readonly PlanOrder[],
-  context: PlanContext,
-): SplitResult {
+export function splitRun(run: Run, orders: readonly PlanOrder[]): SplitResult {
   const byId = new Map(orders.map((order) => [order.id, order]));
   const working: PlanOrder[] = run.orderIds.flatMap((id) => {
     const order = byId.get(id);
     return order === undefined ? [] : [order];
   });
-  let ctx = withOrders(context, working);
   const moves: PlacedMove[] = [];
-  const conflicts: Conflict[] = [];
-  const stops: CascadeStop[] = [];
-  for (const saved of run.savedSetups) {
+  for (const before of run.before) {
     const index = working.findIndex((order) =>
-      order.jobOrders.some((row) => row.id === saved.jobOrderId),
+      order.jobOrders.some((row) => row.id === before.jobOrderId),
     );
     const order = working[index];
-    const row = order?.jobOrders.find((each) => each.id === saved.jobOrderId);
-    if (order === undefined || row?.placement === undefined) continue;
-    const restored = withRow(order, row.id, { plannedSetupS: saved.setupS });
-    const result = cascade(
-      restored,
-      {
-        jobOrderId: row.id,
-        setupStartMs: row.placement.setupStartMs,
-        ...(row.equipment !== undefined && { equipment: row.equipment }),
-      },
-      withOrders(ctx, [restored]),
-      { cascade: true },
-    );
-    if (result.refused !== undefined) continue;
-    const [own, ...successors] = result.moves;
-    if (own !== undefined) moves.push({ ...own, setupS: saved.setupS });
-    moves.push(...successors);
-    conflicts.push(...result.conflicts);
-    if (result.stop !== undefined) stops.push(result.stop);
-    working[index] = result.order;
-    ctx = withOrders(ctx, [result.order]);
+    const row = order?.jobOrders.find((each) => each.id === before.jobOrderId);
+    if (order === undefined || row === undefined) continue;
+    moves.push({
+      jobOrderId: row.id,
+      displayNumber: row.displayNumber,
+      equipment: before.equipment,
+      ...(row.placement !== undefined && { from: row.placement }),
+      to: before.placement,
+      reason: 'moved',
+      ...(row.plannedSetupS !== before.plannedSetupS && { setupS: before.plannedSetupS }),
+    });
+    working[index] = withRow(order, row.id, {
+      equipment: before.equipment,
+      placement: before.placement,
+      plannedSetupS: before.plannedSetupS,
+    });
   }
-  return { moves: mergeMoves(moves), conflicts: mergeConflicts(conflicts), stops, orders: working };
+  return { moves, orders: working };
 }

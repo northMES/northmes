@@ -105,6 +105,7 @@ export { lastPieceMinEnd, type Release, releaseOf } from './release.ts';
 export {
   combineIntoRun,
   type EarlyOrder,
+  type RowBefore,
   type Run,
   type RunRefusal,
   type RunResult,
