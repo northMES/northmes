@@ -170,21 +170,30 @@ describe('openApiDocument', () => {
     const built = document();
 
     expect(built.paths['/api/v1/tools/gauges/{id}']?.get?.parameters).toEqual([
-      { name: 'id', in: 'path', required: true, schema: expect.objectContaining({ type: 'string', format: 'uuid' }) },
+      {
+        name: 'id',
+        in: 'path',
+        required: true,
+        schema: expect.objectContaining({ type: 'string', format: 'uuid' }),
+      },
       { $ref: '#/components/parameters/plant' },
     ]);
     const list = built.paths['/api/v1/tools/gauges']?.get?.parameters ?? [];
-    expect(list.map((parameter) => ('name' in parameter ? parameter.name : parameter.$ref))).toEqual([
+    expect(
+      list.map((parameter) => ('name' in parameter ? parameter.name : parameter.$ref)),
+    ).toEqual([
       'first',
       'after',
       'orderBy',
+      'calibrated',
       'search',
       'includeArchived',
-      'calibrated',
       '#/components/parameters/plant',
     ]);
     expect(list.every((parameter) => !('in' in parameter) || parameter.in === 'query')).toBe(true);
-    expect(list.find((parameter) => 'name' in parameter && parameter.name === 'orderBy')).toMatchObject({
+    expect(
+      list.find((parameter) => 'name' in parameter && parameter.name === 'orderBy'),
+    ).toMatchObject({
       required: false,
       style: 'form',
       explode: false,
@@ -229,10 +238,7 @@ describe('openApiDocument', () => {
     const built = document();
 
     expect(built.components.schemas.ToolsGauge?.properties?.calibratedAt).toEqual({
-      anyOf: [
-        expect.objectContaining({ type: 'string', format: 'date-time' }),
-        { type: 'null' },
-      ],
+      anyOf: [expect.objectContaining({ type: 'string', format: 'date-time' }), { type: 'null' }],
     });
   });
 
@@ -293,7 +299,7 @@ describe('openApiDocument', () => {
     const other = z.object({ id: z.uuid() }).meta({ id: 'ToolsGauge' });
 
     expect(() => document([tools, toRestRoutes([stockOperations(other)])])).toThrow(
-      'Component ToolsGauge converts to different schemas in modules tools and stock',
+      'Component ToolsGauge converts to different schemas in modules stock and tools',
     );
   });
 
@@ -301,8 +307,12 @@ describe('openApiDocument', () => {
     const built = document([tools, toRestRoutes([stockOperations(gauge)])]);
 
     expect(built.tags).toEqual([{ name: 'stock' }, { name: 'tools' }]);
-    expect(
-      built.paths['/api/v1/stock/bins/{id}']?.get?.responses?.['200'],
-    ).toMatchObject({ content: { 'application/json': { schema: { properties: { gauge: { $ref: '#/components/schemas/ToolsGauge' } } } } } });
+    expect(built.paths['/api/v1/stock/bins/{id}']?.get?.responses?.['200']).toMatchObject({
+      content: {
+        'application/json': {
+          schema: { properties: { gauge: { $ref: '#/components/schemas/ToolsGauge' } } },
+        },
+      },
+    });
   });
 });
