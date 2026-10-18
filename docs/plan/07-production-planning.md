@@ -303,7 +303,7 @@ runSecondsFor(n, rates) = ceilToSecond( ceil(n * cyclesPerPiece / piecesPerCycle
 plannedSeconds(job)     = setupSeconds + runSecondsFor(job.quantity, job.rates)
 ```
 
-- Planned seconds are working seconds laid over the machine's availability with `addWork`. Breaks and closed time inside the interval extend it. A job order is one contiguous block on its machine: setup, then run, interrupted only by calendar closures, never by another job order.
+- Planned seconds are working seconds laid over the machine's availability with `addWork`. Breaks and closed time inside the interval extend it. A job order is one contiguous block on its machine: setup, then run time, interrupted only by calendar closures, never by another job order.
 - Retool is not divided by the planning factor.
 - A piece exists when its cycle completes, so a partial cycle rounds up.
 - Quantity 0 gives setup only and no send-ahead release.

@@ -42,7 +42,7 @@ New terms this document introduces. They go into [GLOSSARY.md](../../GLOSSARY.md
 | timeline core | The headless TypeScript functions and the React pieces that both views share: the time scale, culling, hit testing, row virtualization, block rendering, the drag preview, the link overlay, the keyboard grid model and the move paths. | board core (that is its release 1 name in [ADR 0030](../adr/0030-a-planning-board-built-in-house.md)), Gantt engine |
 | order Gantt (Gantt) | The view with one row per production order, one row per operation under it and one row per job order under that, on the same time axis as the board, with links between consecutive operations. | project Gantt, order view (ambiguous with the production order page) |
 | page | Which timeline page is open: the board (`/$plant/planning/board`, one row per machine), the Gantt (`/$plant/planning/gantt`, one row per order, operation and job order) or the job order table, each an entry under Planning in the sidebar. | view (the first round's URL key), mode, tab |
-| release | Between two consecutive operations of one order: the instant at which the later operation may start its run, from the earlier operation's rows, the send-ahead quantity and the lead time ([07](07-production-planning.md#rules-between-operations)). The glossary's "release" of an order is the other meaning, and the UI says "released from <operation>" for this one. | dependency, link date |
+| release | Between two consecutive operations of one order: the instant at which the later operation may start its run time, from the earlier operation's rows, the send-ahead quantity and the lead time ([07](07-production-planning.md#rules-between-operations)). The glossary's "release" of an order is the other meaning, and the UI says "released from <operation>" for this one. | dependency, link date |
 | link | The drawn relation between consecutive operations of one order: from the earlier operation's release point to the later operation's earliest start, with the lead time as its own segment. Every link is finish-to-start, shortened by the send-ahead quantity and lengthened by the lead time. | dependency, arrow, predecessor link |
 | float | The working time a job order can start later without breaking a rule: total float against the order's deadline, free float against its successor and the next reservation on its machine. Measured in working seconds on the job order's machine. | slack (kept for the elapsed time between planned end and deadline), buffer |
 | binding constraint | The one rule or reservation that stops a job order from starting earlier: the release from its predecessor, a reservation on its machine, a calendar closure, the frozen window, a hard lock, a started row or the earliest start of its order. | bottleneck (that is a machine), reason |
@@ -50,7 +50,7 @@ New terms this document introduces. They go into [GLOSSARY.md](../../GLOSSARY.md
 | cascade | Moving the later operations of one order in the planner's draft so the rules between operations still hold after a move, never earlier than before, never past a fixed row. | auto-schedule (that is autoplan), push |
 | plan this order | Running `plan()` for one production order in the browser against the loaded reservations and writing the result into the draft. | autoplan (that is the plant-wide job) |
 | earliest start | An instant before which no job order of a production order may start: material arrival, a customer's release, a tooling date. | release date (ambiguous), start constraint |
-| workload | For one machine and one time bucket: the available working seconds from the calendar, the seconds loaded by job orders, their split into setup and run, and the seconds above availability. | capacity (that is availability alone), utilization (that is one ratio of the workload) |
+| workload | For one machine and one time bucket: the available working seconds from the calendar, the seconds loaded by job orders, their split into setup and run time, and the seconds above availability. | capacity (that is availability alone), utilization (that is one ratio of the workload) |
 | bucket | One cell of the workload lane: a production day, a shift or an ISO week, following the zoom preset. | period, slot (that is a snap step) |
 | run | Two or more production orders of one article at one plant that a planner has combined to plan together: a later order's job order of an operation with a retool follows the earlier order's job order of that operation on its machine without a second retool (its fixed time stays), when the operation allows that machine and as soon as its own release allows, while its other job orders keep their setup, and the run is due at the earliest deadline of its orders ([ADR 0083](../adr/0083-runs-of-production-orders-of-one-article.md)). | campaign, merged order, batch |
 
@@ -75,7 +75,7 @@ Not in scope, with the reason:
 - People and crews as resources: crew rotation is HR planning ([ADR 0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md)). Workload is per machine. Tools as a contended resource are a later item ([Open points](#open-points)).
 - Resource leveling: autoplan places rows and never moves fixed rows; the planner levels by moving rows with the float and workload the timeline shows.
 - Baselines (a saved earlier plan to compare against): the plan revision and the audit trail hold history, and a baseline view is a later item.
-- A teardown or cleanup time after the run, as a third part of a job order beside setup and run: the routing data of release 1 has no such value. It is a later item that extends the duration function.
+- A teardown or cleanup time after the run time, as a third part of a job order beside setup and run time: the routing data of release 1 has no such value. It is a later item that extends the duration function.
 - Calendar editing: the calendar page of E06-S09 and E06-S10 owns it. The timeline shows the result and links to the page.
 - Export to image or spreadsheet: not requested for release 1.
 
@@ -243,7 +243,7 @@ Calendars, versions, shift patterns, breaks, deviations and the availability fun
 
 ### Blocks across closed time
 
-- A job order is one contiguous block on its machine: setup, then run, interrupted only by calendar closures ([ADR 0027](../adr/0027-planned-duration-formula-and-override-precedence.md)). Proposed. The block is drawn from setup start to end as one target with one accessible name, and the closed segments inside it are drawn hollow (the lane color inside the block's border), so a block across a weekend reads as one job that pauses. At Week and 4 weeks zoom, hollow segments narrower than 2 px are not drawn.
+- A job order is one contiguous block on its machine: setup, then run time, interrupted only by calendar closures ([ADR 0027](../adr/0027-planned-duration-formula-and-override-precedence.md)). Proposed. The block is drawn from setup start to end as one target with one accessible name, and the closed segments inside it are drawn hollow (the lane color inside the block's border), so a block across a weekend reads as one job that pauses. At Week and 4 weeks zoom, hollow segments narrower than 2 px are not drawn.
 - The block's hover card and detail panel show both durations: working time ("3 h working") and elapsed time ("2 days 18 h elapsed"), each with its unit, never the sum without a word. One field names one unit ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). Accepted.
 - The setup part of a block (retool plus fixed time) is drawn as a hatched leading segment when the block is at least 66 px wide, and named in the accessible text ("setup 30 min, run 5 h").
 
@@ -432,7 +432,7 @@ For a machine `m` and a bucket `[a, b)`:
 
 - `availableS`: working seconds of `av(m)` inside `[a, b)`.
 - `loadedS`: the sum over every job order on `m` of its working segments inside `[a, b)`, overlapping rows counted twice. Draft moves count at their draft position; the committed position of a moved row does not count.
-- `setupS` and `runS`: the split of `loadedS` by the setup and run parts of each row.
+- `setupS` and `runS`: the split of `loadedS` by the setup and run time parts of each row.
 - `freeS = max(0, availableS - loadedS)`: the working time still open in the bucket, which is what a planner looks for when placing work.
 - `overloadS = max(0, loadedS - availableS) + closedS`, where `closedS` is work laid in closed time (only after a calendar change on committed rows).
 - `utilization = loadedS / availableS` as a permille integer; undefined when `availableS = 0` (shown as "closed").

@@ -61,10 +61,10 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | retool time | The time to set a machine up for an operation before the first piece. Pyramid sends `RetoolTime`, and some sites send setup as a separate row named "Ställtid". | changeover, toolchange |
 | fixed time | A duration added to an operation whatever the quantity. Pyramid sends it as `ExtendedTime`. | extra time |
 | setup | The first part of a job order: retool time plus fixed time. It is not onboarding, the steps a new company and each new plant go through (see onboarding under Company and plants). | preparation |
-| run | The part of a job order after setup, when pieces are made. | production time |
+| run time | The part of a job order after setup, when pieces are made; setup plus run time is the planned duration. Krister decided the name on 2026-10-18, so that "run" alone is the group of production orders under Planning work. | production time, run (alone) |
 | planning factor | The divisor that stretches run time from the ideal machine speed to the expected real speed; by default the operation's OEE target. | efficiency, speed factor |
 | OEE target | The target overall equipment effectiveness of an operation, as a fraction. Pyramid sends `Oee` as a percentage. | expected OEE |
-| planned duration | The working time a job order needs: setup plus run, laid over the machine's working time. | length |
+| planned duration | The working time a job order needs: setup plus run time, laid over the machine's working time. | length |
 | lead time | The wait that must pass after the previous operation before this operation may start, such as cooling; it belongs to the waiting operation. Pyramid sends `LeadTime` on the waiting operation and `LagTime` on the previous one for the same kind of wait. | lag time, queue time, wait time |
 | send-ahead quantity | The number of pieces an operation must have made before the next operation may start. Pyramid calls it `StartNextAfterQuantity`. | start-after quantity, transfer batch |
 
