@@ -2,3 +2,4 @@
 # command that writes it (pnpm gen for these), never by hand.
 /schema/*.graphql linguist-generated=true
 *.gen.* linguist-generated=true
+/schema/*.json linguist-generated=true

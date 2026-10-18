@@ -30,24 +30,26 @@ const plantSlugs = z.codec(
  * through the upsert, so the tool surfaces wrap them. source is null for an article created in
  * NorthMES, else the integration that created it.
  */
-export const article = z.object({
-  id: z.uuid(),
-  code: outsideText(),
-  name: outsideText(),
-  translations: z
-    .array(z.object({ field: z.string(), locale: z.string(), text: outsideText() }))
-    .readonly(),
-  articleGroup: z.object({ id: z.uuid(), code: outsideText(), name: outsideText() }).nullable(),
-  stockUnit,
-  note: outsideText().nullable(),
-  source: outsideText().nullable(),
-  allPlants: z.boolean(),
-  plants: plantSlugs,
-  version,
-  archivedAt: timestamp.nullable(),
-  createdAt: timestamp,
-  updatedAt: timestamp,
-});
+export const article = z
+  .object({
+    id: z.uuid(),
+    code: outsideText(),
+    name: outsideText(),
+    translations: z
+      .array(z.object({ field: z.string(), locale: z.string(), text: outsideText() }))
+      .readonly(),
+    articleGroup: z.object({ id: z.uuid(), code: outsideText(), name: outsideText() }).nullable(),
+    stockUnit,
+    note: outsideText().nullable(),
+    source: outsideText().nullable(),
+    allPlants: z.boolean(),
+    plants: plantSlugs,
+    version,
+    archivedAt: timestamp.nullable(),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  })
+  .meta({ id: 'CoreArticle' });
 
 /**
  * The list of articles (ADR 0016, ADR 0073): by code unless orderBy says otherwise, with search

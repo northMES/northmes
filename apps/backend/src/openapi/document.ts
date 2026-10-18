@@ -74,13 +74,13 @@ const BEARER: oas32.SecuritySchemeObject = {
 };
 
 /** The JSON of a value with the keys of every object in name order, so equal trees print equal. */
-function sorted(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(sorted);
+export function sortedKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortedKeys);
   if (value && typeof value === 'object') {
     return Object.fromEntries(
       Object.keys(value)
         .sort()
-        .map((key) => [key, sorted((value as Record<string, unknown>)[key])]),
+        .map((key) => [key, sortedKeys((value as Record<string, unknown>)[key])]),
     );
   }
   return value;
@@ -112,7 +112,7 @@ class Components {
 
   add(id: string, schema: JsonSchemaObject, owner: string): void {
     const hash = createHash('sha256')
-      .update(JSON.stringify(sorted(schema)))
+      .update(JSON.stringify(sortedKeys(schema)))
       .digest('hex');
     const known = this.schemas.get(id);
     if (!known) {
