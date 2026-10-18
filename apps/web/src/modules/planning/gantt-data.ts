@@ -148,6 +148,82 @@ export interface GanttOrder {
   readonly owner: 'erp' | 'northmes';
   readonly operations: readonly GanttOperation[];
   readonly jobOrders: readonly GanttJobOrder[];
+  /** Where the order came from; a snapshot without the planning pages' data leaves it out. */
+  readonly origin?: OrderOrigin;
+}
+
+/** Who owns a record's master fields: the ERP through the connector, or NorthMES itself. */
+export type RecordOwner = 'erp' | 'northmes';
+
+/**
+ * Where an order came from (plan 07, field ownership): an imported order with the import that
+ * brought it, whose master fields the ERP owns, or an order created in NorthMES with its creator.
+ */
+export interface OrderOrigin {
+  readonly owner: RecordOwner;
+  readonly importedAtMs?: number;
+  readonly createdAtMs?: number;
+  readonly createdBy?: string;
+  /** The version of the article's routing the order's operations were copied from. */
+  readonly routingVersion?: number;
+}
+
+export interface Customer {
+  readonly code: string;
+  readonly name: string;
+}
+
+/** One customer order line (plan 07, customer orders and demand) and the order that supplies it. */
+export interface CustomerOrderLine {
+  readonly id: string;
+  readonly customerOrder: string;
+  /** The customer's own order number. */
+  readonly customersReference: string;
+  readonly customerCode: string;
+  readonly line: number;
+  readonly article: string;
+  readonly quantity: number;
+  /** The wanted date as a plant date, "2026-11-06". */
+  readonly wantedDate: string;
+  /** The id of the production order that supplies the line; none while there is none. */
+  readonly productionOrderId?: string;
+}
+
+export interface RoutingOperation {
+  readonly sequence: number;
+  readonly name: string;
+  readonly allowedEquipment: readonly string[];
+}
+
+/** A routing as planning reads it: the article's operations and their allowed machines. */
+export interface Routing {
+  readonly article: string;
+  readonly version: number;
+  readonly operations: readonly RoutingOperation[];
+}
+
+export interface HistoryChange {
+  readonly field: string;
+  readonly before: string;
+  readonly after: string;
+}
+
+/** One entry of an order's history (design ui-222, DE3): who changed what, where and why. */
+export interface HistoryEntry {
+  readonly id: string;
+  readonly atMs: number;
+  readonly by: string;
+  readonly surface: string;
+  readonly reason?: string;
+  readonly summary: string;
+  readonly changes: readonly HistoryChange[];
+}
+
+/** The ERP connection as configured in Settings: its name is a value, never part of a label. */
+export interface ErpConnection {
+  readonly name: string;
+  /** The instant of the last import, "ERP data as of". */
+  readonly importedAtMs: number;
 }
 
 /** One line of a row's constraint list (plan 18, The constraint list of a row), rendered as text. */
@@ -226,6 +302,14 @@ export interface GanttSnapshot {
   readonly equipment: readonly GanttEquipment[];
   readonly productionOrders: readonly GanttOrder[];
   readonly analysis: GanttAnalysis;
+  // What the planning pages beside the Gantt show (the production order page and the lists); a
+  // source that answers the Gantt alone leaves them out.
+  readonly erp?: ErpConnection;
+  readonly customers?: readonly Customer[];
+  readonly customerOrderLines?: readonly CustomerOrderLine[];
+  readonly routings?: readonly Routing[];
+  /** The history of each order, newest first, by order id. */
+  readonly history?: Readonly<Record<string, readonly HistoryEntry[]>>;
 }
 
 /** Where the order Gantt reads from. */

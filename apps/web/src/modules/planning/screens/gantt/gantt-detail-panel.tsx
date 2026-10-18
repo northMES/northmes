@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatDuration, formatPlantDateTime } from '@northmes/contracts/format';
+import { planningLinks } from '@northmes/planning-contracts';
+import { useShell } from '@northmes/web-sdk';
+import { Link } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { CircleCheck, Clock, Link2, Lock } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
-import { Button } from '../../../../ui/primitives/button.tsx';
+import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
   Sheet,
   SheetContent,
@@ -83,6 +86,19 @@ function ConstraintList({ lines }: { readonly lines: readonly ConstraintLine[] }
         ))}
       </ul>
     </Section>
+  );
+}
+
+/** Open order: the link to the order's page, among a row's actions. */
+function OpenOrder({ orderId }: { readonly orderId: string }) {
+  const { plant } = useShell();
+  return (
+    <Link
+      to={planningLinks.orders.order({ plant, orderId }).href}
+      className={cn(buttonVariants({ variant: 'outline' }), 'h-7.5 px-2.5 text-[0.8125rem]')}
+    >
+      Open order
+    </Link>
   );
 }
 
@@ -313,8 +329,9 @@ function JobOrderDetails({
           {release !== undefined && <li>{release.charAt(0).toUpperCase() + release.slice(1)}.</li>}
         </ul>
       </Section>
-      <Actions actions={['Lock', 'Split', 'Open order']}>
+      <Actions actions={['Lock', 'Split']}>
         <MoveControls row={row} onApplied={onMoveApplied} />
+        <OpenOrder orderId={order.id} />
         <Button variant="outline" className="h-7.5 px-2.5 text-[0.8125rem]" onClick={onToggleChain}>
           {chain !== undefined && chain.order.id === order.id
             ? 'Hide chain'
@@ -429,12 +446,13 @@ function OrderDetails({
         </Section>
       )}
       <Actions
-        actions={['Plan this order', 'Move all later by', 'Zoom to order', 'Open order']}
+        actions={['Plan this order', 'Move all later by', 'Zoom to order']}
         reason={planReason}
       >
         <Button variant="outline" className="h-7.5 px-2.5 text-[0.8125rem]" onClick={onToggleChain}>
           {shown ? 'Hide chain' : 'Show critical chain'}
         </Button>
+        <OpenOrder orderId={order.id} />
       </Actions>
     </>
   );
@@ -462,7 +480,9 @@ function OperationDetails({ row }: { readonly row: OperationRow }) {
         <Field label="Hard lock">{operation.isLocked ? 'yes' : 'no'}</Field>
         {row.notPlaced > 0 && <Field label="Not placed">{row.notPlaced}</Field>}
       </dl>
-      <Actions actions={['Lock', 'Open order']} />
+      <Actions actions={['Lock']}>
+        <OpenOrder orderId={order.id} />
+      </Actions>
     </>
   );
 }
