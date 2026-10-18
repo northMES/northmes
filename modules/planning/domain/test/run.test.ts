@@ -23,6 +23,7 @@ function orderOf(number: string, from: PlanContext = context): PlanOrder {
 }
 
 const ms = (instant: string) => Date.parse(instant);
+const wedUtc = (hour: number, minute = 0) => Date.UTC(2026, 10, 4, hour, minute);
 
 /** The span of a GT10 placement in epoch milliseconds. */
 function spanOf(key: string) {
@@ -176,6 +177,48 @@ describe('combineIntoRun (ADR 0083, plan 18 Runs)', () => {
     expect(rowOf(result, '1005.10').plannedSetupS).toBe(1800);
     // 1005.10 has no predecessor and no setup to save, so it stays where it was.
     expect(result.moves.map((move) => move.displayNumber)).toEqual([]);
+  });
+
+  it('a split operation of the later order follows the previous row one row after the other, each without a retool (ADR 0083 rule 3)', () => {
+    const [turn, mill] = orderOf('1005').jobOrders;
+    if (turn === undefined || mill === undefined) throw new Error('rows of 1005');
+    const halves = ['a', 'b'].map((half) => ({
+      ...turn,
+      id: `${turn.id}-${half}`,
+      quantity: 300,
+      plannedRunS: 9000,
+    }));
+    const split: PlanOrder = { ...orderOf('1005'), jobOrders: [...halves, mill] };
+    const result = combineIntoRun([split, orderOf('1001')], context);
+
+    expect(result.refused).toBeUndefined();
+    expect(
+      result.run?.savedSetups.map((saved) => [saved.jobOrderId, saved.afterJobOrderId]),
+    ).toEqual([
+      ['jo-1005-10-a', 'jo-1001-10'],
+      ['jo-1005-10-b', 'jo-1005-10-a'],
+    ]);
+    // The first half starts where 1001.10 ends, Wed 08:00, and runs 9 000 s across the 08:30 break;
+    // the second follows it at Wed 10:45 across the 11:00 break; neither has a retool.
+    expect(result.moves.slice(0, 2).map((move) => [move.jobOrderId, move.setupS, move.to])).toEqual(
+      [
+        [
+          'jo-1005-10-a',
+          0,
+          { setupStartMs: wedUtc(7), runStartMs: wedUtc(7), endMs: wedUtc(9, 45) },
+        ],
+        [
+          'jo-1005-10-b',
+          0,
+          { setupStartMs: wedUtc(9, 45), runStartMs: wedUtc(9, 45), endMs: wedUtc(12, 45) },
+        ],
+      ],
+    );
+    const shuffled = combineIntoRun(
+      [orderOf('1001'), { ...split, jobOrders: [mill, ...halves.reverse()] }],
+      context,
+    );
+    expect(shuffled.moves).toEqual(result.moves);
   });
 
   it('is deterministic and permutation-invariant in the orders, their operations and their rows', () => {
