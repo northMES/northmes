@@ -94,7 +94,7 @@ export function ShellPlantList({ modules, companies, level }: ShellPlantListProp
         {settings !== undefined && (
           <Link
             to={settings}
-            className="inline-flex min-h-(--nm-target-min) items-center text-sm text-link underline"
+            className="inline-flex min-h-(--nm-target-min) min-w-(--nm-target-min) items-center text-sm text-link underline"
           >
             {company.name} settings
           </Link>
@@ -112,7 +112,7 @@ export function ShellPlantList({ modules, companies, level }: ShellPlantListProp
               </span>
               <Link
                 to={plantLinkHref(modules, each.slug)}
-                className="inline-flex min-h-(--nm-target-min) items-center text-link underline"
+                className="inline-flex min-h-(--nm-target-min) min-w-(--nm-target-min) items-center text-link underline"
               >
                 {each.name}
               </Link>
