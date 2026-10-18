@@ -31,7 +31,13 @@ export function DetailTabs({ label, value, onValueChange, tabs }: DetailTabsProp
     <Tabs value={value} onValueChange={(next) => onValueChange(String(next))}>
       <TabsList variant="line" aria-label={label} activateOnFocus={false}>
         {tabs.map((tab) => (
-          <TabsTrigger key={tab.value} value={tab.value} className="min-h-(--nm-target-min) px-3">
+          <TabsTrigger
+            key={tab.value}
+            value={tab.value}
+            // An inactive tab reads in muted-foreground, the D1 token with 4.5:1 on the background
+            // (WCAG 1.4.3); shadcn's 60 percent foreground falls short of it.
+            className="min-h-(--nm-target-min) px-3 text-muted-foreground data-active:text-foreground"
+          >
             {tab.label}
           </TabsTrigger>
         ))}
