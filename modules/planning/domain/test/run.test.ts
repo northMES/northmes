@@ -221,6 +221,22 @@ describe('combineIntoRun (ADR 0083, plan 18 Runs)', () => {
     expect(shuffled.moves).toEqual(result.moves);
   });
 
+  it('a later row placed under its release inside the frozen window moves and reports FROZEN_WINDOW, as a moved row does in the cascade', () => {
+    // With now at Thu 5 Nov 13:00 and the fence 24 h later, 1005.20 lands at Fri 06:00 on CNC2,
+    // inside the window; the run keeps the move and reports it (plan 18, GT8; cascade rule 5 fixes
+    // only a row that already lies inside the window).
+    const frozen: PlanContext = {
+      ...context,
+      nowMs: Date.UTC(2026, 10, 5, 12),
+      fenceMs: Date.UTC(2026, 10, 6, 12),
+    };
+    const result = combineIntoRun([orderOf('1001'), orderOf('1005')], frozen);
+
+    expect(result.moves.map((move) => move.displayNumber)).toEqual(['1005.10', '1005.20']);
+    expect(rowOf(result, '1005.20').placement?.setupStartMs).toBe(Date.UTC(2026, 10, 6, 5));
+    expect(result.conflicts).toContainEqual({ kind: 'FROZEN_WINDOW', rows: ['1005.20'] });
+  });
+
   it('is deterministic and permutation-invariant in the orders, their operations and their rows', () => {
     const shuffle = <T>(items: readonly T[]) =>
       fc.shuffledSubarray([...items], { minLength: items.length });
