@@ -254,6 +254,8 @@ export interface JobOrdersTableProps {
   readonly onToggleFacts: (id: string) => void;
   /** The rows are loading: the header stays and skeleton rows replace the rows. */
   readonly loading: boolean;
+  /** The rows are those of the range before, kept dimmed while the next range loads (LI7). */
+  readonly stale?: boolean;
 }
 
 /**
@@ -275,6 +277,7 @@ export function JobOrdersTable({
   expanded,
   onToggleFacts,
   loading,
+  stale = false,
 }: JobOrdersTableProps) {
   const { plant } = useShell();
   const columns = useMemo(
@@ -317,7 +320,7 @@ export function JobOrdersTable({
     snapshot === undefined ? undefined : { snapshot, zoom, from, plant, expanded, onToggleFacts };
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
-      <Table aria-label={label} aria-busy={loading || undefined}>
+      <Table aria-label={label} aria-busy={loading || stale || undefined}>
         <TableCaption className="sr-only">{label}</TableCaption>
         <TableHeader className="sticky top-0 bg-muted text-xs font-semibold text-muted-foreground">
           {table.getHeaderGroups().map((group) => (
@@ -365,7 +368,7 @@ export function JobOrdersTable({
             </TableRow>
           ))}
         </TableHeader>
-        <TableBody>
+        <TableBody className={cn(stale && 'opacity-60 transition-opacity delay-200 duration-150')}>
           {loading || view === undefined
             ? skeletonRows.map((key) => (
                 <TableRow key={key} className="border-border hover:bg-transparent">

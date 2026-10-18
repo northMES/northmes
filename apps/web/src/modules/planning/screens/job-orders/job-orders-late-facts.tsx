@@ -46,7 +46,7 @@ export function JobOrderLateFacts({
     (row) => row.binding.kind === 'machine' && row.waitWorkingS > 0,
   );
   return (
-    <div className="grid gap-1.5 text-[0.8125rem] leading-[1.125rem]">
+    <div className="grid gap-1.5 text-data">
       <p className="font-semibold">
         Order {orderNumber} is late by {formatDuration(-analysis.slackElapsedS)}
       </p>

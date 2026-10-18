@@ -4,9 +4,10 @@ import { planningLinks } from '@northmes/planning-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Ellipsis } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { announce } from '../../../../ui/lib/announce.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import {
@@ -27,7 +28,13 @@ import {
   withLateOnly,
 } from '../../job-orders-search.ts';
 import { phase1Reason } from '../../mock-reasons.ts';
-import { plantDateOf, rangeLabel, rangeOf, shiftedFrom } from '../../timeline/time-scale.ts';
+import {
+  plantDateOf,
+  rangeLabel,
+  rangeOf,
+  shiftedFrom,
+  type TimeRange,
+} from '../../timeline/time-scale.ts';
 import { jobOrderTableRows, sortedJobOrderRows } from './job-orders-rows.ts';
 import { JobOrdersTable, jobOrdersColumnChoices, jobOrdersColumns } from './job-orders-table.tsx';
 
@@ -42,6 +49,14 @@ function sortText(sort: ReturnType<typeof sortOf>): string {
   if (sort.id === 'machine' && !sort.desc) return 'Sorted by machine, then start.';
   const header = jobOrdersColumns.find((column) => column.id === sort.id)?.header ?? sort.id;
   return `Sorted by ${header.toLowerCase()}, ${sort.desc ? 'descending' : 'ascending'}.`;
+}
+
+/** A snapshot the page loaded, with the request it answers: its range and Late only. */
+interface Loaded {
+  readonly key: string;
+  readonly range: TimeRange;
+  readonly lateOnly: boolean;
+  readonly snapshot: GanttSnapshot;
 }
 
 /**
@@ -60,11 +75,14 @@ export function JobOrdersScreen() {
   const setSearch = (next: JobOrdersSearch) =>
     navigate({ to: '.', search: next as Record<string, unknown>, replace: true });
   const source = useGanttSource();
-  const [snapshot, setSnapshot] = useState<GanttSnapshot | undefined>(undefined);
+  const [loaded, setLoaded] = useState<Loaded | undefined>(undefined);
   const [loadError, setLoadError] = useState<unknown>(undefined);
   const [attempt, setAttempt] = useState(0);
+  /** Settles the promise of Try again once the reload it started has settled. */
+  const retryDone = useRef<(() => void) | undefined>(undefined);
   const [hiddenColumns, setHiddenColumns] = useState<readonly string[]>([]);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const snapshot = loaded?.snapshot;
 
   const zoom = search.zoom ?? defaultZoom;
   const timeZone = snapshot?.plant.timeZone ?? 'UTC';
@@ -80,6 +98,11 @@ export function JobOrdersScreen() {
     [from, zoom, timeZone, productionDayStart],
   );
 
+  const lateOnly = search.late === 1;
+  // The request the page shows: a snapshot loaded for another key is the view before, kept dimmed
+  // while this one loads (design ui-222, LI7), and the first load without a date in the URL asks
+  // again once the snapshot's now names the week.
+  const loadKey = `${range.fromMs}:${range.toMs}:${lateOnly}:${attempt}`;
   useEffect(() => {
     let cancelled = false;
     setLoadError(undefined);
@@ -87,45 +110,56 @@ export function JobOrdersScreen() {
       .load({
         from: new Date(range.fromMs).toISOString(),
         to: new Date(range.toMs).toISOString(),
-        filter: { lateOnly: search.late === 1 },
+        filter: { lateOnly },
       })
-      .then((loaded) => {
-        if (!cancelled) setSnapshot(loaded);
+      .then((answer) => {
+        if (!cancelled) setLoaded({ key: loadKey, range, lateOnly, snapshot: answer });
       })
       .catch((error: unknown) => {
         if (!cancelled) setLoadError(error ?? new Error('The job orders could not be loaded'));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        retryDone.current?.();
+        retryDone.current = undefined;
       });
     return () => {
       cancelled = true;
     };
-  }, [source, range.fromMs, range.toMs, search.late, attempt]);
+  }, [source, loadKey, range, lateOnly]);
+  const stale = loaded !== undefined && loaded.key !== loadKey;
 
   const sort = sortOf(search);
-  const lateOnly = search.late === 1;
+  // The rows of the loaded request, so a range change shows the rows of the view before, dimmed,
+  // until its own rows arrive, never the old snapshot cut to the new range.
   const rows = useMemo(
     () =>
-      snapshot === undefined
+      loaded === undefined
         ? []
-        : sortedJobOrderRows(jobOrderTableRows(snapshot, range, lateOnly), sort),
-    [snapshot, range, lateOnly, sort],
+        : sortedJobOrderRows(
+            jobOrderTableRows(loaded.snapshot, loaded.range, loaded.lateOnly),
+            sort,
+          ),
+    [loaded, sort],
   );
   const label = rangeLabel(range, zoom, timeZone);
   const lateRows = rows.filter((row) => row.analysis?.late).length;
 
   let state: PageState = { status: 'ready' };
-  if (snapshot === undefined && loadError !== undefined) {
+  if (loadError !== undefined) {
     state = {
       status: 'error',
       title: 'Could not load the job orders',
       error: loadError,
-      onRetry: () => {
-        setAttempt((count) => count + 1);
-        return Promise.resolve();
-      },
+      onRetry: () =>
+        new Promise<void>((resolve) => {
+          retryDone.current = resolve;
+          setAttempt((count) => count + 1);
+        }),
     };
-  } else if (snapshot === undefined) {
+  } else if (loaded === undefined) {
     state = { status: 'loading' };
-  } else if (rows.length === 0) {
+  } else if (!stale && rows.length === 0) {
     state = {
       status: 'empty',
       title: 'No job orders in this range',
@@ -149,11 +183,21 @@ export function JobOrdersScreen() {
   ]
     .filter((part) => part !== undefined)
     .join(', ');
+  const statusLine = `${statusText}. ${sortText(sort)}`;
+  // A change of the rows after a user action is announced once through the app's helper; the
+  // first rows, and the rows of the view before while the next loads, are not.
+  const announced = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (loaded === undefined || stale) return;
+    if (announced.current !== undefined && announced.current !== statusLine) announce(statusLine);
+    announced.current = statusLine;
+  }, [loaded, stale, statusLine]);
   const rangeSearch = { zoom, from };
   return (
     <PageFrame
       title="Job orders"
       state={state}
+      busy={stale}
       toolbar={
         <div className="flex flex-col gap-2">
           <div role="toolbar" aria-label="Job table" className="flex flex-wrap items-center gap-2">
@@ -211,9 +255,7 @@ export function JobOrdersScreen() {
           </div>
           {/* The status line stays in every state, the empty state included, as the toolbar does. */}
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <p role="status">
-              {statusText}. {sortText(sort)}
-            </p>
+            <p data-job-orders-status>{statusLine}</p>
             {snapshot?.fixture !== undefined && <p>Showing fixture {snapshot.fixture}.</p>}
           </div>
         </div>
@@ -237,7 +279,8 @@ export function JobOrdersScreen() {
             return next;
           })
         }
-        loading={snapshot === undefined}
+        loading={loaded === undefined}
+        stale={stale}
       />
       <p className="text-xs text-muted-foreground">{phase1Reason}</p>
     </PageFrame>

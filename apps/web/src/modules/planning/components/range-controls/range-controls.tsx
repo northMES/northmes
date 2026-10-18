@@ -1,44 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cn } from 'cn';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useId } from 'react';
 import { IconButton } from '../../../../ui/components/icon-button/index.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import type { ZoomPreset } from '../../gantt-data.ts';
 import { zoomPresetIds, zoomPresets } from '../../timeline/time-scale.ts';
-
-/** A group of pressed buttons, one pressed: the Zoom group of D3 and D5. */
-export function PressedGroup<TValue extends string>({
-  label,
-  choices,
-  value,
-  onChange,
-}: {
-  readonly label: string;
-  readonly choices: readonly { readonly id: TValue; readonly label: string }[];
-  readonly value: TValue;
-  readonly onChange: (value: TValue) => void;
-}) {
-  return (
-    <fieldset aria-label={label} className="flex rounded-lg bg-muted p-0.5">
-      {choices.map((choice) => (
-        <Button
-          key={choice.id}
-          variant="ghost"
-          aria-pressed={choice.id === value}
-          onClick={() => onChange(choice.id)}
-          className={cn(
-            'h-7 px-2.5',
-            choice.id === value && 'bg-card shadow-[inset_0_-2px_0_var(--foreground)]',
-          )}
-        >
-          {choice.label}
-        </Button>
-      ))}
-    </fieldset>
-  );
-}
+import { PressedGroup } from './range-controls-pressed-group.tsx';
 
 export interface RangeControlsProps {
   /** The name of the preset group: "Zoom" on the Gantt (D5), "Range" on the job order table (T1). */
@@ -91,7 +59,7 @@ export function RangeControls({
       </IconButton>
       <label htmlFor={dateId} className="flex items-center gap-1.5 text-sm">
         <Calendar aria-hidden className="size-4 text-muted-foreground" />
-        <span className="sr-only">Go to date</span>
+        <span className="text-xs font-medium text-muted-foreground">Go to date</span>
         <input
           id={dateId}
           type="date"

@@ -5,6 +5,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { phase1Reason } from '../../../src/modules/planning/mock-reasons.ts';
+import { politeRegionId } from '../../../src/ui/lib/announce.ts';
 import { renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
@@ -12,6 +13,11 @@ afterEach(cleanup);
 /** The job order table of the page, once it has rendered. */
 async function findTable(): Promise<HTMLElement> {
   return screen.findByRole('table', { name: /^Job orders, / });
+}
+
+/** The status line above the table, "8 job orders in W45, ...". */
+function statusLine(): string {
+  return document.querySelector('[data-job-orders-status]')?.textContent ?? '';
 }
 
 /** The display numbers of the body rows, in their order. */
@@ -38,7 +44,7 @@ describe('the job orders page (plan 18, the job order table; design #660, T1)', 
       '1004.20',
       '1006.10',
     ]);
-    expect(screen.getByRole('status').textContent).toBe(
+    expect(statusLine()).toBe(
       '8 job orders in W45, Mon 2 Nov to Sun 8 Nov, 2 late. Sorted by machine, then start.',
     );
     expect(screen.getByText('Showing fixture G1.')).toBeTruthy();
@@ -65,9 +71,11 @@ describe('the job orders page (plan 18, the job order table; design #660, T1)', 
 
     await waitFor(() => expect(rowNumbers(table)).toEqual(['1003.10', '1003.20']));
     expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02', late: 1 });
-    expect(screen.getByRole('status').textContent).toBe(
-      '2 job orders in W45, Mon 2 Nov to Sun 8 Nov, 2 late, late only. Sorted by machine, then start.',
-    );
+    const line =
+      '2 job orders in W45, Mon 2 Nov to Sun 8 Nov, 2 late, late only. Sorted by machine, then start.';
+    expect(statusLine()).toBe(line);
+    // The change is announced once through the app's polite region, not by a live status line.
+    await waitFor(() => expect(document.getElementById(politeRegionId)?.textContent).toBe(line));
   });
 
   it('T1 a sortable header sorts the rows, sets aria-sort and goes to the URL', async () => {
@@ -87,7 +95,7 @@ describe('the job orders page (plan 18, the job order table; design #660, T1)', 
       from: '2026-11-02',
       sort: 'deadline',
     });
-    expect(screen.getByRole('status').textContent).toContain('Sorted by deadline, ascending.');
+    expect(statusLine()).toContain('Sorted by deadline, ascending.');
 
     await userEvent.click(within(table).getByRole('button', { name: 'Deadline' }));
 
@@ -160,7 +168,7 @@ describe('the job orders page (plan 18, the job order table; design #660, T1)', 
 
     expect(table.getAttribute('aria-label')).toBe('Job orders, W50, Mon 7 Dec to Sun 13 Dec');
     expect(rowNumbers(table)).toEqual(['1003.10', '1003.20']);
-    expect(screen.getByRole('status').textContent).toBe(
+    expect(statusLine()).toBe(
       '2 job orders in W50, Mon 7 Dec to Sun 13 Dec, 2 late. Sorted by machine, then start.',
     );
 
@@ -185,7 +193,7 @@ describe('the job orders page (plan 18, the job order table; design #660, T1)', 
     expect(
       await screen.findByRole('heading', { level: 2, name: 'No job orders in this range' }),
     ).toBeTruthy();
-    expect(screen.getByRole('status').textContent).toBe(
+    expect(statusLine()).toBe(
       '0 job orders in W45, Mon 2 Nov to Sun 8 Nov. Sorted by machine, then start.',
     );
 
