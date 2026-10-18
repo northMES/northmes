@@ -237,6 +237,23 @@ describe('combineIntoRun (ADR 0083, plan 18 Runs)', () => {
     expect(result.conflicts).toContainEqual({ kind: 'FROZEN_WINDOW', rows: ['1005.20'] });
   });
 
+  it('a later row that already lies inside the frozen window is fixed: it stays and the run reports the stop', () => {
+    // With now at Mon 9 Nov 00:00 and the fence 24 h later, the committed 1005.20 (Mon 13:15)
+    // lies inside the window, so the run leaves it there (cascade rule 5).
+    const frozen: PlanContext = {
+      ...context,
+      nowMs: Date.UTC(2026, 10, 8, 23),
+      fenceMs: Date.UTC(2026, 10, 9, 23),
+    };
+    const result = combineIntoRun([orderOf('1001'), orderOf('1005')], frozen);
+
+    expect(result.moves.map((move) => move.displayNumber)).toEqual(['1005.10']);
+    expect(rowOf(result, '1005.20').placement).toEqual(orderOf('1005').jobOrders[1]?.placement);
+    expect(result.stops).toEqual([
+      { row: '1005.20', jobOrderId: 'jo-1005-20', reason: 'frozenWindow' },
+    ]);
+  });
+
   it('is deterministic and permutation-invariant in the orders, their operations and their rows', () => {
     const shuffle = <T>(items: readonly T[]) =>
       fc.shuffledSubarray([...items], { minLength: items.length });

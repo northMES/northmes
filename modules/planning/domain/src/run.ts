@@ -326,6 +326,22 @@ export function combineIntoRun(orders: readonly PlanOrder[], context: PlanContex
         } else {
           const release = releaseOf(order, operation.id, ctx);
           if (release === undefined) continue;
+          // The cascade rules (plan 18, Cascade rule 5): a row that already lies inside the frozen
+          // window is fixed and stays; a row placed into it moves and the break is reported.
+          const currentStart = current.placement?.setupStartMs;
+          if (
+            currentStart !== undefined &&
+            currentStart >= ctx.nowMs &&
+            currentStart < ctx.fenceMs
+          ) {
+            stops.push({
+              row: current.displayNumber,
+              jobOrderId: current.id,
+              reason: 'frozenWindow',
+            });
+            after = current;
+            continue;
+          }
           const placed = placeUnderRelease(order, current, release, ctx);
           if (placed === null || current.equipment === undefined) {
             stops.push({ row: current.displayNumber, jobOrderId: current.id, reason: 'horizon' });
@@ -348,6 +364,9 @@ export function combineIntoRun(orders: readonly PlanOrder[], context: PlanContex
             to: placed,
             reason: 'cascade',
           });
+          if (placed.setupStartMs >= ctx.nowMs && placed.setupStartMs < ctx.fenceMs) {
+            conflicts.push({ kind: 'FROZEN_WINDOW', rows: [current.displayNumber] });
+          }
           order = withRow(order, current.id, { placement: placed });
           after = order.jobOrders.find((each) => each.id === current.id);
         }
