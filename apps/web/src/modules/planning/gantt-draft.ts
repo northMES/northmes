@@ -371,11 +371,11 @@ export function orderNumbersText(numbers: readonly string[]): string {
   return `${numbers.slice(0, -1).join(', ')} and ${numbers[numbers.length - 1]}`;
 }
 
-/** "1001 and 1005, 2 rows moved, 1 setup saved": what the run did, for its line and its announcement. */
+/** "1001 and 1005, 2 rows moved, 1 retool saved": what the run did, for its line and its announcement. */
 export function runSummary(draft: GanttDraft, run: Run): string {
   const moved = draft.changes.filter((change) => change.runId === run.id).length;
   const saved = run.savedSetups.length;
-  return `${orderNumbersText(run.orderNumbers)}, ${moved === 1 ? '1 row moved' : `${moved} rows moved`}, ${saved === 1 ? '1 setup saved' : `${saved} setups saved`}`;
+  return `${orderNumbersText(run.orderNumbers)}, ${moved === 1 ? '1 row moved' : `${moved} rows moved`}, ${saved === 1 ? '1 retool saved' : `${saved} retools saved`}`;
 }
 
 /** The words of a conflict the domain reports, as the review step and the My draft list show them. */

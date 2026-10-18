@@ -88,7 +88,7 @@ describe('runs of orders of one article on the order Gantt (ADR 0083, plan 18 Ru
     await user.keyboard('{Escape}');
   });
 
-  it('GT10 the review step lists the orders, the saved setup, the deadline with the early warning, the span and the break; Combine draws the run above its orders', async () => {
+  it('GT10 the review step lists the orders, the saved retool, the deadline with the early warning, the span and the break; Combine draws the run above its orders', async () => {
     const user = userEvent.setup();
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
@@ -105,8 +105,8 @@ describe('runs of orders of one article on the order Gantt (ADR 0083, plan 18 Ru
     expect(within(review).getByRole('list', { name: 'Orders' }).textContent).toContain(
       '1005, 600 pcs, due Fri 13 Nov 15:00, NorthMES',
     );
-    expect(within(review).getByRole('list', { name: 'Saved setups' }).textContent).toBe(
-      '1005.10 follows 1001.10 on CNC 1, saves 30 min',
+    expect(within(review).getByRole('list', { name: 'Saved retools' }).textContent).toBe(
+      '1005.10 follows 1001.10 on CNC 1, saves 30 min of retool',
     );
     expect(review.textContent).toContain('The run is due Fri 6 Nov 15:00, the deadline of 1001.');
     expect(review.textContent).toContain(
@@ -123,7 +123,7 @@ describe('runs of orders of one article on the order Gantt (ADR 0083, plan 18 Ru
 
     await waitFor(() => {
       expect(spoken()).toBe(
-        'Run of Bracket L in your draft: 1001 and 1005, 2 rows moved, 1 setup saved. Not saved.',
+        'Run of Bracket L in your draft: 1001 and 1005, 2 rows moved, 1 retool saved. Not saved.',
       );
     });
     const run = rowOf(gantt, 'run:po-1001+po-1005');
@@ -155,7 +155,9 @@ describe('runs of orders of one article on the order Gantt (ADR 0083, plan 18 Ru
     const block = gantt.querySelector<HTMLElement>('[data-block="jo-1005-10"]');
     expect(block?.querySelector('[data-setup-hatch]')).toBeNull();
     expect(block?.getAttribute('aria-label')).toContain('Wed 4 Nov 08:00 to Wed 4 Nov 13:45');
-    expect(block?.getAttribute('aria-label')).toContain('setup saved by the run (30 min), run 5 h');
+    expect(block?.getAttribute('aria-label')).toContain(
+      'setup 0 min, retool saved by the run (30 min), run 5 h',
+    );
     expect(block?.getAttribute('aria-label')).toContain('changed in your draft');
     expect(screen.getByRole('button', { name: 'My draft, 1 change' })).toBeTruthy();
   });
@@ -176,7 +178,7 @@ describe('runs of orders of one article on the order Gantt (ADR 0083, plan 18 Ru
     const drawer = await screen.findByRole('dialog', { name: 'My draft, 1 change' });
     const runs = within(drawer).getByRole('list', { name: 'Runs' });
     expect(runs.textContent).toContain(
-      'Run of Bracket L: 1001 and 1005, 2 rows moved, 1 setup saved',
+      'Run of Bracket L: 1001 and 1005, 2 rows moved, 1 retool saved',
     );
     expect(within(drawer).queryByRole('list', { name: 'Changes' })).toBeNull();
     expect(
@@ -244,7 +246,9 @@ describe('runs of orders of one article on the order Gantt (ADR 0083, plan 18 Ru
     await user.keyboard('{Enter}');
     const details = await findDetails();
     expect(within(details).getByRole('heading', { level: 2 }).textContent).toBe('Run of Bracket L');
-    expect(details.textContent).toContain('1005.10 follows 1001.10 on CNC 1, saves 30 min');
+    expect(details.textContent).toContain(
+      '1005.10 follows 1001.10 on CNC 1, saves 30 min of retool',
+    );
     await user.click(within(details).getByRole('button', { name: 'Split run' }));
     await waitFor(() => {
       expect(gantt.querySelector('[data-row-id="run:po-1001+po-1005"]')).toBeNull();

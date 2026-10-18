@@ -46,7 +46,7 @@ export function hoverFields(
     value:
       saved === undefined
         ? `${formatDuration(jobOrder.plannedSetupS)}, ${formatDuration(jobOrder.plannedRunS)}`
-        : `0 min, saved by the run (${formatDuration(saved.setupS)}), ${formatDuration(jobOrder.plannedRunS)}`,
+        : `${formatDuration(jobOrder.plannedSetupS)}, retool saved by the run (${formatDuration(saved.setupS)}), ${formatDuration(jobOrder.plannedRunS)}`,
   });
   if (analysis?.float !== undefined) {
     const free =

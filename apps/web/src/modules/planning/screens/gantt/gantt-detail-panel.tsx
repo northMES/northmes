@@ -546,14 +546,14 @@ function RunDetails({ row }: { readonly row: RunRow }) {
           ))}
         </ul>
       </Section>
-      <Section title="Saved setups">
+      <Section title="Saved retools">
         {run.savedSetups.length === 0 ? (
-          <p className="text-[0.8125rem] text-muted-foreground">No setup saved.</p>
+          <p className="text-[0.8125rem] text-muted-foreground">No retool saved.</p>
         ) : (
           <ul className="grid gap-1 text-[0.8125rem] leading-[1.125rem]">
             {run.savedSetups.map((saved) => (
               <li key={saved.jobOrderId}>
-                {`${saved.displayNumber} follows ${saved.afterDisplayNumber} on ${machineName(saved.equipment)}, saves ${formatDuration(saved.setupS)}`}
+                {`${saved.displayNumber} follows ${saved.afterDisplayNumber} on ${machineName(saved.equipment)}, saves ${formatDuration(saved.setupS)} of retool`}
               </li>
             ))}
           </ul>

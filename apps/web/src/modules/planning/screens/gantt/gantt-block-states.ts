@@ -11,12 +11,16 @@ import {
   statusLabel,
 } from './gantt-rows.ts';
 
-/** "setup 30 min" or, for a setup a run saves (ADR 0083), "setup saved by the run (30 min)". */
+/**
+ * "setup 30 min" or, for a retool a run saves (ADR 0083 rule 4), the setup that remains (the fixed
+ * time) and the saved retool: "setup 0 min, retool saved by the run (30 min)".
+ */
 export function setupText(row: JobOrderRow, snapshot: GanttSnapshot): string {
   const saved = savedSetupOf(snapshot, row.jobOrder.id);
+  const setup = `setup ${formatDuration(row.jobOrder.plannedSetupS)}`;
   return saved === undefined
-    ? `setup ${formatDuration(row.jobOrder.plannedSetupS)}`
-    : `setup saved by the run (${formatDuration(saved.setupS)})`;
+    ? setup
+    : `${setup}, retool saved by the run (${formatDuration(saved.setupS)})`;
 }
 
 /** A state cue of a block (plan 07, Block states): its kind and the words the name carries. */

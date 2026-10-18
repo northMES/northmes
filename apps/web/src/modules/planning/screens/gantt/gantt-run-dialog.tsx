@@ -111,14 +111,14 @@ export function GanttRunDialog({
                 })}
               </ul>
             </Section>
-            <Section title="Saved setups">
+            <Section title="Saved retools">
               {run.savedSetups.length === 0 ? (
-                <p className="text-muted-foreground">No setup to save.</p>
+                <p className="text-muted-foreground">No retool to save.</p>
               ) : (
-                <ul aria-label="Saved setups" className="grid gap-0.5">
+                <ul aria-label="Saved retools" className="grid gap-0.5">
                   {run.savedSetups.map((saved) => (
                     <li key={saved.jobOrderId} className="font-mono text-xs">
-                      {`${saved.displayNumber} follows ${saved.afterDisplayNumber} on ${machineName(saved.equipment)}, saves ${formatDuration(saved.setupS)}`}
+                      {`${saved.displayNumber} follows ${saved.afterDisplayNumber} on ${machineName(saved.equipment)}, saves ${formatDuration(saved.setupS)} of retool`}
                     </li>
                   ))}
                 </ul>

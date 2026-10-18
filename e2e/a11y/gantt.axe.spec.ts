@@ -75,8 +75,8 @@ test.describe('the order Gantt', () => {
     const review = page.getByRole('dialog', { name: 'Combine into a run' });
     await expect(review).toBeVisible();
     await expect(review).toHaveCSS('opacity', '1');
-    await expect(review.getByRole('list', { name: 'Saved setups' })).toHaveText(
-      '1005.10 follows 1001.10 on CNC 1, saves 30 min',
+    await expect(review.getByRole('list', { name: 'Saved retools' })).toHaveText(
+      '1005.10 follows 1001.10 on CNC 1, saves 30 min of retool',
     );
     await checkA11y('the review step of a run');
     await review.getByRole('button', { name: 'Combine' }).click();
