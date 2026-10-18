@@ -55,6 +55,8 @@ function sortText(sort: ReturnType<typeof sortOf>): string {
 interface Loaded {
   readonly key: string;
   readonly range: TimeRange;
+  /** The range as text, which the status line names while another range loads. */
+  readonly label: string;
   readonly lateOnly: boolean;
   readonly snapshot: GanttSnapshot;
 }
@@ -103,6 +105,7 @@ export function JobOrdersScreen() {
   // while this one loads (design ui-222, LI7), and the first load without a date in the URL asks
   // again once the snapshot's now names the week.
   const loadKey = `${range.fromMs}:${range.toMs}:${lateOnly}:${attempt}`;
+  const label = rangeLabel(range, zoom, timeZone);
   useEffect(() => {
     let cancelled = false;
     setLoadError(undefined);
@@ -113,7 +116,7 @@ export function JobOrdersScreen() {
         filter: { lateOnly },
       })
       .then((answer) => {
-        if (!cancelled) setLoaded({ key: loadKey, range, lateOnly, snapshot: answer });
+        if (!cancelled) setLoaded({ key: loadKey, range, label, lateOnly, snapshot: answer });
       })
       .catch((error: unknown) => {
         if (!cancelled) setLoadError(error ?? new Error('The job orders could not be loaded'));
@@ -126,8 +129,10 @@ export function JobOrdersScreen() {
     return () => {
       cancelled = true;
     };
-  }, [source, loadKey, range, lateOnly]);
+  }, [source, loadKey, range, label, lateOnly]);
   const stale = loaded !== undefined && loaded.key !== loadKey;
+  /** A request is in flight: the one the page shows is not the one it asked for last. */
+  const pending = stale && loadError === undefined;
 
   const sort = sortOf(search);
   // The rows of the loaded request, so a range change shows the rows of the view before, dimmed,
@@ -142,7 +147,6 @@ export function JobOrdersScreen() {
           ),
     [loaded, sort],
   );
-  const label = rangeLabel(range, zoom, timeZone);
   const lateRows = rows.filter((row) => row.analysis?.late).length;
 
   let state: PageState = { status: 'ready' };
@@ -176,14 +180,18 @@ export function JobOrdersScreen() {
       ),
     };
   }
+  // The rows the page shows are the loaded request's: while another loads, the line says so and
+  // names the rows' own range, never the new one.
   const statusText = [
-    `${rows.length} job orders in ${label}`,
+    `${rows.length} job orders in ${loaded?.label ?? label}`,
     lateRows > 0 ? `${lateRows} late` : undefined,
-    lateOnly ? 'late only' : undefined,
+    loaded?.lateOnly ? 'late only' : undefined,
   ]
     .filter((part) => part !== undefined)
     .join(', ');
-  const statusLine = `${statusText}. ${sortText(sort)}`;
+  const statusLine = stale
+    ? `Loading ${label}. Showing ${statusText} until it loads.`
+    : `${statusText}. ${sortText(sort)}`;
   // A change of the rows after a user action is announced once through the app's helper; the
   // first rows, and the rows of the view before while the next loads, are not.
   const announced = useRef<string | undefined>(undefined);
@@ -197,7 +205,7 @@ export function JobOrdersScreen() {
     <PageFrame
       title="Job orders"
       state={state}
-      busy={stale}
+      busy={pending}
       toolbar={
         <div className="flex flex-col gap-2">
           <div role="toolbar" aria-label="Job table" className="flex flex-wrap items-center gap-2">
@@ -280,7 +288,7 @@ export function JobOrdersScreen() {
           })
         }
         loading={loaded === undefined}
-        stale={stale}
+        stale={pending}
       />
       <p className="text-xs text-muted-foreground">{phase1Reason}</p>
     </PageFrame>

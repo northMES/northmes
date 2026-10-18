@@ -3,6 +3,7 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { GanttDataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { phase1Reason } from '../../../src/modules/planning/mock-reasons.ts';
 import { politeRegionId } from '../../../src/ui/lib/announce.ts';
@@ -180,6 +181,53 @@ describe('the job orders page (plan 18, the job order table; design #660, T1)', 
     expect(
       screen.getByRole('table', { name: 'Job orders, W45, Mon 2 Nov to Sun 8 Nov' }),
     ).toBeTruthy();
+  });
+
+  it('LI7 while another range loads the rows and the status line stay those of the range before, busy, and a failed load shows the error state', async () => {
+    const snapshot = g1Snapshot();
+    let hold: 'none' | 'wait' | 'fail' = 'none';
+    let release: (() => void) | undefined;
+    const source: GanttDataSource = {
+      load: () => {
+        if (hold === 'fail') return Promise.reject(new Error('The plan server is down'));
+        if (hold === 'none') return Promise.resolve(snapshot);
+        return new Promise((resolve) => {
+          release = () => resolve(snapshot);
+        });
+      },
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, source, 'jobOrders');
+    const table = await findTable();
+    await waitFor(() => expect(statusLine()).toContain('8 job orders in W45'));
+
+    hold = 'wait';
+    await userEvent.click(screen.getByRole('button', { name: 'Show later range' }));
+
+    await waitFor(() =>
+      expect(statusLine()).toBe(
+        'Loading W46, Mon 9 Nov to Sun 15 Nov. Showing 8 job orders in W45, Mon 2 Nov to Sun 8 Nov, 2 late until it loads.',
+      ),
+    );
+    expect(table.getAttribute('aria-busy')).toBe('true');
+    expect(rowNumbers(table)).toHaveLength(8);
+
+    release?.();
+
+    await waitFor(() =>
+      expect(statusLine()).toBe(
+        '3 job orders in W46, Mon 9 Nov to Sun 15 Nov, 2 late. Sorted by machine, then start.',
+      ),
+    );
+    expect(table.getAttribute('aria-busy')).toBeNull();
+
+    hold = 'fail';
+    await userEvent.click(screen.getByRole('button', { name: 'Show later range' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Could not load the job orders' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
   it('T1 a plant without job orders in the range shows the empty state with Show the next range', async () => {
