@@ -15,13 +15,18 @@ import {
   type Type,
   UseFilters,
 } from '@nestjs/common';
-import { API_MAJOR, type Operation, type OperationsDeclaration } from '@northmes/contracts';
+import {
+  API_MAJOR,
+  type CommandTarget,
+  type Operation,
+  type OperationsDeclaration,
+} from '@northmes/contracts';
 import type { z } from 'zod';
 import { DomainError } from '../errors/domain-error.ts';
 import { type OperationResult, operationError } from '../operations/runner.ts';
 import { ApiController } from './api-controller.ts';
 import { PROBLEM_CONTENT_TYPE, type Problem, problemOf } from './problem.ts';
-import { operationIdOf, PublicApiOperation } from './public-api-operation.ts';
+import { operationIdOf, type ProblemStatus, PublicApiOperation } from './public-api-operation.ts';
 
 /** One call of a public API route, as toRestRoutes hands it to the host. */
 export interface PublicOperationCall {
@@ -199,6 +204,31 @@ function nestPath(path: string): string {
   return path.replace(/\{([a-zA-Z0-9]+)\}/g, ':$1');
 }
 
+/**
+ * The problem statuses a route may answer. Every route answers 400 for an input or a plant its
+ * contract refuses, 401 without a credential of the public API, 403 without the permission or the
+ * plant, and 429 over the credential's rate limit (ADR 0073). A read by a path parameter answers
+ * 404 for a row it does not find. A command answers 409 for a stale version or a taken code, one
+ * on an existing row 404 when the row is missing, and one that may change a row, so every command
+ * except a create, 412 when that row is archived.
+ */
+function problemsOf(operation: Operation, path: string): ProblemStatus[] {
+  const contract = operation.contract as {
+    readonly kind?: string;
+    readonly target?: CommandTarget;
+  };
+  const statuses: ProblemStatus[] = [400, 401, 403];
+  if (contract.kind === 'query') {
+    if (path.includes('{')) statuses.push(404);
+  } else {
+    if (contract.target === 'existing') statuses.push(404);
+    statuses.push(409);
+    if (contract.target !== 'new') statuses.push(412);
+  }
+  statuses.push(429);
+  return statuses;
+}
+
 /** One route of an operation: its handler and what it records. */
 interface Route {
   readonly key: string;
@@ -337,6 +367,7 @@ export function toRestRoutes(declarations: readonly OperationsDeclaration[]): Ty
     ) as PropertyDescriptor;
     const verb = method === 'GET' ? Get(nestPath(path)) : Post(nestPath(path));
     verb(PublicRoutes.prototype, operationId, descriptor);
+    const { description } = operation.contract as { readonly description?: string };
     PublicApiOperation({
       operationId,
       operation: operation.contract.name,
@@ -344,6 +375,11 @@ export function toRestRoutes(declarations: readonly OperationsDeclaration[]): Ty
       method,
       path: publicApiPath(module, path),
       status,
+      tag: module,
+      ...(description ? { description } : {}),
+      input: operation.contract.input,
+      output: operation.output,
+      problems: problemsOf(operation, path),
     })(PublicRoutes.prototype, operationId, descriptor);
     Req()(PublicRoutes.prototype, operationId, 0);
     Res()(PublicRoutes.prototype, operationId, 1);
