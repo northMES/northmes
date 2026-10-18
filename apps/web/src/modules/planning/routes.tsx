@@ -6,6 +6,7 @@ import type { PlantRoute } from '@northmes/web-sdk';
 import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router';
 import { boardSearch, ganttSearch } from './gantt-search.ts';
 import { jobOrdersSearch } from './job-orders-search.ts';
+import { customerOrderListSearch, orderListSearch, urlSearchOf } from './order-list-search.ts';
 import { orderPageSearch } from './order-page-search.ts';
 
 /**
@@ -56,6 +57,19 @@ export function planningRoutes(plantRoute: PlantRoute) {
     getParentRoute: () => planningRoute,
     path: linkEntry(planningLinks.orders).path,
   });
+  // The list keeps its filters as the URL's comma lists, so the router writes them back as such.
+  const orderListRoute = createRoute({
+    getParentRoute: () => ordersRoute,
+    path: '/',
+    validateSearch: (raw: Record<string, unknown>) => urlSearchOf(orderListSearch(raw)),
+    component: lazyRouteComponent(() => import('./screens.ts'), 'ProductionOrdersScreen'),
+  });
+  const customerOrdersRoute = createRoute({
+    getParentRoute: () => planningRoute,
+    path: linkEntry(planningLinks.customerOrders).path,
+    validateSearch: (raw: Record<string, unknown>) => urlSearchOf(customerOrderListSearch(raw)),
+    component: lazyRouteComponent(() => import('./screens.ts'), 'CustomerOrdersScreen'),
+  });
   const orderRoute = createRoute({
     getParentRoute: () => ordersRoute,
     path: linkEntry(planningLinks.orders.order).path,
@@ -75,6 +89,10 @@ export function planningRoutes(plantRoute: PlantRoute) {
     boardRoute,
     ganttRoute,
     jobOrdersRoute,
-    ordersRoute.addChildren([orderRoute.addChildren([orderPageRoute, editOrderRoute])]),
+    ordersRoute.addChildren([
+      orderListRoute,
+      orderRoute.addChildren([orderPageRoute, editOrderRoute]),
+    ]),
+    customerOrdersRoute,
   ]);
 }

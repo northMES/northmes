@@ -238,10 +238,10 @@ export function EditOrderScreen() {
         'The link may be out of date, or the order belongs to a plant you have no role in.',
       action: (
         <Link
-          to={planningLinks.jobOrders({ plant }).href}
+          to={planningLinks.orders({ plant }).href}
           className={buttonVariants({ variant: 'outline' })}
         >
-          Back to Job orders
+          Back to Production orders
         </Link>
       ),
     };

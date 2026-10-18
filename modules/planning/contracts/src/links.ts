@@ -18,4 +18,6 @@ export const planningLinks = defineModuleLinks('planning', {
     path: 'orders',
     children: { order: { path: '$orderId', children: { edit: { path: 'edit' } } } },
   },
+  /** The customer order lines and the production orders that supply them (plan 07). */
+  customerOrders: { path: 'customer-orders' },
 });
