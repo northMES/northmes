@@ -73,6 +73,8 @@ export const productionOrder = z.object({
   priority: z.number().int().nullable(),
   color: z.string(),
   status: z.enum(['planned', 'released']),
+  /** Who owns the order: the ERP, or NorthMES for an order created in the app (ADR 0083's review step names it). */
+  owner: z.enum(['erp', 'northmes']).default('erp'),
   operations: z.array(operation).nonempty(),
   jobOrders: z.array(jobOrder).nonempty(),
 });
@@ -179,6 +181,60 @@ export const orderChain = z.object({
   criticalRows: z.array(z.string()),
 });
 
+/** A row as a run or a split places it (GT10): its machine, span, setup and segments. */
+export const runPlacement = z.object({
+  equipment: z.string(),
+  start: timePoint,
+  runStart: timePoint,
+  end: timePoint,
+  setupS: z.number().int().nonnegative(),
+  segments: z.array(segment).nonempty(),
+  reason: z.string(),
+});
+
+/** The run of 1001 and 1005 (GT10, ADR 0083): the run record, the moves, the breaks and the split. */
+export const runCase = z.looseObject({
+  orders: z.array(z.string()).min(2),
+  article: z.string(),
+  runOrder: z.array(z.string()).min(2),
+  deadline: timePoint,
+  early: z.array(
+    z.object({
+      order: z.string(),
+      deadline: timePoint,
+      earlyByElapsedS: z.number().int().positive(),
+    }),
+  ),
+  savedSetups: z.array(
+    z.object({
+      jobOrder: z.string(),
+      after: z.string(),
+      equipment: z.string(),
+      setupS: z.number().int().positive(),
+    }),
+  ),
+  moved: z.record(z.string(), runPlacement),
+  conflicts: z.array(z.object({ kind: z.string(), rows: z.array(z.string()), detail: z.string() })),
+  runStart: timePoint,
+  runEnd: timePoint,
+  late: z.boolean(),
+  lateByElapsedS: z.number().int().nonnegative(),
+  /** The split: every moved row back to the placement it had before the combine, by display number. */
+  split: z.record(
+    z.string(),
+    z.union([
+      z.object({
+        equipment: z.string(),
+        start: timePoint,
+        runStart: timePoint,
+        end: timePoint,
+        setupS: z.number().int().nonnegative(),
+      }),
+      z.string(),
+    ]),
+  ),
+});
+
 /** The expected values of g1.expected.json that the Gantt readers take, the rest passed through. */
 export const ganttExpected = z.looseObject({
   dataset: z.literal('G1'),
@@ -222,6 +278,7 @@ export const ganttExpected = z.looseObject({
   GT7_calendar_span_1006: z.looseObject({
     base: z.looseObject({ workingS: z.number().int(), elapsedS: z.number().int() }),
   }),
+  GT10_run_1001_1005: runCase,
 });
 
 export type GanttFixture = z.infer<typeof ganttFixture>;

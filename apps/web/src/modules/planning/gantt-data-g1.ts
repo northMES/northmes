@@ -83,6 +83,7 @@ function orderOf(
     priority: order.priority,
     color: order.color,
     status: order.status,
+    owner: order.owner,
     operations: order.operations.map(operationOf),
     jobOrders: order.jobOrders.map((row) => jobOrderOf(order, row, windowsOf)),
   };

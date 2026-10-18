@@ -22,9 +22,10 @@ describe('g1DataSource (plan 18, Data loading)', () => {
       '1002',
       '1003',
       '1004',
+      '1005',
       '1006',
     ]);
-    expect(snapshot.productionOrders.flatMap((order) => order.jobOrders)).toHaveLength(8);
+    expect(snapshot.productionOrders.flatMap((order) => order.jobOrders)).toHaveLength(10);
     const first = snapshot.productionOrders[0]?.jobOrders[0];
     expect(first?.placement?.setupStartMs).toBe(Date.UTC(2026, 10, 3, 10, 30));
     expect(first?.placement?.runStartMs).toBe(Date.UTC(2026, 10, 3, 11, 0));

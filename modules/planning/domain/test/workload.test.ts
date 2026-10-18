@@ -84,14 +84,14 @@ describe('workload (plan 18, Workload)', () => {
 
   it('GT6 a row of 3 600 s on CNC2 at Thu 12:00 over the locked 1002.10 loads 32 400 s of 29 700 and overloads 2 700 s', () => {
     const extra: PlanOrder = {
-      id: 'po-1005',
-      number: '1005',
+      id: 'po-1007',
+      number: '1007',
       deadlineMs: Date.UTC(2026, 10, 6, 14),
       priority: null,
       operations: [
         {
-          id: '1005.10',
-          displayNumber: '1005.10',
+          id: '1007.10',
+          displayNumber: '1007.10',
           sequence: 10,
           quantity: 60,
           rates: {
@@ -110,9 +110,9 @@ describe('workload (plan 18, Workload)', () => {
       ],
       jobOrders: [
         {
-          id: 'jo-1005-10',
-          operationId: '1005.10',
-          displayNumber: '1005.10',
+          id: 'jo-1007-10',
+          operationId: '1007.10',
+          displayNumber: '1007.10',
           equipment: 'CNC2',
           quantity: 60,
           status: 'planned',
@@ -144,7 +144,7 @@ describe('workload (plan 18, Workload)', () => {
       overloadS: 2700,
       freeS: 0,
     });
-    expect(bucket?.items.map((item) => item.jobOrder)).toEqual(['1001.20', '1002.10', '1005.10']);
+    expect(bucket?.items.map((item) => item.jobOrder)).toEqual(['1001.20', '1002.10', '1007.10']);
   });
 
   it('a bucket with no availability is closed', () => {
