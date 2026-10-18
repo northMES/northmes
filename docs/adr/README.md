@@ -14,7 +14,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | Data and platform | 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014, 0017, 0023, 0024, 0054, 0059, 0060, 0066, 0071 |
 | GraphQL, realtime and MCP | 0015, 0016, 0018, 0034, 0070 |
 | Web | 0019, 0020, 0021, 0053, 0061, 0062, 0067, 0070, 0075 |
-| Production planning | 0025, 0026, 0027, 0028, 0029, 0030 |
+| Production planning | 0025, 0026, 0027, 0028, 0029, 0030, 0083 |
 | ERP integration and the Pyramid connector | 0031, 0032 |
 | Operator station | 0033 |
 | AI | 0035, 0036 |

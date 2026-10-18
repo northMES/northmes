@@ -2,7 +2,7 @@
 status: "proposed"
 date: 2026-10-17
 decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
-consulted: Krister Johansson (runs of any number of orders of one article, one job order per order, the saved setups as the run's rule, the earliest deadline with the early warning, the split, 2026-10-17)
+consulted: Krister Johansson (runs of any number of orders of one article, one job order per order, the saved retools as the run's rule, the earliest deadline with the early warning, the split, 2026-10-17)
 informed: contributors, coding agents, the product owner
 release: "later"
 needs-confirmation: "maintainer (any number of orders in a run; each order keeps its own job orders; the saved retools as the run's rule; the earliest deadline with the early warning; the split as the reverse; the run as a draft record until Save, then a committed grouping); product owner (a started or hard-locked order in a run; whether the ERP learns of a run; a hand-set run deadline; the retool as what a run saves, the fixed time kept)"
