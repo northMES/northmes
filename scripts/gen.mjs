@@ -34,25 +34,46 @@ async function writeUnder(outDir, path, text) {
 }
 
 /**
- * schema/api.graphql: the backend's one schema (ADR 0070). The stage builds the backend through
- * turbo, which reuses its cache when nothing changed, and prints the schema of its build.
+ * Builds the backend through turbo, which reuses its cache when nothing changed, and imports a
+ * module of its build by its path under apps/backend/dist.
+ */
+async function importBackend(path) {
+  const build = spawnSync(
+    'pnpm',
+    ['exec', 'turbo', 'run', 'build', '--filter=@northmes/backend', '--output-logs=errors-only'],
+    { cwd: repositoryRoot, encoding: 'utf8' },
+  );
+  if (build.status !== 0) {
+    throw new Error(`the backend did not build:\n${build.stdout}${build.stderr}`);
+  }
+  return import(pathToFileURL(join(repositoryRoot, 'apps/backend/dist', path)).href);
+}
+
+/**
+ * schema/api.graphql: the backend's one schema (ADR 0070), printed from its build.
  * @type {Stage}
  */
 const schemaStage = {
   name: 'schema',
   outputs: ['schema/api.graphql'],
   async generate(outDir) {
-    const build = spawnSync(
-      'pnpm',
-      ['exec', 'turbo', 'run', 'build', '--filter=@northmes/backend', '--output-logs=errors-only'],
-      { cwd: repositoryRoot, encoding: 'utf8' },
-    );
-    if (build.status !== 0) {
-      throw new Error(`the backend did not build:\n${build.stdout}${build.stderr}`);
-    }
-    const sdlModule = join(repositoryRoot, 'apps/backend/dist/graphql/schema-sdl.js');
-    const { schemaSdl } = await import(pathToFileURL(sdlModule).href);
+    const { schemaSdl } = await importBackend('graphql/schema-sdl.js');
     await writeUnder(outDir, 'schema/api.graphql', await schemaSdl());
+  },
+};
+
+/**
+ * schema/openapi-v1.json: the OpenAPI document of the public REST API of the in-repo modules,
+ * which the oasdiff gate compares with the base branch (ADR 0064), printed from the backend's
+ * build as pnpm northmes openapi print prints it.
+ * @type {Stage}
+ */
+const openApiStage = {
+  name: 'openapi',
+  outputs: ['schema/openapi-v1.json'],
+  async generate(outDir) {
+    const { openApiJson } = await importBackend('openapi/print.js');
+    await writeUnder(outDir, 'schema/openapi-v1.json', await openApiJson());
   },
 };
 
@@ -88,7 +109,7 @@ const sharedWebStage = {
 };
 
 /** @type {readonly Stage[]} */
-export const stages = Object.freeze([schemaStage, webDocumentsStage, sharedWebStage]);
+export const stages = Object.freeze([schemaStage, openApiStage, webDocumentsStage, sharedWebStage]);
 
 /** The files under dir that match the globs, as sorted paths relative to dir. */
 function filesMatching(dir, globs) {

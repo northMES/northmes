@@ -401,7 +401,7 @@ Credentials are bound to surfaces:
 | `/mcp` | A bearer JWT whose `aud` is `NORTHMES_PUBLIC_ORIGIN + '/mcp'`, or a personal access token with prefix `nms_mcp_` that expires within 90 days | Cookies; integration tokens (later); `/mcp` checks `Origin` and `Host` itself and returns 404 while the installation setting `mcp.enabled` is off |
 | Better Auth `/admin/*` and `/organization/*` | Nothing: every path is in `disabledPaths`; user management runs as NorthMES commands, and companies come only from `northmes company create` | Sessions with `impersonatedBy` set |
 | Public routes (later) | A bearer integration token bound to a scope node | Cookies, which they ignore, and MCP tokens |
-| `GET /api/v1/openapi.json` (later) | The session cookie or an integration token | Anonymous requests and MCP tokens |
+| `GET /api/v1/openapi.json` | The web's JWT or an integration token ([ADR 0073](../adr/0073-one-module-contract-for-rest-webmcp-and-later-mcp-with-oauth-clients-and-tokens.md)) | Anonymous requests and MCP tokens |
 
 Later, with the first public route ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md)):
 

@@ -17,6 +17,7 @@ export {
 } from './problem.ts';
 export {
   operationIdOf,
+  type ProblemStatus,
   PUBLIC_API_OPERATION_METADATA,
   PublicApiOperation,
   type PublicApiOperationMetadata,

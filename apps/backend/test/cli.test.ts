@@ -12,7 +12,7 @@ describe('cli', () => {
 
     expect(log.error.mock.calls).toEqual([
       [
-        'Unknown command "seed". Commands: serve, db bootstrap, migrate, company create, company add-admin, company list, admin reset-password',
+        'Unknown command "seed". Commands: serve, db bootstrap, migrate, openapi print, company create, company add-admin, company list, admin reset-password',
       ],
     ]);
     expect(exit.mock.calls).toEqual([[1]]);

@@ -366,7 +366,7 @@ describe('toRestRoutes', () => {
       module: 'tools',
       family: 'public',
     });
-    expect(publicApiOperationsOf(controller)).toEqual([
+    expect(publicApiOperationsOf(controller)).toMatchObject([
       {
         operationId: 'toolsGauges',
         operation: 'tools.findGauges',
@@ -392,6 +392,73 @@ describe('toRestRoutes', () => {
         status: 201,
       },
     ]);
+  });
+
+  it('ADR0073-W4 each route records its tag, its input and output schemas and the problem statuses it answers, for the OpenAPI document', () => {
+    const { find, get, create } = gaugeOperations.operations;
+
+    const [list, read, write] = publicApiOperationsOf(toRestRoutes([gaugeOperations]));
+
+    expect(list).toMatchObject({
+      tag: 'tools',
+      input: find.contract.input,
+      output: find.output,
+      problems: [400, 401, 403, 429],
+    });
+    expect(read).toMatchObject({
+      tag: 'tools',
+      input: get.contract.input,
+      output: get.output,
+      problems: [400, 401, 403, 404, 429],
+    });
+    expect(write).toMatchObject({
+      tag: 'tools',
+      input: create.contract.input,
+      output: create.output,
+      problems: [400, 401, 403, 409, 429],
+    });
+    expect(write).not.toHaveProperty('description');
+  });
+
+  it('ADR0073-W4 a command on an existing row also answers 404 and 412, one without a target 412, and each carries its contract description', () => {
+    const commands = defineOperations({
+      module: 'tools',
+      resource: 'gauges',
+      scope: 'companyOrPlant',
+      operations: {
+        calibrate: {
+          contract: defineCommandContract({
+            name: 'tools.calibrateGauge',
+            description: 'Records a calibration of the gauge.',
+            target: 'existing',
+            fields: z.object({}),
+            permission: 'tools.gauge:calibrate',
+          }),
+          output: gauge,
+          rest: { method: 'POST', path: 'commands/calibrate-gauge', status: 200 },
+          tool: false,
+        },
+        upsert: {
+          contract: defineCommandContract({
+            name: 'tools.upsertGauge',
+            target: 'none',
+            fields: z.object({ code: z.string() }),
+            permission: 'tools.gauge:create',
+          }),
+          output: gauge,
+          rest: { method: 'POST', path: 'commands/upsert-gauge', status: 201 },
+          tool: false,
+        },
+      },
+    });
+
+    const [calibrate, upsert] = publicApiOperationsOf(toRestRoutes([commands]));
+
+    expect(calibrate).toMatchObject({
+      description: 'Records a calibration of the gauge.',
+      problems: [400, 401, 403, 404, 409, 412, 429],
+    });
+    expect(upsert).toMatchObject({ problems: [400, 401, 403, 409, 412, 429] });
   });
 
   it('ADR0073-W4 declarations of two modules, and a plant-scoped operation, throw naming the operation', () => {
