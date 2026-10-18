@@ -168,6 +168,14 @@ describe('fixture G1 (plan 18)', () => {
     expect(Date.parse(run.deadline.instant)).toBe(
       Math.min(...orders.map((order) => Date.parse(order?.deadlineInstant.instant ?? ''))),
     );
+    // The case holds its three findings before their values are checked, so an emptied array
+    // cannot pass the loops below.
+    expect(run.early.map((early) => early.order)).toEqual(['1005']);
+    expect(run.savedSetups.map((saved) => saved.jobOrder)).toEqual(['1005.10']);
+    expect(run.conflicts).toContainEqual(
+      expect.objectContaining({ kind: 'OVERLAP', rows: ['1003.10', '1005.10'] }),
+    );
+    expect(Object.keys(run.moved).sort()).toEqual(['1005.10', '1005.20']);
     for (const early of run.early) {
       const order = data.productionOrders.find((each) => each.number === early.order);
       expect(order?.deadlineInstant).toEqual(early.deadline);
@@ -202,8 +210,11 @@ describe('fixture G1 (plan 18)', () => {
       const setup = addWork(horizon, Date.parse(moved.start.instant), moved.setupS);
       expect(setup?.endMs, displayNumber).toBe(Date.parse(moved.runStart.instant));
     }
-    // The split puts every moved row back to its committed placement, with its setup.
-    for (const [displayNumber, back] of Object.entries(run.split)) {
+    // The split puts every moved row back to its committed placement, with its setup: each moved
+    // row has an object-valued split placement, never a note instead of one.
+    for (const displayNumber of Object.keys(run.moved)) {
+      const back = run.split[displayNumber];
+      expect(typeof back, `split of ${displayNumber}`).toBe('object');
       if (typeof back !== 'object') continue;
       const row = jobOrders.find((each) => each.productionOrderOperation === displayNumber);
       expect(row, displayNumber).toBeDefined();
