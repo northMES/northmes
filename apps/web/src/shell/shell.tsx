@@ -39,6 +39,7 @@ import { CoreCompanies, type ShellCompany } from './companies.graphql.ts';
 import { type PageGroup, PageGroupsProvider, ShellAllPages } from './shell-all-pages.tsx';
 import { CompanySettingsLanding, CompanySettingsLayout } from './shell-company-settings.tsx';
 import { ShellHelpMenu } from './shell-help-menu.tsx';
+import { createLandingRoute } from './shell-landing.tsx';
 import { ShellNotFound } from './shell-not-found.tsx';
 import {
   allPagesHref,
@@ -95,11 +96,11 @@ const nobody: ShellUser = { name: 'Not signed in', username: '' };
 
 /**
  * Creates the web's router, once at boot: each module's routes under /$plant, company settings at
- * /settings/$companyId with each module's settingsRoutes (ADR 0066), and the sign-in page at
- * /sign-in. The $plant route renders the D2 shell, and ShellProvider and the Apollo client of the
+ * /settings/$companyId with each module's settingsRoutes (ADR 0066), the landing at /, which sends
+ * the user on or lists their plants (ADR 0066), and the sign-in page at /sign-in. The $plant route renders the D2 shell, and ShellProvider and the Apollo client of the
  * plant in the URL around the screen; company settings render their own layout without a plant,
  * with the client that names no plant. A viewer without a session who opens a plant or settings
- * page goes to sign-in with the page as the return path, and so does one whose request the API
+ * page, or the landing, goes to sign-in with the page as the return path, and so does one whose request the API
  * refuses with 401, or with core.password_change_required, whose session ends first.
  */
 export function createShellRouter(
@@ -206,6 +207,13 @@ export function createShellRouter(
       }),
     ],
     outsidePlantRoutes: (rootRoute) => [
+      createLandingRoute(rootRoute, {
+        modules: ordered,
+        client: companiesClient,
+        beforeLoad: signedIn,
+        user: () => session.user() ?? nobody,
+        onSignOut: signOut,
+      }),
       createRoute({
         getParentRoute: () => rootRoute,
         path: signInPath,
