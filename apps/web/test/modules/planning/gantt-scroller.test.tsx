@@ -85,6 +85,35 @@ describe('the time scroller of the order Gantt (#685)', () => {
     await waitFor(() => {
       expect(gantt.scrollLeft).toBe(200 + (widthAfter - widthBefore));
     });
+
+    // The browser reports that internal move as a scroll event; it is no movement of the planner
+    // towards the right edge, so nothing more loads.
+    fireEvent.scroll(gantt);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(timeHeaderText(gantt)).not.toContain('Wed 11 Nov');
+  });
+
+  it('the clamp of the scroll position after Later shrinks the range extends nothing', async () => {
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
+    const gantt = await findGantt();
+    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
+    scrollSideways(gantt, 0, 1500);
+    await waitFor(() => {
+      expect(timeHeaderText(gantt)).toContain('Sun 8 Nov');
+    });
+
+    // Later shrinks the range back to one span; the browser clamps the position to what is left
+    // and reports it as a scroll event, which looks like a move towards the left edge.
+    gantt.scrollLeft = 100;
+    fireEvent.click(screen.getByRole('button', { name: 'Show later range' }));
+    await waitFor(() => {
+      expect(timeHeaderText(gantt)).toContain('Sat 7 Nov');
+    });
+    fireEvent.scroll(gantt);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(timeHeaderText(gantt)).not.toContain('Wed 4 Nov');
+    expect(timeHeaderText(gantt)).not.toContain('Tue 10 Nov');
   });
 
   it('a vertical scroll extends nothing, and a leftward scroll in a narrow range extends the earlier side only', async () => {

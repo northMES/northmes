@@ -329,17 +329,23 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const lastTimeWidth = useRef<number | undefined>(undefined);
   const shiftAfterGrowth = useRef(false);
   const gridElement = useRef<HTMLElement | null>(null);
+  // An edge counts only after a horizontal move of the planner towards it: a vertical scroll
+  // changes nothing, a range under two screens wide extends on the side the planner is heading
+  // for, and a move of the position the view makes itself (the shift after a span was added on
+  // the left, the clamp after the range shrank) counts as the new baseline, not as a move.
+  const lastScrollLeft = useRef(0);
   useLayoutEffect(() => {
     const previous = lastTimeWidth.current;
     lastTimeWidth.current = timeWidth;
-    if (!shiftAfterGrowth.current || previous === undefined) return;
-    shiftAfterGrowth.current = false;
     const grid = gridElement.current;
-    if (grid !== null && timeWidth > previous) grid.scrollLeft += timeWidth - previous;
+    if (grid === null) return;
+    if (shiftAfterGrowth.current && previous !== undefined && timeWidth > previous) {
+      grid.scrollLeft += timeWidth - previous;
+    }
+    shiftAfterGrowth.current = false;
+    // The browser has laid the new width out and clamped the position by now.
+    lastScrollLeft.current = grid.scrollLeft;
   }, [timeWidth]);
-  // An edge counts only after a horizontal move towards it: a vertical scroll changes nothing,
-  // and a range under two screens wide extends on the side the planner is heading for.
-  const lastScrollLeft = useRef(0);
   const onGridScroll = (grid: HTMLElement) => {
     const { scrollLeft, clientWidth, scrollWidth } = grid;
     const previous = lastScrollLeft.current;
