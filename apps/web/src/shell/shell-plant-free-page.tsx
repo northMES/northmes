@@ -92,7 +92,10 @@ export function ShellPlantList({ modules, companies, level }: ShellPlantListProp
           {company.name}
         </Heading>
         {settings !== undefined && (
-          <Link to={settings} className="text-sm text-link underline">
+          <Link
+            to={settings}
+            className="inline-flex min-h-(--nm-target-min) items-center text-sm text-link underline"
+          >
             {company.name} settings
           </Link>
         )}
@@ -107,7 +110,10 @@ export function ShellPlantList({ modules, companies, level }: ShellPlantListProp
               >
                 <Factory className="size-3.5" />
               </span>
-              <Link to={plantLinkHref(modules, each.slug)} className="text-link underline">
+              <Link
+                to={plantLinkHref(modules, each.slug)}
+                className="inline-flex min-h-(--nm-target-min) items-center text-link underline"
+              >
                 {each.name}
               </Link>
               <span className="font-mono text-sm text-muted-foreground">/{each.slug}</span>
