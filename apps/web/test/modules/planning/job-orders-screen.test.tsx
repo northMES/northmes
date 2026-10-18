@@ -228,6 +228,7 @@ describe('the job orders page (plan 18, the job order table; design #660, T1)', 
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
     expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(statusLine()).toBe('Could not load W47, Mon 16 Nov to Sun 22 Nov.');
   });
 
   it('T1 a plant without job orders in the range shows the empty state with Show the next range', async () => {

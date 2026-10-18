@@ -45,12 +45,15 @@ test.describe('the job orders page', () => {
 
     await page.getByRole('button', { name: 'Columns' }).click();
     await expect(page.getByRole('menuitemcheckbox', { name: 'Soft lock' })).toBeVisible();
+    // The menu fades in; axe must read its colors once the transition has ended.
+    await expect(page.getByRole('menu')).toHaveCSS('opacity', '1');
     await checkA11y('the Columns menu open');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Actions for 1003.10' }).click();
     await expect(page.getByRole('menuitem', { name: 'Open on Gantt' })).toBeVisible();
+    await expect(page.getByRole('menu')).toHaveCSS('opacity', '1');
     await checkA11y('the row menu open');
   });
 });

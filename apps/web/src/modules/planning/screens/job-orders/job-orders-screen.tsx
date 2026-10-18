@@ -189,9 +189,12 @@ export function JobOrdersScreen() {
   ]
     .filter((part) => part !== undefined)
     .join(', ');
-  const statusLine = stale
-    ? `Loading ${label}. Showing ${statusText} until it loads.`
-    : `${statusText}. ${sortText(sort)}`;
+  const statusLine =
+    loadError !== undefined
+      ? `Could not load ${label}.`
+      : pending
+        ? `Loading ${label}. Showing ${statusText} until it loads.`
+        : `${statusText}. ${sortText(sort)}`;
   // A change of the rows after a user action is announced once through the app's helper; the
   // first rows, and the rows of the view before while the next loads, are not.
   const announced = useRef<string | undefined>(undefined);
