@@ -224,7 +224,7 @@ Case G1 `GT10`: `1001` (Bracket L, 600 pcs, deadline Fri 6 Nov 15:00) and `1005`
 
 ### Open product owner questions
 
-- PO-81: may a run hold an order with a started or hard-locked job order? Working default: no, the review step refuses with the reason.
+- PO-81: may a run hold an order with a started, held or hard-locked job order? Working default: no for all three, the review step refuses with the reason.
 - PO-82: does the ERP learn of a run, as a note or a field on the orders, or is it NorthMES-internal? Working default: internal.
 - PO-83: may a planner set the run's deadline by hand, or is it always the earliest of its orders? Working default: the earliest.
 - PO-84: does a run save the whole retool, or does a run of one article still need a shorter changeover, such as a fixture change? Working default: the whole retool; the fixed time of the operation stays.
@@ -511,7 +511,7 @@ No new permission. Moves, cascade, plan this order and Move all later by need `p
 
 ### Tree grid semantics
 
-- The order Gantt is `role="treegrid"` named after plant, filter and range. Order and operation rows carry `aria-level` 1 and 2, `aria-expanded`, `aria-setsize` and `aria-posinset`; job order rows carry `aria-level` 3. Each row has a `rowheader` (the Name cell) and the tree columns as `gridcell`s, then one `gridcell` for the time area that holds the block or the summary bar.
+- The order Gantt is `role="treegrid"` named after plant, filter and range. Outside a run, order and operation rows carry `aria-level` 1 and 2 and job order rows `aria-level` 3; inside a run ([Runs](#runs)) the run row is level 1 and its orders, operations and job orders are levels 2, 3 and 4. Order, operation and run rows carry `aria-expanded`, `aria-setsize` and `aria-posinset`. Each row has a `rowheader` (the Name cell) and the tree columns as `gridcell`s, then one `gridcell` for the time area that holds the block or the summary bar.
 - Row focus mode, as the ARIA Authoring Practices treegrid pattern: Up and Down move between rows, Right expands a collapsed row or moves into its first cell, Left collapses an expanded row or moves back to the row, Home and End go to the first and last row, Page Up and Page Down move a screenful, Enter opens the detail panel of the row. Inside a row, Left and Right move between cells, and the time area cell holds the block, which takes the block keys of the board (M for move mode, the menu key, Shift+F10).
 - Move mode on a job order row: Left and Right step one snap slot in time; Up and Down step through the operation's allowed machines; the step message names the machine, the span and the cascade count ("Mill 1, Wed 4 Nov 13:30 to Thu 5 Nov 07:00. 1 row moves with it. Not saved."). Enter commits, Escape cancels, focus stays on the block and returns to it by id after a commit.
 - A summary bar cell is focusable for its name only; it has no move keys. Its name carries the span, the status and, for an order row, the slack or late-by.
@@ -650,7 +650,7 @@ These become ADRs at status `proposed`, from `docs/adr/template.md`, before a ta
 | The link limit and `ganttMaxOrders` | SP3b measurement | 200 links, 300 orders |
 | The planner PC and browser for SP3b and the Gantt NVDA pass | pilot IT | as SP3 |
 | Release placement of each story | Krister | as [Decisions this document needs](#decisions-this-document-needs), item 1 |
-| The run questions of [Runs](#runs), PO-81 to PO-85: a started or hard-locked order in a run, the ERP, a hand-set run deadline, the saved retool's size, which operations a run takes; the rules of ADR 0083, M-94 | product owner; Krister | as the section's working defaults |
+| The run questions of [Runs](#runs), PO-81 to PO-85: a started, held or hard-locked order in a run, the ERP, a hand-set run deadline, the saved retool's size, which operations a run takes; the rules of ADR 0083, M-94 | product owner; Krister | as the section's working defaults |
 
 ## Provenance
 
