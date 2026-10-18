@@ -4,18 +4,13 @@ import type { INestApplication, Type } from '@nestjs/common';
 import { ModulesContainer } from '@nestjs/core';
 import { API_MAJOR } from '@northmes/contracts';
 import { withInRepoApp } from '../boot/in-repo-app.ts';
-import { type OpenApiDocument, openApiDocument, sortedKeys } from './document.ts';
+import { documentJson, openApiDocument } from './document.ts';
 
 /** The controllers of every Nest module of the app. */
 export function controllersOf(app: INestApplication): Type[] {
   return [...app.get(ModulesContainer).values()].flatMap((module) =>
     [...module.controllers.values()].map(({ metatype }) => metatype as Type),
   );
-}
-
-/** A document as JSON, with every key in name order and a final newline. */
-export function documentJson(document: OpenApiDocument): string {
-  return `${JSON.stringify(sortedKeys(document), null, 2)}\n`;
 }
 
 /**

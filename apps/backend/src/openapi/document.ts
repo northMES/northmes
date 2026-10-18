@@ -275,3 +275,8 @@ export function openApiDocument(
     },
   };
 }
+
+/** A document as JSON, with every key in name order and a final newline. */
+export function documentJson(document: OpenApiDocument): string {
+  return `${JSON.stringify(sortedKeys(document), null, 2)}\n`;
+}
