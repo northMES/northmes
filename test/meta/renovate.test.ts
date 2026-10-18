@@ -62,6 +62,20 @@ describe('renovate.json', () => {
     expect(`${groups?.depName}:${groups?.currentValue}@${groups?.currentDigest}`).toBe(image);
   });
 
+  it('ADR0064 the oasdiff image of CI / openapi diff has a manager that reads its tag and digest', () => {
+    const file = '.github/workflows/ci.yml';
+    const text = readFileSync(`${root}${file}`, 'utf8');
+    const image = /OASDIFF_IMAGE: (\S+)/.exec(text)?.[1];
+    const manager = renovate.customManagers?.find((candidate) =>
+      candidate.managerFilePatterns.some((pattern) => filePattern(pattern).test(file)),
+    );
+
+    expect(image).toMatch(/^tufin\/oasdiff:/);
+    expect(manager?.datasourceTemplate).toBe('docker');
+    const groups = new RegExp(manager?.matchStrings[0] ?? '$^').exec(text)?.groups;
+    expect(`${groups?.depName}:${groups?.currentValue}@${groups?.currentDigest}`).toBe(image);
+  });
+
   it('GitHub Actions are pinned by digest', () => {
     expect(renovate.extends).toEqual(
       expect.arrayContaining(['config:best-practices', 'helpers:pinGitHubActionDigests']),
