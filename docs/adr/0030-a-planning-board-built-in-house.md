@@ -55,7 +55,7 @@ In release 1: machine rows grouped by equipment group with group colors and coll
 
 Cut from release 1: resize (block length follows from quantity, rates and the calendar), multi-select and multi-drag, continuous zoom, undo beyond discarding the draft, the conflict navigator and the minimap. Click-to-place and the ghost outlines of other planners' drafts are cut candidates.
 
-The timeline views offer Hide closed time, a local option that is on by default and compresses every closed calendar window to a few pixels on the same scale, so a week of the A1 calendar does not spend 73 percent of its width on nights and weekends ([18-gantt-timeline.md](../plan/18-gantt-timeline.md); decided 2026-10-17).
+The order Gantt offers Hide closed time, a local option that is on by default and compresses every closed calendar window to a few pixels on the same scale, so a week of the A1 calendar does not spend 73 percent of its width on nights and weekends ([18-gantt-timeline.md](../plan/18-gantt-timeline.md); decided 2026-10-17).
 
 ### The job order table view
 
