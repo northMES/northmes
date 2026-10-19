@@ -32,6 +32,7 @@ export function g1PlanContext(fixture: GanttFixture = g1): PlanContext {
   const orders: PlanOrder[] = fixture.productionOrders.map((order) => ({
     id: g1OrderId(order.number),
     number: order.number,
+    article: order.article,
     deadlineMs: Date.parse(order.deadlineInstant.instant),
     priority: order.priority,
     operations: order.operations.map((operation) => ({
