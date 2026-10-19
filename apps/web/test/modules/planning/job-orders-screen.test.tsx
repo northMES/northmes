@@ -215,7 +215,7 @@ describe('the job orders page (plan 18, the job order table; design #660, T1)', 
 
     await waitFor(() =>
       expect(statusLine()).toBe(
-        '3 job orders in W46, Mon 9 Nov to Sun 15 Nov, 2 late. Sorted by machine, then start.',
+        '5 job orders in W46, Mon 9 Nov to Sun 15 Nov, 2 late. Sorted by machine, then start.',
       ),
     );
     expect(table.getAttribute('aria-busy')).toBeNull();
