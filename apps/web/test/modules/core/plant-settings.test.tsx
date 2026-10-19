@@ -96,6 +96,20 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
     ).toBe(true);
   });
 
+  it('LI3 a picked group that no row has keeps its name in the chip and its checked item in the menu', async () => {
+    // The assembly bench is the only machine of Assembly and is not plannable.
+    renderCoreAt(
+      withSearch(coreLinks.machines({ plant }).href, { group: 'ASM', plannable: '1' }),
+      [],
+    );
+    await screen.findByRole('heading', { level: 2, name: 'No machines match these filters' });
+
+    expect(screen.getByText('Group:').parentElement?.textContent).toBe('Group: Assembly 0');
+    await userEvent.click(screen.getByRole('button', { name: 'Group, 1 selected' }));
+    const item = screen.getByRole('menuitemcheckbox', { name: /^Assembly/ });
+    expect(item.getAttribute('aria-checked')).toBe('true');
+  });
+
   it('MA1 Plannable only, the Group filter and the search live in the URL', async () => {
     const router = renderCoreAt(coreLinks.machines({ plant }).href, []);
     await screen.findByRole('table', { name: 'Machines' });
