@@ -43,7 +43,7 @@ export function customersOf(snapshot: GanttSnapshot, order: GanttOrder): string[
 
 /** "From the ERP" or "NorthMES": where the order's master fields come from. */
 export function ownerLabel(order: GanttOrder): string {
-  return order.origin?.owner === 'northmes' ? 'NorthMES' : 'From the ERP';
+  return order.owner === 'northmes' ? 'NorthMES' : 'From the ERP';
 }
 
 /** The planned start of an order: its analysis, else the earliest setup start of its rows. */

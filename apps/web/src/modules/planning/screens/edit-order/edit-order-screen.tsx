@@ -73,7 +73,7 @@ function OrderForm({
   readonly order: GanttOrder;
 }) {
   const { plant } = useShell();
-  const imported = order.origin?.owner !== 'northmes';
+  const imported = order.owner !== 'northmes';
   const rule = deadlineRuleText(snapshot.settings);
   const articles = [...new Set((snapshot.routings ?? []).map((routing) => routing.article))];
   return (

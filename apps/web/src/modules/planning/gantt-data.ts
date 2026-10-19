@@ -144,8 +144,11 @@ export interface GanttOrder {
   /** The order color, a palette token name such as palette-1. */
   readonly color: string;
   readonly status: OrderStatus;
-  /** Who owns the order: the ERP, or NorthMES for an order created in the app. */
-  readonly owner: 'erp' | 'northmes';
+  /**
+   * Who owns the order's master fields: the ERP, or NorthMES for an order created in the app. The
+   * one source of ownership; `origin` only adds the details.
+   */
+  readonly owner: RecordOwner;
   readonly operations: readonly GanttOperation[];
   readonly jobOrders: readonly GanttJobOrder[];
   /** Where the order came from; a snapshot without the planning pages' data leaves it out. */
@@ -156,11 +159,11 @@ export interface GanttOrder {
 export type RecordOwner = 'erp' | 'northmes';
 
 /**
- * Where an order came from (plan 07, field ownership): an imported order with the import that
- * brought it, whose master fields the ERP owns, or an order created in NorthMES with its creator.
+ * Where an order came from (plan 07, field ownership): the import that brought an imported order,
+ * or the creator of an order created in NorthMES. Who owns the order's master fields is the
+ * order's own `owner`; the origin only adds the details.
  */
 export interface OrderOrigin {
-  readonly owner: RecordOwner;
   readonly importedAtMs?: number;
   readonly createdAtMs?: number;
   readonly createdBy?: string;

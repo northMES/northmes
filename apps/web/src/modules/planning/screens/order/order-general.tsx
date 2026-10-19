@@ -93,10 +93,10 @@ const cell = 'px-3 py-2 whitespace-normal';
 /** The section lead of the order: where it came from and when (PO1). */
 function sourceLine(snapshot: GanttSnapshot, order: GanttOrder): string {
   const origin = order.origin;
-  if (origin?.owner === 'northmes') {
-    const by = origin.createdBy === undefined ? '' : ` by ${origin.createdBy}`;
+  if (order.owner === 'northmes') {
+    const by = origin?.createdBy === undefined ? '' : ` by ${origin.createdBy}`;
     const at =
-      origin.createdAtMs === undefined ? '' : `, ${plantTime(snapshot, origin.createdAtMs)}`;
+      origin?.createdAtMs === undefined ? '' : `, ${plantTime(snapshot, origin.createdAtMs)}`;
     return `Created in NorthMES${by}${at}.`;
   }
   const imported =
@@ -116,7 +116,7 @@ function OrderSection({
   readonly order: GanttOrder;
   readonly analysis: OrderAnalysis | undefined;
 }) {
-  const imported = order.origin?.owner !== 'northmes';
+  const imported = order.owner !== 'northmes';
   const erpName = snapshot.erp?.name;
   return (
     <Section id="order-facts" title="Order" lead={sourceLine(snapshot, order)}>

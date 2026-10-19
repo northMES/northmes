@@ -78,14 +78,13 @@ function jobOrderOf(
 }
 
 /**
- * Where an order came from: the owner G1 records (#711), with the import or the creator and the
- * routing version the pages fixture adds.
+ * Where an order came from: the import or the creator and the routing version the pages fixture
+ * adds; the owner stays G1's own (#711). An order the pages fixture does not name has no origin.
  */
-function originOf(order: FixtureOrder, pages: GanttPagesFixture): OrderOrigin {
+function originOf(order: FixtureOrder, pages: GanttPagesFixture): OrderOrigin | undefined {
   const origin = pages.orders[order.number];
-  if (origin === undefined) return { owner: order.owner };
+  if (origin === undefined) return undefined;
   return {
-    owner: order.owner,
     ...(origin.importedAt !== undefined && { importedAtMs: ms(origin.importedAt.instant) }),
     ...(origin.createdAt !== undefined && { createdAtMs: ms(origin.createdAt.instant) }),
     ...(origin.createdBy !== undefined && { createdBy: origin.createdBy }),
@@ -111,8 +110,13 @@ function orderOf(
     owner: order.owner,
     operations: order.operations.map(operationOf),
     jobOrders: order.jobOrders.map((row) => jobOrderOf(order, row, windowsOf)),
-    origin: originOf(order, pages),
+    ...withOrigin(originOf(order, pages)),
   };
+}
+
+/** The origin key of an order, left out when there is none. */
+function withOrigin(origin: OrderOrigin | undefined): { readonly origin?: OrderOrigin } {
+  return origin === undefined ? {} : { origin };
 }
 
 /**
