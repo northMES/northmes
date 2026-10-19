@@ -17,6 +17,7 @@ import {
   type MoveRefusal,
   type PlacedMove,
   type Run,
+  type RunRefusal,
   type RunResult,
 } from '@northmes/planning-domain';
 import {
@@ -323,6 +324,15 @@ export function draftChangeCount(draft: GanttDraft): number {
 }
 
 /**
+ * Why the selected orders cannot be combined: the domain's refusals, and `IN_RUN` for an order that
+ * is already in a run of the draft or of the plan, which only the draft knows of.
+ */
+export type CombineRefusal = RunRefusal | 'IN_RUN';
+
+/** The run the review step shows: the domain's result, or a refusal the draft adds. */
+export type RunPreview = Omit<RunResult, 'refused'> & { readonly refused?: CombineRefusal };
+
+/**
  * The run of the selected orders as the review step shows it (plan 18, The review step): the
  * domain's combineIntoRun over the plan with the draft applied, without writing anything.
  */
@@ -330,10 +340,27 @@ export function runPreview(
   committed: GanttSnapshot,
   draft: GanttDraft,
   orderIds: readonly string[],
-): RunResult {
+): RunPreview {
   const applied = applyDraft(committed, draft);
-  const context = planContextOf(applied, { fromMs: applied.nowMs, toMs: applied.fenceMs });
   const orders = applied.productionOrders.filter((order) => orderIds.includes(order.id));
+  // An order already in a run, the draft's or a committed one, joins no other (ADR 0083 rule 1).
+  const runs = [...(committed.runs ?? []), ...draft.runs];
+  const taken = [...orders]
+    .sort((a, b) => (a.number < b.number ? -1 : a.number > b.number ? 1 : 0))
+    .find((order) => runs.some((run) => run.orderIds.includes(order.id)));
+  if (taken !== undefined) {
+    return {
+      moves: [],
+      conflicts: [],
+      stops: [],
+      refused: 'IN_RUN',
+      refusedBy: taken.number,
+      orders,
+      late: false,
+      lateByS: 0,
+    };
+  }
+  const context = planContextOf(applied, { fromMs: applied.nowMs, toMs: applied.fenceMs });
   return combineIntoRun(orders, context);
 }
 
@@ -346,7 +373,7 @@ export function combineInDraft(
   committed: GanttSnapshot,
   draft: GanttDraft,
   orderIds: readonly string[],
-): { readonly draft: GanttDraft; readonly result: RunResult } {
+): { readonly draft: GanttDraft; readonly result: RunPreview } {
   const result = runPreview(committed, draft, orderIds);
   const run = result.run;
   if (result.refused !== undefined || run === undefined) return { draft, result };

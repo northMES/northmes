@@ -201,7 +201,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const fromContext = useGanttSource();
   const source = given ?? fromContext;
   const { plant } = useShell();
-  const search = ganttSearch(useSearch({ strict: false }));
+  // The router keeps its search object while the URL stays, so the parsed keys keep their identity
+  // and the callbacks below that read them stay stable across renders.
+  const rawSearch = useSearch({ strict: false });
+  const search = useMemo(() => ganttSearch(rawSearch), [rawSearch]);
   const navigate = useNavigate();
   const setSearch = useCallback(
     (next: GanttSearch) =>
@@ -589,10 +592,13 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   }, [snapshot, detailRowId, rowById]);
 
   // Show critical chain on an order selects it and turns the chain on; on the shown order it ends.
-  const toggleChain = (orderId: string) => {
-    if (chain?.order.id === orderId) void setSearch(withChain(search, false));
-    else void setSearch(withChain(withOrder(search, orderId), true));
-  };
+  const toggleChain = useCallback(
+    (orderId: string) => {
+      if (chain?.order.id === orderId) void setSearch(withChain(search, false));
+      else void setSearch(withChain(withOrder(search, orderId), true));
+    },
+    [chain, search, setSearch],
+  );
   const selectedOrderIds = useMemo(
     () => new Set(search.order === undefined ? [] : [search.order, ...extraSelected]),
     [search.order, extraSelected],
@@ -617,14 +623,28 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     );
   };
   /** The orders a run would hold: the selection with the order the action was taken on. */
-  const runCandidates = (orderId: string): string[] =>
-    [...selectedOrderIds, orderId].filter((id, index, all) => all.indexOf(id) === index);
+  const runCandidates = useCallback(
+    (orderId: string): string[] =>
+      [...selectedOrderIds, orderId].filter((id, index, all) => all.indexOf(id) === index),
+    [selectedOrderIds],
+  );
   const runActions = useMemo<GanttRunActions | undefined>(() => {
     if (snapshot === undefined || committed === undefined) return undefined;
     const orderOf = (id: string) => snapshot.productionOrders.find((order) => order.id === id);
     return {
       canCombine: (orderId) => {
-        const members = runCandidates(orderId).map(orderOf);
+        const candidates = runCandidates(orderId);
+        // An order already in a run joins no other until that run is split (ADR 0083 rule 1).
+        for (const id of candidates) {
+          const run = snapshot.runs?.find((each) => each.orderIds.includes(id));
+          if (run !== undefined) {
+            return {
+              ok: false,
+              reason: `Order ${orderOf(id)?.number ?? id} is already in the run of ${run.article}; split it first`,
+            };
+          }
+        }
+        const members = candidates.map(orderOf);
         const article = orderOf(orderId)?.article ?? '';
         if (members.length < 2) return { ok: false, reason: `Select another order of ${article}` };
         if (members.some((order) => order?.article !== article)) {

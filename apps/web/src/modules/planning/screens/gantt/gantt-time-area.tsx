@@ -135,9 +135,15 @@ export function SummaryBar({
       data-run={run || undefined}
       className={cn(
         'absolute top-2.5 h-4 border border-block-border opacity-55',
-        run && 'border-s-4 border-s-double',
+        run && 'border-s-4',
       )}
-      style={{ left: `${left}px`, width: `${width}px`, background: `var(--${color})` }}
+      style={{
+        left: `${left}px`,
+        width: `${width}px`,
+        background: `var(--${color})`,
+        // Tailwind has no side variant of the border style, so the run cue's double edge is inline.
+        ...(run && { borderInlineStartStyle: 'double' }),
+      }}
     />
   );
 }

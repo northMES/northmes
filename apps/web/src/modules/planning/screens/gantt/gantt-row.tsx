@@ -107,11 +107,16 @@ export function GanttRowView({
       className={cn(
         'grid border-b border-border outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
         (original.kind === 'order' || original.kind === 'run') && 'bg-muted',
-        original.kind === 'run' && 'border-s-4 border-s-double border-s-foreground/60',
+        original.kind === 'run' && 'border-s-4 border-s-foreground/60',
         original.kind === 'operation' && 'bg-lane-alt',
         original.kind === 'jobOrder' && 'bg-lane',
       )}
-      style={{ gridTemplateColumns, height: `${heightRem}rem` }}
+      // Tailwind has no side variant of the border style, so the run's double start edge is inline.
+      style={{
+        gridTemplateColumns,
+        height: `${heightRem}rem`,
+        ...(original.kind === 'run' && { borderInlineStartStyle: 'double' }),
+      }}
     >
       {columns.map((column, index) =>
         index === 0 ? (

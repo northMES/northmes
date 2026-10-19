@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatDuration, formatPlantDateTime, formatSpan } from '@northmes/contracts/format';
+import type { CascadeStop } from '@northmes/planning-domain';
 import type { ReactNode } from 'react';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import {
@@ -11,13 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../../../ui/primitives/dialog.tsx';
-import type { GanttOrder, RunResult } from '../../gantt-data.ts';
-import { conflictWords, orderNumbersText } from '../../gantt-draft.ts';
+import type { GanttOrder } from '../../gantt-data.ts';
+import { conflictWords, orderNumbersText, type RunPreview } from '../../gantt-draft.ts';
 
 export interface GanttRunDialogProps {
   readonly open: boolean;
   /** The run as the domain computed it for the selection; none while the dialog is closed. */
-  readonly result: RunResult | undefined;
+  readonly result: RunPreview | undefined;
   readonly orders: readonly GanttOrder[];
   readonly timeZone: string;
   readonly machineName: (code: string | undefined) => string;
@@ -26,8 +27,10 @@ export interface GanttRunDialogProps {
 }
 
 /** Why the orders cannot be combined, in the planner's words (ADR 0083). */
-export function refusalText(result: RunResult): string | undefined {
+export function refusalText(result: RunPreview): string | undefined {
   switch (result.refused) {
+    case 'IN_RUN':
+      return `Order ${result.refusedBy ?? ''} is already in a run; split that run first.`;
     case 'ONE_ORDER':
       return 'A run needs two or more orders.';
     case 'DIFFERENT_ARTICLES':
@@ -38,6 +41,25 @@ export function refusalText(result: RunResult): string | undefined {
       return `${result.refusedBy ?? 'A row'} is started, locked or held by another planner; its order joins no run.`;
     default:
       return undefined;
+  }
+}
+
+/**
+ * A row the run left where it was, in the planner's words (plan 18, The review step): each stop
+ * means the row keeps its place, and the reason says why.
+ */
+export function stopText(stop: CascadeStop): string {
+  switch (stop.reason) {
+    case 'frozenWindow':
+      return `${stop.row} lies inside the frozen window and keeps its place`;
+    case 'hardLock':
+      return `${stop.row} is locked and keeps its place`;
+    case 'started':
+      return `${stop.row} has started and keeps its place`;
+    case 'held':
+      return `${stop.row} is held by another planner's draft and keeps its place`;
+    case 'horizon':
+      return `${stop.row} cannot be placed within the loaded weeks and keeps its place`;
   }
 }
 
@@ -150,9 +172,7 @@ export function GanttRunDialog({
                     </li>
                   ))}
                   {result.stops.map((stop) => (
-                    <li
-                      key={stop.jobOrderId}
-                    >{`${stop.row} could not be placed: ${stop.reason}`}</li>
+                    <li key={stop.jobOrderId}>{stopText(stop)}</li>
                   ))}
                 </ul>
               )}
