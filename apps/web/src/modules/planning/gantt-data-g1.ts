@@ -77,12 +77,15 @@ function jobOrderOf(
   };
 }
 
-/** Where an order came from, as the pages fixture records it; an order it does not name is the ERP's. */
-function originOf(number: string, pages: GanttPagesFixture): OrderOrigin {
-  const origin = pages.orders[number];
-  if (origin === undefined) return { owner: 'erp' };
+/**
+ * Where an order came from: the owner G1 records (#711), with the import or the creator and the
+ * routing version the pages fixture adds.
+ */
+function originOf(order: FixtureOrder, pages: GanttPagesFixture): OrderOrigin {
+  const origin = pages.orders[order.number];
+  if (origin === undefined) return { owner: order.owner };
   return {
-    owner: origin.owner,
+    owner: order.owner,
     ...(origin.importedAt !== undefined && { importedAtMs: ms(origin.importedAt.instant) }),
     ...(origin.createdAt !== undefined && { createdAtMs: ms(origin.createdAt.instant) }),
     ...(origin.createdBy !== undefined && { createdBy: origin.createdBy }),
@@ -108,7 +111,7 @@ function orderOf(
     owner: order.owner,
     operations: order.operations.map(operationOf),
     jobOrders: order.jobOrders.map((row) => jobOrderOf(order, row, windowsOf)),
-    origin: originOf(order.number, pages),
+    origin: originOf(order, pages),
   };
 }
 

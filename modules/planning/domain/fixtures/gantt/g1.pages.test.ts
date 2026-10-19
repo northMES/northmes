@@ -40,6 +40,12 @@ describe('the pages fixture beside G1 (plan 18, the planning pages)', () => {
     }
   });
 
+  it('agrees with G1 on who owns each order', () => {
+    for (const order of g1.productionOrders) {
+      expect(g1Pages.orders[order.number]?.owner, order.number).toBe(order.owner);
+    }
+  });
+
   it('marks an imported order with its import and a NorthMES order with its creator', () => {
     for (const [number, origin] of Object.entries(g1Pages.orders)) {
       if (origin.owner === 'erp') {
