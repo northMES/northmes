@@ -46,8 +46,8 @@ function ownedBy1001(): GanttSnapshot {
       order.number === '1001'
         ? {
             ...order,
+            owner: 'northmes',
             origin: {
-              owner: 'northmes',
               createdAtMs: Date.UTC(2026, 9, 30, 13, 12),
               createdBy: 'Alex Lund',
               routingVersion: 3,
@@ -55,6 +55,15 @@ function ownedBy1001(): GanttSnapshot {
           }
         : order,
     ),
+  };
+}
+
+/** G1 as a source without the planning pages' data answers it: no order carries an origin. */
+function withoutOrigins(): GanttSnapshot {
+  const snapshot = g1Snapshot();
+  return {
+    ...snapshot,
+    productionOrders: snapshot.productionOrders.map(({ origin: _, ...order }) => order),
   };
 }
 
@@ -237,6 +246,19 @@ describe('the production order page (plan 07, planning records; design #686, PO1
     expect((screen.getByLabelText(/^Quantity/) as HTMLInputElement).readOnly).toBe(false);
     expect(screen.getByLabelText(/^Deadline time/)).toBeTruthy();
     expect((screen.getByLabelText(/^Priority/) as HTMLInputElement).value).toBe('2');
+  });
+
+  it("PO4 an order NorthMES owns stays the planner's to edit when the source sends no origin", async () => {
+    renderPlanningAt(orderHref('po-1005'), sourceOf(withoutOrigins()));
+    await screen.findByRole('heading', { level: 1, name: 'Order 1005' });
+    expect(definition('Source')).toContain('NorthMES');
+    expect(screen.getByText('Created in NorthMES.')).toBeTruthy();
+    cleanup();
+
+    renderPlanningAt(`${orderHref('po-1005')}/edit`, sourceOf(withoutOrigins()));
+    await screen.findByRole('heading', { level: 1, name: 'Edit order 1005' });
+    expect(screen.queryByText('From the ERP')).toBeNull();
+    expect((screen.getByLabelText(/^Quantity/) as HTMLInputElement).readOnly).toBe(false);
   });
 
   it('PO1 an order created in NorthMES names its creator as the source', async () => {
