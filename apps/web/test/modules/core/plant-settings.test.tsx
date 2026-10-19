@@ -272,6 +272,21 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
     );
   });
 
+  it('MA4 the plannable flag the ERP sent is read-only, and the flag of a NorthMES machine is editable', async () => {
+    renderCoreAt(coreLinks.machines.machine.edit({ plant, equipmentId: 'CNC1' }).href, []);
+    await screen.findByRole('heading', { level: 1, name: 'Edit machine CNC1' });
+    expect(screen.getByRole('checkbox', { name: /^Plannable/ }).getAttribute('aria-readonly')).toBe(
+      'true',
+    );
+    cleanup();
+
+    renderCoreAt(coreLinks.machines.machine.edit({ plant, equipmentId: 'ASM1' }).href, []);
+    await screen.findByRole('heading', { level: 1, name: 'Edit machine ASM1' });
+    expect(
+      screen.getByRole('checkbox', { name: /^Plannable/ }).getAttribute('aria-readonly'),
+    ).toBeNull();
+  });
+
   it('MF1 to MF4 the preview key opens the loading, failed-save and no-access states of the form', async () => {
     const edit = coreLinks.machines.machine.edit({ plant, equipmentId: 'CNC1' }).href;
     renderCoreAt(withSearch(edit, { preview: 'loading' }), []);
@@ -299,6 +314,31 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
 });
 
 describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and CA2)', () => {
+  it('MA8 the preview key opens the no-access state of the calendars list and of a calendar', async () => {
+    renderCoreAt(withSearch(coreLinks.calendars({ plant }).href, { preview: 'forbidden' }), []);
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: 'You need the permission to read calendars at this plant',
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'New calendar' })).toBeNull();
+    cleanup();
+
+    renderCoreAt(
+      withSearch(coreLinks.calendars.calendar({ plant, calendarId: 'A1' }).href, {
+        preview: 'forbidden',
+      }),
+      [],
+    );
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: 'You need the permission to read calendars at this plant',
+      }),
+    ).toBeTruthy();
+  });
+
   it('lists the calendars with their machines, shift and working time per week', async () => {
     renderCoreAt(coreLinks.calendars({ plant }).href, []);
     const table = await screen.findByRole('table', { name: 'Calendars' });
