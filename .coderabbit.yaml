@@ -105,6 +105,7 @@ reviews:
     - '!.claude/skills/playwright-cli/**'
     - '!.claude/skills/pnpm/**'
     - '!.claude/skills/secret-serialization/**'
+    - '!.claude/skills/security-audit/**'
     - '!.claude/skills/tdd/**'
     - '!.claude/skills/to-questionnaire/**'
     - '!.claude/skills/turborepo/**'
