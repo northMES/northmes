@@ -6,6 +6,7 @@ import type { PlantRoute } from '@northmes/web-sdk';
 import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router';
 import { boardSearch, ganttSearch } from './gantt-search.ts';
 import { jobOrdersSearch } from './job-orders-search.ts';
+import { orderPageSearch } from './order-page-search.ts';
 
 /**
  * The planning module's routes under the shell's $plant route. Each route takes its path from its
@@ -49,5 +50,31 @@ export function planningRoutes(plantRoute: PlantRoute) {
     validateSearch: jobOrdersSearch,
     component: lazyRouteComponent(() => import('./screens.ts'), 'JobOrdersScreen'),
   });
-  return planningRoute.addChildren([boardRoute, ganttRoute, jobOrdersRoute]);
+  // The production orders: the list (its index route comes with the lists), each order's page
+  // with its open tab in the URL (design ui-222), and its edit page.
+  const ordersRoute = createRoute({
+    getParentRoute: () => planningRoute,
+    path: linkEntry(planningLinks.orders).path,
+  });
+  const orderRoute = createRoute({
+    getParentRoute: () => ordersRoute,
+    path: linkEntry(planningLinks.orders.order).path,
+  });
+  const orderPageRoute = createRoute({
+    getParentRoute: () => orderRoute,
+    path: '/',
+    validateSearch: orderPageSearch,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'OrderScreen'),
+  });
+  const editOrderRoute = createRoute({
+    getParentRoute: () => orderRoute,
+    path: linkEntry(planningLinks.orders.order.edit).path,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'EditOrderScreen'),
+  });
+  return planningRoute.addChildren([
+    boardRoute,
+    ganttRoute,
+    jobOrdersRoute,
+    ordersRoute.addChildren([orderRoute.addChildren([orderPageRoute, editOrderRoute])]),
+  ]);
 }

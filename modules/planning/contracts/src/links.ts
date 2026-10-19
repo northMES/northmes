@@ -13,4 +13,9 @@ export const planningLinks = defineModuleLinks('planning', {
   gantt: { path: 'gantt' },
   /** The job order table (plan 07, Job order table view), the third page of the timeline. */
   jobOrders: { path: 'job-orders' },
+  /** The production orders (plan 07): the list, each order's page (its tab in `tab`) and its edit page. */
+  orders: {
+    path: 'orders',
+    children: { order: { path: '$orderId', children: { edit: { path: 'edit' } } } },
+  },
 });

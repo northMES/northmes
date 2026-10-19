@@ -1,0 +1,235 @@
+{
+  "id": "G1-pages",
+  "description": "What the planning pages show beside the fixture G1 (docs/plan/18-gantt-timeline.md, the planning pages of the product owner round): the ERP connection, four customers and seven customer order lines, where each order came from, the routings, the history of order 1001, the assembly bench and the calendar deviations the plant admin added. Every name, number and time is fictional. Times are plant time, Europe/Stockholm, no clock change in the range.",
+  "erp": {
+    "connectionName": "Pyramid",
+    "importedAt": {
+      "instant": "2026-11-02T05:40:00Z",
+      "plantLocal": "2026-11-02T06:40:00"
+    }
+  },
+  "customers": [
+    { "code": "K-1042", "name": "Hallberg Verkstad AB" },
+    { "code": "K-1107", "name": "Svea Komponent AB" },
+    { "code": "K-1211", "name": "Lindqvist Maskin AB" },
+    { "code": "K-1318", "name": "Bergmark Hydraulik AB" }
+  ],
+  "customerOrderLines": [
+    {
+      "customerOrder": "40208",
+      "customersReference": "BH-5531",
+      "customer": "K-1318",
+      "line": 1,
+      "article": "Gear blank 32",
+      "quantity": 600,
+      "wantedDate": "2026-11-04",
+      "productionOrder": "1003"
+    },
+    {
+      "customerOrder": "40211",
+      "customersReference": "PO-88412",
+      "customer": "K-1042",
+      "line": 1,
+      "article": "Bracket L",
+      "quantity": 400,
+      "wantedDate": "2026-11-06",
+      "productionOrder": "1001"
+    },
+    {
+      "customerOrder": "40211",
+      "customersReference": "PO-88412",
+      "customer": "K-1042",
+      "line": 2,
+      "article": "Hub 12",
+      "quantity": 250,
+      "wantedDate": "2026-11-20",
+      "productionOrder": null
+    },
+    {
+      "customerOrder": "40214",
+      "customersReference": "LM-2026-118",
+      "customer": "K-1211",
+      "line": 1,
+      "article": "Housing P",
+      "quantity": 420,
+      "wantedDate": "2026-11-05",
+      "productionOrder": "1002"
+    },
+    {
+      "customerOrder": "40216",
+      "customersReference": "LM-2026-121",
+      "customer": "K-1211",
+      "line": 1,
+      "article": "Shaft 8",
+      "quantity": 600,
+      "wantedDate": "2026-11-13",
+      "productionOrder": "1006"
+    },
+    {
+      "customerOrder": "40219",
+      "customersReference": "SK-7719",
+      "customer": "K-1107",
+      "line": 1,
+      "article": "Bracket L",
+      "quantity": 200,
+      "wantedDate": "2026-11-09",
+      "productionOrder": "1001"
+    },
+    {
+      "customerOrder": "40223",
+      "customersReference": "PO-88437",
+      "customer": "K-1042",
+      "line": 1,
+      "article": "Bracket L",
+      "quantity": 300,
+      "wantedDate": "2026-11-10",
+      "productionOrder": "1005"
+    }
+  ],
+  "orders": {
+    "1001": {
+      "owner": "erp",
+      "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
+      "routingVersion": 3
+    },
+    "1002": {
+      "owner": "erp",
+      "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
+      "routingVersion": 1
+    },
+    "1003": {
+      "owner": "erp",
+      "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
+      "routingVersion": 2
+    },
+    "1004": {
+      "owner": "erp",
+      "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
+      "routingVersion": 1
+    },
+    "1005": {
+      "owner": "northmes",
+      "createdAt": { "instant": "2026-10-30T13:12:00Z", "plantLocal": "2026-10-30T14:12:00" },
+      "createdBy": "Alex Lund",
+      "routingVersion": 3
+    },
+    "1006": {
+      "owner": "erp",
+      "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
+      "routingVersion": 1
+    }
+  },
+  "routings": [
+    {
+      "article": "Bracket L",
+      "version": 3,
+      "operations": [
+        { "sequence": 10, "name": "Turn", "allowedEquipment": ["CNC1", "CNC2"] },
+        { "sequence": 20, "name": "Mill", "allowedEquipment": ["CNC2", "MILL1"] }
+      ]
+    },
+    {
+      "article": "Housing P",
+      "version": 1,
+      "operations": [{ "sequence": 10, "name": "Turn", "allowedEquipment": ["CNC2"] }]
+    },
+    {
+      "article": "Gear blank 32",
+      "version": 2,
+      "operations": [
+        { "sequence": 10, "name": "Turn", "allowedEquipment": ["CNC1"] },
+        { "sequence": 20, "name": "Mill", "allowedEquipment": ["MILL1"] }
+      ]
+    },
+    {
+      "article": "Hub 12",
+      "version": 1,
+      "operations": [
+        { "sequence": 10, "name": "Turn", "allowedEquipment": ["CNC1"] },
+        { "sequence": 20, "name": "Mill", "allowedEquipment": ["MILL1"] }
+      ]
+    },
+    {
+      "article": "Shaft 8",
+      "version": 1,
+      "operations": [{ "sequence": 10, "name": "Mill", "allowedEquipment": ["MILL1"] }]
+    }
+  ],
+  "history": {
+    "1001": [
+      {
+        "at": { "instant": "2026-11-02T08:38:00Z", "plantLocal": "2026-11-02T09:38:00" },
+        "by": "Alex Lund",
+        "surface": "Planning board",
+        "reason": "Autoplan",
+        "summary": "Placed, 2 job orders",
+        "changes": [
+          { "field": "1001.10 machine", "before": "Empty", "after": "CNC 1" },
+          { "field": "1001.10 setup start", "before": "Empty", "after": "Tue 3 Nov 11:30" },
+          { "field": "1001.20 machine", "before": "Empty", "after": "CNC 2" },
+          { "field": "1001.20 start", "before": "Empty", "after": "Wed 4 Nov 09:00" }
+        ]
+      },
+      {
+        "at": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
+        "by": "ERP connector",
+        "surface": "Import",
+        "reason": null,
+        "summary": "Changed, 1 field",
+        "changes": [{ "field": "Deadline", "before": "Thu 5 Nov", "after": "Fri 6 Nov" }]
+      },
+      {
+        "at": { "instant": "2026-10-30T13:12:00Z", "plantLocal": "2026-10-30T14:12:00" },
+        "by": "Alex Lund",
+        "surface": "Order page",
+        "reason": "Hallberg Verkstad confirmed Friday, Svea Komponent can wait until Monday",
+        "summary": "Changed, 1 field",
+        "changes": [{ "field": "Priority", "before": "3", "after": "2" }]
+      },
+      {
+        "at": { "instant": "2026-10-29T05:40:00Z", "plantLocal": "2026-10-29T06:40:00" },
+        "by": "ERP connector",
+        "surface": "Import",
+        "reason": null,
+        "summary": "Created, 12 fields",
+        "changes": []
+      }
+    ]
+  },
+  "equipmentGroups": [{ "code": "ASM", "name": "Assembly", "color": "palette-8" }],
+  "equipment": [
+    {
+      "code": "ASM1",
+      "name": "Assembly bench",
+      "group": "ASM",
+      "isPlannable": false,
+      "calendar": null,
+      "owner": "northmes"
+    }
+  ],
+  "equipmentOwners": { "CNC1": "erp", "CNC2": "erp", "MILL1": "erp" },
+  "calendar": {
+    "effectiveFrom": "2026-01-05",
+    "cycleWeeks": 1,
+    "shiftName": "Day",
+    "deviations": [
+      {
+        "kind": "overtime",
+        "startsLocal": "2026-11-07T06:00",
+        "endsLocal": "2026-11-07T10:00",
+        "reason": "Finish order 1006 before the holiday week",
+        "equipment": ["MILL1"],
+        "addedBy": "Jonas Holm",
+        "addedAt": { "instant": "2026-10-30T09:05:00Z", "plantLocal": "2026-10-30T10:05:00" }
+      },
+      {
+        "kind": "nonWorking",
+        "startsLocal": "2026-11-09T00:00",
+        "endsLocal": "2026-11-10T00:00",
+        "reason": "Plant holiday",
+        "addedBy": "Jonas Holm",
+        "addedAt": { "instant": "2026-10-12T07:30:00Z", "plantLocal": "2026-10-12T09:30:00" }
+      }
+    ]
+  }
+}
