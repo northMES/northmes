@@ -245,6 +245,18 @@ describe('runs in the in-memory draft (ADR 0083, plan 18 Runs)', () => {
     ]);
   });
 
+  it('an order already in a run of the draft cannot join another: combineInDraft refuses with IN_RUN and names it', () => {
+    const { draft } = combineInDraft(committed, emptyDraft, ['po-1001', 'po-1005']);
+
+    const again = combineInDraft(committed, draft, ['po-1005', 'po-1001']);
+
+    expect(again.result.refused).toBe('IN_RUN');
+    expect(again.result.refusedBy).toBe('1001');
+    expect(again.result.moves).toEqual([]);
+    expect(again.draft).toBe(draft);
+    expect(runPreview(committed, draft, ['po-1001', 'po-1005']).refused).toBe('IN_RUN');
+  });
+
   it('runPreview computes the same result without writing, and a refusal leaves the draft as it was', () => {
     const preview = runPreview(committed, emptyDraft, ['po-1001', 'po-1005']);
     expect(preview.run?.deadlineMs).toBe(Date.UTC(2026, 10, 6, 14));

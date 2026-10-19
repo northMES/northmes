@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
+import { g1 } from '@northmes/planning-domain';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { findDetails, findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { findDetails, findGantt, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(() => {
   cleanup();
@@ -160,6 +163,79 @@ describe('runs of orders of one article on the order Gantt (ADR 0083, plan 18 Ru
     );
     expect(block?.getAttribute('aria-label')).toContain('changed in your draft');
     expect(screen.getByRole('button', { name: 'My draft, 1 change' })).toBeTruthy();
+  });
+
+  it('the run row and its summary bar draw a double start edge, which Tailwind has no side utility for', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    await selectBoth(user, gantt);
+    await user.click(
+      within(rowOf(gantt, 'po-1005')).getByRole('button', { name: 'Actions for order 1005' }),
+    );
+    await user.click(screen.getByRole('menuitem', { name: 'Combine into a run' }));
+    await user.click(within(await findReview()).getByRole('button', { name: 'Combine' }));
+    const run = await waitFor(() => rowOf(gantt, 'run:po-1001+po-1005'));
+
+    expect(getComputedStyle(run).borderInlineStartStyle).toBe('double');
+    const bar = run.querySelector<HTMLElement>('[data-summary-bar][data-run]');
+    expect(bar).not.toBeNull();
+    expect(getComputedStyle(bar as HTMLElement).borderInlineStartStyle).toBe('double');
+  });
+
+  it('an order already in the run cannot join another: its menu says so and the item is disabled', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    await selectBoth(user, gantt);
+    await user.click(
+      within(rowOf(gantt, 'po-1005')).getByRole('button', { name: 'Actions for order 1005' }),
+    );
+    await user.click(screen.getByRole('menuitem', { name: 'Combine into a run' }));
+    await user.click(within(await findReview()).getByRole('button', { name: 'Combine' }));
+    await waitFor(() => rowOf(gantt, 'run:po-1001+po-1005'));
+
+    // 1001 stays the selected order; Shift+click adds 1005 again, as the reviewer's path does.
+    await user.keyboard('{Shift>}');
+    await user.click(within(rowOf(gantt, 'po-1005')).getByRole('rowheader'));
+    await user.keyboard('{/Shift}');
+    await user.click(
+      within(rowOf(gantt, 'po-1005')).getByRole('button', { name: 'Actions for order 1005' }),
+    );
+    const menu = await screen.findByRole('menu', { name: 'Actions for order 1005' });
+    expect(
+      within(menu)
+        .getByRole('menuitem', { name: 'Combine into a run' })
+        .getAttribute('aria-disabled'),
+    ).toBe('true');
+    expect(menu.textContent).toContain(
+      'Order 1001 is already in the run of Bracket L; split it first',
+    );
+    await user.keyboard('{Escape}');
+  });
+
+  it('the review step words a stop for the planner: a row inside the frozen window keeps its place', async () => {
+    const user = userEvent.setup();
+    // The window Mon 9 Nov 05:00 to 13:00 holds the committed 1005.10, which therefore stays.
+    const frozen = g1Snapshot({
+      ...g1,
+      now: { instant: '2026-11-09T04:00:00Z', plantLocal: '2026-11-09T05:00:00' },
+      fence: { instant: '2026-11-09T12:00:00Z', plantLocal: '2026-11-09T13:00:00' },
+    });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(frozen));
+    const gantt = await findGantt();
+    await selectBoth(user, gantt);
+    await user.click(
+      within(rowOf(gantt, 'po-1005')).getByRole('button', { name: 'Actions for order 1005' }),
+    );
+    await user.click(screen.getByRole('menuitem', { name: 'Combine into a run' }));
+
+    const review = await findReview();
+    expect(within(review).getByRole('list', { name: 'Breaks' }).textContent).toBe(
+      '1005.10 lies inside the frozen window and keeps its place',
+    );
+    expect(review.textContent).not.toContain('frozenWindow');
+    await user.click(within(review).getByRole('button', { name: 'Cancel' }));
   });
 
   it('GT10 the My draft drawer lists the run as one change with Split run, which removes the run and its moves', async () => {
