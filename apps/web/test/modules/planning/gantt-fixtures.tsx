@@ -15,7 +15,7 @@ import { companies, fakeApi, viewer } from '../../settings-fixtures.tsx';
 export const plant = 'plant-a';
 
 /** The planning pages a test renders the shell at. */
-export type PlanningPage = 'board' | 'gantt' | 'jobOrders';
+export type PlanningPage = 'board' | 'gantt' | 'jobOrders' | 'orders' | 'customerOrders';
 
 /** A planning href of the plant with a search, such as the Gantt page with "?zoom=week". */
 export function planningHref(page: PlanningPage, search: Record<string, string | number>): string {
