@@ -109,6 +109,7 @@ function rowTargets(row: JobOrderTableRow, { snapshot, zoom, from, plant }: Cell
   return {
     gantt: planningLinks.gantt({ plant }, search).href,
     board: planningLinks.board({ plant }, search).href,
+    order: planningLinks.orders.order({ plant, orderId: row.order.id }).href,
   };
 }
 
@@ -185,6 +186,7 @@ function ActionsCell({ row, view }: { readonly row: JobOrderTableRow; readonly v
         <DropdownMenuContent align="end" className="min-w-48">
           <DropdownMenuItem render={<Link to={targets.gantt} />}>Open on Gantt</DropdownMenuItem>
           <DropdownMenuItem render={<Link to={targets.board} />}>Show on board</DropdownMenuItem>
+          <DropdownMenuItem render={<Link to={targets.order} />}>Open order</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </span>

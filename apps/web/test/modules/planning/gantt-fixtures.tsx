@@ -36,6 +36,14 @@ export function renderGanttRoute(
   source?: GanttDataSource,
   page: PlanningPage = 'gantt',
 ) {
+  return renderPlanningAt(planningHref(page, search), source);
+}
+
+/**
+ * Renders the shell at any planning href for a signed-in planner, such as an order's page, with
+ * the fake API of renderGanttRoute; the planning pages read the fixture G1 unless a source is given.
+ */
+export function renderPlanningAt(href: string, source?: GanttDataSource) {
   const { fetch } = fakeApi({
     CoreCompanies: companies,
     CoreViewer: () => viewer(['planning.productionOrder:read'], []),
@@ -44,7 +52,7 @@ export function renderGanttRoute(
   const router = createShellRouter(shellModules, {
     session: fakeSession(),
     fetch,
-    history: createMemoryHistory({ initialEntries: [planningHref(page, search)] }),
+    history: createMemoryHistory({ initialEntries: [href] }),
   });
   render(
     <GanttSourceProvider value={source ?? g1DataSource}>

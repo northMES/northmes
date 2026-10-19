@@ -16,10 +16,21 @@ function linkPatterns(node: LinkNode<string>): string[] {
   return [linkEntry(node).pattern, ...children.flatMap(linkPatterns)];
 }
 
-/** The fullPath of every route in the shell's route tree with the planning module mounted. */
+/**
+ * The fullPath of every route in the shell's route tree with the planning module mounted, each
+ * once. An index route's fullPath ends in a slash and opens the same URL as its parent's.
+ */
 function routeFullPaths(): string[] {
   const router = createRouter({ routeTree: createShellRoutes({ modules: [planningModule] }) });
-  return Object.values(router.routesById).map((route) => route.fullPath);
+  return [
+    ...new Set(
+      Object.values(router.routesById).map((route) =>
+        route.fullPath === '/' || route.fullPath === '/settings/$companyId/'
+          ? route.fullPath
+          : route.fullPath.replace(/\/$/, ''),
+      ),
+    ),
+  ];
 }
 
 describe('planning routes', () => {

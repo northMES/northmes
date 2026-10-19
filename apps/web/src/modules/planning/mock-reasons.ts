@@ -9,4 +9,7 @@ export const phase1Reason =
 
 /** Why Plan this order and Move all later by are drawn but disabled (plan 18, phase 2). */
 export const planReason =
-  'Plan this order and Move all later by wait for plan() in the planning domain; Zoom to order and Open order come with the live data.';
+  'Plan this order and Move all later by wait for plan() in the planning domain; Zoom to order comes with the live data.';
+
+/** Why a form's Save is drawn but disabled on the pages that read the fixture. */
+export const saveReason = 'Saving waits for the planning server; this page reads the fixture G1.';
