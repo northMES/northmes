@@ -304,7 +304,8 @@ export function MachinesScreen() {
   const columns = useMemo(() => columnsOf({ plant }), [plant]);
   const groupName = snapshot === undefined ? (code: string) => code : groupNamer(snapshot);
   const facets = (key: 'group' | 'calendar') => {
-    const counts = new Map<string, number>();
+    // A picked value stays in the menu and names its chip even when no row passes with it.
+    const counts = new Map<string, number>((view[key] ?? []).map((value) => [value, 0]));
     for (const row of allRows) {
       if (!matches(row, view, key)) continue;
       const value = key === 'group' ? row.machine.group : (row.machine.calendar ?? noCalendar);
