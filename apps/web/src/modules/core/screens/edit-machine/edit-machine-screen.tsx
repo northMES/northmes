@@ -19,6 +19,7 @@ import { Field, FieldDescription, FieldLabel } from '../../../../ui/primitives/f
 import { Label } from '../../../../ui/primitives/label.tsx';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/primitives/radio-group.tsx';
 import { Skeleton } from '../../../../ui/primitives/skeleton.tsx';
+import { GroupColor } from '../../components/group-color/index.ts';
 import {
   type PlantMachine,
   PlantSettingsForbidden,
@@ -28,7 +29,6 @@ import { groupColorOf, groupNamer } from '../../plant-settings-facts.ts';
 import { machineSaveReason } from '../../plant-settings-reasons.ts';
 import { machinePageSearch } from '../../plant-settings-search.ts';
 import { usePlantSettings } from '../../plant-settings-source-context.ts';
-import { GroupColor } from '../machines/index.ts';
 
 /** The tag of a field the ERP owns (design #688, MA4). */
 const fromErp = 'From the ERP';
@@ -126,6 +126,7 @@ function MachineForm({
                 id={plannableId}
                 name="isPlannable"
                 defaultChecked={machine.isPlannable}
+                readOnly={imported}
                 aria-describedby={`${plannableId}-hint`}
               />
               <FieldLabel htmlFor={plannableId} className="font-normal">

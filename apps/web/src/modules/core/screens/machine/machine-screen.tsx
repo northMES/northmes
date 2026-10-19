@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/primitives/table.tsx';
+import { GroupColor } from '../../components/group-color/index.ts';
 import {
   type PlantMachine,
   PlantSettingsForbidden,
@@ -38,7 +39,6 @@ import {
 import { plantSettingsActionReason } from '../../plant-settings-reasons.ts';
 import { machinePageSearch } from '../../plant-settings-search.ts';
 import { usePlantSettings } from '../../plant-settings-source-context.ts';
-import { GroupColor } from '../machines/index.ts';
 
 const head = 'h-auto px-3 py-2 text-xs font-semibold text-muted-foreground';
 const cell = 'px-3 py-2 whitespace-normal';

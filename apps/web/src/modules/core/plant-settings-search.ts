@@ -25,6 +25,8 @@ export interface MachinePageSearch {
 /** The URL keys of a calendar's page: the first plant date of the week its week view shows. */
 export interface CalendarPageSearch {
   readonly week?: string;
+  /** The page state the mock source answers with, as on the machines pages. */
+  readonly preview?: PlantSettingsPreview;
 }
 
 /** A filter key's comma list of picked values, or a validated view's list, each value once. */
@@ -32,7 +34,16 @@ function commaList() {
   return z
     .unknown()
     .transform((raw): string[] | undefined => {
-      const values = typeof raw === 'string' ? raw.split(',') : Array.isArray(raw) ? raw : [];
+      // The router parses each value as JSON, so an all-digit code such as group=100 arrives as a
+      // number: it is one value, as a string is.
+      const values =
+        typeof raw === 'string'
+          ? raw.split(',')
+          : Array.isArray(raw)
+            ? raw
+            : typeof raw === 'number' || typeof raw === 'boolean'
+              ? [raw]
+              : [];
       const picked = [...new Set(values.map(String))].filter(
         (each) => each.length > 0 && each.length <= 64,
       );
@@ -86,7 +97,12 @@ export function machinePageSearch(raw: Record<string, unknown>): MachinePageSear
   return parsed === undefined ? {} : { preview: parsed };
 }
 
+/** The URL keys of the calendars list and a calendar's page: the week and the preview. */
 export function calendarPageSearch(raw: Record<string, unknown>): CalendarPageSearch {
   const week = z.iso.date().optional().catch(undefined).parse(raw.week);
-  return week === undefined ? {} : { week };
+  const previewed = preview.parse(raw.preview);
+  return {
+    ...(week !== undefined && { week }),
+    ...(previewed !== undefined && { preview: previewed }),
+  };
 }

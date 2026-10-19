@@ -4,6 +4,7 @@ import { formatDuration, formatPlantDateTime, formatPlantDay } from '@northmes/c
 import { Temporal } from 'temporal-polyfill';
 import type {
   PlantCalendar,
+  PlantCalendarDeviation,
   PlantMachine,
   PlantRouting,
   PlantSettingsSnapshot,
@@ -81,13 +82,89 @@ export function shiftText(calendar: PlantCalendar): string {
   const days = [...calendar.weekdays].sort((a, b) => a - b);
   const first = days[0];
   const last = days[days.length - 1];
+  const short = (day: number) => weekdayName(day).slice(0, 3);
+  // A span only for consecutive days: Mon, Wed and Fri must not read as Mon to Fri.
+  const consecutive = first !== undefined && last !== undefined && last - first + 1 === days.length;
   const span =
     first === undefined || last === undefined
       ? 'No working days'
       : first === last
-        ? weekdayName(first).slice(0, 3)
-        : `${weekdayName(first).slice(0, 3)} to ${weekdayName(last).slice(0, 3)}`;
+        ? short(first)
+        : consecutive
+          ? `${short(first)} to ${short(last)}`
+          : days.map(short).join(', ');
   return `${span} ${calendar.shift.start} to ${calendar.shift.end}`;
+}
+
+/** The plant date of a plant-local instant, "2026-11-07T06:00" to "2026-11-07". */
+function dateOf(local: string): string {
+  return local.slice(0, 10);
+}
+
+/** Whether a deviation covers any part of a plant date: it starts before the next day and ends after this one starts. */
+function onDate(deviation: PlantCalendarDeviation, date: string): boolean {
+  const end = deviation.endsLocal;
+  const endsAfterStart = dateOf(end) > date || (dateOf(end) === date && end.slice(11) !== '00:00');
+  return dateOf(deviation.startsLocal) <= date && endsAfterStart;
+}
+
+/** What one plant day of a calendar holds for a machine, or for all machines. */
+export interface CalendarDayView {
+  /** The shift and its breaks apply. */
+  readonly working: boolean;
+  /** The overtime deviations that apply. */
+  readonly overtime: readonly PlantCalendarDeviation[];
+  /** The non-working deviation that closes the day for the machine, or for the plant. */
+  readonly closed?: PlantCalendarDeviation;
+  /** With all machines: the machines' own non-working deviations, which close no other machine. */
+  readonly machineClosures: readonly PlantCalendarDeviation[];
+}
+
+/**
+ * One plant day of a calendar (ADR 0025, rule 7): precedence goes by scope first, then by kind.
+ * The plant's day is the shift minus its breaks, plus plant-wide overtime, minus plant-wide
+ * non-working time; a machine's day is the plant's day plus its own overtime, minus its own
+ * non-working time. So a plant holiday keeps a machine's overtime, and a machine's closed day
+ * closes no other machine. With all machines the view shows the plant's day and every machine's
+ * own deviations beside it.
+ */
+export function calendarDay(
+  calendar: PlantCalendar,
+  date: string,
+  weekday: number,
+  machine: string | undefined,
+): CalendarDayView {
+  const today = calendar.deviations.filter((deviation) => onDate(deviation, date));
+  const plantWide = today.filter((deviation) => deviation.equipment === undefined);
+  const scoped = today.filter((deviation) => deviation.equipment !== undefined);
+  const plantClosed = plantWide.find((deviation) => deviation.kind === 'nonWorking');
+  const plantOvertime = plantWide.filter((deviation) => deviation.kind === 'overtime');
+  if (machine === undefined) {
+    return {
+      working: plantClosed === undefined && calendar.weekdays.includes(weekday),
+      overtime: [
+        ...(plantClosed === undefined ? plantOvertime : []),
+        ...scoped.filter((deviation) => deviation.kind === 'overtime'),
+      ],
+      ...(plantClosed !== undefined && { closed: plantClosed }),
+      machineClosures: scoped.filter((deviation) => deviation.kind === 'nonWorking'),
+    };
+  }
+  const own = scoped.filter((deviation) => deviation.equipment?.includes(machine));
+  const machineClosed = own.find((deviation) => deviation.kind === 'nonWorking');
+  const closed = machineClosed ?? plantClosed;
+  return {
+    working: closed === undefined && calendar.weekdays.includes(weekday),
+    overtime:
+      machineClosed !== undefined
+        ? []
+        : [
+            ...(plantClosed === undefined ? plantOvertime : []),
+            ...own.filter((deviation) => deviation.kind === 'overtime'),
+          ],
+    ...(closed !== undefined && { closed }),
+    machineClosures: [],
+  };
 }
 
 /** "breaks 08:30 to 08:45 and 11:00 to 11:30", or "no breaks". */

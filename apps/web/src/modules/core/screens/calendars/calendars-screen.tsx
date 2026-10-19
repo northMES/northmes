@@ -2,13 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
-import { Link } from '@tanstack/react-router';
+import { Link, useSearch } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useMemo } from 'react';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
-import type { PlantCalendar, PlantSettingsSnapshot } from '../../plant-settings-data.ts';
+import {
+  type PlantCalendar,
+  PlantSettingsForbidden,
+  type PlantSettingsSnapshot,
+} from '../../plant-settings-data.ts';
 import {
   hoursText,
   machineNamer,
@@ -16,7 +20,9 @@ import {
   weeklyWorkingSeconds,
 } from '../../plant-settings-facts.ts';
 import { plantSettingsActionReason } from '../../plant-settings-reasons.ts';
+import { calendarPageSearch } from '../../plant-settings-search.ts';
 import { usePlantSettings } from '../../plant-settings-source-context.ts';
+import { plantSettingsForbiddenState } from '../../plant-settings-states.ts';
 
 function columnsOf(
   snapshot: PlantSettingsSnapshot,
@@ -65,13 +71,17 @@ function columnsOf(
  */
 export function CalendarsScreen() {
   const { plant } = useShell();
-  const { snapshot, error, retry } = usePlantSettings(undefined);
+  const search = calendarPageSearch(useSearch({ strict: false }));
+  const { snapshot, error, retry } = usePlantSettings(search.preview);
   const columns = useMemo(
     () => (snapshot === undefined ? [] : columnsOf(snapshot, plant)),
     [snapshot, plant],
   );
+  const forbidden = snapshot === undefined && error instanceof PlantSettingsForbidden;
   let state: PageState = { status: 'ready' };
-  if (snapshot === undefined && error !== undefined) {
+  if (forbidden) {
+    state = plantSettingsForbiddenState('calendars');
+  } else if (snapshot === undefined && error !== undefined) {
     state = { status: 'error', title: 'Could not load calendars', error, onRetry: retry };
   } else if (snapshot === undefined) {
     state = { status: 'loading' };
@@ -86,16 +96,20 @@ export function CalendarsScreen() {
     <PageFrame
       title="Calendars"
       actions={
-        <Button disabled>
-          <Plus aria-hidden />
-          New calendar
-        </Button>
+        forbidden ? undefined : (
+          <Button disabled>
+            <Plus aria-hidden />
+            New calendar
+          </Button>
+        )
       }
       toolbar={
-        <p className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-          {snapshot?.fixture !== undefined && <span>Showing fixture {snapshot.fixture}.</span>}
-          <span>{plantSettingsActionReason}</span>
-        </p>
+        forbidden ? undefined : (
+          <p className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+            {snapshot?.fixture !== undefined && <span>Showing fixture {snapshot.fixture}.</span>}
+            <span>{plantSettingsActionReason}</span>
+          </p>
+        )
       }
       state={state}
     >

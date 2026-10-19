@@ -20,12 +20,14 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/primitives/table.tsx';
-import type {
-  PlantCalendar,
-  PlantCalendarDeviation,
-  PlantSettingsSnapshot,
+import {
+  type PlantCalendar,
+  type PlantCalendarDeviation,
+  PlantSettingsForbidden,
+  type PlantSettingsSnapshot,
 } from '../../plant-settings-data.ts';
 import {
+  calendarDay,
   daysOf,
   hoursText,
   machineNamer,
@@ -39,6 +41,7 @@ import {
 import { plantSettingsActionReason } from '../../plant-settings-reasons.ts';
 import { calendarPageSearch } from '../../plant-settings-search.ts';
 import { usePlantSettings } from '../../plant-settings-source-context.ts';
+import { plantSettingsForbiddenState } from '../../plant-settings-states.ts';
 
 const head = 'h-auto px-3 py-2 text-xs font-semibold text-muted-foreground';
 const cell = 'px-3 py-2 whitespace-normal';
@@ -262,34 +265,25 @@ interface DayBlock {
   readonly sub?: string;
 }
 
-/** The deviations of a day that apply to the chosen machine, or to every machine with All. */
-function deviationsOn(
-  calendar: PlantCalendar,
-  date: string,
-  machine: string | undefined,
-): PlantCalendarDeviation[] {
-  return calendar.deviations.filter(
-    (deviation) =>
-      dateOf(deviation.startsLocal) <= date &&
-      date < dateOf(deviation.endsLocal) + (clockOf(deviation.endsLocal) === '00:00' ? '' : '~') &&
-      (deviation.equipment === undefined ||
-        machine === undefined ||
-        deviation.equipment.includes(machine)),
-  );
-}
-
-/** The blocks of one day: the shift and its breaks, overtime, or a closed day. */
+/**
+ * The blocks of one day from its view under ADR 0025's precedence (`calendarDay`): the shift and
+ * its breaks, the overtime that applies, the closure of the day, and with all machines the
+ * machines' own closures.
+ */
 function blocksOf(
   calendar: PlantCalendar,
   date: string,
   weekday: number,
   machine: string | undefined,
   machineName: (code: string) => string,
-): { readonly blocks: readonly DayBlock[]; readonly closed: PlantCalendarDeviation | undefined } {
-  const deviations = deviationsOn(calendar, date, machine);
-  const closed = deviations.find((deviation) => deviation.kind === 'nonWorking');
+): {
+  readonly blocks: readonly DayBlock[];
+  readonly closed: PlantCalendarDeviation | undefined;
+  readonly machineClosures: readonly PlantCalendarDeviation[];
+} {
+  const day = calendarDay(calendar, date, weekday, machine);
   const blocks: DayBlock[] = [];
-  if (closed === undefined && calendar.weekdays.includes(weekday)) {
+  if (day.working) {
     blocks.push({
       kind: 'shift',
       from: hoursOf(calendar.shift.start),
@@ -306,8 +300,7 @@ function blocksOf(
       });
     }
   }
-  for (const deviation of deviations) {
-    if (deviation.kind !== 'overtime') continue;
+  for (const deviation of day.overtime) {
     const from = hoursOf(clockOf(deviation.startsLocal));
     const to = hoursOf(clockOf(deviation.endsLocal));
     blocks.push({
@@ -322,7 +315,24 @@ function blocksOf(
       }, ${hoursText((to - from) * 3600)}`,
     });
   }
-  return { blocks, closed };
+  return { blocks, closed: day.closed, machineClosures: day.machineClosures };
+}
+
+/** "on Mill 1" or "on CNC 1, CNC 2": the machines a deviation applies to, or nothing if plant-wide. */
+function onMachines(
+  deviation: PlantCalendarDeviation,
+  machineName: (code: string) => string,
+): string {
+  return deviation.equipment === undefined
+    ? ''
+    : ` on ${deviation.equipment.map(machineName).join(', ')}`;
+}
+
+/** ", plant holiday": a deviation's reason inside a sentence, or nothing. */
+function reasonText(deviation: PlantCalendarDeviation): string {
+  return deviation.reason === undefined
+    ? ''
+    : `, ${deviation.reason.charAt(0).toLowerCase()}${deviation.reason.slice(1)}`;
 }
 
 const blockClass: Readonly<Record<DayBlock['kind'], string>> = {
@@ -357,31 +367,39 @@ function weekDescription(
   const days = [...calendar.weekdays].sort((a, b) => a - b);
   const first = days[0];
   const last = days[days.length - 1];
-  const pattern =
+  // A span only for consecutive days, as shiftText writes it.
+  const consecutive = first !== undefined && last !== undefined && last - first + 1 === days.length;
+  const span =
     first === undefined || last === undefined
       ? 'no working days'
-      : `${weekdayName(first)}${first === last ? '' : ` to ${weekdayName(last)}`} ${calendar.shift.start} to ${calendar.shift.end} with ${countWord(calendar.breaks.length)} break${calendar.breaks.length === 1 ? '' : 's'}`;
+      : first === last
+        ? weekdayName(first)
+        : consecutive
+          ? `${weekdayName(first)} to ${weekdayName(last)}`
+          : listText(days.map(weekdayName));
+  const pattern =
+    first === undefined
+      ? span
+      : `${span} ${calendar.shift.start} to ${calendar.shift.end} with ${countWord(calendar.breaks.length)} break${calendar.breaks.length === 1 ? '' : 's'}`;
   const parts = [pattern];
-  for (const date of daysOf(week)) {
-    const weekday = daysOf(week).indexOf(date) + 1;
-    for (const deviation of deviationsOn(calendar, date, machine)) {
-      if (deviation.kind === 'overtime') {
-        parts.push(
-          `${weekdayName(weekday)} ${clockOf(deviation.startsLocal)} to ${clockOf(deviation.endsLocal)} overtime${
-            deviation.equipment === undefined
-              ? ''
-              : ` on ${deviation.equipment.map(machineName).join(', ')}`
-          }`,
-        );
-      } else {
-        const reason =
-          deviation.reason === undefined
-            ? ''
-            : `, ${deviation.reason.charAt(0).toLowerCase()}${deviation.reason.slice(1)}`;
-        parts.push(`${weekdayName(weekday)} ${formatPlantDay(date).slice(4)} closed${reason}`);
-      }
+  daysOf(week).forEach((date, index) => {
+    const weekday = index + 1;
+    const day = calendarDay(calendar, date, weekday, machine);
+    const dayName = `${weekdayName(weekday)} ${formatPlantDay(date).slice(4)}`;
+    if (day.closed !== undefined) {
+      parts.push(
+        `${dayName} closed${onMachines(day.closed, machineName)}${reasonText(day.closed)}`,
+      );
     }
-  }
+    for (const closure of day.machineClosures) {
+      parts.push(`${dayName} closed${onMachines(closure, machineName)}${reasonText(closure)}`);
+    }
+    for (const deviation of day.overtime) {
+      parts.push(
+        `${weekdayName(weekday)} ${clockOf(deviation.startsLocal)} to ${clockOf(deviation.endsLocal)} overtime${onMachines(deviation, machineName)}`,
+      );
+    }
+  });
   return `Week ${week.week}: ${parts.join(', ')}`;
 }
 
@@ -459,7 +477,7 @@ function WeekSection({
             (hour) => (
               <span
                 key={hour}
-                className="absolute right-1.5 -translate-y-1/2 font-mono text-[0.6875rem] text-muted-foreground"
+                className="absolute right-1.5 -translate-y-1/2 font-mono text-tick text-muted-foreground"
                 style={{ top: 40 + y(hour) }}
               >
                 {String(hour).padStart(2, '0')}:00
@@ -468,7 +486,11 @@ function WeekSection({
           )}
         </div>
         {days.map((date, index) => {
-          const { blocks, closed } = perDay[index] ?? { blocks: [], closed: undefined };
+          const { blocks, closed, machineClosures } = perDay[index] ?? {
+            blocks: [],
+            closed: undefined,
+            machineClosures: [],
+          };
           const weekend = !calendar.weekdays.includes(index + 1);
           return (
             <div key={date} className="flex flex-col border-l border-border first:border-l-0">
@@ -506,12 +528,24 @@ function WeekSection({
                     <span>{closed.reason ?? 'Non-working'}</span>
                   </div>
                 )}
+                {/* With all machines, a machine's own closed day closes only that machine. */}
+                {machineClosures.map((closure) => (
+                  <div
+                    key={closure.id}
+                    className={cn(
+                      'absolute inset-x-1 top-1 rounded-sm border border-dashed px-1.5 py-0.5 text-tick',
+                      blockClass.closed,
+                    )}
+                  >
+                    Closed{onMachines(closure, machineName)}
+                  </div>
+                ))}
                 {blocks.map((block) => (
                   <div
                     key={`${block.kind}-${block.from}`}
                     className={cn(
                       'absolute inset-x-1 overflow-hidden rounded-sm border px-1.5 text-xs leading-4',
-                      block.kind === 'break' ? 'py-0 text-[0.6875rem]' : 'py-1',
+                      block.kind === 'break' ? 'py-0 text-tick' : 'py-1',
                       blockClass[block.kind],
                     )}
                     style={{ top: y(block.from), height: y(block.to) - y(block.from) }}
@@ -551,11 +585,13 @@ export function CalendarScreen() {
   const { calendarId = '' } = useParams({ strict: false });
   const search = calendarPageSearch(useSearch({ strict: false }));
   const navigate = useNavigate();
-  const { snapshot, error, retry } = usePlantSettings(undefined);
+  const { snapshot, error, retry } = usePlantSettings(search.preview);
   const calendar = snapshot?.calendars.find((each) => each.name === calendarId);
   const back = coreLinks.calendars({ plant }).href;
   let state: PageState = { status: 'ready' };
-  if (snapshot === undefined && error !== undefined) {
+  if (snapshot === undefined && error instanceof PlantSettingsForbidden) {
+    state = plantSettingsForbiddenState('calendars');
+  } else if (snapshot === undefined && error !== undefined) {
     state = { status: 'error', title: 'Could not load the calendar', error, onRetry: retry };
   } else if (snapshot === undefined) {
     state = { status: 'loading' };

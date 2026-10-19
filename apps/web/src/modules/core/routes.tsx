@@ -181,6 +181,7 @@ export function coreRoutes(plantRoute: PlantRoute) {
   const calendarListRoute = createRoute({
     getParentRoute: () => calendarsRoute,
     path: '/',
+    validateSearch: calendarPageSearch,
     component: lazyScreen('CalendarsScreen'),
   });
   const calendarRoute = createRoute({
