@@ -256,9 +256,9 @@ describe('combineIntoRun (ADR 0083, plan 18 Runs)', () => {
     ]);
   });
 
-  it('a later row that already lies inside the frozen window is fixed: it stays and the run reports the stop', () => {
-    // With now at Mon 9 Nov 00:00 and the fence 24 h later, the committed 1005.20 (Mon 13:15)
-    // lies inside the window, so the run leaves it there (cascade rule 5).
+  it('later rows that already lie inside the frozen window are fixed on both paths: they stay and the run reports a stop for each', () => {
+    // With now at Mon 9 Nov 00:00 and the fence 24 h later, both committed rows of 1005 (Mon 06:00
+    // and 13:15) lie inside the window, so the run moves neither (cascade rule 5).
     const frozen: PlanContext = {
       ...context,
       nowMs: Date.UTC(2026, 10, 8, 23),
@@ -266,9 +266,10 @@ describe('combineIntoRun (ADR 0083, plan 18 Runs)', () => {
     };
     const result = combineIntoRun([orderOf('1001'), orderOf('1005')], frozen);
 
-    expect(result.moves.map((move) => move.displayNumber)).toEqual(['1005.10']);
-    expect(rowOf(result, '1005.20').placement).toEqual(orderOf('1005').jobOrders[1]?.placement);
+    expect(result.moves).toEqual([]);
+    expect(result.orders[1]).toEqual(orderOf('1005'));
     expect(result.stops).toEqual([
+      { row: '1005.10', jobOrderId: 'jo-1005-10', reason: 'frozenWindow' },
       { row: '1005.20', jobOrderId: 'jo-1005-20', reason: 'frozenWindow' },
     ]);
   });

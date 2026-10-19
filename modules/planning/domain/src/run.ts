@@ -290,6 +290,19 @@ export function combineIntoRun(orders: readonly PlanOrder[], context: PlanContex
         operation.allowedEquipment.includes(after.equipment);
       for (const row of rows) {
         const current = order.jobOrders.find((each) => each.id === row.id) ?? row;
+        // The cascade rules (plan 18, Cascade rule 5), on both paths: a row that already lies
+        // inside the frozen window is fixed, keeps its place and its retool, and is reported as a
+        // stop; a row placed into the window moves and the break is reported.
+        const currentStart = current.placement?.setupStartMs;
+        if (currentStart !== undefined && currentStart >= ctx.nowMs && currentStart < ctx.fenceMs) {
+          stops.push({
+            row: current.displayNumber,
+            jobOrderId: current.id,
+            reason: 'frozenWindow',
+          });
+          after = current;
+          continue;
+        }
         if (saves && after?.placement !== undefined && after.equipment !== undefined) {
           const equipment = after.equipment;
           // The retool goes, the fixed time stays (ADR 0083 rule 4, PO-84).
@@ -326,22 +339,6 @@ export function combineIntoRun(orders: readonly PlanOrder[], context: PlanContex
         } else {
           const release = releaseOf(order, operation.id, ctx);
           if (release === undefined) continue;
-          // The cascade rules (plan 18, Cascade rule 5): a row that already lies inside the frozen
-          // window is fixed and stays; a row placed into it moves and the break is reported.
-          const currentStart = current.placement?.setupStartMs;
-          if (
-            currentStart !== undefined &&
-            currentStart >= ctx.nowMs &&
-            currentStart < ctx.fenceMs
-          ) {
-            stops.push({
-              row: current.displayNumber,
-              jobOrderId: current.id,
-              reason: 'frozenWindow',
-            });
-            after = current;
-            continue;
-          }
           const placed = placeUnderRelease(order, current, release, ctx);
           if (placed === null || current.equipment === undefined) {
             stops.push({ row: current.displayNumber, jobOrderId: current.id, reason: 'horizon' });
