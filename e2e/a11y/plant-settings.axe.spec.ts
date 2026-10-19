@@ -6,7 +6,7 @@ import { expect, plant, test } from '../fixtures.ts';
 // The axe check of ADR 0021 over the states of the plant settings pages (E06; design #688): the
 // machines list and its loading, empty, failed and no-access states, a machine's page, the edit
 // form with its loading, failed-save and no-access states and the not-found state, the calendars
-// list and a calendar's page with its week view. The pages read the fixture G1, so every state is
+// list and a calendar's page with its week view, and their no-access states. The pages read the fixture G1, so every state is
 // the same in every run; the preview key opens the states on mock data.
 
 /** An href of the seed plant with a search. */
@@ -131,5 +131,18 @@ test.describe('the plant settings pages', () => {
       'true',
     );
     await checkA11y('the week view of one machine');
+
+    const noAccess = 'You need the permission to read calendars at this plant';
+    await page.goto(withSearch(coreLinks.calendars({ plant }).href, { preview: 'forbidden' }));
+    await expect(page.getByRole('heading', { level: 2, name: noAccess })).toBeVisible();
+    await checkA11y('the calendars list without access');
+
+    await page.goto(
+      withSearch(coreLinks.calendars.calendar({ plant, calendarId: 'A1' }).href, {
+        preview: 'forbidden',
+      }),
+    );
+    await expect(page.getByRole('heading', { level: 2, name: noAccess })).toBeVisible();
+    await checkA11y('a calendar without access');
   });
 });
