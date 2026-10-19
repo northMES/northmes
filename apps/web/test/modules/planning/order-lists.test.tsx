@@ -53,7 +53,7 @@ describe('the production orders list (plan 07; design #687, PL1 to PL3)', () => 
     renderGanttRoute({}, undefined, 'orders');
     const table = await screen.findByRole('table', { name: 'Production orders' });
 
-    expect(orderRows().slice(0, 5)).toEqual(['1003', '1002', '1001', '1004', '1006']);
+    expect(orderRows()).toEqual(['1003', '1002', '1001', '1004', '1005', '1006']);
     expect(statusLine()).toBe(
       `${orderCount} production orders, 1 late. Sorted by deadline, then priority.`,
     );
