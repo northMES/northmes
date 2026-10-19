@@ -130,6 +130,9 @@ export const shellModules: readonly ShellModule[] = [
       { label: 'Planning board', icon: 'ChartGantt', link: planningLinks.board },
       { label: 'Gantt', icon: 'ChartNoAxesGantt', link: planningLinks.gantt },
       { label: 'Job orders', icon: 'Table', link: planningLinks.jobOrders },
+      // The order lists follow the timeline pages (design #687, F0 assumption 1).
+      { label: 'Production orders', icon: 'ClipboardList', link: planningLinks.orders },
+      { label: 'Customer orders', icon: 'Handshake', link: planningLinks.customerOrders },
     ],
   },
 ];

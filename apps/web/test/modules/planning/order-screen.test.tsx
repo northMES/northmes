@@ -281,9 +281,9 @@ describe('the production order page (plan 07, planning records; design #686, PO1
       }),
     ).toBeTruthy();
     expect(screen.getByRole('heading', { level: 1, name: 'Order' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Back to Job orders' }).getAttribute('href')).toBe(
-      '/plant-a/planning/job-orders',
-    );
+    expect(
+      screen.getByRole('link', { name: 'Back to Production orders' }).getAttribute('href'),
+    ).toBe('/plant-a/planning/orders');
   });
 
   it("PO1 the Gantt's Details and the job order table's row menu lead to the order's page", async () => {
