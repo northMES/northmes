@@ -115,7 +115,7 @@ function MachineForm({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-semibold">Plannable</span>
               {imported && (
-                <Badge variant="outline" className="h-4.5 gap-1 px-1.5 text-[0.6875rem]">
+                <Badge variant="outline" className="h-4.5 gap-1 px-1.5 text-tick">
                   <Lock aria-hidden className="size-3" />
                   {fromErp}
                 </Badge>
