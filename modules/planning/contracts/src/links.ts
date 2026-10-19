@@ -11,4 +11,6 @@ export const planningLinks = defineModuleLinks('planning', {
   board: { path: 'board' },
   /** The order Gantt (plan 18), a page of its own beside the board (Krister, 2026-10-17). */
   gantt: { path: 'gantt' },
+  /** The job order table (plan 07, Job order table view), the third page of the timeline. */
+  jobOrders: { path: 'job-orders' },
 });

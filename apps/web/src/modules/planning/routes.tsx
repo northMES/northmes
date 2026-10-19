@@ -5,6 +5,7 @@ import { planningLinks } from '@northmes/planning-contracts';
 import type { PlantRoute } from '@northmes/web-sdk';
 import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router';
 import { boardSearch, ganttSearch } from './gantt-search.ts';
+import { jobOrdersSearch } from './job-orders-search.ts';
 
 /**
  * The planning module's routes under the shell's $plant route. Each route takes its path from its
@@ -41,5 +42,12 @@ export function planningRoutes(plantRoute: PlantRoute) {
     validateSearch: ganttSearch,
     component: lazyRouteComponent(() => import('./screens.ts'), 'GanttScreen'),
   });
-  return planningRoute.addChildren([boardRoute, ganttRoute]);
+  // The job order table keeps zoom and from as the Gantt does, plus Late only and its sort.
+  const jobOrdersRoute = createRoute({
+    getParentRoute: () => planningRoute,
+    path: linkEntry(planningLinks.jobOrders).path,
+    validateSearch: jobOrdersSearch,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'JobOrdersScreen'),
+  });
+  return planningRoute.addChildren([boardRoute, ganttRoute, jobOrdersRoute]);
 }
