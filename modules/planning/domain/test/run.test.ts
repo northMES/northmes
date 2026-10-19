@@ -237,6 +237,25 @@ describe('combineIntoRun (ADR 0083, plan 18 Runs)', () => {
     expect(result.conflicts).toContainEqual({ kind: 'FROZEN_WINDOW', rows: ['1005.20'] });
   });
 
+  it('a later row that could save its retool but already lies inside the frozen window is fixed: it stays, keeps its retool and the run reports the stop', () => {
+    // With now at Mon 9 Nov 05:00 and the fence at 13:00 plant time, the committed 1005.10 (Mon
+    // 06:00 to 12:15) lies inside the window and 1005.20 (Mon 13:15) does not. 1005.10 stays with
+    // its retool; 1005.20 is already at its release from it, so nothing moves.
+    const frozen: PlanContext = {
+      ...context,
+      nowMs: Date.UTC(2026, 10, 9, 4),
+      fenceMs: Date.UTC(2026, 10, 9, 12),
+    };
+    const result = combineIntoRun([orderOf('1001'), orderOf('1005')], frozen);
+
+    expect(result.moves).toEqual([]);
+    expect(result.run?.savedSetups).toEqual([]);
+    expect(rowOf(result, '1005.10')).toEqual(orderOf('1005').jobOrders[0]);
+    expect(result.stops).toEqual([
+      { row: '1005.10', jobOrderId: 'jo-1005-10', reason: 'frozenWindow' },
+    ]);
+  });
+
   it('a later row that already lies inside the frozen window is fixed: it stays and the run reports the stop', () => {
     // With now at Mon 9 Nov 00:00 and the fence 24 h later, the committed 1005.20 (Mon 13:15)
     // lies inside the window, so the run leaves it there (cascade rule 5).
