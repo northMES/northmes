@@ -151,7 +151,8 @@ export function facetsOf<Row>(
   valuesOf: (row: Row, key: ListFilterKey) => readonly string[],
   labelOf: (value: string) => string,
 ): FacetValue[] {
-  const counts = new Map<string, number>();
+  // A picked value stays in the menu and names its chip even when no row passes with it.
+  const counts = new Map<string, number>((view[key] ?? []).map((value) => [value, 0]));
   for (const row of rows) {
     if (!passes(row, view as never, key)) continue;
     for (const value of valuesOf(row, key)) counts.set(value, (counts.get(value) ?? 0) + 1);
