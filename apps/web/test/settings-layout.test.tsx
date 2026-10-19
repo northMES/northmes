@@ -223,4 +223,23 @@ describe('the Settings button', () => {
     expect(linksIn(sidebar).map(([label]) => label)).not.toContain('People');
     expect(linksIn(sidebar).map(([label]) => label)).not.toContain('Users');
   });
+
+  it('E06 a plant admin who may change core settings finds Machines and Calendars before People in plant settings', async () => {
+    const { fetch } = api(['core.settings:manage', 'core.user:read']);
+    renderShellAt('/plant-a/articles', shellModules, { fetch });
+
+    const button = await within(await screen.findByRole('banner')).findByRole('link', {
+      name: 'Settings',
+    });
+    await waitFor(() => expect(button.getAttribute('href')).toBe('/plant-a/machines'));
+    await userEvent.click(button);
+    const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
+    await waitFor(() =>
+      expect(linksIn(settings).slice(0, 3)).toEqual([
+        ['Machines', '/plant-a/machines'],
+        ['Calendars', '/plant-a/calendars'],
+        ['People', '/plant-a/people'],
+      ]),
+    );
+  });
 });
