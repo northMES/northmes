@@ -39,6 +39,16 @@ export const coreLinks = defineCoreLinks(
         person: { path: '$userId', children: { addRole: { path: 'roles/new' } } },
       },
     },
+    /** The machines of the plant in plant settings (design #688): the list, each machine's page and its edit page. */
+    machines: {
+      path: 'machines',
+      children: { machine: { path: '$equipmentId', children: { edit: { path: 'edit' } } } },
+    },
+    /** The plant's working-time calendars in plant settings (ADR 0025; design #688): the list and each calendar's page. */
+    calendars: {
+      path: 'calendars',
+      children: { calendar: { path: '$calendarId' } },
+    },
   },
   {
     settings: {

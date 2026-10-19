@@ -12,6 +12,12 @@ import {
 } from '@tanstack/react-router';
 import { dashboardSearch, newRoleSearch, rolePageSearch, userPageSearch } from './access-search.ts';
 import { articleListSearch, urlSearchOf } from './article-list-search.ts';
+import {
+  calendarPageSearch,
+  machineListSearch,
+  machinePageSearch,
+  urlSearchOf as urlSearchOfMachineList,
+} from './plant-settings-search.ts';
 import { roleListSearch } from './role-list-search.ts';
 import { userListSearch } from './user-list-search.ts';
 
@@ -138,6 +144,51 @@ export function coreRoutes(plantRoute: PlantRoute) {
     path: linkEntry(coreLinks.people.person.addRole).path,
     component: lazyScreen('PersonAddRoleScreen'),
   });
+  // Plant settings (ADR 0066; design #688): the machines with each machine's page and its edit
+  // page, and the calendars with each calendar's page. The list and the forms take the page state
+  // the mock source previews from the URL; a calendar's page keeps the week its week view shows.
+  const machinesRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.machines).path,
+  });
+  const machineListRoute = createRoute({
+    getParentRoute: () => machinesRoute,
+    path: '/',
+    validateSearch: (raw: Record<string, unknown>) =>
+      urlSearchOfMachineList(machineListSearch(raw)),
+    component: lazyScreen('MachinesScreen'),
+  });
+  const machineRoute = createRoute({
+    getParentRoute: () => machinesRoute,
+    path: linkEntry(coreLinks.machines.machine).path,
+  });
+  const machineDetailRoute = createRoute({
+    getParentRoute: () => machineRoute,
+    path: '/',
+    validateSearch: machinePageSearch,
+    component: lazyScreen('MachineScreen'),
+  });
+  const editMachineRoute = createRoute({
+    getParentRoute: () => machineRoute,
+    path: linkEntry(coreLinks.machines.machine.edit).path,
+    validateSearch: machinePageSearch,
+    component: lazyScreen('EditMachineScreen'),
+  });
+  const calendarsRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.calendars).path,
+  });
+  const calendarListRoute = createRoute({
+    getParentRoute: () => calendarsRoute,
+    path: '/',
+    component: lazyScreen('CalendarsScreen'),
+  });
+  const calendarRoute = createRoute({
+    getParentRoute: () => calendarsRoute,
+    path: linkEntry(coreLinks.calendars.calendar).path,
+    validateSearch: calendarPageSearch,
+    component: lazyScreen('CalendarScreen'),
+  });
   return coreRoute.addChildren([
     withoutCoreSegment(coreRoute, 2),
     dashboardRoute,
@@ -156,6 +207,11 @@ export function coreRoutes(plantRoute: PlantRoute) {
       peopleAddRoleRoute,
       personRoute.addChildren([personDetailRoute, personAddRoleRoute]),
     ]),
+    machinesRoute.addChildren([
+      machineListRoute,
+      machineRoute.addChildren([machineDetailRoute, editMachineRoute]),
+    ]),
+    calendarsRoute.addChildren([calendarListRoute, calendarRoute]),
   ]);
 }
 

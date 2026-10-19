@@ -3,18 +3,18 @@
 import { planningLinks } from '@northmes/planning-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useParams } from '@tanstack/react-router';
-import { Info, Lock } from 'lucide-react';
-import { type ReactNode, useId } from 'react';
+import { Info } from 'lucide-react';
 import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import {
+  ReadOnlyField,
+  type ReadOnlyFieldProps,
+} from '../../../../ui/components/read-only-field/index.ts';
 import { SelectField } from '../../../../ui/components/select-field/index.ts';
 import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { Alert, AlertDescription, AlertTitle } from '../../../../ui/primitives/alert.tsx';
-import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
-import { Field, FieldDescription, FieldLabel } from '../../../../ui/primitives/field.tsx';
-import { Input } from '../../../../ui/primitives/input.tsx';
 import type { GanttOrder, GanttSnapshot } from '../../gantt-data.ts';
 import { saveReason } from '../../mock-reasons.ts';
 import { orderById } from '../../order-facts.ts';
@@ -29,39 +29,8 @@ const colors = Array.from({ length: 8 }, (_, index) => `palette-${index + 1}`);
  * A field the ERP owns on an imported order (PO5): read-only, with the From the ERP tag beside its
  * label, so the planner sees what the next import changes and what stays.
  */
-function ErpField({
-  label,
-  value,
-  hint,
-}: {
-  readonly label: string;
-  readonly value: string;
-  readonly hint: ReactNode;
-}) {
-  const id = useId();
-  const hintId = `${id}-hint`;
-  return (
-    <Field>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <FieldLabel htmlFor={id} className="block text-xs font-semibold text-foreground">
-          {label}
-        </FieldLabel>
-        <Badge variant="outline" className="h-4.5 gap-1 px-1.5 text-[0.6875rem]">
-          <Lock aria-hidden className="size-3" />
-          From the ERP
-        </Badge>
-      </div>
-      <Input
-        id={id}
-        readOnly
-        aria-readonly
-        value={value}
-        aria-describedby={hintId}
-        className="bg-muted"
-      />
-      <FieldDescription id={hintId}>{hint}</FieldDescription>
-    </Field>
-  );
+function ErpField(props: Omit<ReadOnlyFieldProps, 'tag'>) {
+  return <ReadOnlyField {...props} tag="From the ERP" />;
 }
 
 /** The form of an order (PO4, PO5): the master fields, the planning fields and the reason. */
