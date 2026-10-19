@@ -147,6 +147,22 @@ describe('the production orders list (plan 07; design #687, PL1 to PL3)', () => 
     expect(router.state.location.search).toEqual({ sort: 'order' });
     expect(statusLine()).toContain('Sorted by order, ascending.');
   });
+
+  it('LI3 a picked value that no row has keeps its name in the chip and its checked item in the menu', async () => {
+    // Hallberg Verkstad AB orders nothing late, so Late only leaves no row with the picked customer.
+    renderGanttRoute({ customer: 'K-1042', late: 1 }, undefined, 'orders');
+    await screen.findByRole('heading', {
+      level: 2,
+      name: 'No production orders match these filters',
+    });
+
+    expect(screen.getByText('Customer:').parentElement?.textContent).toBe(
+      'Customer: Hallberg Verkstad AB 0',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Customer, 1 selected' }));
+    const item = screen.getByRole('menuitemcheckbox', { name: /^Hallberg Verkstad AB/ });
+    expect(item.getAttribute('aria-checked')).toBe('true');
+  });
 });
 
 describe('the customer orders list (plan 07; design #687, CO1 and CO2)', () => {
