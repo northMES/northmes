@@ -81,7 +81,11 @@ interface AgentFrontmatter {
   readonly hooks?: {
     readonly PreToolUse?: readonly {
       readonly matcher?: string;
-      readonly hooks?: readonly { readonly type?: string; readonly command?: string }[];
+      readonly hooks?: readonly {
+        readonly type?: string;
+        readonly command?: string;
+        readonly onFailure?: string;
+      }[];
     }[];
   };
 }
@@ -125,7 +129,13 @@ describe('code-reviewer agent', () => {
 
     expect(agent.hooks?.PreToolUse).toContainEqual({
       matcher: 'Bash',
-      hooks: [{ type: 'command', command: 'node scripts/agents/review-bash-guard.mjs' }],
+      hooks: [
+        {
+          type: 'command',
+          command: 'node "$CLAUDE_PROJECT_DIR"/scripts/agents/review-bash-guard.mjs',
+          onFailure: 'block',
+        },
+      ],
     });
   });
 

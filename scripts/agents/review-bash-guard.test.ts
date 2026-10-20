@@ -16,7 +16,7 @@ function hook(command: string) {
 }
 
 describe('the code-reviewer agent Bash guard', () => {
-  it('allows git reads, gh views and a vitest run on named files', () => {
+  it('allows git reads and gh views', () => {
     for (const command of [
       'git diff origin/main...HEAD',
       'git diff HEAD -- scripts/cla/check.mjs',
@@ -25,7 +25,6 @@ describe('the code-reviewer agent Bash guard', () => {
       'git show HEAD:CLAUDE.md',
       'gh issue view 747 --repo northMES/northmes',
       'gh pr diff 748 --repo northMES/northmes',
-      'pnpm exec vitest run --project unit scripts/cla/check.test.ts',
     ]) {
       expect(reviewCommandAllowed(command), command).toEqual({ ok: true, reason: '' });
     }
@@ -49,9 +48,9 @@ describe('the code-reviewer agent Bash guard', () => {
       'git show `rm x`',
       'gh pr comment 748 --body hi',
       'gh pr merge 748',
-      'pnpm exec vitest run -u',
-      'pnpm exec vitest run --update',
-      'pnpm exec vitest run --coverage',
+      // A test run executes test files and configuration from the branch under review.
+      'pnpm exec vitest run --project unit scripts/cla/check.test.ts',
+      'pnpm exec vitest run --reporter=json --outputFile=CLAUDE.md',
       'pnpm check',
       'FOO=1 git diff',
     ]) {
@@ -66,5 +65,12 @@ describe('the code-reviewer agent Bash guard', () => {
     expect(refused.status).toBe(2);
     expect(refused.stderr).toMatch(/read-only/);
     expect(allowed.status).toBe(0);
+  });
+
+  // A guard that crashes must refuse, not let the command through.
+  it('as a hook, refuses with exit 2 when its input cannot be read', () => {
+    const broken = spawnSync(process.execPath, [script], { input: 'not json', encoding: 'utf8' });
+
+    expect(broken.status).toBe(2);
   });
 });
