@@ -9,6 +9,7 @@ The third-party skills in `.claude/skills/` are pinned in `skills-lock.json`, wi
 - vitest, pnpm and turborepo: tests, workspace settings and task wiring.
 - apollo-client: web data code. playwright-cli: end-to-end specs and checking a UI change in a browser.
 - wrdn-authz and secret-serialization: reviews of permissions and of code that holds secrets. Row-level security with transaction-local scopes counts as tenant scoping.
+- security-audit: the internal audit before each release (ADR 0076) and a full vulnerability audit of an area. The full audit runs only from an interactive session, never from a handoff run. Its output directory stays outside the repository. The release audit report in `docs/security/audits/<date>.md` takes the skill's coverage statement and its findings that are not exploitable vulnerabilities, each as an issue under the audit's tracking issue. A confirmed vulnerability goes to a private security advisory as `SECURITY.md` says, never to a public issue, and the report records it without detail until the advisory is published.
 - diagnosing-bugs: a bug report or a performance regression.
 - grilling, grill-me, grill-with-docs and domain-modeling: interactive planning sessions with a person who can answer.
 - TanStack Table v9: read the skills that ship in `node_modules/@tanstack/table-core/skills/` and `node_modules/@tanstack/react-table/skills/`, which match the installed version.

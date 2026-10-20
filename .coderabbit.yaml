@@ -105,6 +105,10 @@ reviews:
     - '!.claude/skills/playwright-cli/**'
     - '!.claude/skills/pnpm/**'
     - '!.claude/skills/secret-serialization/**'
+    # The security-audit validators (*.cjs) and their tests run on the maintainer's machine, so they
+    # stay reviewable when the pin moves; only the prompt files and the schema are filtered.
+    - '!.claude/skills/security-audit/*.md'
+    - '!.claude/skills/security-audit/report-schema.json'
     - '!.claude/skills/tdd/**'
     - '!.claude/skills/to-questionnaire/**'
     - '!.claude/skills/turborepo/**'
