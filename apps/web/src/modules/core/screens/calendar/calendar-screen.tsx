@@ -517,29 +517,6 @@ function WeekSection({
                       : undefined,
                 }}
               >
-                {closed !== undefined && (
-                  <div
-                    className={cn(
-                      'absolute inset-x-1 top-1 rounded-sm border px-1.5 py-1 text-xs leading-4',
-                      blockClass.closed,
-                    )}
-                  >
-                    <span className="block font-semibold">Closed</span>
-                    <span>{closed.reason ?? 'Non-working'}</span>
-                  </div>
-                )}
-                {/* With all machines, a machine's own closed day closes only that machine. */}
-                {machineClosures.map((closure) => (
-                  <div
-                    key={closure.id}
-                    className={cn(
-                      'absolute inset-x-1 top-1 rounded-sm border border-dashed px-1.5 py-0.5 text-tick',
-                      blockClass.closed,
-                    )}
-                  >
-                    Closed{onMachines(closure, machineName)}
-                  </div>
-                ))}
                 {blocks.map((block) => (
                   <div
                     key={`${block.kind}-${block.from}`}
@@ -558,6 +535,35 @@ function WeekSection({
                     )}
                   </div>
                 ))}
+                {/* The day's closures stack in one column after the blocks, so none covers
+                    another and a stack that reaches into the shift stays on top. */}
+                {(closed !== undefined || machineClosures.length > 0) && (
+                  <div className="absolute inset-x-1 top-1 flex flex-col gap-0.5">
+                    {closed !== undefined && (
+                      <div
+                        className={cn(
+                          'rounded-sm border px-1.5 py-1 text-xs leading-4',
+                          blockClass.closed,
+                        )}
+                      >
+                        <span className="block font-semibold">Closed</span>
+                        <span>{closed.reason ?? 'Non-working'}</span>
+                      </div>
+                    )}
+                    {/* With all machines, a machine's own closed day closes only that machine. */}
+                    {machineClosures.map((closure) => (
+                      <div
+                        key={closure.id}
+                        className={cn(
+                          'rounded-sm border border-dashed px-1.5 py-0.5 text-tick',
+                          blockClass.closed,
+                        )}
+                      >
+                        Closed{onMachines(closure, machineName)}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           );
