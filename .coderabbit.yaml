@@ -17,15 +17,18 @@ reviews:
   # coder, so a nitpicky profile would mean more fix rounds per task.
   profile: chill
 
-  # CodeRabbit requests changes when it posts actionable comments, resolves the
-  # threads a later review sees addressed, and approves a reviewed head commit
-  # once its threads are resolved. handoff's PR node treats an approval as
-  # "nothing to send back", so a clean review ends the wait at once.
-  request_changes_workflow: true
-  # handoff opens every PR with the maintainer's token, so the maintainer is
-  # the author. Keep this on so "@coderabbitai approve" and
-  # "@coderabbitai resolve" work on those PRs.
-  allow_author_approval: true
+  # CodeRabbit posts its reviews as comments: it neither requests changes nor
+  # approves. The main ruleset requires code owner review, so the maintainer's
+  # approval lets a pull request merge and CodeRabbit's approval counts for
+  # nothing; a request for changes would only block the merge until someone
+  # posts "@coderabbitai approve" (docs/adr/0065, docs/adr/0084). Its inline
+  # threads still block the merge until they are resolved.
+  request_changes_workflow: false
+  # Agents open pull requests as northmes-agent, which makes the agent the
+  # author. Only someone other than the author, the maintainer on agent pull
+  # requests, may post "@coderabbitai resolve" or "@coderabbitai approve", so an
+  # agent cannot clear CodeRabbit's threads by command (docs/adr/0084).
+  allow_author_approval: false
 
   # The summary goes into the walkthrough comment, not the PR description:
   # handoff writes and rewrites the description (Closes #N, screenshots).
@@ -40,7 +43,7 @@ reviews:
   # in progress as a started review. A review error does not fail the check,
   # so a CodeRabbit error does not fail the head commit. The check is not a
   # required status check: the gate is the ruleset's required approval, which
-  # CodeRabbit gives through request_changes_workflow (docs/adr/0065).
+  # is the maintainer's as code owner (docs/adr/0065, docs/adr/0084).
   # handoff's PR node counts this check as CodeRabbit's review progress, not
   # as CI, and bounds it by reviewTimeoutMinutes. commit_status mirrors
   # progress only while review_progress is off.
@@ -189,7 +192,7 @@ reviews:
 
     - path: '.coderabbit.yaml'
       instructions: |
-        CodeRabbit reads this file from the PR's own branch, so a change here already applies to the review of this PR. Flag any change that drops a path instruction, excludes source, test or migration files through path_filters, or turns off request_changes_workflow or auto_incremental_review, and say so in the summary.
+        CodeRabbit reads this file from the PR's own branch, so a change here already applies to the review of this PR. Flag any change that drops a path instruction, excludes source, test or migration files through path_filters, turns on request_changes_workflow or allow_author_approval, or turns off auto_incremental_review, and say so in the summary.
 
     - path: '.github/workflows/**'
       instructions: |
