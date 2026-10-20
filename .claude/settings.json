@@ -1,12 +1,66 @@
 {
   "permissions": {
+    "disableBypassPermissionsMode": "disable",
     "deny": [
       "Bash(npm *)",
       "Bash(npx *)",
       "Bash(react-doctor *)",
       "Bash(pnpm react-doctor*)",
       "Bash(pnpm * react-doctor*)",
-      "Bash(*node_modules/.bin/react-doctor*)"
+      "Bash(*node_modules/.bin/react-doctor*)",
+      "Bash(gh pr merge*)",
+      "Read(~/.ssh/**)",
+      "Read(~/.config/gh/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.npmrc)",
+      "Read(~/.netrc)",
+      "Read(~/.gnupg/**)",
+      "Edit(~/.ssh/**)",
+      "Edit(~/.zshrc)",
+      "Edit(~/.zprofile)",
+      "Edit(~/.bashrc)",
+      "Edit(~/.bash_profile)",
+      "Edit(~/.gitconfig)",
+      "Edit(~/.claude/settings.json)"
     ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "filesystem": {
+      "denyRead": [
+        "~/.ssh",
+        "~/.config/gh",
+        "~/.aws",
+        "~/.npmrc",
+        "~/.netrc",
+        "~/.gnupg"
+      ],
+      "allowWrite": [
+        "~/Library/pnpm/store",
+        "~/Library/Caches/pnpm",
+        "~/Library/Caches/ms-playwright"
+      ]
+    },
+    "network": {
+      "allowedDomains": [
+        "registry.npmjs.org",
+        "github.com",
+        "api.github.com",
+        "codeload.github.com",
+        "objects.githubusercontent.com",
+        "raw.githubusercontent.com",
+        "release-assets.githubusercontent.com",
+        "cdn.playwright.dev",
+        "playwright.download.prss.microsoft.com"
+      ],
+      "allowUnixSockets": [
+        "~/.docker/run/docker.sock",
+        "/var/run/docker.sock"
+      ],
+      "allowLocalBinding": true
+    },
+    "enableWeakerNetworkIsolation": true
   }
 }

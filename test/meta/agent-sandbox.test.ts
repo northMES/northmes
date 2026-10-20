@@ -14,6 +14,8 @@ interface Settings {
     failIfUnavailable?: boolean;
     allowUnsandboxedCommands?: boolean;
     excludedCommands?: string[];
+    enableWeakerNetworkIsolation?: boolean;
+    enableWeakerNestedSandbox?: boolean;
     filesystem?: { denyRead?: string[]; allowWrite?: string[] };
     network?: {
       allowedDomains?: string[];
@@ -41,6 +43,16 @@ describe('ADR0084 agent sessions run in the Claude Code sandbox', () => {
     expect(sandbox?.failIfUnavailable).toBe(true);
     expect(sandbox?.allowUnsandboxedCommands).toBe(false);
     expect(sandbox?.excludedCommands ?? []).toEqual([]);
+  });
+
+  // gh verifies TLS through macOS's trust service, which the sandbox blocks unless this is on. The
+  // other way the documentation offers, `gh *` in excludedCommands, would run gh, its aliases and
+  // its extensions with full access.
+  it('ADR0084 the only weaker isolation is the TLS trust service that gh needs', () => {
+    const sandbox = settings().sandbox;
+
+    expect(sandbox?.enableWeakerNetworkIsolation).toBe(true);
+    expect(sandbox?.enableWeakerNestedSandbox ?? false).toBe(false);
   });
 
   it('ADR0084 sandboxed commands and the file tools cannot read the credential paths', () => {
