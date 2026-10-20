@@ -12,4 +12,4 @@ Each entry holds a GitHub numeric user id, which stays the same when the account
 
 The file holds no names, logins or email addresses. Names, the link to each signing comment and corporate agreements stay in the maintainer's private record outside the repository.
 
-To record a signature, the maintainer finds the signer's id with `gh api users/<login> --jq .id`, adds the entry in a pull request, merges it and re-runs `CI / cla` on the contributor's pull request. The maintainer, `renovate[bot]` and release-please's release pull requests pass without an entry.
+To record a signature, the maintainer finds the signer's id with `gh api users/<login> --jq .id`, adds the entry in a pull request, merges it and re-runs `CI / cla` on the contributor's pull request. The maintainer, `renovate[bot]` and release-please's release pull requests pass without an entry, and so do the commits of `northmes-agent` on pull requests that it or the maintainer opened.

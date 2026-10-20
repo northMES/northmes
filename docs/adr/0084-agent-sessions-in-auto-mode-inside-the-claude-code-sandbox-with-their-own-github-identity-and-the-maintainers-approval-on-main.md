@@ -50,9 +50,9 @@ Chosen option: "Auto mode inside the Claude Code sandbox, with an agent GitHub i
 7. **What stays outside the sandbox.** The sandbox wraps shell commands only. Claude's Read, Edit, Write and WebFetch tools, hooks and MCP servers follow permission rules and the auto mode classifier instead, which is why rules 2 and 3 repeat the paths as permission rules.
 8. **pnpm install.** pnpm 12.11.2 fails inside the macOS sandbox when it opens its store operation lock, also with a store in the temp directory, so the lock is not a path the sandbox can allow. Until [#739](https://github.com/northMES/northmes/issues/739) solves it, the maintainer runs `pnpm install` for a worktree from his own terminal, and a session that needs a new install asks him. No `excludedCommands` entry runs it unsandboxed, because a session can edit `pnpm-workspace.yaml` and the lockfile that such an install would act on.
 
-### Changes to ADR 0050 and ADR 0065
+### Changes to ADR 0039, ADR 0050 and ADR 0065
 
-ADR 0050 is accepted, so its text stays as it was. ADR 0065 is proposed and points here for the line below. This ADR replaces these parts, and the rest of both stands.
+ADR 0039 and ADR 0050 are accepted, so their text stays as it was. ADR 0065 is proposed and points here for the line below. This ADR replaces the parts in the table and adds the CLA exemption below the table, and the rest of each stands.
 
 | Line | Replaced by |
 |---|---|
@@ -60,6 +60,8 @@ ADR 0050 is accepted, so its text stays as it was. ADR 0065 is proposed and poin
 | ADR 0065: "The `CODEOWNERS` line of ADR 0050 stands: code owner review stays off" | Code owner review is on (rule 5). CodeRabbit's approval no longer satisfies the `main` ruleset, for session and contributor pull requests alike |
 
 ADR 0050's "Auto-merge off" stands: the maintainer merges.
+
+ADR 0039 is accepted, so its text stays as it was. This ADR adds one account to those that pass `CI / cla` without a signature: `northmes-agent`, the machine user of rule 4, because it acts for the maintainer, who holds the copyright to its work. `scripts/cla/check.mjs` names it by GitHub user id next to the maintainer, Renovate and github-actions on the release pull request. The agent's commits pass only on a pull request that the agent or the maintainer opened, because GitHub links a commit to the account whose email it names and the agent's noreply address follows from its public id. Every other commit author of an agent pull request is checked as before.
 
 ### Consequences
 
@@ -79,6 +81,7 @@ ADR 0050's "Auto-merge off" stands: the maintainer merges.
 * `test/meta/agent-sandbox.test.ts` compares the whole `sandbox` block of `.claude/settings.json` with the reviewed one, so any key that widens it fails; it also fails when bypass mode or the read block is turned off, when the project settings add an allow rule or an additional directory, when a credential path or settings file leaves the deny rules, and when `.github/CODEOWNERS` names anyone but the maintainer.
 * The probes: a headless session in a worktree with the project settings runs a script of shell commands and reports each outcome without printing a secret. On 2026-10-20 with Claude Code 2.1.304 they showed `~/.ssh`, `~/.config/gh`, `~/.kube`, handoff's `.env`, the private notes, the main checkout, writes to the home folder and `~/.zshrc`, `example.com` and SSH to GitHub refused; `registry.npmjs.org`, HTTPS to GitHub, a commit in the worktree, the meta tests and `migrate.int.test.ts` with Testcontainers (15 tests) working; `env` from the main checkout's `.claude/settings.local.json` reaching a worktree session; gh reaching the GitHub API only with `enableWeakerNetworkIsolation` and a `GH_CONFIG_DIR` of its own; the keychain's gh token readable; a container able to mount `~/.ssh` while Docker Desktop shares the home folder; and `pnpm install` failing at the store lock. The maintainer runs the checks of the setup page after the setup, after a Claude Code upgrade that changes the sandbox, and in the internal audit before each release (ADR 0076).
 * The ruleset check that ADR 0065 plans (`scripts/repo/check-ruleset.mjs`, task E00-S04-T03, [#201](https://github.com/northMES/northmes/issues/201)) asserts `require_code_owner_review: true` as well.
+* `scripts/cla/check.test.ts`: "the northmes-agent machine user passes", "a northmes-agent pull request with an unsigned person among its commit authors fails" and "a commit attributed to northmes-agent fails on another person's pull request".
 
 Inspection steps, not checks: `gh api user --jq .login` in a session prints the machine user, `gh pr view <number> --json author` prints it for an agent pull request, and the other checks at the end of [docs/agents/agent-isolation.md](../agents/agent-isolation.md) show the user settings in force.
 
@@ -114,7 +117,7 @@ Inspection steps, not checks: `gh api user --jq .login` in a session prints the 
 ## More information
 
 * Masking the token with `sandbox.credentials.envVars` was considered: the sandbox would substitute it only on its way to GitHub. It needs the proxy to terminate TLS, which Claude Code marks experimental, so the token stays a plain environment variable inside the sandbox, limited by its permissions instead.
-* Related ADRs: [0050](0050-github-organization-rulesets-ci-runners-and-supply-chain.md) (rulesets, CODEOWNERS and what agents may do on GitHub), [0065](0065-coderabbit-check-run-and-a-required-approval-on-main.md) (the required approval and CodeRabbit), [0076](0076-secure-development-lifecycle-with-a-security-note-per-change-a-controls-index-and-an-internal-audit-each-release.md) (the threat model and the internal audit), [0077](0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md) (the Argos token that an agent pull request's e2e job reads).
+* Related ADRs: [0039](0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md) (the CLA and `CI / cla`), [0050](0050-github-organization-rulesets-ci-runners-and-supply-chain.md) (rulesets, CODEOWNERS and what agents may do on GitHub), [0065](0065-coderabbit-check-run-and-a-required-approval-on-main.md) (the required approval and CodeRabbit), [0076](0076-secure-development-lifecycle-with-a-security-note-per-change-a-controls-index-and-an-internal-audit-each-release.md) (the threat model and the internal audit), [0077](0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md) (the Argos token that an agent pull request's e2e job reads).
 * Security documents: the development workstation zone and conduit C8 in the [threat model](../security/threat-model.md), A-07 in the [risk register](../security/risks.md), the machine user in the [project credentials](../security/project-credentials.md).
 * Claude Code documentation: sandboxing (https://code.claude.com/docs/en/sandboxing), permission modes (https://code.claude.com/docs/en/permission-modes), settings reference (https://code.claude.com/docs/en/settings-reference).
 * Revisit when the sandbox covers the keychain or inspects TLS, when Docker can run without the host socket, when pnpm's store lock works in the sandbox, when a second maintainer joins, or when a session escapes the boundary.
