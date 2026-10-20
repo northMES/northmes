@@ -211,6 +211,28 @@ describe('CI / cla', () => {
     expect(result).toMatchObject({ ok: true });
   });
 
+  // The agent sessions' machine user acts for the maintainer, who holds the copyright to its work
+  // (docs/adr/0084).
+  it('the northmes-agent machine user passes', async () => {
+    const routes = pullRequest(
+      700,
+      'pull-from-fork.json',
+      'commits-by-contributor.json',
+      'signed-on-main.json',
+    );
+    const agent = { login: 'northmes-agent', id: 345317483, type: 'User' };
+    const pull = JSON.parse(fixture('pull-from-fork.json'));
+    const commits = JSON.parse(fixture('commits-by-contributor.json'));
+    routes[`repos/${repository}/pulls/700`] = JSON.stringify({ ...pull, user: agent });
+    routes[`repos/${repository}/pulls/700/commits?per_page=100&page=1`] = JSON.stringify(
+      commits.map((commit: object) => ({ ...commit, author: agent })),
+    );
+
+    const result = await check(routes, 700);
+
+    expect(result).toMatchObject({ ok: true });
+  });
+
   // GitHub lists 100 commits per page and at most 250 commits of a pull request.
   it('reads every page of commits, and fails a pull request with more commits than GitHub lists', async () => {
     const [signed] = JSON.parse(fixture('commits-by-contributor.json'));
