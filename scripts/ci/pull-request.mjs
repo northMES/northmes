@@ -1,6 +1,33 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-// Reads the sections of a pull request body as GitHub renders them, for the pull request checks.
+// What the pull request checks read from a pull request: its title's commit type, its body's sections
+// as GitHub renders them, and whether a bot opened it.
+
+// Renovate's pull requests update dependencies and finish no issue. A GitHub user name cannot end
+// in [bot], so only the Renovate app has this login.
+const renovate = 'renovate[bot]';
+
+// release-please opens the release pull request from a branch with this prefix in this repository.
+// A fork can name a branch the same way, so the prefix counts only outside forks.
+const releaseBranch = 'release-please--branches--';
+
+/** Whether Renovate or release-please opened the pull request, which writes no body sections. */
+export function isBotPullRequest({ author, headRef, fromFork }) {
+  return author === renovate || (!fromFork && headRef.startsWith(releaseBranch));
+}
+
+/** The Conventional Commit type of a title, such as feat in feat(planning)!: ..., or ''. */
+export function commitType(title) {
+  return /^(\w+)(?:\([^()\s]+\))?!?: /.exec(title)?.[1] ?? '';
+}
+
+// "None" alone, or a stand-in for it, gives no reason, also with emphasis or a closing mark.
+const bareNone = /^[-*_\s]*(?:none|n\/a|na|-)[*_]*[.!:]?[*_]*$/i;
+
+/** Whether a section's text is empty or says none without a reason. */
+export function givesNoReason(text) {
+  return text === '' || bareNone.test(text);
+}
 
 // A line that opens or closes a fenced code block, whose lines GitHub renders as code.
 const fence = /^\s{0,3}(?:```|~~~)/;

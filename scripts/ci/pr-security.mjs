@@ -4,19 +4,12 @@
 // controls the change touches and the threat each one meets, or says none with a reason (ADR 0076).
 
 import { errorAnnotation } from './annotation.mjs';
-import { section } from './pr-body.mjs';
+import { givesNoReason, isBotPullRequest, section } from './pull-request.mjs';
 
-// Renovate's and release-please's pull requests, as CI / linked issue exempts them: neither app
+// Renovate's and release-please's pull requests are exempt, as for CI / linked issue: neither app
 // writes the section, and dependency updates go through the license and supply-chain checks.
-const renovate = 'renovate[bot]';
-const releaseBranch = 'release-please--branches--';
-
-// "None" alone, or a stand-in for it, gives no reason, also with emphasis or a closing mark.
-const bareNone = /^[-*_\s]*(?:none|n\/a|na|-)[*_]*[.!:]?[*_]*$/i;
-
 export function checkPrSecurity({ body, author, headRef, fromFork }) {
-  const release = !fromFork && headRef.startsWith(releaseBranch);
-  if (author === renovate || release) return { ok: true, message: '' };
+  if (isBotPullRequest({ author, headRef, fromFork })) return { ok: true, message: '' };
   const security = section(body, 'Security');
   if (security === undefined) {
     return {
@@ -25,7 +18,7 @@ export function checkPrSecurity({ body, author, headRef, fromFork }) {
         'The pull request body has no ## Security section. Name the controls this change touches and the threat each one meets, or "None" with a reason (ADR 0076).',
     };
   }
-  if (security === '' || bareNone.test(security)) {
+  if (givesNoReason(security)) {
     return {
       ok: false,
       message:
