@@ -78,6 +78,12 @@ interface AgentFrontmatter {
   readonly name?: string;
   readonly tools?: string | readonly string[];
   readonly mcpServers?: readonly (string | Record<string, { readonly url?: string }>)[];
+  readonly hooks?: {
+    readonly PreToolUse?: readonly {
+      readonly matcher?: string;
+      readonly hooks?: readonly { readonly type?: string; readonly command?: string }[];
+    }[];
+  };
 }
 
 function agentFrontmatter(path: string): AgentFrontmatter {
@@ -110,6 +116,16 @@ describe('code-reviewer agent', () => {
     }
     expect(agent.mcpServers).toContainEqual({
       context7: expect.objectContaining({ url: 'https://mcp.context7.com/mcp' }),
+    });
+  });
+
+  // Bash can write, so a hook refuses every Bash command that is not a read (ADR 0065).
+  it('ADR0065 the code-reviewer agent runs its Bash commands through the read-only guard', () => {
+    const agent = agentFrontmatter(path);
+
+    expect(agent.hooks?.PreToolUse).toContainEqual({
+      matcher: 'Bash',
+      hooks: [{ type: 'command', command: 'node scripts/agents/review-bash-guard.mjs' }],
     });
   });
 
