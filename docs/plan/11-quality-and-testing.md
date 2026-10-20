@@ -110,7 +110,7 @@ Root scripts:
 | `pnpm react-doctor:summary` | Copies the findings in `react-doctor-report.json` into the job summary and the log | `CI / react doctor` |
 | `pnpm db:types --verify` | kysely-codegen against a migrated database; fails on any generated `Date` type | `pnpm gen` |
 
-Every CI gate step except the pull request checks (`CI / linked issue`, `CI / pr title`, `CI / pr security` and `CI / openapi diff`) and `CI / react doctor`, which runs in CI only ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)), runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report. A run of some of the Vitest projects that `pnpm check` runs, such as `pnpm test:int` in `CI / fresh worktree`, counts as contained in it, and the `git worktree add` step of that job only adds the directory its later steps run in.
+Every CI gate step except the pull request checks (`CI / linked issue`, `CI / pr title`, `CI / pr security`, `CI / pr tests` and `CI / openapi diff`) and `CI / react doctor`, which runs in CI only ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)), runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report. A run of some of the Vitest projects that `pnpm check` runs, such as `pnpm test:int` in `CI / fresh worktree`, counts as contained in it, and the `git worktree add` step of that job only adds the directory its later steps run in.
 
 ## Testcontainers harness
 
@@ -467,6 +467,7 @@ The ruleset on `main` requires these checks by name, strict (the branch must be 
 | `fresh worktree` | On pull requests: `git worktree add`, then `pnpm install --frozen-lockfile` and `pnpm test:int` in the new worktree, with no build step |
 | `pr title` | The title is a Conventional Commit with an allowed type |
 | `linked issue` | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
+| `pr tests` | A `feat`, `fix` or `security` pull request that changes source changes a test, and a pull request that deletes a test says why under `## Removed tests` (`scripts/ci/pr-tests.mjs`) |
 | `gate` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Also `openapi diff`. Later also `docs` (once `apps/docs` exists) and `cla` (before the first outside pull request). |
 | `a11y` | The axe specs over the board states, from the first board pull request |
 | `license gate` | `pnpm sbom` and the license script ([12-operations-and-security.md](12-operations-and-security.md#license-gate)) |
@@ -546,9 +547,9 @@ The maintainer builds tasks through handoff runs. handoff passes `disableAllHook
 2. The planner, coder, plan reviewer and code review node instructions require one behaviour at a time, the failing test first, and a named test per criterion. The plan reviewer blocks code before its test, a step with two behaviours, a criterion without a test, a test at the wrong seam and a database test outside `packages/testing` and Testcontainers.
 3. Krister approves the test list, the seam and the owned paths at the plan gate (guided and standard graphs).
 4. The Tester runs `pnpm check` after every coder attempt, starts its own Postgres container, has a 20-minute timeout and one retry for a flaky run, and sends failures back to the coder with the output tail.
-5. `scripts/handoff/tests-changed.mjs` runs `git diff --name-only origin/main...HEAD` and fails when a source file changed and no test file did. Every non-generated file under `modules/**`, `packages/**` and `examples/**` counts as source, contracts and migrations included, except `docs/` and the paths on the generated-files list shared with `pnpm gen --check`.
+5. `CI / pr tests` (`scripts/ci/pr-tests.mjs`) runs on every pull request, from a run or not. It fails a `feat`, `fix` or `security` pull request that changes source and no test. Source is code (TypeScript, JavaScript, SQL, GraphQL) under `apps/`, `modules/`, `packages/`, `examples/` and `scripts/` that is neither a test nor a file `pnpm gen` writes. A test is a `*.test.*`, `*.test-d.*` or `*.spec.*` file outside `.claude/` that the pull request adds or changes; a deleted test or a pure rename does not count. It also fails any pull request except a revert that deletes such a test without a `## Removed tests` section in its body that gives a reason, where a bare "none" is no reason. Renovate's and release-please's pull requests are exempt, as for `CI / pr security`. Focused and skipped tests are Biome's `noFocusedTests` and `noSkippedTests` errors, so `CI / lint` refuses them.
 
-`tests-changed.mjs` checks that tests changed, not that they were written first. Commit order (`test:` before the code) is visible in the pull request and is checked by the plan reviewer and the code review, not by a script. Whether a stricter tool is worth a model call per edit (Probity, the successor of `tdd-guard`) is decided after a trial week on the scheduling domain.
+`CI / pr tests` checks that tests changed, not that they were written first. Commit order (`test:` before the code) is visible in the pull request and is checked by the plan reviewer and the code review, not by a script. Whether a stricter tool is worth a model call per edit (Probity, the successor of `tdd-guard`) is decided after a trial week on the scheduling domain.
 
 ## Open questions
 
@@ -564,6 +565,6 @@ The full list with owners and dates is in [16-open-questions.md](16-open-questio
 | Do the pilot's planner PCs and stations need Edge or Firefox projects in Playwright? | pilot IT | Chromium only |
 | Is the pilot host amd64, so the image smoke and bundle jobs match it? | pilot IT | amd64 |
 | Where does the Playwright package live (`apps/e2e` or a root `e2e` folder)? | not assigned | Specs use `e2e/...` paths as the ADRs name them |
-| Is a stricter test-first check (Probity, or a commit-order script) worth adopting? | maintainer | Hooks in interactive sessions; the Tester and `tests-changed.mjs` in runs |
+| Is a stricter test-first check (Probity, or a commit-order script) worth adopting? | maintainer | Hooks in interactive sessions; the Tester in runs; `CI / pr tests` on every pull request |
 | When does `e2e` become a required check? | maintainer | In the change that adds it to `ci.yml` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)) |
 | Is "Pause live updates" wanted, which decides whether `pause.spec.ts` stays? | product owner | Built as designed |

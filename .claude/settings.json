@@ -1,5 +1,72 @@
 {
   "permissions": {
-    "deny": ["Bash(npm *)", "Bash(npx *)"]
+    "disableBypassPermissionsMode": "disable",
+    "blockReadsOutsideWorkingDirectories": true,
+    "deny": [
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(react-doctor *)",
+      "Bash(pnpm react-doctor*)",
+      "Bash(pnpm * react-doctor*)",
+      "Bash(*node_modules/.bin/react-doctor*)",
+      "Bash(gh pr merge*)",
+      "Read(~/.ssh/**)",
+      "Read(~/.config/gh/**)",
+      "Read(~/.aws/**)",
+      "Read(~/.npmrc)",
+      "Read(~/.netrc)",
+      "Read(~/.gnupg/**)",
+      "Edit(~/.ssh/**)",
+      "Edit(~/.zshrc)",
+      "Edit(~/.zshenv)",
+      "Edit(~/.zprofile)",
+      "Edit(~/.profile)",
+      "Edit(~/.bashrc)",
+      "Edit(~/.bash_profile)",
+      "Edit(~/.gitconfig)",
+      "Edit(~/Library/LaunchAgents/**)",
+      "Edit(~/.claude/settings.json)",
+      "Edit(/.claude/settings.json)",
+      "Edit(/.claude/settings.local.json)",
+      "Edit(~/**/.claude/settings.json)",
+      "Edit(~/**/.claude/settings.local.json)"
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "enableWeakerNetworkIsolation": true,
+    "filesystem": {
+      "denyRead": [
+        "~/.ssh",
+        "~/.config/gh",
+        "~/.aws",
+        "~/.npmrc",
+        "~/.netrc",
+        "~/.gnupg"
+      ]
+    },
+    "network": {
+      "allowedDomains": [
+        "registry.npmjs.org",
+        "github.com",
+        "api.github.com",
+        "codeload.github.com",
+        "objects.githubusercontent.com",
+        "raw.githubusercontent.com",
+        "release-assets.githubusercontent.com",
+        "cdn.playwright.dev",
+        "playwright.download.prss.microsoft.com"
+      ],
+      "allowUnixSockets": [
+        "~/.docker/run/docker.sock",
+        "/var/run/docker.sock"
+      ],
+      "allowLocalBinding": true
+    }
+  },
+  "env": {
+    "VERCEL_CONFIG_DIR_PATH": "/nonexistent/vercel"
   }
 }

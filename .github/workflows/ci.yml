@@ -275,6 +275,30 @@ jobs:
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
 
+  # AGENTS.md: a feat, fix or security pull request that changes source changes a test, and a
+  # pull request that deletes a test says why under ## Removed tests.
+  pr-tests:
+    name: pr tests
+    permissions:
+      contents: read
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: node scripts/ci/pr-tests.mjs
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+
   # ADR 0064: a pull request that breaks the public API fails, unless NorthMES is still 0.x and the
   # title marks the break with !. oasdiff compares the base branch's schema/openapi-v1.json with the
   # pull request's from its image pinned by digest, without network, so neither document leaves the
@@ -357,7 +381,7 @@ jobs:
     # The gate reads only the results of the jobs it needs, so its token gets no permissions.
     permissions: {}
     if: always()
-    needs: [lint, typecheck, build, test, react-doctor, fresh-worktree, e2e, pr-title, linked-issue, pr-security, openapi-diff]
+    needs: [lint, typecheck, build, test, react-doctor, fresh-worktree, e2e, pr-title, linked-issue, pr-security, pr-tests, openapi-diff]
     runs-on: ubuntu-24.04
     steps:
       - name: Fail when a job that CI / gate needs did not pass
