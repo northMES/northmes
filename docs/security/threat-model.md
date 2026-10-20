@@ -84,7 +84,7 @@ Each entry point, the conduit it sits on and the credential it accepts. A surfac
 | Database | built | C2, C3 | role passwords: `nm_app`, `nm_auth` at run time, `nm_owner` for migrations only |
 | Release and image | built | C6 | GitHub's release workflow; image digests in the release notes |
 | Argos visual snapshots | decided (ADR 0077) | C7 | `ARGOS_TOKEN`, a repository secret |
-| Agent sessions acting on the repository: Claude Code sessions and workflows that push branches, open pull requests and comment | built (sandbox, read block and bypass disabled in `.claude/settings.json`; `.github/CODEOWNERS`; auto mode in user settings, machine user, code owner review in the ruleset and Docker file sharing, set up on 2026-10-20 under [#737](https://github.com/northMES/northmes/issues/737); ADR 0084) | C8 | the `northmes-agent` machine user's fine-grained token for `northMES/northmes` |
+| Agent sessions acting on the repository: Claude Code sessions and workflows that push branches, open pull requests and comment | built (sandbox, read block, bypass disabled and a reviewed `env` block in `.claude/settings.json`; `.github/CODEOWNERS`; auto mode in user settings, machine user, code owner review in the ruleset and Docker file sharing, set up on 2026-10-20 under [#737](https://github.com/northMES/northmes/issues/737); ADR 0084) | C8 | the `northmes-agent` machine user's fine-grained token for `northMES/northmes` |
 | Replay eval trials: headless sessions that deliver old issues from merged pull requests, and the grading that runs their code | decided (ADR 0085) | C8 | none: no GitHub token; the eval API key reaches Claude Code through `apiKeyHelper` |
 
 ## Threats and controls

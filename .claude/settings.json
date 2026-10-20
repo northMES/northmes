@@ -65,5 +65,8 @@
       ],
       "allowLocalBinding": true
     }
+  },
+  "env": {
+    "VERCEL_CONFIG_DIR_PATH": "/nonexistent/vercel"
   }
 }
