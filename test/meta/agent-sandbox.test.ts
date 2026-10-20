@@ -17,6 +17,7 @@ interface Settings {
     deny?: string[];
   };
   sandbox?: unknown;
+  env?: Record<string, string>;
 }
 
 function read(path: string): string {
@@ -68,6 +69,13 @@ describe('ADR0084 agent sessions run in the Claude Code sandbox', () => {
   });
 
   // An Edit allow rule or an additional directory would also widen what sandboxed commands may write.
+  // turbo looks for the Vercel CLI's login file to authenticate a remote cache, which NorthMES does
+  // not use. The sandbox refuses that read, and turbo fails on the refusal, so pnpm check could not
+  // run in a session. A folder that does not exist reads as no login.
+  it('ADR0084 sessions point turbo at a Vercel config folder that does not exist', () => {
+    expect(settings().env?.VERCEL_CONFIG_DIR_PATH).toBe('/nonexistent/vercel');
+  });
+
   it('ADR0084 the project settings add no allow rule and no additional directory', () => {
     const permissions = settings().permissions;
 
