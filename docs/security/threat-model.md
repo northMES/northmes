@@ -4,7 +4,7 @@ This is NorthMES's threat model for release 1 and the pilot: what an attacker wo
 
 A control's status uses the words of the [controls index](README.md#controls-index): **built**, **decided**, **gap** or **accepted**. A threat that stays after its controls is a residual risk; the accepted ones, with an owner and a review date, are in the [risk register](risks.md). The broader project risks are in [plan 17](../plan/17-risks.md).
 
-Checked against `main` at fe15e3d on 2026-10-15.
+Checked against `main` at fe15e3d on 2026-10-15. The rows for agent sessions and code owner review were checked against `main` at 17df3ff8 and the live `main` ruleset on 2026-10-20.
 
 ## The system in one picture
 

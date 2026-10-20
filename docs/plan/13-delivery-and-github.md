@@ -646,7 +646,7 @@ Required workflows have no `on.paths` filter, because a workflow skipped by a pa
 
 ### Agents on GitHub
 
-- An agent merges only when the maintainer asks: Krister's request on the guided graph, or the automatic merge of the standard or lean graph, which the operating session uses only after Krister has switched routine tasks to it ([ADR 0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md)).
+- Agents do not merge. Krister merges after his approval as code owner, and `Bash(gh pr merge*)` is a deny rule in the project settings ([ADR 0084](../adr/0084-agent-sessions-in-auto-mode-inside-the-claude-code-sandbox-with-their-own-github-identity-and-the-maintainers-approval-on-main.md)). The automatic merge of handoff's standard and lean graphs, which [ADR 0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md) allowed, no longer applies.
 - The Claude Code Action (`@claude` on issues and pull requests, and scheduled prompts) runs as a custom GitHub App with only Contents, Issues and Pull requests permissions, with a turn limit, a job timeout and a concurrency group.
 - Actions execution policies let only the owner start the release and image workflows by `workflow_dispatch`.
 - Public issues and their comments are untrusted input for any agent.
