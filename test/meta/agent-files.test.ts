@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { parse } from 'yaml';
 import { root } from './docs.ts';
 
 /** The part of skills-lock.json that the skills check reads: the pinned skills by name. */
@@ -69,5 +70,78 @@ describe('operating session run checklist', () => {
 
     expect(step).toContain('design artifact');
     expect(step).toContain('compares its current version with the approved version id');
+  });
+});
+
+/** The frontmatter of a Claude Code agent file: the part between the first two --- lines. */
+interface AgentFrontmatter {
+  readonly name?: string;
+  readonly tools?: string | readonly string[];
+  readonly mcpServers?: readonly (string | Record<string, { readonly url?: string }>)[];
+  readonly hooks?: {
+    readonly PreToolUse?: readonly {
+      readonly matcher?: string;
+      readonly hooks?: readonly {
+        readonly type?: string;
+        readonly command?: string;
+        readonly onFailure?: string;
+      }[];
+    }[];
+  };
+}
+
+function agentFrontmatter(path: string): AgentFrontmatter {
+  const [, frontmatter = ''] = readFileSync(join(root, path), 'utf8').split(/^---$/m);
+  return parse(frontmatter) as AgentFrontmatter;
+}
+
+function toolList(tools: AgentFrontmatter['tools']): string[] {
+  if (tools === undefined) return [];
+  return typeof tools === 'string' ? tools.split(',').map((tool) => tool.trim()) : [...tools];
+}
+
+// The review before the pull request (CLAUDE.md, ADR 0065) runs as a project subagent, so every
+// session starts the same reviewer. It checks library behaviour against current docs through
+// Context7, declared in the agent file so it works without a user-level Context7 setup, and it
+// reports findings without editing the branch.
+describe('code-reviewer agent', () => {
+  const path = '.claude/agents/code-reviewer.md';
+
+  it('ADR0065 the code-reviewer agent has Context7 and no file-edit tools', () => {
+    const agent = agentFrontmatter(path);
+    const tools = toolList(agent.tools);
+
+    expect(agent.name).toBe('code-reviewer');
+    expect(tools).toEqual(
+      expect.arrayContaining(['mcp__context7__resolve-library-id', 'mcp__context7__query-docs']),
+    );
+    for (const editTool of ['Edit', 'Write', 'NotebookEdit']) {
+      expect(tools).not.toContain(editTool);
+    }
+    expect(agent.mcpServers).toContainEqual({
+      context7: expect.objectContaining({ url: 'https://mcp.context7.com/mcp' }),
+    });
+  });
+
+  // Bash can write, so a hook refuses every Bash command that is not a read (ADR 0065).
+  it('ADR0065 the code-reviewer agent runs its Bash commands through the read-only guard', () => {
+    const agent = agentFrontmatter(path);
+
+    expect(agent.hooks?.PreToolUse).toContainEqual({
+      matcher: 'Bash',
+      hooks: [
+        {
+          type: 'command',
+          command: 'node "$CLAUDE_PROJECT_DIR"/scripts/agents/review-bash-guard.mjs',
+          onFailure: 'block',
+        },
+      ],
+    });
+  });
+
+  it('ADR0065 CLAUDE.md sends the review before the pull request to the code-reviewer agent', () => {
+    const claude = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
+
+    expect(claude).toContain('`code-reviewer` subagent');
   });
 });
