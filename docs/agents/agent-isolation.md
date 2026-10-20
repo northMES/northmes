@@ -21,12 +21,26 @@ A sandboxed command can read the macOS keychain, so no GitHub credential stays t
 
 ## 4. Claude Code settings
 
-In `~/.claude/settings.json`, which applies to every project, set auto mode and open the folders that sandboxed commands need to read. Use the paths of your own Node and pnpm installs. Remove `skipDangerousModePermissionPrompt` if it is there.
+In `~/.claude/settings.json`, which applies to every project, set auto mode, lock the network allowlist and open the folders that sandboxed commands need to read. Without the lock, auto mode lets a command name hosts of its own, which the classifier may open; with it, Claude Code refuses every host outside the list and ignores the repository's `allowedDomains`, so the list here repeats the one in `.claude/settings.json`. The lock and the list apply to every project, so add the hosts your other projects need. Use the paths of your own Node and pnpm installs. Remove `skipDangerousModePermissionPrompt` if it is there.
 
 ```json
 {
   "permissions": { "defaultMode": "auto" },
   "sandbox": {
+    "network": {
+      "strictAllowlist": true,
+      "allowedDomains": [
+        "registry.npmjs.org",
+        "github.com",
+        "api.github.com",
+        "codeload.github.com",
+        "objects.githubusercontent.com",
+        "raw.githubusercontent.com",
+        "release-assets.githubusercontent.com",
+        "cdn.playwright.dev",
+        "playwright.download.prss.microsoft.com"
+      ]
+    },
     "filesystem": {
       "allowRead": [
         "~/.nvm",
@@ -40,7 +54,7 @@ In `~/.claude/settings.json`, which applies to every project, set auto mode and 
 }
 ```
 
-In the main checkout's local settings file, .claude/settings.local.json, which only this repository's sessions load, worktree sessions included, put the machine user's token and identity. Use the token from step 2, your home folder in `GH_CONFIG_DIR`, and the machine user's noreply address from its GitHub email settings.
+In the main checkout's local settings file, .claude/settings.local.json, which `.gitignore` keeps out of git and only this repository's sessions load, worktree sessions included, put the machine user's token and identity. Use the token from step 2, your home folder in `GH_CONFIG_DIR`, and the machine user's noreply address from its GitHub email settings.
 
 ```json
 {
@@ -80,7 +94,7 @@ Start a session in a worktree and ask it to run these commands and report each o
 
 - `ls ~/.ssh`, `ls ~/.config/gh` and `ls ~/Project` are refused with "Operation not permitted".
 - `security find-generic-password -s gh:github.com` and `security find-internet-password -s github.com` find nothing.
-- `curl -sS -o /dev/null -w '%{http_code}' https://example.com/` is refused by the proxy.
+- `curl -sS -o /dev/null -w '%{http_code}' https://example.com/` is refused by the proxy, also when the session names `example.com` as a host for the command.
 - `gh api user --jq .login` prints `northmes-agent`.
 - `git push --dry-run origin HEAD` reaches GitHub over HTTPS.
 - `docker run --rm -v "$HOME:/h:ro" alpine ls /h`, from your own terminal, fails with a file sharing error, because Docker Desktop does not share the folder.
