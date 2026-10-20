@@ -83,7 +83,7 @@ ADR 0050 is accepted, so its text stays as it was. This ADR replaces two parts o
 | Repository settings and rulesets: "Branch ruleset on `main`: pull request required with 0 approvals" | Pull request required with 1 approving review, and stale approvals dismissed on push. The rest of that line stands: review threads resolved, squash merge only, linear history, the strict required checks, force push and deletion blocked, no bypass actors |
 | Tooling modeled on gqlPrune: "The coder checks each finding against the issue and the ADRs instead of obeying it, and lists rejected findings with the reason in the pull request description." | The coder checks each finding against the issue and the ADRs instead of obeying it, and answers it as fixed with the commit, or as declined, unclear or a duplicate with its evidence. The pull request step posts each answer on the pull request, in the finding's thread when it has one, and resolves the thread after CodeRabbit's next review ([Review comments](../agents/handoff/README.md#review-comments)). The rest of that line stands |
 
-The `CODEOWNERS` line of ADR 0050 stands: code owner review stays off, because `CODEOWNERS` names only Krister and he cannot approve his own pull requests.
+The `CODEOWNERS` line of ADR 0050 stands: code owner review stays off, because `CODEOWNERS` names only Krister and he cannot approve his own pull requests. [ADR 0084](0084-agent-sessions-in-auto-mode-inside-the-claude-code-sandbox-with-their-own-github-identity-and-the-maintainers-approval-on-main.md) turns code owner review on once agents act as their own machine user, and CodeRabbit's approval then no longer satisfies the rule.
 
 ### Consequences
 
