@@ -1,6 +1,7 @@
 {
   "permissions": {
     "disableBypassPermissionsMode": "disable",
+    "blockReadsOutsideWorkingDirectories": true,
     "deny": [
       "Bash(npm *)",
       "Bash(npx *)",
@@ -17,17 +18,25 @@
       "Read(~/.gnupg/**)",
       "Edit(~/.ssh/**)",
       "Edit(~/.zshrc)",
+      "Edit(~/.zshenv)",
       "Edit(~/.zprofile)",
+      "Edit(~/.profile)",
       "Edit(~/.bashrc)",
       "Edit(~/.bash_profile)",
       "Edit(~/.gitconfig)",
-      "Edit(~/.claude/settings.json)"
+      "Edit(~/Library/LaunchAgents/**)",
+      "Edit(~/.claude/settings.json)",
+      "Edit(/.claude/settings.json)",
+      "Edit(/.claude/settings.local.json)",
+      "Edit(~/**/.claude/settings.json)",
+      "Edit(~/**/.claude/settings.local.json)"
     ]
   },
   "sandbox": {
     "enabled": true,
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
+    "enableWeakerNetworkIsolation": true,
     "filesystem": {
       "denyRead": [
         "~/.ssh",
@@ -36,11 +45,6 @@
         "~/.npmrc",
         "~/.netrc",
         "~/.gnupg"
-      ],
-      "allowWrite": [
-        "~/Library/pnpm/store",
-        "~/Library/Caches/pnpm",
-        "~/Library/Caches/ms-playwright"
       ]
     },
     "network": {
@@ -60,7 +64,6 @@
         "/var/run/docker.sock"
       ],
       "allowLocalBinding": true
-    },
-    "enableWeakerNetworkIsolation": true
+    }
   }
 }
