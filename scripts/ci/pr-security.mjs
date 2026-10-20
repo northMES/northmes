@@ -4,6 +4,7 @@
 // controls the change touches and the threat each one meets, or says none with a reason (ADR 0076).
 
 import { errorAnnotation } from './annotation.mjs';
+import { section } from './pr-body.mjs';
 
 // Renovate's and release-please's pull requests, as CI / linked issue exempts them: neither app
 // writes the section, and dependency updates go through the license and supply-chain checks.
@@ -13,58 +14,18 @@ const releaseBranch = 'release-please--branches--';
 // "None" alone, or a stand-in for it, gives no reason, also with emphasis or a closing mark.
 const bareNone = /^[-*_\s]*(?:none|n\/a|na|-)[*_]*[.!:]?[*_]*$/i;
 
-// A line that opens or closes a fenced code block, whose lines GitHub renders as code.
-const fence = /^\s{0,3}(?:```|~~~)/;
-
-/**
- * The text without its HTML comments, as GitHub renders it: a comment that is never closed hides
- * the rest of the text.
- */
-function withoutComments(text) {
-  let kept = '';
-  let from = 0;
-  for (;;) {
-    const open = text.indexOf('<!--', from);
-    if (open === -1) return kept + text.slice(from);
-    kept += text.slice(from, open);
-    const close = text.indexOf('-->', open + 4);
-    if (close === -1) return kept;
-    from = close + 3;
-  }
-}
-
-/** The text of the body's `## Security` section without HTML comments, or undefined without one. */
-function securitySection(body) {
-  const lines = withoutComments(body).split(/\r?\n/);
-  let inFence = false;
-  // Whether each line is a heading of level 1 or 2 outside a fenced code block.
-  const headings = lines.map((line) => {
-    if (fence.test(line)) inFence = !inFence;
-    return !inFence && /^#{1,2}\s/.test(line.trim());
-  });
-  const start = lines.findIndex(
-    (line, index) => headings[index] && /^##\s+Security\s*$/i.test(line.trim()),
-  );
-  if (start === -1) return undefined;
-  const end = headings.findIndex((heading, index) => heading && index > start);
-  return lines
-    .slice(start + 1, end === -1 ? undefined : end)
-    .join('\n')
-    .trim();
-}
-
 export function checkPrSecurity({ body, author, headRef, fromFork }) {
   const release = !fromFork && headRef.startsWith(releaseBranch);
   if (author === renovate || release) return { ok: true, message: '' };
-  const section = securitySection(body);
-  if (section === undefined) {
+  const security = section(body, 'Security');
+  if (security === undefined) {
     return {
       ok: false,
       message:
         'The pull request body has no ## Security section. Name the controls this change touches and the threat each one meets, or "None" with a reason (ADR 0076).',
     };
   }
-  if (section === '' || bareNone.test(section)) {
+  if (security === '' || bareNone.test(security)) {
     return {
       ok: false,
       message:
