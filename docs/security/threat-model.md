@@ -40,6 +40,7 @@ One installation serves one customer ([ADR 0072](../adr/0072-one-installation-pe
 | Permissions and role assignments | Decide who may do what | Postgres `core` tables |
 | The audit trail and security events (decided, [#443](https://github.com/northMES/northmes/issues/443)) | Show who changed what, for the customer and an auditor | Postgres `audit` schema |
 | The code that runs: the image, the plugins, the web bundle | A changed artifact runs with full rights | ghcr.io, the host, the plugin volume |
+| The maintainer's credentials on the development workstation: GitHub tokens, SSH keys, registry tokens | Whoever holds them pushes, publishes or acts as the maintainer in this and other organizations | `~/.ssh`, `~/.config/gh`, `~/.npmrc` and the macOS keychain on the maintainer's machine |
 | Availability of the plant's planning | Planners and operators wait when it is down | The whole stack |
 
 ## Zones and conduits
@@ -50,6 +51,7 @@ One installation serves one customer ([ADR 0072](../adr/0072-one-installation-pe
 | Z2 Host | Caddy, the NorthMES server with its plugins, the host operator's shell, `secrets/` | Trusted; the host operator is pilot IT |
 | Z3 Database | Postgres, its volume and backups | Trusted; reached only from Z2 with role passwords |
 | Z4 Build and supply chain | GitHub, CI runners, ghcr.io, the npm registry, Argos | Trusted for what it signs and pins; a third party for the rest |
+| Z5 Development workstation | The maintainer's machine, where Claude Code sessions and workflows build NorthMES, often unattended | Partly trusted: sessions act on untrusted input (public issues, pull request comments, web pages, packages), so they run inside the Claude Code sandbox (ADR 0084) |
 
 | Conduit | From, to | Protocol |
 |---|---|---|
@@ -60,6 +62,7 @@ One installation serves one customer ([ADR 0072](../adr/0072-one-installation-pe
 | C5 | ERP and other systems (Z1) to the server (Z2) | Files or an API (later) |
 | C6 | Source to the running image (Z4 to Z2) | GitHub Actions, ghcr.io, `docker compose pull` |
 | C7 | CI to third-party services (Z4) | Argos upload, Scorecard |
+| C8 | Agent sessions (Z5) to the repository and GitHub (Z4) | git over HTTPS and the GitHub API with the agent machine user's token; Docker on the workstation for Testcontainers |
 
 ## Surfaces
 
@@ -81,6 +84,7 @@ Each entry point, the conduit it sits on and the credential it accepts. A surfac
 | Database | built | C2, C3 | role passwords: `nm_app`, `nm_auth` at run time, `nm_owner` for migrations only |
 | Release and image | built | C6 | GitHub's release workflow; image digests in the release notes |
 | Argos visual snapshots | decided (ADR 0077) | C7 | `ARGOS_TOKEN`, a repository secret |
+| Agent sessions acting on the repository: Claude Code sessions and workflows that push branches, open pull requests and comment | built (sandbox and auto mode in `.claude/settings.json`), decided (machine user, code owner review, Docker file sharing; ADR 0084) | C8 | the `northmes-agent` machine user's fine-grained token for `northMES/northmes` |
 
 ## Threats and controls
 
@@ -156,6 +160,19 @@ Each table lists the threats that matter at that conduit, not every STRIDE lette
 | A device on the plant network poses as a station | S | A station key registered by an admin, in a `__Host-` cookie, accepted only on the station route | decided (ADR 0033) |
 | Badge numbers are guessed at a station | S | 5 unknown badges within 60 seconds lock badge sign-in on that station for 5 minutes and write a security event | decided (ADR 0033) |
 | An operator's action is recorded as someone else's | R | The station is the principal and the signed-in operator is `acting_for` | decided (ADR 0011) |
+
+### C8: agent sessions on the repository
+
+| Threat | STRIDE | Controls | Status |
+|---|---|---|---|
+| An instruction injected through an issue, a comment, a web page or a package makes a session read the maintainer's credentials and send them out | I, S | Sessions run in auto mode with bypass disabled; the sandbox denies `~/.ssh`, `~/.config/gh`, `~/.aws`, `~/.npmrc`, `~/.netrc` and `~/.gnupg` to shell commands and the file tools; the maintainer's GitHub credentials leave the macOS keychain, which the sandbox does not cover; sandboxed commands reach only the npm registry, GitHub and the Playwright downloads (ADR 0084; `test/meta/agent-sandbox.test.ts`) | built (settings), decided (keychain) |
+| A session pushes a workflow that reads a repository secret, adds a key to an account, or changes repository settings | E, I | Sessions hold only the machine user's token: one repository, Contents, Pull requests and Issues, no Workflows, Actions, Administration or Secrets permission, 90 days (ADR 0084; [project credentials](project-credentials.md)) | decided |
+| A session's change reaches `main` without a person reviewing it | T, E | `main` requires code owner review, and only the maintainer is a code owner; CodeRabbit's approval does not count; no bypass actors; `Bash(gh pr merge*)` is a deny rule (ADR 0084, ADR 0065) | decided, accepted A-06 until the ruleset changes |
+| A session changes the workstation outside its worktree (shell start-up files, git hooks, other repositories, its own user settings) so that code runs later with the maintainer's rights | E | Sandboxed commands write only to the worktree, temp and the pnpm and Playwright caches; no command runs unsandboxed; deny rules keep the file tools off the shell start-up files, `~/.gitconfig`, `~/.ssh` and `~/.claude/settings.json`; the auto mode classifier reviews the file tools | built |
+| A session loosens its own boundary by editing `.claude/settings.json` | T, E | The project settings reach `main` only through a pull request that the maintainer approves; `test/meta/agent-sandbox.test.ts` fails a change that widens them | built (test), decided (code owner review) |
+| A session drives Docker to mount a host folder or to reach a host outside the network allowlist | E, I | Docker Desktop shares no folder that holds credentials or a NorthMES checkout; a container still has the Docker VM's rights and its own network egress | accepted A-07 in the [risk register](risks.md) |
+| A session sends data to a host behind an allowed name, because the proxy decides on host names without inspecting TLS, or through the TLS trust service that gh needs | I | The data within reach is the public source and the machine user's narrow token | accepted A-07 |
+| An agent's change is recorded as the maintainer's | R | Commits, pull requests and comments carry the machine user's identity (ADR 0084) | decided |
 
 ### C6 and C7: supply chain, CI and third parties
 
