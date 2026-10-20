@@ -16,8 +16,8 @@ export const signSentence =
   'I have read the NorthMES Individual Contributor License Agreement, version 0.1, and I agree to its terms for all my past and future contributions to NorthMES.';
 
 // The accounts that pass without a signature, by GitHub user id, which a rename does not change.
-// The maintainer holds the copyright, and so does the machine user that agent sessions act as for
-// him (docs/adr/0084). Renovate's commits only update dependency versions.
+// The maintainer holds the copyright, also to the work of the machine user that agent sessions act
+// as for him (docs/adr/0084). Renovate's commits only update dependency versions.
 const maintainer = 24939000; // Krister-Johansson
 const agent = 345317483; // northmes-agent
 const renovate = 29139614; // renovate[bot]

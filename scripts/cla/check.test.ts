@@ -233,6 +233,32 @@ describe('CI / cla', () => {
     expect(result).toMatchObject({ ok: true });
   });
 
+  // The maintainer can open a pull request that carries an agent's commits.
+  it("a commit by northmes-agent passes on the maintainer's pull request", async () => {
+    const maintainer = { login: 'Krister-Johansson', id: 24939000, type: 'User' };
+    const agent = { login: 'northmes-agent', id: 345317483, type: 'User' };
+    const routes = pullRequest(
+      703,
+      'pull-renovate.json',
+      'commits-renovate.json',
+      'signed-on-main.json',
+    );
+    const commits = JSON.parse(fixture('commits-by-contributor.json'));
+    routes[`repos/${repository}/pulls/703`] = JSON.stringify({
+      ...JSON.parse(fixture('pull-renovate.json')),
+      user: maintainer,
+      commits: commits.length,
+    });
+    routes[`repos/${repository}/pulls/703/commits?per_page=100&page=1`] = JSON.stringify([
+      { ...commits[0], author: maintainer },
+      { ...commits[1], author: agent },
+    ]);
+
+    const result = await check(routes, 703);
+
+    expect(result).toMatchObject({ ok: true });
+  });
+
   // A commit that someone else pushes onto an agent's branch is still checked.
   it('a northmes-agent pull request with an unsigned person among its commit authors fails', async () => {
     const agent = { login: 'northmes-agent', id: 345317483, type: 'User' };
