@@ -79,4 +79,22 @@ describe('react-doctor', () => {
     expect(rootManifest.dependencies?.['react-doctor']).toBeUndefined();
     expect(readWorkspace().catalog?.['react-doctor']).toMatch(/^\d+\.\d+\.\d+$/);
   });
+
+  // Until the vendor confirms agent use, an agent must not run it, and a deny rule holds where an
+  // instruction in AGENTS.md can be missed. Claude Code matches a Bash rule by its command prefix.
+  it('ADR0040 the Claude Code project settings deny every pnpm form of react-doctor', () => {
+    const settings = JSON.parse(readText('.claude/settings.json')) as {
+      permissions?: { deny?: string[] };
+    };
+
+    expect(settings.permissions?.deny).toEqual(
+      expect.arrayContaining([
+        'Bash(react-doctor *)',
+        'Bash(pnpm react-doctor*)',
+        'Bash(pnpm run react-doctor*)',
+        'Bash(pnpm exec react-doctor*)',
+        'Bash(pnpm dlx react-doctor*)',
+      ]),
+    );
+  });
 });

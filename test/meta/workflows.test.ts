@@ -56,7 +56,7 @@ function rootScript(name: string | undefined): string | undefined {
 
 // The pull request checks read the pull request instead of the code, so no root script runs them
 // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
-const pullRequestChecks = ['pr title', 'linked issue', 'pr security', 'openapi diff'];
+const pullRequestChecks = ['pr title', 'linked issue', 'pr security', 'pr tests', 'openapi diff'];
 
 // The steps that copy a report of an earlier step into the job summary. They check nothing, so no
 // root script runs them.
@@ -117,6 +117,16 @@ const pullRequestCheckSteps = {
       PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
     },
   },
+  'pr tests': {
+    run: 'node scripts/ci/pr-tests.mjs',
+    env: {
+      PR_TITLE: expression('github.event.pull_request.title'),
+      PR_BODY: expression('github.event.pull_request.body'),
+      PR_AUTHOR: expression('github.event.pull_request.user.login'),
+      PR_HEAD_REF: expression('github.event.pull_request.head.ref'),
+      PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
+    },
+  },
   'openapi diff': {
     run: 'node scripts/ci/openapi-diff.mjs',
     env: {
@@ -141,6 +151,7 @@ const ciJobs = [
   'pr title',
   'linked issue',
   'pr security',
+  'pr tests',
   'openapi diff',
   'gate',
 ];
@@ -736,7 +747,7 @@ describe('workflows', () => {
 
   // A push to main has no pull request to check. An event value interpolated into a run script
   // could inject shell code, so the scripts read the pull request from environment variables.
-  it('CI / pr title, CI / linked issue, CI / pr security and CI / openapi diff run on pull requests only and read the pull request from environment variables', () => {
+  it('CI / pr title, CI / linked issue, CI / pr security, CI / pr tests and CI / openapi diff run on pull requests only and read the pull request from environment variables', () => {
     for (const [name, step] of Object.entries(pullRequestCheckSteps)) {
       const { job } = jobNamed(name);
 
@@ -747,7 +758,7 @@ describe('workflows', () => {
 
   // The opened, synchronize and reopened types are the default; edited re-runs both checks after a
   // fix to the title or body.
-  it('ADR0076 CI / gate needs CI / pr title, CI / linked issue and CI / pr security, and an edited pull request re-runs them', () => {
+  it('ADR0076 CI / gate needs CI / pr title, CI / linked issue, CI / pr security and CI / pr tests, and an edited pull request re-runs them', () => {
     const { workflow, id } = jobNamed('gate');
     const needed = allNeedsOf(workflow.jobs, id).map((need) => workflow.jobs[need]?.name);
     const on = workflow.on as { pull_request?: { types?: string[] } };
@@ -773,7 +784,7 @@ describe('workflows', () => {
 
   // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
   // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
-  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue, pr security, openapi diff, gate and cla', () => {
+  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue, pr security, pr tests, openapi diff, gate and cla', () => {
     const ci = workflows().find(({ name }) => name === 'CI');
 
     expect(ci, 'a workflow named CI').toBeDefined();
@@ -782,6 +793,20 @@ describe('workflows', () => {
         .map(({ name }) => name)
         .sort(),
     ).toEqual([...ciJobs, ...ungatedCiJobs].sort());
+  });
+
+  // CI checks out the pull request's merge commit; its first parent is the base branch, so a depth
+  // of 2 holds both sides of the diff. The job reads code only, so it keeps no credentials.
+  it("CI / pr tests checks out the merge commit with its first parent and without credentials", () => {
+    const { job } = jobNamed('pr tests');
+
+    expect(job.permissions).toEqual({ contents: 'read' });
+    expect(job.steps?.[0]).toEqual(
+      expect.objectContaining({
+        uses: expect.stringMatching(/^actions\/checkout@[0-9a-f]{40}$/),
+        with: { 'fetch-depth': 2, 'persist-credentials': false },
+      }),
+    );
   });
 
   // oasdiff compares the base branch's schema/openapi-v1.json with the pull request's (ADR 0064).
