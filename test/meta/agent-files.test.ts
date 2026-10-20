@@ -97,7 +97,7 @@ function toolList(tools: AgentFrontmatter['tools']): string[] {
 describe('code-reviewer agent', () => {
   const path = '.claude/agents/code-reviewer.md';
 
-  it('ADR0065 the code-reviewer agent has Context7 and no edit tools', () => {
+  it('ADR0065 the code-reviewer agent has Context7 and no file-edit tools', () => {
     const agent = agentFrontmatter(path);
     const tools = toolList(agent.tools);
 
@@ -105,8 +105,9 @@ describe('code-reviewer agent', () => {
     expect(tools).toEqual(
       expect.arrayContaining(['mcp__context7__resolve-library-id', 'mcp__context7__query-docs']),
     );
-    expect(tools).not.toContain('Edit');
-    expect(tools).not.toContain('Write');
+    for (const editTool of ['Edit', 'Write', 'NotebookEdit']) {
+      expect(tools).not.toContain(editTool);
+    }
     expect(agent.mcpServers).toContainEqual({
       context7: expect.objectContaining({ url: 'https://mcp.context7.com/mcp' }),
     });
