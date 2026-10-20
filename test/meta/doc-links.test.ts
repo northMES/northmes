@@ -120,6 +120,7 @@ function backtickedRepoPaths(markdown: string): string[] {
       (token) =>
         !/[\s*?[\]{}<>]/.test(token) &&
         !token.startsWith('node_modules/') &&
+        !/^[~/]/.test(token) &&
         (knownExtension.test(token) || topLevelFolder.test(token)),
     )
     .map((token) => token.replace(/\/+$/, ''));
@@ -324,6 +325,7 @@ describe('doc links', () => {
       'Not paths: `schema/*.graphql`, `modules/*/contracts`, `docs/adr/<name>.md`, `node_modules/x/y.md`,',
       '`northmes/northmes`, `sql.raw`, `github.reviewers_timeout`, `@northmes/source`, `pnpm check`',
       'and `test:`.',
+      'Outside the repository: `~/.claude/settings.json` and `/var/run/docker.sock`.',
       '',
       '```sh',
       'cat `docs/plan/in-a-fence.md`',

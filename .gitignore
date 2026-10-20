@@ -36,8 +36,9 @@ coverage/
 # Output of the to-questionnaire skill (may hold product owner material).
 /to-questionnaire-*.md
 
-# Personal Claude Code instructions (maintainer only).
+# Personal Claude Code instructions and local settings, which hold the agent's token (ADR 0084).
 CLAUDE.local.md
+.claude/settings.local.json
 
 # The secret files of a Compose installation tried from deploy/ (ADR 0080).
 /deploy/secrets/
