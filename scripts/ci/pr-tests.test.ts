@@ -6,7 +6,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { checkPrTests, parseNameStatus } from './pr-tests.mjs';
+import { stages } from '../gen.mjs';
+import { checkPrTests, generatedFiles, parseNameStatus } from './pr-tests.mjs';
 
 const script = fileURLToPath(new URL('./pr-tests.mjs', import.meta.url));
 
@@ -178,14 +179,70 @@ describe('CI / pr tests', () => {
     expect(checkPrTests(pullRequest('feat(planning): split a run', changes)).ok).toBe(false);
   });
 
-  it("reads git's name-status lines, a moved file under its new path", () => {
-    const output = 'M\tmodules/a.ts\nR087\tmodules/old.test.ts\tmodules/new.test.ts\nD\te2e/b.spec.ts\n';
+  // -z keeps every path as git stores it; without it git quotes a path with unusual characters.
+  it("reads git's NUL-separated name-status records, a moved file under its new path", () => {
+    const output = [
+      'M',
+      'modules/a.ts',
+      'R087',
+      'modules/old.test.ts',
+      'modules/new.test.ts',
+      'D',
+      'modules/planning/core/k\u00f6rning.test.ts',
+      '',
+    ].join('\0');
 
     expect(parseNameStatus(output)).toEqual([
       { status: 'M', path: 'modules/a.ts' },
       { status: 'R087', path: 'modules/new.test.ts' },
-      { status: 'D', path: 'e2e/b.spec.ts' },
+      { status: 'D', path: 'modules/planning/core/k\u00f6rning.test.ts' },
     ]);
+  });
+
+  it('the generated files it skips are the outputs of every pnpm gen stage', () => {
+    expect([...generatedFiles].sort()).toEqual(
+      expect.arrayContaining(stages.flatMap(({ outputs }) => outputs).sort()),
+    );
+  });
+
+  it('a fix pull request that only regenerates the shared web shims passes', () => {
+    const changes = [{ status: 'M', path: 'apps/web/public/shared/apollo-client.js' }];
+
+    expect(checkPrTests(pullRequest('fix(web): share Apollo', changes)).ok).toBe(true);
+  });
+
+  // The scripts carry tests next to them, the CI checks among them.
+  it('a fix pull request that changes a script and no test fails', () => {
+    const changes = [{ status: 'M', path: 'scripts/ci/pr-security.mjs' }];
+
+    expect(checkPrTests(pullRequest('fix(ci): read the section', changes)).ok).toBe(false);
+  });
+
+  // "None" gives no reason, as CI / pr security also refuses it.
+  it('a Removed tests section that says none without a reason fails', () => {
+    const changes = [{ status: 'D', path: 'modules/planning/core/run.test.ts' }];
+
+    for (const none of ['None', 'N/A', '- none.']) {
+      const body = `## Removed tests\n${none}\n`;
+      expect(checkPrTests(pullRequest('chore: drop runs', changes, body)).ok, none).toBe(false);
+    }
+  });
+
+  // The skills under .claude are third-party or tooling code, pinned in skills-lock.json.
+  it('tests under .claude neither count as a test change nor need a Removed tests section', () => {
+    const vendored = '.claude/skills/security-audit/validate-findings.test.cjs';
+
+    expect(
+      checkPrTests(pullRequest('chore: update a skill', [{ status: 'D', path: vendored }])).ok,
+    ).toBe(true);
+    expect(
+      checkPrTests(
+        pullRequest('feat(planning): split a run', [
+          { status: 'M', path: 'modules/planning/core/run.ts' },
+          { status: 'M', path: vendored },
+        ]),
+      ).ok,
+    ).toBe(false);
   });
 
   // A revert takes its tests out with the change it reverts.

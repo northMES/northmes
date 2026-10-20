@@ -81,8 +81,9 @@ describe('react-doctor', () => {
   });
 
   // Until the vendor confirms agent use, an agent must not run it, and a deny rule holds where an
-  // instruction in AGENTS.md can be missed. Claude Code matches a Bash rule by its command prefix.
-  it('ADR0040 the Claude Code project settings deny every pnpm form of react-doctor', () => {
+  // instruction in AGENTS.md can be missed. A * in a Claude Code Bash rule matches any text, so
+  // `pnpm * react-doctor*` covers pnpm run, exec, dlx, -w and --filter.
+  it('ADR0040 the Claude Code project settings deny react-doctor through pnpm and its binary', () => {
     const settings = JSON.parse(readText('.claude/settings.json')) as {
       permissions?: { deny?: string[] };
     };
@@ -91,9 +92,8 @@ describe('react-doctor', () => {
       expect.arrayContaining([
         'Bash(react-doctor *)',
         'Bash(pnpm react-doctor*)',
-        'Bash(pnpm run react-doctor*)',
-        'Bash(pnpm exec react-doctor*)',
-        'Bash(pnpm dlx react-doctor*)',
+        'Bash(pnpm * react-doctor*)',
+        'Bash(*node_modules/.bin/react-doctor*)',
       ]),
     );
   });
