@@ -85,6 +85,7 @@ Each entry point, the conduit it sits on and the credential it accepts. A surfac
 | Release and image | built | C6 | GitHub's release workflow; image digests in the release notes |
 | Argos visual snapshots | decided (ADR 0077) | C7 | `ARGOS_TOKEN`, a repository secret |
 | Agent sessions acting on the repository: Claude Code sessions and workflows that push branches, open pull requests and comment | built (sandbox, read block and bypass disabled in `.claude/settings.json`; `.github/CODEOWNERS`), decided (auto mode in user settings, machine user, code owner review in the ruleset, Docker file sharing; ADR 0084, [#737](https://github.com/northMES/northmes/issues/737)) | C8 | the `northmes-agent` machine user's fine-grained token for `northMES/northmes` |
+| Replay eval trials: headless sessions that deliver old issues from merged pull requests, and the grading that runs their code | decided (ADR 0085) | C8 | none: no GitHub token; the eval API key reaches Claude Code through `apiKeyHelper` |
 
 ## Threats and controls
 
@@ -175,6 +176,7 @@ Each table lists the threats that matter at that conduit, not every STRIDE lette
 | A session drives Docker to mount a host folder or to reach a host outside the network allowlist | E, I | Docker Desktop shares no folder that holds credentials or a NorthMES checkout; a container still has the Docker VM's rights and its own network egress | accepted A-07 in the [risk register](risks.md) |
 | A session sends data out through an allowed host (a repository or package of its own on GitHub or npm, or a host behind an allowed name, because the proxy does not inspect TLS), through the TLS trust service that gh needs, or calls a service on a localhost port | I, E | What a session can read is the worktree, which holds the public source, and the machine user's narrow token; local services hold their own credentials | accepted A-07 |
 | An agent's change is recorded as the maintainer's | R | Pushes, pull requests and comments are made with the machine user's token, so GitHub records them as its own; commit author fields come from the session's environment and prove nothing while commits are unsigned (ADR 0050) | decided |
+| A replayed issue carries an injected instruction, or a trial's code runs with the maintainer's rights when it is graded | E, I | Trials and their grading run inside the ADR 0084 sandbox with reviewed trial user settings that allow no GitHub host and deny web fetch and search; no GitHub token and no settings.local.json reach a trial; nothing a trial wrote is installed, because a trial that changes the lockfile or `pnpm-workspace.yaml` fails; results go to the maintainer's private repository, never this one (ADR 0085) | decided |
 
 ### C6 and C7: supply chain, CI and third parties
 
