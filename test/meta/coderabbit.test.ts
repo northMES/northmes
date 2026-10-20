@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
 interface CodeRabbitConfig {
-  reviews?: { request_changes_workflow?: boolean };
+  reviews?: { request_changes_workflow?: boolean; allow_author_approval?: boolean };
 }
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
@@ -22,4 +22,10 @@ describe('.coderabbit.yaml', () => {
     expect(config.reviews?.request_changes_workflow).toBe(false);
   });
 
+  // Agents open pull requests as northmes-agent, so the author is the agent. With author approval
+  // on, the agent could resolve every CodeRabbit thread with one comment and empty the rule that
+  // review threads are resolved before a merge; the maintainer can still use the commands.
+  it('ADR0084 the author of a pull request cannot resolve or approve CodeRabbit threads by command', () => {
+    expect(config.reviews?.allow_author_approval).toBe(false);
+  });
 });
