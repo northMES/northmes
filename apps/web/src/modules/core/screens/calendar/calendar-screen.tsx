@@ -258,6 +258,8 @@ function DeviationsSection({
 
 /** One block of a day column: its hours and its texts. */
 interface DayBlock {
+  /** Unique within the day: the deviation's id for overtime, the pattern's part otherwise. */
+  readonly id: string;
   readonly kind: 'shift' | 'break' | 'overtime' | 'closed';
   readonly from: number;
   readonly to: number;
@@ -277,33 +279,61 @@ function blocksOf(
   machine: string | undefined,
   machineName: (code: string) => string,
 ): {
-  readonly blocks: readonly DayBlock[];
+  readonly blocks: readonly PlacedBlock[];
   readonly closed: PlantCalendarDeviation | undefined;
   readonly machineClosures: readonly PlantCalendarDeviation[];
 } {
   const day = calendarDay(calendar, date, weekday, machine);
+  const start = hoursOf(calendar.shift.start);
+  const end = hoursOf(calendar.shift.end);
+  // A shift belongs to the date it starts and may cross midnight (ADR 0025 rule 1): its part
+  // after midnight, with the breaks in it, sits at the top of the next day.
+  const crosses = end <= start;
+  const afterMidnight = (clock: string) => crosses && hoursOf(clock) < start;
+  const label = `${calendar.shiftName} ${calendar.shift.start} to ${calendar.shift.end}`;
+  const breakBlock = (each: { readonly start: string; readonly end: string }, id: string) => ({
+    id,
+    kind: 'break' as const,
+    from: hoursOf(each.start),
+    to: hoursOf(each.end) > hoursOf(each.start) ? hoursOf(each.end) : 24,
+    label: `Break ${each.start} to ${each.end}`,
+  });
   const blocks: DayBlock[] = [];
+  const weekdayBefore = weekday === 1 ? 7 : weekday - 1;
+  // A closure of this day covers the part after midnight; one of the day before does not.
+  if (crosses && calendar.weekdays.includes(weekdayBefore) && day.closed === undefined) {
+    blocks.push({
+      id: 'shift-before',
+      kind: 'shift',
+      from: 0,
+      to: end,
+      label,
+      sub: `From ${weekdayName(weekdayBefore).slice(0, 3)}`,
+    });
+    for (const each of calendar.breaks.filter((one) => afterMidnight(one.start))) {
+      blocks.push(breakBlock(each, `break-before-${each.start}`));
+    }
+  }
   if (day.working) {
     blocks.push({
+      id: 'shift',
       kind: 'shift',
-      from: hoursOf(calendar.shift.start),
-      to: hoursOf(calendar.shift.end),
-      label: `${calendar.shiftName} ${calendar.shift.start} to ${calendar.shift.end}`,
+      from: start,
+      to: crosses ? 24 : end,
+      label,
       sub: hoursText(calendar.workingSecondsPerDay),
     });
-    for (const each of calendar.breaks) {
-      blocks.push({
-        kind: 'break',
-        from: hoursOf(each.start),
-        to: hoursOf(each.end),
-        label: `Break ${each.start} to ${each.end}`,
-      });
+    for (const each of calendar.breaks.filter((one) => !afterMidnight(one.start))) {
+      blocks.push(breakBlock(each, `break-${each.start}`));
     }
   }
   for (const deviation of day.overtime) {
-    const from = hoursOf(clockOf(deviation.startsLocal));
-    const to = hoursOf(clockOf(deviation.endsLocal));
+    // The part of the deviation on this day: from midnight when it began the day before, to
+    // midnight when it ends on a later day.
+    const from = dateOf(deviation.startsLocal) < date ? 0 : hoursOf(clockOf(deviation.startsLocal));
+    const to = dateOf(deviation.endsLocal) > date ? 24 : hoursOf(clockOf(deviation.endsLocal));
     blocks.push({
+      id: deviation.id,
       kind: 'overtime',
       from,
       to,
@@ -315,7 +345,47 @@ function blocksOf(
       }, ${hoursText((to - from) * 3600)}`,
     });
   }
-  return { blocks, closed: day.closed, machineClosures: day.machineClosures };
+  return { blocks: placed(blocks), closed: day.closed, machineClosures: day.machineClosures };
+}
+
+/** A block with its place across the day: lane of lanes, one lane for the full width. */
+interface PlacedBlock extends DayBlock {
+  readonly lane: number;
+  readonly lanes: number;
+}
+
+/**
+ * The day's blocks with overtime that overlaps in time side by side: overtime blocks that overlap
+ * form a group, each takes the first free lane of its group, and the group's width is split by
+ * its lanes. Plant overtime and a machine's overtime at the same time stay both in view.
+ */
+function placed(blocks: readonly DayBlock[]): PlacedBlock[] {
+  const lanes = new Map<string, { readonly lane: number; readonly group: number }>();
+  const groupLanes: number[] = [];
+  let groupEnd = Number.NEGATIVE_INFINITY;
+  let laneEnds: number[] = [];
+  const overtime = blocks
+    .filter((block) => block.kind === 'overtime')
+    .toSorted((a, b) => a.from - b.from);
+  for (const block of overtime) {
+    if (block.from >= groupEnd) {
+      groupLanes.push(0);
+      laneEnds = [];
+    }
+    const free = laneEnds.findIndex((laneEnd) => laneEnd <= block.from);
+    const lane = free === -1 ? laneEnds.length : free;
+    laneEnds[lane] = block.to;
+    const group = groupLanes.length - 1;
+    groupLanes[group] = Math.max(groupLanes[group] ?? 0, laneEnds.length);
+    groupEnd = Math.max(groupEnd, block.to);
+    lanes.set(block.id, { lane, group });
+  }
+  return blocks.map((block) => {
+    const at = lanes.get(block.id);
+    return at === undefined
+      ? { ...block, lane: 0, lanes: 1 }
+      : { ...block, lane: at.lane, lanes: groupLanes[at.group] ?? 1 };
+  });
 }
 
 /** "on Mill 1" or "on CNC 1, CNC 2": the machines a deviation applies to, or nothing if plant-wide. */
@@ -519,13 +589,22 @@ function WeekSection({
               >
                 {blocks.map((block) => (
                   <div
-                    key={`${block.kind}-${block.from}`}
+                    key={block.id}
                     className={cn(
-                      'absolute inset-x-1 overflow-hidden rounded-sm border px-1.5 text-xs leading-4',
+                      'absolute overflow-hidden rounded-sm border px-1.5 text-xs leading-4',
+                      block.lanes === 1 && 'inset-x-1',
                       block.kind === 'break' ? 'py-0 text-tick' : 'py-1',
                       blockClass[block.kind],
                     )}
-                    style={{ top: y(block.from), height: y(block.to) - y(block.from) }}
+                    style={{
+                      top: y(block.from),
+                      height: y(block.to) - y(block.from),
+                      // Lane of lanes across the day's width inside its 0.25rem inset.
+                      ...(block.lanes > 1 && {
+                        left: `calc(0.25rem + (100% - 0.5rem) * ${block.lane / block.lanes})`,
+                        width: `calc((100% - 0.5rem) / ${block.lanes})`,
+                      }),
+                    }}
                   >
                     <span className={cn('block', block.kind !== 'break' && 'font-semibold')}>
                       {block.label}
