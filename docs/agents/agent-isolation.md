@@ -21,7 +21,7 @@ A sandboxed command can read the macOS keychain, so no GitHub credential stays t
 
 ## 4. Claude Code settings
 
-In `~/.claude/settings.json`, which applies to every project, set auto mode, lock the network allowlist and open the folders that sandboxed commands need to read. Without the lock, auto mode lets a command name hosts of its own, which the classifier may open; with it, Claude Code refuses every host outside the list and ignores the repository's `allowedDomains`, so the list here repeats the one in `.claude/settings.json`. The lock and the list apply to every project, so add the hosts your other projects need. Use the paths of your own Node and pnpm installs. Remove `skipDangerousModePermissionPrompt` if it is there.
+In `~/.claude/settings.json`, which applies to every project, set auto mode, lock the network allowlist and open the folders that sandboxed commands need to read. Without the lock, auto mode lets a command name hosts of its own, which the classifier may open; with it, Claude Code refuses every host outside the list and ignores the repository's `allowedDomains`, so the list here repeats the one in `.claude/settings.json`. The lock and the list apply to every project that uses this configuration folder, so keep the list to these hosts: a host added here opens for NorthMES sessions too. Run a project that needs other hosts with its own configuration folder, for example `CLAUDE_CONFIG_DIR=~/.claude-other claude`, which has its own user settings. Use the paths of your own Node and pnpm installs. Remove `skipDangerousModePermissionPrompt` if it is there.
 
 ```json
 {
