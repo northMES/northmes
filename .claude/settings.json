@@ -1,5 +1,12 @@
 {
   "permissions": {
-    "deny": ["Bash(npm *)", "Bash(npx *)"]
+    "deny": [
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(react-doctor *)",
+      "Bash(pnpm react-doctor*)",
+      "Bash(pnpm * react-doctor*)",
+      "Bash(*node_modules/.bin/react-doctor*)"
+    ]
   }
 }
