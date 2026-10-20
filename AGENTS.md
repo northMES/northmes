@@ -36,11 +36,11 @@ Deliver what the task or issue asks, at the scope it intends. Make routine judgm
 
 When an issue names a seam (the module boundary or interface to build at), build at that seam.
 
-Review happens on the pull request (CI, CodeRabbit and the maintainer), so hand the work over once `pnpm check` passes.
+Before the pull request opens, review the diff in a fresh context against the issue and its ADRs and handle the findings (`CLAUDE.md` gives the Claude Code steps). Review then happens on the pull request (CI, CodeRabbit and the maintainer), so hand the work over once `pnpm check` passes and the findings are handled.
 
 ## Subagents
 
-Delegate to a subagent only for large, independent tracks of work, such as a wide investigation across many files. Work you can finish in a handful of tool calls stays with you, and one subagent beats several when one can do the job.
+Delegate to a subagent only for large, independent tracks of work, such as a wide investigation across many files, and for the review before the pull request, which needs a fresh context. Work you can finish in a handful of tool calls stays with you, and one subagent beats several when one can do the job.
 
 ## Writing
 

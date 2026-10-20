@@ -96,6 +96,10 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | MIT packages import no AGPL code | built | `scripts/lint/mit-imports.mjs`; `test/meta/mit-imports.test.ts` |
 | The web uses no deprecated API of its dependencies (OpenSSF interfaces_current): the TypeScript language service's deprecation suggestions 6385 and 6387 fail the gate | built | `scripts/lint/deprecated-apis.mjs`; `test/meta/deprecated-apis.test.ts` |
 | Project credentials: short-lived workflow tokens with per-job permissions, every stored secret listed with who can change it and when it is rotated | built | [project-credentials.md](project-credentials.md); `test/meta/security-docs.test.ts` checks the list against the workflows |
+| Agent sessions run inside the Claude Code sandbox with bypass disabled: no unsandboxed command, no reads outside the working directories, credential paths and settings files denied, writes limited to the worktree and temp, network limited to the npm registry, GitHub and the Playwright downloads | built | ADR 0084; `.claude/settings.json`; `test/meta/agent-sandbox.test.ts`; [threat model C8](threat-model.md#c8-agent-sessions-on-the-repository) |
+| Agent sessions run in auto mode, act on GitHub as a machine user whose token reaches one repository without Workflows or admin permissions, and the maintainer's GitHub credentials are out of the macOS keychain | decided | ADR 0084; [docs/agents/agent-isolation.md](../agents/agent-isolation.md); [#737](https://github.com/northMES/northmes/issues/737) |
+| Only the maintainer's approval lets a pull request merge to `main` (code owner review) | built | ADR 0084; `.github/CODEOWNERS`, checked by `test/meta/agent-sandbox.test.ts`; the `main` ruleset requires code owner review since 2026-10-20 ([#737](https://github.com/northMES/northmes/issues/737)) |
+| Only the release workflow creates `v*` tags and releases | gap | [#738](https://github.com/northMES/northmes/issues/738) |
 | The public REST API does not break silently: `CI / openapi diff` compares `schema/openapi-v1.json` with the base branch through oasdiff, pinned by digest and run without network, and fails on a breaking change unless a 0.x title marks it with `!` | built | ADR 0064; `.github/workflows/ci.yml`, `scripts/ci/openapi-diff.mjs`; `scripts/ci/openapi-diff.test.ts`, `test/meta/workflows.test.ts` |
 | Origin and license of third-party components | built | `LICENSE`, `NOTICE`, `skills-lock.json`, SPDX headers |
 | Contributions under a signed CLA: `CI / cla` checks the pull request author and every commit author against `.github/cla/signed.json` on the default branch, with no checkout and a read-only token. It runs outside `CI / gate` for now, and joins `CI / gate` and the main ruleset before the first outside pull request | built | ADR 0039; `scripts/cla/check.mjs`, `.github/workflows/ci.yml`; `scripts/cla/check.test.ts`, `test/meta/workflows.test.ts`. The CLA texts wait for legal review |
@@ -134,7 +138,8 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Test first, with Postgres from Testcontainers and tests as `nm_app` | built | ADR 0041; `pnpm check` |
 | Lint, format and typecheck in CI; every CI job a required check | built | Biome; `.github/workflows/ci.yml`; ADR 0069 |
 | Module boundaries enforced | built | `scripts/lint/module-boundaries.mjs`; `test/meta/module-boundaries.test.ts` |
-| Review on every pull request by CodeRabbit and the maintainer | built | ADR 0065; `.coderabbit.yaml` |
+| Review on every pull request by CodeRabbit and the maintainer | built | ADR 0065, ADR 0084; `.coderabbit.yaml`; the `main` ruleset requires code owner review (since 2026-10-20) and `.github/CODEOWNERS` names the maintainer, so only his approval lets a pull request merge |
+| A review agent in a fresh context reviews a session's diff before its pull request opens, and the Checks section lists each finding with its outcome | decided | ADR 0065; `CLAUDE.md` (review before the pull request); an instruction, not yet checked by code or CI |
 
 ### 10. Process
 
@@ -143,4 +148,5 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Decisions recorded as ADRs, checked by a meta test | built | `docs/adr`; `test/meta/adr.test.ts` |
 | Every pull request linked to an issue, with a Conventional Commit title | built | `scripts/ci/linked-issue.mjs`, `scripts/ci/pr-title.mjs` |
 | A security note in every pull request | built | ADR 0076; `.github/PULL_REQUEST_TEMPLATE.md`, checked by `test/meta/security-docs.test.ts`; `CI / pr security` (`scripts/ci/pr-security.mjs`, `scripts/ci/pr-security.test.ts`) fails a pull request whose Security section is missing, empty or a bare none |
+| A test with every behaviour change, and a reason for every deleted test | built | AGENTS.md; `CI / pr tests` (`scripts/ci/pr-tests.mjs`, `scripts/ci/pr-tests.test.ts`) fails a `feat`, `fix` or `security` pull request that changes source and no test, and a pull request that deletes a test without a `## Removed tests` section |
 | An internal audit before each release and each quarter | decided | ADR 0076 |

@@ -4,7 +4,7 @@ This is NorthMES's threat model for release 1 and the pilot: what an attacker wo
 
 A control's status uses the words of the [controls index](README.md#controls-index): **built**, **decided**, **gap** or **accepted**. A threat that stays after its controls is a residual risk; the accepted ones, with an owner and a review date, are in the [risk register](risks.md). The broader project risks are in [plan 17](../plan/17-risks.md).
 
-Checked against `main` at fe15e3d on 2026-10-15.
+Checked against `main` at fe15e3d on 2026-10-15. The rows for agent sessions and code owner review were checked against `main` at 17df3ff8 and the live `main` ruleset on 2026-10-20.
 
 ## The system in one picture
 
@@ -40,6 +40,7 @@ One installation serves one customer ([ADR 0072](../adr/0072-one-installation-pe
 | Permissions and role assignments | Decide who may do what | Postgres `core` tables |
 | The audit trail and security events (decided, [#443](https://github.com/northMES/northmes/issues/443)) | Show who changed what, for the customer and an auditor | Postgres `audit` schema |
 | The code that runs: the image, the plugins, the web bundle | A changed artifact runs with full rights | ghcr.io, the host, the plugin volume |
+| The maintainer's credentials on the development workstation: GitHub tokens, SSH keys, registry tokens | Whoever holds them pushes, publishes or acts as the maintainer in this and other organizations | `~/.ssh`, `~/.config/gh`, `~/.npmrc` and the macOS keychain on the maintainer's machine |
 | Availability of the plant's planning | Planners and operators wait when it is down | The whole stack |
 
 ## Zones and conduits
@@ -50,6 +51,7 @@ One installation serves one customer ([ADR 0072](../adr/0072-one-installation-pe
 | Z2 Host | Caddy, the NorthMES server with its plugins, the host operator's shell, `secrets/` | Trusted; the host operator is pilot IT |
 | Z3 Database | Postgres, its volume and backups | Trusted; reached only from Z2 with role passwords |
 | Z4 Build and supply chain | GitHub, CI runners, ghcr.io, the npm registry, Argos | Trusted for what it signs and pins; a third party for the rest |
+| Z5 Development workstation | The maintainer's machine, where Claude Code sessions and workflows build NorthMES, often unattended | Partly trusted: sessions act on untrusted input (public issues, pull request comments, web pages, packages), so they run inside the Claude Code sandbox (ADR 0084) |
 
 | Conduit | From, to | Protocol |
 |---|---|---|
@@ -60,6 +62,7 @@ One installation serves one customer ([ADR 0072](../adr/0072-one-installation-pe
 | C5 | ERP and other systems (Z1) to the server (Z2) | Files or an API (later) |
 | C6 | Source to the running image (Z4 to Z2) | GitHub Actions, ghcr.io, `docker compose pull` |
 | C7 | CI to third-party services (Z4) | Argos upload, Scorecard |
+| C8 | Agent sessions (Z5) to the repository and GitHub (Z4) | git over HTTPS and the GitHub API with the agent machine user's token; Docker on the workstation for Testcontainers |
 
 ## Surfaces
 
@@ -81,6 +84,8 @@ Each entry point, the conduit it sits on and the credential it accepts. A surfac
 | Database | built | C2, C3 | role passwords: `nm_app`, `nm_auth` at run time, `nm_owner` for migrations only |
 | Release and image | built | C6 | GitHub's release workflow; image digests in the release notes |
 | Argos visual snapshots | decided (ADR 0077) | C7 | `ARGOS_TOKEN`, a repository secret |
+| Agent sessions acting on the repository: Claude Code sessions and workflows that push branches, open pull requests and comment | built (sandbox, read block, bypass disabled and a reviewed `env` block in `.claude/settings.json`; `.github/CODEOWNERS`; auto mode in user settings, machine user, code owner review in the ruleset and Docker file sharing, set up on 2026-10-20 under [#737](https://github.com/northMES/northmes/issues/737); ADR 0084) | C8 | the `northmes-agent` machine user's fine-grained token for `northMES/northmes` |
+| Replay eval trials: headless sessions that deliver old issues from merged pull requests, and the grading that runs their code | decided (ADR 0085) | C8 | none: no GitHub token; the eval API key reaches Claude Code through `apiKeyHelper` |
 
 ## Threats and controls
 
@@ -157,6 +162,23 @@ Each table lists the threats that matter at that conduit, not every STRIDE lette
 | Badge numbers are guessed at a station | S | 5 unknown badges within 60 seconds lock badge sign-in on that station for 5 minutes and write a security event | decided (ADR 0033) |
 | An operator's action is recorded as someone else's | R | The station is the principal and the signed-in operator is `acting_for` | decided (ADR 0011) |
 
+### C8: agent sessions on the repository
+
+| Threat | STRIDE | Controls | Status |
+|---|---|---|---|
+| An instruction injected through an issue, a comment, a web page or a package makes a session read the maintainer's credentials or private files and send them out | I, S | Bypass mode is disabled and sessions run in auto mode; the file tools and sandboxed commands read nothing outside the working directories except the toolchain folders the maintainer opens, and the credential paths are denied by name as well; the maintainer's GitHub credentials leave the macOS keychain, which the sandbox does not cover; sandboxed commands reach only the npm registry, GitHub and the Playwright downloads, and the allowlist is locked in user settings so a command cannot open a host of its own (ADR 0084; `test/meta/agent-sandbox.test.ts`) | built (settings), decided (auto mode, the locked allowlist, keychain) |
+| A session pushes a workflow that reads a repository secret, adds a key to an account, or changes repository settings | E, I | Sessions hold only the machine user's token: one repository, Contents, Pull requests and Issues, no Workflows, Actions, Administration or Secrets permission, 90 days (ADR 0084; [project credentials](project-credentials.md)) | decided |
+| A session's pull request changes what `pnpm e2e` runs, so the `e2e` job hands it `ARGOS_TOKEN` | I | The token reaches only the Argos project and grants nothing in GitHub; a visual change counts only after a person approves it in Argos (ADR 0077) | accepted A-07 |
+| A session creates a `v*` tag or a release whose notes point an installation at another image | T, S | Contents write allows both; the tag ruleset allows creation for release-please (ADR 0050) | gap [#738](https://github.com/northMES/northmes/issues/738) |
+| A session's change reaches `main` without a person reviewing it, through its own approval, CodeRabbit's or a merge it starts | T, E | `.github/CODEOWNERS` names only the maintainer and `main` requires code owner review, so a merge needs his approval and green checks whoever starts it; no bypass actors; `Bash(gh pr merge*)` is a deny rule, which `gh api` gets past (ADR 0084, ADR 0065) | built (CODEOWNERS and the ruleset, 2026-10-20) |
+| A session changes the workstation outside its worktree (shell start-up files, launch agents, git hooks, binaries the maintainer runs, other repositories) so that code runs later with the maintainer's rights | E | Sandboxed commands write only to the worktree and temp, and Claude Code keeps the shared `.git`'s hooks and config read-only for them; no command runs unsandboxed; deny rules keep the file tools off the shell start-up files, `~/.gitconfig`, `~/.ssh` and `~/Library/LaunchAgents`; the auto mode classifier reviews the other edits of the file tools | built |
+| A session loosens its own boundary by editing a Claude Code settings file | T, E | Claude Code keeps the settings files out of sandboxed commands' reach, and deny rules keep the file tools off every `.claude/settings.json` and `.claude/settings.local.json` and the user settings; a change to the project settings reaches `main` only through a pull request that the maintainer approves, and `test/meta/agent-sandbox.test.ts` fails one that widens the sandbox | built |
+| A session drives Docker to mount a host folder or to reach a host outside the network allowlist | E, I | Docker Desktop shares no folder that holds credentials or a NorthMES checkout; a container still has the Docker VM's rights and its own network egress | accepted A-07 in the [risk register](risks.md) |
+| A session sends data out through an allowed host (a repository or package of its own on GitHub or npm, or a host behind an allowed name, because the proxy does not inspect TLS), through the TLS trust service that gh needs, or calls a service on a localhost port | I, E | What a session can read is the worktree, which holds the public source, and the machine user's narrow token; local services hold their own credentials | accepted A-07 |
+| The code-reviewer agent sends repository content or private notes to Context7, which it reaches outside the sandbox, or acts on an instruction injected through the diff | I, E | MCP servers run outside the Bash sandbox, so `mcp.context7.com` is reached outside the network allowlist. The agent asks Context7 about a library's behaviour only, never with code, data or secrets from the diff; it starts without CLAUDE.md files in context (`omitClaudeMd`), so the maintainer's private notes are not loaded; it has no file-edit tools, and a PreToolUse hook (`scripts/agents/review-bash-guard.mjs`) refuses every Bash command that is not a single git read or gh view, every test run (which would execute code from the branch under review), and refuses when it cannot judge a command; and it treats instructions in the diff as data (`.claude/agents/code-reviewer.md`, ADR 0065) | built (the Bash guard, with tests), decided (the query rule, an instruction no code checks) |
+| An agent's change is recorded as the maintainer's | R | Pushes, pull requests and comments are made with the machine user's token, so GitHub records them as its own; commit author fields come from the session's environment and prove nothing while commits are unsigned (ADR 0050) | decided |
+| A replayed issue carries an injected instruction, or a trial's code runs with the maintainer's rights when it is graded | E, I | Trials and their grading run inside the ADR 0084 sandbox with reviewed trial user settings that allow no GitHub host and deny web fetch and search; no GitHub token and no settings.local.json reach a trial; nothing a trial wrote is installed, because a trial that changes the lockfile or `pnpm-workspace.yaml` fails; results go to the maintainer's private repository, never this one (ADR 0085) | decided |
+
 ### C6 and C7: supply chain, CI and third parties
 
 | Threat | STRIDE | Controls | Status |
@@ -165,7 +187,7 @@ Each table lists the threats that matter at that conduit, not every STRIDE lette
 | A known vulnerable dependency stays | E | Automated updates; a dependency audit in CI; accepted ones recorded | gap [#482](https://github.com/northMES/northmes/issues/482); accepted A-05 in the [risk register](risks.md) |
 | A pull request from a fork steals a CI secret or writes to the repository | E, I | Read-only tokens, actions pinned by SHA, no `pull_request_target`, inputs through `env` | built |
 | The oasdiff image of `CI / openapi diff` is swapped, or sends the documents elsewhere | T, I | The image is pinned by digest in `OASDIFF_IMAGE` and Renovate updates its tag and digest together; it runs with `--network none` and the workspace mounted read-only, in a job that holds only `contents: read` and no secret; the official action is not used, because it uploads the documents for a review page and sends telemetry by default (`test/meta/workflows.test.ts`, `test/meta/renovate.test.ts`) | built |
-| A contribution arrives without a license grant, or a pull request signs the CLA for its own author or edits the check that judges it | T, R | `CI / cla` reads `signed.json` and runs its script from the default branch, never from the pull request, with no checkout and a read-only token; a commit without a GitHub account fails; signatures are recorded by the maintainer in a separate pull request | built (not yet in `CI / gate`, ADR 0039) |
+| A contribution arrives without a license grant, or a pull request signs the CLA for its own author or edits the check that judges it | T, R | `CI / cla` reads `signed.json` and runs its script from the default branch, never from the pull request, with no checkout and a read-only token; a commit without a GitHub account fails; signatures are recorded by the maintainer in a separate pull request; the exempt accounts (the maintainer, Renovate, github-actions on the release pull request, and the `northmes-agent` machine user of ADR 0084 on pull requests it or the maintainer opened) are listed by user id in the script on the default branch. GitHub links a commit to the account whose email the commit names, so anyone can author a commit that GitHub lists as an exempt account; the pull request's own author is always checked | built (not yet in `CI / gate`, ADR 0039) |
 | A changed image is installed | T | Image digests in the release notes; signed and attested images, an SBOM and a Trivy scan | built (digests, image attestations, image SBOM), decided [#157](https://github.com/northMES/northmes/issues/157) |
 | A leaked `ARGOS_TOKEN` uploads builds or changes the baseline a pull request is compared with | S, T | Argos's project token grants nothing in GitHub; only the `e2e` test step reads it; a visual change counts only after a person approves it in Argos (ADR 0077) | decided |
 | Screenshots sent to Argos disclose data | I | Screenshots show only the fictional seed and the records a spec creates (ADR 0077) | decided |

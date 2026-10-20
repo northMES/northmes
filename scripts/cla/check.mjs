@@ -16,8 +16,10 @@ export const signSentence =
   'I have read the NorthMES Individual Contributor License Agreement, version 0.1, and I agree to its terms for all my past and future contributions to NorthMES.';
 
 // The accounts that pass without a signature, by GitHub user id, which a rename does not change.
-// The maintainer holds the copyright, and Renovate's commits only update dependency versions.
+// The maintainer holds the copyright, also to the work of the machine user that agent sessions act
+// as for him (docs/adr/0084). Renovate's commits only update dependency versions.
 const maintainer = 24939000; // Krister-Johansson
+const agent = 345317483; // northmes-agent
 const renovate = 29139614; // renovate[bot]
 
 // release-please opens the release pull request as github-actions[bot] from a branch with this
@@ -121,7 +123,16 @@ export async function checkCla({ fetch, apiUrl, repository, token, pullNumber })
     pull.user.id === githubActions &&
     pull.head.repo?.full_name === pull.base.repo.full_name &&
     pull.head.ref.startsWith(releaseBranch);
-  const exempt = new Set([maintainer, renovate, ...(release ? [githubActions] : [])]);
+  // GitHub links a commit to the account whose email the commit names, and the agent's noreply
+  // address follows from its public id, so its commits pass only on a pull request that the agent
+  // or the maintainer opened.
+  const agentPull = pull.user.id === agent || pull.user.id === maintainer;
+  const exempt = new Set([
+    maintainer,
+    renovate,
+    ...(agentPull ? [agent] : []),
+    ...(release ? [githubActions] : []),
+  ]);
 
   const unsigned = new Map();
   const unlinked = [];

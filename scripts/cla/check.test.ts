@@ -211,6 +211,103 @@ describe('CI / cla', () => {
     expect(result).toMatchObject({ ok: true });
   });
 
+  // The agent sessions' machine user acts for the maintainer, who holds the copyright to its work
+  // (docs/adr/0084).
+  it('the northmes-agent machine user passes', async () => {
+    const routes = pullRequest(
+      700,
+      'pull-from-fork.json',
+      'commits-by-contributor.json',
+      'signed-on-main.json',
+    );
+    const agent = { login: 'northmes-agent', id: 345317483, type: 'User' };
+    const pull = JSON.parse(fixture('pull-from-fork.json'));
+    const commits = JSON.parse(fixture('commits-by-contributor.json'));
+    routes[`repos/${repository}/pulls/700`] = JSON.stringify({ ...pull, user: agent });
+    routes[`repos/${repository}/pulls/700/commits?per_page=100&page=1`] = JSON.stringify(
+      commits.map((commit: object) => ({ ...commit, author: agent })),
+    );
+
+    const result = await check(routes, 700);
+
+    expect(result).toMatchObject({ ok: true });
+  });
+
+  // The maintainer can open a pull request that carries an agent's commits.
+  it("a commit by northmes-agent passes on the maintainer's pull request", async () => {
+    const maintainer = { login: 'Krister-Johansson', id: 24939000, type: 'User' };
+    const agent = { login: 'northmes-agent', id: 345317483, type: 'User' };
+    const routes = pullRequest(
+      703,
+      'pull-renovate.json',
+      'commits-renovate.json',
+      'signed-on-main.json',
+    );
+    const commits = JSON.parse(fixture('commits-by-contributor.json'));
+    routes[`repos/${repository}/pulls/703`] = JSON.stringify({
+      ...JSON.parse(fixture('pull-renovate.json')),
+      user: maintainer,
+      commits: commits.length,
+    });
+    routes[`repos/${repository}/pulls/703/commits?per_page=100&page=1`] = JSON.stringify([
+      { ...commits[0], author: maintainer },
+      { ...commits[1], author: agent },
+    ]);
+
+    const result = await check(routes, 703);
+
+    expect(result).toMatchObject({ ok: true });
+  });
+
+  // A commit that someone else pushes onto an agent's branch is still checked.
+  it('a northmes-agent pull request with an unsigned person among its commit authors fails', async () => {
+    const agent = { login: 'northmes-agent', id: 345317483, type: 'User' };
+    const commits = [
+      ...JSON.parse(fixture('commits-by-contributor.json')).map((commit: object) => ({
+        ...commit,
+        author: agent,
+      })),
+      ...JSON.parse(fixture('commits-by-contributor.json')),
+    ];
+    const routes = pullRequest(
+      702,
+      'pull-renovate.json',
+      'commits-renovate.json',
+      'signed-on-main.json',
+    );
+    const pull = { ...JSON.parse(fixture('pull-renovate.json')), user: agent, commits: commits.length };
+    routes[`repos/${repository}/pulls/702`] = JSON.stringify(pull);
+    routes[`repos/${repository}/pulls/702/commits?per_page=100&page=1`] = JSON.stringify(commits);
+
+    const result = await check(routes, 702);
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain('@a-contributor');
+  });
+
+  // GitHub links a commit to the account whose email the commit names, and the agent's noreply
+  // address follows from its public id, so anyone can author a commit that GitHub lists as the
+  // agent's. Its commits pass only on a pull request the agent or the maintainer opened.
+  it("a commit attributed to northmes-agent fails on another person's pull request", async () => {
+    const agent = { login: 'northmes-agent', id: 345317483, type: 'User' };
+    const routes = pullRequest(
+      700,
+      'pull-from-fork.json',
+      'commits-by-contributor.json',
+      'signed-with-contributor.json',
+    );
+    const commits = JSON.parse(fixture('commits-by-contributor.json'));
+    routes[`repos/${repository}/pulls/700/commits?per_page=100&page=1`] = JSON.stringify([
+      commits[0],
+      { ...commits[1], author: agent },
+    ]);
+
+    const result = await check(routes, 700);
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain('@northmes-agent');
+  });
+
   // GitHub lists 100 commits per page and at most 250 commits of a pull request.
   it('reads every page of commits, and fails a pull request with more commits than GitHub lists', async () => {
     const [signed] = JSON.parse(fixture('commits-by-contributor.json'));
