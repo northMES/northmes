@@ -68,14 +68,16 @@ describe('ADR0084 agent sessions run in the Claude Code sandbox', () => {
     });
   });
 
-  // An Edit allow rule or an additional directory would also widen what sandboxed commands may write.
   // turbo looks for the Vercel CLI's login file to authenticate a remote cache, which NorthMES does
   // not use. The sandbox refuses that read, and turbo fails on the refusal, so pnpm check could not
-  // run in a session. A folder that does not exist reads as no login.
-  it('ADR0084 sessions point turbo at a Vercel config folder that does not exist', () => {
-    expect(settings().env?.VERCEL_CONFIG_DIR_PATH).toBe('/nonexistent/vercel');
+  // run in a session. A folder that does not exist reads as no login. The env block reaches every
+  // session in every clone, so it is compared whole: a variable such as NODE_OPTIONS or a proxy would
+  // widen the boundary.
+  it('ADR0084 the project settings set only the Vercel config folder, one that does not exist', () => {
+    expect(settings().env).toEqual({ VERCEL_CONFIG_DIR_PATH: '/nonexistent/vercel' });
   });
 
+  // An Edit allow rule or an additional directory would also widen what sandboxed commands may write.
   it('ADR0084 the project settings add no allow rule and no additional directory', () => {
     const permissions = settings().permissions;
 
