@@ -4,6 +4,8 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { PlantSettingsSource } from '../../../src/modules/core/plant-settings-data.ts';
+import { g1PlantSettingsSnapshot } from '../../../src/modules/core/plant-settings-data-g1.ts';
 import { machineSaveReason } from '../../../src/modules/core/plant-settings-reasons.ts';
 import { plant, renderCoreAt } from './core-app.tsx';
 
@@ -412,5 +414,55 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
     expect(screen.getByRole('img', { name: /^Week 45:/ }).getAttribute('aria-label')).toBe(
       'Week 45: Monday to Friday 06:00 to 15:00 with two breaks',
     );
+  });
+
+  it("CA1 a day's closures stack in one column, so one machine's closure does not cover another's or the plant's", async () => {
+    const snapshot = g1PlantSettingsSnapshot();
+    const [a1, ...others] = snapshot.calendars;
+    if (a1 === undefined) throw new Error('G1 has the calendar A1');
+    const closed = (id: string, date: string, next: string, machine: string) => ({
+      id,
+      kind: 'nonWorking' as const,
+      startsLocal: `${date}T00:00`,
+      endsLocal: `${next}T00:00`,
+      equipment: [machine],
+    });
+    const plantSettingsSource: PlantSettingsSource = {
+      load: async () => ({
+        ...snapshot,
+        calendars: [
+          {
+            ...a1,
+            deviations: [
+              ...a1.deviations,
+              closed('cnc1-wed', '2026-11-04', '2026-11-05', 'CNC1'),
+              closed('mill1-wed', '2026-11-04', '2026-11-05', 'MILL1'),
+              closed('cnc2-holiday', '2026-11-09', '2026-11-10', 'CNC2'),
+            ],
+          },
+          ...others,
+        ],
+      }),
+    };
+    renderCoreAt(coreLinks.calendars.calendar({ plant, calendarId: 'A1' }).href, [], {
+      plantSettingsSource,
+    });
+    await screen.findByRole('heading', { level: 1, name: 'Calendar A1' });
+
+    /** The texts of the column that holds a closure: the day's closures and nothing else. */
+    const closuresBeside = (closure: HTMLElement) =>
+      Array.from(closure.parentElement?.children ?? [], (child) => child.textContent);
+    const w45 = within(screen.getByRole('img', { name: /^Week 45:/ }));
+    expect(closuresBeside(w45.getByText('Closed on Mill 1'))).toEqual([
+      'Closed on CNC 1',
+      'Closed on Mill 1',
+    ]);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show the later week' }));
+    const w46 = within(await screen.findByRole('img', { name: /^Week 46:/ }));
+    expect(closuresBeside(w46.getByText('Closed on CNC 2'))).toEqual([
+      'ClosedPlant holiday',
+      'Closed on CNC 2',
+    ]);
   });
 });

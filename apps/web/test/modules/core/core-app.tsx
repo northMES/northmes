@@ -21,6 +21,11 @@ import { render, within } from '@testing-library/react';
 import { from, mergeMap } from 'rxjs';
 import { CoreArticle } from '../../../src/modules/core/article.graphql.ts';
 import { coreModule } from '../../../src/modules/core/index.ts';
+import {
+  g1PlantSettingsSource,
+  type PlantSettingsSource,
+} from '../../../src/modules/core/plant-settings-data.ts';
+import { PlantSettingsSourceProvider } from '../../../src/modules/core/plant-settings-source-context.ts';
 import { CoreArticles } from '../../../src/modules/core/screens/articles/articles.graphql.ts';
 
 /** The plant of every test, as the $plant segment names it. */
@@ -56,7 +61,8 @@ function SettingsStub() {
  * Renders the core module's routes at href, at a plant or in company settings, with a
  * MockedProvider that answers each of mocks once and the contributions the shell would give the
  * slots, and returns the router, whose state.location shows the URL. A hold from holdRequests
- * keeps its requests from the mocks until the test releases them.
+ * keeps its requests from the mocks until the test releases them. The plant settings pages read
+ * plantSettingsSource, the fixture G1 when the test gives none.
  */
 export function renderCoreAt(
   href: string,
@@ -64,7 +70,12 @@ export function renderCoreAt(
   {
     contributions = [],
     hold,
-  }: { readonly contributions?: readonly SlotContribution[]; readonly hold?: ApolloLink } = {},
+    plantSettingsSource = g1PlantSettingsSource,
+  }: {
+    readonly contributions?: readonly SlotContribution[];
+    readonly hold?: ApolloLink;
+    readonly plantSettingsSource?: PlantSettingsSource;
+  } = {},
 ) {
   const router = createRouter({
     routeTree: createShellRoutes({
@@ -77,7 +88,9 @@ export function renderCoreAt(
   render(
     <MockedProvider mocks={mocks} link={hold && ApolloLink.from([hold, new MockLink(mocks)])}>
       <ContributionsProvider value={contributions}>
-        <RouterProvider router={router} />
+        <PlantSettingsSourceProvider value={plantSettingsSource}>
+          <RouterProvider router={router} />
+        </PlantSettingsSourceProvider>
       </ContributionsProvider>
     </MockedProvider>,
   );
