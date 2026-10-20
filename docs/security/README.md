@@ -134,7 +134,8 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Test first, with Postgres from Testcontainers and tests as `nm_app` | built | ADR 0041; `pnpm check` |
 | Lint, format and typecheck in CI; every CI job a required check | built | Biome; `.github/workflows/ci.yml`; ADR 0069 |
 | Module boundaries enforced | built | `scripts/lint/module-boundaries.mjs`; `test/meta/module-boundaries.test.ts` |
-| Review on every pull request by CodeRabbit and the maintainer | built | ADR 0065; `.coderabbit.yaml` |
+| Review on every pull request by CodeRabbit and the maintainer | built | ADR 0065; `.coderabbit.yaml`. A session pull request that CodeRabbit has not reviewed within 15 minutes merges on the session's own review (accepted risk A-06) |
+| A review agent in a fresh context reviews a session's diff before its pull request opens, and the Checks section lists each finding with its outcome | decided | ADR 0065; `CLAUDE.md` (review before the pull request); an instruction, not yet checked by code or CI |
 
 ### 10. Process
 

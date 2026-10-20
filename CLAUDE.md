@@ -15,3 +15,7 @@ The third-party skills in `.claude/skills/` are pinned in `skills-lock.json`, wi
 - TanStack Table v9: read the skills that ship in `node_modules/@tanstack/table-core/skills/` and `node_modules/@tanstack/react-table/skills/`, which match the installed version.
 
 Where a skill's example differs from an ADR, follow the ADR. Run every tool through pnpm from the repository root, Playwright as `pnpm exec playwright`, and install nothing globally; `.claude/settings.json` denies `npm` and `npx`.
+
+## Review before the pull request
+
+A session that opens its own pull request reviews its diff first; in a handoff run the graph's code review step does this instead. Once `pnpm check` passes, a subagent with a fresh context reviews the branch's diff with the code-review skill at level high, against the issue's acceptance criteria and the ADRs it links. When the diff touches permissions, row-level security or secrets, the review adds wrdn-authz and secret-serialization; when it changes authentication, a trust boundary or an integration, it adds a focused security-audit review. Fix each finding that holds, test first, and run `pnpm check` again before you push. The review is done when the pull request's Checks section lists every finding with its outcome: fixed, not changed with the reason, or a follow-up issue. CodeRabbit and the maintainer then review the pull request as [ADR 0065](docs/adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md) says.
