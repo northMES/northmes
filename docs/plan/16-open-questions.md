@@ -183,7 +183,7 @@ The remaining administrator questions (installation, polling rate, response size
 | Id | Question | Working default until answered | Affects |
 |---|---|---|---|
 | M-20 | Does the pull request step wait for CodeRabbit while the repository has fewer than 10 stars? | It waits up to 30 minutes per push; Krister or the operating session posts `@coderabbitai review` | [0050][adr-0050], 13 |
-| M-21 | Does the `main` ruleset require resolved review threads? | Yes; Krister resolves threads, or uses `@coderabbitai approve`, before requesting a merge | [0050][adr-0050], 13 |
+| M-21 | Does the `main` ruleset require resolved review threads? | Yes; Krister resolves threads, or uses `@coderabbitai approve`, before requesting a merge. A session posts the command itself when CodeRabbit has not reviewed its pull request within 15 minutes and no CodeRabbit item is declined or unanswered ([ADR 0065](../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md)) | [0050][adr-0050], 13 |
 | M-22 | Which format do requirement ids in tests take? | Until the maintainer fixes the format, a test name starts with the plan case id when one exists (TC1, CAL8) and otherwise with the story's plan id (E07-S05) | [0041][adr-0041], 11, 13, 15 |
 | M-23 | Do contributors translate by hand with `gt generate` or through a General Translation account? | Decided before translation work starts; translation files are committed either way | [0053][adr-0053] |
 
