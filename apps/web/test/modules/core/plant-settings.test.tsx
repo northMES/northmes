@@ -79,7 +79,7 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
 
     expect(machineRows()).toEqual(['ASM1', 'CNC1', 'CNC2', 'MILL1']);
     expect(statusLine()).toBe(
-      '4 machines, 3 plannable, 3 equipment groups. Sorted by code. Allowed in counts the routing operations that may run on the machine.',
+      '4 machines, 3 plannable, 2 equipment groups. Sorted by code. Allowed in counts the routing operations that may run on the machine.',
     );
     expect(screen.getByText('ERP data as of Mon 2 Nov 06:40')).toBeTruthy();
     expect(screen.getByText('Showing fixture G1.')).toBeTruthy();
@@ -90,6 +90,8 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
     expect(within(groups).getByRole('link', { name: /^Assembly/ }).textContent).toBe(
       'Assembly ASM 1 machine',
     );
+    // The company group HEAT has no machines here, so it leads to no filtered list.
+    expect(within(groups).queryByRole('link', { name: /^Heat treatment/ })).toBeNull();
     const table = screen.getByRole('table', { name: 'Machines' });
     const rows = bodyRows(table);
     expect(rows[1]?.slice(0, 6)).toEqual([
@@ -285,7 +287,12 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
     expect(code.value).toBe('CNC1');
     expect(screen.getAllByText('From the ERP')).toHaveLength(2);
     expect((screen.getByLabelText('Name') as HTMLInputElement).value).toBe('CNC 1');
-    expect((screen.getByLabelText('Equipment group') as HTMLSelectElement).value).toBe('MACH');
+    const group = screen.getByLabelText('Equipment group') as HTMLSelectElement;
+    expect(group.value).toBe('MACH');
+    // A machine may join a company group too, such as HEAT with no machines here yet.
+    expect(Array.from(group.options).map((option) => option.textContent)).toContain(
+      'Heat treatment',
+    );
     expect((screen.getByLabelText('Calendar') as HTMLSelectElement).value).toBe('A1');
     expect(
       (screen.getByRole('checkbox', { name: /^Plannable/ }) as HTMLElement).getAttribute(

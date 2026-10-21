@@ -4,6 +4,8 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { PlantSettingsSource } from '../../../src/modules/core/plant-settings-data.ts';
+import { g1PlantSettingsSnapshot } from '../../../src/modules/core/plant-settings-data-g1.ts';
 import { plantSettingsActionReason } from '../../../src/modules/core/plant-settings-reasons.ts';
 import { plant, renderCoreAt } from './core-app.tsx';
 
@@ -102,16 +104,36 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
     await waitFor(() => expect(router.state.location.search).toEqual({ scope: 'company' }));
     expect(bodyRows(table).map((row) => row[1])).toEqual(['HEAT']);
     expect(statusLine()).toMatch(/^1 equipment group, 0 machines\./);
-    expect(screen.getByRole('button', { name: 'Remove the scope filter' })).toBeTruthy();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remove the scope filter' }));
     await waitFor(() => expect(router.state.location.search).toEqual({}));
     expect(bodyRows(table).map((row) => row[1])).toEqual(['ASM', 'HEAT', 'MACH']);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Scope' }));
+    await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: /^Plant A/ }));
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(bodyRows(table).map((row) => row[1])).toEqual(['ASM', 'MACH']));
+    await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Scope' }));
 
     cleanup();
     renderCoreAt(withSearch(groups, { scope: 'plant' }), []);
     const plantGroups = await screen.findByRole('table', { name: 'Equipment groups of Plant A' });
     expect(bodyRows(plantGroups).map((row) => row[1])).toEqual(['ASM', 'MACH']);
+  });
+
+  it('#729 EG1 names the company in the Scope menu at a plant with no company group', async () => {
+    const snapshot = g1PlantSettingsSnapshot();
+    const plantSettingsSource: PlantSettingsSource = {
+      load: async () => ({
+        ...snapshot,
+        equipmentGroups: snapshot.equipmentGroups.filter((group) => group.code !== 'HEAT'),
+      }),
+    };
+    renderCoreAt(groups, [], { plantSettingsSource });
+    await screen.findByRole('table', { name: 'Equipment groups of Plant A' });
+    await userEvent.click(screen.getByRole('button', { name: 'Scope' }));
+    expect(await screen.findByRole('menuitemcheckbox', { name: /^Acme AB/ })).toBeTruthy();
   });
 
   it('#729 EG6 to EG9 show the loading, empty, failed and no-access states', async () => {
@@ -188,6 +210,11 @@ describe("an equipment group's page (design #729, EG4)", () => {
     expect(screen.queryByRole('table', { name: 'Machines in HEAT' })).toBeNull();
   });
 
+  it('#729 EG4 names the group in the h1 while it loads', async () => {
+    renderCoreAt(withSearch(mach, { preview: 'loading' }), []);
+    await screen.findByRole('heading', { level: 1, name: 'Equipment group MACH' });
+  });
+
   it('#729 EG4 says a group does not exist, with the way back, and shows the failed and no-access states', async () => {
     renderCoreAt(coreLinks.equipmentGroups.group({ plant, groupCode: 'NOPE' }).href, []);
     await screen.findByRole('heading', {
@@ -256,11 +283,60 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
     expect(name.hasAttribute('readonly')).toBe(false);
   });
 
-  it('#729 EG5 shows the no-access state of the form', async () => {
+  it('#729 EG5 picks a color by keyboard and recolors the preview', async () => {
+    renderCoreAt(editMach, []);
+    const colors = await screen.findByRole('radiogroup', { name: 'Color' });
+    within(colors).getByRole('radio', { name: 'Color 3' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    await waitFor(() =>
+      expect(
+        within(colors).getByRole('radio', { name: 'Color 4' }).getAttribute('aria-checked'),
+      ).toBe('true'),
+    );
+    const preview = screen.getByRole('figure', { name: 'Machining on the board' });
+    expect(preview.querySelector('[style*="palette-4"]')).not.toBeNull();
+  });
+
+  it('#729 EG5 previews the name a plant admin types for a group created in NorthMES', async () => {
+    renderCoreAt(coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'ASM' }).href, []);
+    const name = await screen.findByRole('textbox', { name: 'Name' });
+    await userEvent.clear(name);
+    await userEvent.type(name, 'Final assembly');
+    expect(screen.getByRole('figure', { name: 'Final assembly on the board' })).toBeTruthy();
+  });
+
+  it('#729 EG5 says a change to a company group reaches every plant of the company', async () => {
+    renderCoreAt(coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'HEAT' }).href, []);
+    await screen.findByRole('heading', { level: 1, name: 'Edit equipment group HEAT' });
+    expect(
+      screen.getByText('HEAT is a company group: a change here applies at every plant of Acme AB.'),
+    ).toBeTruthy();
+  });
+
+  it('#729 EG5 shows the loading, failed, not-found and no-access states of the form', async () => {
+    renderCoreAt(withSearch(editMach, { preview: 'loading' }), []);
+    await screen.findByRole('heading', { level: 1, name: 'Edit equipment group MACH' });
+    expect(screen.getByText('Loading the equipment group.')).toBeTruthy();
+
+    cleanup();
+    renderCoreAt(withSearch(editMach, { preview: 'error' }), []);
+    await screen.findByRole('heading', { level: 2, name: 'Could not load the equipment group' });
+
+    cleanup();
+    renderCoreAt(coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'NOPE' }).href, []);
+    await screen.findByRole('heading', {
+      level: 2,
+      name: 'This equipment group does not exist or you cannot see it',
+    });
+
+    cleanup();
     renderCoreAt(withSearch(editMach, { preview: 'forbidden' }), []);
     await screen.findByRole('heading', {
       level: 2,
       name: 'You need the permission to manage the settings of this plant',
     });
+    expect(
+      screen.getByRole('link', { name: 'Back to equipment group MACH' }).getAttribute('href'),
+    ).toBe(mach);
   });
 });
