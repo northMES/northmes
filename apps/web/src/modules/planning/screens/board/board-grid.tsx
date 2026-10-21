@@ -99,7 +99,6 @@ export function BoardGrid({
   gridRef,
   height,
 }: BoardGridProps) {
-  const timeZone = snapshot.plant.timeZone;
   const columns = `${machineWidth}px ${timeWidth}px`;
   const machineName = (code: string) =>
     snapshot.equipment.find((machine) => machine.code === code)?.name ?? code;
@@ -190,8 +189,8 @@ export function BoardGrid({
                   key={row.id}
                   row={row}
                   scale={scale}
+                  snapshot={snapshot}
                   machine={machineName(code)}
-                  timeZone={timeZone}
                   focusable={tabStop === focusKeys.block(row.jobOrder.id)}
                   onFocus={() => onFocusTarget(focusKeys.block(row.jobOrder.id))}
                 />

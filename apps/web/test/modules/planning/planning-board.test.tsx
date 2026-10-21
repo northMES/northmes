@@ -220,7 +220,9 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(block('1002.10').getAttribute('data-states')).toBe('locked');
     expect(
       within(board).getByRole('gridcell', {
-        name: named('1002.10 Housing P, 420 pcs, CNC 2, Thu 5 Nov 11:30 to Thu 5 Nov 15:00, locked'),
+        name: named(
+          '1002.10 Housing P, 420 pcs, CNC 2, Thu 5 Nov 11:30 to Thu 5 Nov 15:00, locked',
+        ),
       }),
     ).toBe(block('1002.10'));
     expect(block('1003.20').getAttribute('data-states')).toBe('late');
@@ -232,5 +234,48 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
       }),
     ).toBe(block('1003.20'));
     expect(block('1001.10').getAttribute('data-states')).toBeNull();
+  });
+
+  it('BO12 marks a held, a started and an overdue job order by icon, border and words', async () => {
+    const g1 = g1Snapshot();
+    const snapshot = {
+      ...g1,
+      // Tue 3 Nov 12:00 in plant time: 1001.10 should have started at 11:30.
+      nowMs: Date.UTC(2026, 10, 3, 11),
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) =>
+          row.displayNumber === '1001.20'
+            ? { ...row, held: true }
+            : row.displayNumber === '1004.10'
+              ? { ...row, status: 'started' as const }
+              : row,
+        ),
+      })),
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    const block = (job: string) =>
+      board.querySelector<HTMLElement>(`[role="gridcell"][data-job-order="${job}"]`) as HTMLElement;
+
+    expect(block('1001.20').getAttribute('data-states')).toBe('held');
+    expect(block('1001.20').querySelector('[data-marker="held"]')).not.toBeNull();
+    expect(block('1001.20').querySelector('[data-state-icon="held"]')).not.toBeNull();
+    expect(
+      within(board).getByRole('gridcell', {
+        name: named(
+          '1001.20 Bracket L, 600 pcs, CNC 2, Wed 4 Nov 09:00 to Thu 5 Nov 10:45, being edited by another planner',
+        ),
+      }),
+    ).toBe(block('1001.20'));
+    expect(block('1004.10').getAttribute('data-states')).toBe('started');
+    expect(block('1004.10').querySelector('[data-state-icon="started"]')).not.toBeNull();
+    expect(
+      within(board).getByRole('gridcell', {
+        name: named(
+          '1001.10 Bracket L, 600 pcs, CNC 1, Tue 3 Nov 11:30 to Wed 4 Nov 08:00, overdue, planned 11:30, not started',
+        ),
+      }),
+    ).toBe(block('1001.10'));
   });
 });
