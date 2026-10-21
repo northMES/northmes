@@ -95,4 +95,10 @@ describe('coreLinks', () => {
       '/plant-a/customers/K-1042',
     );
   });
+
+  it('#729 coreLinks builds the href of the warehouses in company settings', () => {
+    expect(coreLinks.settings.warehouses({ companyId: 'acme' }).href).toBe(
+      '/settings/acme/warehouses',
+    );
+  });
 });
