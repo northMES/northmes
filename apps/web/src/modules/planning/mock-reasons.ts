@@ -14,6 +14,6 @@ export const planReason =
 /** Why a form's Save is drawn but disabled on the pages that read the fixture. */
 export const saveReason = 'Saving waits for the planning server; this page reads the fixture G1.';
 
-/** Why New order is drawn but disabled on the lists that read the fixture. */
+/** Where an order entered by hand stays on the lists that read the fixture (#768). */
 export const createReason =
-  'New order waits for the planning server; this list reads the fixture G1.';
+  'Orders entered by hand stay in this browser tab until the planning server exists; this list reads the fixture G1.';

@@ -38,6 +38,7 @@ export type {
   WorkloadBucket,
 };
 
+import type { EnteredOrders } from './entered-orders.ts';
 import type { EffectivePlanningRules } from './planning-rules.ts';
 
 /** The zoom presets of the approved board design D3, by their URL ids (plan 18, Shared pieces). */
@@ -62,6 +63,11 @@ export interface GanttLoadInput {
    * source reads the plant's rules itself and ignores them.
    */
   readonly rules?: EffectivePlanningRules;
+  /**
+   * The orders entered by hand on mock data (#768): the mock source adds them to its plan; a server
+   * source has them in its own records and ignores them.
+   */
+  readonly entered?: EnteredOrders;
 }
 
 /** A working-time calendar of the plant (ADR 0025): weekdays, one shift and its breaks. */

@@ -16,7 +16,11 @@ export const planningLinks = defineModuleLinks('planning', {
   /** The production orders (plan 07): the list, each order's page (its tab in `tab`) and its edit page. */
   orders: {
     path: 'orders',
-    children: { order: { path: '$orderId', children: { edit: { path: 'edit' } } } },
+    children: {
+      /** New production order (design #768), from the list or from a customer order line in `line`. */
+      new: { path: 'new' },
+      order: { path: '$orderId', children: { edit: { path: 'edit' } } },
+    },
   },
   /**
    * The customer order lines and the production orders that supply them (plan 07), and each
@@ -24,7 +28,11 @@ export const planningLinks = defineModuleLinks('planning', {
    */
   customerOrders: {
     path: 'customer-orders',
-    children: { customerOrder: { path: '$customerOrderId' } },
+    children: {
+      /** New customer order (design #768). */
+      new: { path: 'new' },
+      customerOrder: { path: '$customerOrderId' },
+    },
   },
   /**
    * The planning pages of plant settings (ADR 0066): the planning rules at settings itself (plan

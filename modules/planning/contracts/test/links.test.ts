@@ -15,6 +15,18 @@ describe('planningLinks', () => {
     ).toBe('/plant-a/planning/customer-orders/40211');
   });
 
+  it('#768 planningLinks builds the hrefs of New production order, from a customer order line, and New customer order', () => {
+    expect(planningLinks.orders.new({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/planning/orders/new',
+    );
+    expect(planningLinks.orders.new({ plant: 'plant-a' }, { line: '40211-2' }).href).toBe(
+      '/plant-a/planning/orders/new?line=40211-2',
+    );
+    expect(planningLinks.customerOrders.new({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/planning/customer-orders/new',
+    );
+  });
+
   it("#762 planningLinks.settings.boardFields builds the href of a plant's board fields page", () => {
     expect(planningLinks.settings.boardFields({ plant: 'plant-a' }).href).toBe(
       '/plant-a/planning/settings/board-fields',
