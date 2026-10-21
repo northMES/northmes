@@ -38,6 +38,8 @@ export type {
   WorkloadBucket,
 };
 
+import type { EffectivePlanningRules } from './planning-rules.ts';
+
 /** The zoom presets of the approved board design D3, by their URL ids (plan 18, Shared pieces). */
 export type ZoomPreset = 'hours' | 'day' | 'week' | '4weeks';
 
@@ -55,6 +57,11 @@ export interface GanttLoadInput {
   /** The instant after the visible range, ISO 8601. */
   readonly to: string;
   readonly filter: GanttFilter;
+  /**
+   * The plant's planning rules as saved (#766): the mock source applies them to its plan; a server
+   * source reads the plant's rules itself and ignores them.
+   */
+  readonly rules?: EffectivePlanningRules;
 }
 
 /** A working-time calendar of the plant (ADR 0025): weekdays, one shift and its breaks. */

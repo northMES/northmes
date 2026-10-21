@@ -6,17 +6,21 @@ import {
   type GanttPagesFixture,
   g1,
   g1Pages,
+  resolveWallClock,
 } from '@northmes/planning-domain';
+import { Temporal } from 'temporal-polyfill';
 import { analyzeGantt, placementWithSegments, workingCalendarOf } from './gantt-analysis.ts';
 import type {
   GanttDataSource,
   GanttJobOrder,
   GanttOperation,
   GanttOrder,
+  GanttSettings,
   GanttSnapshot,
   HistoryEntry,
   OrderOrigin,
 } from './gantt-data.ts';
+import { type EffectivePlanningRules, ganttSettingsWith } from './planning-rules.ts';
 
 /** An ISO instant as epoch milliseconds: the one place a snapshot's instants are parsed. */
 function ms(instant: string): number {
@@ -92,10 +96,27 @@ function originOf(order: FixtureOrder, pages: GanttPagesFixture): OrderOrigin | 
   };
 }
 
+/**
+ * An order's deadline instant: its own time when the source gave one, else the plant's deadline
+ * rule on its date (ADR 0027): 00:00 plant time at the start of the day, or the end of the shift.
+ */
+function deadlineMsOf(order: FixtureOrder, settings: GanttSettings, timeZone: string): number {
+  const time =
+    order.deadlineTime ??
+    (settings.deadlineRule === 'startOfDay' ? '00:00' : settings.shiftEndForDeadline);
+  // ADR 0024's clamp rule: a time in the spring gap is the first instant after it.
+  return resolveWallClock(
+    timeZone,
+    Temporal.PlainDate.from(order.deadlineDate),
+    Temporal.PlainTime.from(time),
+  );
+}
+
 function orderOf(
   order: FixtureOrder,
   windowsOf: (equipment: string) => ReturnType<typeof availabilityOf>,
   pages: GanttPagesFixture,
+  deadlineMs: number,
 ): GanttOrder {
   return {
     id: orderIdOf(order.number),
@@ -103,7 +124,7 @@ function orderOf(
     article: order.article,
     quantity: order.quantity,
     deadlineDate: order.deadlineDate,
-    deadlineMs: ms(order.deadlineInstant.instant),
+    deadlineMs,
     priority: order.priority,
     color: order.color,
     status: order.status,
@@ -177,13 +198,32 @@ function pagesOf(fixture: GanttFixture, pages: GanttPagesFixture) {
 /**
  * The snapshot of the fixture G1 over a visible range, with its analysis from the domain
  * functions (plan 18, phase 2): the placements come from the fixture's job orders, everything
- * else from floatOf, criticalChain, releaseOf, constraintsOf and workload over them.
+ * else from floatOf, criticalChain, releaseOf, constraintsOf and workload over them. With a
+ * plant's planning rules as saved (#766), the settings, the frozen window and the deadlines of
+ * date-only orders follow them; without, they are the fixture's own.
  */
 export function g1Snapshot(
   fixture: GanttFixture = g1,
   range = g1Week,
   pages: GanttPagesFixture = g1Pages,
+  rules?: EffectivePlanningRules,
 ): GanttSnapshot {
+  const fixtureSettings: GanttSettings = {
+    deadlineRule: fixture.settings.deadlineRule,
+    shiftEndForDeadline: fixture.settings.shiftEndForDeadline,
+    frozenHours: fixture.settings.frozenHours,
+    leadTimeBasis: fixture.settings.leadTimeBasis,
+    retoolOverlapsLeadTime: fixture.settings.retoolOverlapsLeadTime,
+  };
+  const settings =
+    rules === undefined ? fixtureSettings : ganttSettingsWith(fixtureSettings, rules);
+  const nowMs = ms(fixture.now.instant);
+  const fenceMs =
+    rules === undefined ? ms(fixture.fence.instant) : nowMs + settings.frozenHours * 3_600_000;
+  const deadlineOf = (order: FixtureOrder) =>
+    rules === undefined
+      ? ms(order.deadlineInstant.instant)
+      : deadlineMsOf(order, settings, fixture.plant.timeZone);
   const calendar = workingCalendarOf(fixture.calendar, fixture.plant.timeZone);
   // The windows cover the fixture's placements and deadlines as well as the asked range, so a load
   // of a later week still lays every placement over the calendar it was planned on.
@@ -209,15 +249,9 @@ export function g1Snapshot(
   const base: Omit<GanttSnapshot, 'analysis'> = {
     fixture: fixture.id,
     plant: fixture.plant,
-    settings: {
-      deadlineRule: fixture.settings.deadlineRule,
-      shiftEndForDeadline: fixture.settings.shiftEndForDeadline,
-      frozenHours: fixture.settings.frozenHours,
-      leadTimeBasis: fixture.settings.leadTimeBasis,
-      retoolOverlapsLeadTime: fixture.settings.retoolOverlapsLeadTime,
-    },
-    nowMs: ms(fixture.now.instant),
-    fenceMs: ms(fixture.fence.instant),
+    settings,
+    nowMs,
+    fenceMs,
     calendar: {
       name: fixture.calendar.name,
       weekdays: fixture.calendar.weekdays,
@@ -228,7 +262,9 @@ export function g1Snapshot(
     },
     equipmentGroups: fixture.equipmentGroups.map(({ code, name }) => ({ code, name })),
     equipment: fixture.equipment,
-    productionOrders: fixture.productionOrders.map((order) => orderOf(order, windowsOf, pages)),
+    productionOrders: fixture.productionOrders.map((order) =>
+      orderOf(order, windowsOf, pages, deadlineOf(order)),
+    ),
     ...pagesOf(fixture, pages),
   };
   return { ...base, analysis: analyzeGantt(base, range) };
@@ -240,5 +276,6 @@ export function g1Snapshot(
  * The screen shows "Showing fixture G1" while it is in use.
  */
 export const g1DataSource: GanttDataSource = {
-  load: async ({ from, to }) => g1Snapshot(g1, { fromMs: Date.parse(from), toMs: Date.parse(to) }),
+  load: async ({ from, to, rules }) =>
+    g1Snapshot(g1, { fromMs: Date.parse(from), toMs: Date.parse(to) }, g1Pages, rules),
 };

@@ -83,19 +83,23 @@ describe('plant settings', () => {
     ]);
   });
 
-  it('#762 the plant settings navigation lists Board fields in the Modules group for a user who administers the plant', async () => {
+  it('#762 #766 the plant settings navigation lists Planning rules, then Board fields, in the Modules group for a user who administers the plant', async () => {
     const { fetch } = api(['core.roleAssignment:manage']);
     renderShellAt('/plant-a/planning/settings/board-fields', shellModules, { fetch });
 
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     await waitFor(() =>
       expect(linksIn(within(settings).getByRole('list', { name: 'Modules' }))).toEqual([
+        ['Planning rules', '/plant-a/planning/settings'],
         ['Board fields', '/plant-a/planning/settings/board-fields'],
       ]),
     );
     expect(
       within(settings).getByRole('link', { name: 'Board fields' }).getAttribute('aria-current'),
     ).toBe('page');
+    expect(
+      within(settings).getByRole('link', { name: 'Planning rules' }).getAttribute('aria-current'),
+    ).toBeNull();
   });
 
   it('E04-S02 the plant settings navigation ends with the company settings link for a user with a company settings entry', async () => {

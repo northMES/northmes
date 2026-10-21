@@ -10,6 +10,7 @@ import { boardSearch, ganttSearch } from './gantt-search.ts';
 import { jobOrdersSearch } from './job-orders-search.ts';
 import { customerOrderListSearch, orderListSearch, urlSearchOf } from './order-list-search.ts';
 import { orderPageSearch } from './order-page-search.ts';
+import { planningRulesSearch } from './planning-rules-search.ts';
 
 /**
  * The planning module's routes under the shell's $plant route. Each route takes its path from its
@@ -99,11 +100,19 @@ export function planningRoutes(plantRoute: PlantRoute) {
     path: linkEntry(planningLinks.orders.order.edit).path,
     component: lazyRouteComponent(() => import('./screens.ts'), 'EditOrderScreen'),
   });
-  // Plant settings (ADR 0066; #762): the board fields, on the fixture G1 and the in-memory store
-  // until planning settings have their API. The page takes the state the URL previews.
+  // Plant settings (ADR 0066; #762, #766): the planning rules and the board fields, on the fixture
+  // G1 and the in-memory stores until planning settings have their API. Each page takes the state
+  // the URL previews.
   const settingsRoute = createRoute({
     getParentRoute: () => planningRoute,
     path: linkEntry(planningLinks.settings).path,
+  });
+  // The planning rules page is the settings index, /plant-a/planning/settings (plan 06; #766).
+  const planningRulesRoute = createRoute({
+    getParentRoute: () => settingsRoute,
+    path: '/',
+    validateSearch: planningRulesSearch,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'PlanningRulesScreen'),
   });
   const boardFieldsRoute = createRoute({
     getParentRoute: () => settingsRoute,
@@ -120,6 +129,6 @@ export function planningRoutes(plantRoute: PlantRoute) {
       orderRoute.addChildren([orderPageRoute, editOrderRoute]),
     ]),
     customerOrdersRoute.addChildren([customerOrderListRoute, customerOrderRoute]),
-    settingsRoute.addChildren([boardFieldsRoute]),
+    settingsRoute.addChildren([planningRulesRoute, boardFieldsRoute]),
   ]);
 }

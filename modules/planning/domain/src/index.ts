@@ -76,7 +76,12 @@ export {
   g1OrderId,
   g1PlanContext,
 } from './fixtures/gantt-context.ts';
-export { type GanttPagesFixture, g1Pages, ganttPagesFixture } from './fixtures/gantt-pages.ts';
+export {
+  type GanttPagesFixture,
+  g1Pages,
+  ganttPagesFixture,
+  type PlanningRuleValues,
+} from './fixtures/gantt-pages.ts';
 export {
   type BindingConstraint,
   type BindingConstraintKind,
