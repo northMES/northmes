@@ -326,7 +326,7 @@
       "leadTimeBasis": "elapsed",
       "retoolOverlapsLeadTime": true,
       "deadlineRule": "startOfDay",
-      "softLockIdleExpiryMinutes": 30,
+      "softLockIdleExpiry": 1800,
       "countPurchaseRequisitions": false
     },
     "plants": {

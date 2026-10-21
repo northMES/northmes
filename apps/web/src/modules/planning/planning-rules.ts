@@ -30,6 +30,10 @@ export interface PlanningRuleDefinition {
   readonly kind: 'choice' | 'number';
   readonly options?: readonly PlanningRuleOption[];
   readonly unit?: string;
+  /** How many stored units one shown unit is: 60 for minutes shown over seconds stored. */
+  readonly scale?: number;
+  /** The largest value the page takes, in the shown unit (a plan proposal, #766). */
+  readonly max?: number;
   /** The recorded default; none while the product owner has not answered (ADR 0066). */
   readonly defaultValue?: string | boolean | number;
   readonly defaultText: string;
@@ -78,9 +82,10 @@ export const planningRuleDefinitions: readonly PlanningRuleDefinition[] = [
     key: 'frozenHours',
     label: 'Frozen window',
     description:
-      'Elapsed hours from now. Autoplan keeps a job order that starts inside the window on its machine and in its order, and only moves it later.',
+      'Elapsed hours from now. Autoplan keeps a job order that starts inside the window on its machine and in its order, and only moves it later. Up to 720 h.',
     kind: 'number',
     unit: 'h',
+    max: 720,
     defaultText: noDefault,
     adr: 'ADR 0028',
     open: 'productOwner',
@@ -128,12 +133,15 @@ export const planningRuleDefinitions: readonly PlanningRuleDefinition[] = [
     open: 'productOwner',
   },
   {
-    key: 'softLockIdleExpiryMinutes',
+    key: 'softLockIdleExpiry',
     label: 'Lock expiry after idle time',
     description:
-      'A planner who changes an order in a draft holds a lock on it. The lock ends after this much idle time, and another planner may then take the order.',
+      'A planner who changes an order in a draft holds a lock on it. The lock ends after this much idle time, and another planner may then take the order. Up to 24 h.',
     kind: 'number',
     unit: 'min',
+    // Stored as a duration in seconds, shown and typed in minutes.
+    scale: 60,
+    max: 1440,
     defaultText: noDefault,
     adr: 'ADR 0029',
     open: 'productOwner',
@@ -151,27 +159,34 @@ export const planningRuleDefinitions: readonly PlanningRuleDefinition[] = [
   },
 ];
 
-/** A rule's value at a plant and where it comes from; both are undefined when no scope sets it. */
+/**
+ * A rule's value at a plant and where it comes from: the plant, the company, or the default its
+ * ADR records. Both are undefined for a rule that no scope sets and that has no default.
+ */
 export interface EffectiveRule<Value> {
   readonly value: Value | undefined;
-  readonly from: 'plant' | 'company' | undefined;
+  readonly from: 'plant' | 'company' | 'default' | undefined;
 }
 
 export type EffectivePlanningRules = {
   readonly [Key in PlanningRuleKey]: EffectiveRule<Required<PlanningRuleValues>[Key]>;
 };
 
-/** A plant's rules: its own value where it sets one, else the company's. */
+/**
+ * A plant's rules: its own value where it sets one, else the company's, else the recorded default
+ * (ADR 0027, ADR 0028).
+ */
 export function effectivePlanningRules(
   settings: PlanningRuleSettings,
   plant: string,
 ): EffectivePlanningRules {
   const own = settings.plants[plant] ?? {};
-  const entries = planningRuleDefinitions.map(({ key }) => {
+  const entries = planningRuleDefinitions.map(({ key, defaultValue }) => {
     if (own[key] !== undefined) return [key, { value: own[key], from: 'plant' }] as const;
     if (settings.company[key] !== undefined) {
       return [key, { value: settings.company[key], from: 'company' }] as const;
     }
+    if (defaultValue !== undefined) return [key, { value: defaultValue, from: 'default' }] as const;
     return [key, { value: undefined, from: undefined }] as const;
   });
   return Object.fromEntries(entries) as unknown as EffectivePlanningRules;
@@ -179,8 +194,8 @@ export function effectivePlanningRules(
 
 /**
  * The Gantt's settings with a plant's rules in them: the four rules the Gantt's analysis reads
- * (the deadline rule, the frozen window, the lead time basis and the setup overlap). A rule no
- * scope sets keeps the base value. What divides run time does not change the mock plan: the
+ * (the deadline rule, the frozen window, the lead time basis and the setup overlap). A rule with
+ * no value at any scope and no default keeps the base value. What divides run time does not change the mock plan: the
  * fixture's durations are fixed.
  */
 export function ganttSettingsWith(

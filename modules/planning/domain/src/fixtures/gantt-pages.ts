@@ -74,18 +74,20 @@ export const boardFieldLists = z.object({
 
 /**
  * The values of the planning rules of plan 07, Settings, at one scope; a rule left out takes the
- * value of the scope above. The lock expiry is in minutes. The Zod definitions move to
- * @northmes/planning-contracts with the planning settings API.
+ * value of the scope above. The lock expiry is a duration in seconds, the canonical unit of plan
+ * 07's common columns. The upper bounds, 720 h for the frozen window and 24 h for the lock
+ * expiry, are plan proposals (#766). The Zod definitions move to @northmes/planning-contracts
+ * with the planning settings API.
  */
 export const planningRuleValues = z
   .object({
     planningFactorSource: z.enum(['oeeTarget', 'factor', 'none']),
     planningFactor: z.number().gt(0).max(2),
-    frozenHours: z.number().nonnegative(),
+    frozenHours: z.number().nonnegative().max(720),
     leadTimeBasis: z.enum(['elapsed', 'working']),
     retoolOverlapsLeadTime: z.boolean(),
     deadlineRule: z.enum(['startOfDay', 'endOfShift']),
-    softLockIdleExpiryMinutes: z.number().int().positive(),
+    softLockIdleExpiry: z.number().int().positive().max(86_400),
     countPurchaseRequisitions: z.boolean(),
   })
   .partial()

@@ -33,7 +33,8 @@ export function PlanningRuleCard({
   rule,
   plantName,
   companyText,
-  hasCompanyValue,
+  inheritLabel,
+  canInherit,
   draft,
   error,
   notUsed,
@@ -43,7 +44,10 @@ export function PlanningRuleCard({
   readonly rule: PlanningRuleDefinition;
   readonly plantName: string;
   readonly companyText: string;
-  readonly hasCompanyValue: boolean;
+  /** The words of the choice that takes no own value: the company value, or the recorded default. */
+  readonly inheritLabel: string;
+  /** Whether that choice has a value to take; without one the plant needs its own. */
+  readonly canInherit: boolean;
   readonly draft: RuleDraft;
   readonly error: string | undefined;
   /** Why the rule does not apply at the plant; it then has no choice. */
@@ -116,13 +120,9 @@ export function PlanningRuleCard({
               className="grid gap-2"
             >
               <div className="flex items-center gap-2 text-sm">
-                <RadioGroupItem
-                  id={`${baseId}-company`}
-                  value="company"
-                  disabled={!hasCompanyValue}
-                />
+                <RadioGroupItem id={`${baseId}-company`} value="company" disabled={!canInherit} />
                 <Label htmlFor={`${baseId}-company`} className="font-normal">
-                  {hasCompanyValue ? 'Use the company value' : 'Use the company value, none is set'}
+                  {inheritLabel}
                 </Label>
               </div>
               <div className="flex items-center gap-2 text-sm">
@@ -138,6 +138,8 @@ export function PlanningRuleCard({
                   label={label}
                   name={`rules.${rule.key}`}
                   value={draft.text}
+                  error={error}
+                  {...(draft.text === '' && { placeholder: 'Choose a value' })}
                   options={(rule.options ?? []).map((option) => ({
                     value: String(option.value),
                     label: option.label,

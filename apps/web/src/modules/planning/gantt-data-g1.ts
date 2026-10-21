@@ -6,6 +6,7 @@ import {
   type GanttPagesFixture,
   g1,
   g1Pages,
+  resolveWallClock,
 } from '@northmes/planning-domain';
 import { Temporal } from 'temporal-polyfill';
 import { analyzeGantt, placementWithSegments, workingCalendarOf } from './gantt-analysis.ts';
@@ -103,9 +104,12 @@ function deadlineMsOf(order: FixtureOrder, settings: GanttSettings, timeZone: st
   const time =
     order.deadlineTime ??
     (settings.deadlineRule === 'startOfDay' ? '00:00' : settings.shiftEndForDeadline);
-  return Temporal.PlainDate.from(order.deadlineDate)
-    .toPlainDateTime(Temporal.PlainTime.from(time))
-    .toZonedDateTime(timeZone).epochMilliseconds;
+  // ADR 0024's clamp rule: a time in the spring gap is the first instant after it.
+  return resolveWallClock(
+    timeZone,
+    Temporal.PlainDate.from(order.deadlineDate),
+    Temporal.PlainTime.from(time),
+  );
 }
 
 function orderOf(

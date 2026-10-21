@@ -42,22 +42,28 @@ function valueText(rule: PlanningRuleDefinition, value: RuleValue | undefined): 
   if (rule.kind === 'choice') {
     return rule.options?.find((option) => option.value === value)?.label ?? String(value);
   }
-  return rule.unit === undefined ? String(value) : `${value} ${rule.unit}`;
+  const shown = typeof value === 'number' ? value / (rule.scale ?? 1) : value;
+  return rule.unit === undefined ? String(shown) : `${shown} ${rule.unit}`;
+}
+
+/** The value a plant takes when it does not set its own: the company's, else the recorded default. */
+function inheritedValue(rule: PlanningRuleDefinition, company: PlanningRuleValues) {
+  return (company[rule.key] as RuleValue | undefined) ?? rule.defaultValue;
 }
 
 /**
- * The form's start: the plant's own value where it sets one, else the company's. A rule the
- * company does not set starts on the plant's own value, which then needs one.
+ * The form's start: the plant's own value where it sets one, else the company's or the recorded
+ * default. A rule with neither starts on the plant's own value, which then needs one.
  */
 function draftsOf(rules: EffectivePlanningRules): Drafts {
   return Object.fromEntries(
     planningRuleDefinitions.map((rule) => {
       const { value, from } = rules[rule.key];
-      const shown = value ?? rule.defaultValue;
+      const shown = typeof value === 'number' ? value / (rule.scale ?? 1) : value;
       return [
         rule.key,
         {
-          choice: from === 'company' ? 'company' : 'own',
+          choice: from === 'company' || from === 'default' ? 'company' : 'own',
           text: shown === undefined ? '' : String(shown),
         },
       ];
@@ -75,11 +81,12 @@ function parsedValue(rule: PlanningRuleDefinition, text: string): RuleValue | un
   const trimmed = text.trim().replace(',', '.');
   if (!/^\d+(\.\d+)?$/.test(trimmed)) return undefined;
   const number = Number(trimmed);
+  if (rule.max !== undefined && number > rule.max) return undefined;
   switch (rule.key) {
     case 'planningFactor':
       return number > 0 && number <= 2 ? number : undefined;
-    case 'softLockIdleExpiryMinutes':
-      return Number.isInteger(number) && number >= 1 ? number : undefined;
+    case 'softLockIdleExpiry':
+      return Number.isInteger(number) && number >= 1 ? number * (rule.scale ?? 1) : undefined;
     default:
       return number;
   }
@@ -89,17 +96,20 @@ function parsedValue(rule: PlanningRuleDefinition, text: string): RuleValue | un
 const valueErrors: Partial<Record<PlanningRuleKey, string>> = {
   planningFactor: 'Enter a planning factor greater than 0 and at most 2, such as 0.8.',
   frozenHours:
-    'Enter the frozen window in hours, 0 or more. No default is recorded, so the plant needs a value.',
-  softLockIdleExpiryMinutes: 'Enter the lock expiry in whole minutes, 1 or more.',
+    'Enter the frozen window in hours, from 0 to 720. No default is recorded, so the plant needs a value.',
+  softLockIdleExpiry: 'Enter the lock expiry in whole minutes, from 1 to 1440.',
 };
 
-/** The values the form stands for: the own value where it is chosen and parses, else the company's. */
+/**
+ * The values the form stands for: the own value where it is chosen and parses, else the company's
+ * or the recorded default.
+ */
 function formValues(drafts: Drafts, company: PlanningRuleValues) {
   const values: Partial<Record<PlanningRuleKey, RuleValue>> = {};
   for (const rule of planningRuleDefinitions) {
     const draft = drafts[rule.key];
     const value =
-      draft.choice === 'own' ? parsedValue(rule, draft.text) : (company[rule.key] as RuleValue);
+      draft.choice === 'own' ? parsedValue(rule, draft.text) : inheritedValue(rule, company);
     if (value !== undefined) values[rule.key] = value;
   }
   return values;
@@ -149,10 +159,10 @@ function effectOf(
         ? `A deadline date of ${date} becomes ${date} 00:00 on the Gantt.`
         : `A deadline date of ${date} becomes ${date} ${snapshot.settings.shiftEndForDeadline}, the end of shift in calendar ${snapshot.calendar.name}, on the Gantt.`;
     }
-    case 'softLockIdleExpiryMinutes': {
-      const minutes = values.softLockIdleExpiryMinutes;
-      return typeof minutes === 'number'
-        ? `A lock taken at ${formatPlantTime(snapshot.nowMs, zone)} ends at ${formatPlantTime(snapshot.nowMs + minutes * 60_000, zone)} unless the planner moves a job order of the order or extends the lock. The mock data holds no locks, so the value is kept only.`
+    case 'softLockIdleExpiry': {
+      const seconds = values.softLockIdleExpiry;
+      return typeof seconds === 'number'
+        ? `A lock taken at ${formatPlantTime(snapshot.nowMs, zone)} ends at ${formatPlantTime(snapshot.nowMs + seconds * 1000, zone)} unless the planner moves a job order of the order or extends the lock. The mock data holds no locks, so the value is kept only.`
         : 'Without a value the plant cannot open.';
     }
     case 'countPurchaseRequisitions':
@@ -183,7 +193,9 @@ function PlanningRulesForm({
   const plantName = snapshot.plants?.find((each) => each.slug === plant)?.name ?? plant;
   const values = formValues(drafts, company);
   const factorUsed = values.planningFactorSource === 'factor';
-  const dirty = JSON.stringify(drafts) !== JSON.stringify(savedDrafts);
+  const dirty = JSON.stringify(drafts) !== JSON.stringify(savedDrafts) || reason !== '';
+  /** Whether a rule takes a value at the plant: the planning factor only with one factor. */
+  const applies = (key: PlanningRuleKey) => key !== 'planningFactor' || factorUsed;
   const ownCount = planningRuleDefinitions.filter(
     (rule) => drafts[rule.key].choice === 'own' && (rule.key !== 'planningFactor' || factorUsed),
   ).length;
@@ -193,8 +205,7 @@ function PlanningRulesForm({
     const change: Record<string, RuleValue | null> = {};
     for (const rule of planningRuleDefinitions) {
       const draft = drafts[rule.key];
-      const applies = rule.key !== 'planningFactor' || factorUsed;
-      if (!applies || draft.choice === 'company') {
+      if (!applies(rule.key) || draft.choice === 'company') {
         change[rule.key] = null;
         continue;
       }
@@ -211,11 +222,15 @@ function PlanningRulesForm({
     }
     store.save(plant, change as PlanningRulesChange);
     setSavedDrafts(drafts);
+    setReason('');
     setStatus('Planning rules saved.');
   };
 
+  // A rule that no longer takes its own value leaves the summary, so no link points to a field
+  // that is gone.
   const summaryErrors = planningRuleDefinitions.flatMap((rule) => {
-    const message = errors[rule.key];
+    const message =
+      applies(rule.key) && drafts[rule.key].choice === 'own' ? errors[rule.key] : undefined;
     return message === undefined
       ? []
       : [
@@ -264,7 +279,14 @@ function PlanningRulesForm({
             rule={rule}
             plantName={plantName}
             companyText={valueText(rule, companyValue)}
-            hasCompanyValue={companyValue !== undefined}
+            inheritLabel={
+              companyValue !== undefined
+                ? 'Use the company value'
+                : rule.defaultValue !== undefined
+                  ? `Use the default, ${valueText(rule, rule.defaultValue)}`
+                  : 'Use the company value, none is set'
+            }
+            canInherit={inheritedValue(rule, company) !== undefined}
             draft={drafts[rule.key]}
             error={errors[rule.key]}
             notUsed={
@@ -279,6 +301,7 @@ function PlanningRulesForm({
             effect={effectOf(rule.key, values, snapshot, plantName)}
             onChange={(draft) => {
               setDrafts((current) => ({ ...current, [rule.key]: draft }));
+              setErrors(({ [rule.key]: _changed, ...others }) => others);
               setStatus('');
             }}
           />

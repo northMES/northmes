@@ -152,7 +152,9 @@ describe('the planning rules page in plant settings (plan 07, Settings; #766, PS
     await userEvent.type(input, '100000000');
     const lock = await findRule('Lock expiry after idle time');
     await userEvent.click(within(lock).getByRole('radio', { name: 'Set for Plant A' }));
-    const minutes = within(lock).getByRole('textbox', { name: /Lock expiry after idle time at Plant A/ });
+    const minutes = within(lock).getByRole('textbox', {
+      name: /Lock expiry after idle time at Plant A/,
+    });
     await userEvent.clear(minutes);
     await userEvent.type(minutes, '1441');
     await userEvent.click(screen.getByRole('button', { name: 'Save planning rules' }));
@@ -202,10 +204,15 @@ describe('the planning rules page in plant settings (plan 07, Settings; #766, PS
   it('PS4 the error summary drops a rule that no longer applies, and a reason counts as a change that Save clears', async () => {
     renderRules();
     const source = await findRule('What divides run time');
-    const sourceSelect = within(source).getByRole('combobox', { name: /What divides run time at Plant A/ });
+    const sourceSelect = within(source).getByRole('combobox', {
+      name: /What divides run time at Plant A/,
+    });
     await userEvent.selectOptions(sourceSelect, 'factor');
     const factor = await findRule('Planning factor');
-    await userEvent.type(within(factor).getByRole('textbox', { name: /Planning factor at Plant A/ }), '2.5');
+    await userEvent.type(
+      within(factor).getByRole('textbox', { name: /Planning factor at Plant A/ }),
+      '2.5',
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Save planning rules' }));
     expect(await screen.findByRole('group', { name: '1 rule needs a change' })).toBeTruthy();
 
