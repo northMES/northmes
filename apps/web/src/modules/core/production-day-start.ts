@@ -64,13 +64,17 @@ export function productionDayStartClash(
 export interface UnevenProductionDay {
   /** The plant date the production day starts on. */
   readonly date: string;
-  readonly hours: number;
+  /** Its length: 82 800 for a 23-hour day, 88 200 for a day that a half-hour change lengthens. */
+  readonly seconds: number;
 }
 
+/** How many clock changes the search looks past for one that changes a day's length. */
+const changesSearched = 4;
+
 /**
- * The first production day from an instant on that lasts 23 or 25 hours, because the zone's
- * clocks change during it (ADR 0025, CAL9): with a 06:00 start in Europe/Stockholm, the day of
- * Sat 27 Mar 2027 lasts 23 h. Answers undefined for a zone without clock changes.
+ * The production day that runs at an instant, or the first one after it, whose length the zone's
+ * clocks change (ADR 0025, CAL9): with a 06:00 start in Europe/Stockholm, the day of Sat 27 Mar
+ * 2027 lasts 23 h. Answers undefined for a zone without clock changes.
  */
 export function nextUnevenProductionDay(
   timeZone: string,
@@ -78,17 +82,27 @@ export function nextUnevenProductionDay(
   fromMs: number,
 ): UnevenProductionDay | undefined {
   const start = Temporal.PlainTime.from(dayStart);
-  const transition = Temporal.Instant.fromEpochMilliseconds(fromMs)
-    .toZonedDateTimeISO(timeZone)
-    .getTimeZoneTransition('next');
-  if (transition === null) return undefined;
-  // The production day that holds the change starts on the change's date, or on the day before
-  // when the change comes before the day start.
-  let date = transition.toPlainDate();
-  if (Temporal.PlainTime.compare(transition.toPlainTime(), start) < 0) {
-    date = date.subtract({ days: 1 });
+  const beginOf = (date: Temporal.PlainDate) =>
+    date.toPlainDateTime(start).toZonedDateTime(timeZone);
+  const now = Temporal.Instant.fromEpochMilliseconds(fromMs).toZonedDateTimeISO(timeZone);
+  let running = now.toPlainDate();
+  if (Temporal.ZonedDateTime.compare(now, beginOf(running)) < 0) {
+    running = running.subtract({ days: 1 });
   }
-  const begins = date.toPlainDateTime(start).toZonedDateTime(timeZone);
-  const ends = date.add({ days: 1 }).toPlainDateTime(start).toZonedDateTime(timeZone);
-  return { date: date.toString(), hours: begins.until(ends, { largestUnit: 'hours' }).hours };
+  let cursor = beginOf(running);
+  for (let searched = 0; searched < changesSearched; searched++) {
+    const transition = cursor.getTimeZoneTransition('next');
+    if (transition === null) return undefined;
+    // The day that holds the change is the last one that begins before it. Instants, not wall
+    // times, decide: a 03:00 start begins at the very instant the spring change ends at 03:00.
+    let date = transition.toPlainDate();
+    if (Temporal.ZonedDateTime.compare(transition, beginOf(date)) <= 0) {
+      date = date.subtract({ days: 1 });
+    }
+    const seconds =
+      (beginOf(date.add({ days: 1 })).epochMilliseconds - beginOf(date).epochMilliseconds) / 1000;
+    if (seconds !== 86_400) return { date: date.toString(), seconds };
+    cursor = transition;
+  }
+  return undefined;
 }

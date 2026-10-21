@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { formatPlantDateTime, formatPlantDay } from '@northmes/contracts/format';
+import { formatDuration, formatPlantDateTime, formatPlantDay } from '@northmes/contracts/format';
+import { useShell } from '@northmes/web-sdk';
 import { useSearch } from '@tanstack/react-router';
 import { Info, Lock } from 'lucide-react';
 import { useState } from 'react';
@@ -24,9 +25,27 @@ import { nextUnevenProductionDay, productionDayStartClash } from '../../producti
 /** The tag of a field that is set once and cannot change on this page. */
 const fixed = 'Fixed';
 
-/** A plant date in another year than now's, with its year: "Sat 27 Mar 2027". */
+/** A day is this long when no clock change falls in it. */
+const daySeconds = 86_400;
+
+/**
+ * The IANA zones the browser knows, as the zone's options: the server's list replaces it with the
+ * plant API (#419), which checks a zone against the database's list.
+ */
+const browserZones: readonly string[] = Intl.supportedValuesOf('timeZone');
+
+/** A plant date with its year: "Sat 27 Mar 2027". */
 function dayWithYear(date: string): string {
   return `${formatPlantDay(date)} ${date.slice(0, 4)}`;
+}
+
+/** The plant date of the production day that runs at an instant. */
+function productionDayAt(epochMs: number, timeZone: string, dayStart: string): Temporal.PlainDate {
+  const start = Temporal.PlainTime.from(dayStart);
+  const now = Temporal.Instant.fromEpochMilliseconds(epochMs).toZonedDateTimeISO(timeZone);
+  const date = now.toPlainDate();
+  const begins = date.toPlainDateTime(start).toZonedDateTime(timeZone);
+  return Temporal.ZonedDateTime.compare(now, begins) < 0 ? date.subtract({ days: 1 }) : date;
 }
 
 /**
@@ -34,10 +53,14 @@ function dayWithYear(date: string): string {
  * within 10 years of the plant's today (ADR 0025), the earlier clock change first; undefined when
  * the time is safe.
  */
-function dayStartError(timeZone: string, value: string, today: string): string | undefined {
+function dayStartError(timeZone: string, value: string, nowMs: number): string | undefined {
   if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) {
     return 'Enter the production day start as HH:MM, such as 06:00.';
   }
+  const today = Temporal.Instant.fromEpochMilliseconds(nowMs)
+    .toZonedDateTimeISO(timeZone)
+    .toPlainDate()
+    .toString();
   const clash = productionDayStartClash(timeZone, value, today);
   if (clash === undefined) return undefined;
   const parts = [
@@ -55,11 +78,7 @@ function dayStartError(timeZone: string, value: string, today: string): string |
 function ProductionDayFacts({ snapshot }: { readonly snapshot: PlantSettingsSnapshot }) {
   const { timeZone, productionDayStart } = snapshot.plant;
   const start = Temporal.PlainTime.from(productionDayStart);
-  const now = Temporal.Instant.fromEpochMilliseconds(snapshot.nowMs).toZonedDateTimeISO(timeZone);
-  const today =
-    Temporal.PlainTime.compare(now.toPlainTime(), start) < 0
-      ? now.toPlainDate().subtract({ days: 1 })
-      : now.toPlainDate();
+  const today = productionDayAt(snapshot.nowMs, timeZone, productionDayStart);
   const begins = today.toPlainDateTime(start).toZonedDateTime(timeZone).epochMilliseconds;
   const ends = today
     .add({ days: 1 })
@@ -74,8 +93,9 @@ function ProductionDayFacts({ snapshot }: { readonly snapshot: PlantSettingsSnap
       </p>
       {uneven !== undefined && (
         <p>
-          The production day of {dayWithYear(uneven.date)} lasts {uneven.hours} h, because the
-          clocks {uneven.hours < 24 ? 'go forward' : 'go back'} that night.
+          The production day of {dayWithYear(uneven.date)} lasts{' '}
+          {formatDuration(uneven.seconds, { form: 'hours' })}, because the clocks{' '}
+          {uneven.seconds < daySeconds ? 'go forward' : 'go back'} that night.
         </p>
       )}
     </div>
@@ -86,12 +106,11 @@ function ProductionDayFacts({ snapshot }: { readonly snapshot: PlantSettingsSnap
 function OpenTimeFields({ snapshot }: { readonly snapshot: PlantSettingsSnapshot }) {
   const [timeZone, setTimeZone] = useState(snapshot.plant.timeZone);
   const [dayStart, setDayStart] = useState(snapshot.plant.productionDayStart);
-  const [checked, setChecked] = useState<string | undefined>(undefined);
-  const today = Temporal.Instant.fromEpochMilliseconds(snapshot.nowMs)
-    .toZonedDateTimeISO(timeZone)
-    .toPlainDate()
-    .toString();
-  const check = (zone: string, value: string) => setChecked(dayStartError(zone, value, today));
+  const [error, setError] = useState<string | undefined>(undefined);
+  // A stored zone that the browser's list spells another way stays a choice, so the select shows it.
+  const zones = browserZones.includes(snapshot.plant.timeZone)
+    ? browserZones
+    : [snapshot.plant.timeZone, ...browserZones];
   return (
     <>
       <SelectField
@@ -100,19 +119,22 @@ function OpenTimeFields({ snapshot }: { readonly snapshot: PlantSettingsSnapshot
         value={timeZone}
         onChange={(event) => {
           setTimeZone(event.target.value);
-          check(event.target.value, dayStart);
+          setError(dayStartError(event.target.value, dayStart, snapshot.nowMs));
         }}
-        options={Intl.supportedValuesOf('timeZone').map((zone) => ({ value: zone, label: zone }))}
-        hint="An IANA zone from the server's list, the same list as New plant in company settings."
+        options={zones.map((zone) => ({ value: zone, label: zone }))}
+        hint="An IANA zone. Until the plant API checks it against the server's list (#419), the list is your browser's."
       />
       <TextField
         label="Production day start"
         name="productionDayStart"
         value={dayStart}
         inputMode="numeric"
-        onChange={(event) => setDayStart(event.target.value)}
-        onBlur={() => check(timeZone, dayStart)}
-        error={checked}
+        onChange={(event) => {
+          setDayStart(event.target.value);
+          setError(undefined);
+        }}
+        onBlur={() => setError(dayStartError(timeZone, dayStart, snapshot.nowMs))}
+        error={error}
         hint="Plant time, HH:MM. A night shift belongs to the production day it starts on. The time is checked against the zone's clock changes for the next 10 years."
       />
     </>
@@ -122,7 +144,10 @@ function OpenTimeFields({ snapshot }: { readonly snapshot: PlantSettingsSnapshot
 /** The plant's form (PP1, PP4): the name, the fixed slug, the zone and the day start, the facts. */
 function PlantForm({ snapshot }: { readonly snapshot: PlantSettingsSnapshot }) {
   const calendar = snapshot.calendars[0];
-  const plannable = snapshot.equipment.filter((machine) => machine.isPlannable);
+  const nameOf = machineNamer(snapshot);
+  const plannable = snapshot.equipment
+    .filter((machine) => machine.isPlannable)
+    .map((machine) => nameOf(machine.code));
   return (
     <form
       className="flex flex-col gap-4"
@@ -150,9 +175,9 @@ function PlantForm({ snapshot }: { readonly snapshot: PlantSettingsSnapshot }) {
         {calendar !== undefined && (
           <Alert>
             <Lock aria-hidden />
-            <AlertTitle>Fixed since calendar {calendar.name}'s first version</AlertTitle>
+            <AlertTitle>Fixed since the plant's first calendar version</AlertTitle>
             <AlertDescription>
-              Calendar {calendar.name} has a version from {dayWithYear(calendar.effectiveFrom)}.
+              Calendar {calendar.name} is in effect from {dayWithYear(calendar.effectiveFrom)}.
               Calendar versions and the order times from the ERP are read in the plant's zone, so
               the zone and the day start stay as they are once a calendar version exists (ADR 0066).
               Whether the day start may change later is open with the product owner (ADR 0025).
@@ -199,15 +224,13 @@ function PlantForm({ snapshot }: { readonly snapshot: PlantSettingsSnapshot }) {
             <dd>
               {calendar === undefined
                 ? 'None yet'
-                : `${calendar.name}, version from ${dayWithYear(calendar.effectiveFrom)}`}
+                : `${calendar.name}, in effect from ${dayWithYear(calendar.effectiveFrom)}`}
             </dd>
           </div>
           <div className="flex flex-col gap-0.5">
             <dt className="text-xs text-muted-foreground">Plannable machines</dt>
             <dd>
-              {plannable.length === 0
-                ? 'None yet'
-                : `${plannable.length}: ${plannable.map((machine) => machineNamer(snapshot)(machine.code)).join(', ')}`}
+              {plannable.length === 0 ? 'None yet' : `${plannable.length}: ${plannable.join(', ')}`}
             </dd>
           </div>
         </dl>
@@ -262,11 +285,13 @@ function FormSkeleton() {
  * The plant's own page in plant settings (design #767, PP1 to PP7): its name, its slug, and its
  * zone and production day start, which are fixed once the plant has a calendar version (ADR 0066)
  * and checked against the zone's clock changes before (ADR 0025). The fields and checks are those
- * of New plant in company settings (#419). The page reads the fixture G1; Save waits for the plant
- * API. The preview key opens the plant without a calendar version (PP4) and the loading, failed
- * and no-access states.
+ * of New plant in company settings (#419). The page reads the fixture G1, which holds one plant:
+ * at any other plant it says so instead of showing that plant as this one. Save waits for the
+ * plant API. The preview key opens the plant without a calendar version (PP4) and the loading,
+ * failed and no-access states.
  */
 export function PlantScreen() {
+  const { plant } = useShell();
   const search = plantPageSearch(useSearch({ strict: false }));
   const { snapshot, error, retry } = usePlantSettings(search.preview);
   let state: PageState = { status: 'ready' };
@@ -279,12 +304,30 @@ export function PlantScreen() {
     };
   } else if (snapshot === undefined && error !== undefined) {
     state = { status: 'error', title: 'Could not load the plant', error, onRetry: retry };
+  } else if (snapshot !== undefined && snapshot.plant.slug !== plant) {
+    state = {
+      status: 'empty',
+      icon: Info,
+      title: 'This page reads mock data',
+      description: `The mock data holds ${snapshot.plant.name} only, at ${snapshot.plant.slug}. The plant page shows this plant once it reads the plant API (#419).`,
+    };
   }
   const loading = snapshot === undefined && error === undefined;
+  const shown = state.status === 'ready' && snapshot !== undefined;
   return (
-    <PageFrame title={snapshot?.plant.name ?? 'Plant'} currentCrumb="Plant" state={state}>
+    <PageFrame
+      title="Plant"
+      meta={
+        shown ? (
+          <span className="text-sm text-muted-foreground">
+            {snapshot.plant.name}, {snapshot.plant.slug}
+          </span>
+        ) : undefined
+      }
+      state={state}
+    >
       {loading && <FormSkeleton />}
-      {snapshot !== undefined && <PlantForm snapshot={snapshot} />}
+      {shown && <PlantForm snapshot={snapshot} />}
     </PageFrame>
   );
 }

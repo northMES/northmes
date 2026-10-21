@@ -87,9 +87,7 @@ describe("the plant's own page in plant settings (design #767, PP1 to PP7)", () 
     renderCoreAt(coreLinks.plant({ plant: 'plant-b' }).href, []);
     await screen.findByRole('heading', { level: 1, name: 'Plant' });
 
-    expect(
-      await screen.findByText('The mock data holds Plant A only, at plant-a.'),
-    ).toBeTruthy();
+    expect(await screen.findByText(/^The mock data holds Plant A only, at plant-a\./)).toBeTruthy();
     expect(screen.queryByRole('textbox', { name: 'Slug' })).toBeNull();
   });
 
