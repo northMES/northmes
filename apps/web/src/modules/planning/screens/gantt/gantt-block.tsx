@@ -4,11 +4,12 @@ import { cn } from 'cn';
 import { Clock, Lock, Pencil } from 'lucide-react';
 import { type KeyboardEvent, type PointerEvent, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
+import { blockLines } from '../../board-fields.ts';
 import { blockName, blockStates } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
 import { GanttHoverCard } from './gantt-hover-card.tsx';
 import { tooltipText } from './gantt-move.ts';
-import { type JobOrderRow, quantityText } from './gantt-rows.ts';
+import type { JobOrderRow } from './gantt-rows.ts';
 
 /** The width from which a block shows its first line, its second line, and the setup hatch (D3). */
 const density = { compact: 48, full: 120, setup: 66 } as const;
@@ -40,7 +41,7 @@ export function GanttBlock({
   readonly onChain: boolean;
   readonly onSelect: () => void;
 }) {
-  const { scale, snapshot, machineName, timeZone, draftRowIds, move } = useGanttView();
+  const { scale, snapshot, machineName, timeZone, draftRowIds, move, boardFields } = useGanttView();
   const { jobOrder, operation, order } = row;
   // The press in progress: where it started, and whether it has become a drag.
   const press = useRef<{ clientX: number; setupStartMs: number; dragging: boolean } | undefined>(
@@ -54,7 +55,12 @@ export function GanttBlock({
   const width = Math.max(2, scale.x(placement.endMs) - left);
   const machine = machineName(jobOrder.equipment);
   const inDraft = draftRowIds?.has(jobOrder.id) === true;
-  const name = blockName(row, snapshot, machine, { onChain, inDraft });
+  const lines = blockLines(boardFields.block, row, snapshot, machineName);
+  const name = blockName(row, snapshot, machine, {
+    onChain,
+    inDraft,
+    extraNames: lines.extraNames,
+  });
   const states = blockStates(row, snapshot, { onChain, inDraft });
   const locked = states.some((state) => state.kind === 'locked');
   const conflict = states.some((state) => state.kind === 'conflict');
@@ -245,14 +251,25 @@ export function GanttBlock({
               {locked && <Lock aria-hidden className="size-3.5 shrink-0" />}
               {inDraft && <Pencil aria-hidden className="size-3.5 shrink-0" />}
               {late && <Clock aria-hidden className="size-3.5 shrink-0" />}
-              <span className="truncate">
-                {operation.displayNumber} {operation.name}
+              <span data-block-line="1" className="truncate">
+                {lines.first === undefined
+                  ? operation.displayNumber
+                  : `${operation.displayNumber} ${lines.first}`}
               </span>
             </span>
           )}
-          {width >= density.full && (
-            <span className="relative z-[2] block truncate">
-              {order.article}, {quantityText(jobOrder.quantity)}
+          {/* The block fields after the first (plan 07, Board settings; #762): the second line at
+              full density, with the module fields at its trailing edge (D3 IN29). */}
+          {width >= density.full && (lines.second !== '' || lines.trailing.length > 0) && (
+            <span className="relative z-[2] flex items-center gap-1.5">
+              <span data-block-line="2" className="min-w-0 flex-1 truncate">
+                {lines.second}
+              </span>
+              {lines.trailing.map((field) => (
+                <span key={field.id} data-block-trailing className="shrink-0 font-semibold">
+                  {field.text}
+                </span>
+              ))}
             </span>
           )}
         </TooltipTrigger>
@@ -263,7 +280,12 @@ export function GanttBlock({
           align="start"
           className="max-w-none px-3 py-2.5"
         >
-          <GanttHoverCard row={row} snapshot={snapshot} machineName={machine} />
+          <GanttHoverCard
+            row={row}
+            snapshot={snapshot}
+            machineName={machineName}
+            hoverIds={boardFields.hover}
+          />
         </TooltipContent>
       </Tooltip>
       {/* The move preview: the snapped span as an outline in the draft style, with the tooltip

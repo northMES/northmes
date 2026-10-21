@@ -14,4 +14,10 @@ describe('planningLinks', () => {
         .href,
     ).toBe('/plant-a/planning/customer-orders/40211');
   });
+
+  it("#762 planningLinks.settings.boardFields builds the href of a plant's board fields page", () => {
+    expect(planningLinks.settings.boardFields({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/planning/settings/board-fields',
+    );
+  });
 });

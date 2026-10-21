@@ -111,7 +111,15 @@ function orderOf(
     operations: order.operations.map(operationOf),
     jobOrders: order.jobOrders.map((row) => jobOrderOf(order, row, windowsOf)),
     ...withOrigin(originOf(order, pages)),
+    ...withExternalData(pages.orders[order.number]?.externalData),
   };
+}
+
+/** The ERP's free fields of an order, left out when it has none (#762). */
+function withExternalData(
+  entries: readonly { readonly key: string; readonly value: string }[] | undefined,
+): { readonly externalData?: readonly { readonly key: string; readonly value: string }[] } {
+  return entries === undefined || entries.length === 0 ? {} : { externalData: entries };
 }
 
 /** The origin key of an order, left out when there is none. */
@@ -162,6 +170,7 @@ function pagesOf(fixture: GanttFixture, pages: GanttPagesFixture) {
     })),
     routings: pages.routings,
     history,
+    moduleFields: pages.moduleFields,
   };
 }
 

@@ -123,14 +123,19 @@ export function durationsOf(
 
 /**
  * The accessible name of a block (plan 07, Block states): the row, the article, the quantity, the
- * machine, the times, the setup and run durations, the status, the release relation and every
- * state cue in words, so a screen reader hears what the block shows and the hover card adds.
+ * machine, the times, the setup and run durations, the status, the release relation, the words of
+ * the block fields the name does not already say (#762) and every state cue in words, so a screen
+ * reader hears what the block shows and the hover card adds.
  */
 export function blockName(
   row: JobOrderRow,
   snapshot: GanttSnapshot,
   machineName: string,
-  options: { readonly onChain?: boolean; readonly inDraft?: boolean } = {},
+  options: {
+    readonly onChain?: boolean;
+    readonly inDraft?: boolean;
+    readonly extraNames?: readonly string[];
+  } = {},
 ): string {
   const { jobOrder, operation, order } = row;
   const timeZone = snapshot.plant.timeZone;
@@ -151,6 +156,7 @@ export function blockName(
     ...(release !== undefined && !states.some((state) => state.kind === 'conflict')
       ? [release]
       : []),
+    ...(options.extraNames ?? []),
     ...states.map((state) => state.text),
   ].join(', ');
 }
