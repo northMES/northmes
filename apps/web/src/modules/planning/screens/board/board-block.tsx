@@ -7,6 +7,7 @@ import { type FocusEvent, type KeyboardEvent, type PointerEvent, useRef } from '
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
+import { orderNumbersText } from '../../gantt-draft.ts';
 import { useGanttView } from '../gantt/gantt-context.ts';
 import { type JobOrderRow, quantityText } from '../gantt/gantt-rows.ts';
 import { type BoardBlockState, boardBlockStates, borderMarkerOf } from './board-block-states.ts';
@@ -87,7 +88,14 @@ export function BoardBlock({
   // The press in progress: where it started, whether it has become a drag, and the machine under
   // the pointer that the operation may not use, which refuses the drop.
   const press = useRef<
-    { clientX: number; setupStartMs: number; dragging: boolean; refusedOn?: string } | undefined
+    | {
+        clientX: number;
+        clientY: number;
+        setupStartMs: number;
+        dragging: boolean;
+        refusedOn?: string;
+      }
+    | undefined
   >(undefined);
   // The click the browser fires after a drop is not a selection.
   const dropped = useRef(false);
@@ -110,6 +118,8 @@ export function BoardBlock({
         ArrowDown: () => move.stepMachine(1),
         Enter: () => move.commit(),
         Escape: () => {
+          // The click the browser fires when the cancelled drag lets go is not a selection.
+          if (press.current?.dragging === true) dropped.current = true;
           press.current = undefined;
           move.cancel();
         },
@@ -148,14 +158,15 @@ export function BoardBlock({
     const icon = stateIcons[state.kind];
     return icon === undefined ? [] : [{ kind: state.kind, icon }];
   });
-  // A pointer drag (plan 07, Moving without dragging; design D3, IN4): past 3 px the press becomes
-  // a move, the preview follows the snapped drop on the machine under the pointer, and pointer up
-  // commits it; over a machine the operation may not use the preview stays where it was and the
-  // drop is refused.
+  // A pointer drag (plan 07, Moving without dragging; design D3, IN4 and IN5): past 3 px in any
+  // direction the press becomes a move, the preview follows the snapped drop on the machine under
+  // the pointer, and pointer up commits it. Over a machine the operation may not use, the preview
+  // keeps the last allowed machine and the drop is refused with the machines it may use.
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || move === undefined) return;
     press.current = {
       clientX: event.clientX,
+      clientY: event.clientY,
       setupStartMs: placement.setupStartMs,
       dragging: false,
     };
@@ -165,7 +176,7 @@ export function BoardBlock({
     if (current === undefined || move === undefined) return;
     const dx = event.clientX - current.clientX;
     if (!current.dragging) {
-      if (Math.abs(dx) < dragThresholdPx) return;
+      if (Math.hypot(dx, event.clientY - current.clientY) < dragThresholdPx) return;
       if (!move.begin(jobOrder.id, 'pointer')) {
         press.current = undefined;
         return;
@@ -190,12 +201,17 @@ export function BoardBlock({
     press.current = undefined;
     if (current?.dragging !== true || move === undefined) return;
     dropped.current = true;
+    // A touch drag ends without a click, so the next tap on the block selects again.
+    setTimeout(() => {
+      dropped.current = false;
+    }, 0);
     if (!commit) {
       move.cancel();
     } else if (current.refusedOn !== undefined) {
-      move.cancel();
+      move.cancel({ announce: false });
+      const allowed = row.operation.allowedEquipment.map((code) => machineNameOf(code));
       announce(
-        `Cannot move ${jobOrder.displayNumber}: not allowed on ${machineNameOf(current.refusedOn)}.`,
+        `Cannot move ${jobOrder.displayNumber}: not allowed on ${machineNameOf(current.refusedOn)}. This operation runs on ${orderNumbersText(allowed)}.`,
       );
     } else {
       move.commit();
@@ -245,7 +261,7 @@ export function BoardBlock({
               if (inMoveMode) move?.cancel({ refocus: false });
             }}
             className={cn(
-              'absolute top-1 h-11 touch-none overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-black focus-visible:z-10',
+              'absolute top-1 h-11 touch-none overflow-hidden border select-none border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-black focus-visible:z-10',
               moving && 'opacity-60',
             )}
             style={{ left: `${left}px`, width: `${width}px`, background: `var(--${order.color})` }}

@@ -150,7 +150,10 @@ export function BoardScreen() {
   const [menu, setMenu] = useState<{ jobOrderId: string; anchor: HTMLElement } | undefined>(
     undefined,
   );
+  const [menuOpen, setMenuOpen] = useState(false);
+  // The job order stays after the dialog closes, so the dialog fades out with its content.
   const [moveDialogFor, setMoveDialogFor] = useState<string | undefined>(undefined);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [loadError, setLoadError] = useState<unknown>(undefined);
   const [attempt, setAttempt] = useState(0);
   /** Settles the promise of Try again once the load it started has settled. */
@@ -325,7 +328,10 @@ export function BoardScreen() {
     setDraft(next);
     const machine = snapshot.equipment.find((each) => each.code === equipment)?.name ?? equipment;
     announce(movedMessage(preview, machine, timeZone));
-    requestAnimationFrame(() => focusTarget(focusKeys.block(jobOrderId)));
+    // Focus returns to the block by id; a block outside the range moves the range to it.
+    requestAnimationFrame(() => {
+      if (!focusTarget(focusKeys.block(jobOrderId))) setPendingFocus(jobOrderId);
+    });
   };
 
   const view = useMemo<GanttViewContext | undefined>(() => {
@@ -569,7 +575,10 @@ export function BoardScreen() {
               {...(preview !== undefined && { preview })}
               selectedOrderId={search.order}
               onSelectOrder={selectOrder}
-              onBlockMenu={(jobOrderId, anchor) => setMenu({ jobOrderId, anchor })}
+              onBlockMenu={(jobOrderId, anchor) => {
+                setMenu({ jobOrderId, anchor });
+                setMenuOpen(true);
+              }}
               onFocusTarget={setFocused}
               onKeyDown={onKeyDown}
               gridRef={measureRef}
@@ -578,16 +587,19 @@ export function BoardScreen() {
           </div>
           <BlockMenu
             menu={menu}
+            open={menuOpen}
             snapshot={snapshot}
             plant={plant}
-            onClose={() => setMenu(undefined)}
+            onClose={() => setMenuOpen(false)}
             onMove={(jobOrderId) => {
-              setMenu(undefined);
+              setMenuOpen(false);
               moveDialogReturn.current = jobOrderId;
               setMoveDialogFor(jobOrderId);
+              setMoveDialogOpen(true);
             }}
           />
           <MoveDialog
+            open={moveDialogOpen}
             row={moveDialogRow}
             snapshot={snapshot}
             machineName={view.machineName}
@@ -595,11 +607,10 @@ export function BoardScreen() {
             presetLabel={zoomPresets[zoom].label}
             onMove={(equipment, setupStartMs) => {
               if (moveDialogFor === undefined) return;
-              const jobOrderId = moveDialogFor;
-              setMoveDialogFor(undefined);
-              moveFromDialog(jobOrderId, equipment, setupStartMs);
+              setMoveDialogOpen(false);
+              moveFromDialog(moveDialogFor, equipment, setupStartMs);
             }}
-            onCancel={() => setMoveDialogFor(undefined)}
+            onCancel={() => setMoveDialogOpen(false)}
             finalFocus={() =>
               moveDialogReturn.current === undefined
                 ? null

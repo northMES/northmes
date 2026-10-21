@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { planningLinks } from '@northmes/planning-contracts';
 import { useNavigate } from '@tanstack/react-router';
+import { useId } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,12 +19,15 @@ import { moveRefusalOf, refusalMessage } from '../gantt/gantt-move.ts';
  */
 export function BlockMenu({
   menu,
+  open,
   snapshot,
   plant,
   onClose,
   onMove,
 }: {
+  /** The job order and block of the menu, kept after it closes, so it fades out as it was. */
   readonly menu: { readonly jobOrderId: string; readonly anchor: HTMLElement } | undefined;
+  readonly open: boolean;
   readonly snapshot: GanttSnapshot;
   readonly plant: string;
   readonly onClose: () => void;
@@ -38,30 +42,35 @@ export function BlockMenu({
         );
   const row = order?.jobOrders.find((each) => each.id === menu?.jobOrderId);
   const refused = menu === undefined ? undefined : moveRefusalOf(snapshot, menu.jobOrderId);
+  const reasonId = useId();
   return (
     <DropdownMenu
-      open={menu !== undefined}
-      onOpenChange={(open) => {
-        if (!open) onClose();
+      open={open && menu !== undefined}
+      onOpenChange={(next) => {
+        if (!next) onClose();
       }}
     >
       <DropdownMenuContent
         anchor={menu?.anchor}
         aria-label={`Actions for ${row?.displayNumber ?? ''}`}
-        finalFocus={() => menu?.anchor ?? true}
+        finalFocus={() => menu?.anchor ?? false}
         className="w-56"
       >
+        {/* A Move that cannot run keeps its place, named Move and described by its reason (D3). */}
         <DropdownMenuItem
           disabled={refused !== undefined}
+          aria-describedby={refused === undefined ? undefined : reasonId}
           onClick={() => {
             if (menu !== undefined && refused === undefined) onMove(menu.jobOrderId);
           }}
         >
           Move
-          {refused !== undefined && row !== undefined && (
-            <span className="sr-only">, {refusalMessage(row.displayNumber, refused)}</span>
-          )}
         </DropdownMenuItem>
+        {refused !== undefined && row !== undefined && (
+          <p id={reasonId} className="px-2 pb-1 text-xs text-muted-foreground">
+            {refusalMessage(row.displayNumber, refused)}
+          </p>
+        )}
         <DropdownMenuItem
           onClick={() => {
             if (order === undefined) return;

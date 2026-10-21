@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatDuration, formatPlantDateTime, formatPlantTime } from '@northmes/contracts/format';
-import { ChevronLeft, ChevronRight, CircleAlert } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 import { ErrorSummary } from '../../../../ui/components/error-summary/index.ts';
+import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import {
   Dialog,
@@ -20,7 +21,8 @@ import type { JobOrderRow } from '../../screens/gantt/gantt-rows.ts';
 import { startOf, startText } from './move-dialog-start.ts';
 
 export interface MoveDialogProps {
-  /** The job order the dialog moves; none keeps it closed. */
+  readonly open: boolean;
+  /** The job order the dialog moves, kept while it closes so it fades out with its content. */
   readonly row: JobOrderRow | undefined;
   /** The plan with the planner's draft applied, which the Ends and Overlaps columns read. */
   readonly snapshot: GanttSnapshot;
@@ -36,7 +38,10 @@ export interface MoveDialogProps {
   readonly finalFocus: () => HTMLElement | null;
 }
 
-/** The job orders on a machine that a move's span would overlap, past the rows the cascade moves. */
+/**
+ * The job orders on a machine that a move's span would overlap, past the rows the cascade moves,
+ * each with when it ends and whether its order is late (design D3, IN8).
+ */
 function overlapsOf(
   snapshot: GanttSnapshot,
   preview: MovePreview | undefined,
@@ -44,12 +49,17 @@ function overlapsOf(
 ): string {
   if (preview === undefined) return 'none';
   const { setupStartMs, endMs } = preview.span;
+  const timeZone = snapshot.plant.timeZone;
   const names = snapshot.productionOrders.flatMap((order) =>
     order.jobOrders.flatMap((row) => {
       if (row.id === preview.jobOrderId || row.equipment !== equipment) return [];
       const span = preview.ghosts.get(row.id) ?? row.placement;
       if (span === undefined || span.endMs <= setupStartMs || span.setupStartMs >= endMs) return [];
-      return [`${row.displayNumber} ${order.article}`];
+      const analysis = snapshot.analysis.orders[order.id];
+      const late = analysis?.late ? `, late by ${formatDuration(-analysis.slackElapsedS)}` : '';
+      return [
+        `${row.displayNumber} ${order.article}, until ${formatPlantTime(span.endMs, timeZone)}${late}`,
+      ];
     }),
   );
   return names.length === 0 ? 'none' : names.join(', ');
@@ -67,7 +77,7 @@ function MoveForm({
   presetLabel,
   onMove,
   onCancel,
-}: Omit<MoveDialogProps, 'row' | 'finalFocus'> & { readonly row: JobOrderRow }) {
+}: Omit<MoveDialogProps, 'open' | 'row' | 'finalFocus'> & { readonly row: JobOrderRow }) {
   const timeZone = snapshot.plant.timeZone;
   const placement = row.jobOrder.placement;
   const current = row.jobOrder.equipment ?? row.operation.allowedEquipment[0] ?? '';
@@ -107,7 +117,26 @@ function MoveForm({
   const chosen = previews.get(equipment);
   const frozen = chosen?.conflicts.some((conflict) => conflict.kind === 'FROZEN_WINDOW') === true;
   const stepText = formatDuration(stepMs / 1000);
-  const step = (direction: -1 | 1) => edit(startText(setupStartMs + direction * stepMs, timeZone));
+  // A step moves the start one snap from the snapped start the preview shows and writes the
+  // snapped start. Backwards, the forward snap of the calendar can land on the same instant again,
+  // so the step keeps going back until it is earlier, as move mode's does. It steps on instants,
+  // so the hour that a change of clocks repeats is stepped through.
+  const snappedAt = (atMs: number) =>
+    previewOf(
+      snapshot,
+      { jobOrderId: row.id, setupStartMs: atMs, equipment, source: 'keyboard' },
+      true,
+    )?.span.setupStartMs ?? atMs;
+  const step = (direction: -1 | 1) => {
+    const from = chosen?.span.setupStartMs ?? setupStartMs;
+    let atMs = from + direction * stepMs;
+    for (let count = 0; direction < 0 && count < 500 && snappedAt(atMs) >= from; count += 1) {
+      atMs -= stepMs;
+    }
+    const snapped = snappedAt(atMs);
+    setSetupStartMs(snapped);
+    setText(startText(snapped, timeZone));
+  };
   return (
     <>
       <DialogHeader>
@@ -208,35 +237,19 @@ function MoveForm({
           </span>
         </div>
         <div className="grid gap-1.5">
-          <label htmlFor={startId} className="text-xs font-semibold">
-            {startLabel}
-          </label>
-          <input
+          <TextField
             id={startId}
-            type="text"
+            label={startLabel}
             value={text}
             onChange={(event) => edit(event.target.value)}
-            aria-invalid={showError || undefined}
-            aria-describedby={[showError ? `${startId}-error` : '', `${startId}-hint`]
-              .filter((part) => part !== '')
-              .join(' ')}
-            className="h-9 rounded-md border border-input bg-background px-3 font-mono text-sm aria-invalid:border-destructive"
+            className="font-mono"
+            {...(showError && { error: 'Enter a date and time like 2026-11-03 11:30.' })}
+            hint={`${
+              frozen
+                ? `Starts in the frozen window, which ends at ${formatPlantTime(snapshot.fenceMs, timeZone)}, so Save asks for a reason. `
+                : ''
+            }Steps of ${stepText}, the ${presetLabel} snap.`}
           />
-          {showError && (
-            <span
-              id={`${startId}-error`}
-              className="flex items-center gap-1.5 text-xs text-destructive"
-            >
-              <CircleAlert aria-hidden className="size-3.5" />
-              Enter a date and time like 2026-11-03 11:30.
-            </span>
-          )}
-          <span id={`${startId}-hint`} className="text-xs text-muted-foreground">
-            {frozen
-              ? `Starts in the frozen window, which ends at ${formatPlantTime(snapshot.fenceMs, timeZone)}, so Save asks for a reason. `
-              : ''}
-            Steps of {stepText}, the {presetLabel} snap.
-          </span>
           <div className="grid grid-cols-2 gap-2">
             <Button
               type="button"
@@ -279,10 +292,10 @@ function MoveForm({
  * keeps the dialog open with the error summary, which takes focus. Focus starts on the current
  * machine, and Cancel and Escape close without a change.
  */
-export function MoveDialog({ row, finalFocus, onCancel, ...props }: MoveDialogProps) {
+export function MoveDialog({ open, row, finalFocus, onCancel, ...props }: MoveDialogProps) {
   return (
     <Dialog
-      open={row !== undefined}
+      open={open && row !== undefined}
       onOpenChange={(open) => {
         if (!open) onCancel();
       }}

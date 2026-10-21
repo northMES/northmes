@@ -436,7 +436,8 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     });
     fireEvent.pointerUp(cell, { clientX: 100, clientY: 70, pointerId: 1, button: 0 });
     fireEvent.click(cell);
-    await waitFor(() => expect(spoken()).toContain('1001.10 moved to CNC 2, Tue 3 Nov 11:30'));
+    // The drop snaps to the Week step first: Tue 11:30 becomes Tue 12:00, on CNC 2.
+    await waitFor(() => expect(spoken()).toContain('1001.10 moved to CNC 2, Tue 3 Nov 12:00'));
     expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
   });
 

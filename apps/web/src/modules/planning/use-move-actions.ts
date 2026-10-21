@@ -177,7 +177,7 @@ export function useMoveActions({
       cancel: (options) => {
         if (moveState === undefined) return;
         setMoveState(undefined);
-        announce('Move cancelled.');
+        if (options?.announce !== false) announce('Move cancelled.');
         if (options?.refocus !== false) {
           requestAnimationFrame(() => focusBlock.current(moveState.jobOrderId));
         }
