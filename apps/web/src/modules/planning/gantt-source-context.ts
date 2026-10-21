@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useShell } from '@northmes/web-sdk';
 import { createContext, useContext, useMemo } from 'react';
+import { enteredAt } from './entered-orders.ts';
 import { useEnteredOrders } from './entered-orders-store.ts';
 import { type GanttDataSource, g1DataSource } from './gantt-data.ts';
 import { usePlanningRules } from './planning-rules-store.ts';
@@ -23,7 +24,8 @@ export function useGanttSource(): GanttDataSource {
   const source = useContext(GanttSourceContext);
   const { plant } = useShell();
   const rules = usePlanningRules(plant);
-  const entered = useEnteredOrders();
+  const all = useEnteredOrders();
+  const entered = useMemo(() => enteredAt(all, plant), [all, plant]);
   return useMemo(
     () => ({ load: (input) => source.load({ ...input, rules, entered }) }),
     [source, rules, entered],

@@ -8,6 +8,8 @@
 
 /** A production order entered by hand, as New production order saves it. */
 export interface EnteredProductionOrder {
+  /** The slug of the plant it was entered at. */
+  readonly plant: string;
   /** Its number in NorthMES's own series, such as N-1007. */
   readonly number: string;
   readonly article: string;
@@ -19,7 +21,6 @@ export interface EnteredProductionOrder {
   readonly priority: number | null;
   /** A palette token name, such as palette-8. */
   readonly color: string;
-  readonly note?: string;
   /** The ids of the customer order lines it supplies, such as 40211-2. */
   readonly suppliedLines: readonly string[];
   readonly createdAtMs: number;
@@ -39,6 +40,8 @@ export interface EnteredCustomerOrderLine {
 
 /** A customer order entered by hand, as New customer order saves it. */
 export interface EnteredCustomerOrder {
+  /** The slug of the plant it was entered at, which delivers its lines. */
+  readonly plant: string;
   readonly number: string;
   readonly customerCode: string;
   /** The customer's own order number; empty when the customer gave none. */
@@ -66,6 +69,14 @@ export function nextProductionOrderNumber(entered: EnteredOrders): string {
     .filter((digits): digits is string => digits !== undefined)
     .map(Number);
   return `N-${used.length === 0 ? firstNumber : Math.max(firstNumber - 1, ...used) + 1}`;
+}
+
+/** What was entered at one plant: a plant's pages see only its own orders. */
+export function enteredAt(entered: EnteredOrders, plant: string): EnteredOrders {
+  return {
+    productionOrders: entered.productionOrders.filter((order) => order.plant === plant),
+    customerOrders: entered.customerOrders.filter((order) => order.plant === plant),
+  };
 }
 
 /**

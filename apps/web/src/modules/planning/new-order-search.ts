@@ -4,10 +4,10 @@ import { z } from 'zod';
 
 /**
  * A page state the product owner can open on mock data (#768, NO6 to NO9 and NC4 to NC7):
- * loading, empty (no article, or no customer), could not load and no access. A server source
- * ignores it.
+ * loading, empty (no article, or no customer), could not load, a save that fails, and no access.
+ * A server source ignores it.
  */
-export type NewOrderPreview = 'loading' | 'empty' | 'error' | 'forbidden';
+export type NewOrderPreview = 'loading' | 'empty' | 'error' | 'saveError' | 'forbidden';
 
 /** The URL keys of New production order: the customer order line it starts from, and the preview. */
 export interface NewOrderSearch {
@@ -21,7 +21,10 @@ export interface NewCustomerOrderSearch {
   readonly preview?: NewOrderPreview;
 }
 
-const preview = z.enum(['loading', 'empty', 'error', 'forbidden']).optional().catch(undefined);
+const preview = z
+  .enum(['loading', 'empty', 'error', 'saveError', 'forbidden'])
+  .optional()
+  .catch(undefined);
 const line = z
   .union([z.string(), z.number()])
   .transform(String)

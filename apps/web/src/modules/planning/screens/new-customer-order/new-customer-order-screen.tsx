@@ -14,6 +14,7 @@ import { ReadOnlyField } from '../../../../ui/components/read-only-field/index.t
 import { SelectField } from '../../../../ui/components/select-field/index.ts';
 import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
+import { announce } from '../../../../ui/lib/announce.ts';
 import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { Alert, AlertDescription, AlertTitle } from '../../../../ui/primitives/alert.tsx';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
@@ -23,33 +24,19 @@ import type { GanttSnapshot } from '../../gantt-data.ts';
 import {
   customerOrderNumberTaken,
   nextCustomerOrderNumber,
+  orderNumberProblem,
   ordersWithFree,
+  validPlantDate,
+  wholePieces,
 } from '../../new-order-facts.ts';
 import { newCustomerOrderSearch } from '../../new-order-search.ts';
 import { usePlanningSnapshot } from '../../use-planning-snapshot.ts';
-
-const isoDate = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Whether text is a real plant date, "2026-11-27". */
-function validDate(text: string): boolean {
-  if (!isoDate.test(text)) return false;
-  const date = new Date(`${text}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(text);
-}
-
-/** A positive number as typed, or undefined. */
-function positive(text: string): number | undefined {
-  const trimmed = text.trim().replace(',', '.');
-  if (!/^\d+(\.\d+)?$/.test(trimmed)) return undefined;
-  const number = Number(trimmed);
-  return number > 0 ? number : undefined;
-}
 
 /** The supply of a line in the form: none, an open order's number, or a new production order. */
 type Supply = '' | 'new' | string;
 
 interface LineDraft {
-  /** A key that stays with the line while lines above it are removed. */
+  /** A key that stays with the line while lines above it are removed; fields are named by it. */
   readonly key: number;
   readonly article: string;
   readonly quantity: string;
@@ -72,24 +59,68 @@ const emptyLine = (key: number): LineDraft => ({
   supply: '',
 });
 
-/** What a field needs, by its field name (`order.number`, `line.1.quantity`). */
-function errorsOf(draft: Draft, snapshot: GanttSnapshot): Map<string, string> {
+/** One line as the form stands for it: its open orders to pick from and the supply that holds. */
+interface LineView {
+  readonly line: LineDraft;
+  readonly open: readonly { readonly order: { readonly number: string }; readonly free: number }[];
+  /** The line's supply, or Not supplied when the order it named no longer has the quantity free. */
+  readonly supply: Supply;
+}
+
+/**
+ * Each line with the orders it may take from, after what the lines above it take: two lines can
+ * never share more than an order has free (#768).
+ */
+function lineViews(draft: Draft, snapshot: GanttSnapshot): readonly LineView[] {
+  const taken = new Map<string, number>();
+  return draft.lines.map((line) => {
+    const quantity = wholePieces(line.quantity) ?? 0;
+    const open = line.article === '' ? [] : ordersWithFree(snapshot, line.article, quantity, taken);
+    const holds =
+      line.supply === '' ||
+      line.supply === 'new' ||
+      open.some(({ order }) => order.number === line.supply);
+    const supply = holds ? line.supply : '';
+    if (supply !== '' && supply !== 'new') {
+      taken.set(supply, (taken.get(supply) ?? 0) + quantity);
+    }
+    return { line, open, supply };
+  });
+}
+
+/** What a field needs, by its field name (`order.number`, `line.<key>.quantity`). */
+function errorsOf(
+  draft: Draft,
+  views: readonly LineView[],
+  snapshot: GanttSnapshot,
+): Map<string, string> {
   const errors = new Map<string, string>();
   const number = draft.number.trim();
+  const numberProblem = orderNumberProblem(number);
   if (number === '') errors.set('order.number', 'Enter a number for the customer order.');
   else if (customerOrderNumberTaken(snapshot, number)) {
     errors.set('order.number', `Customer order ${number} exists. Choose another number.`);
-  }
+  } else if (numberProblem !== undefined) errors.set('order.number', numberProblem);
   if (draft.customer === '') errors.set('order.customer', 'Choose a customer.');
   if (draft.lines.length === 0) errors.set('order.lines', 'Add at least one line.');
-  draft.lines.forEach((line, index) => {
+  else if (views.filter((view) => view.supply === 'new').length > 1) {
+    errors.set(
+      'order.lines',
+      'Only one line can open New production order after creating. Supply the others from the customer order page.',
+    );
+  }
+  views.forEach(({ line }, index) => {
     const n = index + 1;
-    if (line.article === '') errors.set(`line.${n}.article`, `Line ${n}: choose an article.`);
-    if (positive(line.quantity) === undefined) {
-      errors.set(`line.${n}.quantity`, `Line ${n}: enter a quantity greater than 0.`);
+    if (line.article === '')
+      errors.set(`line.${line.key}.article`, `Line ${n}: choose an article.`);
+    if (wholePieces(line.quantity) === undefined) {
+      errors.set(
+        `line.${line.key}.quantity`,
+        `Line ${n}: enter whole pieces greater than 0, digits only.`,
+      );
     }
-    if (!validDate(line.wantedDate)) {
-      errors.set(`line.${n}.wantedDate`, `Line ${n}: enter the wanted date as YYYY-MM-DD.`);
+    if (!validPlantDate(line.wantedDate)) {
+      errors.set(`line.${line.key}.wantedDate`, `Line ${n}: enter the wanted date as YYYY-MM-DD.`);
     }
   });
   return errors;
@@ -99,9 +130,12 @@ function errorsOf(draft: Draft, snapshot: GanttSnapshot): Map<string, string> {
 function NewCustomerOrderForm({
   snapshot,
   plant,
+  saveFails,
 }: {
   readonly snapshot: GanttSnapshot;
   readonly plant: string;
+  /** The page previews a save that fails (NC6): the entries stay and the summary says so. */
+  readonly saveFails: boolean;
 }) {
   const store = useEnteredOrdersStore();
   const navigate = useNavigate();
@@ -115,15 +149,18 @@ function NewCustomerOrderForm({
     [snapshot],
   );
   const [draft, setDraft] = useState<Draft>(initial);
-  const [errors, setErrors] = useState<Map<string, string>>(new Map());
   const [submits, setSubmits] = useState(0);
-  /** Where the page goes once the order is created. */
+  const [saveFailed, setSaveFailed] = useState(false);
+  /** Where the page goes once the customer order is created, in place of the form in the history. */
   const [target, setTarget] = useState<string | undefined>(undefined);
   useEffect(() => {
-    if (target !== undefined) void navigate({ to: target });
+    if (target !== undefined) void navigate({ to: target, replace: true });
   }, [target, navigate]);
   const plantName = snapshot.plants?.find((each) => each.slug === plant)?.name ?? plant;
   const articles = [...new Set((snapshot.routings ?? []).map((routing) => routing.article))];
+  const views = lineViews(draft, snapshot);
+  // After the first Create the errors follow the entries, so a fixed field loses its error at once.
+  const errors = submits === 0 ? new Map<string, string>() : errorsOf(draft, views, snapshot);
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
   const setLine = (key: number, change: Partial<LineDraft>) =>
     setDraft((current) => ({
@@ -132,27 +169,33 @@ function NewCustomerOrderForm({
     }));
 
   const create = () => {
-    const found = errorsOf(draft, snapshot);
-    setErrors(found);
+    const found = errorsOf(draft, views, snapshot);
     setSubmits((count) => count + 1);
+    setSaveFailed(false);
     if (found.size > 0) return;
+    if (saveFails) {
+      setSaveFailed(true);
+      return;
+    }
     const number = draft.number.trim();
     store.addCustomerOrder({
+      plant,
       number,
       customerCode: draft.customer,
       customersReference: draft.reference.trim(),
-      lines: draft.lines.map((line, index) => ({
+      lines: views.map(({ line, supply }, index) => ({
         line: index + 1,
         article: line.article,
-        quantity: positive(line.quantity) ?? 0,
+        quantity: wholePieces(line.quantity) ?? 0,
         wantedDate: line.wantedDate,
-        supply: line.supply === '' || line.supply === 'new' ? null : line.supply,
+        supply: supply === '' || supply === 'new' ? null : supply,
       })),
       createdAtMs: Date.now(),
       createdBy: 'You',
     });
-    const first = draft.lines.findIndex((line) => line.supply === 'new');
-    // The guard lets the form go once the order exists; the effect below then leaves.
+    announce(`Customer order ${number} created.`);
+    const first = views.findIndex((view) => view.supply === 'new');
+    // The guard lets the form go once the order exists; the effect above then leaves.
     setTarget(
       first < 0
         ? planningLinks.customerOrders.customerOrder({ plant, customerOrderId: number }).href
@@ -181,6 +224,15 @@ function NewCustomerOrderForm({
         errors={summary}
         focusKey={submits}
       />
+      {saveFailed && summary.length === 0 && (
+        <ErrorSummary heading="Could not create the customer order" errors={[]} focusKey={submits}>
+          <p>
+            Your entries are kept. Try again; if it fails again, give your plant admin the
+            correlation id.
+          </p>
+          <p className="font-mono">Correlation id 7f3a-2c91-0b78</p>
+        </ErrorSummary>
+      )}
       <Alert>
         <Info aria-hidden />
         <AlertTitle>Source NorthMES</AlertTitle>
@@ -198,7 +250,7 @@ function NewCustomerOrderForm({
             value={draft.number}
             error={errors.get('order.number')}
             onChange={(event) => setDraft({ ...draft, number: event.target.value })}
-            hint="Unique in the company."
+            hint="Unique in the company. Letters, digits, - and _ only."
           />
           <SelectField
             label="Customer"
@@ -231,7 +283,7 @@ function NewCustomerOrderForm({
       </FormSection>
       <FormSection
         title="Lines"
-        description="Supply lists the open orders of the line's article with enough quantity free. A line supplied by a new production order opens New production order with it after you create the customer order."
+        description="Supply lists the open orders of the line's article with enough quantity free. One line may be supplied by a new production order, which opens with that line after you create the customer order."
       >
         {errors.has('order.lines') && (
           <p id={fieldId('order.lines')} tabIndex={-1} className="text-sm text-destructive">
@@ -239,11 +291,8 @@ function NewCustomerOrderForm({
           </p>
         )}
         <ol className="flex flex-col gap-4">
-          {draft.lines.map((line, index) => {
+          {views.map(({ line, open, supply }, index) => {
             const n = index + 1;
-            const quantity = positive(line.quantity) ?? 0;
-            const open =
-              line.article === '' ? [] : ordersWithFree(snapshot, line.article, quantity);
             return (
               <li
                 key={line.key}
@@ -251,10 +300,10 @@ function NewCustomerOrderForm({
               >
                 <SelectField
                   label={`Article of line ${n}`}
-                  name={`line.${n}.article`}
+                  name={`line.${line.key}.article`}
                   value={line.article}
                   placeholder="Choose an article"
-                  error={errors.get(`line.${n}.article`)}
+                  error={errors.get(`line.${line.key}.article`)}
                   options={articles.map((article) => ({ value: article, label: article }))}
                   onChange={(event) =>
                     setLine(line.key, { article: event.target.value, supply: '' })
@@ -262,24 +311,24 @@ function NewCustomerOrderForm({
                 />
                 <TextField
                   label={`Quantity of line ${n}, pcs`}
-                  name={`line.${n}.quantity`}
-                  inputMode="decimal"
+                  name={`line.${line.key}.quantity`}
+                  inputMode="numeric"
                   value={line.quantity}
-                  error={errors.get(`line.${n}.quantity`)}
+                  error={errors.get(`line.${line.key}.quantity`)}
                   onChange={(event) => setLine(line.key, { quantity: event.target.value })}
                 />
                 <TextField
                   label={`Wanted date of line ${n}`}
-                  name={`line.${n}.wantedDate`}
+                  name={`line.${line.key}.wantedDate`}
                   value={line.wantedDate}
                   placeholder="YYYY-MM-DD"
-                  error={errors.get(`line.${n}.wantedDate`)}
+                  error={errors.get(`line.${line.key}.wantedDate`)}
                   onChange={(event) => setLine(line.key, { wantedDate: event.target.value })}
                 />
                 <SelectField
                   label={`Supply of line ${n}`}
-                  name={`line.${n}.supply`}
-                  value={line.supply}
+                  name={`line.${line.key}.supply`}
+                  value={supply}
                   options={[
                     { value: '', label: 'Not supplied' },
                     ...open.map(({ order, free }) => ({
@@ -344,7 +393,7 @@ function NewCustomerOrderForm({
  * and lines with their supply: an open order with quantity free, a new production order after
  * creating, or none. Plan 07 has no command that creates a customer order yet; on mock data the
  * order goes to the in-memory store the plan's pages load with. The preview key opens the
- * loading, no customers, failed and no-access states.
+ * loading, no customers, failed, failed save and no-access states.
  */
 export function NewCustomerOrderScreen() {
   const { plant } = useShell();
@@ -399,7 +448,11 @@ export function NewCustomerOrderScreen() {
         </div>
       )}
       {state.status === 'ready' && snapshot !== undefined && (
-        <NewCustomerOrderForm snapshot={snapshot} plant={plant} />
+        <NewCustomerOrderForm
+          snapshot={snapshot}
+          plant={plant}
+          saveFails={search.preview === 'saveError'}
+        />
       )}
     </PageFrame>
   );

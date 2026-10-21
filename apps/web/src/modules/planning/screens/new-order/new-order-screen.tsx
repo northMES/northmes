@@ -14,8 +14,8 @@ import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { SelectField } from '../../../../ui/components/select-field/index.ts';
 import { TextField } from '../../../../ui/components/text-field/index.ts';
-import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
+import { announce } from '../../../../ui/lib/announce.ts';
 import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { Alert, AlertDescription, AlertTitle } from '../../../../ui/primitives/alert.tsx';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
@@ -31,30 +31,20 @@ import {
 } from '../../../../ui/primitives/table.tsx';
 import { useEnteredOrdersStore } from '../../entered-orders-store.ts';
 import type { CustomerOrderLine, GanttSnapshot } from '../../gantt-data.ts';
-import { linesNeedingSupply, productionOrderNumberTaken } from '../../new-order-facts.ts';
+import {
+  linesNeedingSupply,
+  orderNumberProblem,
+  productionOrderNumberTaken,
+  validPlantDate,
+  wholePieces,
+} from '../../new-order-facts.ts';
 import { newOrderSearch } from '../../new-order-search.ts';
 import { usePlanningSnapshot } from '../../use-planning-snapshot.ts';
 
 /** The order colors of the board, the palette tokens of D1 (ui-189). */
 const colors = Array.from({ length: 8 }, (_, index) => `palette-${index + 1}`);
 
-const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 const clock = /^([01]\d|2[0-3]):[0-5]\d$/;
-
-/** Whether text is a real plant date, "2026-11-27". */
-function validDate(text: string): boolean {
-  if (!isoDate.test(text)) return false;
-  const date = new Date(`${text}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(text);
-}
-
-/** A positive number as typed, or undefined. */
-function positive(text: string): number | undefined {
-  const trimmed = text.trim().replace(',', '.');
-  if (!/^\d+(\.\d+)?$/.test(trimmed)) return undefined;
-  const number = Number(trimmed);
-  return number > 0 ? number : undefined;
-}
 
 interface Draft {
   readonly number: string;
@@ -64,7 +54,6 @@ interface Draft {
   readonly deadlineTime: string;
   readonly priority: string;
   readonly color: string;
-  readonly note: string;
   /** The ids of the customer order lines the order supplies. */
   readonly lines: readonly string[];
 }
@@ -98,7 +87,6 @@ function draftOf(number: string, line: CustomerOrderLine | undefined): Draft {
     deadlineTime: '',
     priority: '',
     color: 'palette-8',
-    note: '',
     lines: line === undefined ? [] : [line.id],
   };
 }
@@ -108,17 +96,21 @@ function errorsOf(
   draft: Draft,
   snapshot: GanttSnapshot,
   plantName: string,
+  articles: readonly string[],
 ): Partial<Record<FieldName, string>> {
   const errors: Partial<Record<FieldName, string>> = {};
   const number = draft.number.trim();
+  const numberProblem = orderNumberProblem(number);
   if (number === '') errors.number = 'Enter a number for the order.';
   else if (productionOrderNumberTaken(snapshot, number)) {
     errors.number = `Number ${number} is in use at ${plantName}. Choose another number.`;
+  } else if (numberProblem !== undefined) errors.number = numberProblem;
+  if (!articles.includes(draft.article)) errors.article = 'Choose an article.';
+  const quantity = wholePieces(draft.quantity);
+  if (quantity === undefined) {
+    errors.quantity = 'Enter whole pieces greater than 0, digits only, such as 400.';
   }
-  if (draft.article === '') errors.article = 'Choose an article.';
-  const quantity = positive(draft.quantity);
-  if (quantity === undefined) errors.quantity = 'Enter a quantity greater than 0, such as 400.';
-  if (!validDate(draft.deadlineDate)) {
+  if (!validPlantDate(draft.deadlineDate)) {
     errors.deadlineDate = 'Enter the date as YYYY-MM-DD, such as 2026-11-27.';
   }
   if (draft.deadlineTime !== '' && !clock.test(draft.deadlineTime)) {
@@ -128,8 +120,12 @@ function errorsOf(
     errors.priority = 'Enter a whole number of 1 or more, or leave it empty.';
   }
   const lines = (snapshot.customerOrderLines ?? []).filter((line) => draft.lines.includes(line.id));
+  const open = new Set(linesNeedingSupply(snapshot, draft.article).map((line) => line.id));
   const other = lines.find((line) => line.article !== draft.article);
-  if (other !== undefined && draft.article !== '') {
+  const taken = lines.find((line) => line.article === draft.article && !open.has(line.id));
+  if (taken !== undefined) {
+    errors.lines = `Line ${taken.line} of ${taken.customerOrder} is supplied by another order or delivered by another plant. Remove it.`;
+  } else if (other !== undefined && draft.article !== '') {
     errors.lines = `Line ${other.line} of ${other.customerOrder} is for ${other.article}, not ${draft.article}. Remove it or choose ${other.article}.`;
   } else if (quantity !== undefined) {
     const asked = lines.reduce((sum, line) => sum + line.quantity, 0);
@@ -145,25 +141,30 @@ function NewOrderForm({
   snapshot,
   plant,
   line,
+  saveFails,
 }: {
   readonly snapshot: GanttSnapshot;
   readonly plant: string;
   readonly line: CustomerOrderLine | undefined;
+  /** The page previews a save that fails (NO8): the entries stay and the summary says so. */
+  readonly saveFails: boolean;
 }) {
   const store = useEnteredOrdersStore();
   const navigate = useNavigate();
   const initial = useMemo(() => draftOf(store.nextProductionOrderNumber(), line), [store, line]);
   const [draft, setDraft] = useState<Draft>(initial);
-  const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
   const [submits, setSubmits] = useState(0);
-  /** Where the page goes once the order is created. */
+  const [saveFailed, setSaveFailed] = useState(false);
+  /** Where the page goes once the order is created, in place of the form in the history. */
   const [target, setTarget] = useState<string | undefined>(undefined);
   useEffect(() => {
-    if (target !== undefined) void navigate({ to: target });
+    if (target !== undefined) void navigate({ to: target, replace: true });
   }, [target, navigate]);
   const [picked, setPicked] = useState('');
   const plantName = snapshot.plants?.find((each) => each.slug === plant)?.name ?? plant;
   const articles = [...new Set((snapshot.routings ?? []).map((routing) => routing.article))];
+  // After the first Create the errors follow the entries, so a fixed field loses its error at once.
+  const errors = submits === 0 ? {} : errorsOf(draft, snapshot, plantName, articles);
   const routing = snapshot.routings?.find((each) => each.article === draft.article);
   const machineName = (code: string) =>
     snapshot.equipment.find((machine) => machine.code === code)?.name ?? code;
@@ -174,18 +175,23 @@ function NewOrderForm({
   );
   const candidates = draft.article === '' ? [] : linesNeedingSupply(snapshot, draft.article);
   const offered = candidates.filter((each) => !draft.lines.includes(each.id));
-  const quantity = positive(draft.quantity);
+  const quantity = wholePieces(draft.quantity);
   const asked = chosen.reduce((sum, each) => sum + each.quantity, 0);
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
   const set = (change: Partial<Draft>) => setDraft((current) => ({ ...current, ...change }));
 
   const create = () => {
-    const found = errorsOf(draft, snapshot, plantName);
-    setErrors(found);
+    const found = errorsOf(draft, snapshot, plantName, articles);
     setSubmits((count) => count + 1);
+    setSaveFailed(false);
     if (Object.keys(found).length > 0 || quantity === undefined) return;
+    if (saveFails) {
+      setSaveFailed(true);
+      return;
+    }
     const number = draft.number.trim();
     store.addProductionOrder({
+      plant,
       number,
       article: draft.article,
       quantity,
@@ -193,12 +199,12 @@ function NewOrderForm({
       ...(draft.deadlineTime !== '' && { deadlineTime: draft.deadlineTime }),
       priority: draft.priority === '' ? null : Number(draft.priority),
       color: draft.color,
-      ...(draft.note.trim() !== '' && { note: draft.note.trim() }),
       suppliedLines: draft.lines,
       createdAtMs: Date.now(),
       createdBy: 'You',
     });
-    // The guard lets the form go once the order exists; the effect below then leaves.
+    announce(`Order ${number} created.`);
+    // The guard lets the form go once the order exists; the effect above then leaves.
     setTarget(planningLinks.orders.order({ plant, orderId: `po-${number}` }).href);
   };
 
@@ -224,6 +230,15 @@ function NewOrderForm({
         errors={summary}
         focusKey={submits}
       />
+      {saveFailed && summary.length === 0 && (
+        <ErrorSummary heading="Could not create the order" errors={[]} focusKey={submits}>
+          <p>
+            Your entries are kept. Try again; if it fails again, give your plant admin the
+            correlation id.
+          </p>
+          <p className="font-mono">Correlation id 7f3a-2c91-0b77</p>
+        </ErrorSummary>
+      )}
       <Alert>
         <Info aria-hidden />
         <AlertTitle>Source NorthMES</AlertTitle>
@@ -302,16 +317,6 @@ function NewOrderForm({
             options={colors.map((color) => ({ value: color, label: color }))}
             onChange={(event) => set({ color: event.target.value })}
             hint="Groups the order's blocks on the board and the Gantt. It never carries state."
-          />
-          <TextareaField
-            label="Note"
-            name="order.note"
-            optional
-            maxLength={500}
-            value={draft.note}
-            onChange={(event) => set({ note: event.target.value })}
-            className="sm:col-span-2"
-            hint="Up to 500 characters. Do not enter personal data."
           />
         </div>
       </FormSection>
@@ -463,7 +468,14 @@ export function NewOrderScreen() {
   const { plant } = useShell();
   const search = newOrderSearch(useSearch({ strict: false }));
   const { snapshot, error, retry } = usePlanningSnapshot();
-  const line = snapshot?.customerOrderLines?.find((each) => each.id === search.line);
+  // Only a line that needs supply and that this plant delivers is taken from the URL; any other
+  // line leaves the form as it starts from the list.
+  const line = snapshot?.customerOrderLines?.find(
+    (each) =>
+      each.id === search.line &&
+      each.productionOrderId === undefined &&
+      (each.deliveringPlant === undefined || each.deliveringPlant === plant),
+  );
   let state: PageState = { status: 'ready' };
   if (search.preview === 'forbidden') {
     state = {
@@ -471,7 +483,7 @@ export function NewOrderScreen() {
       icon: Lock,
       title: 'You need the permission to create production orders at this plant',
       description:
-        'Creating a production order needs the permission planning.productionOrder:create. Ask your plant admin for a role that holds it.',
+        'Creating a production order needs the permissions planning.productionOrder:create and, for its release, planning.productionOrder:release. Ask your plant admin for a role that holds them.',
     };
   } else if (search.preview === 'error' || (snapshot === undefined && error !== undefined)) {
     state = {
@@ -520,7 +532,13 @@ export function NewOrderScreen() {
         </div>
       )}
       {state.status === 'ready' && snapshot !== undefined && (
-        <NewOrderForm key={search.line ?? 'list'} snapshot={snapshot} plant={plant} line={line} />
+        <NewOrderForm
+          key={search.line ?? 'list'}
+          snapshot={snapshot}
+          plant={plant}
+          line={line}
+          saveFails={search.preview === 'saveError'}
+        />
       )}
     </PageFrame>
   );

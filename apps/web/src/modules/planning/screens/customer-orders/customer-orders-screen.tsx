@@ -101,7 +101,7 @@ function RowActions({ row, view }: { readonly row: LineListRow; readonly view: C
         <Link
           to={planningLinks.orders.new({ plant: view.plant }, { line: row.line.id }).href}
           className={`${buttonVariants({ variant: 'outline' })} h-8 px-2.5`}
-          aria-label={`New production order for customer order ${row.line.customerOrder} line ${row.line.line}`}
+          aria-label={`New order for customer order ${row.line.customerOrder} line ${row.line.line}`}
         >
           <Plus aria-hidden />
           New order
@@ -313,7 +313,14 @@ export function CustomerOrdersScreen() {
     state = {
       status: 'empty',
       title: 'No customer orders yet',
-      description: 'Customer orders come from the ERP with the next import.',
+      description:
+        'Customer orders come from the ERP with the next import, or a planner enters one here.',
+      action: (
+        <Link to={planningLinks.customerOrders.new({ plant }).href} className={buttonVariants()}>
+          <Plus aria-hidden />
+          New customer order
+        </Link>
+      ),
     };
   }
   return (
