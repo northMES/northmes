@@ -39,7 +39,7 @@ function calendarWith(
   };
 }
 
-/** Three shifts of 7 h 15 min each: Early and Late Monday to Friday, Night Monday to Thursday. */
+/** Early (7 h 15 min) and Late (7 h 45 min) Monday to Friday, Night (8 h) Monday to Thursday. */
 const threeShifts: PlantCalendar = {
   name: 'B3',
   plantDefault: false,
@@ -63,7 +63,7 @@ const threeShifts: PlantCalendar = {
       start: '14:00',
       end: '22:00',
       breaks: [{ start: '17:00', end: '17:15' }],
-      workingSeconds: 26_100,
+      workingSeconds: 27_900,
     },
     {
       name: 'Night',
@@ -71,7 +71,7 @@ const threeShifts: PlantCalendar = {
       start: '22:00',
       end: '06:00',
       breaks: [],
-      workingSeconds: 26_100,
+      workingSeconds: 28_800,
     },
   ],
   machines: ['LATHE1', 'LATHE2'],
@@ -130,7 +130,7 @@ describe('a calendar with several shifts (#770)', () => {
   });
 
   it('adds up each shift over the days it starts on', () => {
-    expect(hoursText(weeklyWorkingSeconds(threeShifts))).toBe('101 h 30 min');
+    expect(hoursText(weeklyWorkingSeconds(threeShifts))).toBe('104 h 30 min');
   });
 
   it('writes each shift with its breaks for the machine page, and one shift without its name', () => {
@@ -138,6 +138,7 @@ describe('a calendar with several shifts (#770)', () => {
       'Mon to Fri Early 06:00 to 14:00, breaks 09:00 to 09:15 and 11:30 to 12:00; Mon to Fri Late 14:00 to 22:00, break 17:00 to 17:15; Mon to Thu Night 22:00 to 06:00, no breaks',
     );
     expect(patternText(calendarWith([]))).toBe('Mon to Fri 06:00 to 15:00, break 08:30 to 08:45');
+    expect(patternText({ ...threeShifts, shifts: [] })).toBe('No shifts');
   });
 });
 
