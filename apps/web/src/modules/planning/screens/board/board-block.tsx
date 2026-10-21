@@ -65,6 +65,7 @@ export function BoardBlock({
   selected,
   onFocus,
   onSelect,
+  onMenu,
 }: {
   readonly row: JobOrderRow;
   /** Where the block starts on the time axis and how wide it is, in px, from its cell. */
@@ -79,6 +80,8 @@ export function BoardBlock({
   readonly onFocus: (event: FocusEvent<HTMLDivElement>) => void;
   /** A click, Enter or Space selects the block's order; M enters keyboard move mode. */
   readonly onSelect: () => void;
+  /** Shift+F10, the context menu key or a right click opens the block menu at the block. */
+  readonly onMenu: (anchor: HTMLElement) => void;
 }) {
   const { draftRowIds, move, scale, machineName: machineNameOf } = useGanttView();
   // The press in progress: where it started, whether it has become a drag, and the machine under
@@ -121,6 +124,12 @@ export function BoardBlock({
       event.preventDefault();
       event.stopPropagation();
       move.begin(jobOrder.id, 'keyboard');
+      return;
+    }
+    if (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey)) {
+      event.preventDefault();
+      event.stopPropagation();
+      onMenu(event.currentTarget);
       return;
     }
     if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -215,6 +224,10 @@ export function BoardBlock({
                 return;
               }
               onSelect();
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              onMenu(event.currentTarget);
             }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}

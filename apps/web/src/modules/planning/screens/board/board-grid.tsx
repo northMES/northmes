@@ -49,6 +49,8 @@ export interface BoardGridProps {
   /** The selected order, by id, whose job orders carry aria-selected. */
   readonly selectedOrderId: string | undefined;
   readonly onSelectOrder: (orderId: string) => void;
+  /** Opens the block menu of a job order at its block. */
+  readonly onBlockMenu: (jobOrderId: string, anchor: HTMLElement) => void;
   readonly onFocusTarget: (key: string) => void;
   readonly onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   readonly gridRef: (node: HTMLDivElement | null) => void;
@@ -177,6 +179,7 @@ export function BoardGrid({
   preview,
   selectedOrderId,
   onSelectOrder,
+  onBlockMenu,
   onFocusTarget,
   onKeyDown,
   gridRef,
@@ -317,6 +320,7 @@ export function BoardGrid({
                     selected={cell.row.order.id === selectedOrderId}
                     onFocus={() => onFocusTarget(focusKeys.block(cell.row.jobOrder.id))}
                     onSelect={() => onSelectOrder(cell.row.order.id)}
+                    onMenu={(anchor) => onBlockMenu(cell.row.jobOrder.id, anchor)}
                   />
                 ),
               )

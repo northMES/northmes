@@ -28,6 +28,14 @@ function machineOf(cell: HTMLElement): string {
   return cell.closest('[role="row"]')?.querySelector('[role="rowheader"]')?.textContent ?? '';
 }
 
+/**
+ * A name matcher for text that joins nested spans: happy-dom has no layout, so it reads every span
+ * as a block and puts a space around it, where a browser joins inline spans without one.
+ */
+function named(text: string): (name: string) => boolean {
+  return (name) => name.replace(/\s+,/g, ',').replace(/\s+/g, ' ').trim() === text;
+}
+
 /** What the polite live region says. */
 function spoken(): string {
   return document.getElementById('announcer-polite')?.textContent ?? '';
@@ -176,10 +184,11 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
 
     await user.keyboard('{Shift>}{F10}{/Shift}');
     const menu = await screen.findByRole('menu', { name: 'Actions for 1001.10' });
-    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
-      'Move',
-      'Open order',
-    ]);
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Move', 'Open order']);
     await user.click(within(menu).getByRole('menuitem', { name: 'Move' }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Move 1001.10 Bracket L' });
@@ -191,7 +200,7 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     const machines = within(dialog).getByRole('radiogroup', { name: 'Machine' });
     const radios = within(machines).getAllByRole('radio');
     expect(radios.map((radio) => radio.getAttribute('aria-checked'))).toEqual(['true', 'false']);
-    expect(within(machines).getByRole('radio', { name: 'CNC 1, Current' })).toBe(radios[0]);
+    expect(within(machines).getByRole('radio', { name: named('CNC 1, Current') })).toBe(radios[0]);
     await waitFor(() => expect(document.activeElement).toBe(radios[0]));
     const start = within(dialog).getByRole('textbox', { name: 'Start, plant time (CET)' });
     expect((start as HTMLInputElement).value).toBe('2026-11-03 11:30');
@@ -201,15 +210,15 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     await waitFor(() => {
       expect(
         within(machines).getByRole('radio', {
-          name: 'CNC 1, Current',
-          description: 'Ends Wed 4 Nov 12:15 Overlaps 1003.10 Gear blank 32',
+          name: named('CNC 1, Current'),
+          description: named('Ends Wed 4 Nov 12:15 Overlaps 1003.10 Gear blank 32'),
         }),
       ).toBeTruthy();
     });
     await user.click(
       within(machines).getByRole('radio', {
         name: 'CNC 2',
-        description: 'Ends Wed 4 Nov 12:15 Overlaps none',
+        description: named('Ends Wed 4 Nov 12:15 Overlaps none'),
       }),
     );
     await user.click(within(dialog).getByRole('button', { name: 'Move' }));
@@ -242,10 +251,10 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     await waitFor(() => expect(document.activeElement).toBe(summary));
     expect(start.getAttribute('aria-invalid')).toBe('true');
     expect(within(dialog).getByText('Enter a date and time like 2026-11-03 11:30.')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
 
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(block(board, '1001.10')));
+    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
   });
 });
