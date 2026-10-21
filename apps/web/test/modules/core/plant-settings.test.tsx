@@ -79,7 +79,7 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
 
     expect(machineRows()).toEqual(['ASM1', 'CNC1', 'CNC2', 'MILL1']);
     expect(statusLine()).toBe(
-      '4 machines, 3 plannable, 2 equipment groups. Sorted by code. Allowed in counts the routing operations that may run on the machine.',
+      '4 machines, 3 plannable, 3 equipment groups. Sorted by code. Allowed in counts the routing operations that may run on the machine.',
     );
     expect(screen.getByText('ERP data as of Mon 2 Nov 06:40')).toBeTruthy();
     expect(screen.getByText('Showing fixture G1.')).toBeTruthy();
