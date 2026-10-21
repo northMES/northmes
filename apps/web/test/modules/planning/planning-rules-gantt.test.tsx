@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { act, cleanup, waitFor, within } from '@testing-library/react';
+import { planningLinks } from '@northmes/planning-contracts';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createG1PlanningRulesStore } from '../../../src/modules/planning/planning-rules-store.ts';
-import { findGantt, markerTexts, plant, renderGanttRoute } from './gantt-fixtures.tsx';
+import {
+  findGantt,
+  markerTexts,
+  plant,
+  renderGanttRoute,
+  renderPlanningAt,
+} from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -32,6 +39,19 @@ describe("the order Gantt draws a plant's planning rules as saved (#766)", () =>
 
     const row = within(gantt).getByRole('row', { name: /^1001 / });
     expect(markerTexts(row, 'deadline')).toEqual(['deadline Fri 6 Nov 00:00']);
+  });
+
+  it("the order page reads the same rules: start of day puts order 1001's deadline at 00:00", async () => {
+    const rules = createG1PlanningRulesStore();
+    rules.save(plant, { deadlineRule: 'startOfDay' });
+    renderPlanningAt(
+      planningLinks.orders.order({ plant, orderId: 'po-1001' }).href,
+      undefined,
+      undefined,
+      rules,
+    );
+
+    expect(await screen.findByText('Bracket L, 600 pcs, deadline Fri 6 Nov 00:00')).toBeTruthy();
   });
 
   it('a Save on the planning rules shows on an open Gantt without a reload', async () => {
