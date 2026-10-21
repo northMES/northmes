@@ -161,6 +161,36 @@ export interface GanttOrder {
   readonly jobOrders: readonly GanttJobOrder[];
   /** Where the order came from; a snapshot without the planning pages' data leaves it out. */
   readonly origin?: OrderOrigin;
+  /**
+   * The ERP's free fields on an imported order, kept as sent for display (plan 07, external
+   * data), in the order the ERP sent them; board fields can show them by key (#762).
+   */
+  readonly externalData?: readonly ExternalDataEntry[];
+}
+
+/** One free field the ERP sent with an order: its key and its value as text. */
+export interface ExternalDataEntry {
+  readonly key: string;
+  readonly value: string;
+}
+
+/**
+ * A field a module contributes to the block fields slot `planning/board/block-fields/v1` (plan 07;
+ * ADR 0068): per job order id, the short text a block draws at its trailing edge, the words the
+ * block's name carries and the value its hover card lists (#762).
+ */
+export interface ModuleField {
+  /** The contribution's id, such as connector.erpChange. */
+  readonly id: string;
+  readonly label: string;
+  /** The module that contributes it, which the board settings page names as the source. */
+  readonly module: string;
+  readonly values: Readonly<
+    Record<
+      string,
+      { readonly text: string; readonly accessibleText: string; readonly hoverText: string }
+    >
+  >;
 }
 
 /** Who owns a record's master fields: the ERP through the connector, or NorthMES itself. */
@@ -332,6 +362,8 @@ export interface GanttSnapshot {
   readonly routings?: readonly Routing[];
   /** The history of each order, newest first, by order id. */
   readonly history?: Readonly<Record<string, readonly HistoryEntry[]>>;
+  /** The fields the installed modules contribute to the block fields slot (#762). */
+  readonly moduleFields?: readonly ModuleField[];
 }
 
 /** Where the order Gantt reads from. */

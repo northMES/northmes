@@ -22,7 +22,7 @@ function termsOf(element: HTMLElement): string[] {
 
 describe('board fields on the order Gantt (plan 07, Board settings; #762)', () => {
   it("#762 draws the company's block fields: the article beside the job number, quantity and end below", async () => {
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    renderGanttRoute({ zoom: 'day', from: '2026-11-03' });
     const gantt = await findGantt();
 
     const block = blockOf(gantt, 'jo-1001-10');
@@ -35,7 +35,7 @@ describe('board fields on the order Gantt (plan 07, Board settings; #762)', () =
   it('#762 draws the block fields Plant A saved, a module field at the trailing edge and in the name', async () => {
     const store = createG1BoardFieldsStore();
     store.save(plant, { block: ['article', 'quantity', 'slot:connector.erpChange'] });
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, store);
+    renderGanttRoute({ zoom: 'day', from: '2026-11-03' }, undefined, 'gantt', store);
     const gantt = await findGantt();
 
     const block = blockOf(gantt, 'jo-1001-10');
@@ -50,7 +50,7 @@ describe('board fields on the order Gantt (plan 07, Board settings; #762)', () =
   it("#762 lists the hover fields Plant A saved in the hover card, then the Gantt's analysis lines", async () => {
     const store = createG1BoardFieldsStore();
     store.save(plant, { hover: ['erp:DRAWING_REV', 'customer'] });
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, store);
+    renderGanttRoute({ zoom: 'day', from: '2026-11-03' }, undefined, 'gantt', store);
     const gantt = await findGantt();
 
     await userEvent.hover(blockOf(gantt, 'jo-1001-10'));
@@ -71,7 +71,7 @@ describe('board fields on the order Gantt (plan 07, Board settings; #762)', () =
   it('#762 lists every hover field in Details as well, in the same order', async () => {
     const store = createG1BoardFieldsStore();
     store.save(plant, { hover: ['erp:SURFACE', 'slot:tooling.toolLife', 'status'] });
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, store);
+    renderGanttRoute({ zoom: 'day', from: '2026-11-03' }, undefined, 'gantt', store);
     const gantt = await findGantt();
 
     await userEvent.click(blockOf(gantt, 'jo-1001-10'));

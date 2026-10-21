@@ -47,7 +47,11 @@ describe('the board fields a plant shows (plan 07, Board settings; #762)', () =>
   it('#762 lists the ERP keys found in the orders with a sample value and how many orders carry each', () => {
     const { erp } = boardFieldCatalog(snapshot);
     const drawing = erp.find((field) => field.id === 'erp:DRAWING_REV');
-    expect(drawing).toMatchObject({ label: 'DRAWING_REV', source: 'erp', sourceLabel: 'ERP field' });
+    expect(drawing).toMatchObject({
+      label: 'DRAWING_REV',
+      source: 'erp',
+      sourceLabel: 'ERP field',
+    });
     expect(drawing?.description).toBe('C, in 5 of 6 orders');
     expect(erp.find((field) => field.id === 'erp:HEAT_TREAT')?.description).toBe(
       'Hardened, in 1 of 6 orders',
@@ -91,7 +95,12 @@ describe('the board fields a plant shows (plan 07, Board settings; #762)', () =>
   });
 
   it('#762 names an ERP field on a block by its key, as the article and quantity need no extra words', () => {
-    const lines = blockLines(['erp:DRAWING_REV', 'quantity'], rowOf('jo-1001-10'), snapshot, machineName);
+    const lines = blockLines(
+      ['erp:DRAWING_REV', 'quantity'],
+      rowOf('jo-1001-10'),
+      snapshot,
+      machineName,
+    );
     expect(lines.first).toBe('C');
     expect(lines.extraNames).toEqual(['DRAWING_REV C']);
   });
