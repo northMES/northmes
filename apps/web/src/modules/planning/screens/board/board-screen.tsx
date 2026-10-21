@@ -181,15 +181,22 @@ export function BoardScreen() {
     lines.some((line) => line.header === key || line.cells.some((cell) => cell.key === key));
   // Tab enters at the focused target while it is drawn, else at the selected order's first job
   // order, else at the job order nearest now (design D3, Keyboard model).
+  // A job order of the selected order inside a cluster enters at its cluster.
   const selectedEntry =
     model === undefined || search.order === undefined
       ? undefined
       : [
-          ...model.notPlaced,
-          ...model.groups.flatMap((group) => group.machines.flatMap((machine) => machine.blocks)),
+          ...model.notPlaced.map((row) => ({ key: focusKeys.block(row.jobOrder.id), rows: [row] })),
+          ...[...cells.values()].flatMap((row) =>
+            row.map((cell) =>
+              cell.kind === 'cluster'
+                ? { key: cell.key, rows: cell.rows }
+                : { key: focusKeys.block(cell.row.jobOrder.id), rows: [cell.row] },
+            ),
+          ),
         ]
-          .filter((row) => row.order.id === search.order)
-          .map((row) => focusKeys.block(row.jobOrder.id))
+          .filter((target) => target.rows.some((row) => row.order.id === search.order))
+          .map((target) => target.key)
           .find((key) => known(key));
   const tabStop = known(focused)
     ? focused

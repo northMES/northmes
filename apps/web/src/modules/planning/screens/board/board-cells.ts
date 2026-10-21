@@ -27,10 +27,11 @@ export type BoardCellItem =
 
 /**
  * The cells of a machine row at a scale (plan 07, Targets and density; design D3, BO12): a job
- * order under 24 px wide starts a target 24 px wide, and every job order that starts inside it
- * joins it, so the cluster's name can carry their counts; a narrow job order alone keeps its own
- * cell at 24 px. The cells keep time order, so the arrow keys and a screen reader meet them left
- * to right.
+ * order under 24 px wide starts a target 24 px wide, and every narrow job order that starts inside
+ * it joins it, so the cluster's name can carry their counts; a wide one keeps its own cell, and the
+ * cluster ends where it starts unless that would leave it under 24 px. A narrow job order alone
+ * keeps its own cell at 24 px. A target stays inside the time area. The cells keep time order, so
+ * the arrow keys and a screen reader meet them left to right.
  */
 export function cellsOf(blocks: readonly JobOrderRow[], scale: TimeScale): BoardCellItem[] {
   const cells: BoardCellItem[] = [];
@@ -60,18 +61,23 @@ export function cellsOf(blocks: readonly JobOrderRow[], scale: TimeScale): Board
     if (placement === undefined) continue;
     const left = scale.x(Math.max(placement.setupStartMs, scale.range.fromMs));
     const right = scale.x(Math.min(placement.endMs, scale.range.toMs));
-    if (open !== undefined && left < open.right) {
+    const narrow = right - left < minTargetPx;
+    if (open !== undefined && left < open.right && narrow) {
       open.rows.push(row);
       open.right = Math.max(open.right, right);
       open.toMs = Math.max(open.toMs, placement.endMs);
       continue;
     }
+    if (open !== undefined && left < open.right) {
+      open.right = Math.max(open.left + minTargetPx, left);
+    }
     close();
-    if (right - left < minTargetPx) {
+    if (narrow) {
+      const start = Math.max(0, Math.min(left, scale.widthPx - minTargetPx));
       open = {
         rows: [row],
-        left,
-        right: Math.max(right, left + minTargetPx),
+        left: start,
+        right: Math.max(right, start + minTargetPx),
         fromMs: placement.setupStartMs,
         toMs: placement.endMs,
       };

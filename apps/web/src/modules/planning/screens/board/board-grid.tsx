@@ -212,6 +212,7 @@ export function BoardGrid({
                     width={cell.width}
                     focusKey={cell.key}
                     focusable={tabStop === cell.key}
+                    selectedOrderId={selectedOrderId}
                     onFocus={() => onFocusTarget(cell.key)}
                     onSelectOrder={onSelectOrder}
                   />
@@ -242,6 +243,7 @@ export function BoardGrid({
       ref={gridRef}
       role="grid"
       aria-label={name}
+      aria-multiselectable="true"
       aria-rowcount={rowIndex}
       onKeyDown={onKeyDown}
       className="min-h-0 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
@@ -318,8 +320,15 @@ export function BoardGrid({
                   event.preventDefault();
                   onSelectOrder(row.order.id);
                 }}
-                className="flex h-7 items-center gap-1.5 rounded-sm border border-foreground bg-card px-2 text-xs"
+                className="relative flex h-7 items-center gap-1.5 overflow-hidden rounded-sm border border-foreground bg-card px-2 text-xs"
               >
+                {row.order.id === selectedOrderId && (
+                  <span
+                    aria-hidden
+                    data-selection-bar
+                    className="pointer-events-none absolute inset-x-0 top-0 h-0.75 bg-foreground"
+                  />
+                )}
                 <span className="font-mono font-bold">{row.jobOrder.displayNumber}</span>
                 {row.order.article}
                 <span className="sr-only">, {quantityText(row.jobOrder.quantity)}, not placed</span>

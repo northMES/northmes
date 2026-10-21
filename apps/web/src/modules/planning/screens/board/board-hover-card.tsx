@@ -3,7 +3,7 @@
 import { formatDuration, formatPlantDateTime } from '@northmes/contracts/format';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { HoverField } from '../gantt/gantt-hover-card.tsx';
-import { type JobOrderRow, latenessText, quantityText, statusLabel } from '../gantt/gantt-rows.ts';
+import { type JobOrderRow, quantityText, statusLabel } from '../gantt/gantt-rows.ts';
 import type { BoardBlockState } from './board-block-states.ts';
 
 /** The badge words of a state in the hover card and in Details (design D3, Badge). */
@@ -60,7 +60,7 @@ export function boardHoverFields(
     { label: 'Order deadline', value: at(order.deadlineMs) },
     {
       label: 'Late by',
-      value: analysis?.late ? latenessText(analysis).replace(/^late by /, '') : 'Not late',
+      value: analysis?.late ? formatDuration(-analysis.slackElapsedS) : 'Not late',
     },
     { label: 'Status', value: statusLabel(jobOrder.status) },
     { label: 'Soft lock', value: jobOrder.held === true ? 'Another planner' : 'Nobody' },
