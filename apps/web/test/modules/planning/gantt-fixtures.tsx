@@ -8,6 +8,11 @@ import {
   BoardFieldsStoreProvider,
   createG1BoardFieldsStore,
 } from '../../../src/modules/planning/board-fields-store.ts';
+import {
+  createEnteredOrdersStore,
+  type EnteredOrdersStore,
+  EnteredOrdersStoreProvider,
+} from '../../../src/modules/planning/entered-orders-store.ts';
 import type { GanttDataSource, GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts';
 import { g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { GanttSourceProvider } from '../../../src/modules/planning/gantt-source-context.ts';
@@ -47,21 +52,24 @@ export function renderGanttRoute(
   page: PlanningPage = 'gantt',
   store?: BoardFieldsStore,
   rules?: PlanningRulesStore,
+  entered?: EnteredOrdersStore,
 ) {
-  return renderPlanningAt(planningHref(page, search), source, store, rules);
+  return renderPlanningAt(planningHref(page, search), source, store, rules, entered);
 }
 
 /**
  * Renders the shell at any planning href for a signed-in planner, such as an order's page, with
  * the fake API of renderGanttRoute; the planning pages read the fixture G1 unless a source is given,
  * a fresh store of G1's board fields unless a store is given (#762), and a fresh store of G1's
- * planning rules unless one is given (#766).
+ * planning rules unless one is given (#766), and an empty store of orders entered by hand unless
+ * one is given (#768).
  */
 export function renderPlanningAt(
   href: string,
   source?: GanttDataSource,
   store?: BoardFieldsStore,
   rules?: PlanningRulesStore,
+  entered?: EnteredOrdersStore,
 ) {
   const { fetch } = fakeApi({
     CoreCompanies: companies,
@@ -74,13 +82,15 @@ export function renderPlanningAt(
     history: createMemoryHistory({ initialEntries: [href] }),
   });
   render(
-    <PlanningRulesStoreProvider value={rules ?? createG1PlanningRulesStore()}>
-      <BoardFieldsStoreProvider value={store ?? createG1BoardFieldsStore()}>
-        <GanttSourceProvider value={source ?? g1DataSource}>
-          <RouterProvider router={router} />
-        </GanttSourceProvider>
-      </BoardFieldsStoreProvider>
-    </PlanningRulesStoreProvider>,
+    <EnteredOrdersStoreProvider value={entered ?? createEnteredOrdersStore()}>
+      <PlanningRulesStoreProvider value={rules ?? createG1PlanningRulesStore()}>
+        <BoardFieldsStoreProvider value={store ?? createG1BoardFieldsStore()}>
+          <GanttSourceProvider value={source ?? g1DataSource}>
+            <RouterProvider router={router} />
+          </GanttSourceProvider>
+        </BoardFieldsStoreProvider>
+      </PlanningRulesStoreProvider>
+    </EnteredOrdersStoreProvider>,
   );
   return router;
 }

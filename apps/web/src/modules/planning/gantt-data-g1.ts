@@ -7,10 +7,19 @@ import {
   g1,
   g1Pages,
   resolveWallClock,
+  runSecondsFor,
+  setupSeconds,
 } from '@northmes/planning-domain';
 import { Temporal } from 'temporal-polyfill';
+import {
+  type EnteredOrders,
+  type EnteredProductionOrder,
+  noEnteredOrders,
+  suppliesOf,
+} from './entered-orders.ts';
 import { analyzeGantt, placementWithSegments, workingCalendarOf } from './gantt-analysis.ts';
 import type {
+  CustomerOrderLine,
   GanttDataSource,
   GanttJobOrder,
   GanttOperation,
@@ -148,6 +157,125 @@ function withOrigin(origin: OrderOrigin | undefined): { readonly origin?: OrderO
   return origin === undefined ? {} : { origin };
 }
 
+/** The rates, lead time and send-ahead of an article's operation, as G1's orders of it carry them. */
+function operationRatesOf(fixture: GanttFixture, article: string, sequence: number) {
+  for (const order of fixture.productionOrders) {
+    if (order.article !== article) continue;
+    const operation = order.operations.find((each) => each.sequence === sequence);
+    if (operation !== undefined) return operation;
+  }
+  return undefined;
+}
+
+const noRates = {
+  cycleSeconds: 0,
+  piecesPerCycle: 1,
+  cyclesPerPiece: 1,
+  planningFactor: 1,
+  retoolSeconds: 0,
+  fixedSeconds: 0,
+};
+
+/**
+ * A production order entered by hand (#768) as the snapshot holds it: released, with the article's
+ * routing copied into its operations and one job order per operation that waits under Not placed
+ * (plan 07, releaseProductionOrder). Rates come from G1's orders of the same article until the
+ * routings carry them; the deadline takes its own time or the plant's deadline rule.
+ */
+function enteredOrderOf(
+  order: EnteredProductionOrder,
+  fixture: GanttFixture,
+  pages: GanttPagesFixture,
+  settings: GanttSettings,
+): GanttOrder {
+  const id = orderIdOf(order.number);
+  const routing = pages.routings.find((each) => each.article === order.article);
+  const operations: GanttOperation[] = (routing?.operations ?? []).map((step) => {
+    const known = operationRatesOf(fixture, order.article, step.sequence);
+    return {
+      id: `${order.number}.${step.sequence}`,
+      displayNumber: `${order.number}.${step.sequence}`,
+      sequence: step.sequence,
+      name: step.name,
+      quantity: order.quantity,
+      rates: known?.rates ?? noRates,
+      leadTimeS: known?.leadTimeS ?? 0,
+      sendAheadQuantity: known?.sendAheadQuantity ?? 0,
+      isLocked: false,
+      allowedEquipment: step.allowedEquipment,
+    };
+  });
+  const time =
+    order.deadlineTime ??
+    (settings.deadlineRule === 'startOfDay' ? '00:00' : settings.shiftEndForDeadline);
+  return {
+    id,
+    number: order.number,
+    article: order.article,
+    quantity: order.quantity,
+    deadlineDate: order.deadlineDate,
+    deadlineMs: resolveWallClock(
+      fixture.plant.timeZone,
+      Temporal.PlainDate.from(order.deadlineDate),
+      Temporal.PlainTime.from(time),
+    ),
+    priority: order.priority,
+    color: order.color,
+    status: 'released',
+    owner: 'northmes',
+    operations,
+    jobOrders: operations.map((operation) => ({
+      id: `jo-${order.number}-${operation.sequence}`,
+      orderId: id,
+      operationId: operation.id,
+      displayNumber: operation.displayNumber,
+      quantity: order.quantity,
+      status: 'planned',
+      plannedSetupS: setupSeconds(operation.rates),
+      plannedRunS: runSecondsFor(order.quantity, operation.rates),
+      rates: operation.rates,
+    })),
+    origin: {
+      createdAtMs: order.createdAtMs,
+      createdBy: order.createdBy,
+      ...(routing !== undefined && { routingVersion: routing.version }),
+    },
+  };
+}
+
+/**
+ * The customer order lines with those entered by hand after the fixture's, and each line's supply
+ * as the orders entered by hand set it (planning.setProductionOrderDemand on mock data).
+ */
+function withEnteredLines<
+  Pages extends { readonly customerOrderLines: readonly CustomerOrderLine[] },
+>(pagesData: Pages, fixture: GanttFixture, entered: EnteredOrders): Pages {
+  const supplies = suppliesOf(entered);
+  const lines: CustomerOrderLine[] = [
+    ...pagesData.customerOrderLines,
+    ...entered.customerOrders.flatMap((order) =>
+      order.lines.map((line) => ({
+        id: `${order.number}-${line.line}`,
+        customerOrder: order.number,
+        customersReference: order.customersReference,
+        customerCode: order.customerCode,
+        line: line.line,
+        article: line.article,
+        quantity: line.quantity,
+        wantedDate: line.wantedDate,
+        deliveringPlant: fixture.plant.slug,
+      })),
+    ),
+  ];
+  return {
+    ...pagesData,
+    customerOrderLines: lines.map((line) => {
+      const supply = supplies.get(line.id);
+      return supply === undefined ? line : { ...line, productionOrderId: orderIdOf(supply) };
+    }),
+  };
+}
+
 /**
  * What the planning pages show beside the Gantt, from the pages fixture: the ERP connection, the
  * company's plants, the customers and their lines (each line names its production order by the
@@ -207,6 +335,7 @@ export function g1Snapshot(
   range = g1Week,
   pages: GanttPagesFixture = g1Pages,
   rules?: EffectivePlanningRules,
+  entered: EnteredOrders = noEnteredOrders,
 ): GanttSnapshot {
   const fixtureSettings: GanttSettings = {
     deadlineRule: fixture.settings.deadlineRule,
@@ -262,10 +391,13 @@ export function g1Snapshot(
     },
     equipmentGroups: fixture.equipmentGroups.map(({ code, name }) => ({ code, name })),
     equipment: fixture.equipment,
-    productionOrders: fixture.productionOrders.map((order) =>
-      orderOf(order, windowsOf, pages, deadlineOf(order)),
-    ),
-    ...pagesOf(fixture, pages),
+    productionOrders: [
+      ...fixture.productionOrders.map((order) =>
+        orderOf(order, windowsOf, pages, deadlineOf(order)),
+      ),
+      ...entered.productionOrders.map((order) => enteredOrderOf(order, fixture, pages, settings)),
+    ],
+    ...withEnteredLines(pagesOf(fixture, pages), fixture, entered),
   };
   return { ...base, analysis: analyzeGantt(base, range) };
 }
@@ -276,6 +408,6 @@ export function g1Snapshot(
  * The screen shows "Showing fixture G1" while it is in use.
  */
 export const g1DataSource: GanttDataSource = {
-  load: async ({ from, to, rules }) =>
-    g1Snapshot(g1, { fromMs: Date.parse(from), toMs: Date.parse(to) }, g1Pages, rules),
+  load: async ({ from, to, rules, entered }) =>
+    g1Snapshot(g1, { fromMs: Date.parse(from), toMs: Date.parse(to) }, g1Pages, rules, entered),
 };
