@@ -74,6 +74,8 @@ export interface PlannedMovement {
     readonly customerOrder: string;
     readonly line: number;
     readonly customerName: string;
+    /** The production order that supplies the line, if any. */
+    readonly productionOrder?: { readonly id: string; readonly number: string };
   };
   /** Whether the projection counts it: purchase requisitions follow a plant setting. */
   readonly counted: boolean;

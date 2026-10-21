@@ -15,11 +15,7 @@ import {
   type InventorySource,
   type PlannedMovement,
 } from './inventory-data.ts';
-
-/** A quantity rounded to the thousandth, so 1 200 × 0,085 m is 102 m and not 102.00000000000001. */
-function rounded(quantity: number): number {
-  return Math.round(quantity * 1000) / 1000;
-}
+import { roundQuantity } from './material-projection.ts';
 
 /** The instant a plant date starts, where an ERP date without a time sorts (plan 07). */
 function startOfDay(date: string, timeZone: string): number {
@@ -29,57 +25,59 @@ function startOfDay(date: string, timeZone: string): number {
 /**
  * The movements planning derives from the plan (plan 07, Material warnings): each operation's
  * material consumed at the earliest setup start of its job orders, each order's output at the
- * latest end of its last operation, an unplaced order's movement at its deadline date as the ERP
- * would date it, and each customer order line's demand at its wanted date.
+ * latest end of its last operation, an order not fully placed at its deadline date, and each
+ * customer order line's demand at its wanted date. An operation with a started or finished job
+ * order consumes nothing more: the ERP's stock already shows the material it took.
  */
 function derivedMovements(
   plan: GanttSnapshot,
-  pages: GanttPagesFixture,
   inventory: GanttInventoryFixture,
 ): PlannedMovement[] {
   const timeZone = plan.plant.timeZone;
   const numberOf = new Map(inventory.articles.map((article) => [article.name, article.number]));
-  const customers = new Map(pages.customers.map((customer) => [customer.code, customer.name]));
+  const customers = new Map((plan.customers ?? []).map((each) => [each.code, each.name]));
+  const machineName = (code: string) =>
+    plan.equipment.find((machine) => machine.code === code)?.name ?? code;
   const movements: PlannedMovement[] = [];
   for (const order of plan.productionOrders) {
+    const deadline = startOfDay(order.deadlineDate, timeZone);
     for (const material of inventory.operationMaterials) {
       if (material.article !== order.article) continue;
       const operation = order.operations.find((each) => each.sequence === material.sequence);
       if (operation === undefined) continue;
       const rows = order.jobOrders.filter((row) => row.operationId === operation.id);
-      const starts = rows.flatMap((row) =>
-        row.placement === undefined ? [] : [row.placement.setupStartMs],
-      );
-      const first = rows.find((row) => row.placement?.setupStartMs === Math.min(...starts));
+      if (rows.some((row) => row.status !== 'planned')) continue;
+      const placed = rows.every((row) => row.placement !== undefined) && rows.length > 0;
+      const first = placed
+        ? [...rows].sort(
+            (a, b) => (a.placement?.setupStartMs ?? 0) - (b.placement?.setupStartMs ?? 0),
+          )[0]
+        : undefined;
       movements.push({
         id: `consumption-${operation.id}`,
         kind: 'consumption',
         article: material.material,
         warehouse: material.warehouse,
-        quantity: -rounded(operation.quantity * material.perPiece),
-        atMs: starts.length === 0 ? startOfDay(order.deadlineDate, timeZone) : Math.min(...starts),
-        dateOnly: starts.length === 0,
-        dateFrom: starts.length === 0 ? 'ERP date' : `Setup start of ${operation.displayNumber}`,
+        quantity: -roundQuantity(operation.quantity * material.perPiece),
+        atMs: first?.placement?.setupStartMs ?? deadline,
+        dateOnly: first === undefined,
+        dateFrom:
+          first === undefined ? 'Order deadline' : `Setup start of ${operation.displayNumber}`,
         reference: operation.displayNumber,
         jobOrder: {
-          id: first?.id ?? operation.id,
+          id: first?.id ?? rows[0]?.id ?? operation.id,
           displayNumber: operation.displayNumber,
           operationName: operation.name,
           orderId: order.id,
           article: order.article,
-          ...(first?.equipment !== undefined && {
-            machine:
-              plan.equipment.find((machine) => machine.code === first.equipment)?.name ??
-              first.equipment,
-          }),
+          ...(first?.equipment !== undefined && { machine: machineName(first.equipment) }),
         },
         counted: true,
       });
     }
     const last = [...order.operations].sort((a, b) => b.sequence - a.sequence)[0];
-    const ends = order.jobOrders.flatMap((row) =>
-      row.operationId === last?.id && row.placement !== undefined ? [row.placement.endMs] : [],
-    );
+    const lastRows = order.jobOrders.filter((row) => row.operationId === last?.id);
+    const placed = lastRows.length > 0 && lastRows.every((row) => row.placement !== undefined);
     const article = numberOf.get(order.article);
     if (article === undefined) continue;
     movements.push({
@@ -88,17 +86,18 @@ function derivedMovements(
       article,
       warehouse: inventory.outputWarehouse,
       quantity: order.quantity,
-      atMs: ends.length === 0 ? startOfDay(order.deadlineDate, timeZone) : Math.max(...ends),
-      dateOnly: ends.length === 0,
-      dateFrom: ends.length === 0 ? 'ERP date' : `End of ${last?.displayNumber ?? order.number}`,
+      atMs: placed ? Math.max(...lastRows.map((row) => row.placement?.endMs ?? 0)) : deadline,
+      dateOnly: !placed,
+      dateFrom: placed ? `End of ${last?.displayNumber ?? order.number}` : 'Order deadline',
       reference: order.number,
       productionOrder: { id: order.id, number: order.number },
       counted: true,
     });
   }
-  for (const line of pages.customerOrderLines) {
+  for (const line of plan.customerOrderLines ?? []) {
     const article = numberOf.get(line.article);
     if (article === undefined) continue;
+    const order = plan.productionOrders.find((each) => each.id === line.productionOrderId);
     movements.push({
       id: `demand-${line.customerOrder}-${line.line}`,
       kind: 'customerDemand',
@@ -112,12 +111,30 @@ function derivedMovements(
       customerOrderLine: {
         customerOrder: line.customerOrder,
         line: line.line,
-        customerName: customers.get(line.customer) ?? line.customer,
+        customerName: customers.get(line.customerCode) ?? line.customerCode,
+        ...(order !== undefined && {
+          productionOrder: { id: order.id, number: order.number },
+        }),
       },
       counted: true,
     });
   }
   return movements;
+}
+
+/** A movement dated before now moves to now, keeping its own date as overdueSince (plan 07). */
+function overdueAtNow(movement: PlannedMovement, nowMs: number, timeZone: string): PlannedMovement {
+  if (movement.atMs >= nowMs) return movement;
+  return {
+    ...movement,
+    atMs: nowMs,
+    dateOnly: false,
+    dateFrom: 'Now, overdue',
+    overdueSince: Temporal.Instant.fromEpochMilliseconds(movement.atMs)
+      .toZonedDateTimeISO(timeZone)
+      .toPlainDate()
+      .toString(),
+  };
 }
 
 /**
@@ -141,31 +158,21 @@ export function g1InventorySnapshot(
       .filter((warehouse) => warehouse.plant === plan.plant.slug)
       .map((warehouse) => warehouse.code),
   );
-  const today = Temporal.Instant.fromEpochMilliseconds(plan.nowMs)
-    .toZonedDateTimeISO(timeZone)
-    .toPlainDate()
-    .toString();
-  const erp: PlannedMovement[] = inventory.plannedMovements.map((movement, index) => {
-    const dayMs = startOfDay(movement.date, timeZone);
-    // A movement whose ERP date has passed is counted at now (plan 07).
-    const overdue = movement.date < today;
-    return {
-      id: `erp-${index}`,
-      kind: movement.kind,
-      article: movement.article,
-      warehouse: movement.warehouse,
-      quantity: movement.quantity,
-      atMs: overdue ? plan.nowMs : dayMs,
-      dateOnly: !overdue,
-      dateFrom: overdue ? 'Now, overdue' : 'ERP date',
-      ...(overdue && { overdueSince: movement.date }),
-      reference: movement.reference,
-      counted: movement.kind !== 'purchaseRequisition' || inventory.countPurchaseRequisitions,
-    };
-  });
-  const movements = [...erp, ...derivedMovements(plan, pages, inventory)].filter(
-    (movement) => mapped.has(movement.warehouse) && movement.atMs < projectedToMs,
-  );
+  const erp: PlannedMovement[] = inventory.plannedMovements.map((movement, index) => ({
+    id: `erp-${index}`,
+    kind: movement.kind,
+    article: movement.article,
+    warehouse: movement.warehouse,
+    quantity: movement.quantity,
+    atMs: startOfDay(movement.date, timeZone),
+    dateOnly: true,
+    dateFrom: 'ERP date',
+    reference: movement.reference,
+    counted: movement.kind !== 'purchaseRequisition' || inventory.countPurchaseRequisitions,
+  }));
+  const movements = [...erp, ...derivedMovements(plan, inventory)]
+    .map((movement) => overdueAtNow(movement, plan.nowMs, timeZone))
+    .filter((movement) => mapped.has(movement.warehouse) && movement.atMs < projectedToMs);
   return {
     ...(plan.fixture !== undefined && { fixture: plan.fixture }),
     plant: {

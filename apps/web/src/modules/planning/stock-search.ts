@@ -52,7 +52,7 @@ function commaList<Value extends string>(accepts: (value: string) => value is Va
 
 const preview = z.enum(['loading', 'empty', 'error', 'forbidden']).optional().catch(undefined);
 
-const code = (value: string): value is string => /^[A-Za-z0-9-]{1,32}$/.test(value);
+const code = (value: string): value is string => /^[A-Za-z0-9._/-]{1,32}$/.test(value);
 const kind = (value: string): value is ArticleKind => value === 'material' || value === 'finished';
 
 const sort = z

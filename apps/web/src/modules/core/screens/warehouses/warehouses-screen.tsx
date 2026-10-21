@@ -85,7 +85,7 @@ function columnsOf(snapshot: WarehousesSnapshot): DataTableColumn<Warehouse>[] {
             variant="outline"
             className="h-8 px-2.5"
             disabled
-            aria-label={row.plant === null ? `Map ${row.code} to a plant` : `Edit ${row.code}`}
+            aria-label={row.plant === null ? `Map to plant, ${row.code}` : `Edit, ${row.code}`}
           >
             {row.plant === null ? 'Map to plant' : 'Edit'}
           </Button>
@@ -137,7 +137,7 @@ export function WarehousesScreen() {
     () =>
       snapshot === undefined
         ? []
-        : [...snapshot.warehouses].sort((a, b) => a.code.localeCompare(b.code)),
+        : [...snapshot.warehouses].sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0)),
     [snapshot],
   );
   const rows = allRows.filter((row) => matches(row, view));

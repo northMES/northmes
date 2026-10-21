@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatPlantDay } from '@northmes/contracts/format';
 import { useId } from 'react';
+import { Temporal } from 'temporal-polyfill';
 import type { InventorySnapshot } from '../../inventory-data.ts';
 import type { Projection } from '../../material-projection.ts';
 import { plantDateOf } from '../../stock-facts.ts';
@@ -54,13 +55,18 @@ export function StockArticleChart({
   if (balance < 0) below.push({ from: atMs, to: toMs, value: balance });
   path += ` H ${x(toMs)}`;
 
-  // A tick per plant date, a day apart from when the stock was taken.
+  // A tick at the start of each plant date after the stock was taken (plan 07, startOfDay).
   const ticks: { readonly ms: number; readonly label: string }[] = [];
   const timeZone = snapshot.plant.timeZone;
-  for (let ms = fromMs; ms < toMs; ms += 86_400_000) {
-    const date = plantDateOf(ms, timeZone);
-    if (ticks.at(-1)?.label === formatPlantDay(date)) continue;
-    ticks.push({ ms, label: formatPlantDay(date) });
+  for (
+    let day = Temporal.PlainDate.from(plantDateOf(fromMs, timeZone)).add({ days: 1 });
+    day.toZonedDateTime({ timeZone }).epochMilliseconds < toMs;
+    day = day.add({ days: 1 })
+  ) {
+    ticks.push({
+      ms: day.toZonedDateTime({ timeZone }).epochMilliseconds,
+      label: formatPlantDay(day.toString()),
+    });
   }
   let running = projection.start;
   return (

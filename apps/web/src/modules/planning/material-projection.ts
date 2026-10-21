@@ -13,16 +13,24 @@ import type {
   PlannedMovement,
 } from './inventory-data.ts';
 
-/** A quantity rounded to the thousandth, so sums of decimal metres stay exact. */
-function rounded(quantity: number): number {
-  return Math.round(quantity * 1000) / 1000;
+/**
+ * A quantity rounded to the millionth, the scale of the plan's numeric(18,6) quantities, so a sum
+ * of decimal metres stays exact: 1 200 × 0.085 m is 102 m, not 102.00000000000001.
+ */
+export function roundQuantity(quantity: number): number {
+  return Math.round(quantity * 1_000_000) / 1_000_000;
+}
+
+/** Codes compare by code unit, the same in every browser. */
+export function compareCodes(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 /** The warehouses the plant counts: those mapped to it, by code. */
 export function plantWarehouses(snapshot: InventorySnapshot): InventoryWarehouse[] {
   return snapshot.warehouses
     .filter((warehouse) => warehouse.plant === snapshot.plant.slug)
-    .sort((a, b) => a.code.localeCompare(b.code));
+    .sort((a, b) => compareCodes(a.code, b.code));
 }
 
 /** The balances of an article in the plant's warehouses, or in those picked, by warehouse. */
@@ -40,7 +48,7 @@ function compareMovements(a: PlannedMovement, b: PlannedMovement): number {
   if (a.atMs !== b.atMs) return a.atMs - b.atMs;
   const incoming = Number(b.quantity > 0) - Number(a.quantity > 0);
   if (incoming !== 0) return incoming;
-  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  return compareCodes(a.id, b.id);
 }
 
 /** One movement of a projection with the balance after it; none for one that is not counted. */
@@ -68,7 +76,7 @@ export function projectionOf(
   warehouses: readonly string[] = plantWarehouses(snapshot).map((each) => each.code),
 ): Projection {
   const picked = new Set(warehouses);
-  const start = rounded(
+  const start = roundQuantity(
     balancesOf(snapshot, article, warehouses).reduce((sum, row) => sum + row.quantity, 0),
   );
   let balance = start;
@@ -78,7 +86,7 @@ export function projectionOf(
     .sort(compareMovements)
     .map((movement) => {
       if (!movement.counted) return { movement, balance: undefined };
-      balance = rounded(balance + movement.quantity);
+      balance = roundQuantity(balance + movement.quantity);
       if (balance < lowest.balance) {
         lowest = { balance, atMs: movement.atMs, dateOnly: movement.dateOnly };
       }
@@ -87,84 +95,125 @@ export function projectionOf(
   return { start, steps, lowest };
 }
 
-/** Why an article falls below zero: a job order short of material, or a late order's output. */
+/**
+ * Why an article falls below zero at the plant: job orders short of material, a late order whose
+ * output comes after the customer demand it supplies, or neither, such as a balance below zero
+ * from the start.
+ */
 export type ShortReason =
-  | { readonly kind: 'material'; readonly movement: PlannedMovement }
+  | { readonly kind: 'material'; readonly shortages: readonly MaterialShortage[] }
   | {
       readonly kind: 'lateOrder';
       /** The demand that takes the balance below zero. */
       readonly movement: PlannedMovement;
-      /** The output that brings it back, the late order. */
-      readonly output: PlannedMovement | undefined;
-    };
+      /** The production order that supplies that demand. */
+      readonly order: { readonly id: string; readonly number: string };
+    }
+  | { readonly kind: 'belowZero' };
 
-/** One row of the Stock page: an article with stock at the plant, and its projection (ST1). */
+/** One row of the Stock page: an article at the plant and its projection (ST1). */
 export interface StockRow {
   readonly article: InventoryArticle;
   readonly inStock: number;
+  /** The projection over the picked warehouses, which In stock, Lowest and At show. */
   readonly projection: Projection;
   readonly lowest: Projection['lowest'];
-  /** Why it falls below zero; none while it stays at zero or above. */
+  /** Why it falls below zero over the whole plant; none while the plant stays at zero or above. */
   readonly short?: ShortReason;
-  /** The first counted incoming movement after it falls below zero. */
+  /** The first counted incoming movement after the plant's balance falls below zero. */
   readonly nextIncoming?: PlannedMovement;
 }
 
-/** The first step that takes the balance below zero, and the first incoming one after it. */
-function belowZero(projection: Projection) {
+/**
+ * Where the balance first is below zero: -1 when it starts there, the index of the step that
+ * takes it there, or undefined when it never is.
+ */
+function firstBelowZero(projection: Projection): number | undefined {
+  if (projection.start < 0) return -1;
   const index = projection.steps.findIndex(
     (step) => step.balance !== undefined && step.balance < 0,
   );
-  if (index < 0) return undefined;
-  const step = projection.steps[index];
-  const next = projection.steps
-    .slice(index + 1)
-    .find((each) => each.balance !== undefined && each.movement.quantity > 0);
-  return step === undefined ? undefined : { step, next: next?.movement };
+  return index < 0 ? undefined : index;
 }
 
-/** The row of one article at the plant, over the picked warehouses. */
+/** Why the plant's balance of an article falls below zero, the verdict every filter keeps. */
+function shortReasonOf(
+  snapshot: InventorySnapshot,
+  article: InventoryArticle,
+  plant: Projection,
+): ShortReason | undefined {
+  if (plant.lowest.balance >= 0) return undefined;
+  if (article.kind === 'material') {
+    const shortages = materialShortages(snapshot).filter(
+      (each) => each.material.number === article.number,
+    );
+    if (shortages.length > 0) return { kind: 'material', shortages };
+  }
+  const step = plant.steps[firstBelowZero(plant) ?? -1];
+  const order = step?.movement.customerOrderLine?.productionOrder;
+  if (step !== undefined && step.movement.kind === 'customerDemand' && order !== undefined) {
+    return { kind: 'lateOrder', movement: step.movement, order };
+  }
+  return { kind: 'belowZero' };
+}
+
+/** The row of one article at the plant, In stock, Lowest and At over the picked warehouses. */
 export function stockRowOf(
   snapshot: InventorySnapshot,
   article: InventoryArticle,
   warehouses?: readonly string[],
 ): StockRow {
   const projection = projectionOf(snapshot, article.number, warehouses);
-  const below = belowZero(projection);
-  let short: ShortReason | undefined;
-  if (below !== undefined) {
-    short =
-      below.step.movement.kind === 'consumption'
-        ? { kind: 'material', movement: below.step.movement }
-        : { kind: 'lateOrder', movement: below.step.movement, output: below.next };
-  }
+  const plant = warehouses === undefined ? projection : projectionOf(snapshot, article.number);
+  const short = shortReasonOf(snapshot, article, plant);
+  const index = firstBelowZero(plant);
+  const next =
+    index === undefined
+      ? undefined
+      : plant.steps
+          .slice(index + 1)
+          .find((step) => step.balance !== undefined && step.movement.quantity > 0)?.movement;
   return {
     article,
     inStock: projection.start,
     projection,
     lowest: projection.lowest,
     ...(short !== undefined && { short }),
-    ...(below?.next !== undefined && { nextIncoming: below.next }),
+    ...(next !== undefined && { nextIncoming: next }),
   };
 }
 
 /**
- * The rows of the Stock page (ST1): every article with a stock row in a counted warehouse,
- * materials first, then by the lowest projected balance, then by number.
+ * Whether the plant holds the article: a balance row or a planned movement in its warehouses, or
+ * in those picked.
+ */
+export function isAtPlant(
+  snapshot: InventorySnapshot,
+  article: string,
+  warehouses: readonly string[] = plantWarehouses(snapshot).map((each) => each.code),
+): boolean {
+  const counted = new Set(warehouses);
+  return (
+    snapshot.balances.some((row) => row.article === article && counted.has(row.warehouse)) ||
+    snapshot.movements.some(
+      (movement) => movement.article === article && counted.has(movement.warehouse),
+    )
+  );
+}
+
+/**
+ * The rows of the Stock page (ST1): every article with a balance row or a planned movement at
+ * the plant, or in the picked warehouses, materials first, then by the lowest projected balance, then by number.
  */
 export function stockRows(snapshot: InventorySnapshot, warehouses?: readonly string[]): StockRow[] {
-  const counted = new Set(warehouses ?? plantWarehouses(snapshot).map((each) => each.code));
-  const numbers = new Set(
-    snapshot.balances.filter((row) => counted.has(row.warehouse)).map((row) => row.article),
-  );
   return snapshot.articles
-    .filter((article) => numbers.has(article.number))
+    .filter((article) => isAtPlant(snapshot, article.number, warehouses))
     .map((article) => stockRowOf(snapshot, article, warehouses))
     .sort(
       (a, b) =>
         Number(a.article.kind === 'finished') - Number(b.article.kind === 'finished') ||
         a.lowest.balance - b.lowest.balance ||
-        a.article.number.localeCompare(b.article.number),
+        compareCodes(a.article.number, b.article.number),
     );
 }
 
@@ -211,7 +260,7 @@ export function materialShortages(snapshot: InventorySnapshot): MaterialShortage
             need: -movement.quantity,
             before,
             after: step.balance,
-            shortfall: rounded(Math.min(-step.balance, -movement.quantity)),
+            shortfall: roundQuantity(Math.min(-step.balance, -movement.quantity)),
             warehouse,
             ...(previous !== undefined && { previous }),
             ...(next !== undefined && { nextIncoming: next.movement }),

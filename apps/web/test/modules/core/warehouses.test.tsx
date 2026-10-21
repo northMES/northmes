@@ -57,7 +57,7 @@ describe('the warehouses register in company settings (design #729, WH1 to WH6)'
       true,
     );
     expect(
-      within(table).getByRole('button', { name: 'Map CON to a plant' }).hasAttribute('disabled'),
+      within(table).getByRole('button', { name: 'Map to plant, CON' }).hasAttribute('disabled'),
     ).toBe(true);
   });
 

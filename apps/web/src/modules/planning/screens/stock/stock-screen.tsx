@@ -20,11 +20,18 @@ import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import { InventoryForbidden, type InventorySnapshot } from '../../inventory-data.ts';
 import { useInventory } from '../../inventory-source-context.ts';
-import { plantWarehouses, type StockRow, stockRows } from '../../material-projection.ts';
+import {
+  compareCodes,
+  isAtPlant,
+  materialShortages,
+  plantWarehouses,
+  type StockRow,
+  stockRows,
+} from '../../material-projection.ts';
 import {
   amountText,
   incomingText,
-  plantDateOf,
+  jobOrderHref,
   quantityWithUnit,
   stockTime,
   whenText,
@@ -47,57 +54,56 @@ const kindLabels: Readonly<Record<ArticleKind, string>> = {
   finished: 'Finished article',
 };
 
-/** Why an article falls below zero, with the link to the job order or the late order (ST1). */
+/** Why an article falls below zero, with the link to the job orders or the late order (ST1). */
 function ShortFor({ row, plant, snapshot }: CellProps) {
   const short = row.short;
   if (short === undefined) return <span className="text-xs text-muted-foreground">None</span>;
   if (short.kind === 'material') {
-    const job = short.movement.jobOrder;
     return (
       <span className="flex flex-wrap items-center gap-1.5">
         <StatusBadge tone="warning" icon={TriangleAlert}>
           Material short
         </StatusBadge>
-        {job !== undefined && (
+        {short.shortages.map((shortage) => (
           <Link
-            to={
-              planningLinks.gantt(
-                { plant },
-                {
-                  zoom: 'week',
-                  from: plantDateOf(short.movement.atMs, snapshot.plant.timeZone),
-                  order: job.orderId,
-                },
-              ).href
-            }
+            key={shortage.movement.id}
+            to={jobOrderHref(shortage.movement, plant, snapshot.plant.timeZone)}
             className={`font-mono ${link}`}
           >
-            {job.displayNumber}
+            {shortage.jobOrder.displayNumber}
           </Link>
-        )}
+        ))}
       </span>
     );
   }
-  const order = short.output?.productionOrder;
-  const line = short.movement.customerOrderLine;
+  if (short.kind === 'belowZero') {
+    return <span className="text-xs text-muted-foreground">No order or job order named</span>;
+  }
   return (
     <span className="flex flex-wrap items-center gap-1.5">
       <StatusBadge tone="destructive" icon={Clock}>
         Late order
       </StatusBadge>
       <span>
-        {order !== undefined && (
-          <Link
-            to={planningLinks.orders.order({ plant, orderId: order.id }).href}
-            className={`font-mono ${link}`}
-          >
-            {order.number}
-          </Link>
-        )}
-        {line !== undefined && ` for customer order ${line.customerOrder}`}
+        <Link
+          to={planningLinks.orders.order({ plant, orderId: short.order.id }).href}
+          className={`font-mono ${link}`}
+        >
+          {short.order.number}
+        </Link>
+        {short.movement.customerOrderLine !== undefined &&
+          ` for customer order ${short.movement.customerOrderLine.customerOrder}`}
       </span>
     </span>
   );
+}
+
+/** The next incoming movement, None planned for a short article, None needed otherwise. */
+function nextIncomingText(row: StockRow, timeZone: string): string | undefined {
+  if (row.nextIncoming !== undefined) {
+    return incomingText(row.nextIncoming, row.article.unit, timeZone);
+  }
+  return undefined;
 }
 
 interface CellProps {
@@ -166,14 +172,16 @@ function columnsOf(snapshot: InventorySnapshot, plant: string): DataTableColumn<
     {
       id: 'nextIncoming',
       header: 'Next incoming',
-      cell: (row) =>
-        row.nextIncoming === undefined ? (
-          <span className="text-xs text-muted-foreground">None needed</span>
-        ) : (
-          <span className="font-mono">
-            {incomingText(row.nextIncoming, row.article.unit, timeZone)}
+      cell: (row) => {
+        const text = nextIncomingText(row, timeZone);
+        return text === undefined ? (
+          <span className="text-xs text-muted-foreground">
+            {row.short === undefined ? 'None needed' : 'None planned'}
           </span>
-        ),
+        ) : (
+          <span className="font-mono">{text}</span>
+        );
+      },
     },
   ];
 }
@@ -197,50 +205,41 @@ function sorted(
   const direction = sort.desc ? -1 : 1;
   return [...rows].sort((a, b) =>
     sort.id === 'article'
-      ? a.article.number.localeCompare(b.article.number) * direction
+      ? compareCodes(a.article.number, b.article.number) * direction
       : (a.lowest.balance - b.lowest.balance) * direction ||
-        a.article.number.localeCompare(b.article.number),
+        compareCodes(a.article.number, b.article.number),
   );
 }
 
-/** The article that is short for a job order, in one sentence for the note above the table. */
-function ShortNote({
-  rows,
-  snapshot,
-}: {
-  readonly rows: readonly StockRow[];
-  readonly snapshot: InventorySnapshot;
-}) {
+/** Each job order short of material, one sentence each, in the note above the table (ST1). */
+function ShortNote({ snapshot }: { readonly snapshot: InventorySnapshot }) {
   const { plant } = useShell();
-  const short = rows.filter((row) => row.short?.kind === 'material');
-  if (short.length === 0) return null;
+  const shortages = materialShortages(snapshot);
+  if (shortages.length === 0) return null;
+  const materials = new Set(shortages.map((each) => each.material.number)).size;
+  const timeZone = snapshot.plant.timeZone;
   return (
     <Alert role="note" className="border-warning bg-warning-subtle text-foreground">
       <TriangleAlert aria-hidden className="text-warning" />
       <AlertTitle>
-        {short.length === 1
+        {materials === 1
           ? '1 article is short for a job order.'
-          : `${short.length} articles are short for a job order.`}
+          : `${materials} articles are short for a job order.`}
       </AlertTitle>
       <AlertDescription className="text-foreground">
-        {short.map((row) => {
-          const movement = row.short?.movement;
-          const job = movement?.jobOrder;
-          if (movement === undefined || job === undefined) return null;
-          return (
-            <span key={row.article.number}>
-              {`${row.article.name} is ${quantityWithUnit(-row.lowest.balance, row.article.unit)} short when ${job.displayNumber} ${job.article} starts${
-                job.machine === undefined ? '' : ` on ${job.machine}`
-              }, ${stockTime(snapshot, movement.atMs)}. `}
-              <Link
-                to={planningLinks.stock.article({ plant, articleId: row.article.number }).href}
-                className={link}
-              >
-                Show the stock of {row.article.name}
-              </Link>
-            </span>
-          );
-        })}
+        {shortages.map((shortage) => (
+          <span key={shortage.movement.id}>
+            {`${shortage.material.name} is ${quantityWithUnit(shortage.shortfall, shortage.material.unit)} short when ${shortage.jobOrder.displayNumber} ${shortage.jobOrder.article} starts${
+              shortage.jobOrder.machine === undefined ? '' : ` on ${shortage.jobOrder.machine}`
+            }, ${whenText(shortage.movement.atMs, shortage.movement.dateOnly, timeZone)}. `}
+            <Link
+              to={planningLinks.stock.article({ plant, articleId: shortage.material.number }).href}
+              className={link}
+            >
+              Show the stock of {shortage.material.name}
+            </Link>
+          </span>
+        ))}
       </AlertDescription>
     </Alert>
   );
@@ -279,6 +278,11 @@ function StockCard({ row, plant, snapshot }: CellProps) {
         <dd className="text-end font-mono text-xs">
           {whenText(row.lowest.atMs, row.lowest.dateOnly, timeZone)}
         </dd>
+        <dt className="text-muted-foreground">Next incoming</dt>
+        <dd className="text-end font-mono text-xs">
+          {nextIncomingText(row, timeZone) ??
+            (row.short === undefined ? 'None needed' : 'None planned')}
+        </dd>
       </dl>
     </li>
   );
@@ -308,12 +312,27 @@ export function StockScreen() {
   const [hiddenColumns, setHiddenColumns] = useState<readonly string[]>([]);
   const belowId = `${searchFieldId}-below`;
 
-  const warehouses = snapshot === undefined ? [] : plantWarehouses(snapshot);
-  const picked = view.warehouse?.filter((code) => warehouses.some((each) => each.code === code));
-  const counted = picked === undefined || picked.length === 0 ? undefined : picked;
+  const warehouses = useMemo(
+    () => (snapshot === undefined ? [] : plantWarehouses(snapshot)),
+    [snapshot],
+  );
+  // The picked warehouses that map to the plant, as a key, so the rows recompute only when it changes.
+  const countedKey = (view.warehouse ?? [])
+    .filter((code) => warehouses.some((each) => each.code === code))
+    .join(',');
+  const counted = useMemo(
+    () => (countedKey === '' ? undefined : countedKey.split(',')),
+    [countedKey],
+  );
+  const plantRows = useMemo(() => (snapshot === undefined ? [] : stockRows(snapshot)), [snapshot]);
   const allRows = useMemo(
-    () => (snapshot === undefined ? [] : stockRows(snapshot, counted)),
-    [snapshot, counted],
+    () =>
+      snapshot === undefined
+        ? []
+        : counted === undefined
+          ? plantRows
+          : stockRows(snapshot, counted),
+    [snapshot, counted, plantRows],
   );
   const sort =
     view.sort === undefined
@@ -349,7 +368,16 @@ export function StockScreen() {
     sort === undefined
       ? 'Sorted by kind of article, then lowest projected balance.'
       : `Sorted by ${sort.id === 'article' ? 'article' : 'lowest projected balance'}, ${sort.desc ? 'descending' : 'ascending'}.`;
-  const statusLine = `${plural(rows.length, 'article', 'articles')} with stock or planned movements, ${belowZero} below zero in the projection. ${sortText} Lowest projected sums ${
+  const filters = [
+    view.q === undefined ? undefined : `matching "${view.q}"`,
+    view.kind === undefined
+      ? undefined
+      : view.kind.map((kind) => kindLabels[kind].toLowerCase()).join(' and '),
+    view.below === 1 ? 'below zero only' : undefined,
+  ].filter((part) => part !== undefined);
+  const statusLine = `${plural(rows.length, 'article', 'articles')} with stock or planned movements, ${belowZero} below zero in the projection${
+    filters.length === 0 ? '' : `, ${filters.join(', ')}`
+  }. ${sortText} Lowest projected sums ${
     counted === undefined ? `every warehouse mapped to ${plantName}` : counted.join(', ')
   }; purchase requisitions are ${snapshot?.countPurchaseRequisitions ? '' : 'not '}counted (${plantName} setting).`;
   const announced = useRef<string | undefined>(undefined);
@@ -372,7 +400,7 @@ export function StockScreen() {
     state = { status: 'error', title: 'Could not load the stock', error, onRetry: retry };
   } else if (snapshot === undefined) {
     state = { status: 'loading' };
-  } else if (allRows.length === 0) {
+  } else if (plantRows.length === 0) {
     state = {
       status: 'empty',
       icon: PackageOpen,
@@ -391,17 +419,26 @@ export function StockScreen() {
       ),
     };
   }
-  const filtered = view.warehouse !== undefined || view.kind !== undefined;
+  const filtered = counted !== undefined || view.kind !== undefined;
   const kindOptions = (['material', 'finished'] as const).map((kind) => ({
     value: kind,
     label: kindLabels[kind],
     count: allRows.filter((row) => row.article.kind === kind).length,
   }));
-  const warehouseOptions = warehouses.map((warehouse) => ({
-    value: warehouse.code,
-    label: `${warehouse.code} ${warehouse.name}`,
-    count: snapshot === undefined ? 0 : stockRows(snapshot, [warehouse.code]).length,
-  }));
+  const warehouseOptions = useMemo(
+    () =>
+      warehouses.map((warehouse) => ({
+        value: warehouse.code,
+        label: `${warehouse.code} ${warehouse.name}`,
+        count:
+          snapshot === undefined
+            ? 0
+            : snapshot.articles.filter((article) =>
+                isAtPlant(snapshot, article.number, [warehouse.code]),
+              ).length,
+      })),
+    [snapshot, warehouses],
+  );
   return (
     <PageFrame
       title="Stock"
@@ -415,7 +452,7 @@ export function StockScreen() {
       toolbar={
         forbidden ? undefined : (
           <div className="flex flex-col gap-3">
-            {snapshot !== undefined && <ShortNote rows={allRows} snapshot={snapshot} />}
+            {snapshot !== undefined && <ShortNote snapshot={snapshot} />}
             <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <SearchField

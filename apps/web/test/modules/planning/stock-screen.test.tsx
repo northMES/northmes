@@ -56,11 +56,21 @@ describe('the Stock page of a plant (design #729, ST1 to ST7)', () => {
         'Late order1003 for customer order 40208',
         '+600 pcs, Thu 5 Nov 06:15',
       ],
+      [
+        '20-1002Housing P',
+        'pcs',
+        '0',
+        '−420Below zero',
+        'Thu 5 Nov',
+        'Late order1002 for customer order 40214',
+        '+420 pcs, Thu 5 Nov 15:00',
+      ],
+      ['20-1005Shaft 8', 'pcs', '0', '0', 'Mon 2 Nov 06:40', 'None', 'None needed'],
       ['20-1001Bracket L', 'pcs', '40', '40', 'Mon 2 Nov 06:40', 'None', 'None needed'],
       ['20-1004Hub 12', 'pcs', '120', '120', 'Mon 2 Nov 06:40', 'None', 'None needed'],
     ]);
     expect(statusLine()).toBe(
-      '7 articles with stock or planned movements, 2 below zero in the projection. Sorted by kind of article, then lowest projected balance. Lowest projected sums every warehouse mapped to Plant A; purchase requisitions are not counted (Plant A setting).',
+      '9 articles with stock or planned movements, 3 below zero in the projection. Sorted by kind of article, then lowest projected balance. Lowest projected sums every warehouse mapped to Plant A; purchase requisitions are not counted (Plant A setting).',
     );
     expect(
       screen.getByText(
@@ -102,6 +112,7 @@ describe('the Stock page of a plant (design #729, ST1 to ST7)', () => {
     expect(bodyRows(table).map((row) => row[0])).toEqual([
       '30-2011Round bar 36 C45',
       '20-1003Gear blank 32',
+      '20-1002Housing P',
     ]);
 
     cleanup();
@@ -109,6 +120,8 @@ describe('the Stock page of a plant (design #729, ST1 to ST7)', () => {
     const finished = await screen.findByRole('table', { name: 'Stock of Plant A by article' });
     expect(bodyRows(finished).map((row) => row[0])).toEqual([
       '20-1003Gear blank 32',
+      '20-1002Housing P',
+      '20-1005Shaft 8',
       '20-1001Bracket L',
       '20-1004Hub 12',
     ]);
@@ -129,14 +142,22 @@ describe('the Stock page of a plant (design #729, ST1 to ST7)', () => {
     await waitFor(() => expect(router.state.location.search).toEqual({ sort: 'article' }));
     expect(bodyRows(table).map((row) => row[0]?.slice(0, 7))).toEqual([
       '20-1001',
+      '20-1002',
       '20-1003',
       '20-1004',
+      '20-1005',
       '30-2011',
       '30-2014',
       '30-2020',
       '30-2030',
     ]);
     expect(statusLine()).toMatch(/Sorted by article, ascending\./);
+  });
+
+  it('#729 ST1 says no article matches when the picked warehouse holds none, not that no stock came', async () => {
+    renderPlanningAt(withSearch(stock, { warehouse: 'A-QH', kind: 'finished' }));
+    await screen.findByRole('heading', { level: 2, name: 'No articles match these filters' });
+    expect(screen.getByRole('button', { name: 'Remove the warehouse filter' })).toBeTruthy();
   });
 
   it('#729 ST4 to ST7 show the loading, empty, failed and no-access states', async () => {
@@ -242,6 +263,16 @@ describe('the stock of one article (design #729, SA1 to SA3)', () => {
       ],
       ['Mon 9 Nov', 'ERP date', 'Purchase', 'Purchase order 7740', 'A-RM', '+120 m', '94 m'],
     ]);
+  });
+
+  it('#729 SA1 names the late order that brings a finished article back from below zero', async () => {
+    renderPlanningAt(planningLinks.stock.article({ plant, articleId: '20-1003' }).href);
+    await screen.findByRole('heading', { level: 1, name: 'Gear blank 32' });
+
+    expect(screen.getByText('Late order 1003')).toBeTruthy();
+    expect(screen.getByRole('figure', { name: /^Falls below zero/ }).textContent).toContain(
+      'Falls below zero on Wed 4 Nov at −600 pcs, when customer order 40208 line 1 takes 600 pcs, and is back at 0 pcs on Thu 5 Nov 06:15 with 1003.',
+    );
   });
 
   it('#729 SA3 lists the output and the customer demand of Bracket L, which never goes below zero', async () => {

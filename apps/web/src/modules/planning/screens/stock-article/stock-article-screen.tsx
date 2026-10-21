@@ -30,14 +30,17 @@ import {
 import { useInventory } from '../../inventory-source-context.ts';
 import {
   balancesOf,
+  compareCodes,
+  isAtPlant,
   type Projection,
-  plantWarehouses,
+  type ProjectionStep,
+  roundQuantity,
   type StockRow,
   stockRowOf,
 } from '../../material-projection.ts';
 import {
+  jobOrderHref,
   kindLabel,
-  plantDateOf,
   quantityWithUnit,
   signedQuantity,
   stockTime,
@@ -88,7 +91,8 @@ function causeText(movement: PlannedMovement, unit: string): string {
 
 /**
  * The projection in words, the chart's caption (SA1, SA3): when the balance falls below zero and
- * what brings it back, or the level it stays at, and each movement not counted.
+ * what takes it there, its lowest value when that is lower, what brings it back, each later dip,
+ * or the level it stays at; then each movement not counted.
  */
 export function projectionCaption(
   snapshot: InventorySnapshot,
@@ -97,48 +101,66 @@ export function projectionCaption(
 ): string {
   const timeZone = snapshot.plant.timeZone;
   const unit = article.unit;
-  const index = projection.steps.findIndex(
-    (step) => step.balance !== undefined && step.balance < 0,
-  );
-  const fall = projection.steps[index];
-  let sentence: string;
-  if (fall === undefined || fall.balance === undefined) {
-    sentence = `The balance stays at ${quantityWithUnit(projection.lowest.balance, unit)} or more.`;
-  } else {
-    const back = projection.steps
-      .slice(index + 1)
-      .find((step) => step.balance !== undefined && step.balance >= 0);
-    sentence = `Falls below zero on ${whenText(fall.movement.atMs, fall.movement.dateOnly, timeZone)} at ${quantityWithUnit(
-      fall.balance,
-      unit,
-    )}, when ${causeText(fall.movement, unit)}${
-      back?.balance === undefined
-        ? ', and stays below zero to the end of the projection.'
-        : `, and is back at ${quantityWithUnit(back.balance, unit)} on ${formatPlantDay(
-            plantDateOf(back.movement.atMs, timeZone),
-          )} with ${back.movement.reference}.`
-    }`;
+  const when = (movement: PlannedMovement) => whenText(movement.atMs, movement.dateOnly, timeZone);
+  // The spans below zero: the step that starts each (none when the stock starts there) and the
+  // step that ends it, if any.
+  const dips: { start: ProjectionStep | undefined; back: ProjectionStep | undefined }[] = [];
+  let below = projection.start < 0;
+  if (below) dips.push({ start: undefined, back: undefined });
+  for (const step of projection.steps) {
+    if (step.balance === undefined) continue;
+    if (!below && step.balance < 0) {
+      dips.push({ start: step, back: undefined });
+      below = true;
+    } else if (below && step.balance >= 0) {
+      const dip = dips.at(-1);
+      if (dip !== undefined) dip.back = step;
+      below = false;
+    }
   }
-  const uncounted = projection.steps
-    .filter((step) => step.balance === undefined)
-    .map(
-      (step) =>
-        ` ${step.movement.reference} (dashed ring, ${formatPlantDay(plantDateOf(step.movement.atMs, timeZone))}) is not counted.`,
+  const sentences = dips.map((dip, index) => {
+    const opening =
+      dip.start === undefined
+        ? `Starts below zero at ${quantityWithUnit(projection.start, unit)}`
+        : `${index === 0 ? 'Falls' : 'Falls again'} below zero on ${when(dip.start.movement)} at ${quantityWithUnit(dip.start.balance ?? 0, unit)}, when ${causeText(dip.start.movement, unit)}`;
+    const lowest =
+      index === 0 && projection.lowest.balance < (dip.start?.balance ?? projection.start)
+        ? `, is lowest at ${quantityWithUnit(projection.lowest.balance, unit)} on ${whenText(projection.lowest.atMs, projection.lowest.dateOnly, timeZone)}`
+        : '';
+    const closing =
+      dip.back?.balance === undefined
+        ? ', and stays below zero to the end of the projection.'
+        : `, and is back at ${quantityWithUnit(dip.back.balance, unit)} on ${when(dip.back.movement)} with ${dip.back.movement.reference}.`;
+    return `${opening}${lowest}${closing}`;
+  });
+  if (dips.length === 0) {
+    sentences.push(
+      `The balance stays at ${quantityWithUnit(projection.lowest.balance, unit)} or more.`,
     );
-  return `${sentence}${uncounted.join('')}`;
+  }
+  for (const step of projection.steps) {
+    if (step.balance !== undefined) continue;
+    sentences.push(
+      `${step.movement.reference} (dashed ring, ${when(step.movement)}) is not counted.`,
+    );
+  }
+  return sentences.join(' ');
 }
 
 /** The reference of a movement, with the link to its job order, order or customer order. */
-function Reference({ movement }: { readonly movement: PlannedMovement }) {
+function Reference({
+  movement,
+  timeZone,
+}: {
+  readonly movement: PlannedMovement;
+  readonly timeZone: string;
+}) {
   const { plant } = useShell();
   if (movement.jobOrder !== undefined) {
     const job = movement.jobOrder;
     return (
       <span>
-        <Link
-          to={planningLinks.orders.order({ plant, orderId: job.orderId }).href}
-          className={cn('font-mono', link)}
-        >
+        <Link to={jobOrderHref(movement, plant, timeZone)} className={cn('font-mono', link)}>
           {job.displayNumber}
         </Link>
         {` ${job.operationName}, ${job.article}`}
@@ -191,7 +213,7 @@ function BalanceSection({
 }) {
   const names = new Map(snapshot.warehouses.map((each) => [each.code, each.name]));
   const rows = balancesOf(snapshot, article.number).sort((a, b) =>
-    a.warehouse.localeCompare(b.warehouse),
+    compareCodes(a.warehouse, b.warehouse),
   );
   const total = rows.reduce((sum, row) => sum + row.quantity, 0);
   const plantName = snapshot.plant.name;
@@ -229,7 +251,7 @@ function BalanceSection({
               {plantName}, counted
             </TableCell>
             <TableCell className={cn(cell, 'text-end font-mono font-semibold')}>
-              {quantityWithUnit(Math.round(total * 1000) / 1000, article.unit)}
+              {quantityWithUnit(roundQuantity(total), article.unit)}
             </TableCell>
           </TableRow>
         </TableFooter>
@@ -315,7 +337,7 @@ function MovementsSection({
               </TableCell>
               <TableCell className={cell}>{kindLabel(movement.kind)}</TableCell>
               <TableCell className={cell}>
-                <Reference movement={movement} />
+                <Reference movement={movement} timeZone={timeZone} />
               </TableCell>
               <TableCell className={cn(cell, 'font-mono')}>{movement.warehouse}</TableCell>
               <TableCell className={cn(cell, 'text-end font-mono')}>
@@ -341,23 +363,24 @@ function MovementsSection({
   );
 }
 
-/** The state beside the h1: Material short for the job order, or Late order (SA1). */
+/** The state beside the h1: Material short for its job orders, or Late order (SA1). */
 function ShortBadge({ row }: { readonly row: StockRow }) {
-  if (row.short?.kind === 'material') {
+  const short = row.short;
+  if (short?.kind === 'material') {
     return (
       <StatusBadge tone="warning" icon={TriangleAlert}>
-        Material short for {row.short.movement.reference}
+        Material short for {short.shortages.map((each) => each.jobOrder.displayNumber).join(', ')}
       </StatusBadge>
     );
   }
-  if (row.short?.kind === 'lateOrder') {
-    const order = row.short.output?.productionOrder?.number;
+  if (short?.kind === 'lateOrder') {
     return (
       <StatusBadge tone="destructive" icon={Clock}>
-        {order === undefined ? 'Below zero' : `Late order ${order}`}
+        Late order {short.order.number}
       </StatusBadge>
     );
   }
+  if (short?.kind === 'belowZero') return <StatusBadge tone="destructive">Below zero</StatusBadge>;
   return null;
 }
 
@@ -374,16 +397,8 @@ export function StockArticleScreen() {
   const search = stockArticleSearch(useSearch({ strict: false }));
   const { snapshot, error, retry } = useInventory(search.preview);
   const article = snapshot?.articles.find((each) => each.number === articleId);
-  const counted = new Set(
-    snapshot === undefined ? [] : plantWarehouses(snapshot).map((w) => w.code),
-  );
   const known =
-    snapshot !== undefined &&
-    article !== undefined &&
-    (snapshot.balances.some(
-      (row) => row.article === article.number && counted.has(row.warehouse),
-    ) ||
-      snapshot.movements.some((movement) => movement.article === article.number));
+    snapshot !== undefined && article !== undefined && isAtPlant(snapshot, article.number);
   const row =
     snapshot !== undefined && article !== undefined && known
       ? stockRowOf(snapshot, article)

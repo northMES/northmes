@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatPlantDateTime, formatPlantDay } from '@northmes/contracts/format';
+import { planningLinks } from '@northmes/planning-contracts';
 import { Temporal } from 'temporal-polyfill';
 import type { InventorySnapshot, MovementKind, PlannedMovement } from './inventory-data.ts';
 
@@ -10,7 +11,7 @@ import type { InventorySnapshot, MovementKind, PlannedMovement } from './invento
 /** The minus sign the stock pages write before a negative quantity. */
 const minus = '−';
 
-/** "92", "−26" or "0,085" as plain digits: a quantity without its unit. */
+/** "92", "−26" or "0.085" as plain digits: a quantity without its unit. */
 export function amountText(quantity: number): string {
   return quantity < 0 ? `${minus}${-quantity}` : String(quantity);
 }
@@ -63,4 +64,19 @@ export function kindLabel(kind: MovementKind): string {
 /** "+120 m, Mon 9 Nov": the next incoming movement as the Stock page's last column says it. */
 export function incomingText(movement: PlannedMovement, unit: string, timeZone: string): string {
   return `${signedQuantity(movement.quantity, unit)}, ${whenText(movement.atMs, movement.dateOnly, timeZone)}`;
+}
+
+/**
+ * The Gantt at the order of a consumption's job order, the week from its date: where both stock
+ * pages lead from a job order (plan 18, Zoom to order).
+ */
+export function jobOrderHref(movement: PlannedMovement, plant: string, timeZone: string): string {
+  return planningLinks.gantt(
+    { plant },
+    {
+      zoom: 'week',
+      from: plantDateOf(movement.atMs, timeZone),
+      ...(movement.jobOrder !== undefined && { order: movement.jobOrder.orderId }),
+    },
+  ).href;
 }
