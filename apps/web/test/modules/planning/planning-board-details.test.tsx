@@ -3,7 +3,8 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { detailsOpen, findDetails, renderGanttRoute } from './gantt-fixtures.tsx';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { detailsOpen, findDetails, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -101,5 +102,38 @@ describe('Details on the planning board (Krister, 2026-10-21: the Gantt drawer)'
     await user.click(within(drawer).getByRole('button', { name: 'Show critical chain' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/plant-a/planning/gantt'));
     expect(router.state.location.search).toMatchObject({ order: 'po-1003', chain: 1 });
+  });
+
+  it('a Not placed chip opens its Details by Enter, and Space only selects', async () => {
+    const user = userEvent.setup();
+    const g1 = g1Snapshot();
+    const snapshot = {
+      ...g1,
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) => {
+          if (row.displayNumber !== '1005.20') return row;
+          const { placement: _, equipment: __, ...unplaced } = row;
+          return unplaced;
+        }),
+      })),
+    };
+    const router = renderGanttRoute(
+      { zoom: 'week', from: '2026-11-02' },
+      sourceOf(snapshot),
+      'board',
+    );
+    const board = await findBoard();
+    const chip = board.querySelector<HTMLElement>(
+      '[aria-rowindex="2"] [data-job-order="1005.20"]',
+    ) as HTMLElement;
+
+    chip.focus();
+    await user.keyboard(' ');
+    expect(router.state.location.search).toMatchObject({ order: 'po-1005' });
+    expect(detailsOpen()).toBe(false);
+    await user.keyboard('{Enter}');
+    const drawer = await findDetails();
+    expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('1005.20 Mill');
   });
 });
