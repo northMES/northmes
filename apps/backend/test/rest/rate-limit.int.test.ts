@@ -103,15 +103,14 @@ describe('the rate limits of the public API', () => {
     const { app, url } = await apps.defaults();
     const { authorization } = await givenToken(app);
 
-    const first: number[] = [];
-    // The answers of the writes that did not return 201, so a failure names their problems.
+    // The first 60 writes that did not return 201, so a failure names each one's status and problem.
     const notCreated: { write: number; status: number; body: string }[] = [];
     for (let i = 1; i <= 60; i += 1) {
       const answer = await write(url, authorization);
-      first.push(answer.status);
       if (answer.status === 201) await answer.body?.cancel();
       else notCreated.push({ write: i, status: answer.status, body: await answer.text() });
     }
+    expect(notCreated).toEqual([]);
     const id = randomUUIDv7();
     const over = await write(url, authorization, id);
     const body = (await over.json()) as Record<string, unknown>;
@@ -120,9 +119,6 @@ describe('the rate limits of the public API', () => {
     });
     const listed = (await afterwards.json()) as { nodes: { id: string }[] };
 
-    expect(first, `writes not created: ${JSON.stringify(notCreated)}`).toEqual(
-      Array.from({ length: 60 }, () => 201),
-    );
     expect(over.status).toBe(429);
     expect(over.headers.get('content-type')).toMatch(/^application\/problem\+json/);
     const retryAfter = Number(over.headers.get('retry-after'));
