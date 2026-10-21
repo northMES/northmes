@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { globSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
@@ -8,12 +9,17 @@ import { scan } from '../../scripts/lint/pool-error-listener.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
-/** Every TypeScript and JavaScript file in the repository, outside docs/ and build output. */
+const extensions = ['ts', 'mts', 'cts', 'tsx', 'js', 'mjs', 'cjs'];
+
+/** Every TypeScript and JavaScript file that git tracks, outside docs/. */
 function sourceFiles(): { path: string; text: string }[] {
-  return globSync('**/*.{ts,mts,cts,tsx,js,mjs,cjs}', {
+  const pathspecs = [...extensions.map((extension) => `*.${extension}`), ':!docs/'];
+  return execFileSync('git', ['ls-files', '-z', '--', ...pathspecs], {
     cwd: root,
-    exclude: ['**/node_modules', '**/dist', '**/.turbo', 'docs', 'coverage'],
+    encoding: 'utf8',
   })
+    .split('\0')
+    .filter((path) => path !== '' && existsSync(join(root, path)))
     .sort()
     .map((path) => ({ path, text: readFileSync(join(root, path), 'utf8') }));
 }
@@ -86,6 +92,92 @@ describe('pool-error-listener', () => {
     ]);
 
     expect(findings).toEqual([{ path, line: 3 }]);
+  });
+
+  it('ADR0041 a once listener is a finding, because the drop of a database ends each idle connection with an error of its own', () => {
+    const path = 'apps/backend/test/once.int.test.ts';
+
+    const findings = scan([
+      {
+        path,
+        text: [
+          "import { Pool } from 'pg';",
+          'const pool = new Pool({ connectionString: url });',
+          "pool.once('error', () => {});",
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([{ path, line: 2 }]);
+  });
+
+  it('ADR0041 a listener chained on the construction counts', () => {
+    const findings = scan([
+      {
+        path: 'apps/backend/test/chained.int.test.ts',
+        text: [
+          "import { Pool } from 'pg';",
+          "const pool = new Pool({ connectionString: url }).on('error', () => {});",
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([]);
+  });
+
+  it('ADR0041 a pool constructed under another name from pg or pg-pool is checked too', () => {
+    const path = 'apps/backend/test/renamed.int.test.ts';
+
+    const findings = scan([
+      {
+        path,
+        text: [
+          "import { Pool as PgPool } from 'pg';",
+          "import BarePool from 'pg-pool';",
+          "import * as postgres from 'pg';",
+          'const first = new PgPool({ connectionString: url });',
+          'const second = new BarePool({ connectionString: url });',
+          'const third = new (postgres.Pool)({ connectionString: url });',
+          'const fourth = new postgres.default.Pool({ connectionString: url });',
+          'const map = new Map();',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([
+      { path, line: 4 },
+      { path, line: 5 },
+      { path, line: 6 },
+      { path, line: 7 },
+    ]);
+  });
+
+  it('ADR0041 a listener counts only as a statement of the block that constructs the pool, so a conditional or a later hook does not', () => {
+    const path = 'apps/backend/test/order.int.test.ts';
+
+    const findings = scan([
+      {
+        path,
+        text: [
+          "import { Pool } from 'pg';",
+          'const first = new Pool({ connectionString: url });',
+          "if (debug) first.on('error', () => {});",
+          'let second: Pool | undefined;',
+          'beforeAll(() => {',
+          '  second = new Pool({ connectionString: url });',
+          '});',
+          'afterAll(async () => {',
+          "  second?.on('error', () => {});",
+          '  await second?.end();',
+          '});',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([
+      { path, line: 2 },
+      { path, line: 6 },
+    ]);
   });
 
   it('ADR0041 a listener on a property that holds the pool counts, and one for another event does not', () => {
