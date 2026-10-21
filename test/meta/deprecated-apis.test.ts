@@ -76,6 +76,7 @@ describe('deprecated-apis', () => {
           module: 'esnext',
           moduleResolution: 'bundler',
           allowImportingTsExtensions: true,
+          lib: ['es2022'],
           types: [],
         },
         include: ['src'],
@@ -101,13 +102,15 @@ describe('deprecated-apis', () => {
     } finally {
       rmSync(base, { recursive: true, force: true });
     }
-  });
+  }, 20_000);
 
   it('OSPS interfaces_current a project whose scan fails in its worker thread fails the scan, naming the tsconfig', async () => {
+    // TypeScript's own message names the file by its absolute path; the scan's names the tsconfig
+    // as it was given, before any message.
     await expect(scanProjects(root, ['examples/missing/tsconfig.json'])).rejects.toThrow(
-      'examples/missing/tsconfig.json',
+      /^examples\/missing\/tsconfig\.json: /,
     );
-  });
+  }, 20_000);
 
   it('OSPS interfaces_current the web and the example plugins use no deprecated API', async () => {
     const configs = [
@@ -118,8 +121,7 @@ describe('deprecated-apis', () => {
     ];
 
     expect((await scanProjects(root, configs)).map(describeFinding)).toEqual([]);
-    // Run in the test's own thread, the scan took 40 to 69 s in CI / test under --coverage, and 18
-    // to 31 s in the same job's run without coverage. In worker threads it takes the time of a run
-    // without coverage in both.
+    // Without the coverage counters, the scan of the web and the four examples took 18 to 31 s in
+    // CI / test.
   }, 60_000);
 });

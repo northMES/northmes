@@ -115,33 +115,45 @@ export function scanProject(root, configPath) {
 }
 
 /**
- * scanProject for each tsconfig.json, each in a worker thread of its own, so the projects are
- * checked in parallel. A test run with --coverage starts V8's precise coverage on the test's own
- * thread only, and its block counters slow the type checker two to three times; a worker thread
- * runs without them.
+ * scanProject in a worker thread, so the type checker runs outside the coverage counters. A test run
+ * with --coverage starts V8's precise coverage on the test's own thread only, and its block counters
+ * slow the type checker two to three times. Vitest's coverage.autoAttachSubprocess would count in
+ * worker threads too, so it stays off in vitest.config.ts.
+ * @param {string} root The directory the findings' paths are relative to.
+ * @param {string} configPath The tsconfig.json, relative to root.
+ * @returns {Promise<Finding[]>}
+ */
+function scanProjectInWorker(root, configPath) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./deprecated-apis-worker.mjs', import.meta.url), {
+      workerData: { root, configPath },
+    });
+    worker.once('message', resolve);
+    worker.once('error', (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      reject(new Error(`${configPath}: ${message}`, { cause: error }));
+    });
+    // Node emits a worker's messages before its exit, so this rejects only a worker that ended
+    // without posting its findings.
+    worker.once('exit', (code) => {
+      reject(new Error(`${configPath}: the scan's worker exited with code ${code}`));
+    });
+  });
+}
+
+/**
+ * scanProject for each tsconfig.json, each in a worker thread of its own. The projects are checked
+ * one after another, so the scan holds one program at a time and takes one core of the runner the
+ * other tests share.
  * @param {string} root The directory the findings' paths are relative to.
  * @param {string[]} configPaths The tsconfig.json files, relative to root.
  * @returns {Promise<Finding[]>} The findings of each project, in the order of configPaths.
  */
 export async function scanProjects(root, configPaths) {
-  const findings = await Promise.all(
-    configPaths.map(
-      (configPath) =>
-        /** @type {Promise<Finding[]>} */ (
-          new Promise((resolve, reject) => {
-            const worker = new Worker(new URL('./deprecated-apis-worker.mjs', import.meta.url), {
-              workerData: { root, configPath },
-            });
-            worker.once('message', resolve);
-            worker.once('error', (error) => {
-              reject(new Error(`${configPath}: ${error.message}`, { cause: error }));
-            });
-            worker.once('exit', (code) => {
-              reject(new Error(`${configPath}: the scan's worker exited with code ${code}`));
-            });
-          })
-        ),
-    ),
-  );
-  return findings.flat();
+  /** @type {Finding[]} */
+  const findings = [];
+  for (const configPath of configPaths) {
+    findings.push(...(await scanProjectInWorker(root, configPath)));
+  }
+  return findings;
 }

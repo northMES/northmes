@@ -7,4 +7,4 @@
 import { parentPort, workerData } from 'node:worker_threads';
 import { scanProject } from './deprecated-apis.mjs';
 
-parentPort?.postMessage(scanProject(workerData.root, workerData.configPath));
+parentPort.postMessage(scanProject(workerData.root, workerData.configPath));
