@@ -295,11 +295,49 @@ export function BoardScreen() {
   };
   const detailRow =
     detailFor === undefined ? undefined : allRows.find((row) => row.jobOrder.id === detailFor);
+  // The target that takes focus when Details closes: the block, else the cluster that holds it.
+  const detailTarget = (jobOrderId: string): HTMLElement | null => {
+    const byKey = (key: string) =>
+      document.querySelector<HTMLElement>(`[data-board-focus="${CSS.escape(key)}"]`);
+    const cluster = [...cells.values()]
+      .flat()
+      .find(
+        (cell) =>
+          cell.kind === 'cluster' && cell.rows.some((row) => row.jobOrder.id === jobOrderId),
+      );
+    return (
+      byKey(focusKeys.block(jobOrderId)) ??
+      (cluster === undefined
+        ? null
+        : byKey(cluster.kind === 'cluster' ? cluster.key : focusKeys.block(jobOrderId)))
+    );
+  };
+  // Details closes when its job order leaves the board, and when Back or Forward changes the
+  // selected order away from its order.
+  useEffect(() => {
+    if (detailFor !== undefined && detailRow === undefined) setDetailFor(undefined);
+  }, [detailFor, detailRow]);
+  const previousOrder = useRef(search.order);
+  useEffect(() => {
+    const before = previousOrder.current;
+    previousOrder.current = search.order;
+    if (before !== search.order && detailRow !== undefined && detailRow.order.id !== search.order) {
+      setDetailFor(undefined);
+    }
+  }, [search.order, detailRow]);
   const openedFromLink = useRef(false);
   useEffect(() => {
     if (openedFromLink.current || model === undefined) return;
     openedFromLink.current = true;
-    const first = allRows.find((row) => row.order.id === search.order);
+    // The order's first operation in the range: by operation sequence, then by setup start.
+    const first = allRows
+      .filter((row) => row.order.id === search.order)
+      .sort(
+        (a, b) =>
+          a.operation.sequence - b.operation.sequence ||
+          (a.jobOrder.placement?.setupStartMs ?? Number.MAX_SAFE_INTEGER) -
+            (b.jobOrder.placement?.setupStartMs ?? Number.MAX_SAFE_INTEGER),
+      )[0];
     if (first === undefined) return;
     detailReturn.current = first.jobOrder.id;
     setDetailFor(first.jobOrder.id);
@@ -657,7 +695,11 @@ export function BoardScreen() {
           <GanttDetailDrawer
             row={detailRow}
             chain={undefined}
-            onClose={() => setDetailFor(undefined)}
+            onClose={() => {
+              // A move begun in Details ends with it, without a change (plan 07, the Escape stack).
+              if (moveActions?.state !== undefined) moveActions.cancel({ refocus: false });
+              setDetailFor(undefined);
+            }}
             // The board draws no chain: Show critical chain opens the order's chain on the Gantt.
             onToggleChain={(orderId) =>
               void navigate({
@@ -674,11 +716,7 @@ export function BoardScreen() {
               setDetailFor(undefined);
             }}
             finalFocus={() =>
-              detailReturn.current === undefined
-                ? null
-                : document.querySelector<HTMLElement>(
-                    `[data-board-focus="${CSS.escape(detailReturn.current)}"]`,
-                  )
+              detailReturn.current === undefined ? null : detailTarget(detailReturn.current)
             }
           />
           <GanttDraftDrawer

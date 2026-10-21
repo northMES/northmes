@@ -335,6 +335,7 @@ export function BoardGrid({
                     selectedOrderId={selectedOrderId}
                     onFocus={() => onFocusTarget(cell.key)}
                     onSelectOrder={onSelectOrder}
+                    onOpenDetails={onOpenDetails}
                   />
                 ) : (
                   <BoardBlock

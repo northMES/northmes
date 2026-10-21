@@ -4,9 +4,9 @@ import { planningLinks } from '@northmes/planning-contracts';
 import { expect, plant, test } from '../fixtures.ts';
 
 // The axe check of ADR 0021 over the states of the planning board (plan 07, Gates; design D3):
-// the populated board, a collapsed equipment group, a selected order with a hover card, Details, the 4
-// weeks preset and a range without job orders. The board reads the fixture G1, so every state is
-// the same in every run. G1 has no two job orders close enough to share a cluster, so the cluster
+// the populated board, a collapsed equipment group, a selected order with a hover card, Details,
+// the 4 weeks preset and a range without job orders. The board reads the fixture G1, so every
+// state is the same in every run. G1 has no two job orders close enough to share a cluster, so the cluster
 // popover has no axe state here; planning-board.test.tsx checks its roles and focus.
 
 /** The board page of the seed plant with its search. */
@@ -34,8 +34,8 @@ test.describe('the planning board', () => {
     await expect(board.getByRole('rowheader', { name: 'CNC 1' })).toHaveCount(0);
     await checkA11y('a collapsed equipment group');
 
-    // A selected order, and the hover card that keyboard focus opens on the next job order (D3
-    // IN2); a click closes the card of the block it selects.
+    // A selected order, by Space, and the hover card that keyboard focus opens on the next job
+    // order (D3 IN2).
     await page.getByRole('button', { name: 'Expand Machining' }).click();
     await board.locator('[data-job-order="1003.20"]').focus();
     await page.keyboard.press('Space');
