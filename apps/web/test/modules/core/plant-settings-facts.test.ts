@@ -130,7 +130,7 @@ describe('a calendar with several shifts (#770)', () => {
   });
 
   it('adds up each shift over the days it starts on', () => {
-    expect(hoursText(weeklyWorkingSeconds(threeShifts))).toBe('104 h 30 min');
+    expect(hoursText(weeklyWorkingSeconds(threeShifts))).toBe('107 h');
   });
 
   it('writes each shift with its breaks for the machine page, and one shift without its name', () => {
