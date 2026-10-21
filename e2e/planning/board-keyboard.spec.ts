@@ -109,7 +109,10 @@ test.describe('the planning board keyboard', () => {
     const dialog = page.getByRole('dialog', { name: /^Move 1003\.10/ });
     await expect(dialog).toBeVisible();
     await expect(dialog).toHaveCSS('opacity', '1');
+    // Focus starts on the current machine and stays in the dialog once the menu has faded out.
+    await expect(dialog.getByRole('radio', { checked: true })).toBeFocused();
     await checkA11y('the Move dialog');
+    await expect(dialog.getByRole('radio', { checked: true })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
     await expect(board.locator('[role="gridcell"][data-job-order="1003.10"]')).toBeFocused();
