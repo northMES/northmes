@@ -19,8 +19,10 @@ test.describe('the planning board keyboard', () => {
     signIn,
   }) => {
     await signIn(boardHref({ zoom: 'week', from: '2026-11-02' }));
+    // The grid's skeleton has the same role and name while it loads, so wait for it to be done.
     const board = page.getByRole('grid', { name: /board/ });
     await expect(board).toBeVisible();
+    await expect(board).not.toHaveAttribute('aria-busy', 'true');
     const cell = (job: string) => board.locator(`[role="gridcell"][data-job-order="${job}"]`);
 
     await expect(board.locator('[tabindex="0"]')).toHaveCount(1);

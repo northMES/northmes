@@ -63,7 +63,7 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        'Your draft and the saved plan are not affected. Try again. If the error comes back, give your plant admin the correlation id.',
+        'Your draft and the saved plan are not affected. Try again, or open the job table for the same range.',
       ),
     ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
