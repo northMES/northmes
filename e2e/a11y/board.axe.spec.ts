@@ -4,8 +4,10 @@ import { planningLinks } from '@northmes/planning-contracts';
 import { expect, plant, test } from '../fixtures.ts';
 
 // The axe check of ADR 0021 over the states of the planning board (plan 07, Gates; design D3):
-// the populated board, a collapsed equipment group and a range without job orders. The board
-// reads the fixture G1, so every state is the same in every run.
+// the populated board, a collapsed equipment group, a selected order with a hover card, the 4
+// weeks preset and a range without job orders. The board reads the fixture G1, so every state is
+// the same in every run. G1 has no job orders close enough to cluster; the cluster popover is
+// checked in apps/web/test/modules/planning/planning-board.test.tsx.
 
 /** The board page of the seed plant with its search. */
 function boardHref(search: Record<string, string>): string {
@@ -29,6 +31,23 @@ test.describe('the planning board', () => {
     await expect(page.getByRole('button', { name: 'Expand Machining' })).toBeVisible();
     await expect(board.getByRole('rowheader', { name: 'CNC 1' })).toHaveCount(0);
     await checkA11y('a collapsed equipment group');
+
+    // A selected order and the hover card of a block that keyboard focus opens (D3 IN2).
+    await page.getByRole('button', { name: 'Expand Machining' }).click();
+    await board.locator('[data-job-order="1003.20"]').click();
+    await expect(board.locator('[data-job-order="1003.10"]')).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    const card = page.getByRole('tooltip');
+    await expect(card).toBeVisible();
+    await expect(card).toHaveCSS('opacity', '1');
+    await checkA11y('a selected order with the hover card of its job order');
+
+    // The clusters of the 4 weeks preset and the popover of one (D3 BO10, IN27).
+    await page.goto(boardHref({ zoom: '4weeks', from: '2026-11-02' }));
+    await expect(board).toBeVisible();
+    await checkA11y('the 4 weeks preset');
 
     await page.goto(boardHref({ zoom: 'week', from: '2026-11-16' }));
     await expect(board.getByRole('gridcell', { name: 'No jobs in this range' })).toHaveCount(3);
