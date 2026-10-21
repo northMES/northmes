@@ -229,6 +229,9 @@ function PlantForm({ snapshot }: { readonly snapshot: PlantSettingsSnapshot }) {
           Save plant
         </Button>
         <p className="text-sm text-muted-foreground">{plantSaveReason}</p>
+        {snapshot.fixture !== undefined && (
+          <p className="text-sm text-muted-foreground">Showing fixture {snapshot.fixture}.</p>
+        )}
       </div>
     </form>
   );

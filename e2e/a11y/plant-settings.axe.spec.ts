@@ -145,4 +145,39 @@ test.describe('the plant settings pages', () => {
     await expect(page.getByRole('heading', { level: 2, name: noAccess })).toBeVisible();
     await checkA11y('a calendar without access');
   });
+
+  test('ADR0021 each state of the plant page passes the WCAG 2.2 AA rules (design #767)', async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
+    const plantPage = coreLinks.plant({ plant }).href;
+    await signIn(plantPage);
+    await expect(page.getByRole('heading', { level: 1, name: 'Plant A' })).toBeVisible();
+    await expect(page.getByText('Showing fixture G1.')).toBeVisible();
+    await checkA11y('the plant page');
+
+    await page.goto(withSearch(plantPage, { preview: 'noCalendar' }));
+    const dayStart = page.getByRole('textbox', { name: 'Production day start' });
+    await dayStart.fill('02:30');
+    await dayStart.blur();
+    await expect(dayStart).toHaveAttribute('aria-invalid', 'true');
+    await checkA11y('the plant page before its first calendar version, with a refused day start');
+
+    await page.goto(withSearch(plantPage, { preview: 'loading' }));
+    await expect(page.getByText('Loading the plant.')).toBeVisible();
+    await checkA11y('the plant page loading', { busy: true });
+
+    await page.goto(withSearch(plantPage, { preview: 'error' }));
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Could not load the plant' }),
+    ).toBeVisible();
+    await checkA11y('the plant page failed');
+
+    await page.goto(withSearch(plantPage, { preview: 'forbidden' }));
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'You need the permission to change this plant' }),
+    ).toBeVisible();
+    await checkA11y('the plant page without access');
+  });
 });
