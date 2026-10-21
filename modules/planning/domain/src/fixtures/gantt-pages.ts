@@ -6,9 +6,9 @@ import { calendarDeviation, timePoint } from './gantt.ts';
 
 /**
  * What the planning pages of the product owner round show beside the fixture G1: the ERP
- * connection, the customers and their order lines, where each order came from, the routings, the
- * history of an order, a machine that is not on the board and the calendar deviations the plant
- * admin added. The mock data sources in apps/web merge it with G1; nothing here changes what the
+ * connection, the company's plants, the customers and their order lines, where each order came
+ * from, the routings, the history of an order, a machine that is not on the board and the calendar
+ * deviations the plant admin added. The mock data sources in apps/web merge it with G1; nothing here changes what the
  * Gantt's analysis reads, so G1's expected values stay as they are.
  */
 
@@ -30,6 +30,8 @@ export const customerOrderLine = z.object({
   wantedDate: z.iso.date(),
   /** The number of the production order that supplies the line; null while there is none. */
   productionOrder: z.string().nullable(),
+  /** The slug of the plant that delivers the line, which a company admin sets (design #728). */
+  deliveringPlant: z.string(),
 });
 
 /** Where an order came from: the ERP, with the import that brought it, or NorthMES, with its creator. */
@@ -76,6 +78,8 @@ export const ganttPagesFixture = z.object({
   id: z.literal('G1-pages'),
   description: z.string(),
   erp: z.object({ connectionName: z.string(), importedAt: timePoint }),
+  /** The plants of the company that the lines name, with the name a page shows. */
+  plants: z.array(z.object({ slug: z.string(), name: z.string() })).nonempty(),
   customers: z.array(customer).nonempty(),
   customerOrderLines: z.array(customerOrderLine).nonempty(),
   /** By order number. */

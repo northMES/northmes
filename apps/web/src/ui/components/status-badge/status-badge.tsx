@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { Badge } from '../../primitives/badge.tsx';
 
 /** The colour of a state: neutral, in progress (such as Planned), done or fine, or stopped. */
-export type StatusTone = 'neutral' | 'info' | 'success' | 'destructive';
+export type StatusTone = 'neutral' | 'info' | 'success' | 'destructive' | 'warning';
 
 const tones: Readonly<Record<StatusTone, string>> = {
   neutral: 'bg-muted text-muted-foreground',
@@ -14,6 +14,7 @@ const tones: Readonly<Record<StatusTone, string>> = {
   info: 'bg-info-subtle text-info',
   success: 'bg-success-subtle text-success',
   destructive: 'bg-destructive-subtle text-destructive',
+  warning: 'bg-warning-subtle text-warning',
 };
 
 export interface StatusBadgeProps {
