@@ -3,7 +3,8 @@
 import { cleanup, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { renderGanttRoute } from './gantt-fixtures.tsx';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -113,5 +114,46 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(within(board).getByRole('rowheader', { name: 'CNC 1' })).toBeTruthy();
     await user.keyboard('{ArrowDown}{ArrowRight}');
     expect(document.activeElement?.getAttribute('data-job-order')).toBe('1001.10');
+  });
+
+  it("BO1 shades each machine's closed time from its own calendar, so a machine deviation shades only its row", async () => {
+    const g1 = g1Snapshot();
+    // Mill 1 does not work on Mon 2 Nov; the other machines keep the plant calendar.
+    const snapshot = {
+      ...g1,
+      calendar: {
+        ...g1.calendar,
+        deviations: [
+          {
+            kind: 'nonWorking' as const,
+            startsLocal: '2026-11-02T06:00',
+            endsLocal: '2026-11-02T15:00',
+            equipment: ['MILL1'],
+          },
+        ],
+      },
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    const firstClosed = (machine: string) => {
+      const shading = machineRow(board, machine).querySelector('[data-shading]');
+      return [shading?.getAttribute('data-from-ms'), shading?.getAttribute('data-to-ms')].map(
+        (value) => new Date(Number(value)).toISOString(),
+      );
+    };
+
+    expect(firstClosed('CNC 1')).toEqual(['2026-11-01T23:00:00.000Z', '2026-11-02T05:00:00.000Z']);
+    expect(firstClosed('Mill 1')).toEqual(['2026-11-01T23:00:00.000Z', '2026-11-03T05:00:00.000Z']);
+  });
+
+  it('DR18 gives each machine without job orders in the range one cell that says so', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-16' }, undefined, 'board');
+    const board = await findBoard();
+
+    for (const machine of ['CNC 1', 'CNC 2', 'Mill 1']) {
+      expect(
+        within(machineRow(board, machine)).getByRole('gridcell', { name: 'No jobs in this range' }),
+      ).toBeTruthy();
+    }
   });
 });
