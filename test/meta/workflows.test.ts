@@ -441,7 +441,11 @@ describe('workflows', () => {
   // CI / cla reads the pull request and its commits through the API.
   const claPermissions = { contents: 'read', 'pull-requests': 'read' };
 
-  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what CI / cla reads, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
+  // Risk / risk gate reads the pull request, its files and reviews, and labels it with its tier
+  // (ADR 0086).
+  const riskGatePermissions = { contents: 'read', 'pull-requests': 'write' };
+
+  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what CI / cla reads, what Risk / risk gate reads and labels, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
@@ -451,7 +455,9 @@ describe('workflows', () => {
           ? {}
           : job.name === 'cla'
             ? claPermissions
-            : job.name === 'Scorecard analysis'
+            : job.name === 'risk gate'
+              ? riskGatePermissions
+              : job.name === 'Scorecard analysis'
               ? scorecardPermissions
               : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
       expect(job.permissions, where).toEqual(expected);
@@ -861,6 +867,35 @@ describe('workflows', () => {
     expect(check).toEqual({
       name: expect.any(String),
       run: 'node "$RUNNER_TEMP/cla/scripts/cla/check.mjs"',
+      env: {
+        GITHUB_TOKEN: expression('github.token'),
+        PR_NUMBER: expression('github.event.pull_request.number'),
+      },
+    });
+  });
+
+  // A pull request runs its own copy of a workflow, so the gate's integrity rests on the check and
+  // the path list coming from the default branch, and on .github/ being a high-risk path.
+  it('ADR0086 Risk / risk gate runs on pull requests and reviews, checks out nothing and runs the check from the default branch', () => {
+    const { workflow, job } = jobNamed('risk gate');
+    const steps = job.steps ?? [];
+    const download = steps.find(({ run }) => run?.includes('gh api'));
+    const check = steps.find(({ id }) => id === 'risk');
+
+    expect(workflow.path).toBe('.github/workflows/risk.yml');
+    expect(triggersOf(workflow.on)).toEqual(['pull_request', 'pull_request_review']);
+    expect(steps.some(({ uses }) => uses?.startsWith('actions/checkout@'))).toBe(false);
+    expect(download?.env).toEqual({
+      GH_TOKEN: expression('github.token'),
+      DEFAULT_BRANCH: expression('github.event.repository.default_branch'),
+    });
+    for (const file of ['scripts/ci/risk-gate.mjs', 'scripts/ci/pull-request.mjs', 'scripts/ci/annotation.mjs']) {
+      expect(download?.run).toContain(`contents/${file}?ref=$DEFAULT_BRANCH`);
+    }
+    expect(check).toEqual({
+      name: expect.any(String),
+      id: 'risk',
+      run: 'node "$RUNNER_TEMP/risk/scripts/ci/risk-gate.mjs"',
       env: {
         GITHUB_TOKEN: expression('github.token'),
         PR_NUMBER: expression('github.event.pull_request.number'),

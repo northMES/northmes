@@ -1,0 +1,62 @@
+# The risk gate (ADR 0086). It sorts each pull request into a low or a high tier by how much harm a
+# wrong merge would do, labels it risk:low or risk:high, and fails a high pull request until the
+# maintainer approves its head commit. A review re-runs it, so an approval turns it green. The job
+# downloads the check and .github/risk-paths from the default branch and runs them without a
+# checkout, as CI / cla does, so a pull request cannot change the check that judges it.
+name: Risk
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+  pull_request_review:
+    types: [submitted, dismissed]
+
+permissions:
+  contents: read
+
+jobs:
+  risk-gate:
+    name: risk gate
+    # Reading the files and reviews needs pull-requests: read; the label needs write. A pull request
+    # from a fork gets a read-only token, so its label step warns instead.
+    permissions:
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 26
+      - name: Download the risk gate from the default branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/risk/scripts/ci"
+          gh api -H 'Accept: application/vnd.github.raw+json' \
+            "repos/$GITHUB_REPOSITORY/contents/scripts/ci/risk-gate.mjs?ref=$DEFAULT_BRANCH" \
+            > "$RUNNER_TEMP/risk/scripts/ci/risk-gate.mjs"
+          gh api -H 'Accept: application/vnd.github.raw+json' \
+            "repos/$GITHUB_REPOSITORY/contents/scripts/ci/pull-request.mjs?ref=$DEFAULT_BRANCH" \
+            > "$RUNNER_TEMP/risk/scripts/ci/pull-request.mjs"
+          gh api -H 'Accept: application/vnd.github.raw+json' \
+            "repos/$GITHUB_REPOSITORY/contents/scripts/ci/annotation.mjs?ref=$DEFAULT_BRANCH" \
+            > "$RUNNER_TEMP/risk/scripts/ci/annotation.mjs"
+      - name: Sort the pull request into a tier
+        id: risk
+        run: node "$RUNNER_TEMP/risk/scripts/ci/risk-gate.mjs"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+      - name: Label the pull request with its tier
+        if: always() && steps.risk.outputs.tier != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TIER: ${{ steps.risk.outputs.tier }}
+        run: |
+          other=low
+          if [ "$TIER" = low ]; then other=high; fi
+          gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --add-label "risk:$TIER" --remove-label "risk:$other" \
+            || echo "::warning::Could not label the pull request risk:$TIER."
