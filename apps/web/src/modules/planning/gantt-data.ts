@@ -13,8 +13,12 @@ import type {
   ChainRow,
   ConstraintCode,
   ConstraintKind,
+  EarlyOrder,
   RowFloat,
   Release as RowRelease,
+  Run,
+  RunResult,
+  SavedSetup,
   WorkloadBucket,
 } from '@northmes/planning-domain';
 
@@ -25,8 +29,12 @@ export type {
   ChainRow,
   ConstraintCode,
   ConstraintKind,
+  EarlyOrder,
   RowFloat,
   RowRelease,
+  Run,
+  RunResult,
+  SavedSetup,
   WorkloadBucket,
 };
 
@@ -304,6 +312,8 @@ export interface GanttSnapshot {
   readonly equipmentGroups: readonly { readonly code: string; readonly name: string }[];
   readonly equipment: readonly GanttEquipment[];
   readonly productionOrders: readonly GanttOrder[];
+  /** The runs over the orders (ADR 0083): the draft's until Save, then the committed ones. */
+  readonly runs?: readonly Run[];
   readonly analysis: GanttAnalysis;
   // What the planning pages beside the Gantt show (the production order page and the lists); a
   // source that answers the Gantt alone leaves them out.
