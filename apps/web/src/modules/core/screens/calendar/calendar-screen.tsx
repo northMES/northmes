@@ -69,6 +69,18 @@ function shiftLabel(shift: PlantShift): string {
   return `${shift.name} ${shift.start} to ${shift.end}`;
 }
 
+/** "Early 06:00 to 14:00" with the name in semibold and the times in mono, as in design #770. */
+function ShiftName({ shift }: { readonly shift: PlantShift }) {
+  return (
+    <span>
+      <span className="font-semibold">{shift.name}</span>{' '}
+      <span className="font-mono">
+        {shift.start} to {shift.end}
+      </span>
+    </span>
+  );
+}
+
 /** A shift's color key in the pattern table and the legend, beside its written name. */
 function ShiftKey({ order }: { readonly order: number }) {
   return (
@@ -142,7 +154,11 @@ function PatternSection({ calendar }: { readonly calendar: PlantCalendar }) {
       title="Shift pattern"
       lead={`Version in effect since ${formatPlantDay(calendar.effectiveFrom)}, ${
         calendar.cycleWeeks === 1 ? 'one-week' : `${calendar.cycleWeeks}-week`
-      } cycle anchored on Mondays. A version in effect cannot change; a correction is a new version with an effective date.`}
+      } cycle anchored on Mondays.${
+        calendar.shifts.length > 1
+          ? ` ${countWord(calendar.shifts.length, true)} shifts: ${listText(calendar.shifts.map((shift) => shift.name))}.`
+          : ''
+      } A version in effect cannot change; a correction is a new version with an effective date.`}
       action={
         <Button variant="outline" className="h-8 px-3" disabled>
           New version
@@ -153,7 +169,7 @@ function PatternSection({ calendar }: { readonly calendar: PlantCalendar }) {
         <TableCaption className="sr-only">Shift pattern of {calendar.name}</TableCaption>
         <TableHeader className="bg-muted">
           <TableRow className="hover:bg-transparent">
-            {['Weekday', 'Shift', 'Breaks'].map((label) => (
+            {['Weekday', 'Shifts', 'Breaks'].map((label) => (
               <TableHead key={label} scope="col" className={head}>
                 {label}
               </TableHead>
@@ -178,9 +194,9 @@ function PatternSection({ calendar }: { readonly calendar: PlantCalendar }) {
                   ) : (
                     <span className="flex flex-col gap-1.5">
                       {shifts.map(({ shift, order }) => (
-                        <span key={shift.name} className="flex items-center gap-2 font-mono">
+                        <span key={order} className="flex items-center gap-2">
                           <ShiftKey order={order} />
-                          {shiftLabel(shift)}
+                          <ShiftName shift={shift} />
                         </span>
                       ))}
                     </span>
@@ -189,9 +205,15 @@ function PatternSection({ calendar }: { readonly calendar: PlantCalendar }) {
                 <TableCell className={cn(cell, 'align-top font-mono')}>
                   {shifts.length > 0 && (
                     <span className="flex flex-col gap-1.5">
-                      {shifts.map(({ shift }) => (
-                        <span key={shift.name} className="leading-5">
-                          {shift.breaks.map((each) => `${each.start} to ${each.end}`).join(', ')}
+                      {shifts.map(({ shift, order }) => (
+                        <span key={order} className="leading-5">
+                          {/* Each line names its shift for a page reader; the lines line up with the shifts beside them. */}
+                          <span className="sr-only">{shift.name}: </span>
+                          {shift.breaks.length === 0 ? (
+                            <span className="font-sans text-muted-foreground">No breaks</span>
+                          ) : (
+                            shift.breaks.map((each) => `${each.start} to ${each.end}`).join(', ')
+                          )}
                         </span>
                       ))}
                     </span>
@@ -346,7 +368,7 @@ function blocksOf(
     // A closure of this day covers the part after midnight; one of the day before does not.
     if (crosses && shift.weekdays.includes(weekdayBefore) && day.closed === undefined) {
       blocks.push({
-        id: `${shift.name}-before`,
+        id: `shift-${order}-before`,
         kind: 'shift',
         order,
         from: 0,
@@ -355,12 +377,12 @@ function blocksOf(
         sub: `From ${weekdayName(weekdayBefore).slice(0, 3)}`,
       });
       for (const each of shift.breaks.filter((one) => afterMidnight(one.start))) {
-        blocks.push(breakBlock(each, `${shift.name}-break-before-${each.start}`));
+        blocks.push(breakBlock(each, `shift-${order}-break-before-${each.start}`));
       }
     }
     if (day.closed === undefined && shift.weekdays.includes(weekday)) {
       blocks.push({
-        id: shift.name,
+        id: `shift-${order}`,
         kind: 'shift',
         order,
         from: start,
@@ -369,7 +391,7 @@ function blocksOf(
         sub: hoursText(shift.workingSeconds),
       });
       for (const each of shift.breaks.filter((one) => !afterMidnight(one.start))) {
-        blocks.push(breakBlock(each, `${shift.name}-break-${each.start}`));
+        blocks.push(breakBlock(each, `shift-${order}-break-${each.start}`));
       }
     }
   });
@@ -466,8 +488,9 @@ function listText(names: readonly string[]): string {
 }
 
 /** "two" for 2, else the digits. */
-function countWord(count: number): string {
-  return ['no', 'one', 'two', 'three'][count] ?? String(count);
+function countWord(count: number, sentenceStart = false): string {
+  const word = ['no', 'one', 'two', 'three'][count] ?? String(count);
+  return sentenceStart ? `${word.charAt(0).toUpperCase()}${word.slice(1)}` : word;
 }
 
 /** "Monday to Friday", "Monday, Wednesday and Friday" or "Monday": the days a shift starts on. */
@@ -506,9 +529,16 @@ function patternDescription(calendar: PlantCalendar): string {
   const parts = [...groups].map(([days, shifts]) => `${days} ${listText(shifts.map(shiftLabel))}`);
   const counts = new Set(calendar.shifts.map((shift) => shift.breaks.length));
   const [count] = counts;
-  return counts.size === 1 && count !== undefined
-    ? `${parts.join(', ')}, each shift with ${breaks(count)}`
-    : parts.join(', ');
+  if (counts.size === 1 && count !== undefined) {
+    return `${parts.join(', ')}, each shift with ${breaks(count)}`;
+  }
+  // The shifts' breaks differ, so each shift says its own.
+  return [...groups]
+    .map(
+      ([days, shifts]) =>
+        `${days} ${listText(shifts.map((shift) => `${shiftLabel(shift)} with ${breaks(shift.breaks.length)}`))}`,
+    )
+    .join(', ');
 }
 
 /**
@@ -565,8 +595,12 @@ function WeekSection({
   const hours = perDay.flatMap(({ blocks }) => blocks.flatMap((block) => [block.from, block.to]));
   const starts = calendar.shifts.map((shift) => hoursOf(shift.start));
   const ends = calendar.shifts.map((shift) => hoursOf(shift.end));
-  const startHour = Math.max(0, Math.floor(Math.min(...starts, ...hours)) - 1);
-  const endHour = Math.min(24, Math.ceil(Math.max(...ends, ...hours)) + 1);
+  // A calendar without shifts and a week without deviations still draw a day, 06:00 to 18:00.
+  const bounds = [...starts, ...ends, ...hours];
+  const startHour =
+    bounds.length === 0 ? 6 : Math.max(0, Math.floor(Math.min(...starts, ...hours)) - 1);
+  const endHour =
+    bounds.length === 0 ? 18 : Math.min(24, Math.ceil(Math.max(...ends, ...hours)) + 1);
   const y = (hour: number) => (hour - startHour) * hourPx;
   const height = y(endHour);
   return (
@@ -609,10 +643,11 @@ function WeekSection({
       </div>
       {/* The legend names each shift before the view, so a shift's color is never the only cue. */}
       <ul aria-label="Legend" className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+        {/* Keyed by order: a shift's order is its identity, and names may repeat. */}
         {calendar.shifts.map((shift, order) => (
-          <li key={shift.name} className="inline-flex items-center gap-1.5">
+          <li key={order} className="inline-flex items-center gap-1.5">
             <ShiftKey order={order} />
-            <span>{shiftLabel(shift)}</span>
+            <ShiftName shift={shift} />
           </li>
         ))}
         {(

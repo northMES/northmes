@@ -202,6 +202,7 @@ function breaksText(shift: PlantShift): string {
  * breaks, the shifts apart by semicolons.
  */
 export function patternText(calendar: PlantCalendar): string {
+  if (calendar.shifts.length === 0) return 'No shifts';
   return shiftParts(calendar)
     .map(({ shift, text }) => `${text}, ${breaksText(shift)}`)
     .join('; ');

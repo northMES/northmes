@@ -627,7 +627,7 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
     expect(week.getAllByText('From Mon')).toHaveLength(1);
   });
 
-  it('CS1 two shifts of one name keep apart, a shift without breaks says so, and the description counts each shift\'s breaks (#770)', async () => {
+  it("CS1 two shifts of one name keep apart, a shift without breaks says so, and the description counts each shift's breaks (#770)", async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const w45 = await weekOfA1((a1) => {
       const [day] = a1.shifts;

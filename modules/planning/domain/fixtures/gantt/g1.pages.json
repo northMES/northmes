@@ -1,6 +1,6 @@
 {
   "id": "G1-pages",
-  "description": "What the planning pages show beside the fixture G1 (docs/plan/18-gantt-timeline.md, the planning pages of the product owner round): the ERP connection, four customers and seven customer order lines, where each order came from, the routings, the history of order 1001, the assembly bench, the two lathes on the three-shift calendar B3 and the calendar deviations the plant admin added. Every name, number and time is fictional. Times are plant time, Europe/Stockholm, no clock change in the range.",
+  "description": "What the planning pages show beside the fixture G1 (docs/plan/18-gantt-timeline.md, the planning pages of the product owner round): the ERP connection, four customers and seven customer order lines, where each order came from, the routings, the history of order 1001, the assembly bench, the two lathes on the three-shift calendar B3 (not plannable, so neither the board nor the Gantt shows them) and the calendar deviations the plant admin added. Every name, number and time is fictional. Times are plant time, Europe/Stockholm, no clock change in the range.",
   "erp": {
     "connectionName": "Pyramid",
     "importedAt": {
@@ -210,7 +210,7 @@
       "code": "LATHE1",
       "name": "Lathe 1",
       "group": "MACH",
-      "isPlannable": true,
+      "isPlannable": false,
       "calendar": "B3",
       "owner": "erp"
     },
@@ -218,7 +218,7 @@
       "code": "LATHE2",
       "name": "Lathe 2",
       "group": "MACH",
-      "isPlannable": true,
+      "isPlannable": false,
       "calendar": "B3",
       "owner": "erp"
     }
