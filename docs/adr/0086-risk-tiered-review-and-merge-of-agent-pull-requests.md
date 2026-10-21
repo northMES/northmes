@@ -5,7 +5,7 @@ decision-makers: Krister Johansson
 consulted: GitHub documentation on rulesets, CODEOWNERS and auto-merge; CodeRabbit configuration reference (auto_review.labels); Claude Code documentation on auto mode; OpenSSF Scorecard checks; published practice on risk-based merge of agent pull requests (Vercel, April 2026; Rewind); a review of the change in a fresh context
 informed: contributors and coding agents
 release: "1"
-needs-confirmation: "maintainer (the paths in .github/risk-paths; the shadow phase and when it ends; the switch of the main ruleset to code owner review on the risk paths only; the lower OpenSSF Scorecard Code-Review and Branch-Protection scores; accepted risk A-08)"
+needs-confirmation: "maintainer (the paths in .github/risk-paths; the shadow phase and when it ends; the switch of the main ruleset to code owner review on the risk paths only, with risk gate required from the GitHub Actions app; the lower OpenSSF Scorecard Code-Review and Branch-Protection scores; accepted risk A-08, recorded with the switch)"
 ---
 
 # Risk-tiered review and merge of agent pull requests
@@ -36,19 +36,19 @@ Chosen option: "A deterministic floor from changed paths and the validation impa
 
 1. **Two tiers.** A pull request is high when any of these holds, and low otherwise:
    * it changes, or renames a file out of, a path in `.github/risk-paths`;
-   * its Validation impact (ADR 0051 rule 18) names records, security, calculation or data migration, or it has no Validation impact section;
-   * its Blast radius section declares `Tier: high`, or declares no tier;
+   * its Validation impact (ADR 0051 rule 18) names anything other than none or UI only (records, security, calculation, data migration, or a value the gate cannot read), or it has no Validation impact section;
+   * a Tier line in its Blast radius section says `Tier: high`, or the section has no Tier line;
    * its title marks a breaking change with `!`;
    * `northmes-agent` did not open it;
    * it changes more files than GitHub lists.
 2. **The blast-radius review.** Before the pull request opens, the session gives the `blast-radius` subagent (`.claude/agents/blast-radius.md`) the issue, the branch, the intent and the Validation impact. In a fresh context, with read-only tools and the Bash guard of the code-reviewer agent, it answers what breaks for whom, whether a revert undoes it, how far the change reaches, which test would catch a wrong version and which controls it touches. It returns the `## Blast radius` section of the pull request, ending in `Tier: low` or `Tier: high`. It can raise the tier and never lower it below rule 1's other conditions.
-3. **The risk gate.** `Risk / risk gate` (`.github/workflows/risk.yml`, `scripts/ci/risk-gate.mjs`) runs on every pull request and review. It downloads the check and `.github/risk-paths` from the default branch and runs them without a checkout, as `CI / cla` does, so a pull request cannot change the rules that judge it. It labels the pull request `risk:low` or `risk:high`, writes the reasons into the job summary, passes a low pull request, and passes a high one only once the maintainer's latest review approves its head commit.
+3. **The risk gate.** `Risk / risk gate` (`.github/workflows/risk.yml`, `scripts/ci/risk-gate.mjs`) runs on every pull request and review. It downloads the check and `.github/risk-paths` from the default branch and runs them without a checkout, as `CI / cla` does, so a pull request cannot change the script or the paths that judge it. GitHub runs a pull request's own copy of `risk.yml`, so the workflow file itself is protected by code owner review on `.github/`, which is a risk path; the machine user's token cannot change a workflow at all (ADR 0084 rule 4). It labels the pull request `risk:low` or `risk:high`, writes the reasons into the job summary, passes a low pull request, and passes a high one only once the maintainer's latest review approves its head commit.
 4. **Shadow phase.** The gate, the labels and the Blast radius section start while CODEOWNERS still names the maintainer for every path, so he reviews every pull request and notes where he disagrees with the tier. The switch in rule 5 follows when he is satisfied with the tiers, in a pull request of its own.
 5. **The switch.**
    * `.github/CODEOWNERS` names the maintainer for the patterns of `.github/risk-paths` only, and a meta test keeps the two lists equal.
-   * The `main` ruleset requires 0 approvals, keeps code owner review, conversation resolution and stale review dismissal, and requires `risk gate`. A pull request that touches a risk path needs the maintainer's approval through GitHub itself; one that is high for another reason waits on the risk gate.
+   * The `main` ruleset requires 0 approvals, keeps code owner review, conversation resolution and stale review dismissal, and requires `risk gate` from the GitHub Actions app, so a status set by another integration or a token does not satisfy it. A pull request that touches a risk path needs the maintainer's approval through GitHub itself; one that is high for another reason waits on the risk gate.
    * Auto-merge is turned on for the repository.
-   * A session turns on auto-merge for a low pull request through a project script, which refuses unless `northmes-agent` opened the pull request and the risk gate passed with `risk:low` on the head commit. GitHub merges it once every required check passes. The deny rule `Bash(gh pr merge*)` stays, so a session never merges directly.
+   * A session turns on auto-merge for a low pull request through a project script, which refuses unless `northmes-agent` opened the pull request and the `risk gate` check run on the head commit concluded with success for the low tier. It reads the check run, not the `risk:low` label, because the machine user can set labels itself. GitHub merges it once every required check passes. The deny rule `Bash(gh pr merge*)` stays, so a session never merges directly.
    * The maintainer adds an `autoMode.allow` entry for that script to his `~/.claude/settings.json`, because merging a pull request no person approved is one of auto mode's default blocks.
 6. **CodeRabbit.** After the switch CodeRabbit reviews high pull requests only: `reviews.auto_review.enabled: false` with `reviews.auto_review.labels: ["risk:high"]`, and a session posts `@coderabbitai review` on a high pull request while the repository is under CodeRabbit's limit for automatic reviews.
 
@@ -69,7 +69,8 @@ ADR 0050 is accepted, so its text stays as it was. ADR 0065 and ADR 0084 are pro
 * Good, because a low pull request merges when its checks pass, so agent sessions finish without waiting for the maintainer.
 * Good, because the maintainer's and CodeRabbit's attention goes to the changes where a mistake costs the most.
 * Good, because the risk paths and the gate are themselves risk paths, and the gate runs from the default branch, so a pull request cannot widen the low tier.
-* Bad, because a low change with a defect reaches `main` without a person reading it (accepted risk A-08). Tests, the two fresh-context reviews and a revert bound the harm.
+* Bad, because a low change with a defect reaches `main` without a person reading it (accepted risk A-08, which the risk register records with the switch). Tests, the two fresh-context reviews and a revert bound the harm.
+* Bad, because the maintainer's own pull requests are always high and he cannot approve them himself, so they go through agent sessions as ADR 0084 says. The gate names one maintainer by user id, and a second maintainer needs a change to it.
 * Bad, because OpenSSF Scorecard counts a merge without a human review against Code-Review, and 0 required approvals scores lower on Branch-Protection.
 * Bad, because the tier depends on how well `.github/risk-paths` names the risky code, and a new risky area needs a line there.
 

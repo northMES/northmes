@@ -441,11 +441,12 @@ describe('workflows', () => {
   // CI / cla reads the pull request and its commits through the API.
   const claPermissions = { contents: 'read', 'pull-requests': 'read' };
 
-  // Risk / risk gate reads the pull request, its files and reviews, and labels it with its tier
-  // (ADR 0086).
-  const riskGatePermissions = { contents: 'read', 'pull-requests': 'write' };
+  // Risk / risk gate reads the pull request, its files and reviews; Risk / risk label labels it with
+  // its tier (ADR 0086). Only the label job holds the write token.
+  const riskGatePermissions = { contents: 'read', 'pull-requests': 'read' };
+  const riskLabelPermissions = { contents: 'read', 'pull-requests': 'write' };
 
-  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what CI / cla reads, what Risk / risk gate reads and labels, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
+  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what CI / cla reads, what Risk / risk gate reads, what Risk / risk label writes, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
@@ -457,7 +458,9 @@ describe('workflows', () => {
             ? claPermissions
             : job.name === 'risk gate'
               ? riskGatePermissions
-              : job.name === 'Scorecard analysis'
+              : job.name === 'risk label'
+                ? riskLabelPermissions
+                : job.name === 'Scorecard analysis'
               ? scorecardPermissions
               : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
       expect(job.permissions, where).toEqual(expected);
@@ -904,13 +907,28 @@ describe('workflows', () => {
   });
 
   // Without a checkout the job cannot read .node-version, so it names the same version.
-  it('ADR0039 CI / cla sets up the Node version in .node-version', () => {
-    const { job } = jobNamed('cla');
-    const setup = (job.steps ?? []).find(({ uses }) => uses?.startsWith('actions/setup-node@'));
+  it('ADR0039 ADR0086 CI / cla and Risk / risk gate set up the Node version in .node-version', () => {
+    for (const name of ['cla', 'risk gate']) {
+      const { job } = jobNamed(name);
+      const setup = (job.steps ?? []).find(({ uses }) => uses?.startsWith('actions/setup-node@'));
 
-    expect(String(setup?.with?.['node-version'])).toBe(
-      readFileSync(`${root}.node-version`, 'utf8').trim(),
-    );
+      expect(String(setup?.with?.['node-version']), name).toBe(
+        readFileSync(`${root}.node-version`, 'utf8').trim(),
+      );
+    }
+  });
+
+  // A review run and an edited run can overlap; the later one wins, so a stale label does not stay.
+  it('ADR0086 the Risk workflow runs one at a time per pull request and labels in a job of its own after the gate', () => {
+    const { workflow, job } = jobNamed('risk label');
+
+    expect((workflow as Workflow & { concurrency?: unknown }).concurrency).toEqual({
+      group: `risk-${expression('github.event.pull_request.number')}`,
+      'cancel-in-progress': true,
+    });
+    expect(needsOf(job)).toEqual(['risk-gate']);
+    expect(job.if).toBe("always() && needs.risk-gate.outputs.tier != ''");
+    expect(job.steps?.some(({ uses }) => uses?.startsWith('actions/checkout@'))).toBe(false);
   });
 
   // A required status check matches a check by its name and the app that reports it, not by the

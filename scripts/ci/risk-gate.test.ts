@@ -59,6 +59,24 @@ describe('risk gate', () => {
   // The patterns follow .gitignore, as CODEOWNERS does: a leading slash anchors a pattern at the
   // root, a pattern with no slash matches at any depth, * stays within one folder, ** crosses
   // folders, and a pattern that names a folder covers everything below it.
+  // A pattern with a space would never match, which would fail open, so the gate refuses it. So
+  // does a pattern with ! or [, which CODEOWNERS does not support.
+  it('a risk path with whitespace, ! or [ makes the gate throw', () => {
+    for (const pattern of ['/deploy/ # note', '/deploy/ @owner', '!/docs/', '/docs/[ab].md']) {
+      expect(() => assessRisk({ ...agentPull(['docs/a.md']), riskPaths: pattern }), pattern).toThrow(
+        /risk-paths/,
+      );
+    }
+  });
+
+  // CODEOWNERS: docs/* matches the files directly in docs and not the ones further down.
+  it('a risk path that ends in /* matches the files directly in its folder only', () => {
+    const pull = { ...agentPull([]), riskPaths: '/docs/security/*' };
+
+    expect(assessRisk({ ...pull, files: ['docs/security/README.md'] }).tier).toBe('high');
+    expect(assessRisk({ ...pull, files: ['docs/security/audits/2026.md'] }).tier).toBe('low');
+  });
+
   it('a change to a high-risk path makes the pull request high, and the reason names the file', () => {
     const high = [
       '.github/workflows/ci.yml',
@@ -90,22 +108,38 @@ describe('risk gate', () => {
   });
 
   // ADR 0051 rule 18: a change to records, security, calculations or data needs a person to judge
-  // whether the system still does what its validation says.
-  it('a validation impact of records, security, calculation or data migration makes the pull request high', () => {
+  // whether the system still does what its validation says. Only none and UI only are low, so a
+  // value the gate cannot read counts as high.
+  it('a validation impact other than none or UI only makes the pull request high', () => {
     const high = [
       'Records',
       'Security: the sign-in rate limit.',
       'Calculation (the run length).',
       'data migration',
       'UI only, records',
+      '- Records',
+      'Records change in the run table.',
+      'Records or calculation',
+      'records; security',
+      'Record',
+      'Data migrations',
+      'See below.\n\nRecords',
     ];
-    const low = ['None.', 'UI only: a label changes.', 'None: no records change.'];
+    const low = [
+      'None.',
+      'UI only: a label changes.',
+      'None: no records change.',
+      '- **None**',
+      'UI only',
+      'None, UI only.',
+    ];
 
     for (const impact of high) {
       const result = assessRisk(agentPull(['docs/guide/start.md'], 'low', impact));
+      const firstLine = impact.split('\n')[0];
 
       expect(result.tier, impact).toBe('high');
-      expect(result.reasons, impact).toEqual([`has the validation impact ${impact}`]);
+      expect(result.reasons, impact).toEqual([`has the validation impact ${firstLine}`]);
     }
     for (const impact of low) {
       expect(assessRisk(agentPull(['docs/guide/start.md'], 'low', impact)).tier, impact).toBe('low');
@@ -134,6 +168,13 @@ describe('risk gate', () => {
     const result = assessRisk(agentPull(['.github/CODEOWNERS'], 'low'));
 
     expect(result.tier).toBe('high');
+  });
+
+  it('a Tier line that says high makes the pull request high wherever it stands in the section', () => {
+    const pull = agentPull(['docs/guide/start.md']);
+    const twoLines = pull.body.replace('Tier: low', 'Tier: low\n\nTier: high');
+
+    expect(assessRisk({ ...pull, body: twoLines }).tier).toBe('high');
   });
 
   it('a body without a Blast radius section or a Tier line makes the pull request high', () => {
@@ -188,8 +229,12 @@ describe('risk gate', () => {
           [review(maintainer, 'APPROVED'), review(maintainer, 'CHANGES_REQUESTED')],
           false,
         ],
+        // GitHub records a dismissal as the state of the dismissed review itself.
+        ['the approval was dismissed', [review(maintainer, 'DISMISSED')], false],
+        // A dismissed request for changes does not bring an earlier approval back: the machine
+        // user may dismiss reviews, so the maintainer approves again.
         [
-          'the approval was dismissed',
+          'the maintainer approved, asked for changes, and that request was dismissed',
           [review(maintainer, 'APPROVED'), review(maintainer, 'DISMISSED')],
           false,
         ],
@@ -278,12 +323,13 @@ describe('risk gate', () => {
       const result = await check(
         routes({
           [`repos/${repository}/pulls/800`]: { ...pull, changed_files: 3001 },
-          [`repos/${repository}/pulls/800/files?per_page=100&page=1`]: [],
+          [`repos/${repository}/pulls/800/files?per_page=100&page=1`]: undefined,
         }),
       );
 
       expect(result.tier).toBe('high');
-      expect(result.reasons).toContain('changes more files than GitHub lists');
+      expect(result.reasons).toEqual(['changes more files than GitHub lists']);
+      expect(result.ok).toBe(false);
     });
   });
 

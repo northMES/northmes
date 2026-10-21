@@ -1,11 +1,13 @@
 # The paths where a wrong merge is expensive or touches a security control (ADR 0086). A pull
-# request that changes one of them, or renames a file out of one, is high risk: CodeRabbit reviews it
-# and it merges only after the maintainer approves its head commit. CI / risk gate reads this file
-# from the default branch, so a pull request cannot change the paths that judge it.
+# request that changes one of them, or renames a file out of one, is high risk: it merges only after
+# the maintainer approves its head commit. Risk / risk gate reads this file from the default branch,
+# so a pull request cannot change the paths that judge it.
 #
-# The patterns follow .gitignore, as CODEOWNERS does: a leading slash anchors a pattern at the root,
-# a pattern with no slash matches at any depth, * stays within one folder, ** crosses folders, and a
-# pattern that names a folder covers everything below it.
+# The patterns follow CODEOWNERS: a leading slash or a slash inside anchors a pattern at the root, a
+# pattern with no slash matches at any depth, * stays within one folder, ** crosses folders, a
+# pattern that names a folder covers everything below it, and one that ends in /* covers only the
+# files directly in its folder. The gate refuses a pattern with whitespace, ! or [, so write an
+# inline comment on a line of its own.
 
 # Migrations, row-level security and database roles
 **/migrations/**
@@ -62,10 +64,27 @@
 /AGENTS.md
 /skills-lock.json
 
-# Dependencies and the workspace
+# Dependencies, the workspace and the license gate
 /package.json
 /pnpm-workspace.yaml
 /pnpm-lock.yaml
+/license-exceptions.json
+/license-clarifications.json
+
+# What decides which tests and lint rules run, and on which Node
+/vitest.config.ts
+/playwright.config.ts
+/turbo.json
+/biome.json
+/.node-version
+/.nvmrc
+/.dockerignore
+
+# Licensing: a merged license change cannot be taken back by a revert
+/LICENSE
+/NOTICE
+/CLA.md
+/CLA-corporate.md
 
 # Decisions and security documents
 /docs/adr/
