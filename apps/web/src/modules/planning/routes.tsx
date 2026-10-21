@@ -4,6 +4,7 @@ import { linkEntry } from '@northmes/contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import type { PlantRoute } from '@northmes/web-sdk';
 import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router';
+import { customerOrderPageSearch } from './customer-order-page-search.ts';
 import { boardSearch, ganttSearch } from './gantt-search.ts';
 import { jobOrdersSearch } from './job-orders-search.ts';
 import { customerOrderListSearch, orderListSearch, urlSearchOf } from './order-list-search.ts';
@@ -64,11 +65,23 @@ export function planningRoutes(plantRoute: PlantRoute) {
     validateSearch: (raw: Record<string, unknown>) => urlSearchOf(orderListSearch(raw)),
     component: lazyRouteComponent(() => import('./screens.ts'), 'ProductionOrdersScreen'),
   });
+  // The customer orders: the list of their lines and each customer order's page (design #728),
+  // with its open tab and its Supply from an order step in the URL.
   const customerOrdersRoute = createRoute({
     getParentRoute: () => planningRoute,
     path: linkEntry(planningLinks.customerOrders).path,
+  });
+  const customerOrderListRoute = createRoute({
+    getParentRoute: () => customerOrdersRoute,
+    path: '/',
     validateSearch: (raw: Record<string, unknown>) => urlSearchOf(customerOrderListSearch(raw)),
     component: lazyRouteComponent(() => import('./screens.ts'), 'CustomerOrdersScreen'),
+  });
+  const customerOrderRoute = createRoute({
+    getParentRoute: () => customerOrdersRoute,
+    path: linkEntry(planningLinks.customerOrders.customerOrder).path,
+    validateSearch: customerOrderPageSearch,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'CustomerOrderScreen'),
   });
   const orderRoute = createRoute({
     getParentRoute: () => ordersRoute,
@@ -93,6 +106,6 @@ export function planningRoutes(plantRoute: PlantRoute) {
       orderListRoute,
       orderRoute.addChildren([orderPageRoute, editOrderRoute]),
     ]),
-    customerOrdersRoute,
+    customerOrdersRoute.addChildren([customerOrderListRoute, customerOrderRoute]),
   ]);
 }

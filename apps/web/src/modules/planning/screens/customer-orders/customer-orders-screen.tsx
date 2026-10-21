@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
+import { CustomerLink, CustomerOrderLink } from '../../components/customer-link/index.ts';
 import {
   type ListFilterField,
   OrderListToolbar,
@@ -148,7 +149,7 @@ function columnsOf(view: CellView): readonly DataTableColumn<LineListRow>[] {
       cell: (row) => (
         <span className="flex flex-col" data-line={row.id}>
           <span>
-            <span className="font-mono">{row.line.customerOrder}</span>{' '}
+            <CustomerOrderLink number={row.line.customerOrder} />{' '}
             <span className="text-xs text-muted-foreground">line {row.line.line}</span>
           </span>
           <span className="font-mono text-xs text-muted-foreground">
@@ -163,7 +164,7 @@ function columnsOf(view: CellView): readonly DataTableColumn<LineListRow>[] {
       sortable: true,
       cell: (row) => (
         <span className="flex flex-col">
-          <span>{row.customerName}</span>
+          <CustomerLink code={row.line.customerCode} name={row.customerName} />
           <span className="font-mono text-xs text-muted-foreground">{row.line.customerCode}</span>
         </span>
       ),
