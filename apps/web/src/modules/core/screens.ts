@@ -30,3 +30,4 @@ export { RoleScreen } from './screens/role/index.ts';
 export { RolesScreen } from './screens/roles/index.ts';
 export { UserScreen } from './screens/user/index.ts';
 export { UsersScreen } from './screens/users/index.ts';
+export { WarehousesScreen } from './screens/warehouses/index.ts';
