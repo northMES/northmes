@@ -18,22 +18,27 @@ const skeletonRows = [
 /**
  * The board while it loads (design D3, DR17): the grid named after the plant and the range and
  * marked busy, with the time header, the Not placed row and skeleton rows in the populated layout.
- * The skeletons are hidden from assistive technology, and the grid has no Tab stop until it holds
- * cells.
+ * The skeletons are hidden from assistive technology, and the busy grid itself holds the Tab stop
+ * until its rows arrive (D3, DR17 and DR25).
  */
 export function BoardSkeleton({
   name,
   machineWidth,
+  gridRef,
 }: {
   readonly name: string;
   readonly machineWidth: number;
+  /** Measures the grid's width, as the populated grid does, so the machine column keeps its cap. */
+  readonly gridRef: (node: HTMLDivElement | null) => void;
 }) {
   const columns = `${machineWidth}px 1fr`;
   return (
     <div
+      ref={gridRef}
       role="grid"
       aria-label={name}
       aria-busy="true"
+      tabIndex={0}
       className="overflow-hidden rounded-lg border border-border bg-card text-sm"
     >
       <div

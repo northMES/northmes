@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { coreLinks } from '@northmes/core-contracts';
-import { useShell } from '@northmes/web-sdk';
+import { planningLinks } from '@northmes/planning-contracts';
+import { classifyError, useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Drill, Pencil, ShieldOff } from 'lucide-react';
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -151,6 +152,15 @@ export function BoardScreen() {
   const [moveDialogFor, setMoveDialogFor] = useState<string | undefined>(undefined);
   const [loadError, setLoadError] = useState<unknown>(undefined);
   const [attempt, setAttempt] = useState(0);
+  /** Settles the promise of Try again once the load it started has settled. */
+  const retryDone = useRef<(() => void) | undefined>(undefined);
+  // A change of the preview drops the board shown before, so the state it asks for shows at once.
+  const [shownPreview, setShownPreview] = useState(search.preview);
+  if (shownPreview !== search.preview) {
+    setShownPreview(search.preview);
+    setCommitted(undefined);
+    setLoadError(undefined);
+  }
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [focused, setFocused] = useState<string | undefined>(undefined);
   const [width, measureRef] = useMeasuredWidth();
@@ -184,6 +194,11 @@ export function BoardScreen() {
       })
       .catch((error: unknown) => {
         if (!cancelled) setLoadError(error ?? new Error('The board could not be loaded'));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        retryDone.current?.();
+        retryDone.current = undefined;
       });
     return () => {
       cancelled = true;
@@ -228,15 +243,22 @@ export function BoardScreen() {
     lines.some((line) => line.header === key || line.cells.some((cell) => cell.key === key));
   // Tab enters at the focused target while it is drawn, else at the selected order's first job
   // order, else at the job order nearest now (design D3, Keyboard model).
+  // A job order of the selected order inside a cluster enters at its cluster.
   const selectedEntry =
     model === undefined || search.order === undefined
       ? undefined
       : [
-          ...model.notPlaced,
-          ...model.groups.flatMap((group) => group.machines.flatMap((machine) => machine.blocks)),
+          ...model.notPlaced.map((row) => ({ key: focusKeys.block(row.jobOrder.id), rows: [row] })),
+          ...[...cells.values()].flatMap((row) =>
+            row.map((cell) =>
+              cell.kind === 'cluster'
+                ? { key: cell.key, rows: cell.rows }
+                : { key: focusKeys.block(cell.row.jobOrder.id), rows: [cell.row] },
+            ),
+          ),
         ]
-          .filter((row) => row.order.id === search.order)
-          .map((row) => focusKeys.block(row.jobOrder.id))
+          .filter((target) => target.rows.some((row) => row.order.id === search.order))
+          .map((target) => target.key)
           .find((key) => known(key));
   const tabStop = known(focused)
     ? focused
@@ -360,7 +382,11 @@ export function BoardScreen() {
 
   // The page states of design D3 (DR17 to DR22): loading draws the grid's skeleton; no access and
   // no machines to plan replace the board and its toolbar.
-  const forbidden = committed === undefined && loadError instanceof PlanningForbidden;
+  // A refusal shows no access also when a range before is still in memory: the mock source's
+  // refusal, or the API's FORBIDDEN of a server source.
+  const forbidden =
+    loadError !== undefined &&
+    (loadError instanceof PlanningForbidden || classifyError(loadError).page === 'forbidden');
   const noMachines = model !== undefined && model.groups.length === 0;
   let state: PageState = { status: 'ready' };
   if (forbidden) {
@@ -378,9 +404,21 @@ export function BoardScreen() {
       status: 'error',
       title: 'The board could not be loaded',
       description:
-        'Your draft and the saved plan are not affected. Try again. If the error comes back, give your plant admin the correlation id.',
+        'Your draft and the saved plan are not affected. Try again, or open the job table for the same range.',
       error: loadError,
-      onRetry: async () => setAttempt((count) => count + 1),
+      onRetry: () =>
+        new Promise<void>((resolve) => {
+          retryDone.current = resolve;
+          setAttempt((count) => count + 1);
+        }),
+      action: (
+        <Link
+          to={planningLinks.jobOrders({ plant }, { zoom, from }).href}
+          className={buttonVariants({ variant: 'outline' })}
+        >
+          Open the job table
+        </Link>
+      ),
     };
   } else if (snapshot === undefined) {
     state = { status: 'loading' };
@@ -408,7 +446,7 @@ export function BoardScreen() {
     <PageFrame
       title="Planning board"
       meta={
-        snapshot?.erp === undefined ? undefined : (
+        snapshot?.erp === undefined || noMachines ? undefined : (
           <span className="text-sm text-muted-foreground">
             ERP data as of {plantTime(snapshot, snapshot.erp.importedAtMs)}
           </span>
@@ -455,7 +493,9 @@ export function BoardScreen() {
       {snapshot?.fixture !== undefined && (
         <p className="text-xs text-muted-foreground">Showing fixture {snapshot.fixture}.</p>
       )}
-      {state.status === 'loading' && <BoardSkeleton name={gridName} machineWidth={machineWidth} />}
+      {state.status === 'loading' && (
+        <BoardSkeleton name={gridName} machineWidth={machineWidth} gridRef={measureRef} />
+      )}
       {view !== undefined &&
         snapshot !== undefined &&
         model !== undefined &&
