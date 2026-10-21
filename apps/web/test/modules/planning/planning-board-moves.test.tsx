@@ -95,11 +95,8 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
 
     await user.keyboard('m');
     expect(block(board, '1002.10').getAttribute('data-move-mode')).toBeNull();
-    await waitFor(() => {
-      expect(document.getElementById('announcer-assertive')?.textContent).toBe(
-        'Cannot move 1002.10: locked.',
-      );
-    });
+    // The app has one polite announcer; plan 07 asks for refusals to be assertive (a follow-up).
+    await waitFor(() => expect(spoken()).toBe('Cannot move 1002.10: locked.'));
   });
 
   it('a move on the board shows on the Gantt and in the job order table, in the same draft', async () => {

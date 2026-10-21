@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
+import type { JobOrderSpan } from '@northmes/planning-domain';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { TimeScale } from '../../timeline/time-scale.ts';
 import { GanttMarkerLayer, overlayMarkers } from '../gantt/gantt-marker-layer.tsx';
+import { type MovePreview, tooltipText } from '../gantt/gantt-move.ts';
 import {
   GanttTimeHeader,
   TimeCellShading,
@@ -41,6 +44,8 @@ export interface BoardGridProps {
   readonly onToggleGroup: (code: string) => void;
   /** The target that holds the grid's one Tab stop. */
   readonly tabStop: string | undefined;
+  /** The move in progress, which draws its outline in the row of its target machine. */
+  readonly preview?: MovePreview;
   /** The selected order, by id, whose job orders carry aria-selected. */
   readonly selectedOrderId: string | undefined;
   readonly onSelectOrder: (orderId: string) => void;
@@ -48,6 +53,69 @@ export interface BoardGridProps {
   readonly onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   readonly gridRef: (node: HTMLDivElement | null) => void;
   readonly height: number | undefined;
+}
+
+/**
+ * The outline of a move in progress (plan 07, Moving without dragging; design D3, IN4 and IN6):
+ * the span the move would write on its target machine, in the draft style, with the tooltip that
+ * names it. Decorative: the step messages and the block's name carry the words.
+ */
+function MoveOutline({
+  preview,
+  scale,
+  timeZone,
+}: {
+  readonly preview: MovePreview;
+  readonly scale: TimeScale;
+  readonly timeZone: string;
+}) {
+  const left = scale.x(preview.span.setupStartMs);
+  return (
+    <>
+      <span
+        aria-hidden
+        data-move-preview={preview.jobOrderId}
+        data-from-ms={preview.span.setupStartMs}
+        data-to-ms={preview.span.endMs}
+        className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground bg-foreground/10"
+        style={{
+          left: `${left}px`,
+          width: `${Math.max(2, scale.x(preview.span.endMs) - left)}px`,
+        }}
+      />
+      <span
+        aria-hidden
+        data-drag-tooltip
+        className="pointer-events-none absolute bottom-0 z-[4] rounded-sm bg-popover px-1.5 py-0.5 font-mono text-tick whitespace-nowrap text-popover-foreground shadow-sm"
+        style={{ left: `${left}px` }}
+      >
+        {tooltipText(preview, timeZone)}
+      </span>
+    </>
+  );
+}
+
+/** Where the cascade would put a row that moves with the one in progress, at reduced opacity. */
+function GhostSpan({
+  jobOrderId,
+  span,
+  scale,
+}: {
+  readonly jobOrderId: string;
+  readonly span: JobOrderSpan;
+  readonly scale: TimeScale;
+}) {
+  const left = scale.x(span.setupStartMs);
+  return (
+    <span
+      aria-hidden
+      data-ghost={jobOrderId}
+      data-from-ms={span.setupStartMs}
+      data-to-ms={span.endMs}
+      className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground opacity-45"
+      style={{ left: `${left}px`, width: `${Math.max(2, scale.x(span.endMs) - left)}px` }}
+    />
+  );
 }
 
 /** A row of the grid: the row header column and the time column, as CSS grid columns. */
@@ -102,6 +170,7 @@ export function BoardGrid({
   collapsed,
   onToggleGroup,
   tabStop,
+  preview,
   selectedOrderId,
   onSelectOrder,
   onFocusTarget,
@@ -183,6 +252,22 @@ export function BoardGrid({
           </div>
           <div className="relative bg-lane">
             <TimeCellShading windows={machine.closed} scale={scale} />
+            {preview !== undefined && preview.equipment === code && (
+              <MoveOutline preview={preview} scale={scale} timeZone={snapshot.plant.timeZone} />
+            )}
+            {machine.blocks.flatMap((row) => {
+              const ghost = preview?.ghosts.get(row.jobOrder.id);
+              return ghost === undefined
+                ? []
+                : [
+                    <GhostSpan
+                      key={row.id}
+                      jobOrderId={row.jobOrder.id}
+                      span={ghost}
+                      scale={scale}
+                    />,
+                  ];
+            })}
             {cells.length === 0 ? (
               <div
                 role="gridcell"

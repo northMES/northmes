@@ -13,7 +13,16 @@ import {
   useTable,
 } from '@tanstack/react-table';
 import { cn } from 'cn';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Clock, Ellipsis, Lock } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronRight,
+  Clock,
+  Ellipsis,
+  Lock,
+  Pencil,
+} from 'lucide-react';
 import { type ReactNode, useMemo } from 'react';
 import type { ColumnChoice } from '../../../../ui/components/columns-menu/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
@@ -113,7 +122,10 @@ function rowTargets(row: JobOrderTableRow, { snapshot, zoom, from, plant }: Cell
   };
 }
 
-/** The status cell: the job order's status, Locked on a hard-locked operation, and Late by. */
+/**
+ * The status cell: the job order's status, In my draft on a row the planner's draft moved, Locked
+ * on a hard-locked operation, and Late by.
+ */
 function StatusCell({ row }: { readonly row: JobOrderTableRow }) {
   const status = row.jobOrder.status;
   return (
@@ -123,6 +135,11 @@ function StatusCell({ row }: { readonly row: JobOrderTableRow }) {
       >
         {statusLabel(status)}
       </StatusBadge>
+      {row.inDraft === true && (
+        <StatusBadge tone="info" icon={Pencil}>
+          In my draft, not saved
+        </StatusBadge>
+      )}
       {row.operation.isLocked && (
         <StatusBadge tone="neutral" icon={Lock}>
           Locked

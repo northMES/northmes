@@ -1,15 +1,27 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { Drill, ShieldOff } from 'lucide-react';
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { Drill, Pencil, ShieldOff } from 'lucide-react';
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
-import { buttonVariants } from '../../../../ui/primitives/button.tsx';
+import { announce } from '../../../../ui/lib/announce.ts';
+import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { RangeControls } from '../../components/range-controls/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
+import {
+  applyDraft,
+  cascadeFromHere,
+  type DraftConflict,
+  discardChange,
+  draftChangeCount,
+  draftConflicts,
+  draftRowIds,
+  emptyDraft,
+  moveBack,
+  splitRunInDraft,
+} from '../../gantt-draft.ts';
 import {
   type BoardSearch,
   boardSearch,
@@ -19,6 +31,7 @@ import {
 } from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
 import { plantTime } from '../../order-facts.ts';
+import { usePlanningDraft } from '../../planning-draft.tsx';
 import { PlanningForbidden } from '../../planning-preview.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
@@ -30,7 +43,10 @@ import {
   shiftedFrom,
 } from '../../timeline/time-scale.ts';
 import { useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
+import { useMoveActions } from '../../use-move-actions.ts';
 import { type GanttViewContext, GanttViewProvider } from '../gantt/gantt-context.ts';
+import { changesText, GanttDraftDrawer } from '../gantt/gantt-draft-drawer.tsx';
+import { refusalMessage } from '../gantt/gantt-move.ts';
 import { type BoardCellItem, cellsOf } from './board-cells.ts';
 import { BoardGrid, focusKeys } from './board-grid.tsx';
 import { type BoardLine, boardEntry, boardFocusAfter } from './board-navigation.ts';
@@ -115,7 +131,12 @@ export function BoardScreen() {
       }),
     [navigate],
   );
-  const [snapshot, setSnapshot] = useState<GanttSnapshot | undefined>(undefined);
+  const [committed, setCommitted] = useState<GanttSnapshot | undefined>(undefined);
+  // The planner's draft, which the Gantt and the job order table share (plan 07, Drafts).
+  const [draft, setDraft] = usePlanningDraft();
+  const [draftOpen, setDraftOpen] = useState(false);
+  /** The element that opened the My draft drawer, which takes focus back when it closes. */
+  const draftOpener = useRef<HTMLElement | undefined>(undefined);
   const [loadError, setLoadError] = useState<unknown>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
@@ -124,13 +145,13 @@ export function BoardScreen() {
   const zoom = search.zoom ?? defaultZoom;
   const [fillHeight, fillRef] = useViewportFill(`${zoom}|${search.from ?? ''}`);
 
-  const timeZone = snapshot?.plant.timeZone ?? 'UTC';
-  const productionDayStart = snapshot?.plant.productionDayStart ?? '06:00';
+  const timeZone = committed?.plant.timeZone ?? 'UTC';
+  const productionDayStart = committed?.plant.productionDayStart ?? '06:00';
   const from =
     search.from ??
-    (snapshot === undefined
+    (committed === undefined
       ? plantDateOf(Date.now(), timeZone)
-      : plantDateOf(snapshot.nowMs, timeZone));
+      : plantDateOf(committed.nowMs, timeZone));
   const range = useMemo(
     () => rangeOf(from, zoom, timeZone, productionDayStart),
     [from, zoom, timeZone, productionDayStart],
@@ -147,7 +168,7 @@ export function BoardScreen() {
         ...(search.preview !== undefined && { preview: search.preview }),
       })
       .then((loaded) => {
-        if (!cancelled) setSnapshot(loaded);
+        if (!cancelled) setCommitted(loaded);
       })
       .catch((error: unknown) => {
         if (!cancelled) setLoadError(error ?? new Error('The board could not be loaded'));
@@ -157,6 +178,16 @@ export function BoardScreen() {
     };
   }, [source, range.fromMs, range.toMs, attempt, search.preview]);
 
+  // Everything the board draws reads the plan with the draft applied, analysed over the range.
+  const snapshot = useMemo(
+    () => (committed === undefined ? undefined : applyDraft(committed, draft, range)),
+    [committed, draft, range],
+  );
+  const draftIds = useMemo(() => draftRowIds(draft), [draft]);
+  const conflicts = useMemo(
+    () => (snapshot === undefined ? [] : draftConflicts(snapshot, draft)),
+    [snapshot, draft],
+  );
   const model = useMemo(
     () => (snapshot === undefined ? undefined : boardModelOf(snapshot, range)),
     [snapshot, range],
@@ -202,6 +233,26 @@ export function BoardScreen() {
     if (orderId !== search.order) void setSearch(withOrder(search, orderId), 'push');
   };
 
+  // Up and Down in move mode step through the allowed machines in the board's row order, past the
+  // machines of collapsed groups (plan 07, Moving without dragging).
+  const machineSteps = (allowed: readonly string[]) =>
+    lines.flatMap((line) => {
+      const code = line.kind === 'machine' ? line.header?.slice('header:'.length) : undefined;
+      return code !== undefined && allowed.includes(code) ? [code] : [];
+    });
+  const { actions: moveActions, preview } = useMoveActions({
+    committed,
+    snapshot,
+    draft,
+    setDraft,
+    cascadeOn: true,
+    zoom,
+    range,
+    timeZone,
+    focusBlock: (jobOrderId) => focusTarget(focusKeys.block(jobOrderId)),
+    machineSteps,
+  });
+
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
     const equipment = new Map(snapshot.equipment.map((machine) => [machine.code, machine]));
@@ -219,15 +270,17 @@ export function BoardScreen() {
       chainRowIds: new Set(),
       machineName: (code) =>
         code === undefined ? 'no machine' : (equipment.get(code)?.name ?? code),
+      draftRowIds: draftIds,
+      ...(moveActions !== undefined && { move: moveActions }),
     };
-  }, [snapshot, scale, timeZone, range, search.order]);
+  }, [snapshot, scale, timeZone, range, search.order, draftIds, moveActions]);
 
-  const focusTarget = (key: string) => {
+  function focusTarget(key: string) {
     setFocused(key);
     const element = document.querySelector<HTMLElement>(`[data-board-focus="${key}"]`);
     element?.focus({ preventScroll: true });
     element?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  };
+  }
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const key = (event.target as HTMLElement).getAttribute('data-board-focus');
     if (key === null) return;
@@ -245,7 +298,7 @@ export function BoardScreen() {
 
   // The page states of design D3 (DR17 to DR22): loading draws the grid's skeleton; no access and
   // no machines to plan replace the board and its toolbar.
-  const forbidden = snapshot === undefined && loadError instanceof PlanningForbidden;
+  const forbidden = committed === undefined && loadError instanceof PlanningForbidden;
   const noMachines = model !== undefined && model.groups.length === 0;
   let state: PageState = { status: 'ready' };
   if (forbidden) {
@@ -316,6 +369,21 @@ export function BoardScreen() {
               onLater={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'later')))}
               rangeLabel={label}
             />
+            <span className="grow" />
+            <Button
+              variant="outline"
+              className="h-8 px-3"
+              data-draft-button
+              onClick={() => {
+                draftOpener.current = document.activeElement as HTMLElement | undefined;
+                setDraftOpen(true);
+              }}
+            >
+              <Pencil aria-hidden />
+              {draftChangeCount(draft) === 0
+                ? 'My draft'
+                : `My draft, ${changesText(draftChangeCount(draft))}`}
+            </Button>
           </div>
         )
       }
@@ -345,6 +413,7 @@ export function BoardScreen() {
                 })
               }
               tabStop={tabStop}
+              {...(preview !== undefined && { preview })}
               selectedOrderId={search.order}
               onSelectOrder={selectOrder}
               onFocusTarget={setFocused}
@@ -353,6 +422,25 @@ export function BoardScreen() {
               height={fillHeight}
             />
           </div>
+          <GanttDraftDrawer
+            open={draftOpen}
+            onClose={() => setDraftOpen(false)}
+            draft={draft}
+            conflicts={conflicts}
+            timeZone={timeZone}
+            machineName={view.machineName}
+            onCascadeFromHere={(conflict: DraftConflict) => {
+              if (committed === undefined) return;
+              const { draft: next, refused } = cascadeFromHere(committed, draft, conflict);
+              if (refused !== undefined) announce(refusalMessage(conflict.rows[0], refused));
+              else setDraft(next);
+            }}
+            onMoveBack={(conflict: DraftConflict) => setDraft(moveBack(draft, conflict))}
+            onDiscardChange={(jobOrderId) => setDraft(discardChange(draft, jobOrderId))}
+            onSplitRun={(runId) => setDraft(splitRunInDraft(draft, runId))}
+            onDiscardDraft={() => setDraft(emptyDraft)}
+            finalFocus={() => draftOpener.current ?? null}
+          />
         </GanttViewProvider>
       )}
     </PageFrame>

@@ -21,6 +21,8 @@ export interface JobOrderTableRow {
   readonly machine: string;
   /** The machine's position among the plant's machines, which the default sort reads. */
   readonly machineIndex: number;
+  /** Whether the planner's draft moved the row, which its status names. */
+  readonly inDraft?: boolean;
 }
 
 /** The sort of the table: a column id and a direction. */
@@ -38,6 +40,7 @@ export function jobOrderTableRows(
   snapshot: GanttSnapshot,
   range: TimeRange,
   lateOnly: boolean,
+  draftRowIds: ReadonlySet<string> = new Set(),
 ): JobOrderTableRow[] {
   const machineIndex = new Map(snapshot.equipment.map((machine, index) => [machine.code, index]));
   const machineName = new Map(snapshot.equipment.map((machine) => [machine.code, machine.name]));
@@ -69,6 +72,7 @@ export function jobOrderTableRows(
           jobOrder.equipment === undefined
             ? Number.MAX_SAFE_INTEGER
             : (machineIndex.get(jobOrder.equipment) ?? Number.MAX_SAFE_INTEGER),
+        ...(draftRowIds.has(jobOrder.id) && { inDraft: true }),
       });
     }
   }
