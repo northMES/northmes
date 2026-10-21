@@ -88,7 +88,7 @@ export function PlanningRuleCard({
               rule.adr
             ) : (
               <a
-                className="text-link underline-offset-2 hover:underline"
+                className="text-link underline underline-offset-2 hover:no-underline"
                 href={`https://github.com/northMES/northmes/blob/main/docs/adr/${adrFile}`}
               >
                 {rule.adr}
