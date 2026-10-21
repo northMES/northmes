@@ -6,7 +6,13 @@ import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'r
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { RangeControls } from '../../components/range-controls/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
-import { type GanttSearch, ganttSearch, withFrom, withZoom } from '../../gantt-search.ts';
+import {
+  type GanttSearch,
+  ganttSearch,
+  withFrom,
+  withOrder,
+  withZoom,
+} from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
 import { plantTime } from '../../order-facts.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
@@ -80,9 +86,15 @@ export function BoardScreen() {
   const rawSearch = useSearch({ strict: false });
   const search = useMemo(() => ganttSearch(rawSearch), [rawSearch]);
   const navigate = useNavigate();
+  // The range replaces the history entry; a change of the selected order pushes one, so Back
+  // returns to the order before (design D3, URL state).
   const setSearch = useCallback(
-    (next: GanttSearch) =>
-      navigate({ to: '.', search: next as Record<string, unknown>, replace: true }),
+    (next: GanttSearch, history: 'replace' | 'push' = 'replace') =>
+      navigate({
+        to: '.',
+        search: next as Record<string, unknown>,
+        replace: history === 'replace',
+      }),
     [navigate],
   );
   const [snapshot, setSnapshot] = useState<GanttSnapshot | undefined>(undefined);
@@ -143,11 +155,24 @@ export function BoardScreen() {
   const known = (key: string | undefined) =>
     key !== undefined &&
     lines.some((line) => line.header === key || line.cells.some((cell) => cell.key === key));
+  // Tab enters at the focused target while it is drawn, else at the selected order's first job
+  // order, else at the job order nearest now (design D3, Keyboard model).
+  const selectedEntry =
+    model === undefined || search.order === undefined
+      ? undefined
+      : [
+          ...model.notPlaced,
+          ...model.groups.flatMap((group) => group.machines.flatMap((machine) => machine.blocks)),
+        ]
+          .filter((row) => row.order.id === search.order)
+          .map((row) => focusKeys.block(row.jobOrder.id))
+          .find((key) => known(key));
   const tabStop = known(focused)
     ? focused
-    : snapshot === undefined
-      ? undefined
-      : boardEntry(lines, snapshot.nowMs);
+    : (selectedEntry ?? (snapshot === undefined ? undefined : boardEntry(lines, snapshot.nowMs)));
+  const selectOrder = (orderId: string | undefined) => {
+    if (orderId !== search.order) void setSearch(withOrder(search, orderId), 'push');
+  };
 
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
@@ -178,6 +203,12 @@ export function BoardScreen() {
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const key = (event.target as HTMLElement).getAttribute('data-board-focus');
     if (key === null) return;
+    // The Escape stack (plan 07): the selection is the last layer the grid ends.
+    if (event.key === 'Escape' && search.order !== undefined) {
+      event.preventDefault();
+      selectOrder(undefined);
+      return;
+    }
     const next = boardFocusAfter(lines, key, event.key);
     if (next === undefined) return;
     event.preventDefault();
@@ -249,6 +280,8 @@ export function BoardScreen() {
                 })
               }
               tabStop={tabStop}
+              selectedOrderId={search.order}
+              onSelectOrder={selectOrder}
               onFocusTarget={setFocused}
               onKeyDown={onKeyDown}
               gridRef={measureRef}

@@ -36,7 +36,8 @@ const markerClasses = {
  * the machine, the times and the state words, so the article keeps its own language. Each state
  * shows as an icon at the trailing edge, one border marker and, for a conflict, a striped edge, in
  * the block's text color; the fill never carries a state. Under 66 px it draws no text and no
- * icon; the name keeps every word. The block holds no interactive element.
+ * icon; the name keeps every word. The block holds no interactive element. The job orders of
+ * the selected order carry aria-selected and the 3 px bar on top, apart from the focus ring.
  */
 export function BoardBlock({
   row,
@@ -44,7 +45,9 @@ export function BoardBlock({
   snapshot,
   machine,
   focusable,
+  selected,
   onFocus,
+  onSelect,
 }: {
   readonly row: JobOrderRow;
   readonly scale: TimeScale;
@@ -52,7 +55,11 @@ export function BoardBlock({
   readonly machine: string;
   /** Whether the block holds the grid's one Tab stop. */
   readonly focusable: boolean;
+  /** Whether the block's order is the selected one, which draws the 3 px bar on top. */
+  readonly selected: boolean;
   readonly onFocus: (event: FocusEvent<HTMLDivElement>) => void;
+  /** A click selects the block's order. */
+  readonly onSelect: () => void;
 }) {
   const { jobOrder, order } = row;
   const placement = jobOrder.placement;
@@ -82,11 +89,20 @@ export function BoardBlock({
       data-job-order={jobOrder.displayNumber}
       data-board-focus={jobOrder.id}
       data-states={states.map((state) => state.kind).join(' ') || undefined}
+      aria-selected={selected}
       aria-labelledby={`${id}-number ${id}-article ${id}-facts`}
       onFocus={onFocus}
+      onClick={onSelect}
       className="absolute top-1 h-11 overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-black focus-visible:z-10"
       style={{ left: `${left}px`, width: `${width}px`, background: `var(--${order.color})` }}
     >
+      {selected && (
+        <span
+          aria-hidden
+          data-selection-bar
+          className="pointer-events-none absolute inset-x-0 top-0 h-0.75 bg-foreground"
+        />
+      )}
       {marker !== undefined && (
         <span
           aria-hidden

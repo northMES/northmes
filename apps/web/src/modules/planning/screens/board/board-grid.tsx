@@ -37,6 +37,9 @@ export interface BoardGridProps {
   readonly onToggleGroup: (code: string) => void;
   /** The target that holds the grid's one Tab stop. */
   readonly tabStop: string | undefined;
+  /** The selected order, by id, whose job orders carry aria-selected. */
+  readonly selectedOrderId: string | undefined;
+  readonly onSelectOrder: (orderId: string) => void;
   readonly onFocusTarget: (key: string) => void;
   readonly onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   readonly gridRef: (node: HTMLDivElement | null) => void;
@@ -94,6 +97,8 @@ export function BoardGrid({
   collapsed,
   onToggleGroup,
   tabStop,
+  selectedOrderId,
+  onSelectOrder,
   onFocusTarget,
   onKeyDown,
   gridRef,
@@ -192,7 +197,9 @@ export function BoardGrid({
                   snapshot={snapshot}
                   machine={machineName(code)}
                   focusable={tabStop === focusKeys.block(row.jobOrder.id)}
+                  selected={row.order.id === selectedOrderId}
                   onFocus={() => onFocusTarget(focusKeys.block(row.jobOrder.id))}
+                  onSelect={() => onSelectOrder(row.order.id)}
                 />
               ))
             )}
@@ -275,7 +282,9 @@ export function BoardGrid({
                 tabIndex={tab(focusKeys.block(row.jobOrder.id))}
                 data-board-focus={focusKeys.block(row.jobOrder.id)}
                 data-job-order={row.jobOrder.displayNumber}
+                aria-selected={row.order.id === selectedOrderId}
                 onFocus={() => onFocusTarget(focusKeys.block(row.jobOrder.id))}
+                onClick={() => onSelectOrder(row.order.id)}
                 className="flex h-7 items-center gap-1.5 rounded-sm border border-foreground bg-card px-2 text-xs"
               >
                 <span className="font-mono font-bold">{row.jobOrder.displayNumber}</span>
