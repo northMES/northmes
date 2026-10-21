@@ -201,13 +201,13 @@ export function ToolsScreen() {
   const facets = <Value extends string>(
     key: 'scope' | 'source',
     values: readonly Value[],
-    valueOf: (tool: Tool) => Value,
+    fieldOf: (tool: Tool) => Value,
     labelOf: (value: Value) => string,
   ) =>
     values.map((value) => ({
       value,
       label: labelOf(value),
-      count: allRows.filter((tool) => matches(tool, view, key) && valueOf(tool) === value).length,
+      count: allRows.filter((tool) => matches(tool, view, key) && fieldOf(tool) === value).length,
     }));
   const scopeLabel = (value: ToolScope) =>
     value === 'company' ? (snapshot?.companyName ?? 'The company') : plantName;
