@@ -125,6 +125,7 @@ function Row({
   columns,
   className,
   top,
+  machine,
   children,
 }: {
   readonly index: number;
@@ -133,12 +134,15 @@ function Row({
   readonly className?: string;
   /** The offset in rem at which a sticky row sticks. */
   readonly top?: number;
+  /** The machine of a machine row, which a pointer drag reads to find its target. */
+  readonly machine?: string;
   readonly children: ReactNode;
 }) {
   return (
     <div
       role="row"
       aria-rowindex={index}
+      data-machine={machine}
       className={cn('grid border-b border-border', className)}
       style={{
         gridTemplateColumns: columns,
@@ -236,7 +240,13 @@ export function BoardGrid({
       const code = machine.equipment.code;
       const cells = cellsOf(code);
       bodyRows.push(
-        <Row key={code} index={rowIndex} heightRem={boardRowRem.machine} columns={columns}>
+        <Row
+          key={code}
+          index={rowIndex}
+          heightRem={boardRowRem.machine}
+          columns={columns}
+          machine={code}
+        >
           <div
             role="rowheader"
             tabIndex={tab(focusKeys.header(code))}

@@ -3,13 +3,27 @@
 import { formatPlantTime, formatSpan } from '@northmes/contracts/format';
 import { cn } from 'cn';
 import { Clock, ClockAlert, Lock, type LucideIcon, Pencil, Play, UserPen } from 'lucide-react';
-import type { FocusEvent, KeyboardEvent } from 'react';
+import { type FocusEvent, type KeyboardEvent, type PointerEvent, useRef } from 'react';
+import { announce } from '../../../../ui/lib/announce.ts';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import { useGanttView } from '../gantt/gantt-context.ts';
 import { type JobOrderRow, quantityText } from '../gantt/gantt-rows.ts';
 import { type BoardBlockState, boardBlockStates, borderMarkerOf } from './board-block-states.ts';
 import { BoardHoverCard } from './board-hover-card.tsx';
+
+/** The pointer travel from which a press is a drag, not a click. */
+const dragThresholdPx = 3;
+
+/** The machine of the board row under a point of the viewport, by its row's data-machine. */
+function machineAt(clientX: number, clientY: number): string | undefined {
+  if (typeof document.elementsFromPoint !== 'function') return undefined;
+  for (const element of document.elementsFromPoint(clientX, clientY)) {
+    const code = element.closest<HTMLElement>('[data-machine]')?.dataset.machine;
+    if (code !== undefined) return code;
+  }
+  return undefined;
+}
 
 /** The widths from which a block shows its job number and its second line (D3, BO12). */
 export const blockDensity = { compact: 66, full: 120 } as const;
@@ -66,7 +80,14 @@ export function BoardBlock({
   /** A click, Enter or Space selects the block's order; M enters keyboard move mode. */
   readonly onSelect: () => void;
 }) {
-  const { draftRowIds, move } = useGanttView();
+  const { draftRowIds, move, scale, machineName: machineNameOf } = useGanttView();
+  // The press in progress: where it started, whether it has become a drag, and the machine under
+  // the pointer that the operation may not use, which refuses the drop.
+  const press = useRef<
+    { clientX: number; setupStartMs: number; dragging: boolean; refusedOn?: string } | undefined
+  >(undefined);
+  // The click the browser fires after a drop is not a selection.
+  const dropped = useRef(false);
   const { jobOrder, order } = row;
   const placement = jobOrder.placement;
   if (placement === undefined) return null;
@@ -85,7 +106,10 @@ export function BoardBlock({
         ArrowUp: () => move.stepMachine(-1),
         ArrowDown: () => move.stepMachine(1),
         Enter: () => move.commit(),
-        Escape: () => move.cancel(),
+        Escape: () => {
+          press.current = undefined;
+          move.cancel();
+        },
       }[event.key];
       if (step === undefined) return;
       event.preventDefault();
@@ -109,6 +133,59 @@ export function BoardBlock({
     const icon = stateIcons[state.kind];
     return icon === undefined ? [] : [{ kind: state.kind, icon }];
   });
+  // A pointer drag (plan 07, Moving without dragging; design D3, IN4): past 3 px the press becomes
+  // a move, the preview follows the snapped drop on the machine under the pointer, and pointer up
+  // commits it; over a machine the operation may not use the preview stays where it was and the
+  // drop is refused.
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || move === undefined) return;
+    press.current = {
+      clientX: event.clientX,
+      setupStartMs: placement.setupStartMs,
+      dragging: false,
+    };
+  };
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const current = press.current;
+    if (current === undefined || move === undefined) return;
+    const dx = event.clientX - current.clientX;
+    if (!current.dragging) {
+      if (Math.abs(dx) < dragThresholdPx) return;
+      if (!move.begin(jobOrder.id, 'pointer')) {
+        press.current = undefined;
+        return;
+      }
+      current.dragging = true;
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        // A test browser without pointer capture still delivers the events to the block.
+      }
+    }
+    const target = machineAt(event.clientX, event.clientY);
+    const allowed = target === undefined || row.operation.allowedEquipment.includes(target);
+    current.refusedOn = allowed ? undefined : target;
+    move.previewAt(
+      scale.snap(scale.instant(scale.x(current.setupStartMs) + dx)),
+      allowed ? target : undefined,
+    );
+  };
+  const endPress = (commit: boolean) => {
+    const current = press.current;
+    press.current = undefined;
+    if (current?.dragging !== true || move === undefined) return;
+    dropped.current = true;
+    if (!commit) {
+      move.cancel();
+    } else if (current.refusedOn !== undefined) {
+      move.cancel();
+      announce(
+        `Cannot move ${jobOrder.displayNumber}: not allowed on ${machineNameOf(current.refusedOn)}.`,
+      );
+    } else {
+      move.commit();
+    }
+  };
   const id = `board-block-${jobOrder.id}`;
   const facts = [
     quantityText(jobOrder.quantity),
@@ -130,10 +207,22 @@ export function BoardBlock({
             aria-selected={selected}
             aria-labelledby={`${id}-number ${id}-article ${id}-facts`}
             onFocus={onFocus}
-            onClick={onSelect}
+            onClick={(event) => {
+              // The click after a drop is not a selection.
+              if (dropped.current) {
+                dropped.current = false;
+                event.stopPropagation();
+                return;
+              }
+              onSelect();
+            }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={() => endPress(true)}
+            onPointerCancel={() => endPress(false)}
             onKeyDown={onKeyDown}
             className={cn(
-              'absolute top-1 h-11 overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-black focus-visible:z-10',
+              'absolute top-1 h-11 touch-none overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-black focus-visible:z-10',
               moving && 'opacity-60',
             )}
             style={{ left: `${left}px`, width: `${width}px`, background: `var(--${order.color})` }}
