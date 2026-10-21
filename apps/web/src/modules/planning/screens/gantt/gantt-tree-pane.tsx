@@ -403,13 +403,13 @@ export function GanttRowHeader({
   readonly expanded: boolean;
   readonly onToggle: () => void;
 }) {
-  const { timeZone, machineName, materialShortages } = useGanttView();
+  const { timeZone, machineName, materialShortages, materialShortOrderIds } = useGanttView();
   const original = row.original;
   const materialBadge = (
     <Badge
       key="material"
       variant="outline"
-      className="h-4.5 border-warning bg-warning-subtle px-1.5 text-foreground"
+      className="h-4.5 border-warning bg-warning-subtle px-1.5 text-warning"
     >
       <TriangleAlert aria-hidden />
       Material short
@@ -476,13 +476,7 @@ export function GanttRowHeader({
       );
     }
     // The order row carries the warning of its operations, so a collapsed tree still shows it.
-    if (
-      [...(materialShortages?.values() ?? [])].some(
-        (shortage) => shortage.jobOrder.orderId === original.order.id,
-      )
-    ) {
-      badges.push(materialBadge);
-    }
+    if (materialShortOrderIds?.has(original.order.id)) badges.push(materialBadge);
   } else if (original.kind === 'operation') {
     title = `${original.operation.displayNumber} ${original.operation.name}`;
     subtext = [

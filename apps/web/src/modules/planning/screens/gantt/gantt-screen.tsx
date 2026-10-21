@@ -44,7 +44,10 @@ import {
 } from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
 import { inventoryOf } from '../../inventory-of.ts';
-import { materialShortages as materialShortageList } from '../../material-projection.ts';
+import {
+  type MaterialShortage,
+  materialShortages as materialShortageList,
+} from '../../material-projection.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
   type ClosedWindow,
@@ -700,16 +703,16 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     () => (snapshot === undefined ? undefined : inventoryOf(snapshot)),
     [snapshot],
   );
-  const materialShortages = useMemo(
-    () =>
-      new Map(
-        (inventory === undefined ? [] : materialShortageList(inventory)).map((shortage) => [
-          shortage.jobOrder.displayNumber,
-          shortage,
-        ]),
-      ),
-    [inventory],
-  );
+  const { materialShortages, materialShortOrderIds } = useMemo(() => {
+    const byOperation = new Map<string, MaterialShortage[]>();
+    const orderIds = new Set<string>();
+    for (const shortage of inventory === undefined ? [] : materialShortageList(inventory)) {
+      const key = shortage.jobOrder.displayNumber;
+      byOperation.set(key, [...(byOperation.get(key) ?? []), shortage]);
+      orderIds.add(shortage.jobOrder.orderId);
+    }
+    return { materialShortages: byOperation, materialShortOrderIds: orderIds };
+  }, [inventory]);
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
     const equipment = new Map(snapshot.equipment.map((machine) => [machine.code, machine]));
@@ -732,6 +735,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         code === undefined ? 'no machine' : (equipment.get(code)?.name ?? code),
       draftRowIds: draftIds,
       materialShortages,
+      materialShortOrderIds,
       ...(inventory !== undefined && { inventory }),
       move: moveActions,
       runActions,
@@ -741,6 +745,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     snapshot,
     inventory,
     materialShortages,
+    materialShortOrderIds,
     scale,
     plantClosed,
     closedByCalendar,

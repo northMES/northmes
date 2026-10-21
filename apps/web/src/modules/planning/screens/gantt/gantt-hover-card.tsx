@@ -23,7 +23,7 @@ export function hoverFields(
   row: JobOrderRow,
   snapshot: GanttSnapshot,
   machineName: string,
-  material?: MaterialShortage,
+  material: readonly MaterialShortage[] = [],
 ): HoverField[] {
   const timeZone = snapshot.plant.timeZone;
   const { jobOrder, analysis } = row;
@@ -66,10 +66,10 @@ export function hoverFields(
     });
   }
   fields.push({ label: 'Status', value: statusLabel(jobOrder.status) });
-  if (material !== undefined) {
+  for (const shortage of material) {
     fields.push({
       label: 'Material short',
-      value: materialShortText(material, ' '),
+      value: materialShortText(shortage, ' '),
       warning: true,
     });
   }
@@ -96,7 +96,7 @@ export function GanttHoverCard({
   readonly row: JobOrderRow;
   readonly snapshot: GanttSnapshot;
   readonly machineName: string;
-  readonly material?: MaterialShortage;
+  readonly material?: readonly MaterialShortage[];
 }) {
   return (
     <div className="grid w-72 gap-1 text-data">
@@ -110,7 +110,7 @@ export function GanttHoverCard({
         {hoverFields(row, snapshot, machineName, material).map((field) =>
           field.warning ? (
             <div
-              key={field.label}
+              key={`${field.label}-${field.value}`}
               className="col-span-2 grid grid-cols-subgrid rounded-sm bg-warning-subtle px-1 text-foreground"
             >
               <dt>{field.label}</dt>

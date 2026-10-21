@@ -55,10 +55,12 @@ export interface GanttViewContext {
   /** The name of a machine by code, its code when unknown. */
   readonly machineName: (code: string | undefined) => string;
   /**
-   * The operations short of material (plan 07, Material warnings), by display number, from the
-   * plan with the draft applied; none from a snapshot without stock.
+   * The shortages of each operation short of material (plan 07, Material warnings), by display
+   * number, from the plan with the draft applied; empty for a snapshot without stock.
    */
-  readonly materialShortages?: ReadonlyMap<string, MaterialShortage>;
+  readonly materialShortages?: ReadonlyMap<string, readonly MaterialShortage[]>;
+  /** The orders with an operation short of material, by id, for the badge of the order row. */
+  readonly materialShortOrderIds?: ReadonlySet<string>;
   /** The inventory those shortages come from, which the Material section of Details explains. */
   readonly inventory?: InventorySnapshot;
   /** The rows the planner's draft moved, drawn in the draft style. */

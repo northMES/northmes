@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { planningLinks } from '@northmes/planning-contracts';
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
@@ -63,7 +63,7 @@ describe('the material warning on the order Gantt (plan 07, Material warnings; d
 
     await userEvent.click(blockOf(gantt, 'jo-1004-10'));
     const panel = await findDetails();
-    const material = within(panel).getByRole('region', { name: 'Material' });
+    const material = within(panel).getByRole('region', { name: 'Material: Round bar 36 C45' });
 
     expect(material.textContent).toContain(
       'Round bar 36 C45 30-2011 is 26 m short at the setup start, Thu 5 Nov 06:00.',
@@ -91,7 +91,7 @@ describe('the material warning on the order Gantt (plan 07, Material warnings; d
 
     await userEvent.click(blockOf(gantt, 'jo-1003-10'));
     const panel = await findDetails();
-    expect(within(panel).queryByRole('region', { name: 'Material' })).toBeNull();
+    expect(within(panel).queryByRole('region', { name: /^Material/ })).toBeNull();
   });
 
   it('#729 draws no warning from a snapshot without stock, as a server source without it answers', async () => {
@@ -100,5 +100,69 @@ describe('the material warning on the order Gantt (plan 07, Material warnings; d
     const gantt = await findGantt();
 
     expect(blockOf(gantt, 'jo-1004-10').querySelector('[data-material-cue]')).toBeNull();
+    expect(within(gantt).queryByText('Material short')).toBeNull();
+  });
+
+  it('#729 MW1 names every material an operation is short of, one Material section each', async () => {
+    const snapshot = g1Snapshot();
+    const stock = snapshot.stock;
+    if (stock === undefined) throw new Error('G1 carries stock');
+    const twoMaterials = {
+      ...snapshot,
+      stock: {
+        ...stock,
+        operationMaterials: [
+          ...stock.operationMaterials,
+          {
+            article: 'Hub 12',
+            sequence: 10,
+            material: '30-2030',
+            perPiece: 0.1,
+            warehouse: 'A-RM',
+          },
+        ],
+      },
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(twoMaterials));
+    const gantt = await findGantt();
+
+    expect(blockOf(gantt, 'jo-1004-10').getAttribute('aria-label')).toMatch(
+      /material short: Round bar 36 C45, 26 m short at setup start, material short: Steel tube 52x6, 50 m short at setup start$/,
+    );
+    await userEvent.click(blockOf(gantt, 'jo-1004-10'));
+    const panel = await findDetails();
+    expect(within(panel).getAllByRole('region', { name: /^Material: / })).toHaveLength(2);
+  });
+
+  it('#729 MW1 says the setup start has passed when the consumption counts at now', async () => {
+    const later = { ...g1Snapshot(), nowMs: Date.parse('2026-11-05T07:00:00Z') };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(later));
+    const gantt = await findGantt();
+
+    expect(blockOf(gantt, 'jo-1004-10').getAttribute('aria-label')).toMatch(
+      /material short: Round bar 36 C45, 26 m short now, its setup start has passed$/,
+    );
+  });
+
+  it('#729 MW1 clears the warning when a draft move takes 1004.10 past the incoming purchase', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    await userEvent.click(blockOf(gantt, 'jo-1004-10'));
+    const panel = await findDetails();
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Move' }));
+    const controls = within(panel).getByRole('group', { name: 'Move 1004.10' });
+    // Later until the move starts on Monday, after purchase order 7740 arrives.
+    const startsMonday = () => /CNC \d, Mon 9 Nov/.test(controls.textContent ?? '');
+    for (let step = 0; step < 8 && !startsMonday(); step += 1) {
+      await userEvent.click(within(controls).getByRole('button', { name: 'Later' }));
+    }
+    expect(startsMonday()).toBe(true);
+    await userEvent.click(within(controls).getByRole('button', { name: 'Apply' }));
+
+    await waitFor(() =>
+      expect(blockOf(gantt, 'jo-1004-10').querySelector('[data-material-cue]')).toBeNull(),
+    );
+    expect(within(gantt).queryByText('Material short')).toBeNull();
   });
 });

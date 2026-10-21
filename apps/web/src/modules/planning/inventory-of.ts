@@ -28,11 +28,15 @@ function derivedMovements(plan: GanttSnapshot, stock: GanttStock): PlannedMoveme
   const customers = new Map((plan.customers ?? []).map((each) => [each.code, each.name]));
   const machineName = (code: string) =>
     plan.equipment.find((machine) => machine.code === code)?.name ?? code;
+  const materialsOf = new Map<string, GanttStock['operationMaterials'][number][]>();
+  for (const material of stock.operationMaterials) {
+    materialsOf.set(material.article, [...(materialsOf.get(material.article) ?? []), material]);
+  }
+  const orderById = new Map(plan.productionOrders.map((order) => [order.id, order]));
   const movements: PlannedMovement[] = [];
   for (const order of plan.productionOrders) {
     const deadline = startOfDay(order.deadlineDate, timeZone);
-    for (const material of stock.operationMaterials) {
-      if (material.article !== order.article) continue;
+    for (const material of materialsOf.get(order.article) ?? []) {
       const operation = order.operations.find((each) => each.sequence === material.sequence);
       if (operation === undefined) continue;
       const rows = order.jobOrders.filter((row) => row.operationId === operation.id);
@@ -87,7 +91,8 @@ function derivedMovements(plan: GanttSnapshot, stock: GanttStock): PlannedMoveme
   for (const line of plan.customerOrderLines ?? []) {
     const article = numberOf.get(line.article);
     if (article === undefined) continue;
-    const order = plan.productionOrders.find((each) => each.id === line.productionOrderId);
+    const order =
+      line.productionOrderId === undefined ? undefined : orderById.get(line.productionOrderId);
     movements.push({
       id: `demand-${line.customerOrder}-${line.line}`,
       kind: 'customerDemand',
@@ -118,6 +123,7 @@ function overdueAtNow(movement: PlannedMovement, nowMs: number, timeZone: string
   return {
     ...movement,
     atMs: nowMs,
+    dueMs: movement.atMs,
     dateOnly: false,
     dateFrom: 'Now, overdue',
     overdueSince: Temporal.Instant.fromEpochMilliseconds(movement.atMs)

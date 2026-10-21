@@ -257,19 +257,33 @@ function MaterialSection({
     row.operation.quantity === 0
       ? undefined
       : roundQuantity(shortage.need / row.operation.quantity);
+  const when = whenText(movement.atMs, movement.dateOnly, timeZone);
+  // Where the consumption is dated (plan 07): the setup start, now for one already past, or the
+  // order deadline for an operation not placed.
+  const whenPhrase =
+    movement.dateFrom === 'Now, overdue'
+      ? `now, ${when}: its setup start has passed`
+      : movement.dateFrom === 'Order deadline'
+        ? `at the order deadline, ${when}: the operation is not placed`
+        : `at the setup start, ${when}`;
+  // An operation split into several job orders consumes as one, at the first setup start.
+  const consumer =
+    row.order.jobOrders.filter((each) => each.operationId === row.operation.id).length > 1
+      ? `operation ${row.operation.displayNumber}'s`
+      : "this job order's";
   const uncounted = inventory.movements.filter(
     (each) => each.article === material.number && !each.counted,
   );
   return (
     <section
-      aria-label="Material"
+      aria-label={`Material: ${material.name}`}
       className="grid gap-1.5 rounded-md border border-warning bg-warning-subtle p-2.5 text-[0.8125rem] leading-[1.125rem]"
     >
       <h3 className="text-xs font-semibold">Material</h3>
       <p>
         <b className="font-semibold">{material.name}</b>{' '}
         <span className="font-mono">{material.number}</span>
-        {` is ${quantityWithUnit(shortage.shortfall, unit)} short at the setup start, ${whenText(movement.atMs, movement.dateOnly, timeZone)}.`}
+        {` is ${quantityWithUnit(shortage.shortfall, unit)} short ${whenPhrase}.`}
       </p>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
         <dt>Needs</dt>
@@ -289,7 +303,7 @@ function MaterialSection({
         </dd>
       </dl>
       <p>
-        {`Caused by this job order's consumption of ${quantityWithUnit(shortage.need, unit)}, which takes ${plantName}'s projected balance from ${quantityWithUnit(shortage.before, unit)} to ${quantityWithUnit(shortage.after, unit)}.`}
+        {`Caused by ${consumer} consumption of ${quantityWithUnit(shortage.need, unit)}, which takes ${plantName}'s projected balance from ${quantityWithUnit(shortage.before, unit)} to ${quantityWithUnit(shortage.after, unit)}.`}
         {shortage.previous !== undefined &&
           ` Before it, ${movementText(shortage.previous, unit, timeZone)}.`}
       </p>
@@ -332,7 +346,7 @@ function JobOrderDetails({
   const { snapshot, timeZone, machineName, chainRowIds, materialShortages, inventory } =
     useGanttView();
   const { jobOrder, operation, order, analysis } = row;
-  const shortage = materialShortages?.get(operation.displayNumber);
+  const shortages = materialShortages?.get(operation.displayNumber) ?? [];
   const durations = durationsOf(row, snapshot);
   const float = analysis?.float;
   const release = releaseText(row, timeZone, snapshot.settings.retoolOverlapsLeadTime);
@@ -423,9 +437,15 @@ function JobOrderDetails({
       <p id="gantt-detail-reason" className="sr-only">
         {phase1Reason}
       </p>
-      {shortage !== undefined && inventory !== undefined && (
-        <MaterialSection row={row} shortage={shortage} inventory={inventory} />
-      )}
+      {inventory !== undefined &&
+        shortages.map((shortage) => (
+          <MaterialSection
+            key={shortage.material.number}
+            row={row}
+            shortage={shortage}
+            inventory={inventory}
+          />
+        ))}
       {analysis !== undefined && <ConstraintList lines={analysis.constraints} />}
       <Section title="Float">
         <ul className="grid gap-1 text-[0.8125rem] leading-[1.125rem]">

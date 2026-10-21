@@ -181,6 +181,12 @@ describe('the material warning of a draft (plan 07, Material warnings)', () => {
     );
     const inventory = inventoryOf(applyDraft(committed, draft));
 
-    expect(inventory === undefined ? [] : materialShortages(inventory)).toEqual([]);
+    expect(inventory).toBeDefined();
+    if (inventory === undefined) return;
+    const consumption = projectionOf(inventory, '30-2011').steps.find(
+      (step) => step.movement.reference === '1004.10',
+    )?.movement;
+    expect(consumption?.atMs).toBe(Date.parse('2026-11-10T05:00:00Z'));
+    expect(materialShortages(inventory)).toEqual([]);
   });
 });
