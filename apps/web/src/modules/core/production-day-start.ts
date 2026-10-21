@@ -58,3 +58,36 @@ export function productionDayStartClash(
     ...(skipped !== undefined && { skipped }),
   };
 }
+
+/** A production day that is not 24 hours long, because the clocks change in it. */
+export interface UnevenProductionDay {
+  /** The plant date the production day starts on. */
+  readonly date: string;
+  readonly hours: number;
+}
+
+/**
+ * The first production day from an instant on that lasts 23 or 25 hours, because the zone's
+ * clocks change during it (ADR 0025, CAL9): with a 06:00 start in Europe/Stockholm, the day of
+ * Sat 27 Mar 2027 lasts 23 h. Answers undefined for a zone without clock changes.
+ */
+export function nextUnevenProductionDay(
+  timeZone: string,
+  dayStart: string,
+  fromMs: number,
+): UnevenProductionDay | undefined {
+  const start = Temporal.PlainTime.from(dayStart);
+  const transition = Temporal.Instant.fromEpochMilliseconds(fromMs)
+    .toZonedDateTimeISO(timeZone)
+    .getTimeZoneTransition('next');
+  if (transition === null) return undefined;
+  // The production day that holds the change starts on the change's date, or on the day before
+  // when the change comes before the day start.
+  let date = transition.toPlainDate();
+  if (Temporal.PlainTime.compare(transition.toPlainTime(), start) < 0) {
+    date = date.subtract({ days: 1 });
+  }
+  const begins = date.toPlainDateTime(start).toZonedDateTime(timeZone);
+  const ends = date.add({ days: 1 }).toPlainDateTime(start).toZonedDateTime(timeZone);
+  return { date: date.toString(), hours: begins.until(ends, { largestUnit: 'hours' }).hours };
+}

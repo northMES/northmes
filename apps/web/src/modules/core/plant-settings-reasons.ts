@@ -10,3 +10,7 @@ export const machineSaveReason =
 /** Why New machine, New equipment group, Archive and the calendar actions are drawn but disabled. */
 export const plantSettingsActionReason =
   'Changes to machines, groups and calendars wait for the equipment API; these pages read the fixture G1.';
+
+/** Why Save plant is drawn but disabled on the plant page (design #767). */
+export const plantSaveReason =
+  'Saving waits for the plant API (core.updatePlant, #419); this page reads the fixture G1.';

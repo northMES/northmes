@@ -36,7 +36,10 @@ export function g1PlantSettingsSnapshot(
   );
   return {
     fixture: fixture.id,
-    plant: fixture.plant,
+    plant: {
+      ...fixture.plant,
+      name: pages.plants.find((each) => each.slug === fixture.plant.slug)?.name ?? fixture.plant.slug,
+    },
     nowMs: ms(fixture.now.instant),
     erp: { name: pages.erp.connectionName, importedAtMs: ms(pages.erp.importedAt.instant) },
     equipmentGroups: [...fixture.equipmentGroups, ...pages.equipmentGroups],
@@ -111,6 +114,8 @@ export const g1PlantSettingsSource: PlantSettingsSource = {
         throw new Error('The plant settings could not be loaded');
       case 'forbidden':
         throw new PlantSettingsForbidden() as Forbidden;
+      case 'noCalendar':
+        return { ...g1PlantSettingsSnapshot(), calendars: [] };
       default:
         return g1PlantSettingsSnapshot();
     }

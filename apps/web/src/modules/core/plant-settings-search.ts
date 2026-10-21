@@ -52,7 +52,10 @@ function commaList() {
     .catch(undefined);
 }
 
-const preview = z.enum(['loading', 'empty', 'error', 'forbidden']).optional().catch(undefined);
+const preview = z
+  .enum(['loading', 'empty', 'error', 'forbidden', 'noCalendar'])
+  .optional()
+  .catch(undefined);
 
 const machineListKeys = z.object({
   q: z
@@ -96,6 +99,9 @@ export function machinePageSearch(raw: Record<string, unknown>): MachinePageSear
   const parsed = preview.parse(raw.preview);
   return parsed === undefined ? {} : { preview: parsed };
 }
+
+/** The URL keys of the plant page (design #767): the page state the mock source answers with. */
+export const plantPageSearch = machinePageSearch;
 
 /** The URL keys of the calendars list and a calendar's page: the week and the preview. */
 export function calendarPageSearch(raw: Record<string, unknown>): CalendarPageSearch {

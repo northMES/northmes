@@ -24,6 +24,7 @@ export { NewRoleScreen } from './screens/new-role/index.ts';
 export { NewUserScreen } from './screens/new-user/index.ts';
 export { PeopleScreen } from './screens/people/index.ts';
 export { PeopleAddRoleScreen } from './screens/people-add-role/index.ts';
+export { PlantScreen } from './screens/plant/index.ts';
 export { PersonScreen } from './screens/person/index.ts';
 export { PersonAddRoleScreen } from './screens/person-add-role/index.ts';
 export { RoleScreen } from './screens/role/index.ts';
