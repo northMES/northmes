@@ -181,6 +181,22 @@ describe("a customer order's page (design #728, KO1 to KO3)", () => {
     ).toBeTruthy();
   });
 
+  it('#728 KO3 names the open plant in the supply step of a line that names no delivering plant', async () => {
+    const snapshot = g1Snapshot();
+    const unset = {
+      ...snapshot,
+      customerOrderLines: snapshot.customerOrderLines?.map(({ deliveringPlant, ...line }) =>
+        line.id === '40211-2' ? line : { ...line, deliveringPlant },
+      ),
+    };
+    renderPlanningAt(customerOrderHref('40211', { supply: '2' }), sourceOf(unset));
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Supply line 2 from a production order',
+    });
+
+    expect(within(dialog).getByText(/ at Plant A with quantity free:$/)).toBeTruthy();
+  });
+
   it('#728 KO1 says a customer order does not exist, with the way back to Customer orders', async () => {
     renderPlanningAt(customerOrderHref('99999'));
     await screen.findByRole('heading', {
