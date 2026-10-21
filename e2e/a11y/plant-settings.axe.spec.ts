@@ -153,7 +153,9 @@ test.describe('the plant settings pages', () => {
   }) => {
     const plantPage = coreLinks.plant({ plant }).href;
     await signIn(plantPage);
-    await expect(page.getByRole('heading', { level: 1, name: 'Plant A' })).toBeVisible();
+    // The h1 is the page, Plant; the plant's name and slug stand beside it (#767).
+    await expect(page.getByRole('heading', { level: 1, name: 'Plant' })).toBeVisible();
+    await expect(page.getByText('Plant A, plant-a')).toBeVisible();
     await expect(page.getByText('Showing fixture G1.')).toBeVisible();
     await checkA11y('the plant page');
 
