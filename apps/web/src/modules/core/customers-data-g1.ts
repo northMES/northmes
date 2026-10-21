@@ -27,12 +27,18 @@ export function g1CustomersSnapshot(
     const plan = context.orders.find((each) => each.id === g1OrderId(order.number));
     if (plan === undefined) continue;
     const float = floatOf(plan, context);
+    // The planned start falls back on the earliest placement, as planning's timelineLinks does.
+    const starts = plan.jobOrders.flatMap((row) =>
+      row.placement === undefined ? [] : [row.placement.setupStartMs],
+    );
+    const plannedStartMs =
+      float.plannedStartMs ?? (starts.length === 0 ? undefined : Math.min(...starts));
     supplies.set(order.number, {
       orderId: plan.id,
       number: order.number,
       status: order.status,
       deadlineMs: plan.deadlineMs,
-      ...(float.plannedStartMs !== undefined && { plannedStartMs: float.plannedStartMs }),
+      ...(plannedStartMs !== undefined && { plannedStartMs }),
       ...(float.plannedEndMs !== undefined && { plannedEndMs: float.plannedEndMs }),
       late: float.late,
       slackElapsedS: float.slackElapsedS,

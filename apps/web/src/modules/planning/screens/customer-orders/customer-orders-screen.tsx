@@ -16,7 +16,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
-import { CustomerLink, CustomerOrderLink } from '../../components/customer-link/index.ts';
+import { CustomerLink } from '../../components/customer-link/index.ts';
+import { CustomerOrderLink } from '../../components/customer-order-link/index.ts';
 import {
   type ListFilterField,
   OrderListToolbar,

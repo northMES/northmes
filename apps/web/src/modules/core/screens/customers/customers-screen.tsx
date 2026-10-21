@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { formatPlantDateTime, formatPlantDay } from '@northmes/contracts/format';
+import { formatPlantDateTime, formatPlantDay, pinnedLocale } from '@northmes/contracts/format';
 import { coreLinks } from '@northmes/core-contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import { useShell } from '@northmes/web-sdk';
@@ -150,8 +150,8 @@ const columnChoices = [
   { id: 'nextWanted', label: 'Next wanted' },
 ] as const;
 
-/** The sort key of a row under a column; a customer without lines sorts its wanted date last. */
-function sortKey(row: CustomerSummary, id: CustomerSortId): number | string {
+/** The sort key of a row under a column; none for a customer without lines under Next wanted. */
+function sortKey(row: CustomerSummary, id: CustomerSortId): number | string | undefined {
   switch (id) {
     case 'name':
       return row.customer.name;
@@ -166,11 +166,14 @@ function sortKey(row: CustomerSummary, id: CustomerSortId): number | string {
     case 'notSupplied':
       return row.notSupplied;
     case 'nextWanted':
-      return row.nextWanted ?? '9999-12-31';
+      return row.nextWanted;
   }
 }
 
-/** The rows sorted on a column, the name breaking ties. */
+/** Names and codes compare in the pinned locale (ADR 0061), so "de Wit" sorts among the D. */
+const collator = new Intl.Collator(pinnedLocale, { sensitivity: 'base' });
+
+/** The rows sorted on a column, a missing value last in either direction, the name breaking ties. */
 function sorted(
   rows: readonly CustomerSummary[],
   sort: { readonly id: CustomerSortId; readonly desc: boolean },
@@ -179,8 +182,18 @@ function sorted(
   return [...rows].sort((a, b) => {
     const left = sortKey(a, sort.id);
     const right = sortKey(b, sort.id);
-    if (left !== right) return (left < right ? -1 : 1) * direction;
-    return a.customer.name.localeCompare(b.customer.name);
+    if (left === undefined || right === undefined) {
+      if (left !== right) return left === undefined ? 1 : -1;
+    } else if (left !== right) {
+      const order =
+        typeof left === 'string' && typeof right === 'string'
+          ? collator.compare(left, right)
+          : left < right
+            ? -1
+            : 1;
+      if (order !== 0) return order * direction;
+    }
+    return collator.compare(a.customer.name, b.customer.name);
   });
 }
 

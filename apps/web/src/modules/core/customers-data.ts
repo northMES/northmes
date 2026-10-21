@@ -24,6 +24,7 @@ export interface CustomerLineSupply {
   readonly number: string;
   readonly status: 'planned' | 'released';
   readonly deadlineMs: number;
+  /** The planned start, else the earliest placement: where Open on Gantt puts the range. */
   readonly plannedStartMs?: number;
   readonly plannedEndMs?: number;
   /** Whether the order ends after its deadline at now (plan 18). */

@@ -13,11 +13,16 @@ export interface CustomerOrderPageSearch {
 
 /** The URL search of a customer order's page, for its route's validateSearch; a bad key falls back. */
 export function customerOrderPageSearch(raw: Record<string, unknown>): CustomerOrderPageSearch {
-  const supply = z.coerce
-    .number()
-    .int()
-    .positive()
-    .max(9999)
+  // An integer or a string of digits names a line; anything else, true or a list, falls back.
+  const supply = z
+    .union([
+      z.number().int(),
+      z
+        .string()
+        .regex(/^\d{1,4}$/)
+        .transform(Number),
+    ])
+    .pipe(z.number().positive().max(9999))
     .optional()
     .catch(undefined)
     .parse(raw.supply);

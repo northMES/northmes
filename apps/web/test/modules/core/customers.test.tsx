@@ -7,7 +7,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { CustomersSource } from '../../../src/modules/core/customers-data.ts';
 import { g1CustomersSnapshot } from '../../../src/modules/core/customers-data-g1.ts';
-import { plant, renderCoreAt } from './core-app.tsx';
+import { plant, renderCoreAt, spoken } from './core-app.tsx';
 
 afterEach(cleanup);
 
@@ -140,6 +140,66 @@ describe('the customers register (design #728, CU1 to CU5)', () => {
     expect(erp.textContent).toContain('4');
     await userEvent.click(erp);
     await waitFor(() => expect(router.state.location.search).toEqual({ source: 'erp' }));
+  });
+
+  it('#728 CU1 shows the Source filter as a chip and keeps a key that applies when another does not', async () => {
+    renderCoreAt(withSearch(customers, { source: 'erp', sort: 'bogus', q: 'svea' }), []);
+    const table = await screen.findByRole('table', { name: 'Customers' });
+
+    expect(bodyRows(table).map((row) => row[1])).toEqual(['K-1107']);
+    expect(screen.getByRole('button', { name: 'Remove the source filter' })).toBeTruthy();
+    expect(statusLine()).toMatch(/Sorted by name\.$/);
+  });
+
+  it('#728 CU1 sorts a customer without lines last under Next wanted, in either direction', async () => {
+    const snapshot = g1CustomersSnapshot();
+    const customersSource: CustomersSource = {
+      load: async () => ({
+        ...snapshot,
+        customers: [
+          ...snapshot.customers,
+          { code: 'K-1500', name: 'Ödmark Svets AB', owner: 'erp' },
+        ],
+      }),
+    };
+    renderCoreAt(withSearch(customers, { sort: '-nextWanted' }), [], { customersSource });
+    const table = await screen.findByRole('table', { name: 'Customers' });
+    expect(
+      bodyRows(table)
+        .map((row) => row[1])
+        .at(-1),
+    ).toBe('K-1500');
+
+    cleanup();
+    renderCoreAt(withSearch(customers, { sort: 'nextWanted' }), [], { customersSource });
+    const ascending = await screen.findByRole('table', { name: 'Customers' });
+    expect(
+      bodyRows(ascending)
+        .map((row) => row[1])
+        .at(-1),
+    ).toBe('K-1500');
+  });
+
+  it('#728 CU1 sorts names by the language, not by code units', async () => {
+    const snapshot = g1CustomersSnapshot();
+    const customersSource: CustomersSource = {
+      load: async () => ({
+        ...snapshot,
+        customers: [
+          ...snapshot.customers,
+          { code: 'K-1600', name: 'de Wit Metaal BV', owner: 'erp' },
+        ],
+      }),
+    };
+    renderCoreAt(customers, [], { customersSource });
+    const table = await screen.findByRole('table', { name: 'Customers' });
+    expect(bodyRows(table).map((row) => row[1])).toEqual([
+      'K-1318',
+      'K-1600',
+      'K-1042',
+      'K-1211',
+      'K-1107',
+    ]);
   });
 
   it('#728 CU1 sorts on a column in the URL, the name breaking ties', async () => {
@@ -277,7 +337,7 @@ describe("a customer's page (design #728, CC1 to CC6)", () => {
     );
     expect(bodyRows(table).map((row) => row[4])).toEqual(['Order 1003PlannedLate 15 h 15 min']);
     expect(statusLine()).toBe(
-      '1 of 1 line, late only. Order 1003 ends after its deadline, so line 1 of customer order 40208 is at risk.',
+      '1 of 1 line, late only. Order 1003 ends after its deadline, so line 1 of customer order 40208 is at risk. Sorted by wanted date.',
     );
   });
 
@@ -296,6 +356,52 @@ describe("a customer's page (design #728, CC1 to CC6)", () => {
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
     await waitFor(() => expect(router.state.location.search).toEqual({}));
     expect(bodyRows(table)).toHaveLength(3);
+  });
+
+  it('#728 CC4 names every late order with Late only, and announces the lines the filters keep', async () => {
+    const snapshot = g1CustomersSnapshot();
+    const late = snapshot.lines.find((line) => line.id === '40208-1');
+    const customersSource: CustomersSource = {
+      load: async () => ({
+        ...snapshot,
+        lines: snapshot.lines.map((line) =>
+          line.id === '40211-1' && late?.supply !== undefined
+            ? {
+                ...line,
+                customerCode: 'K-1318',
+                supply: { ...late.supply, number: '1007', orderId: 'po-1007' },
+              }
+            : line,
+        ),
+      }),
+    };
+    renderCoreAt(coreLinks.customers.customer({ plant, customerId: 'K-1318' }).href, [], {
+      customersSource,
+    });
+    await screen.findByRole('table', { name: 'Customer order lines of Bergmark Hydraulik AB' });
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Late only' }));
+    const status =
+      '2 of 2 lines, late only. Orders 1003 and 1007 end after their deadlines, so line 1 of customer order 40208 and line 1 of customer order 40211 are at risk. Sorted by wanted date.';
+    await waitFor(() => expect(statusLine()).toBe(status));
+    await waitFor(() => expect(spoken()).toBe(status));
+  });
+
+  it('#728 CC1 opens the History tab from the URL, and Back returns to General', async () => {
+    const router = renderCoreAt(hallberg, []);
+    await screen.findByRole('heading', { level: 1, name: 'Hallberg Verkstad AB' });
+
+    await userEvent.click(screen.getByRole('tab', { name: 'History' }));
+    await waitFor(() => expect(router.state.location.search).toEqual({ tab: 'history' }));
+    router.history.back();
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+    expect(screen.getByRole('tab', { name: 'General' }).getAttribute('aria-selected')).toBe('true');
+
+    cleanup();
+    renderCoreAt(withSearch(hallberg, { tab: 'history' }), []);
+    await screen.findByText(
+      "A customer's history waits for the customers API; this page reads the fixture G1.",
+    );
   });
 
   it('#728 CC5 shows the loading page, marked busy', async () => {

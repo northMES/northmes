@@ -4,8 +4,9 @@ import { planningLinks } from '@northmes/planning-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { saveReason } from '../../../src/modules/planning/mock-reasons.ts';
-import { plant, renderPlanningAt } from './gantt-fixtures.tsx';
+import { plant, renderPlanningAt, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -188,6 +189,72 @@ describe("a customer order's page (design #728, KO1 to KO3)", () => {
     });
     expect(screen.getByRole('link', { name: 'Back to Customer orders' }).getAttribute('href')).toBe(
       planningLinks.customerOrders({ plant }).href,
+    );
+  });
+
+  it('#728 KO3 says the line would be late when the picked order is late, whatever its deadline', async () => {
+    const snapshot = g1Snapshot();
+    const onTime = snapshot.analysis.orders['po-1004'];
+    const late = {
+      ...snapshot,
+      analysis: {
+        ...snapshot.analysis,
+        orders: {
+          ...snapshot.analysis.orders,
+          'po-1004': {
+            ...onTime,
+            late: true,
+            slackElapsedS: -3600,
+            plannedEndMs: Date.parse('2026-11-06T15:00:00Z'),
+          },
+        },
+      },
+    };
+    renderPlanningAt(customerOrderHref('40211', { supply: '2' }), sourceOf(late));
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Supply line 2 from a production order',
+    });
+
+    expect(within(dialog).getByRole('status').textContent).toBe(
+      'Order 1004 then supplies 250 pcs to this line and 950 pcs to stockOrder 1004 is late by 1 h: it ends Fri 6 Nov 16:00, after its deadline Fri 6 Nov 15:00, so the line is late too. Nothing moves on the plan. It is no longer a stock order.',
+    );
+  });
+
+  it('#728 KO1 opens the History tab from the URL, and Back returns to General', async () => {
+    const router = renderPlanningAt(customerOrderHref('40211'));
+    await screen.findByRole('heading', { level: 1, name: 'Customer order 40211' });
+
+    await userEvent.click(screen.getByRole('tab', { name: 'History' }));
+    await waitFor(() => expect(router.state.location.search).toEqual({ tab: 'history' }));
+    router.history.back();
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+
+    cleanup();
+    renderPlanningAt(customerOrderHref('40211', { tab: 'history' }));
+    await screen.findByText(
+      "A customer order's history waits for the planning server; this page reads the fixture G1.",
+    );
+  });
+
+  it('#728 KO3 drops a supply key that names a supplied line, and opens no step', async () => {
+    const router = renderPlanningAt(customerOrderHref('40211', { supply: '1' }));
+    await screen.findByRole('heading', { level: 1, name: 'Customer order 40211' });
+
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it("#728 KO3 gives focus back to the line's Supply from an order when the step closes", async () => {
+    renderPlanningAt(customerOrderHref('40211', { supply: '2' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Supply line 2 from a production order',
+    });
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'Supply from an order, line 2' }),
+      ),
     );
   });
 });

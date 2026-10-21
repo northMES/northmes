@@ -6,7 +6,7 @@ import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { ChartNoAxesGantt, Clock, Info } from 'lucide-react';
-import { Fragment, type ReactNode, useId } from 'react';
+import { Fragment, type ReactNode, useEffect, useId, useRef } from 'react';
 import { DetailTabs } from '../../../../ui/components/detail-tabs/index.ts';
 import { OwnerTag } from '../../../../ui/components/owner-tag/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
@@ -268,6 +268,7 @@ function LinesSection({
                     <span className="flex items-center justify-end gap-1">
                       {order === undefined ? (
                         <Button
+                          id={supplyButtonId(line.line)}
                           variant="outline"
                           className="h-8 px-2.5"
                           aria-label={`Supply from an order, line ${line.line}`}
@@ -329,6 +330,11 @@ function LinesSection({
   );
 }
 
+/** The id of a line's Supply from an order button, where focus returns when its step closes. */
+function supplyButtonId(line: number): string {
+  return `supply-line-${line}`;
+}
+
 /** Who changes which field of a customer order from the ERP, and why (KO1). */
 const ownership: readonly {
   readonly field: string;
@@ -348,7 +354,7 @@ const ownership: readonly {
   {
     field: 'Which production order supplies a line, and how much',
     who: 'planner',
-    why: "Demand is planning's record. Whether the ERP also sends it is open with the product owner.",
+    why: "Demand is planning's record: the planner decides which order supplies each line.",
   },
   {
     field: 'Delivering plant of a line',
@@ -364,7 +370,7 @@ function WhoChangesWhat() {
   return (
     <Section
       title="Who changes what"
-      lead="Release 1 has no command that creates a customer order in NorthMES; customer orders come from the ERP."
+      lead="Customer orders come from the ERP; NorthMES does not create them."
     >
       <Table>
         <TableCaption className="sr-only">
@@ -446,6 +452,19 @@ export function CustomerOrderScreen() {
     search.supply === undefined
       ? undefined
       : lines.find((line) => line.line === search.supply && line.productionOrderId === undefined);
+  // The line whose step was open last: the URL has lost it by the time the step closes.
+  const lastSupply = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (supplyLine !== undefined) lastSupply.current = supplyLine.line;
+  }, [supplyLine]);
+  // A supply key that names no line without an order does not apply, so it leaves the URL.
+  const staleSupply =
+    snapshot !== undefined && search.supply !== undefined && supplyLine === undefined;
+  useEffect(() => {
+    if (!staleSupply) return;
+    const { supply: _, ...rest } = search;
+    navigate({ to: '.', search: rest, replace: true });
+  }, [staleSupply, search, navigate]);
   const plantName =
     snapshot?.plants?.find((each) => each.slug === supplyLine?.deliveringPlant)?.name ??
     supplyLine?.deliveringPlant ??
@@ -481,7 +500,11 @@ export function CustomerOrderScreen() {
             label={`Customer order ${first.customerOrder}`}
             value={search.tab ?? 'general'}
             onValueChange={(tab) =>
-              show(tab === 'history' ? { ...search, tab: 'history' } : withoutTab(search))
+              // A tab is a step Back undoes, so it pushes (ADR 0062).
+              navigate({
+                to: '.',
+                search: tab === 'history' ? { ...search, tab: 'history' } : withoutTab(search),
+              })
             }
             tabs={[
               {
@@ -522,6 +545,11 @@ export function CustomerOrderScreen() {
             snapshot={snapshot}
             line={supplyLine}
             plantName={plantName}
+            returnFocus={() =>
+              lastSupply.current === undefined
+                ? null
+                : document.getElementById(supplyButtonId(lastSupply.current))
+            }
             onClose={() => show(withoutSupply())}
           />
         </>

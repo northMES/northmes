@@ -7,7 +7,7 @@ import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { ChartNoAxesGantt, Clock } from 'lucide-react';
-import { type ReactNode, useId, useMemo } from 'react';
+import { type ReactNode, useEffect, useId, useMemo, useRef } from 'react';
 import { Temporal } from 'temporal-polyfill';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { DetailTabs } from '../../../../ui/components/detail-tabs/index.ts';
@@ -15,6 +15,7 @@ import { OwnerTag } from '../../../../ui/components/owner-tag/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
+import { announce } from '../../../../ui/lib/announce.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
@@ -310,19 +311,31 @@ function lineMatches(line: CustomerLine, view: CustomerPageSearch): boolean {
   ].some((text) => text.toLowerCase().includes(needle));
 }
 
+/** "a", "a and b" or "a, b and c". */
+function listText(items: readonly string[]): string {
+  return items.length <= 1
+    ? (items[0] ?? '')
+    : `${items.slice(0, -1).join(', ')} and ${items.at(-1) ?? ''}`;
+}
+
 /** The status line of the lines: what the filters keep and, with Late only, why (CC1, CC4). */
 function linesStatus(
   all: readonly CustomerLine[],
   shown: readonly CustomerLine[],
   view: CustomerPageSearch,
 ): string {
+  const sorted = 'Sorted by wanted date.';
   if (view.late === 1) {
-    const first = shown[0];
+    const late = shown.filter((line) => line.supply !== undefined);
+    const orders = [...new Set(late.map((line) => line.supply?.number ?? ''))];
+    const lines = late.map((line) => `line ${line.line} of customer order ${line.customerOrder}`);
     const reason =
-      first?.supply === undefined
+      late.length === 0
         ? ''
-        : ` Order ${first.supply.number} ends after its deadline, so line ${first.line} of customer order ${first.customerOrder} is at risk.`;
-    return `${shown.length} of ${linesText(all.length)}, late only.${reason}`;
+        : orders.length === 1
+          ? ` Order ${orders[0]} ends after its deadline, so ${listText(lines)} ${lines.length === 1 ? 'is' : 'are'} at risk.`
+          : ` Orders ${listText(orders)} end after their deadlines, so ${listText(lines)} are at risk.`;
+    return `${shown.length} of ${linesText(all.length)}, late only.${reason} ${sorted}`;
   }
   const late = shown.filter(isLateLine).length;
   const notSupplied = shown.filter((line) => line.supply === undefined).length;
@@ -330,7 +343,7 @@ function linesStatus(
     shown.length === all.length
       ? linesText(all.length)
       : `${shown.length} of ${linesText(all.length)}`;
-  return `${lines}, ${late} late, ${notSupplied} not supplied. Sorted by wanted date.`;
+  return `${lines}, ${late} late, ${notSupplied} not supplied. ${sorted}`;
 }
 
 /** The Customer order lines section: the open lines, their filters and their supply (CC1, CC4). */
@@ -359,6 +372,13 @@ function LinesSection({
     [snapshot, customer.code],
   );
   const shown = all.filter((line) => lineMatches(line, view));
+  const status = linesStatus(all, shown, view);
+  // The filters change the rows without moving focus, so the new status is spoken (WCAG 4.1.3).
+  const announced = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (announced.current !== undefined && announced.current !== status) announce(status);
+    announced.current = status;
+  }, [status]);
   const columns = useMemo(() => columnsOf(snapshot, plant), [snapshot, plant]);
   const filtered = view.q !== undefined || view.late === 1 || view.unsupplied === 1;
   const withFlag = (key: 'late' | 'unsupplied', on: boolean) => {
@@ -419,7 +439,7 @@ function LinesSection({
         )}
       </div>
       <p className="text-xs text-muted-foreground" data-list-status>
-        {linesStatus(all, shown, view)}
+        {status}
       </p>
       <DataTable
         label={`Customer order lines of ${customer.name}`}
@@ -504,7 +524,13 @@ export function CustomerScreen() {
             label={`Customer ${customer.code}`}
             value={view.tab ?? 'general'}
             onValueChange={(tab) =>
-              show(tab === 'history' ? { ...view, tab: 'history' } : withoutTab(view))
+              // A tab is a step Back undoes, so it pushes (ADR 0062).
+              navigate({
+                to: '.',
+                search: urlSearchOf(
+                  tab === 'history' ? { ...view, tab: 'history' } : withoutTab(view),
+                ),
+              })
             }
             tabs={[
               {

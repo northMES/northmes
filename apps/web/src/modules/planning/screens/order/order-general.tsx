@@ -17,7 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/primitives/table.tsx';
-import { CustomerLink, CustomerOrderLink } from '../../components/customer-link/index.ts';
+import { CustomerLink } from '../../components/customer-link/index.ts';
+import { CustomerOrderLink } from '../../components/customer-order-link/index.ts';
 import type { GanttOrder, GanttSnapshot, OrderAnalysis } from '../../gantt-data.ts';
 import { phase1Reason } from '../../mock-reasons.ts';
 import {

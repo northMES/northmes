@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { formatPlantDay } from '@northmes/contracts/format';
+import { formatDuration, formatPlantDay } from '@northmes/contracts/format';
 import { useId, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 import { TextField } from '../../../../ui/components/text-field/index.ts';
@@ -27,6 +27,8 @@ export interface CustomerOrderSupplyDialogProps {
   readonly line: CustomerOrderLine | undefined;
   /** The name of the plant that delivers the line. */
   readonly plantName: string;
+  /** The element that has focus once the step closes: the line's Supply from an order. */
+  readonly returnFocus: () => HTMLElement | null;
   readonly onClose: () => void;
 }
 
@@ -48,9 +50,18 @@ function Outcome({
   readonly quantity: number;
 }) {
   const { order } = candidate;
+  const analysis = snapshot.analysis.orders[order.id];
   const days = Temporal.PlainDate.from(order.deadlineDate).until(line.wantedDate).days;
   const deadline = plantTime(snapshot, order.deadlineMs);
   const rest = candidate.free - quantity;
+  // A line is late when the order that supplies it is late, the rule of every list (#728).
+  const consequence = analysis?.late
+    ? `Order ${order.number} is late by ${formatDuration(-analysis.slackElapsedS)}: it ends ${
+        analysis.plannedEndMs === undefined ? 'later' : plantTime(snapshot, analysis.plannedEndMs)
+      }, after its deadline ${deadline}, so the line is late too. Nothing moves on the plan.`
+    : days >= 0
+      ? `Its deadline stays ${deadline}, ${daysText(days)} before the wanted date, so nothing moves on the plan.`
+      : `Its deadline stays ${deadline}, ${daysText(-days)} after the wanted date. Nothing moves on the plan.`;
   return (
     <div role="status" className="grid gap-0.5 rounded-md border border-info bg-info-subtle p-3">
       <b className="font-medium">
@@ -58,9 +69,7 @@ function Outcome({
         {rest > 0 ? ` and ${quantityText(rest)} to stock` : ''}
       </b>
       <span>
-        {days >= 0
-          ? `Its deadline stays ${deadline}, ${daysText(days)} before the wanted date, so nothing moves on the plan.`
-          : `Its deadline stays ${deadline}, ${daysText(-days)} after the wanted date, so the line would be late. Nothing moves on the plan.`}
+        {consequence}
         {candidate.stock && ' It is no longer a stock order.'}
       </span>
     </div>
@@ -78,6 +87,7 @@ export function CustomerOrderSupplyDialog({
   snapshot,
   line,
   plantName,
+  returnFocus,
   onClose,
 }: CustomerOrderSupplyDialogProps) {
   return (
@@ -87,7 +97,11 @@ export function CustomerOrderSupplyDialog({
         if (!next) onClose();
       }}
     >
-      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-xl">
+      <DialogContent
+        className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-xl"
+        // Opened from the URL there is no trigger to return to, so focus goes to the line's button.
+        finalFocus={() => returnFocus() ?? true}
+      >
         {line !== undefined && (
           <SupplyStep snapshot={snapshot} line={line} plantName={plantName} onClose={onClose} />
         )}
@@ -107,7 +121,11 @@ function SupplyStep({
   readonly plantName: string;
   readonly onClose: () => void;
 }) {
-  const candidates = supplyCandidates(snapshot, line);
+  // The snapshot holds this plant's orders; a line another plant delivers has none here.
+  const candidates =
+    line.deliveringPlant === undefined || line.deliveringPlant === snapshot.plant.slug
+      ? supplyCandidates(snapshot, line)
+      : [];
   const legendId = useId();
   const [picked, setPicked] = useState(candidates[0]?.order.id);
   const [quantity, setQuantity] = useState(String(line.quantity));
