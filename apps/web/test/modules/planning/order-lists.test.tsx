@@ -73,7 +73,9 @@ describe('the production orders list (plan 07; design #687, PL1 to PL3)', () => 
     );
     expect(rowOf('data-order', '1004').textContent).toContain('Stock order');
     expect(rowOf('data-order', '1003').textContent).toContain('Late 15 h 15 min');
-    expect(screen.getByRole('button', { name: 'New order' }).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('link', { name: 'New production order' }).getAttribute('href')).toBe(
+      '/plant-a/planning/orders/new',
+    );
     expect(screen.getByText(createReason)).toBeTruthy();
 
     await userEvent.click(within(row1001).getByRole('button', { name: 'Actions for order 1001' }));
@@ -222,9 +224,11 @@ describe('the customer orders list (plan 07; design #687, CO1 and CO2)', () => {
     const none = rowOf('data-line', '40211-2');
     expect(none.textContent).toContain('Not supplied');
     expect(none.textContent).toContain('No production order yet');
-    expect(within(none).getByRole('button', { name: 'New order' }).hasAttribute('disabled')).toBe(
-      true,
-    );
+    expect(
+      within(none)
+        .getByRole('link', { name: 'New production order for customer order 40211 line 2' })
+        .getAttribute('href'),
+    ).toBe('/plant-a/planning/orders/new?line=40211-2');
   });
 
   it('CO1 Late only keeps the lines of late orders, and the Status filter offers Not supplied', async () => {
