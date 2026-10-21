@@ -40,7 +40,10 @@ import { BoardSkeleton } from './board-skeleton.tsx';
 /** The board opens at Week, as the Gantt and the job order table do (D5; D3 open question 1). */
 const defaultZoom = 'week';
 
-/** The machine column of D3: about 200 px, never more than 40 percent of the grid (plan 07). */
+/**
+ * The machine column: 200 px, never more than 40 percent of the grid (plan 07). D3 proposes fitting
+ * the longest name between 168 and 272 px.
+ */
 const machineColumnPx = 200;
 const machineColumnShare = 0.4;
 
@@ -210,7 +213,11 @@ export function BoardScreen() {
       snapshot,
       scale,
       closedWindows: plantClosed,
-      closedWindowsOf: () => plantClosed,
+      // A machine's own closed time, from its availability, as its row shades it.
+      closedWindowsOf: (code) =>
+        model?.groups
+          .flatMap((group) => group.machines)
+          .find((machine) => machine.equipment.code === code)?.closed ?? plantClosed,
       timeZone,
       zoneLabel: Intl.DateTimeFormat().resolvedOptions().timeZone !== timeZone,
       hideClosed: false,
@@ -220,17 +227,28 @@ export function BoardScreen() {
       machineName: (code) =>
         code === undefined ? 'no machine' : (equipment.get(code)?.name ?? code),
     };
-  }, [snapshot, scale, timeZone, range, search.order]);
+  }, [snapshot, scale, timeZone, range, search.order, model]);
 
+  // A target takes focus and scrolls into view past the sticky axes, which the scroll padding keeps
+  // clear (WCAG 2.4.11). A target in the sticky machine column or the pinned Not placed row is in
+  // view along that axis already, so the grid keeps its position there.
   const focusTarget = (key: string) => {
     setFocused(key);
-    const element = document.querySelector<HTMLElement>(`[data-board-focus="${key}"]`);
-    element?.focus({ preventScroll: true });
-    element?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    const element = document.querySelector<HTMLElement>(`[data-board-focus="${CSS.escape(key)}"]`);
+    if (element === null) return;
+    element.focus({ preventScroll: true });
+    const grid = element.closest<HTMLElement>('[role="grid"]');
+    const kept = { left: grid?.scrollLeft ?? 0, top: grid?.scrollTop ?? 0 };
+    element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (grid === null) return;
+    if (element.closest('[data-sticky-column]') !== null) grid.scrollLeft = kept.left;
+    if (element.closest('[data-pinned-row]') !== null) grid.scrollTop = kept.top;
   };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const key = (event.target as HTMLElement).getAttribute('data-board-focus');
     if (key === null) return;
+    // A key with a modifier belongs to the browser and to the commands of later stories.
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     // The Escape stack (plan 07): the selection is the last layer the grid ends.
     if (event.key === 'Escape' && search.order !== undefined) {
       event.preventDefault();
@@ -256,7 +274,9 @@ export function BoardScreen() {
       description:
         'The board needs the permission planning.jobOrder:read, and your role at this plant does not include it. Ask your plant admin for the Planner or Viewer role.',
     };
-  } else if (snapshot === undefined && loadError !== undefined) {
+  } else if (loadError !== undefined) {
+    // A failed load shows the error, also when the range before is still in memory: its rows
+    // would read as a range without job orders.
     state = {
       status: 'error',
       title: 'The board could not be loaded',
@@ -324,37 +344,41 @@ export function BoardScreen() {
         <p className="text-xs text-muted-foreground">Showing fixture {snapshot.fixture}.</p>
       )}
       {state.status === 'loading' && <BoardSkeleton name={gridName} machineWidth={machineWidth} />}
-      {view !== undefined && snapshot !== undefined && model !== undefined && !noMachines && (
-        <GanttViewProvider value={view}>
-          <div ref={fillRef} className="flex min-w-0 flex-col">
-            <BoardGrid
-              name={gridName}
-              snapshot={snapshot}
-              model={model}
-              cellsOf={(code) => cells.get(code) ?? []}
-              scale={scale}
-              machineWidth={machineWidth}
-              timeWidth={timeWidth}
-              collapsed={collapsed}
-              onToggleGroup={(code) =>
-                setCollapsed((current) => {
-                  const next = new Set(current);
-                  if (next.has(code)) next.delete(code);
-                  else next.add(code);
-                  return next;
-                })
-              }
-              tabStop={tabStop}
-              selectedOrderId={search.order}
-              onSelectOrder={selectOrder}
-              onFocusTarget={setFocused}
-              onKeyDown={onKeyDown}
-              gridRef={measureRef}
-              height={fillHeight}
-            />
-          </div>
-        </GanttViewProvider>
-      )}
+      {view !== undefined &&
+        snapshot !== undefined &&
+        model !== undefined &&
+        !noMachines &&
+        loadError === undefined && (
+          <GanttViewProvider value={view}>
+            <div ref={fillRef} className="flex min-w-0 flex-col">
+              <BoardGrid
+                name={gridName}
+                snapshot={snapshot}
+                model={model}
+                cellsOf={(code) => cells.get(code) ?? []}
+                scale={scale}
+                machineWidth={machineWidth}
+                timeWidth={timeWidth}
+                collapsed={collapsed}
+                onToggleGroup={(code) =>
+                  setCollapsed((current) => {
+                    const next = new Set(current);
+                    if (next.has(code)) next.delete(code);
+                    else next.add(code);
+                    return next;
+                  })
+                }
+                tabStop={tabStop}
+                selectedOrderId={search.order}
+                onSelectOrder={selectOrder}
+                onFocusTarget={setFocused}
+                onKeyDown={onKeyDown}
+                gridRef={measureRef}
+                height={fillHeight}
+              />
+            </div>
+          </GanttViewProvider>
+        )}
     </PageFrame>
   );
 }
