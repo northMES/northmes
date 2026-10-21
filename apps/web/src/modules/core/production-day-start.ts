@@ -45,7 +45,8 @@ export function productionDayStartClash(
       const earlier = local.toZonedDateTime(timeZone, { disambiguation: 'earlier' });
       const later = local.toZonedDateTime(timeZone, { disambiguation: 'later' });
       if (earlier.epochNanoseconds === later.epochNanoseconds) continue;
-      const exists = earlier.toPlainDateTime().equals(local) && later.toPlainDateTime().equals(local);
+      const exists =
+        earlier.toPlainDateTime().equals(local) && later.toPlainDateTime().equals(local);
       if (exists) repeated ??= date;
       else skipped ??= date;
     }

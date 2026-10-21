@@ -38,7 +38,8 @@ export function g1PlantSettingsSnapshot(
     fixture: fixture.id,
     plant: {
       ...fixture.plant,
-      name: pages.plants.find((each) => each.slug === fixture.plant.slug)?.name ?? fixture.plant.slug,
+      name:
+        pages.plants.find((each) => each.slug === fixture.plant.slug)?.name ?? fixture.plant.slug,
     },
     nowMs: ms(fixture.now.instant),
     erp: { name: pages.erp.connectionName, importedAtMs: ms(pages.erp.importedAt.instant) },

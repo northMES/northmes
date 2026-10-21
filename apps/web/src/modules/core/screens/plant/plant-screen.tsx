@@ -19,10 +19,7 @@ import { machineNamer } from '../../plant-settings-facts.ts';
 import { plantSaveReason } from '../../plant-settings-reasons.ts';
 import { plantPageSearch } from '../../plant-settings-search.ts';
 import { usePlantSettings } from '../../plant-settings-source-context.ts';
-import {
-  nextUnevenProductionDay,
-  productionDayStartClash,
-} from '../../production-day-start.ts';
+import { nextUnevenProductionDay, productionDayStartClash } from '../../production-day-start.ts';
 
 /** The tag of a field that is set once and cannot change on this page. */
 const fixed = 'Fixed';
@@ -157,9 +154,8 @@ function PlantForm({ snapshot }: { readonly snapshot: PlantSettingsSnapshot }) {
             <AlertDescription>
               Calendar {calendar.name} has a version from {dayWithYear(calendar.effectiveFrom)}.
               Calendar versions and the order times from the ERP are read in the plant's zone, so
-              the zone and the day start stay as they are once a calendar version exists (ADR
-              0066). Whether the day start may change later is open with the product owner (ADR
-              0025).
+              the zone and the day start stay as they are once a calendar version exists (ADR 0066).
+              Whether the day start may change later is open with the product owner (ADR 0025).
             </AlertDescription>
           </Alert>
         )}
