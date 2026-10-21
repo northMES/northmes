@@ -49,7 +49,7 @@ const markerClasses = {
  * One job order on its machine row (plan 07, Grid semantics and focus, Block states; design D3,
  * BO12): a gridcell from setup start to end in the order color, its accessible name built through
  * aria-labelledby from the visible job number and article and a hidden span with the quantity,
- * the machine, the times and the state words, so the article keeps its own language. Each state
+ * the machine, the times and the state words, so the article can carry its own language once the data names it. Each state
  * shows as an icon at the trailing edge, one border marker and, for a conflict, a striped edge, in
  * the block's text color; the fill never carries a state. Under 66 px it draws no text and no
  * icon; the name keeps every word. The block holds no interactive element. The job orders of

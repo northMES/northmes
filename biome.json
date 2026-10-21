@@ -50,7 +50,9 @@
   },
   "overrides": [
     {
-      "includes": ["apps/web/src/ui/primitives/**"],
+      "includes": [
+        "apps/web/src/ui/primitives/**"
+      ],
       "linter": {
         "rules": {
           "a11y": {
@@ -80,7 +82,9 @@
       }
     },
     {
-      "includes": ["apps/web/src/**/*.graphql.ts"],
+      "includes": [
+        "apps/web/src/**/*.graphql.ts"
+      ],
       "linter": {
         "rules": {
           "correctness": {
@@ -111,7 +115,9 @@
       }
     },
     {
-      "includes": ["modules/planning/domain/src/**"],
+      "includes": [
+        "modules/planning/domain/src/**"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -145,7 +151,9 @@
       }
     },
     {
-      "includes": ["apps/backend/src/modules/*/core/**"],
+      "includes": [
+        "apps/backend/src/modules/*/core/**"
+      ],
       "linter": {
         "rules": {
           "style": {
@@ -157,7 +165,9 @@
                 },
                 "patterns": [
                   {
-                    "group": ["@nestjs/graphql/**"],
+                    "group": [
+                      "@nestjs/graphql/**"
+                    ],
                     "message": "A module's core/ holds domain services and command handlers and does not depend on GraphQL; put GraphQL types and resolvers in its api/ (ADR 0070)."
                   }
                 ]
@@ -168,7 +178,9 @@
       }
     },
     {
-      "includes": ["apps/backend/src/modules/*/api/**"],
+      "includes": [
+        "apps/backend/src/modules/*/api/**"
+      ],
       "linter": {
         "rules": {
           "style": {
