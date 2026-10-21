@@ -341,4 +341,61 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(within(focused).getByText('1002.10 Housing P')).toBeTruthy();
     expect(within(focused).getByText('Locked')).toBeTruthy();
   });
+
+  it('IN27 merges job orders under 24 px wide into one cluster cell with its counts, and Enter opens its popover', async () => {
+    const user = userEvent.setup();
+    const g1 = g1Snapshot();
+    // 1002.10 moves onto CNC 1 right after 1003.10, so at 4 weeks the two lie within one 24 px target.
+    const snapshot = {
+      ...g1,
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) => {
+          if (row.displayNumber !== '1002.10' || row.placement === undefined) return row;
+          const setupStartMs = Date.UTC(2026, 10, 4, 11, 45);
+          const endMs = Date.UTC(2026, 10, 4, 15, 15);
+          return {
+            ...row,
+            equipment: 'CNC1',
+            placement: {
+              setupStartMs,
+              runStartMs: setupStartMs,
+              endMs,
+              segments: [{ fromMs: setupStartMs, toMs: endMs }],
+            },
+          };
+        }),
+      })),
+    };
+    renderGanttRoute({ zoom: '4weeks', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    const row = machineRow(board, 'CNC 1');
+    const cluster = within(row).getByRole('gridcell', {
+      name: named('2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 locked, 1 late'),
+    });
+
+    expect(within(row).getAllByRole('gridcell')).toHaveLength(4);
+    expect(cluster.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(Number.parseFloat(cluster.style.width)).toBeGreaterThanOrEqual(24);
+    // A narrow job order alone keeps its own cell, 24 px wide.
+    const lone = row.querySelector<HTMLElement>('[data-job-order="1005.10"]') as HTMLElement;
+    expect(Number.parseFloat(lone.style.width)).toBeGreaterThanOrEqual(24);
+
+    cluster.focus();
+    await user.keyboard('{Enter}');
+    const popover = await screen.findByRole('dialog', {
+      name: '2 jobs on CNC 1, Wed 4 Nov 08:00 to Wed 4 Nov 16:15',
+    });
+    expect(cluster.getAttribute('aria-expanded')).toBe('true');
+    const rows = within(popover).getAllByRole('button', { name: /^100/ });
+    expect(rows.map((button) => button.textContent)).toEqual([
+      '1003.10 Gear blank 32',
+      '1002.10 Housing P',
+    ]);
+    expect(document.activeElement).toBe(rows[0]);
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(cluster);
+  });
 });
