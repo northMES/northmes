@@ -89,4 +89,30 @@ describe('the pages fixture beside G1 (plan 18, the planning pages)', () => {
       }
     }
   });
+
+  it('puts each of its machines on no calendar, the calendar of G1 or a calendar of its own', () => {
+    const calendars = new Set([g1.calendar.name, ...g1Pages.calendars.map((each) => each.name)]);
+    for (const machine of g1Pages.equipment) {
+      expect(machine.calendar === null || calendars.has(machine.calendar), machine.code).toBe(true);
+    }
+  });
+
+  it("gives each shift of its calendars the working time of its span minus its breaks (#770)", () => {
+    const minutes = (clock: string) => {
+      const [hours = 0, rest = 0] = clock.split(':').map(Number);
+      return hours * 60 + rest;
+    };
+    /** The minutes from start to end, across midnight when the end is not later. */
+    const span = (start: string, end: string) =>
+      (minutes(end) - minutes(start) + 24 * 60) % (24 * 60) || 24 * 60;
+    for (const calendar of g1Pages.calendars) {
+      for (const shift of calendar.shifts) {
+        const breaks = shift.breaks.reduce((sum, each) => sum + span(each.start, each.end), 0);
+        expect(shift.workingSeconds, `${calendar.name} ${shift.name}`).toBe(
+          (span(shift.start, shift.end) - breaks) * 60,
+        );
+      }
+    }
+    expect(g1Pages.calendars.map((each) => each.name)).toEqual(['B3']);
+  });
 });
