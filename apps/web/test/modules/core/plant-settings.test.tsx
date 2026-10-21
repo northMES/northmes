@@ -346,6 +346,17 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
 });
 
 describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and CA2)', () => {
+  it("the calendars list's loading state draws the table's columns while the snapshot loads", async () => {
+    renderCoreAt(withSearch(coreLinks.calendars({ plant }).href, { preview: 'loading' }), []);
+    const table = await screen.findByRole('table', { name: 'Calendars' });
+    expect(table.getAttribute('aria-busy')).toBe('true');
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((header) => header.textContent),
+    ).toEqual(['Name', 'Machines', 'Shift', 'Working time per week']);
+  });
+
   it('MA8 the preview key opens the no-access state of the calendars list and of a calendar', async () => {
     renderCoreAt(withSearch(coreLinks.calendars({ plant }).href, { preview: 'forbidden' }), []);
     expect(
