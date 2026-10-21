@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { createContext, useContext } from 'react';
 import type { GanttSnapshot } from '../../gantt-data.ts';
+import type { InventorySnapshot } from '../../inventory-data.ts';
+import type { MaterialShortage } from '../../material-projection.ts';
 import type { ClosedWindow, TimeScale } from '../../timeline/time-scale.ts';
 import type { MovePreview, MoveState } from './gantt-move.ts';
 
@@ -52,6 +54,13 @@ export interface GanttViewContext {
   readonly chainRowIds: ReadonlySet<string>;
   /** The name of a machine by code, its code when unknown. */
   readonly machineName: (code: string | undefined) => string;
+  /**
+   * The operations short of material (plan 07, Material warnings), by display number, from the
+   * plan with the draft applied; none from a snapshot without stock.
+   */
+  readonly materialShortages?: ReadonlyMap<string, MaterialShortage>;
+  /** The inventory those shortages come from, which the Material section of Details explains. */
+  readonly inventory?: InventorySnapshot;
   /** The rows the planner's draft moved, drawn in the draft style. */
   readonly draftRowIds?: ReadonlySet<string>;
   readonly move?: GanttMoveActions;

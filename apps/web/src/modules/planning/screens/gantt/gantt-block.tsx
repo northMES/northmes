@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cn } from 'cn';
-import { Clock, Lock, Pencil } from 'lucide-react';
+import { Clock, Lock, Pencil, TriangleAlert } from 'lucide-react';
 import { type KeyboardEvent, type PointerEvent, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import { blockName, blockStates } from './gantt-block-states.ts';
@@ -40,7 +40,8 @@ export function GanttBlock({
   readonly onChain: boolean;
   readonly onSelect: () => void;
 }) {
-  const { scale, snapshot, machineName, timeZone, draftRowIds, move } = useGanttView();
+  const { scale, snapshot, machineName, timeZone, draftRowIds, move, materialShortages } =
+    useGanttView();
   const { jobOrder, operation, order } = row;
   // The press in progress: where it started, and whether it has become a drag.
   const press = useRef<{ clientX: number; setupStartMs: number; dragging: boolean } | undefined>(
@@ -54,8 +55,9 @@ export function GanttBlock({
   const width = Math.max(2, scale.x(placement.endMs) - left);
   const machine = machineName(jobOrder.equipment);
   const inDraft = draftRowIds?.has(jobOrder.id) === true;
-  const name = blockName(row, snapshot, machine, { onChain, inDraft });
-  const states = blockStates(row, snapshot, { onChain, inDraft });
+  const material = materialShortages?.get(operation.displayNumber);
+  const name = blockName(row, snapshot, machine, { onChain, inDraft, material });
+  const states = blockStates(row, snapshot, { onChain, inDraft, material });
   const locked = states.some((state) => state.kind === 'locked');
   const conflict = states.some((state) => state.kind === 'conflict');
   const late = states.some((state) => state.kind === 'late');
@@ -240,6 +242,14 @@ export function GanttBlock({
               }}
             />
           )}
+          {material !== undefined && (
+            // The material warning at the block's trailing edge (D3 block states), in every width.
+            <TriangleAlert
+              aria-hidden
+              data-material-cue
+              className="absolute end-0.5 top-0.5 z-[3] size-3.5 rounded-sm bg-warning-subtle text-warning"
+            />
+          )}
           {width >= density.compact && (
             <span className="relative z-[2] flex items-center gap-1 truncate font-mono font-bold">
               {locked && <Lock aria-hidden className="size-3.5 shrink-0" />}
@@ -263,7 +273,12 @@ export function GanttBlock({
           align="start"
           className="max-w-none px-3 py-2.5"
         >
-          <GanttHoverCard row={row} snapshot={snapshot} machineName={machine} />
+          <GanttHoverCard
+            row={row}
+            snapshot={snapshot}
+            machineName={machine}
+            {...(material !== undefined && { material })}
+          />
         </TooltipContent>
       </Tooltip>
       {/* The move preview: the snapped span as an outline in the draft style, with the tooltip

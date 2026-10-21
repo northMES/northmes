@@ -43,6 +43,8 @@ import {
   withZoom,
 } from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
+import { inventoryOf } from '../../inventory-of.ts';
+import { materialShortages as materialShortageList } from '../../material-projection.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
   type ClosedWindow,
@@ -692,6 +694,22 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     );
   };
 
+  // The material warnings of the plan with the draft applied, so a move recomputes them before
+  // Save (plan 07, Material warnings).
+  const inventory = useMemo(
+    () => (snapshot === undefined ? undefined : inventoryOf(snapshot)),
+    [snapshot],
+  );
+  const materialShortages = useMemo(
+    () =>
+      new Map(
+        (inventory === undefined ? [] : materialShortageList(inventory)).map((shortage) => [
+          shortage.jobOrder.displayNumber,
+          shortage,
+        ]),
+      ),
+    [inventory],
+  );
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
     const equipment = new Map(snapshot.equipment.map((machine) => [machine.code, machine]));
@@ -713,12 +731,16 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       machineName: (code) =>
         code === undefined ? 'no machine' : (equipment.get(code)?.name ?? code),
       draftRowIds: draftIds,
+      materialShortages,
+      ...(inventory !== undefined && { inventory }),
       move: moveActions,
       runActions,
       toggleChain,
     };
   }, [
     snapshot,
+    inventory,
+    materialShortages,
     scale,
     plantClosed,
     closedByCalendar,

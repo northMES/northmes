@@ -176,7 +176,11 @@ export function GanttRowView({
           {...(original.jobOrder.placement === undefined && {
             tabIndex: -1,
             'data-cell-focus': true,
-            'aria-label': blockName(original, snapshot, machineName(original.jobOrder.equipment)),
+            'aria-label': blockName(original, snapshot, machineName(original.jobOrder.equipment), {
+              ...(view.materialShortages?.has(original.operation.displayNumber) && {
+                material: view.materialShortages.get(original.operation.displayNumber),
+              }),
+            }),
           })}
         >
           <TimeCellShading windows={shading} scale={scale} />

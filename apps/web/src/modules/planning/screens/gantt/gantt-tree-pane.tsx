@@ -23,6 +23,7 @@ import {
   Layers,
   Link2,
   Lock,
+  TriangleAlert,
 } from 'lucide-react';
 import { type ReactNode, useMemo } from 'react';
 import type { ColumnChoice } from '../../../../ui/components/columns-menu/index.ts';
@@ -402,8 +403,18 @@ export function GanttRowHeader({
   readonly expanded: boolean;
   readonly onToggle: () => void;
 }) {
-  const { timeZone, machineName } = useGanttView();
+  const { timeZone, machineName, materialShortages } = useGanttView();
   const original = row.original;
+  const materialBadge = (
+    <Badge
+      key="material"
+      variant="outline"
+      className="h-4.5 border-warning bg-warning-subtle px-1.5 text-foreground"
+    >
+      <TriangleAlert aria-hidden />
+      Material short
+    </Badge>
+  );
   const canExpand = row.getCanExpand();
   const subject =
     original.kind === 'run'
@@ -464,6 +475,14 @@ export function GanttRowHeader({
         </Badge>,
       );
     }
+    // The order row carries the warning of its operations, so a collapsed tree still shows it.
+    if (
+      [...(materialShortages?.values() ?? [])].some(
+        (shortage) => shortage.jobOrder.orderId === original.order.id,
+      )
+    ) {
+      badges.push(materialBadge);
+    }
   } else if (original.kind === 'operation') {
     title = `${original.operation.displayNumber} ${original.operation.name}`;
     subtext = [
@@ -481,6 +500,7 @@ export function GanttRowHeader({
         </Badge>,
       );
     }
+    if (materialShortages?.has(original.operation.displayNumber)) badges.push(materialBadge);
   } else {
     title = machineName(original.jobOrder.equipment);
     subtext = `${quantityText(original.jobOrder.quantity)}, ${statusLabel(original.jobOrder.status)}`;

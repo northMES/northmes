@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatDuration, formatPlantDateTime, formatSpan } from '@northmes/contracts/format';
 import type { GanttSnapshot } from '../../gantt-data.ts';
+import type { MaterialShortage } from '../../material-projection.ts';
+import { quantityWithUnit } from '../../stock-facts.ts';
 import { workingMsBetween } from '../../timeline/availability-shading.ts';
 import {
   type JobOrderRow,
@@ -25,7 +27,7 @@ export function setupText(row: JobOrderRow, snapshot: GanttSnapshot): string {
 
 /** A state cue of a block (plan 07, Block states): its kind and the words the name carries. */
 export interface BlockState {
-  readonly kind: 'locked' | 'conflict' | 'late' | 'chain' | 'draft';
+  readonly kind: 'locked' | 'conflict' | 'late' | 'chain' | 'draft' | 'material';
   readonly text: string;
 }
 
@@ -65,7 +67,7 @@ export function startsBeforeRelease(row: JobOrderRow, retoolOverlapsLeadTime: bo
 export function blockStates(
   row: JobOrderRow,
   snapshot: GanttSnapshot,
-  options: { readonly onChain?: boolean; readonly inDraft?: boolean } = {},
+  options: BlockStateOptions = {},
 ): BlockState[] {
   const states: BlockState[] = [];
   if (row.operation.isLocked) states.push({ kind: 'locked', text: 'locked' });
@@ -95,7 +97,25 @@ export function blockStates(
   const orderAnalysis = snapshot.analysis.orders[row.order.id];
   if (orderAnalysis?.late) states.push({ kind: 'late', text: latenessText(orderAnalysis) });
   if (options.onChain) states.push({ kind: 'chain', text: 'on the critical chain' });
+  if (options.material !== undefined) {
+    states.push({
+      kind: 'material',
+      text: `material short: ${materialShortText(options.material)}`,
+    });
+  }
   return states;
+}
+
+/** "Round bar 36 C45, 26 m short at setup start": the material warning of a job order in words. */
+export function materialShortText(shortage: MaterialShortage, separator = ', '): string {
+  return `${shortage.material.name}${separator}${quantityWithUnit(shortage.shortfall, shortage.material.unit)} short at setup start`;
+}
+
+/** What a block's states read besides the row: the chain, the draft and the material warning. */
+export interface BlockStateOptions {
+  readonly onChain?: boolean;
+  readonly inDraft?: boolean;
+  readonly material?: MaterialShortage;
 }
 
 /** The working and the elapsed time of a placed row, each with its word (ADR 0061, plan 18). */
@@ -130,7 +150,7 @@ export function blockName(
   row: JobOrderRow,
   snapshot: GanttSnapshot,
   machineName: string,
-  options: { readonly onChain?: boolean; readonly inDraft?: boolean } = {},
+  options: BlockStateOptions = {},
 ): string {
   const { jobOrder, operation, order } = row;
   const timeZone = snapshot.plant.timeZone;

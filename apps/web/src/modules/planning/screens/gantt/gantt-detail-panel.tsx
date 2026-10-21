@@ -19,7 +19,10 @@ import {
 import { bindingSentence } from '../../gantt-analysis.ts';
 import type { ConstraintLine } from '../../gantt-data.ts';
 import { orderNumbersText } from '../../gantt-draft.ts';
+import type { InventorySnapshot, PlannedMovement } from '../../inventory-data.ts';
+import { type MaterialShortage, roundQuantity } from '../../material-projection.ts';
 import { phase1Reason, planReason } from '../../mock-reasons.ts';
+import { amountText, quantityWithUnit, signedQuantity, whenText } from '../../stock-facts.ts';
 import { durationsOf, releaseText } from './gantt-block-states.ts';
 import type { ChainView } from './gantt-chain.ts';
 import { useGanttView } from './gantt-context.ts';
@@ -222,6 +225,99 @@ function MoveControls({
   );
 }
 
+/** A movement before a shortage, in words: "1003.10 consumes 36 m on Wed 4 Nov 08:00". */
+function movementText(movement: PlannedMovement, unit: string, timeZone: string): string {
+  const when = whenText(movement.atMs, movement.dateOnly, timeZone);
+  return movement.kind === 'consumption'
+    ? `${movement.reference} consumes ${quantityWithUnit(-movement.quantity, unit)} on ${when}`
+    : `${movement.reference}, ${signedQuantity(movement.quantity, unit)}, on ${when}`;
+}
+
+/**
+ * The Material section of a job order short of material (plan 07; design #729, MW3): the article,
+ * what the job order needs, the projected balance before it, the shortfall and the warehouse, the
+ * movement that causes it and the one before, the next incoming movement and those not counted,
+ * and Show stock.
+ */
+function MaterialSection({
+  row,
+  shortage,
+  inventory,
+}: {
+  readonly row: JobOrderRow;
+  readonly shortage: MaterialShortage;
+  readonly inventory: InventorySnapshot;
+}) {
+  const { plant } = useShell();
+  const { material, movement } = shortage;
+  const unit = material.unit;
+  const timeZone = inventory.plant.timeZone;
+  const plantName = inventory.plant.name;
+  const perPiece =
+    row.operation.quantity === 0
+      ? undefined
+      : roundQuantity(shortage.need / row.operation.quantity);
+  const uncounted = inventory.movements.filter(
+    (each) => each.article === material.number && !each.counted,
+  );
+  return (
+    <section
+      aria-label="Material"
+      className="grid gap-1.5 rounded-md border border-warning bg-warning-subtle p-2.5 text-[0.8125rem] leading-[1.125rem]"
+    >
+      <h3 className="text-xs font-semibold">Material</h3>
+      <p>
+        <b className="font-semibold">{material.name}</b>{' '}
+        <span className="font-mono">{material.number}</span>
+        {` is ${quantityWithUnit(shortage.shortfall, unit)} short at the setup start, ${whenText(movement.atMs, movement.dateOnly, timeZone)}.`}
+      </p>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+        <dt>Needs</dt>
+        <dd className="font-mono">
+          {quantityWithUnit(shortage.need, unit)}
+          {perPiece !== undefined && ` (${amountText(perPiece)} ${unit} per piece)`}
+        </dd>
+        <dt>Projected then</dt>
+        <dd className="font-mono">
+          {quantityWithUnit(shortage.before, unit)} in {plantName}
+        </dd>
+        <dt>Shortfall</dt>
+        <dd className="font-mono">{quantityWithUnit(shortage.shortfall, unit)}</dd>
+        <dt>From</dt>
+        <dd>
+          <span className="font-mono">{shortage.warehouse.code}</span> {shortage.warehouse.name}
+        </dd>
+      </dl>
+      <p>
+        {`Caused by this job order's consumption of ${quantityWithUnit(shortage.need, unit)}, which takes ${plantName}'s projected balance from ${quantityWithUnit(shortage.before, unit)} to ${quantityWithUnit(shortage.after, unit)}.`}
+        {shortage.previous !== undefined &&
+          ` Before it, ${movementText(shortage.previous, unit, timeZone)}.`}
+      </p>
+      <p>
+        {shortage.nextIncoming === undefined
+          ? 'No incoming movement is planned before the end of the projection.'
+          : `Next incoming: ${shortage.nextIncoming.reference}, ${signedQuantity(shortage.nextIncoming.quantity, unit)}, ${whenText(shortage.nextIncoming.atMs, shortage.nextIncoming.dateOnly, timeZone)}.`}
+        {uncounted.map(
+          (each) =>
+            ` ${each.reference}, ${signedQuantity(each.quantity, unit)} on ${whenText(each.atMs, each.dateOnly, timeZone)}, is not counted (${plantName} setting).`,
+        )}
+      </p>
+      <p className="text-xs">
+        {`Stock from the ERP as of ${formatPlantDateTime(inventory.stockAsOfMs, timeZone)}. A move in your draft recomputes the warning before Save.`}
+      </p>
+      <Link
+        to={planningLinks.stock.article({ plant, articleId: material.number }).href}
+        className={cn(
+          buttonVariants({ variant: 'outline' }),
+          'h-7.5 justify-self-start px-2.5 text-[0.8125rem]',
+        )}
+      >
+        Show stock of {material.name}
+      </Link>
+    </section>
+  );
+}
+
 function JobOrderDetails({
   row,
   chain,
@@ -233,8 +329,10 @@ function JobOrderDetails({
   readonly onToggleChain: () => void;
   readonly onMoveApplied: (jobOrderId: string) => void;
 }) {
-  const { snapshot, timeZone, machineName, chainRowIds } = useGanttView();
+  const { snapshot, timeZone, machineName, chainRowIds, materialShortages, inventory } =
+    useGanttView();
   const { jobOrder, operation, order, analysis } = row;
+  const shortage = materialShortages?.get(operation.displayNumber);
   const durations = durationsOf(row, snapshot);
   const float = analysis?.float;
   const release = releaseText(row, timeZone, snapshot.settings.retoolOverlapsLeadTime);
@@ -325,6 +423,9 @@ function JobOrderDetails({
       <p id="gantt-detail-reason" className="sr-only">
         {phase1Reason}
       </p>
+      {shortage !== undefined && inventory !== undefined && (
+        <MaterialSection row={row} shortage={shortage} inventory={inventory} />
+      )}
       {analysis !== undefined && <ConstraintList lines={analysis.constraints} />}
       <Section title="Float">
         <ul className="grid gap-1 text-[0.8125rem] leading-[1.125rem]">

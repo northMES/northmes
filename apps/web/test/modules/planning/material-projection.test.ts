@@ -86,7 +86,7 @@ describe('the projected balance of an article (plan 07, Material warnings; desig
   });
 
   it('#729 ST1 names a neutral reason for a balance below zero from the start, and the next incoming movement', () => {
-    const negative = g1InventorySnapshot(g1Snapshot(), undefined, {
+    const negative = g1InventorySnapshot(g1Snapshot(), {
       ...g1Inventory,
       stock: g1Inventory.stock.map((row) =>
         row.article === '20-1004' && row.warehouse === 'A-FG' ? { ...row, quantity: -5 } : row,
@@ -157,7 +157,7 @@ describe('the dates of derived movements (plan 07, Material warnings)', () => {
   });
 
   it('#729 counts purchase requisitions when the plant setting says so', () => {
-    const counted = g1InventorySnapshot(plan, undefined, {
+    const counted = g1InventorySnapshot(plan, {
       ...g1Inventory,
       countPurchaseRequisitions: true,
     });
