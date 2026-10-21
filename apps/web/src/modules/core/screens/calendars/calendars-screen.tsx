@@ -24,11 +24,15 @@ import { calendarPageSearch } from '../../plant-settings-search.ts';
 import { usePlantSettings } from '../../plant-settings-source-context.ts';
 import { plantSettingsForbiddenState } from '../../plant-settings-states.ts';
 
+/**
+ * The list's columns. They need the snapshot only for the machines' names, so the loading state
+ * draws the same columns over its skeleton rows and names machines by their codes until then.
+ */
 function columnsOf(
-  snapshot: PlantSettingsSnapshot,
+  snapshot: PlantSettingsSnapshot | undefined,
   plant: string,
 ): readonly DataTableColumn<PlantCalendar>[] {
-  const machineName = machineNamer(snapshot);
+  const machineName = snapshot === undefined ? (code: string) => code : machineNamer(snapshot);
   return [
     {
       id: 'name',
@@ -73,10 +77,7 @@ export function CalendarsScreen() {
   const { plant } = useShell();
   const search = calendarPageSearch(useSearch({ strict: false }));
   const { snapshot, error, retry } = usePlantSettings(search.preview);
-  const columns = useMemo(
-    () => (snapshot === undefined ? [] : columnsOf(snapshot, plant)),
-    [snapshot, plant],
-  );
+  const columns = useMemo(() => columnsOf(snapshot, plant), [snapshot, plant]);
   const forbidden = snapshot === undefined && error instanceof PlantSettingsForbidden;
   let state: PageState = { status: 'ready' };
   if (forbidden) {
