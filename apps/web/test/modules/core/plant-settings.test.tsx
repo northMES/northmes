@@ -77,15 +77,15 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
     renderCoreAt(coreLinks.machines({ plant }).href, []);
     await screen.findByRole('table', { name: 'Machines' });
 
-    expect(machineRows()).toEqual(['ASM1', 'CNC1', 'CNC2', 'MILL1']);
+    expect(machineRows()).toEqual(['ASM1', 'CNC1', 'CNC2', 'LATHE1', 'LATHE2', 'MILL1']);
     expect(statusLine()).toBe(
-      '4 machines, 3 plannable, 2 equipment groups. Sorted by code. Allowed in counts the routing operations that may run on the machine.',
+      '6 machines, 5 plannable, 2 equipment groups. Sorted by code. Allowed in counts the routing operations that may run on the machine.',
     );
     expect(screen.getByText('ERP data as of Mon 2 Nov 06:40')).toBeTruthy();
     expect(screen.getByText('Showing fixture G1.')).toBeTruthy();
     const groups = screen.getByRole('region', { name: 'Equipment groups' });
     expect(within(groups).getByRole('link', { name: /^Machining/ }).textContent).toBe(
-      'Machining MACH 3 machines',
+      'Machining MACH 5 machines',
     );
     expect(within(groups).getByRole('link', { name: /^Assembly/ }).textContent).toBe(
       'Assembly ASM 1 machine',
@@ -101,6 +101,14 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
       '3 operations',
     ]);
     expect(rows[3]?.slice(0, 6)).toEqual([
+      'LATHE1',
+      'Lathe 1',
+      'Machining',
+      'Yes',
+      'B3',
+      'No operations',
+    ]);
+    expect(rows[5]?.slice(0, 6)).toEqual([
       'MILL1',
       'Mill 1',
       'Machining',
@@ -147,7 +155,9 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
     await screen.findByRole('table', { name: 'Machines' });
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Plannable only' }));
-    await waitFor(() => expect(machineRows()).toEqual(['CNC1', 'CNC2', 'MILL1']));
+    await waitFor(() =>
+      expect(machineRows()).toEqual(['CNC1', 'CNC2', 'LATHE1', 'LATHE2', 'MILL1']),
+    );
     expect(router.state.location.search).toEqual({ plannable: 1 });
     await userEvent.click(screen.getByRole('checkbox', { name: 'Plannable only' }));
 
@@ -157,7 +167,7 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
     await waitFor(() => expect(machineRows()).toEqual(['ASM1']));
     expect(router.state.location.search).toEqual({ group: 'ASM' });
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
-    await waitFor(() => expect(machineRows()).toHaveLength(4));
+    await waitFor(() => expect(machineRows()).toHaveLength(6));
 
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search machines' }), 'mill');
     await waitFor(() => expect(machineRows()).toEqual(['MILL1']));
@@ -251,6 +261,15 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
       '/plant-a/machines/CNC1/edit',
     );
     expect(screen.getByRole('button', { name: 'Archive' }).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('MA3 a machine on a calendar with several shifts names each shift with its breaks (#770)', async () => {
+    renderCoreAt(coreLinks.machines.machine({ plant, equipmentId: 'LATHE1' }).href, []);
+    await screen.findByRole('heading', { level: 1, name: 'Machine LATHE1' });
+
+    expect(definition('Calendar')).toBe(
+      'B3Mon to Fri Early 06:00 to 14:00, breaks 09:00 to 09:15 and 11:30 to 12:00; Mon to Fri Late 14:00 to 22:00, breaks 17:00 to 17:15 and 19:30 to 20:00; Mon to Thu Night 22:00 to 06:00, breaks 01:00 to 01:30 and 03:30 to 03:45.',
+    );
   });
 
   it('MA3 a machine that is not on the board says so, and an unknown code shows the not-found state', async () => {
@@ -388,6 +407,12 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
 
     expect(bodyRows(table)).toEqual([
       ['A1', 'CNC 1, CNC 2, Mill 1', 'Mon to Fri 06:00 to 15:00', '41 h 15 min'],
+      [
+        'B3',
+        'Lathe 1, Lathe 2',
+        'Mon to Fri Early 06:00 to 14:00, Mon to Fri Late 14:00 to 22:00, Mon to Thu Night 22:00 to 06:00',
+        '101 h 30 min',
+      ],
     ]);
     expect(within(table).getByRole('link', { name: 'A1' }).getAttribute('href')).toBe(
       '/plant-a/calendars/A1',
@@ -411,7 +436,7 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
     expect(rows[0]).toEqual([
       'Monday',
       'Day 06:00 to 15:00',
-      '08:30 to 08:4511:00 to 11:30',
+      '08:30 to 08:45, 11:00 to 11:30',
       '8 h 15 min',
     ]);
     expect(rows[5]).toEqual(['Saturday', 'Closed', '', '0 min']);
@@ -523,6 +548,76 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
       ...Array(5).fill(6 * hourPx),
     ]);
     expect(heightsOf(w45.getAllByText('Break 02:00 to 02:30'))).toEqual(Array(5).fill(hourPx / 2));
+  });
+
+  it('CS1 a calendar with three shifts lists each shift by name and color in the pattern and above the week view (#770)', async () => {
+    renderCoreAt(
+      withSearch(coreLinks.calendars.calendar({ plant, calendarId: 'B3' }).href, {
+        week: '2026-11-09',
+      }),
+      [],
+    );
+    await screen.findByRole('heading', { level: 1, name: 'Calendar B3' });
+
+    expect(
+      screen.getByText(
+        'Calendar of the plant, used by Lathe 1 and Lathe 2. Times are plant time, Europe/Stockholm.',
+      ),
+    ).toBeTruthy();
+    const rows = bodyRows(screen.getByRole('table', { name: 'Shift pattern of B3' }));
+    expect(rows[0]).toEqual([
+      'Monday',
+      'Early 06:00 to 14:00Late 14:00 to 22:00Night 22:00 to 06:00',
+      '09:00 to 09:15, 11:30 to 12:0017:00 to 17:15, 19:30 to 20:0001:00 to 01:30, 03:30 to 03:45',
+      '21 h 45 min',
+    ]);
+    expect(rows[4]?.[3]).toBe('14 h 30 min');
+    expect(rows[5]).toEqual(['Saturday', 'Closed', '', '0 min']);
+    expect(rows[7]).toEqual(['Per week', '101 h 30 min']);
+
+    // The legend names every shift with its times before the view, so color is never the only cue.
+    const legend = screen.getByRole('list', { name: 'Legend' });
+    expect(within(legend).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Early 06:00 to 14:00',
+      'Late 14:00 to 22:00',
+      'Night 22:00 to 06:00',
+      'Break',
+      'Overtime deviation',
+      'Non-working deviation',
+      'Closed time',
+    ]);
+    const week = screen.getByRole('img', { name: /^Week 46:/ });
+    expect(legend.compareDocumentPosition(week) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(week.getAttribute('aria-label')).toBe(
+      'Week 46: Monday to Friday Early 06:00 to 14:00 and Late 14:00 to 22:00, Monday to Thursday Night 22:00 to 06:00, each shift with two breaks, Monday 9 Nov closed, plant holiday, Saturday 06:00 to 12:00 overtime',
+    );
+  });
+
+  it('CS1 each shift keeps its own color on every day, its legend key included, the part after midnight too (#770)', async () => {
+    renderCoreAt(
+      withSearch(coreLinks.calendars.calendar({ plant, calendarId: 'B3' }).href, {
+        week: '2026-11-09',
+      }),
+      [],
+    );
+    const week = within(await screen.findByRole('img', { name: /^Week 46:/ }));
+    const legend = within(screen.getByRole('list', { name: 'Legend' }));
+
+    for (const [name, shift] of [
+      ['Early 06:00 to 14:00', 'shift-1'],
+      ['Late 14:00 to 22:00', 'shift-2'],
+      ['Night 22:00 to 06:00', 'shift-3'],
+    ] as const) {
+      const blocks = week.getAllByText(name).map((label) => label.parentElement?.className ?? '');
+      expect(blocks.length, name).toBeGreaterThan(0);
+      const key = legend.getByText(name).closest('li')?.querySelector('[aria-hidden="true"]');
+      for (const block of [...blocks, key?.getAttribute('class') ?? '']) {
+        expect(block, name).toContain(`border-${shift}`);
+        expect(block, name).toContain(`bg-${shift}-subtle`);
+      }
+    }
+    // Tuesday holds Monday's night after midnight: the plant holiday closes Monday only.
+    expect(week.getAllByText('From Mon')).toHaveLength(1);
   });
 
   it("CA1 plant overtime and a machine's overtime at the same time sit side by side", async () => {
