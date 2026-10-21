@@ -167,4 +167,85 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     expect(board.querySelector('[data-move-preview]')).toBeNull();
     expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
   });
+
+  it('IN7 IN8 Shift+F10 opens the block menu, and Move opens the Move dialog with every allowed machine and a start', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+
+    await user.keyboard('{Shift>}{F10}{/Shift}');
+    const menu = await screen.findByRole('menu', { name: 'Actions for 1001.10' });
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Move',
+      'Open order',
+    ]);
+    await user.click(within(menu).getByRole('menuitem', { name: 'Move' }));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Move 1001.10 Bracket L' });
+    expect(
+      within(dialog).getByText(
+        'Choose a machine and a start. The move goes into your draft, and Save writes it to the plan.',
+      ),
+    ).toBeTruthy();
+    const machines = within(dialog).getByRole('radiogroup', { name: 'Machine' });
+    const radios = within(machines).getAllByRole('radio');
+    expect(radios.map((radio) => radio.getAttribute('aria-checked'))).toEqual(['true', 'false']);
+    expect(within(machines).getByRole('radio', { name: 'CNC 1, Current' })).toBe(radios[0]);
+    await waitFor(() => expect(document.activeElement).toBe(radios[0]));
+    const start = within(dialog).getByRole('textbox', { name: 'Start, plant time (CET)' });
+    expect((start as HTMLInputElement).value).toBe('2026-11-03 11:30');
+
+    await user.clear(start);
+    await user.type(start, '2026-11-04 06:00');
+    await waitFor(() => {
+      expect(
+        within(machines).getByRole('radio', {
+          name: 'CNC 1, Current',
+          description: 'Ends Wed 4 Nov 12:15 Overlaps 1003.10 Gear blank 32',
+        }),
+      ).toBeTruthy();
+    });
+    await user.click(
+      within(machines).getByRole('radio', {
+        name: 'CNC 2',
+        description: 'Ends Wed 4 Nov 12:15 Overlaps none',
+      }),
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Move' }));
+
+    await waitFor(() => {
+      expect(spoken()).toBe(
+        '1001.10 moved to CNC 2, Wed 4 Nov 06:00 to Wed 4 Nov 12:15. 1 row moves with it. Not saved.',
+      );
+    });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(block(board, '1001.10')));
+    expect(machineOf(block(board, '1001.10'))).toBe('CNC 2');
+  });
+
+  it('IN9 Move with a start that is not a date and time keeps the dialog open with the field error', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+    await user.keyboard('{Shift>}{F10}{/Shift}');
+    await user.click(await screen.findByRole('menuitem', { name: 'Move' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Move 1001.10 Bracket L' });
+    const start = within(dialog).getByRole('textbox', { name: 'Start, plant time (CET)' });
+
+    await user.clear(start);
+    await user.type(start, '2026-11-03 1130');
+    await user.click(within(dialog).getByRole('button', { name: 'Move' }));
+
+    const summary = within(dialog).getByRole('group', { name: '1 field needs attention' });
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    expect(start.getAttribute('aria-invalid')).toBe('true');
+    expect(within(dialog).getByText('Enter a date and time like 2026-11-03 11:30.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(block(board, '1001.10')));
+  });
 });
