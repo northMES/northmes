@@ -1,19 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-// The seam between the plant settings pages (machines, machine, calendars; design #688) and their
-// data: a source answers one snapshot of the plant's equipment, routings, calendars and the week's
-// job orders in epoch milliseconds. The pages never know which source they have. The first source
+// The seam between the plant settings pages (machines, machine, calendars; design #688; equipment
+// groups, design #729) and their data: a source answers one snapshot of the plant's equipment and
+// its groups, routings, calendars and the week's job orders in epoch milliseconds. The pages never know which source they have. The first source
 // is the fixture G1 of @northmes/planning-domain with the pages fixture beside it; the GraphQL
 // source of core's equipment and calendars replaces it value by value.
 
 /** Who owns a record's master fields: the ERP through the connector, or NorthMES itself. */
 export type PlantRecordOwner = 'erp' | 'northmes';
 
+/**
+ * Where a group's color came from (ADR 0026): the ERP sent it, a plant admin set it here, or the
+ * group took the first of the 20 palette colors that no other group used.
+ */
+export type GroupColorFrom = 'erp' | 'set' | 'palette';
+
 export interface PlantEquipmentGroup {
   readonly code: string;
   readonly name: string;
   /** The group's color, a palette token name such as palette-3: its band on the board. */
   readonly color: string;
+  /** The company's group, which every plant of the company may use, or the plant's own, by name. */
+  readonly scope: { readonly kind: 'company' | 'plant'; readonly name: string };
+  readonly colorFrom: GroupColorFrom;
+  readonly owner: PlantRecordOwner;
 }
 
 export interface PlantMachine {
@@ -91,6 +101,7 @@ export interface PlantSettingsSnapshot {
   readonly fixture?: string;
   readonly plant: {
     readonly slug: string;
+    readonly name: string;
     readonly timeZone: string;
     readonly productionDayStart: string;
   };

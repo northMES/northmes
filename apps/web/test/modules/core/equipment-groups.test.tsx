@@ -216,7 +216,8 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
     renderCoreAt(editMach, []);
     await screen.findByRole('heading', { level: 1, name: 'Edit equipment group MACH' });
 
-    expect(screen.queryByRole('textbox', { name: 'Name' })).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Code' }).hasAttribute('readonly')).toBe(true);
+    expect(screen.getByRole('textbox', { name: 'Name' }).hasAttribute('readonly')).toBe(true);
     const colors = screen.getByRole('radiogroup', { name: 'Color' });
     expect(within(colors).getAllByRole('radio')).toHaveLength(20);
     expect(
@@ -250,9 +251,9 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
   it('#729 EG5 lets a plant admin rename a group created in NorthMES', async () => {
     renderCoreAt(coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'ASM' }).href, []);
     await screen.findByRole('heading', { level: 1, name: 'Edit equipment group ASM' });
-    expect((screen.getByRole('textbox', { name: 'Name' }) as HTMLInputElement).value).toBe(
-      'Assembly',
-    );
+    const name = screen.getByRole('textbox', { name: 'Name' }) as HTMLInputElement;
+    expect(name.value).toBe('Assembly');
+    expect(name.hasAttribute('readonly')).toBe(false);
   });
 
   it('#729 EG5 shows the no-access state of the form', async () => {
