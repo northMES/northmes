@@ -3,7 +3,8 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { findGantt, planningHref, renderGanttRoute } from './gantt-fixtures.tsx';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { findGantt, planningHref, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -256,5 +257,147 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(block(board, '1001.10')));
     expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+  });
+  it('plan 07 a move that lands after the range moves the range with it and keeps focus on the block', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1006.10').focus();
+
+    // Fri 13:00 plus the 4 h step is Fri 17:00, closed, so the move lands on Mon 9 Nov 06:00.
+    await user.keyboard('m{ArrowRight}{Enter}');
+    await waitFor(() => expect(spoken()).toContain('1006.10 moved to Mill 1, Mon 9 Nov 06:00'));
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ from: '2026-11-09' }));
+    await waitFor(() =>
+      expect(document.activeElement?.getAttribute('data-job-order')).toBe('1006.10'),
+    );
+  });
+
+  it('IN6 in move mode the keys that would move focus stay with the moving block, and Escape cancels', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute(
+      { zoom: 'week', from: '2026-11-02', order: 'po-1001' },
+      undefined,
+      'board',
+    );
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+
+    await user.keyboard('m{ArrowRight}{Home}{End}{PageDown}');
+    expect(document.activeElement).toBe(block(board, '1001.10'));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(spoken()).toBe('Move cancelled.'));
+    expect(board.querySelector('[data-move-preview]')).toBeNull();
+    expect(router.state.location.search).toMatchObject({ order: 'po-1001' });
+  });
+
+  it('IN6 Tab out of a moving block ends move mode without a change', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+
+    await user.keyboard('m{ArrowRight}');
+    await waitFor(() => expect(board.querySelector('[data-move-preview]')).not.toBeNull());
+    await user.tab();
+    await waitFor(() => expect(board.querySelector('[data-move-preview]')).toBeNull());
+    expect(board.contains(document.activeElement)).toBe(false);
+    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+  });
+
+  it('IN6 Down in move mode skips the machines of a collapsed group', async () => {
+    const g1 = g1Snapshot();
+    // A second group holds CNC 2, so collapsing it leaves 1001.10 one allowed machine to step to: none.
+    const snapshot = {
+      ...g1,
+      equipmentGroups: [...g1.equipmentGroups, { code: 'TURN', name: 'Turning' }],
+      equipment: g1.equipment.map((machine) =>
+        machine.code === 'CNC2' ? { ...machine, group: 'TURN' } : machine,
+      ),
+    };
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    await user.click(within(board).getByRole('button', { name: 'Collapse Turning' }));
+    block(board, '1001.10').focus();
+
+    await user.keyboard('m{ArrowDown}');
+    await waitFor(() => expect(spoken()).toContain('CNC 1, Tue 3 Nov 11:30'));
+    expect(spoken()).not.toContain('CNC 2');
+  });
+
+  it('a cluster names a job order that the draft moved', async () => {
+    const user = userEvent.setup();
+    const g1 = g1Snapshot();
+    // At Hours, two job orders of 6 min on CNC 1, 15 min apart: one 15 min step of 1003.10 puts
+    // 1002.10 inside its 24 px target.
+    const span = (
+      row: (typeof g1.productionOrders)[number]['jobOrders'][number],
+      fromMs: number,
+    ) => ({
+      ...row,
+      equipment: 'CNC1',
+      plannedSetupS: 0,
+      plannedRunS: 360,
+      placement: {
+        setupStartMs: fromMs,
+        runStartMs: fromMs,
+        endMs: fromMs + 360_000,
+        segments: [{ fromMs, toMs: fromMs + 360_000 }],
+      },
+    });
+    const snapshot = {
+      ...g1,
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) =>
+          row.displayNumber === '1003.10'
+            ? span(row, Date.UTC(2026, 10, 4, 7))
+            : row.displayNumber === '1002.10'
+              ? span(row, Date.UTC(2026, 10, 4, 7, 21))
+              : row,
+        ),
+      })),
+    };
+    renderGanttRoute({ zoom: 'hours', from: '2026-11-04' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    expect(board.querySelector('[data-cluster]')).toBeNull();
+    block(board, '1003.10').focus();
+    await user.keyboard('m{ArrowRight}{Enter}');
+    await waitFor(() => expect(spoken()).toContain('1003.10 moved to CNC 1'));
+
+    await waitFor(() =>
+      expect(board.querySelector('[data-cluster]')?.getAttribute('aria-label') ?? '').toContain(
+        '1 changed in your draft',
+      ),
+    );
+  });
+
+  it('My draft opens the drawer with the moves, and closing it returns focus to the button', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+    await user.keyboard('m{ArrowRight}{Enter}');
+    await waitFor(() => expect(spoken()).toContain('1001.10 moved to CNC 1'));
+
+    const button = screen.getByRole('button', { name: 'My draft, 2 changes' });
+    await user.click(button);
+    const drawer = await screen.findByRole('dialog', { name: /My draft/ });
+    expect(within(drawer).getAllByText(/1001\.10/).length).toBeGreaterThan(0);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'My draft, 2 changes' }),
+      ),
+    );
+  });
+
+  it('DR20 shows no My draft button while the board is not drawn', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02', preview: 'error' }, undefined, 'board');
+
+    await screen.findByRole('heading', { level: 2, name: 'The board could not be loaded' });
+    expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
   });
 });

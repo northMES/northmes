@@ -113,6 +113,12 @@ export function BoardBlock({
           press.current = undefined;
           move.cancel();
         },
+        // The keys that would move focus off the moving block wait until the move ends.
+        Home: () => {},
+        End: () => {},
+        PageUp: () => {},
+        PageDown: () => {},
+        ' ': () => {},
       }[event.key];
       if (step === undefined) return;
       event.preventDefault();
@@ -234,6 +240,10 @@ export function BoardBlock({
             onPointerUp={() => endPress(true)}
             onPointerCancel={() => endPress(false)}
             onKeyDown={onKeyDown}
+            onBlur={() => {
+              // Focus that leaves a block in keyboard move mode ends the move without a change.
+              if (inMoveMode) move?.cancel({ refocus: false });
+            }}
             className={cn(
               'absolute top-1 h-11 touch-none overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-black focus-visible:z-10',
               moving && 'opacity-60',

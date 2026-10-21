@@ -98,14 +98,19 @@ function MoveOutline({
   );
 }
 
-/** Where the cascade would put a row that moves with the one in progress, at reduced opacity. */
+/**
+ * Where the cascade would put a row that moves with the one in progress, in the draft style and
+ * the order color at reduced opacity, as on the Gantt.
+ */
 function GhostSpan({
   jobOrderId,
   span,
+  color,
   scale,
 }: {
   readonly jobOrderId: string;
   readonly span: JobOrderSpan;
+  readonly color: string;
   readonly scale: TimeScale;
 }) {
   const left = scale.x(span.setupStartMs);
@@ -116,7 +121,11 @@ function GhostSpan({
       data-from-ms={span.setupStartMs}
       data-to-ms={span.endMs}
       className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground opacity-45"
-      style={{ left: `${left}px`, width: `${Math.max(2, scale.x(span.endMs) - left)}px` }}
+      style={{
+        left: `${left}px`,
+        width: `${Math.max(2, scale.x(span.endMs) - left)}px`,
+        background: `var(--${color})`,
+      }}
     />
   );
 }
@@ -189,6 +198,18 @@ export function BoardGrid({
   const columns = `${machineWidth}px ${timeWidth}px`;
   const machineCount = model.groups.reduce((sum, group) => sum + group.machines.length, 0);
   const tab = (key: string) => (key === tabStop ? 0 : -1);
+  // The rows the move in progress carries with it, on their machines, also from outside the range.
+  const ghosts = [...(preview?.ghosts ?? new Map<string, JobOrderSpan>())].flatMap(
+    ([jobOrderId, span]) => {
+      for (const order of snapshot.productionOrders) {
+        const row = order.jobOrders.find((each) => each.id === jobOrderId);
+        if (row?.equipment !== undefined) {
+          return [{ jobOrderId, span, equipment: row.equipment, color: order.color }];
+        }
+      }
+      return [];
+    },
+  );
   let rowIndex = 2;
   const bodyRows: ReactNode[] = [];
   let bodyRem = 0;
@@ -272,19 +293,17 @@ export function BoardGrid({
             {preview !== undefined && preview.equipment === code && (
               <MoveOutline preview={preview} scale={scale} timeZone={snapshot.plant.timeZone} />
             )}
-            {machine.blocks.flatMap((row) => {
-              const ghost = preview?.ghosts.get(row.jobOrder.id);
-              return ghost === undefined
-                ? []
-                : [
-                    <GhostSpan
-                      key={row.id}
-                      jobOrderId={row.jobOrder.id}
-                      span={ghost}
-                      scale={scale}
-                    />,
-                  ];
-            })}
+            {ghosts
+              .filter((ghost) => ghost.equipment === code)
+              .map((ghost) => (
+                <GhostSpan
+                  key={ghost.jobOrderId}
+                  jobOrderId={ghost.jobOrderId}
+                  span={ghost.span}
+                  color={ghost.color}
+                  scale={scale}
+                />
+              ))}
             {cells.length === 0 ? (
               <div
                 role="gridcell"
