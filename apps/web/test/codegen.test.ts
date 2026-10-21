@@ -72,7 +72,7 @@ describe("the web's typed documents", () => {
       expect.arrayContaining([
         'src/modules/core/article.graphql.ts',
         'src/modules/core/screens/articles/articles.graphql.ts',
-        'src/modules/planning/screens/board/board.graphql.ts',
+        'src/modules/planning/screens/release-orders/board.graphql.ts',
       ]),
     );
     expect(files.map(({ path }) => path)).toEqual(
