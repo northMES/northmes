@@ -6,7 +6,9 @@
  * settings pages do: the mock source answers it instead of the fixture; a server source ignores
  * it.
  */
-export type PlanningPreview = 'loading' | 'empty' | 'error' | 'forbidden';
+export const planningPreviews = ['loading', 'empty', 'error', 'forbidden'] as const;
+
+export type PlanningPreview = (typeof planningPreviews)[number];
 
 /** The refusal a source answers a forbidden preview with, as the API's FORBIDDEN would arrive. */
 export class PlanningForbidden extends Error {

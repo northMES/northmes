@@ -158,7 +158,7 @@ export function BoardBlock({
           <span
             aria-hidden
             data-conflict-edge
-            className="pointer-events-none absolute inset-y-0 right-0 w-1.75"
+            className="pointer-events-none absolute inset-y-0 end-0 w-1.75"
             style={{
               background:
                 'repeating-linear-gradient(135deg, currentColor 0 3px, transparent 3px 6px)',
@@ -172,7 +172,7 @@ export function BoardBlock({
             conflict && 'pe-2',
           )}
         >
-          <span id={`${id}-number`} className="shrink-0 font-mono font-bold">
+          <span id={`${id}-number`} className="min-w-0 truncate font-mono font-bold">
             {jobOrder.displayNumber}
           </span>
           <span

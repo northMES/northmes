@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { z } from 'zod';
 import type { ZoomPreset } from './gantt-data.ts';
-import type { PlanningPreview } from './planning-preview.ts';
+import { type PlanningPreview, planningPreviews } from './planning-preview.ts';
 
 /**
  * The view state of the Gantt page in the URL (ADR 0062, plan 18): the zoom preset, the first
@@ -61,7 +61,7 @@ export interface BoardSearch extends GanttSearch {
 }
 
 const legacyView = z.literal('gantt').optional().catch(undefined);
-const previewKey = z.enum(['loading', 'empty', 'error', 'forbidden']).optional().catch(undefined);
+const previewKey = z.enum(planningPreviews).optional().catch(undefined);
 
 /** The board route's search, for its validateSearch; see BoardSearch. */
 export function boardSearch(raw: Record<string, unknown>): BoardSearch {
