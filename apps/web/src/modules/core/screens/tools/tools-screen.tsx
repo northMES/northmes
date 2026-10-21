@@ -6,9 +6,10 @@ import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Hammer, Lock, Plus, TriangleAlert } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { ChoiceMenu } from '../../../../ui/components/choice-menu/index.ts';
 import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
+import { FilterChip } from '../../../../ui/components/filter-chip/index.ts';
+import { FilterMenu } from '../../../../ui/components/filter-menu/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
@@ -17,7 +18,14 @@ import { Button } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import { SourceTag } from '../../components/source-tag/index.ts';
-import { type ToolListSearch, toolListSearch } from '../../tool-list-search.ts';
+import { toolsAt } from '../../tool-facts.ts';
+import {
+  type ToolListSearch,
+  type ToolScope,
+  type ToolSource,
+  toolListSearch,
+  urlSearchOf,
+} from '../../tool-list-search.ts';
 import { type Tool, ToolsForbidden } from '../../tools-data.ts';
 import { useTools } from '../../tools-source-context.ts';
 
@@ -124,9 +132,20 @@ const columnChoices = [
   { id: 'source', label: 'Source' },
 ] as const;
 
-function matches(tool: Tool, view: ToolListSearch): boolean {
-  if (view.scope !== undefined && tool.scope.kind !== view.scope) return false;
-  if (view.source !== undefined && tool.source !== view.source) return false;
+/** The labels of the Source filter's values. */
+const sourceLabels: Readonly<Record<ToolSource, string>> = {
+  erp: 'From the ERP',
+  import: 'Created by the import',
+  northmes: 'Set in NorthMES',
+};
+
+function matches(tool: Tool, view: ToolListSearch, except?: 'scope' | 'source'): boolean {
+  if (except !== 'scope' && view.scope !== undefined && !view.scope.includes(tool.scope.kind)) {
+    return false;
+  }
+  if (except !== 'source' && view.source !== undefined && !view.source.includes(tool.source)) {
+    return false;
+  }
   if (view.unused === 1 && tool.uses.length > 0) return false;
   if (view.q === undefined) return true;
   const needle = view.q.toLowerCase();
@@ -145,24 +164,28 @@ export function ToolsScreen() {
   const { plant } = useShell();
   const view = toolListSearch(useSearch({ strict: false }));
   const navigate = useNavigate();
-  const show = (next: ToolListSearch) => navigate({ to: '.', search: next, replace: true });
+  const show = (next: ToolListSearch) =>
+    navigate({ to: '.', search: urlSearchOf(next), replace: true });
   const { snapshot, error, retry } = useTools(view.preview);
   const [hiddenColumns, setHiddenColumns] = useState<readonly string[]>([]);
   const unusedId = useId();
   const allRows = useMemo(
     () =>
-      [...(snapshot?.tools ?? [])].sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0)),
-    [snapshot],
+      (snapshot === undefined ? [] : toolsAt(snapshot, plant)).sort((a, b) =>
+        a.code < b.code ? -1 : a.code > b.code ? 1 : 0,
+      ),
+    [snapshot, plant],
   );
   const rows = allRows.filter((tool) => matches(tool, view));
   const columns = useMemo(() => columnsOf(plant), [plant]);
   const imported = allRows.filter((tool) => tool.source === 'import');
+  const plantName = snapshot?.plants.find((each) => each.slug === plant)?.name ?? plant;
   const where =
     snapshot === undefined
       ? 'the company and the plant'
-      : `${snapshot.companyName} and ${snapshot.plant.name}`;
-  const createdText = rows.filter((tool) => tool.source === 'import').length;
-  const statusLine = `${rows.length} tool${rows.length === 1 ? '' : 's'}, ${createdText} created by the import. Sorted by code. Used in counts the routing operations that allow the tool.`;
+      : `${snapshot.companyName} and ${plantName}`;
+  const createdCount = rows.filter((tool) => tool.source === 'import').length;
+  const statusLine = `${rows.length} tool${rows.length === 1 ? '' : 's'}, ${createdCount} created by the import. Sorted by code. Used in counts the routing operations that allow the tool.`;
   const announced = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (snapshot === undefined) return;
@@ -175,7 +198,39 @@ export function ToolsScreen() {
     document.getElementById(searchFieldId)?.focus();
   };
 
+  const facets = <Value extends string>(
+    key: 'scope' | 'source',
+    values: readonly Value[],
+    valueOf: (tool: Tool) => Value,
+    labelOf: (value: Value) => string,
+  ) =>
+    values.map((value) => ({
+      value,
+      label: labelOf(value),
+      count: allRows.filter((tool) => matches(tool, view, key) && valueOf(tool) === value).length,
+    }));
+  const scopeLabel = (value: ToolScope) =>
+    value === 'company' ? (snapshot?.companyName ?? 'The company') : plantName;
+  const scopeOptions = facets<ToolScope>(
+    'scope',
+    ['company', 'plant'],
+    (tool) => tool.scope.kind,
+    scopeLabel,
+  );
+  const sourceOptions = facets<ToolSource>(
+    'source',
+    ['erp', 'import', 'northmes'],
+    (tool) => tool.source,
+    (value) => sourceLabels[value],
+  );
+  const withList = (key: 'scope' | 'source', values: readonly string[]) => {
+    const { [key]: _, ...rest } = view;
+    show(values.length === 0 ? rest : ({ ...rest, [key]: values } as ToolListSearch));
+  };
+  const filtered = view.scope !== undefined || view.source !== undefined;
+
   const forbidden = snapshot === undefined && error instanceof ToolsForbidden;
+  const failed = snapshot === undefined && error !== undefined;
   let state: PageState = { status: 'ready' };
   if (forbidden) {
     state = {
@@ -253,32 +308,19 @@ export function ToolsScreen() {
                   }}
                   className="w-full max-w-sm"
                 />
-                <ChoiceMenu
+                <FilterMenu
                   label="Scope"
-                  choices={[
-                    { value: undefined, label: 'Every scope' },
-                    { value: 'company' as const, label: snapshot?.companyName ?? 'The company' },
-                    { value: 'plant' as const, label: snapshot?.plant.name ?? 'The plant' },
-                  ]}
-                  value={view.scope}
-                  onChange={(scope) => {
-                    const { scope: _, ...rest } = view;
-                    show(scope === undefined ? rest : { ...rest, scope });
-                  }}
+                  heading="Show tools of these scopes"
+                  options={scopeOptions}
+                  selected={view.scope ?? []}
+                  onChange={(values) => withList('scope', values)}
                 />
-                <ChoiceMenu
+                <FilterMenu
                   label="Source"
-                  choices={[
-                    { value: undefined, label: 'Every source' },
-                    { value: 'erp' as const, label: 'From the ERP' },
-                    { value: 'import' as const, label: 'Created by the import' },
-                    { value: 'northmes' as const, label: 'Set in NorthMES' },
-                  ]}
-                  value={view.source}
-                  onChange={(source) => {
-                    const { source: _, ...rest } = view;
-                    show(source === undefined ? rest : { ...rest, source });
-                  }}
+                  heading="Show tools from these sources"
+                  options={sourceOptions}
+                  selected={view.source ?? []}
+                  onChange={(values) => withList('source', values)}
                 />
                 <Field orientation="horizontal" className="w-auto">
                   <Checkbox
@@ -298,8 +340,39 @@ export function ToolsScreen() {
                 onChange={setHiddenColumns}
               />
             </div>
+            {filtered && (
+              <div className="flex flex-wrap items-center gap-2">
+                {view.scope !== undefined && (
+                  <FilterChip
+                    label="Scope"
+                    values={view.scope.map((value) => ({
+                      label: scopeLabel(value),
+                      count: scopeOptions.find((each) => each.value === value)?.count ?? 0,
+                    }))}
+                    removeLabel="Remove the scope filter"
+                    onRemove={() => withList('scope', [])}
+                  />
+                )}
+                {view.source !== undefined && (
+                  <FilterChip
+                    label="Source"
+                    values={view.source.map((value) => ({
+                      label: sourceLabels[value],
+                      count: sourceOptions.find((each) => each.value === value)?.count ?? 0,
+                    }))}
+                    removeLabel="Remove the source filter"
+                    onRemove={() => withList('source', [])}
+                  />
+                )}
+                <Button variant="link" onClick={clearFilters}>
+                  Clear filters
+                </Button>
+              </div>
+            )}
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <p data-list-status>{snapshot === undefined ? 'Loading tools.' : statusLine}</p>
+              <p data-list-status>
+                {failed ? '' : snapshot === undefined ? 'Loading tools.' : statusLine}
+              </p>
               <p className="flex flex-wrap gap-x-2">
                 {snapshot?.fixture !== undefined && (
                   <span>Showing fixture {snapshot.fixture}.</span>
@@ -314,6 +387,7 @@ export function ToolsScreen() {
     >
       <DataTable
         label={`Tools of ${where}`}
+        scrollLabel="Tools, scrolls sideways"
         columns={columns}
         rows={rows}
         getRowId={(tool) => tool.code}

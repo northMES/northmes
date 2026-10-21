@@ -34,6 +34,16 @@ test.describe('the tools pages', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Tool T-311' })).toBeVisible();
     await checkA11y('a tool');
 
+    // At 320 px the list and the tool's operations scroll sideways in focusable regions.
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto(tools);
+    await expect(page.getByRole('region', { name: 'Tools, scrolls sideways' })).toBeVisible();
+    await checkA11y('the tools list at 320 px');
+    await page.goto(coreLinks.tools.tool({ plant, toolCode: 'T-311' }).href);
+    await expect(page.getByRole('heading', { level: 1, name: 'Tool T-311' })).toBeVisible();
+    await checkA11y('a tool at 320 px');
+    await page.setViewportSize({ width: 1440, height: 900 });
+
     await page.goto(withSearch(tools, { preview: 'loading' }));
     await expect(
       page.getByRole('table', { name: 'Tools of the company and the plant' }),

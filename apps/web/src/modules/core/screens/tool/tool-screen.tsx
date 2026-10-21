@@ -21,7 +21,9 @@ import {
 } from '../../../../ui/primitives/table.tsx';
 import { ScrollTable } from '../../components/scroll-table/index.ts';
 import { SourceTag } from '../../components/source-tag/index.ts';
-import { toolListSearch } from '../../tool-list-search.ts';
+import { weekOf } from '../../plant-settings-facts.ts';
+import { toolsAt } from '../../tool-facts.ts';
+import { toolPageSearch } from '../../tool-list-search.ts';
 import { type Tool, ToolsForbidden, type ToolsSnapshot } from '../../tools-data.ts';
 import { useTools } from '../../tools-source-context.ts';
 
@@ -56,27 +58,24 @@ function Section({
   );
 }
 
-/** Where a tool came from, in words, with the routing that brought it. */
+/** Where a tool came from, in words: the import that brought it, or its creation. */
 function originText(tool: Tool, snapshot: ToolsSnapshot): string {
   const at = formatPlantDateTime(tool.importedAtMs, snapshot.plant.timeZone);
   const first = tool.uses[0];
   if (tool.source === 'import') {
-    return `Created by the import ${at}${first === undefined ? '' : ` for ${first.articleName} operation ${first.sequence}`}, with its code as its name.`;
+    const named = tool.name === tool.code ? ', with its code as its name' : '';
+    return `Created by the import ${at}${first === undefined ? '' : ` for ${first.articleName} operation ${first.sequence}`}${named}.`;
   }
   if (tool.source === 'northmes') return `Created in NorthMES ${at}.`;
-  return `From the ERP. Imported ${at}${first === undefined ? '' : ` with the routing of ${first.articleName}`}.`;
+  return `From the ERP. Imported ${at}.`;
 }
 
-/** The ISO week of now in plant time: "W45" and its Monday to Sunday. */
-function weekOf(snapshot: ToolsSnapshot) {
-  const today = Temporal.Instant.fromEpochMilliseconds(snapshot.nowMs)
-    .toZonedDateTimeISO(snapshot.plant.timeZone)
-    .toPlainDate();
-  const monday = today.subtract({ days: today.dayOfWeek - 1 });
-  return {
-    label: `W${today.weekOfYear ?? ''}`,
-    span: `${formatPlantDay(monday.toString())} to ${formatPlantDay(monday.add({ days: 6 }).toString())}`,
-  };
+/** Where a tool's scope comes from, under its scope. */
+function scopeNote(tool: Tool): string {
+  if (tool.scope.kind === 'company') return 'Every plant of the company may use it.';
+  return tool.source === 'import'
+    ? 'The import puts a tool at the plant of the order that names it.'
+    : 'Only this plant uses it.';
 }
 
 /**
@@ -89,9 +88,13 @@ function weekOf(snapshot: ToolsSnapshot) {
 export function ToolScreen() {
   const { plant } = useShell();
   const { toolCode = '' } = useParams({ strict: false });
-  const search = toolListSearch(useSearch({ strict: false }));
+  const search = toolPageSearch(useSearch({ strict: false }));
   const { snapshot, error, retry } = useTools(search.preview);
-  const tool = snapshot?.tools.find((each) => each.code === toolCode);
+  // A plant sees the company's tools and its own; another plant's tool is not found here.
+  const tool =
+    snapshot === undefined
+      ? undefined
+      : toolsAt(snapshot, plant).find((each) => each.code === toolCode);
   const back = coreLinks.tools({ plant }).href;
 
   let state: PageState = { status: 'ready' };
@@ -118,10 +121,10 @@ export function ToolScreen() {
       ),
     };
   }
-  const week = snapshot === undefined ? undefined : weekOf(snapshot);
+  const week = snapshot === undefined ? undefined : weekOf(snapshot.nowMs, snapshot.plant.timeZone);
   return (
     <PageFrame
-      title={tool === undefined ? 'Tool' : `Tool ${tool.code}`}
+      title={`Tool ${tool?.code ?? toolCode}`}
       crumbs={[{ label: 'Tools', href: back }]}
       state={state}
       actions={
@@ -160,11 +163,7 @@ export function ToolScreen() {
                 <dt className="text-xs font-semibold text-muted-foreground">Scope</dt>
                 <dd className="flex flex-col gap-0.5 text-sm">
                   <span>{tool.scope.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {tool.scope.kind === 'plant'
-                      ? 'The import puts a tool at the plant of the order that names it.'
-                      : 'Every plant of the company may use it.'}
-                  </span>
+                  <span className="text-xs text-muted-foreground">{scopeNote(tool)}</span>
                 </dd>
               </div>
               <div className="flex flex-col gap-0.5">
@@ -243,9 +242,18 @@ export function ToolScreen() {
               </ScrollTable>
             )}
           </Section>
-          <Section title="Job orders with this tool" lead={`${week.label}, ${week.span}`}>
+          <Section title="Job orders with this tool" lead={week.label}>
             <p className="text-sm">
-              {`No job order uses ${tool.code} in ${week.label}. A planner picks the tool of a job order in Details; a job order without a tool uses the values of its machine and operation. The tool is never sent to the ERP.`}
+              {tool.jobOrders.length === 0
+                ? `No job order uses ${tool.code} in W${week.week}.`
+                : `${tool.jobOrders.length === 1 ? '1 job order uses' : `${tool.jobOrders.length} job orders use`} ${tool.code} in W${week.week}: ${tool.jobOrders
+                    .map(
+                      (job) =>
+                        `${job.displayNumber} from ${formatPlantDateTime(job.setupStartMs, snapshot.plant.timeZone)}`,
+                    )
+                    .join(', ')}.`}{' '}
+              A planner picks the tool of a job order in Details; a job order without a tool uses
+              the values of its machine and operation. The tool is never sent to the ERP.
             </p>
           </Section>
           {snapshot.fixture !== undefined && (

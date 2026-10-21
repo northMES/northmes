@@ -25,11 +25,24 @@ export interface ToolUse {
 export interface Tool {
   readonly code: string;
   readonly name: string;
-  /** A tool of the whole company, or of one plant, by the name a page shows. */
-  readonly scope: { readonly kind: 'company' | 'plant'; readonly name: string };
+  /**
+   * A tool of the whole company, or of one plant, by the name a page shows; a plant's tool names
+   * its plant by slug, as only that plant sees it.
+   */
+  readonly scope: {
+    readonly kind: 'company' | 'plant';
+    readonly name: string;
+    readonly plant?: string;
+  };
   readonly source: MasterDataSource;
   readonly importedAtMs: number;
   readonly uses: readonly ToolUse[];
+  /** The job orders of this week that a planner gave this tool. */
+  readonly jobOrders: readonly {
+    readonly displayNumber: string;
+    readonly orderNumber: string;
+    readonly setupStartMs: number;
+  }[];
 }
 
 export interface ToolsSnapshot {
@@ -37,6 +50,8 @@ export interface ToolsSnapshot {
   readonly fixture?: string;
   readonly companyName: string;
   readonly plant: { readonly slug: string; readonly name: string; readonly timeZone: string };
+  /** The company's plants by slug, with the names the pages show. */
+  readonly plants: readonly { readonly slug: string; readonly name: string }[];
   readonly nowMs: number;
   /** When the ERP's last import ran. */
   readonly importedAtMs?: number;

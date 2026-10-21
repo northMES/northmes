@@ -13,12 +13,14 @@ import { ToolsForbidden, type ToolsSnapshot, type ToolsSource } from './tools-da
 
 /**
  * The tools of the fixture G1: the master data fixture's tools, each at its company or plant, with
- * the routing operations of G1's routings that allow it.
+ * the routing operations of G1's routings that allow it. G1's job orders carry no tool, so no tool
+ * has job orders this week.
  */
 export function g1ToolsSnapshot(
   routings: RoutingsSnapshot = g1RoutingsSnapshot(),
   masterData: GanttMasterDataFixture = g1MasterData,
   pages: GanttPagesFixture = g1Pages,
+  nowMs: number = Date.parse(g1.now.instant),
 ): ToolsSnapshot {
   const plantName = (slug: string) =>
     pages.plants.find((plant) => plant.slug === slug)?.name ?? slug;
@@ -26,7 +28,8 @@ export function g1ToolsSnapshot(
     ...(routings.fixture !== undefined && { fixture: routings.fixture }),
     companyName: masterData.company.name,
     plant: routings.plant,
-    nowMs: Date.parse(g1.now.instant),
+    plants: pages.plants.map(({ slug, name }) => ({ slug, name })),
+    nowMs,
     importedAtMs: Date.parse(pages.erp.importedAt.instant),
     tools: masterData.tools.map((tool) => ({
       code: tool.code,
@@ -34,9 +37,10 @@ export function g1ToolsSnapshot(
       scope:
         tool.plant === null
           ? { kind: 'company', name: masterData.company.name }
-          : { kind: 'plant', name: plantName(tool.plant) },
+          : { kind: 'plant', name: plantName(tool.plant), plant: tool.plant },
       source: tool.source,
       importedAtMs: Date.parse(tool.importedAt.instant),
+      jobOrders: [],
       uses: routings.routings.flatMap((routing) =>
         routing.operations.flatMap((operation) => {
           const use = operation.tools.find((each) => each.code === tool.code);

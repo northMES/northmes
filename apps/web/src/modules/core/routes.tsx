@@ -25,7 +25,11 @@ import {
 } from './plant-settings-search.ts';
 import { roleListSearch } from './role-list-search.ts';
 import { routingPageSearch } from './routing-search.ts';
-import { toolListSearch } from './tool-list-search.ts';
+import {
+  toolListSearch,
+  toolPageSearch,
+  urlSearchOf as urlSearchOfToolList,
+} from './tool-list-search.ts';
 import { userListSearch } from './user-list-search.ts';
 import {
   urlSearchOf as urlSearchOfWarehouseList,
@@ -257,13 +261,13 @@ export function coreRoutes(plantRoute: PlantRoute) {
   const toolListRoute = createRoute({
     getParentRoute: () => toolsRoute,
     path: '/',
-    validateSearch: toolListSearch,
+    validateSearch: (raw: Record<string, unknown>) => urlSearchOfToolList(toolListSearch(raw)),
     component: lazyScreen('ToolsScreen'),
   });
   const toolRoute = createRoute({
     getParentRoute: () => toolsRoute,
     path: linkEntry(coreLinks.tools.tool).path,
-    validateSearch: toolListSearch,
+    validateSearch: toolPageSearch,
     component: lazyScreen('ToolScreen'),
   });
   return coreRoute.addChildren([

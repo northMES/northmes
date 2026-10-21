@@ -4,6 +4,8 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { ToolsSource } from '../../../src/modules/core/tools-data.ts';
+import { g1ToolsSnapshot } from '../../../src/modules/core/tools-data-g1.ts';
 import { plant, renderCoreAt } from './core-app.tsx';
 
 afterEach(cleanup);
@@ -64,10 +66,66 @@ describe('the tools register (design #729, TO1 to TO8)', () => {
       coreLinks.tools.tool({ plant, toolCode: 'T-311' }).href,
     );
     expect(screen.getByRole('button', { name: 'New tool' }).hasAttribute('disabled')).toBe(true);
+    expect(
+      within(table).getByRole('button', { name: 'Edit, T-905' }).hasAttribute('disabled'),
+    ).toBe(true);
   });
 
-  it('#729 TO1 filters by scope and source and keeps the unused tools in the URL', async () => {
-    const router = renderCoreAt(withSearch(tools, { scope: 'plant' }), []);
+  it("#729 TO1 lists only the company's tools and the open plant's own", async () => {
+    renderCoreAt(coreLinks.tools({ plant: 'plant-b' }).href, []);
+    const table = await screen.findByRole('table', { name: 'Tools of Acme AB and Plant B' });
+    expect(bodyRows(table).map((row) => row[0])).toEqual(['T-118', 'T-204', 'T-415']);
+
+    cleanup();
+    renderCoreAt(coreLinks.tools.tool({ plant: 'plant-b', toolCode: 'T-311' }).href, []);
+    await screen.findByRole('heading', {
+      level: 2,
+      name: 'This tool does not exist or you cannot see it',
+    });
+  });
+
+  it('#729 TO1 filters by Scope and Source through their menus, with a chip and Clear filters', async () => {
+    const router = renderCoreAt(tools, []);
+    const table = await screen.findByRole('table', { name: 'Tools of Acme AB and Plant A' });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Scope' }));
+    await userEvent.click(await screen.findByRole('menuitemcheckbox', { name: /^Plant A/ }));
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => expect(router.state.location.search).toEqual({ scope: 'plant' }));
+    expect(bodyRows(table).map((row) => row[0])).toEqual(['T-311', 'T-312', 'T-905']);
+    expect(screen.getByRole('button', { name: 'Remove the scope filter' })).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+    expect(document.activeElement).toBe(screen.getByRole('searchbox', { name: 'Search tools' }));
+  });
+
+  it('#729 TO1 keeps a tool no routing operation allows with Not used only', async () => {
+    const snapshot = g1ToolsSnapshot();
+    const toolsSource: ToolsSource = {
+      load: async () => ({
+        ...snapshot,
+        tools: [
+          ...snapshot.tools,
+          {
+            code: 'T-990',
+            name: 'Spare collet',
+            scope: { kind: 'company', name: 'Acme AB' },
+            source: 'erp',
+            importedAtMs: snapshot.nowMs,
+            uses: [],
+            jobOrders: [],
+          },
+        ],
+      }),
+    };
+    renderCoreAt(withSearch(tools, { unused: '1' }), [], { toolsSource });
+    const table = await screen.findByRole('table', { name: 'Tools of Acme AB and Plant A' });
+    expect(bodyRows(table).map((row) => [row[0], row[4]])).toEqual([['T-990', 'None']]);
+  });
+
+  it('#729 TO1 filters by scope and source from the URL', async () => {
+    renderCoreAt(withSearch(tools, { scope: 'plant' }), []);
     const table = await screen.findByRole('table', { name: 'Tools of Acme AB and Plant A' });
     expect(bodyRows(table).map((row) => row[0])).toEqual(['T-311', 'T-312', 'T-905']);
 
@@ -82,7 +140,6 @@ describe('the tools register (design #729, TO1 to TO8)', () => {
     await userEvent.click(screen.getByRole('checkbox', { name: 'Not used only' }));
     await waitFor(() => expect(unused.state.location.search).toEqual({ unused: 1 }));
     await screen.findByRole('heading', { level: 2, name: 'No tools match these filters' });
-    expect(router).toBeDefined();
   });
 
   it('#729 TO5 to TO8 show the loading, empty, failed and no-access states', async () => {
@@ -116,9 +173,7 @@ describe("a tool's page (design #729, TO4)", () => {
     await screen.findByRole('heading', { level: 1, name: 'Tool T-311' });
 
     expect(screen.getByText('Fixture BR-L 2-up', { selector: 'span' })).toBeTruthy();
-    expect(
-      screen.getByText('From the ERP. Imported Thu 8 Oct 06:40 with the routing of Bracket L.'),
-    ).toBeTruthy();
+    expect(screen.getByText('From the ERP. Imported Thu 8 Oct 06:40.')).toBeTruthy();
     const operations = screen.getByRole('table', { name: 'Routing operations that allow T-311' });
     expect(bodyRows(operations)).toEqual([
       ['Bracket L20-1001', '20 Mill', '2 instead of 1', 'CNC 2 (default), Mill 1', '1001, 1005'],
@@ -127,6 +182,33 @@ describe("a tool's page (design #729, TO4)", () => {
       coreLinks.routings.routing({ plant, articleNumber: '20-1001' }).href,
     );
     expect(screen.getByText(/^No job order uses T-311 in W45\./)).toBeTruthy();
+  });
+
+  it('#729 TO4 says the import created T-905 with its code as its name', async () => {
+    renderCoreAt(coreLinks.tools.tool({ plant, toolCode: 'T-905' }).href, []);
+    await screen.findByRole('heading', { level: 1, name: 'Tool T-905' });
+    expect(
+      screen.getByText(
+        'Created by the import Mon 2 Nov 06:40 for Hub 12 operation 20, with its code as its name.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it("#729 TO4 names the tool in the h1 while it loads, and shows the page's failed and no-access states", async () => {
+    const t311 = coreLinks.tools.tool({ plant, toolCode: 'T-311' }).href;
+    renderCoreAt(withSearch(t311, { preview: 'loading' }), []);
+    await screen.findByRole('heading', { level: 1, name: 'Tool T-311' });
+
+    cleanup();
+    renderCoreAt(withSearch(t311, { preview: 'error' }), []);
+    await screen.findByRole('heading', { level: 2, name: 'Could not load the tool' });
+
+    cleanup();
+    renderCoreAt(withSearch(t311, { preview: 'forbidden' }), []);
+    await screen.findByRole('heading', {
+      level: 2,
+      name: 'You need the permission to read master data',
+    });
   });
 
   it('#729 TO4 says a tool does not exist, with the way back to Tools', async () => {
