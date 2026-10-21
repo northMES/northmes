@@ -71,6 +71,17 @@ describe('New production order (#768, NO1 to NO9)', () => {
     expect(entered.get().productionOrders[0]?.suppliedLines).toEqual(['40211-2']);
   });
 
+  it('NO5 the operations and the supplies scroll sideways in a region the keyboard reaches (WCAG 2.1.1)', async () => {
+    renderAt(planningLinks.orders.new({ plant }, { line: '40211-2' }).href);
+    await screen.findByRole('heading', { level: 1, name: 'New production order' });
+
+    for (const name of ['Operations, scrolls sideways', 'Supplies, scrolls sideways']) {
+      const region = screen.getByRole('region', { name });
+      expect(region.getAttribute('tabindex')).toBe('0');
+      expect(region.querySelectorAll('[class~="overflow-x-auto"]').length).toBe(0);
+    }
+  });
+
   it('NO4 a taken number, no quantity and a date that does not parse are refused with the error summary', async () => {
     const { entered } = renderAt(planningLinks.orders.new({ plant }).href);
     await screen.findByRole('heading', { level: 1, name: 'New production order' });
