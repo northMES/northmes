@@ -153,6 +153,16 @@ export const shellModules: readonly ShellModule[] = [
       // The order lists follow the timeline pages (design #687, F0 assumption 1).
       { label: 'Production orders', icon: 'ClipboardList', link: planningLinks.orders },
       { label: 'Customer orders', icon: 'Handshake', link: planningLinks.customerOrders },
+      // Plant settings (plan 07, Board settings; #762): which fields blocks and hover cards show.
+      // planning.settings:manage is not installed yet, so the entry shows to a user who administers
+      // the plant's roles there, as the machines and calendars do.
+      {
+        label: 'Board fields',
+        icon: 'ListChecks',
+        link: planningLinks.settings.boardFields,
+        permission: 'core.roleAssignment:manage',
+        area: 'settings',
+      },
     ],
   },
 ];

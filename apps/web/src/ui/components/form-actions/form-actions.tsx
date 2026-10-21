@@ -8,18 +8,33 @@ export interface FormActionsProps {
   readonly saveLabel: string;
   /** The save is running: the submit button is busy. */
   readonly saving: boolean;
-  /** Where Cancel leads: the list for a new record, the record's page for an edit. */
-  readonly cancelHref: string;
   /** The form has changes that are not saved, which the bar says beside its buttons. */
   readonly dirty?: boolean;
+  /** A line after the buttons on what Save does, such as a settings page's effect. */
+  readonly note?: string;
 }
+
+/**
+ * Cancel leads to a page (the list for a new record, the record's page for an edit), or resets a
+ * form that stays on its page, such as a settings page.
+ */
+export type FormActionsCancel =
+  | { readonly cancelHref: string; readonly onCancel?: never }
+  | { readonly onCancel: () => void; readonly cancelHref?: never };
 
 /**
  * The Save bar of a form page (design ui-222, DE7 and NA20; core-304, NO15): sticky at the bottom
  * of the page, with the submit button, Cancel as a link, and "Changes not saved" while the form has
  * changes. The page's scroll-padding-bottom keeps a focused field clear of it (WCAG 2.4.11).
  */
-export function FormActions({ saveLabel, saving, cancelHref, dirty = false }: FormActionsProps) {
+export function FormActions({
+  saveLabel,
+  saving,
+  cancelHref,
+  onCancel,
+  dirty = false,
+  note,
+}: FormActionsProps & FormActionsCancel) {
   return (
     <div
       data-slot="form-actions"
@@ -28,10 +43,17 @@ export function FormActions({ saveLabel, saving, cancelHref, dirty = false }: Fo
       <Button type="submit" loading={saving}>
         {saveLabel}
       </Button>
-      <Link to={cancelHref} className={buttonVariants({ variant: 'outline' })}>
-        Cancel
-      </Link>
+      {cancelHref === undefined ? (
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      ) : (
+        <Link to={cancelHref} className={buttonVariants({ variant: 'outline' })}>
+          Cancel
+        </Link>
+      )}
       {dirty && <p className="text-sm text-muted-foreground">Changes not saved</p>}
+      {note !== undefined && <p className="text-sm text-muted-foreground">{note}</p>}
     </div>
   );
 }

@@ -45,9 +45,8 @@ describe('the board fields page in plant settings (plan 07, Board settings; #762
     expect(within(block).getByText('boardBlockFields')).toBeTruthy();
     expect(within(block).getByText('Article, Quantity, End', { selector: 'b' })).toBeTruthy();
     expect(
-      (within(block).getByRole('radio', { name: 'Use the company value' }) as HTMLInputElement)
-        .checked,
-    ).toBe(true);
+      within(block).getByRole('radio', { name: 'Use the company value' }).getAttribute('aria-checked'),
+    ).toBe('true');
     expect(within(block).queryByRole('list')).toBeNull();
     const hover = await findList('Hover fields');
     expect(within(hover).getByRole('radio', { name: 'Use the company value' })).toBeTruthy();
