@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatDuration, formatPlantDateTime } from '@northmes/contracts/format';
+import { planningLinks } from '@northmes/planning-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ChartNoAxesGantt, Clock, Ellipsis, Plus } from 'lucide-react';
@@ -374,10 +375,10 @@ export function ProductionOrdersScreen() {
         )
       }
       actions={
-        <Button disabled>
+        <Link to={planningLinks.orders.new({ plant }).href} className={buttonVariants()}>
           <Plus aria-hidden />
-          New order
-        </Button>
+          New production order
+        </Link>
       }
       toolbar={
         <div className="flex flex-col gap-2">

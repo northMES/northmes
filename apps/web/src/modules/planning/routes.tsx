@@ -8,6 +8,7 @@ import { boardFieldsSearch } from './board-fields-search.ts';
 import { customerOrderPageSearch } from './customer-order-page-search.ts';
 import { boardSearch, ganttSearch } from './gantt-search.ts';
 import { jobOrdersSearch } from './job-orders-search.ts';
+import { newCustomerOrderSearch, newOrderSearch } from './new-order-search.ts';
 import { customerOrderListSearch, orderListSearch, urlSearchOf } from './order-list-search.ts';
 import { orderPageSearch } from './order-page-search.ts';
 import { planningRulesSearch } from './planning-rules-search.ts';
@@ -85,6 +86,20 @@ export function planningRoutes(plantRoute: PlantRoute) {
     validateSearch: customerOrderPageSearch,
     component: lazyRouteComponent(() => import('./screens.ts'), 'CustomerOrderScreen'),
   });
+  // New production order and New customer order (design #768), on the in-memory store of
+  // orders entered by hand until the planning server's commands exist.
+  const newOrderRoute = createRoute({
+    getParentRoute: () => ordersRoute,
+    path: linkEntry(planningLinks.orders.new).path,
+    validateSearch: newOrderSearch,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'NewOrderScreen'),
+  });
+  const newCustomerOrderRoute = createRoute({
+    getParentRoute: () => customerOrdersRoute,
+    path: linkEntry(planningLinks.customerOrders.new).path,
+    validateSearch: newCustomerOrderSearch,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'NewCustomerOrderScreen'),
+  });
   const orderRoute = createRoute({
     getParentRoute: () => ordersRoute,
     path: linkEntry(planningLinks.orders.order).path,
@@ -126,9 +141,14 @@ export function planningRoutes(plantRoute: PlantRoute) {
     jobOrdersRoute,
     ordersRoute.addChildren([
       orderListRoute,
+      newOrderRoute,
       orderRoute.addChildren([orderPageRoute, editOrderRoute]),
     ]),
-    customerOrdersRoute.addChildren([customerOrderListRoute, customerOrderRoute]),
+    customerOrdersRoute.addChildren([
+      customerOrderListRoute,
+      newCustomerOrderRoute,
+      customerOrderRoute,
+    ]),
     settingsRoute.addChildren([planningRulesRoute, boardFieldsRoute]),
   ]);
 }
