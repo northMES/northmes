@@ -75,6 +75,8 @@ export const tool = z.object({
 export const ganttMasterDataFixture = z.object({
   id: z.literal('G1-master-data'),
   description: z.string(),
+  /** The company the tools of no plant belong to, by the name a page shows. */
+  company: z.object({ name: z.string() }),
   routings: z.array(routingDetail).nonempty(),
   tools: z.array(tool).nonempty(),
 });

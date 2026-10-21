@@ -25,6 +25,7 @@ import {
 } from './plant-settings-search.ts';
 import { roleListSearch } from './role-list-search.ts';
 import { routingPageSearch } from './routing-search.ts';
+import { toolListSearch } from './tool-list-search.ts';
 import { userListSearch } from './user-list-search.ts';
 import {
   urlSearchOf as urlSearchOfWarehouseList,
@@ -248,6 +249,23 @@ export function coreRoutes(plantRoute: PlantRoute) {
     validateSearch: routingPageSearch,
     component: lazyScreen('EditRoutingOperationScreen'),
   });
+  // The tools register under Master data (design #729), on the fixture G1 until core's tool API.
+  const toolsRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.tools).path,
+  });
+  const toolListRoute = createRoute({
+    getParentRoute: () => toolsRoute,
+    path: '/',
+    validateSearch: toolListSearch,
+    component: lazyScreen('ToolsScreen'),
+  });
+  const toolRoute = createRoute({
+    getParentRoute: () => toolsRoute,
+    path: linkEntry(coreLinks.tools.tool).path,
+    validateSearch: toolListSearch,
+    component: lazyScreen('ToolScreen'),
+  });
   return coreRoute.addChildren([
     withoutCoreSegment(coreRoute, 2),
     dashboardRoute,
@@ -272,6 +290,7 @@ export function coreRoutes(plantRoute: PlantRoute) {
     ]),
     calendarsRoute.addChildren([calendarListRoute, calendarRoute]),
     customersRoute.addChildren([customerListRoute, customerRoute]),
+    toolsRoute.addChildren([toolListRoute, toolRoute]),
     routingsRoute.addChildren([
       routingListRoute,
       routingRoute.addChildren([routingDetailRoute, editRoutingOperationRoute]),
