@@ -12,6 +12,8 @@ import {
   timeHeaderHeightRem,
 } from '../gantt/gantt-time-area.tsx';
 import { BoardBlock } from './board-block.tsx';
+import type { BoardCellItem } from './board-cells.ts';
+import { BoardCluster } from './board-cluster.tsx';
 import type { BoardModel } from './board-rows.ts';
 
 /** The row heights of D3 in rem: 46 px for Not placed, 36 px for a group band, 52 px for a machine. */
@@ -30,6 +32,8 @@ export interface BoardGridProps {
   readonly name: string;
   readonly snapshot: GanttSnapshot;
   readonly model: BoardModel;
+  /** The cells of each machine row at the scale, blocks and clusters in time order, by machine. */
+  readonly cellsOf: (machine: string) => readonly BoardCellItem[];
   readonly scale: TimeScale;
   readonly machineWidth: number;
   readonly timeWidth: number;
@@ -91,6 +95,7 @@ export function BoardGrid({
   name,
   snapshot,
   model,
+  cellsOf,
   scale,
   machineWidth,
   timeWidth,
@@ -160,6 +165,7 @@ export function BoardGrid({
       rowIndex += 1;
       bodyRem += boardRowRem.machine;
       const code = machine.equipment.code;
+      const cells = cellsOf(code);
       bodyRows.push(
         <Row key={code} index={rowIndex} heightRem={boardRowRem.machine} columns={columns}>
           <div
@@ -177,7 +183,7 @@ export function BoardGrid({
           </div>
           <div className="relative bg-lane">
             <TimeCellShading windows={machine.closed} scale={scale} />
-            {machine.blocks.length === 0 ? (
+            {cells.length === 0 ? (
               <div
                 role="gridcell"
                 tabIndex={tab(focusKeys.empty(code))}
@@ -189,19 +195,36 @@ export function BoardGrid({
                 No jobs in this range
               </div>
             ) : (
-              machine.blocks.map((row) => (
-                <BoardBlock
-                  key={row.id}
-                  row={row}
-                  scale={scale}
-                  snapshot={snapshot}
-                  machine={machineName(code)}
-                  focusable={tabStop === focusKeys.block(row.jobOrder.id)}
-                  selected={row.order.id === selectedOrderId}
-                  onFocus={() => onFocusTarget(focusKeys.block(row.jobOrder.id))}
-                  onSelect={() => onSelectOrder(row.order.id)}
-                />
-              ))
+              cells.map((cell) =>
+                cell.kind === 'cluster' ? (
+                  <BoardCluster
+                    key={cell.key}
+                    rows={cell.rows}
+                    snapshot={snapshot}
+                    machine={machineName(code)}
+                    span={cell}
+                    left={cell.left}
+                    width={cell.width}
+                    focusKey={cell.key}
+                    focusable={tabStop === cell.key}
+                    onFocus={() => onFocusTarget(cell.key)}
+                    onSelectOrder={onSelectOrder}
+                  />
+                ) : (
+                  <BoardBlock
+                    key={cell.row.id}
+                    row={cell.row}
+                    left={cell.left}
+                    width={cell.width}
+                    snapshot={snapshot}
+                    machine={machineName(code)}
+                    focusable={tabStop === focusKeys.block(cell.row.jobOrder.id)}
+                    selected={cell.row.order.id === selectedOrderId}
+                    onFocus={() => onFocusTarget(focusKeys.block(cell.row.jobOrder.id))}
+                    onSelect={() => onSelectOrder(cell.row.order.id)}
+                  />
+                ),
+              )
             )}
           </div>
         </Row>,

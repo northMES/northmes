@@ -6,7 +6,6 @@ import { Clock, ClockAlert, Lock, type LucideIcon, Pencil, Play, UserPen } from 
 import type { FocusEvent } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
-import type { TimeScale } from '../../timeline/time-scale.ts';
 import { type JobOrderRow, quantityText } from '../gantt/gantt-rows.ts';
 import { type BoardBlockState, boardBlockStates, borderMarkerOf } from './board-block-states.ts';
 import { BoardHoverCard } from './board-hover-card.tsx';
@@ -43,7 +42,8 @@ const markerClasses = {
  */
 export function BoardBlock({
   row,
-  scale,
+  left,
+  width,
   snapshot,
   machine,
   focusable,
@@ -52,7 +52,9 @@ export function BoardBlock({
   onSelect,
 }: {
   readonly row: JobOrderRow;
-  readonly scale: TimeScale;
+  /** Where the block starts on the time axis and how wide it is, in px, from its cell. */
+  readonly left: number;
+  readonly width: number;
   readonly snapshot: GanttSnapshot;
   readonly machine: string;
   /** Whether the block holds the grid's one Tab stop. */
@@ -67,9 +69,6 @@ export function BoardBlock({
   const placement = jobOrder.placement;
   if (placement === undefined) return null;
   const timeZone = snapshot.plant.timeZone;
-  const left = scale.x(Math.max(placement.setupStartMs, scale.range.fromMs));
-  const right = scale.x(Math.min(placement.endMs, scale.range.toMs));
-  const width = Math.max(2, right - left);
   const states = boardBlockStates(row, snapshot);
   const marker = borderMarkerOf(states);
   const conflict = states.some((state) => state.kind === 'conflict');
