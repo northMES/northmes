@@ -64,6 +64,7 @@ describe('coreLinks', () => {
       'dashboard',
       'articles',
       'articleGroups',
+      'plant',
       'people',
       'machines',
       'calendars',
@@ -84,6 +85,13 @@ describe('coreLinks', () => {
     );
     expect(coreLinks.calendars.calendar({ plant: 'plant-a', calendarId: 'A1' }).href).toBe(
       '/plant-a/calendars/A1',
+    );
+  });
+
+  it('#767 coreLinks builds the href of the plant page in plant settings at the plant root', () => {
+    expect(coreLinks.plant({ plant: 'plant-a' }).href).toBe('/plant-a/plant');
+    expect(coreLinks.plant({ plant: 'plant-a' }, { preview: 'noCalendar' }).href).toBe(
+      '/plant-a/plant?preview=noCalendar',
     );
   });
 
