@@ -3,9 +3,9 @@
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
-import { Lock, Pencil } from 'lucide-react';
+import { Pencil } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
-import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
 import { buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
   Table,
@@ -21,8 +21,8 @@ import { GroupColor } from '../../components/group-color/index.ts';
 import { ScrollTable } from '../../components/scroll-table/index.ts';
 import { SourceTag } from '../../components/source-tag/index.ts';
 import { colorNote, colorText, machineCountText, machinesOf } from '../../equipment-group-facts.ts';
-import { PlantSettingsForbidden } from '../../plant-settings-data.ts';
-import { machinePageSearch } from '../../plant-settings-search.ts';
+import { equipmentGroupPageState } from '../../equipment-group-states.tsx';
+import { equipmentGroupPageSearch } from '../../plant-settings-search.ts';
 import { usePlantSettings } from '../../plant-settings-source-context.ts';
 
 const head = 'h-auto px-3 py-2 text-xs font-semibold text-muted-foreground';
@@ -86,35 +86,18 @@ function Term({
 export function EquipmentGroupScreen() {
   const { plant } = useShell();
   const { groupCode = '' } = useParams({ strict: false });
-  const search = machinePageSearch(useSearch({ strict: false }));
+  const search = equipmentGroupPageSearch(useSearch({ strict: false }));
   const { snapshot, error, retry } = usePlantSettings(search.preview);
   const group = snapshot?.equipmentGroups.find((each) => each.code === groupCode);
   const back = coreLinks.equipmentGroups({ plant }).href;
 
-  let state: PageState = { status: 'ready' };
-  if (snapshot === undefined && error instanceof PlantSettingsForbidden) {
-    state = {
-      status: 'empty',
-      icon: Lock,
-      title: 'You need the permission to manage the settings of this plant',
-      description: 'Ask your plant admin for a role that manages plant settings.',
-    };
-  } else if (snapshot === undefined && error !== undefined) {
-    state = { status: 'error', title: 'Could not load the equipment group', error, onRetry: retry };
-  } else if (snapshot === undefined) {
-    state = { status: 'loading' };
-  } else if (group === undefined) {
-    state = {
-      status: 'empty',
-      title: 'This equipment group does not exist or you cannot see it',
-      description: 'The link may be out of date, or the group belongs to another plant.',
-      action: (
-        <Link to={back} className={buttonVariants({ variant: 'outline' })}>
-          Back to Equipment groups
-        </Link>
-      ),
-    };
-  }
+  const state = equipmentGroupPageState({
+    plant,
+    loaded: snapshot !== undefined,
+    found: group !== undefined,
+    error,
+    retry,
+  });
   const machines = snapshot === undefined ? [] : machinesOf(snapshot, groupCode);
   const plantName = snapshot?.plant.name ?? 'the plant';
   return (
@@ -152,7 +135,7 @@ export function EquipmentGroupScreen() {
             <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Term term="Code">
                 <span className="font-mono">{group.code}</span>
-                <SourceTag kind={group.owner === 'northmes' ? 'northmes' : 'erp'} />
+                <SourceTag kind={group.owner} />
               </Term>
               <Term term="Name">{group.name}</Term>
               <Term
@@ -212,11 +195,7 @@ export function EquipmentGroupScreen() {
             )}
           </Section>
           <Section title="On the board" lead="The color and the name are always shown together.">
-            <GroupBand
-              name={group.name}
-              color={group.color}
-              machines={machines.map((machine) => machine.name)}
-            />
+            <GroupBand name={group.name} color={group.color} machines={machines} />
           </Section>
           {snapshot.fixture !== undefined && (
             <p className="text-xs text-muted-foreground">Showing fixture {snapshot.fixture}.</p>

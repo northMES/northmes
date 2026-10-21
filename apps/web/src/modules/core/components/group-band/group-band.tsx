@@ -15,8 +15,8 @@ export function GroupBand({
 }: {
   readonly name: string;
   readonly color: string;
-  /** The machines' names, in board order. */
-  readonly machines: readonly string[];
+  /** The group's machines at the plant, by code. */
+  readonly machines: readonly { readonly code: string; readonly name: string }[];
 }) {
   return (
     <figure
@@ -30,11 +30,11 @@ export function GroupBand({
       </div>
       {machines.map((machine) => (
         <div
-          key={machine}
+          key={machine.code}
           className="flex items-center gap-2 border-t border-border px-3 py-1.5 text-sm"
         >
           <GroupColor color={color} shape="dot" />
-          {machine}
+          {machine.name}
         </div>
       ))}
     </figure>

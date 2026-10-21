@@ -118,6 +118,10 @@ export function equipmentGroupListSearch(raw: Record<string, unknown>): Equipmen
   return defined(equipmentGroupListKeys.parse(raw));
 }
 
+/** The URL keys of an equipment group's page and its edit form: the preview, as a machine's. */
+export const equipmentGroupPageSearch = (raw: Record<string, unknown>): MachinePageSearch =>
+  machinePageSearch(raw);
+
 export function machinePageSearch(raw: Record<string, unknown>): MachinePageSearch {
   const parsed = preview.parse(raw.preview);
   return parsed === undefined ? {} : { preview: parsed };

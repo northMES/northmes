@@ -21,6 +21,7 @@ import {
   machinesOf,
   ownerText,
 } from '../../equipment-group-facts.ts';
+import { groupsForbiddenDescription, groupsForbiddenTitle } from '../../equipment-group-states.tsx';
 import {
   type PlantEquipmentGroup,
   type PlantMachine,
@@ -157,9 +158,7 @@ export function EquipmentGroupsScreen() {
   const { snapshot, error, retry } = usePlantSettings(view.preview);
   const [hiddenColumns, setHiddenColumns] = useState<readonly string[]>([]);
   const plantName = snapshot?.plant.name ?? 'the plant';
-  const companyName =
-    snapshot?.equipmentGroups.find((group) => group.scope.kind === 'company')?.scope.name ??
-    'The company';
+  const companyName = snapshot?.company.name ?? 'The company';
 
   const allRows = useMemo(() => (snapshot === undefined ? [] : rowsOf(snapshot)), [snapshot]);
   const rows = allRows.filter(
@@ -205,8 +204,8 @@ export function EquipmentGroupsScreen() {
     state = {
       status: 'empty',
       icon: Lock,
-      title: 'You need the permission to manage the settings of this plant',
-      description: 'Ask your plant admin for a role that manages plant settings.',
+      title: groupsForbiddenTitle,
+      description: groupsForbiddenDescription,
     };
   } else if (failed) {
     state = { status: 'error', title: 'Could not load equipment groups', error, onRetry: retry };

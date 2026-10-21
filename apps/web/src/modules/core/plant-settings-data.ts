@@ -2,9 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The seam between the plant settings pages (machines, machine, calendars; design #688; equipment
 // groups, design #729) and their data: a source answers one snapshot of the plant's equipment and
-// its groups, routings, calendars and the week's job orders in epoch milliseconds. The pages never know which source they have. The first source
-// is the fixture G1 of @northmes/planning-domain with the pages fixture beside it; the GraphQL
-// source of core's equipment and calendars replaces it value by value.
+// its groups, routings, calendars and the week's job orders in epoch milliseconds. The pages never
+// know which source they have. The first source is the fixture G1 of @northmes/planning-domain with
+// the pages fixture beside it; the GraphQL source of core's equipment and calendars replaces it
+// value by value.
 
 /** Who owns a record's master fields: the ERP through the connector, or NorthMES itself. */
 export type PlantRecordOwner = 'erp' | 'northmes';
@@ -105,6 +106,7 @@ export interface PlantSettingsSnapshot {
     readonly timeZone: string;
     readonly productionDayStart: string;
   };
+  readonly company: { readonly name: string };
   readonly nowMs: number;
   /** The ERP connection as configured in Settings: its name is a value, never part of a label. */
   readonly erp?: { readonly name: string; readonly importedAtMs: number };

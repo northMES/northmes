@@ -54,7 +54,7 @@ function groupsOf(
           ? { kind: 'company', name: masterData.company.name }
           : { kind: 'plant', name: plantName },
       colorFrom: detail?.colorFrom ?? 'erp',
-      owner: detail?.source === 'northmes' ? 'northmes' : 'erp',
+      owner: detail?.source ?? 'erp',
     };
   });
 }
@@ -82,6 +82,7 @@ export function g1PlantSettingsSnapshot(
   return {
     fixture: fixture.id,
     plant: { ...fixture.plant, name: plantName },
+    company: { name: masterData.company.name },
     nowMs: ms(fixture.now.instant),
     erp: { name: pages.erp.connectionName, importedAtMs: ms(pages.erp.importedAt.instant) },
     equipmentGroups: groupsOf(fixture, pages, masterData, plantName),

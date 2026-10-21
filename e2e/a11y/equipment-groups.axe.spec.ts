@@ -4,8 +4,9 @@ import { coreLinks } from '@northmes/core-contracts';
 import { expect, plant, test } from '../fixtures.ts';
 
 // The axe check of ADR 0021 over the equipment groups pages (design #729, EG1 to EG9): the list
-// with its Scope menu open, a group's page, the edit form with a color picked, the list and the
-// page at 320 px, and the list's loading, empty, failed and no-access states. The pages read the
+// with its Scope menu open, a group's page, the edit form with a color picked, the list, the page
+// and the form at 320 px, the list's loading, empty, failed and no-access states, the form's
+// loading and no-access states, and a group that does not exist. The pages read the
 // fixture G1, so every state is the same in every run; the preview key opens the states on mock
 // data.
 
@@ -22,6 +23,7 @@ test.describe('the equipment groups pages', () => {
   }) => {
     const groups = coreLinks.equipmentGroups({ plant }).href;
     const mach = coreLinks.equipmentGroups.group({ plant, groupCode: 'MACH' }).href;
+    const editMach = coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'MACH' }).href;
     await signIn(groups);
     await expect(page.getByRole('table', { name: 'Equipment groups of Plant A' })).toBeVisible();
     await checkA11y('the equipment groups list');
@@ -38,7 +40,7 @@ test.describe('the equipment groups pages', () => {
     ).toBeVisible();
     await checkA11y('an equipment group');
 
-    await page.goto(coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'MACH' }).href);
+    await page.goto(editMach);
     await page.getByRole('radio', { name: 'Color 12' }).click();
     await expect(page.getByRole('radio', { name: 'Color 12' })).toHaveAttribute(
       'aria-checked',
@@ -58,6 +60,9 @@ test.describe('the equipment groups pages', () => {
       page.getByRole('heading', { level: 1, name: 'Equipment group MACH' }),
     ).toBeVisible();
     await checkA11y('an equipment group at 320 px');
+    await page.goto(editMach);
+    await expect(page.getByRole('radiogroup', { name: 'Color' })).toBeVisible();
+    await checkA11y('the edit form at 320 px');
     await page.setViewportSize({ width: 1440, height: 900 });
 
     await page.goto(withSearch(groups, { preview: 'loading' }));
@@ -87,5 +92,22 @@ test.describe('the equipment groups pages', () => {
       }),
     ).toBeVisible();
     await checkA11y('the equipment groups list without access');
+
+    await page.goto(withSearch(editMach, { preview: 'loading' }));
+    await expect(page.getByText('Loading the equipment group.')).toBeVisible();
+    await checkA11y('the edit form loading', { busy: true });
+
+    await page.goto(withSearch(editMach, { preview: 'forbidden' }));
+    await expect(page.getByRole('link', { name: 'Back to equipment group MACH' })).toBeVisible();
+    await checkA11y('the edit form without access');
+
+    await page.goto(coreLinks.equipmentGroups.group({ plant, groupCode: 'NOPE' }).href);
+    await expect(
+      page.getByRole('heading', {
+        level: 2,
+        name: 'This equipment group does not exist or you cannot see it',
+      }),
+    ).toBeVisible();
+    await checkA11y('an equipment group that does not exist');
   });
 });

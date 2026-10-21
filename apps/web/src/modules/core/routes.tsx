@@ -20,6 +20,7 @@ import {
 import {
   calendarPageSearch,
   equipmentGroupListSearch,
+  equipmentGroupPageSearch,
   machineListSearch,
   machinePageSearch,
   urlSearchOf as urlSearchOfPlantSettingsList,
@@ -210,13 +211,13 @@ export function coreRoutes(plantRoute: PlantRoute) {
   const equipmentGroupDetailRoute = createRoute({
     getParentRoute: () => equipmentGroupRoute,
     path: '/',
-    validateSearch: machinePageSearch,
+    validateSearch: equipmentGroupPageSearch,
     component: lazyScreen('EquipmentGroupScreen'),
   });
   const editEquipmentGroupRoute = createRoute({
     getParentRoute: () => equipmentGroupRoute,
     path: linkEntry(coreLinks.equipmentGroups.group.edit).path,
-    validateSearch: machinePageSearch,
+    validateSearch: equipmentGroupPageSearch,
     component: lazyScreen('EditEquipmentGroupScreen'),
   });
   const calendarsRoute = createRoute({

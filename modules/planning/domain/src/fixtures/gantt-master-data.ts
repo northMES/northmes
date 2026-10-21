@@ -83,7 +83,7 @@ export const equipmentGroupDetail = z.object({
   color: z.string().optional(),
   scope: z.enum(['company', 'plant']),
   colorFrom: z.enum(['erp', 'set', 'palette']),
-  source: masterDataSource,
+  source: z.enum(['erp', 'northmes']),
 });
 
 export const ganttMasterDataFixture = z.object({
