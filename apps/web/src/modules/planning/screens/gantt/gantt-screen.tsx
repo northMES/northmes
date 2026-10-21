@@ -18,14 +18,20 @@ import type { GanttDataSource, GanttSnapshot } from '../../gantt-data.ts';
 import {
   applyDraft,
   cascadeFromHere,
+  combineInDraft,
   type DraftConflict,
   discardChange,
+  draftChangeCount,
   draftConflicts,
   draftRowIds,
   emptyDraft,
   type GanttDraft,
   moveBack,
   moveInDraft,
+  orderNumbersText,
+  runPreview,
+  runSummary,
+  splitRunInDraft,
 } from '../../gantt-draft.ts';
 import {
   droppedKeyMessage,
@@ -52,6 +58,7 @@ import {
 import { chainOf } from './gantt-chain.ts';
 import {
   type GanttMoveActions,
+  type GanttRunActions,
   type GanttViewContext,
   GanttViewProvider,
 } from './gantt-context.ts';
@@ -77,6 +84,7 @@ import {
   notPlacedRows,
   rowHeightRem,
 } from './gantt-rows.ts';
+import { GanttRunDialog } from './gantt-run-dialog.tsx';
 import { GanttTimeHeader, timeHeaderHeightRem } from './gantt-time-area.tsx';
 import { GanttToolbar } from './gantt-toolbar.tsx';
 import {
@@ -193,7 +201,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const fromContext = useGanttSource();
   const source = given ?? fromContext;
   const { plant } = useShell();
-  const search = ganttSearch(useSearch({ strict: false }));
+  // The router keeps its search object while the URL stays, so the parsed keys keep their identity
+  // and the callbacks below that read them stay stable across renders.
+  const rawSearch = useSearch({ strict: false });
+  const search = useMemo(() => ganttSearch(rawSearch), [rawSearch]);
   const navigate = useNavigate();
   const setSearch = useCallback(
     (next: GanttSearch) =>
@@ -205,6 +216,11 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const [draft, setDraft] = useState<GanttDraft>(emptyDraft);
   const [moveState, setMoveState] = useState<MoveState | undefined>(undefined);
   const [draftOpen, setDraftOpen] = useState(false);
+  // The orders Shift+click or Shift+Space added to the selection, after the one the URL names
+  // (plan 18, Runs); a plain selection clears them.
+  const [extraSelected, setExtraSelected] = useState<readonly string[]>([]);
+  // The review step of a run: the orders it combines, while it is open.
+  const [runReview, setRunReview] = useState<readonly string[] | undefined>(undefined);
   /** The element that opened the My draft drawer, which takes focus back when it closes. */
   const draftOpener = useRef<HTMLElement | undefined>(undefined);
   const [loadError, setLoadError] = useState<unknown>(undefined);
@@ -551,12 +567,18 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   }, [snapshot, committed, moveState, preview, draft, options.cascade, zoom, timeZone, range]);
   const rowById = useMemo(() => {
     const map = new Map<string, GanttRow>();
-    for (const order of rows) {
+    const addOrder = (order: GanttRow) => {
       map.set(order.id, order);
+      if (order.kind !== 'order') return;
       for (const operation of order.subRows) {
         map.set(operation.id, operation);
         for (const jobOrder of operation.subRows) map.set(jobOrder.id, jobOrder);
       }
+    };
+    for (const row of rows) {
+      map.set(row.id, row);
+      if (row.kind === 'run') for (const order of row.subRows) addOrder(order);
+      else addOrder(row);
     }
     return map;
   }, [rows]);
@@ -568,6 +590,107 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     returnRowId.current = undefined;
     setDetailRowId(undefined);
   }, [snapshot, detailRowId, rowById]);
+
+  // Show critical chain on an order selects it and turns the chain on; on the shown order it ends.
+  const toggleChain = useCallback(
+    (orderId: string) => {
+      if (chain?.order.id === orderId) void setSearch(withChain(search, false));
+      else void setSearch(withChain(withOrder(search, orderId), true));
+    },
+    [chain, search, setSearch],
+  );
+  const selectedOrderIds = useMemo(
+    () => new Set(search.order === undefined ? [] : [search.order, ...extraSelected]),
+    [search.order, extraSelected],
+  );
+  const selectOrder = (orderId: string) => {
+    setExtraSelected([]);
+    if (search.order !== orderId) void setSearch(withOrder(search, orderId));
+  };
+  /** A plain click or Enter on an order already in the selection keeps the selection (plan 18, Runs). */
+  const selectUnlessSelected = (orderId: string) => {
+    if (!selectedOrderIds.has(orderId)) selectOrder(orderId);
+  };
+  /** Shift+click or Shift+Space: the order joins the selection, or leaves it when it was in it. */
+  const extendSelection = (orderId: string) => {
+    if (search.order === undefined) {
+      selectOrder(orderId);
+      return;
+    }
+    if (orderId === search.order) return;
+    setExtraSelected((current) =>
+      current.includes(orderId) ? current.filter((id) => id !== orderId) : [...current, orderId],
+    );
+  };
+  /** The orders a run would hold: the selection with the order the action was taken on. */
+  const runCandidates = useCallback(
+    (orderId: string): string[] =>
+      [...selectedOrderIds, orderId].filter((id, index, all) => all.indexOf(id) === index),
+    [selectedOrderIds],
+  );
+  const runActions = useMemo<GanttRunActions | undefined>(() => {
+    if (snapshot === undefined || committed === undefined) return undefined;
+    const orderOf = (id: string) => snapshot.productionOrders.find((order) => order.id === id);
+    return {
+      canCombine: (orderId) => {
+        const candidates = runCandidates(orderId);
+        // An order already in a run joins no other until that run is split (ADR 0083 rule 1).
+        for (const id of candidates) {
+          const run = snapshot.runs?.find((each) => each.orderIds.includes(id));
+          if (run !== undefined) {
+            return {
+              ok: false,
+              reason: `Order ${orderOf(id)?.number ?? id} is already in the run of ${run.article}; split it first`,
+            };
+          }
+        }
+        const members = candidates.map(orderOf);
+        const article = orderOf(orderId)?.article ?? '';
+        if (members.length < 2) return { ok: false, reason: `Select another order of ${article}` };
+        if (members.some((order) => order?.article !== article)) {
+          return { ok: false, reason: 'The selected orders are of different articles' };
+        }
+        return { ok: true };
+      },
+      // The review step is a modal dialog beside the Details drawer, so the drawer closes first
+      // and focus comes back to its row once the dialog has closed.
+      combine: (orderId) => {
+        if (detailRowId !== undefined) {
+          returnRowId.current = detailRowId;
+          setDetailRowId(undefined);
+        }
+        setRunReview(runCandidates(orderId));
+      },
+      split: (runId) => {
+        const run = draft.runs.find((each) => each.id === runId);
+        setDraft(splitRunInDraft(draft, runId));
+        if (detailRowId === runId) setDetailRowId(undefined);
+        if (run !== undefined) {
+          announce(
+            `Run of ${run.article} split; ${orderNumbersText(run.orderNumbers)} are separate orders again.`,
+          );
+        }
+      },
+    };
+  }, [snapshot, committed, draft, detailRowId, runCandidates]);
+  const runResult = useMemo(
+    () =>
+      committed === undefined || runReview === undefined
+        ? undefined
+        : runPreview(committed, draft, runReview),
+    [committed, draft, runReview],
+  );
+  const combineRun = () => {
+    if (committed === undefined || runReview === undefined) return;
+    const { draft: next, result } = combineInDraft(committed, draft, runReview);
+    setRunReview(undefined);
+    if (result.run === undefined) return;
+    setDraft(next);
+    setExtraSelected([]);
+    announce(
+      `Run of ${result.run.article} in your draft: ${runSummary(next, result.run)}. Not saved.`,
+    );
+  };
 
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
@@ -585,11 +708,14 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       zoneLabel: browserZone !== timeZone,
       hideClosed: options.hideClosed,
       selectedOrderId: search.order,
+      selectedOrderIds,
       chainRowIds,
       machineName: (code) =>
         code === undefined ? 'no machine' : (equipment.get(code)?.name ?? code),
       draftRowIds: draftIds,
       move: moveActions,
+      runActions,
+      toggleChain,
     };
   }, [
     snapshot,
@@ -599,9 +725,12 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     timeZone,
     options.hideClosed,
     search.order,
+    selectedOrderIds,
     chainRowIds,
     draftIds,
     moveActions,
+    runActions,
+    toggleChain,
   ]);
   const { links, limited } =
     snapshot === undefined
@@ -626,14 +755,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     };
   }
 
-  const selectOrder = (orderId: string) => {
-    if (search.order !== orderId) void setSearch(withOrder(search, orderId));
-  };
-  // Show critical chain on an order selects it and turns the chain on; on the shown order it ends.
-  const toggleChain = (orderId: string) => {
-    if (chain?.order.id === orderId) void setSearch(withChain(search, false));
-    else void setSearch(withChain(withOrder(search, orderId), true));
-  };
   const focusRow = (rowId: string) => {
     setFocusedRowId(rowId);
     document.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`)?.focus();
@@ -643,7 +764,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     if (target !== undefined) focusRow(target.id);
   };
   const openDetails = (row: GanttTableRow) => {
-    selectOrder(row.original.order.id);
+    selectUnlessSelected(row.original.order.id);
     setDetailRowId(row.id);
   };
   // The drawer closes and focus goes back to the row it opened from, or to the row a chain link
@@ -721,6 +842,30 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         if (onRow) openDetails(row);
         else handled = false;
         break;
+      // Space selects the row's order, Shift+Space adds it to the selection (plan 18, Runs); on a
+      // run row, its orders.
+      case ' ':
+        if (!onRow) {
+          handled = false;
+          break;
+        }
+        if (row.original.kind === 'run') {
+          const [first, ...rest] = row.original.run.orderIds;
+          if (first !== undefined) {
+            setExtraSelected(rest);
+            if (search.order !== first) void setSearch(withOrder(search, first));
+          }
+        } else if (event.shiftKey) extendSelection(row.original.order.id);
+        else selectOrder(row.original.order.id);
+        break;
+      case 'F10':
+      case 'ContextMenu':
+        if (event.key === 'F10' && !event.shiftKey) {
+          handled = false;
+          break;
+        }
+        event.currentTarget.querySelector<HTMLElement>('[data-row-menu]')?.click();
+        break;
       case 'Escape':
         if (moveState !== undefined) moveActions?.cancel();
         else if (chain !== undefined) void setSearch(withChain(search, false));
@@ -760,7 +905,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
           rangeLabel={rangeLabel(chosenRange, zoom, timeZone)}
           options={options}
           onOptionsChange={setOptions}
-          draftCount={draft.changes.length}
+          draftCount={draftChangeCount(draft)}
           onOpenDraft={() => {
             draftOpener.current = document.activeElement as HTMLElement | undefined;
             setDraftOpen(true);
@@ -848,8 +993,12 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                       focused={row.id === focusedId}
                       onFocus={() => setFocusedRowId(row.id)}
                       onKeyDown={(event) => onRowKeyDown(event, row, index)}
-                      onSelect={() => {
-                        selectOrder(row.original.order.id);
+                      onSelect={(extend) => {
+                        if (extend === true) {
+                          extendSelection(row.original.order.id);
+                          return;
+                        }
+                        selectUnlessSelected(row.original.order.id);
                         setDetailRowId(row.id);
                       }}
                       onToggle={() => row.toggleExpanded()}
@@ -898,8 +1047,18 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             }}
             onMoveBack={(conflict: DraftConflict) => setDraft(moveBack(draft, conflict))}
             onDiscardChange={(jobOrderId) => setDraft(discardChange(draft, jobOrderId))}
+            onSplitRun={(runId) => runActions?.split(runId)}
             onDiscardDraft={() => setDraft(emptyDraft)}
             finalFocus={() => draftOpener.current ?? null}
+          />
+          <GanttRunDialog
+            open={runReview !== undefined}
+            result={runResult}
+            orders={snapshot.productionOrders}
+            timeZone={timeZone}
+            machineName={view.machineName}
+            onCombine={combineRun}
+            onCancel={() => setRunReview(undefined)}
           />
           <GanttDetailDrawer
             row={detailRow}

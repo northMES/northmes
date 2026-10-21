@@ -107,6 +107,8 @@ describe('the links of the order Gantt (plan 18, Blocks, links and the selection
     );
   });
 
+  // Seventy orders with their menus render for seconds under the full suite's load, so the test
+  // gets three times the default timeout; alone it takes about four.
   it("GT1 above 200 links draws the selected order's links only and the toolbar says so", async () => {
     renderGanttRoute(
       { view: 'gantt', zoom: 'week', from: '2026-11-02', order: 'po-1001-3' },
@@ -118,5 +120,5 @@ describe('the links of the order Gantt (plan 18, Blocks, links and the selection
     expect(screen.getByTestId('gantt-status').textContent).toContain(
       'Links shown for the selected order.',
     );
-  });
+  }, 60_000);
 });

@@ -118,10 +118,13 @@ export function SummaryBar({
   span,
   scale,
   color,
+  run = false,
 }: {
   readonly span: { readonly fromMs: number; readonly toMs: number };
   readonly scale: TimeScale;
   readonly color: string;
+  /** The run cue (plan 18, Runs): a doubled left edge, so a run reads apart from an order in forced colors too. */
+  readonly run?: boolean;
 }) {
   const left = scale.x(span.fromMs);
   const width = Math.max(2, scale.x(span.toMs) - left);
@@ -129,8 +132,18 @@ export function SummaryBar({
     <div
       aria-hidden
       data-summary-bar
-      className="absolute top-2.5 h-4 border border-block-border opacity-55"
-      style={{ left: `${left}px`, width: `${width}px`, background: `var(--${color})` }}
+      data-run={run || undefined}
+      className={cn(
+        'absolute top-2.5 h-4 border border-block-border opacity-55',
+        run && 'border-s-4',
+      )}
+      style={{
+        left: `${left}px`,
+        width: `${width}px`,
+        background: `var(--${color})`,
+        // Tailwind has no side variant of the border style, so the run cue's double edge is inline.
+        ...(run && { borderInlineStartStyle: 'double' }),
+      }}
     />
   );
 }

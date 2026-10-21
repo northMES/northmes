@@ -8,7 +8,10 @@ import {
   type GanttViewContext,
   GanttViewProvider,
 } from '../../../src/modules/planning/screens/gantt/gantt-context.ts';
-import { buildGanttRows } from '../../../src/modules/planning/screens/gantt/gantt-rows.ts';
+import {
+  buildGanttRows,
+  jobOrderRowsOf,
+} from '../../../src/modules/planning/screens/gantt/gantt-rows.ts';
 import { closedWindows } from '../../../src/modules/planning/timeline/availability-shading.ts';
 import { createTimeScale, rangeOf } from '../../../src/modules/planning/timeline/time-scale.ts';
 
@@ -29,11 +32,12 @@ function renderBlock(jobOrderId: string, onChain: boolean) {
     zoneLabel: false,
     hideClosed: false,
     selectedOrderId: undefined,
+    selectedOrderIds: new Set<string>(),
     chainRowIds: new Set(onChain ? [jobOrderId] : []),
     machineName: (code) => code ?? 'no machine',
   };
   const row = buildGanttRows(snapshot)
-    .flatMap((order) => order.subRows.flatMap((operation) => operation.subRows))
+    .flatMap((level1) => (level1.kind === 'order' ? jobOrderRowsOf(level1) : []))
     .find((each) => each.id === jobOrderId);
   if (row === undefined) throw new Error(`No row ${jobOrderId}`);
   const { container } = render(

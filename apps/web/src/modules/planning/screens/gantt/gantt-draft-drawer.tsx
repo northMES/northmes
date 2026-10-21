@@ -13,7 +13,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../../../../ui/primitives/sheet.tsx';
-import type { DraftChange, DraftConflict, GanttDraft } from '../../gantt-draft.ts';
+import type { Run } from '../../gantt-data.ts';
+import {
+  type DraftChange,
+  type DraftConflict,
+  draftChangeCount,
+  type GanttDraft,
+  runSummary,
+} from '../../gantt-draft.ts';
 
 /** Why Save is drawn disabled until the plan server exists (plan 18, phase 2). */
 export const saveReason = 'Saving needs the plan server.';
@@ -28,6 +35,8 @@ export interface GanttDraftDrawerProps {
   readonly onCascadeFromHere: (conflict: DraftConflict) => void;
   readonly onMoveBack: (conflict: DraftConflict) => void;
   readonly onDiscardChange: (jobOrderId: string) => void;
+  /** Split run on a run of the draft: the run and its moves go (ADR 0083 rule 7). */
+  readonly onSplitRun: (runId: string) => void;
   readonly onDiscardDraft: () => void;
   /** The element that takes focus once the drawer has closed. */
   readonly finalFocus: () => HTMLElement | null;
@@ -71,6 +80,36 @@ function ConflictLine({
   );
 }
 
+/** A run of the draft as one line (plan 18, Runs): what it did, with Split run as its action. */
+function RunLine({
+  run,
+  draft,
+  onSplit,
+}: {
+  readonly run: Run;
+  readonly draft: GanttDraft;
+  readonly onSplit: () => void;
+}) {
+  return (
+    <li
+      className="grid gap-1 border-b border-border py-1.5 last:border-b-0"
+      data-draft-run={run.id}
+    >
+      <div className="flex items-center gap-2">
+        <span className="font-mono text-xs font-semibold">Run of {run.article}</span>
+        <Badge variant="outline">Ready to save</Badge>
+        <span className="grow" />
+        <Button variant="ghost" className="h-7 px-2 text-xs" onClick={onSplit}>
+          Split run
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {`Run of ${run.article}: ${runSummary(draft, run)}`}
+      </p>
+    </li>
+  );
+}
+
 function ChangeLine({
   change,
   timeZone,
@@ -101,6 +140,7 @@ function ChangeLine({
         {change.from !== undefined &&
           `; was ${formatPlantDateTime(change.from.setupStartMs, timeZone)}`}
         {change.reason === 'cascade' && '; moved by the cascade'}
+        {change.reason === 'run' && '; placed by the run'}
         {change.reason === 'snappedToRelease' && '; snapped to its release'}
         {change.reason === 'snappedToLastPiece' && '; snapped to its last-piece bound'}
       </p>
@@ -124,11 +164,13 @@ export function GanttDraftDrawer({
   onCascadeFromHere,
   onMoveBack,
   onDiscardChange,
+  onSplitRun,
   onDiscardDraft,
   finalFocus,
 }: GanttDraftDrawerProps) {
   const reasonId = useId();
-  const count = draft.changes.length;
+  const count = draftChangeCount(draft);
+  const ownChanges = draft.changes.filter((change) => change.runId === undefined);
   const spokenConflicts = useRef(conflicts.length);
   useEffect(() => {
     if (conflicts.length === spokenConflicts.current) return;
@@ -187,17 +229,31 @@ export function GanttDraftDrawer({
                 ))}
               </ul>
             )}
-            <ul aria-label="Changes" className="grid">
-              {draft.changes.map((change) => (
-                <ChangeLine
-                  key={change.jobOrderId}
-                  change={change}
-                  timeZone={timeZone}
-                  machineName={machineName}
-                  onDiscard={() => onDiscardChange(change.jobOrderId)}
-                />
-              ))}
-            </ul>
+            {draft.runs.length > 0 && (
+              <ul aria-label="Runs" className="grid">
+                {draft.runs.map((run) => (
+                  <RunLine
+                    key={run.id}
+                    run={run}
+                    draft={draft}
+                    onSplit={() => onSplitRun(run.id)}
+                  />
+                ))}
+              </ul>
+            )}
+            {ownChanges.length > 0 && (
+              <ul aria-label="Changes" className="grid">
+                {ownChanges.map((change) => (
+                  <ChangeLine
+                    key={change.jobOrderId}
+                    change={change}
+                    timeZone={timeZone}
+                    machineName={machineName}
+                    onDiscard={() => onDiscardChange(change.jobOrderId)}
+                  />
+                ))}
+              </ul>
+            )}
             <div className="flex flex-wrap items-center gap-1.5">
               <Button aria-disabled="true" aria-describedby={reasonId} className="h-8 px-3">
                 Save changes

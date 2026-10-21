@@ -29,7 +29,8 @@ export interface GanttRowProps {
   readonly focused: boolean;
   readonly onFocus: () => void;
   readonly onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
-  readonly onSelect: () => void;
+  /** A click selects the row's order; with Shift it adds the order to the selection (plan 18, Runs). */
+  readonly onSelect: (extend?: boolean) => void;
   readonly onToggle: () => void;
 }
 
@@ -60,7 +61,7 @@ export function GanttRowView({
     snapshot,
     closedWindows,
     closedWindowsOf,
-    selectedOrderId,
+    selectedOrderIds,
     chainRowIds,
     timeZone,
     zoneLabel,
@@ -69,7 +70,10 @@ export function GanttRowView({
   const original = row.original;
   const level = row.depth + 1;
   const expanded = row.getIsExpanded();
-  const selected = selectedOrderId === original.order.id;
+  const selected =
+    original.kind === 'run'
+      ? original.run.orderIds.some((id) => selectedOrderIds.has(id))
+      : selectedOrderIds.has(original.order.id);
   const summary = original.kind !== 'jobOrder';
   const heightRem = rowHeightRem[original.kind];
   const span = summary ? summarySpan(jobOrderRowsOf(original)) : undefined;
@@ -78,7 +82,7 @@ export function GanttRowView({
   const onChain = chainRowIds.has(original.id);
   const markers = rowMarkers(original, snapshot, scale, { onChain });
   const background =
-    original.kind === 'order'
+    original.kind === 'order' || original.kind === 'run'
       ? 'bg-muted'
       : original.kind === 'operation'
         ? 'bg-lane-alt'
@@ -99,14 +103,20 @@ export function GanttRowView({
         if (event.target === event.currentTarget) onFocus();
       }}
       onKeyDown={onKeyDown}
-      onClick={onSelect}
+      onClick={(event) => onSelect(event.shiftKey)}
       className={cn(
         'grid border-b border-border outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
-        original.kind === 'order' && 'bg-muted',
+        (original.kind === 'order' || original.kind === 'run') && 'bg-muted',
+        original.kind === 'run' && 'border-s-4 border-s-foreground/60',
         original.kind === 'operation' && 'bg-lane-alt',
         original.kind === 'jobOrder' && 'bg-lane',
       )}
-      style={{ gridTemplateColumns, height: `${heightRem}rem` }}
+      // Tailwind has no side variant of the border style, so the run's double start edge is inline.
+      style={{
+        gridTemplateColumns,
+        height: `${heightRem}rem`,
+        ...(original.kind === 'run' && { borderInlineStartStyle: 'double' }),
+      }}
     >
       {columns.map((column, index) =>
         index === 0 ? (
@@ -149,7 +159,12 @@ export function GanttRowView({
           <TimeCellShading windows={shading} scale={scale} />
           <GanttMarkerLayer markers={markers} scale={scale} />
           {span !== undefined && (
-            <SummaryBar span={span} scale={scale} color={original.order.color} />
+            <SummaryBar
+              span={span}
+              scale={scale}
+              color={original.order.color}
+              run={original.kind === 'run'}
+            />
           )}
         </div>
       ) : (
@@ -166,7 +181,12 @@ export function GanttRowView({
         >
           <TimeCellShading windows={shading} scale={scale} />
           <GanttMarkerLayer markers={markers} scale={scale} />
-          <GanttBlock row={original} selected={selected} onChain={onChain} onSelect={onSelect} />
+          <GanttBlock
+            row={original}
+            selected={selected}
+            onChain={onChain}
+            onSelect={() => onSelect()}
+          />
         </div>
       )}
     </div>

@@ -16,9 +16,11 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  CalendarClock,
   ChevronDown,
   ChevronRight,
   Clock,
+  Layers,
   Link2,
   Lock,
 } from 'lucide-react';
@@ -27,15 +29,20 @@ import type { ColumnChoice } from '../../../../ui/components/columns-menu/index.
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import { useGanttView } from './gantt-context.ts';
+import { GanttRowMenu } from './gantt-row-menu.tsx';
 import {
+  earlyText,
   type GanttRow,
   type JobOrderRow,
   jobOrderRowsOf,
+  type Level1Row,
   latenessText,
   machinesText,
-  type OrderRow,
   orderSubtext,
   quantityText,
+  runLatenessText,
+  runSubtext,
+  runTitle,
   statusLabel,
   summarySpan,
   workingSecondsOf,
@@ -139,11 +146,13 @@ export const ganttColumns: readonly GanttColumn[] = [
     numeric: true,
     cell: (row) =>
       quantityText(
-        row.kind === 'order'
-          ? row.order.quantity
-          : row.kind === 'operation'
-            ? row.operation.quantity
-            : row.jobOrder.quantity,
+        row.kind === 'run'
+          ? row.orders.reduce((sum, order) => sum + order.quantity, 0)
+          : row.kind === 'order'
+            ? row.order.quantity
+            : row.kind === 'operation'
+              ? row.operation.quantity
+              : row.jobOrder.quantity,
       ),
   },
   { id: 'start', header: 'Start', widthPx: 128, cell: timeCell('fromMs') },
@@ -163,7 +172,9 @@ export const ganttColumns: readonly GanttColumn[] = [
     cell: (row, { timeZone, zoneLabel }) =>
       row.kind === 'order'
         ? formatPlantDateTime(row.order.deadlineMs, timeZone, { zoneLabel })
-        : '',
+        : row.kind === 'run'
+          ? formatPlantDateTime(row.run.deadlineMs, timeZone, { zoneLabel })
+          : '',
   },
   {
     id: 'lateBy',
@@ -171,7 +182,11 @@ export const ganttColumns: readonly GanttColumn[] = [
     widthPx: 100,
     sortable: true,
     cell: (row) =>
-      row.kind === 'order' && row.analysis?.late ? formatDuration(-row.analysis.slackElapsedS) : '',
+      row.kind === 'order' && row.analysis?.late
+        ? formatDuration(-row.analysis.slackElapsedS)
+        : row.kind === 'run' && row.analysis.late
+          ? formatDuration(row.analysis.lateByS)
+          : '',
   },
   {
     id: 'float',
@@ -219,13 +234,17 @@ export interface GanttSort {
   readonly desc: boolean;
 }
 
-/** The sort key of an order row under a column; the autoplan order breaks ties. */
-function sortKey(row: OrderRow, id: string): number | string {
+/** The sort key of a level 1 row under a column; the autoplan order breaks ties. A run sorts by its deadline and its first order's number. */
+function sortKey(row: Level1Row, id: string): number | string {
   switch (id) {
     case 'deadline':
-      return row.order.deadlineMs;
+      return row.kind === 'run' ? row.run.deadlineMs : row.order.deadlineMs;
     case 'lateBy':
-      return row.analysis?.late ? -row.analysis.slackElapsedS : 0;
+      return row.kind === 'run'
+        ? row.analysis.lateByS
+        : row.analysis?.late
+          ? -row.analysis.slackElapsedS
+          : 0;
     default:
       return row.order.number;
   }
@@ -233,9 +252,9 @@ function sortKey(row: OrderRow, id: string): number | string {
 
 /** The level 1 rows sorted on a column, the tree under each kept. */
 export function sortedOrderRows(
-  rows: readonly OrderRow[],
+  rows: readonly Level1Row[],
   sort: GanttSort | undefined,
-): OrderRow[] {
+): Level1Row[] {
   if (sort === undefined) return [...rows];
   const direction = sort.desc ? -1 : 1;
   return [...rows].sort((a, b) => {
@@ -247,7 +266,7 @@ export function sortedOrderRows(
 }
 
 export interface GanttTableInput {
-  readonly rows: readonly OrderRow[];
+  readonly rows: readonly Level1Row[];
   readonly sort: GanttSort | undefined;
   readonly hiddenColumns: readonly string[];
   readonly expanded: ExpandedState;
@@ -373,7 +392,7 @@ export function GanttTreeHeaderCells({
   );
 }
 
-/** The row header of a row: the disclosure button at levels 1 and 2, then the name and its subtext. */
+/** The row header of a row: the disclosure button on a summary row, the name and its subtext, and the menu of a run or order row. */
 export function GanttRowHeader({
   row,
   expanded,
@@ -387,17 +406,52 @@ export function GanttRowHeader({
   const original = row.original;
   const canExpand = row.getCanExpand();
   const subject =
-    original.kind === 'order'
-      ? `order ${original.order.number}`
-      : original.kind === 'operation'
-        ? `operation ${original.operation.displayNumber}`
-        : '';
+    original.kind === 'run'
+      ? `the run of ${original.run.article}`
+      : original.kind === 'order'
+        ? `order ${original.order.number}`
+        : original.kind === 'operation'
+          ? `operation ${original.operation.displayNumber}`
+          : '';
   let title: string;
   let subtext: string;
   const badges: ReactNode[] = [];
-  if (original.kind === 'order') {
+  if (original.kind === 'run') {
+    title = runTitle(original.run);
+    subtext = runSubtext(original, timeZone);
+    badges.push(
+      <Badge key="run" variant="outline" className="h-4.5 px-1.5">
+        <Layers aria-hidden />
+        Run
+      </Badge>,
+    );
+    if (original.analysis.late) {
+      badges.push(
+        <Badge
+          key="late"
+          variant="outline"
+          className="h-4.5 border-late-foreground bg-late px-1.5 text-late-foreground"
+        >
+          <Clock aria-hidden />
+          {runLatenessText(original.analysis)}
+        </Badge>,
+      );
+    }
+  } else if (original.kind === 'order') {
     title = original.order.number;
     subtext = orderSubtext(original.order, timeZone);
+    if (original.early !== undefined) {
+      badges.push(
+        <Badge
+          key="early"
+          variant="outline"
+          className="h-4.5 border-warning bg-warning-subtle px-1.5 text-warning-foreground"
+        >
+          <CalendarClock aria-hidden />
+          {earlyText(original.early)}
+        </Badge>,
+      );
+    }
     if (original.analysis?.late) {
       badges.push(
         <Badge
@@ -461,6 +515,7 @@ export function GanttRowHeader({
         </span>
         <span className="truncate text-xs text-muted-foreground">{subtext}</span>
       </span>
+      {(original.kind === 'run' || original.kind === 'order') && <GanttRowMenu row={original} />}
     </>
   );
 }
