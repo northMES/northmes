@@ -5,7 +5,9 @@ import { g1Inventory } from '@northmes/planning-domain';
 import { describe, expect, it } from 'vitest';
 import type { GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { applyDraft, emptyDraft, moveInDraft } from '../../../src/modules/planning/gantt-draft.ts';
 import { g1InventorySnapshot } from '../../../src/modules/planning/inventory-data-g1.ts';
+import { inventoryOf } from '../../../src/modules/planning/inventory-of.ts';
 import {
   materialShortages,
   projectionOf,
@@ -165,5 +167,20 @@ describe('the dates of derived movements (plan 07, Material warnings)', () => {
     expect(projectionOf(counted, '30-2011').steps.every((step) => step.balance !== undefined)).toBe(
       true,
     );
+  });
+});
+
+describe('the material warning of a draft (plan 07, Material warnings)', () => {
+  it('#729 MW1 clears the warning of 1004.10 when the draft moves it after purchase order 7740', () => {
+    const committed = g1Snapshot();
+    const { draft } = moveInDraft(
+      committed,
+      emptyDraft,
+      { jobOrderId: 'jo-1004-10', setupStartMs: Date.parse('2026-11-10T05:00:00Z') },
+      { cascade: true },
+    );
+    const inventory = inventoryOf(applyDraft(committed, draft));
+
+    expect(inventory === undefined ? [] : materialShortages(inventory)).toEqual([]);
   });
 });
