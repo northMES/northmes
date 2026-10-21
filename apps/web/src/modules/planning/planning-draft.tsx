@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useShell } from '@northmes/web-sdk';
-import { createContext, type ReactNode, useContext, useState, useSyncExternalStore } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { emptyDraft, type GanttDraft } from './gantt-draft.ts';
 
 /**
@@ -59,6 +66,8 @@ export function usePlanningDraft(): readonly [GanttDraft, (draft: GanttDraft) =>
     store?.subscribe ?? unsubscribed,
     () => store?.get(plant) ?? emptyDraft,
   );
+  // A stable setter, as useState's is, so the actions that write the draft keep their identity.
+  const setShared = useCallback((draft: GanttDraft) => store?.set(plant, draft), [store, plant]);
   if (store === undefined) return [local, setLocal];
-  return [shared, (draft) => store.set(plant, draft)];
+  return [shared, setShared];
 }

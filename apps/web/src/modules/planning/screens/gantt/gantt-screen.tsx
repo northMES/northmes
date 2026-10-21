@@ -472,7 +472,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         }
       },
     };
-  }, [snapshot, committed, draft, detailRowId, runCandidates]);
+  }, [snapshot, committed, draft, setDraft, detailRowId, runCandidates]);
   const runResult = useMemo(
     () =>
       committed === undefined || runReview === undefined

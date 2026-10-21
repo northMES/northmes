@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { announce } from '../../ui/lib/announce.ts';
 import type { GanttSnapshot, ZoomPreset } from './gantt-data.ts';
 import { type GanttDraft, moveInDraft } from './gantt-draft.ts';
@@ -62,9 +62,12 @@ export function useMoveActions({
 } {
   const [moveState, setMoveState] = useState<MoveState | undefined>(undefined);
   const focusBlock = useRef(focus);
-  focusBlock.current = focus;
   const machineSteps = useRef(steps);
-  machineSteps.current = steps;
+  // The latest callbacks, for the actions to call after the render that made them.
+  useLayoutEffect(() => {
+    focusBlock.current = focus;
+    machineSteps.current = steps;
+  });
   const preview = useMemo(
     () =>
       snapshot === undefined || moveState === undefined
@@ -117,7 +120,6 @@ export function useMoveActions({
             ? current
             : { ...current, setupStartMs, equipment: equipment ?? current.equipment },
         ),
-      // A step moves one snap step; the preview then snaps forward to working time on the machine.
       // A step moves one snap step from the snapped preview. Backwards, the forward snap of the
       // calendar can land on the same instant again, so the step keeps going back until the
       // preview is earlier, or the horizon ends (plan 18, Snapping and the calendar).
@@ -172,11 +174,13 @@ export function useMoveActions({
         // Focus returns to the block by id once it has drawn at its new place (plan 18).
         requestAnimationFrame(() => focusBlock.current(moveState.jobOrderId));
       },
-      cancel: () => {
+      cancel: (options) => {
         if (moveState === undefined) return;
         setMoveState(undefined);
         announce('Move cancelled.');
-        requestAnimationFrame(() => focusBlock.current(moveState.jobOrderId));
+        if (options?.refocus !== false) {
+          requestAnimationFrame(() => focusBlock.current(moveState.jobOrderId));
+        }
       },
     };
   }, [snapshot, committed, moveState, preview, draft, setDraft, cascadeOn, zoom, timeZone, range]);
