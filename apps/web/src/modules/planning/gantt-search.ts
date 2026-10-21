@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { z } from 'zod';
 import type { ZoomPreset } from './gantt-data.ts';
+import type { PlanningPreview } from './planning-preview.ts';
 
 /**
  * The view state of the Gantt page in the URL (ADR 0062, plan 18): the zoom preset, the first
@@ -55,28 +56,36 @@ export function ganttSearch(raw: Record<string, unknown>): GanttSearch {
  */
 export interface BoardSearch extends GanttSearch {
   readonly view?: 'gantt';
+  /** The page state the mock source answers with (design D3, DR17 to DR22). */
+  readonly preview?: PlanningPreview;
 }
 
 const legacyView = z.literal('gantt').optional().catch(undefined);
+const previewKey = z.enum(['loading', 'empty', 'error', 'forbidden']).optional().catch(undefined);
 
 /** The board route's search, for its validateSearch; see BoardSearch. */
 export function boardSearch(raw: Record<string, unknown>): BoardSearch {
   const view = legacyView.parse(raw.view);
-  return { ...ganttSearch(raw), ...(view !== undefined && { view }) };
+  const preview = previewKey.parse(raw.preview);
+  return {
+    ...ganttSearch(raw),
+    ...(view !== undefined && { view }),
+    ...(preview !== undefined && { preview }),
+  };
 }
 
-export function withZoom(search: GanttSearch, zoom: ZoomPreset): GanttSearch {
+export function withZoom<T extends GanttSearch>(search: T, zoom: ZoomPreset): T {
   return { ...search, zoom };
 }
 
-export function withFrom(search: GanttSearch, from: string): GanttSearch {
+export function withFrom<T extends GanttSearch>(search: T, from: string): T {
   return { ...search, from };
 }
 
 /** The view with an order selected, or none; a change of order ends the chain highlight. */
-export function withOrder(search: GanttSearch, order: string | undefined): GanttSearch {
+export function withOrder<T extends GanttSearch>(search: T, order: string | undefined): T {
   const { order: _, chain: __, ...rest } = search;
-  return order === undefined ? rest : { ...rest, order };
+  return (order === undefined ? rest : { ...rest, order }) as T;
 }
 
 /** The view with the selected order's chain shown or hidden; without an order it stays hidden. */

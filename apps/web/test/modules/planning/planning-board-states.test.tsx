@@ -24,7 +24,10 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
     renderGanttRoute({ preview: 'empty' }, undefined, 'board');
 
     expect(
-      await screen.findByRole('heading', { level: 2, name: 'No machines to plan at this plant yet' }),
+      await screen.findByRole('heading', {
+        level: 2,
+        name: 'No machines to plan at this plant yet',
+      }),
     ).toBeTruthy();
     expect(
       screen.getByText(

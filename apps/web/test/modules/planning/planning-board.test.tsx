@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
@@ -8,9 +8,13 @@ import { renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
-/** The board grid, once it has rendered. */
+/** The board grid, once it has loaded: while it loads, the grid's skeleton is busy. */
 async function findBoard(): Promise<HTMLElement> {
-  return screen.findByRole('grid', { name: /board/ });
+  return waitFor(() => {
+    const board = screen.getByRole('grid', { name: /board/ });
+    if (board.getAttribute('aria-busy') === 'true') throw new Error('The board is loading');
+    return board;
+  });
 }
 
 /** The machine row whose row header names the machine. */

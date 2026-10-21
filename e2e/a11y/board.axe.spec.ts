@@ -53,4 +53,36 @@ test.describe('the planning board', () => {
     await expect(board.getByRole('gridcell', { name: 'No jobs in this range' })).toHaveCount(3);
     await checkA11y('a range without job orders');
   });
+
+  test('ADR0021 the page states of the planning board pass the WCAG 2.2 AA rules', async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
+    // The preview key opens each page state of D3 on the fixture (DR17 to DR22).
+    await signIn(boardHref({ zoom: 'week', from: '2026-11-02', preview: 'loading' }));
+    await expect(page.getByRole('grid', { name: /board/ })).toHaveAttribute('aria-busy', 'true');
+    await checkA11y('the board while it loads', { busy: true });
+
+    await page.goto(boardHref({ preview: 'empty' }));
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'No machines to plan at this plant yet' }),
+    ).toBeVisible();
+    await checkA11y('a plant without machines to plan');
+
+    await page.goto(boardHref({ preview: 'error' }));
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'The board could not be loaded' }),
+    ).toBeVisible();
+    await checkA11y('the board that could not be loaded');
+
+    await page.goto(boardHref({ preview: 'forbidden' }));
+    await expect(
+      page.getByRole('heading', {
+        level: 2,
+        name: 'You cannot see the planning board at this plant',
+      }),
+    ).toBeVisible();
+    await checkA11y('the board without its permission');
+  });
 });
