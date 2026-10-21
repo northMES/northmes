@@ -136,4 +136,74 @@ describe('Details on the planning board (Krister, 2026-10-21: the Gantt drawer)'
     const drawer = await findDetails();
     expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('1005.20 Mill');
   });
+
+  it('plan 07 closing Details during its Move ends the move without a change', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+    await user.keyboard('{Enter}');
+    const drawer = await findDetails();
+
+    await user.click(within(drawer).getByRole('button', { name: 'Move' }));
+    await user.click(within(drawer).getByRole('button', { name: 'Later' }));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(detailsOpen()).toBe(false));
+    expect(board.querySelector('[data-move-preview]')).toBeNull();
+    expect(block(board, '1001.10').getAttribute('data-move-mode')).toBeNull();
+    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+  });
+
+  it('IN27 a job order of a cluster opens its Details from the popover, and closing returns focus to the cluster', async () => {
+    const user = userEvent.setup();
+    const g1 = g1Snapshot();
+    const snapshot = {
+      ...g1,
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) => {
+          if (row.displayNumber !== '1002.10' || row.placement === undefined) return row;
+          const setupStartMs = Date.UTC(2026, 10, 4, 11, 45);
+          const endMs = Date.UTC(2026, 10, 4, 15, 15);
+          return {
+            ...row,
+            equipment: 'CNC1',
+            placement: {
+              setupStartMs,
+              runStartMs: setupStartMs,
+              endMs,
+              segments: [{ fromMs: setupStartMs, toMs: endMs }],
+            },
+          };
+        }),
+      })),
+    };
+    renderGanttRoute({ zoom: '4weeks', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    const cluster = board.querySelector<HTMLElement>(
+      '[data-cluster="1003.10 1002.10"]',
+    ) as HTMLElement;
+
+    await user.click(cluster);
+    const popover = await screen.findByRole('dialog', { name: /^2 jobs on CNC 1/ });
+    await user.click(within(popover).getByRole('button', { name: /^1002\.10 Housing P/ }));
+    const drawer = await findDetails();
+    expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('1002.10 Turn');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(detailsOpen()).toBe(false));
+    await waitFor(() => expect(document.activeElement).toBe(cluster));
+  });
+
+  it('URL state Back to the order before closes the Details of the order after', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+    await user.keyboard('{Enter}');
+    await findDetails();
+
+    router.history.back();
+    await waitFor(() => expect(router.state.location.search).not.toHaveProperty('order'));
+    await waitFor(() => expect(detailsOpen()).toBe(false));
+  });
 });
