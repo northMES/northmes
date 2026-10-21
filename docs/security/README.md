@@ -140,6 +140,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Module boundaries enforced | built | `scripts/lint/module-boundaries.mjs`; `test/meta/module-boundaries.test.ts` |
 | Review on every pull request by CodeRabbit and the maintainer | built | ADR 0065, ADR 0084; `.coderabbit.yaml`; the `main` ruleset requires code owner review (since 2026-10-20) and `.github/CODEOWNERS` names the maintainer, so only his approval lets a pull request merge |
 | A review agent in a fresh context reviews a session's diff before its pull request opens, and the Checks section lists each finding with its outcome | decided | ADR 0065; `CLAUDE.md` (review before the pull request); an instruction, not yet checked by code or CI |
+| A blast-radius agent in a fresh context judges the harm of a wrong merge, and `Risk / risk gate` sorts each pull request into a low or a high tier from `.github/risk-paths` on the default branch, the Validation impact, the declared tier, a breaking title and the author | built (shadow phase: CODEOWNERS still names the maintainer for every path, so every pull request needs his approval; the gate labels each pull request and fails a high one until he approves its head commit) | ADR 0086; `.claude/agents/blast-radius.md`; `.github/workflows/risk.yml`; `scripts/ci/risk-gate.test.ts` |
 
 ### 10. Process
 

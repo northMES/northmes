@@ -21,7 +21,7 @@ Path instructions tell it what to flag per area:
 | `docs/adr/**` | Missing MADR front matter, a new ADR with a status other than `proposed`, Confirmation items that name no test, lint rule or CI check |
 | `docs/**`, `**/*.md`, `.github/**/*.md`, `apps/docs/**/*.mdx` | Em and en dashes, Title Case headings, curly quotes, emojis, MDX components outside the portable subset |
 | `.github/workflows/**` | Actions not pinned by SHA, broad permissions, `pull_request_target`, checkout without `persist-credentials: false`, event values interpolated into scripts |
-| `.coderabbit.yaml` | Changes that drop a path instruction, exclude source, test or migration files, or turn off the request-changes workflow or incremental reviews |
+| `.coderabbit.yaml` | Changes that drop a path instruction, exclude source, test or migration files, turn on the request-changes workflow or author approval, or turn off incremental reviews |
 
 Pre-merge checks only warn; they never block a merge. The title check asks for a Conventional Commit written for users, because the PR title becomes the changelog line. The linked issue check looks for out-of-scope changes. Three custom checks look for AGPL imports in MIT packages, new tables without row-level security outside `docs/sources`, and source changes without a test change.
 
@@ -57,7 +57,7 @@ The PR node of each graph in `docs/agents/handoff/graphs/` (`northmes-guided`, `
 
 CodeRabbit's check run reports the review's progress on the head commit. handoff counts a check named after a reviewer that is in progress as a started review, and the PR node's `reviewRequest` setting uses that to ask only a reviewer that has not started. The three graphs set `reviewRequest`, so the PR node asks CodeRabbit only when it has not started. The PR node leaves checks named after a reviewer in `waitForReviewers` out of CI: an in-progress CodeRabbit check counts as review progress, and `reviewTimeoutMinutes` bounds the wait for that review. The dashboard may still show the raw check as pending. The check is not a required status check.
 
-handoff opens every pull request with Krister's token, so every review counts against one GitHub identity. On the open source plan that identity gets 1 to 10 PR reviews per hour, depending on the repository's stars, and 100 to 300 files per review after path filters. Every push from the PR node uses one review, whether CodeRabbit starts it or a comment does. `@coderabbitai rate limit` shows what is left. A rate-limited push gets a comment from CodeRabbit and no review, so the PR node waits out its timeout.
+Reviews count against the GitHub identity that opened the pull request: Krister's for handoff's pull requests and `northmes-agent`'s for sessions' pull requests (ADR 0084). On the open source plan each identity gets 1 to 10 PR reviews per hour, depending on the repository's stars, and 100 to 300 files per review after path filters. Every push from the PR node uses one review, whether CodeRabbit starts it or a comment does. `@coderabbitai rate limit` shows what is left. A rate-limited push gets a comment from CodeRabbit and no review, so the PR node waits out its timeout.
 
 ## Commands
 

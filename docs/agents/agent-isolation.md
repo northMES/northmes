@@ -54,6 +54,8 @@ In `~/.claude/settings.json`, which applies to every project, set auto mode, loc
 }
 ```
 
+The project settings turn bypass permissions mode off (ADR 0084 rule 1), so the Code tab's mode picker no longer offers it and Claude Code refuses `--dangerously-skip-permissions`. Auto mode replaces it, and the auto mode classifier is one of the controls that stop an injected session. A worktree created before [#740](https://github.com/northMES/northmes/pull/740) keeps the old project settings, which still allow bypass, until a `git merge main` brings in the new ones. When auto mode stops a session on an action it should allow, add an `autoMode.allow` or `autoMode.environment` entry to `~/.claude/settings.json`; Claude Code reads `autoMode` from user and managed settings only.
+
 In the main checkout's local settings file, .claude/settings.local.json, which `.gitignore` keeps out of git and only this repository's sessions load, worktree sessions included, put the machine user's token and identity. Use the token from step 2, your home folder in `GH_CONFIG_DIR`, and the machine user's noreply address from its GitHub email settings.
 
 ```json
