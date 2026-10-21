@@ -1,6 +1,6 @@
 {
   "id": "G1-pages",
-  "description": "What the planning pages show beside the fixture G1 (docs/plan/18-gantt-timeline.md, the planning pages of the product owner round): the ERP connection, four customers and seven customer order lines, where each order came from, the routings, the history of order 1001, the assembly bench and the calendar deviations the plant admin added. Every name, number and time is fictional. Times are plant time, Europe/Stockholm, no clock change in the range.",
+  "description": "What the planning pages show beside the fixture G1 (docs/plan/18-gantt-timeline.md, the planning pages of the product owner round): the ERP connection, four customers and seven customer order lines, where each order came from, the routings, the history of order 1001, the assembly bench and the calendar deviations the plant admin added. Every name, number and time is fictional. Times are plant time, Europe/Stockholm, no clock change in the range. For the board fields (#762): the ERP free fields of the imported orders, two module fields standing in for slot contributions, and the company's board fields.",
   "erp": {
     "connectionName": "Pyramid",
     "importedAt": {
@@ -98,22 +98,40 @@
     "1001": {
       "owner": "erp",
       "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
-      "routingVersion": 3
+      "routingVersion": 3,
+      "externalData": [
+        { "key": "DRAWING_REV", "value": "C" },
+        { "key": "SURFACE", "value": "Zinc plated" },
+        { "key": "PACKING", "value": "EUR pallet" }
+      ]
     },
     "1002": {
       "owner": "erp",
       "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
-      "routingVersion": 1
+      "routingVersion": 1,
+      "externalData": [
+        { "key": "DRAWING_REV", "value": "B" },
+        { "key": "SURFACE", "value": "Anodized" }
+      ]
     },
     "1003": {
       "owner": "erp",
       "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
-      "routingVersion": 2
+      "routingVersion": 2,
+      "externalData": [
+        { "key": "DRAWING_REV", "value": "A" },
+        { "key": "HEAT_TREAT", "value": "Hardened" }
+      ]
     },
     "1004": {
       "owner": "erp",
       "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
-      "routingVersion": 1
+      "routingVersion": 1,
+      "externalData": [
+        { "key": "DRAWING_REV", "value": "D" },
+        { "key": "SURFACE", "value": "Zinc plated" },
+        { "key": "PACKING", "value": "Box 40" }
+      ]
     },
     "1005": {
       "owner": "northmes",
@@ -124,7 +142,12 @@
     "1006": {
       "owner": "erp",
       "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
-      "routingVersion": 1
+      "routingVersion": 1,
+      "externalData": [
+        { "key": "DRAWING_REV", "value": "A" },
+        { "key": "SURFACE", "value": "Raw" },
+        { "key": "PACKING", "value": "EUR pallet" }
+      ]
     }
   },
   "routings": [
@@ -239,5 +262,62 @@
         "addedAt": { "instant": "2026-10-12T07:30:00Z", "plantLocal": "2026-10-12T09:30:00" }
       }
     ]
+  },
+  "moduleFields": [
+    {
+      "id": "connector.erpChange",
+      "label": "ERP change",
+      "module": "ERP connector",
+      "values": {
+        "jo-1001-10": {
+          "text": "ERP change",
+          "accessibleText": "pending ERP change, quantity 600 to 640 pcs",
+          "hoverText": "Quantity 600 to 640 pcs, waiting"
+        },
+        "jo-1001-20": {
+          "text": "ERP change",
+          "accessibleText": "pending ERP change, quantity 600 to 640 pcs",
+          "hoverText": "Quantity 600 to 640 pcs, waiting"
+        }
+      }
+    },
+    {
+      "id": "tooling.toolLife",
+      "label": "Tool life",
+      "module": "Acme tooling",
+      "values": {
+        "jo-1001-10": {
+          "text": "T-311",
+          "accessibleText": "tool T-311, 1 840 pcs left",
+          "hoverText": "T-311, 1 840 pcs left"
+        },
+        "jo-1003-10": {
+          "text": "T-208",
+          "accessibleText": "tool T-208, 220 pcs left",
+          "hoverText": "T-208, 220 pcs left"
+        },
+        "jo-1004-10": {
+          "text": "T-311",
+          "accessibleText": "tool T-311, 1 840 pcs left",
+          "hoverText": "T-311, 1 840 pcs left"
+        }
+      }
+    }
+  ],
+  "boardFields": {
+    "company": {
+      "block": ["article", "quantity", "end"],
+      "hover": [
+        "operation",
+        "article",
+        "quantity",
+        "setupStart",
+        "end",
+        "machine",
+        "orderDeadline",
+        "status",
+        "customer"
+      ]
+    }
   }
 }

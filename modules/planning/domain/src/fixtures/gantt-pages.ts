@@ -42,6 +42,34 @@ export const orderOrigin = z.object({
   createdBy: z.string().optional(),
   /** The version of the article's routing the order's operations were copied from. */
   routingVersion: z.number().int().positive(),
+  /**
+   * The ERP's free fields on an imported order, kept as sent for display (plan 07, external data):
+   * an ordered list of keys and values that board fields can show (#762).
+   */
+  externalData: z.array(z.object({ key: z.string(), value: z.string() })).optional(),
+});
+
+/**
+ * A field a module contributes to the board's block fields slot `planning/board/block-fields/v1`
+ * (plan 07; ADR 0068), as the fixture stands in for its contribution: per job order id, the short
+ * text a block draws, the words its name carries and the value its hover card lists (#762).
+ */
+export const moduleField = z.object({
+  /** The contribution's id, such as connector.erpChange. */
+  id: z.string(),
+  label: z.string(),
+  /** The module that contributes it, as the board settings page names the source. */
+  module: z.string(),
+  values: z.record(
+    z.string(),
+    z.object({ text: z.string(), accessibleText: z.string(), hoverText: z.string() }),
+  ),
+});
+
+/** The field ids of a block and of its hover card, in order (plan 07, Settings). */
+export const boardFieldLists = z.object({
+  block: z.array(z.string()).max(4),
+  hover: z.array(z.string()),
 });
 
 export const routing = z.object({
@@ -108,6 +136,10 @@ export const ganttPagesFixture = z.object({
     shiftName: z.string(),
     deviations: z.array(enteredDeviation),
   }),
+  /** The fields the fixture's modules contribute to the block fields slot (#762). */
+  moduleFields: z.array(moduleField),
+  /** The board fields the company sets; a plant uses them until it sets its own (#762). */
+  boardFields: z.object({ company: boardFieldLists }),
 });
 
 export type GanttPagesFixture = z.infer<typeof ganttPagesFixture>;
