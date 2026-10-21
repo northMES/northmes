@@ -144,12 +144,14 @@ export function boardFocusAfter(
 }
 
 /**
- * Where Tab enters the grid when no job order is selected (design D3, Keyboard model, proposed):
- * the cell of the first machine row that runs at now, else the one nearest to now, else the first
- * cell there is.
+ * Where Tab enters the grid when no job order is selected (design D3, Keyboard model and DR32,
+ * proposed): the job order of the first machine row with job orders that runs at now, else the one
+ * nearest to now; with no job order on any machine, the Not placed row's first cell.
  */
 export function boardEntry(lines: readonly BoardLine[], nowMs: number): string | undefined {
-  const first = lines.find((line) => line.kind === 'machine');
+  const first = lines.find(
+    (line) => line.kind === 'machine' && line.cells.some((cell) => cell.fromMs !== undefined),
+  );
   if (first !== undefined) return nearestIn(first, nowMs);
-  return lines.find((line) => line.cells.length > 0)?.cells[0]?.key;
+  return lines.find((line) => line.kind === 'notPlaced')?.cells[0]?.key;
 }

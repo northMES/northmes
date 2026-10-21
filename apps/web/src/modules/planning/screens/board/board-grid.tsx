@@ -6,6 +6,7 @@ import type { KeyboardEvent, ReactNode } from 'react';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { TimeScale } from '../../timeline/time-scale.ts';
 import { GanttMarkerLayer, overlayMarkers } from '../gantt/gantt-marker-layer.tsx';
+import { quantityText } from '../gantt/gantt-rows.ts';
 import {
   GanttTimeHeader,
   TimeCellShading,
@@ -101,8 +102,6 @@ export function BoardGrid({
 }: BoardGridProps) {
   const timeZone = snapshot.plant.timeZone;
   const columns = `${machineWidth}px ${timeWidth}px`;
-  const machineName = (code: string) =>
-    snapshot.equipment.find((machine) => machine.code === code)?.name ?? code;
   const machineCount = model.groups.reduce((sum, group) => sum + group.machines.length, 0);
   const tab = (key: string) => (key === tabStop ? 0 : -1);
   let rowIndex = 2;
@@ -120,7 +119,11 @@ export function BoardGrid({
         columns={columns}
         className="bg-muted"
       >
-        <div role="rowheader" className="sticky start-0 z-10 flex items-center bg-muted px-1">
+        <div
+          role="rowheader"
+          data-sticky-column
+          className="sticky start-0 z-20 flex items-center bg-muted px-1"
+        >
           <button
             type="button"
             tabIndex={tab(focusKeys.group(group.code))}
@@ -163,7 +166,8 @@ export function BoardGrid({
             tabIndex={tab(focusKeys.header(code))}
             data-board-focus={focusKeys.header(code)}
             onFocus={() => onFocusTarget(focusKeys.header(code))}
-            className="sticky start-0 z-10 flex items-center border-e border-border bg-card px-3 text-sm"
+            data-sticky-column
+            className="sticky start-0 z-20 flex items-center border-e border-border bg-card px-3 text-sm"
             style={{
               boxShadow:
                 group.color === undefined ? undefined : `inset 6px 0 0 var(--${group.color})`,
@@ -178,6 +182,7 @@ export function BoardGrid({
                 role="gridcell"
                 tabIndex={tab(focusKeys.empty(code))}
                 data-board-focus={focusKeys.empty(code)}
+                data-sticky-column
                 onFocus={() => onFocusTarget(focusKeys.empty(code))}
                 className="sticky start-0 inline-flex h-full items-center px-3 text-xs text-muted-foreground"
                 style={{ insetInlineStart: `${machineWidth}px` }}
@@ -190,7 +195,7 @@ export function BoardGrid({
                   key={row.id}
                   row={row}
                   scale={scale}
-                  machine={machineName(code)}
+                  machine={machine.equipment.name}
                   timeZone={timeZone}
                   focusable={tabStop === focusKeys.block(row.jobOrder.id)}
                   onFocus={() => onFocusTarget(focusKeys.block(row.jobOrder.id))}
@@ -217,7 +222,7 @@ export function BoardGrid({
         scrollPaddingInlineStart: `${machineWidth + 8}px`,
       }}
     >
-      <Row index={1} heightRem={headerRem} columns={columns} className="sticky top-0 z-20 bg-muted">
+      <Row index={1} heightRem={headerRem} columns={columns} className="sticky top-0 z-40 bg-muted">
         <div
           role="columnheader"
           className="sticky start-0 z-10 flex flex-col justify-center border-e border-border bg-muted px-3"
@@ -235,7 +240,7 @@ export function BoardGrid({
         index={2}
         heightRem={boardRowRem.notPlaced}
         columns={columns}
-        className="sticky z-10 bg-lane-alt"
+        className="sticky z-30 bg-lane-alt"
         top={headerRem}
       >
         <div
@@ -257,7 +262,7 @@ export function BoardGrid({
             )}
           </span>
         </div>
-        <div className="flex items-center gap-2 px-2">
+        <div data-pinned-row className="flex items-center gap-2 px-2">
           {model.notPlaced.length === 0 ? (
             <div
               role="gridcell"
@@ -281,7 +286,7 @@ export function BoardGrid({
               >
                 <span className="font-mono font-bold">{row.jobOrder.displayNumber}</span>
                 {row.order.article}
-                <span className="sr-only">, not placed</span>
+                <span className="sr-only">, {quantityText(row.jobOrder.quantity)}, not placed</span>
               </div>
             ))
           )}

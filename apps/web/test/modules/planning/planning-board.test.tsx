@@ -249,7 +249,9 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     await findBoard();
 
     await user.click(screen.getByRole('button', { name: 'Show later range' }));
-    expect(await screen.findByRole('heading', { level: 2, name: /could not be loaded|Could not load/ })).toBeTruthy();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: /could not be loaded|Could not load/ }),
+    ).toBeTruthy();
     expect(screen.queryByRole('grid')).toBeNull();
   });
 });

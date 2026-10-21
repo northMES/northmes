@@ -13,7 +13,7 @@ export const blockDensity = { compact: 66, full: 120 } as const;
  * One job order on its machine row (plan 07, Grid semantics and focus; design D3, BO12): a
  * gridcell from setup start to end in the order color, its accessible name built through
  * aria-labelledby from the visible job number and article and a hidden span with the quantity,
- * the machine and the times, so the article keeps its own language. Under 66 px it draws no text;
+ * the machine and the times, so the article can carry its own language once the data names it. Under 66 px it draws no text;
  * the name keeps every word. The block holds no interactive element.
  */
 export function BoardBlock({

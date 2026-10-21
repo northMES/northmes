@@ -68,7 +68,8 @@
     },
     {
       "includes": [
-        "apps/web/src/modules/planning/screens/gantt/**"
+        "apps/web/src/modules/planning/screens/gantt/**",
+        "apps/web/src/modules/planning/screens/board/**"
       ],
       "linter": {
         "rules": {
