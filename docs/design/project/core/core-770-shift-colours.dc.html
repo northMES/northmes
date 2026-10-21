@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Shift colour tokens</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./core-770-shift-colours-tokens.css">
+<link rel="stylesheet" href="./core-770-shift-colours-bundle.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;padding:0}
+.tk-root{box-sizing:border-box;display:flex;flex-direction:column;gap:20px;padding:32px 40px;font-family:var(--font-sans);font-size:.875rem;line-height:1.25rem;background:var(--background);color:var(--foreground)}
+.tk-root h1{margin:0;font-size:1.75rem;line-height:2.125rem;font-weight:600}
+.tk-root h2{margin:0;font-size:1rem;line-height:1.375rem;font-weight:600}
+.tk-root p{margin:0}
+.tk-sub{color:var(--muted-foreground);font-size:.75rem;line-height:1rem}
+.tk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.tk-sec{display:grid;gap:10px;align-content:start;padding:16px;border:1px solid var(--border);border-radius:8.4px;background:var(--card)}
+.tk-sec .nm-table td{height:34px;padding:0 8px;vertical-align:middle;white-space:nowrap}
+.tk-sec .nm-table th{height:32px}
+.tk-sw{display:inline-block;width:14px;height:14px;border-radius:3px;border:1px solid;vertical-align:-3px;margin-right:6px}
+.tk-rules{margin:0;padding-left:18px;display:grid;gap:4px}
+</style>
+</helmet>
+<div class="tk-root" data-theme="light" style="width: 1440px; height: 1000px">
+ <div style="display: grid; gap: 4px">
+  <h1>Shift colours on the calendar's week view</h1>
+  <p class="tk-sub">#770 · design notes for the build · every value is a proposal until Krister picks a variation</p>
+ </div>
+ <ul class="tk-rules">
+  <li>The colour follows the shift by its order in the calendar version: the first shift takes shift-1, the second shift-2, the third shift-3. A calendar with one shift looks almost as today. A fourth shift starts over at shift-1; its name stays written.</li>
+  <li>Each block keeps the shift's name and times, and the legend above the view names every shift, so colour is never the only cue (WCAG 1.4.1).</li>
+  <li>Break stays muted and dashed, overtime stays the success pair, non-working stays hatched destructive, and closed time has no fill. The order palette and the equipment group colours stay unused.</li>
+  <li>Ratios below are WCAG 2.x, measured in sRGB as tokens.contrast.test.ts measures them. The week view draws on card; lane and lane-alt are listed for the board.</li>
+ </ul>
+ <div class="tk-grid">
+  <section class="tk-sec" aria-labelledby="ta">
+   <h2 id="ta">A: shift-N edge and shift-N-subtle fill (recommended)</h2>
+   <p class="tk-sub">Six new tokens per theme. Edge 3:1 on the lane, foreground and muted-foreground 4.5:1 on the fill.</p>
+   <div class="nm-table-wrap"><table class="nm-table">
+    <caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Variation A tokens and contrast</caption>
+    <thead><tr><th scope="col">Token</th><th scope="col">Light</th><th scope="col">Dark</th><th scope="col" style="text-align: right">Edge on card</th><th scope="col" style="text-align: right">Text on fill</th><th scope="col" style="text-align: right">Muted on fill</th></tr></thead>
+    <tbody>
+     <tr><td><span class="tk-sw" style="background: oklch(0.935 0.03 250); border-color: oklch(0.48 0.12 250)"></span>shift-1</td><td class="nm-mono">0.48 0.12 250 / 0.935 0.03 250</td><td class="nm-mono">0.78 0.1 250 / 0.29 0.05 250</td><td class="num nm-mono">6.53 · 8.26</td><td class="num nm-mono">14.33 · 12.54</td><td class="num nm-mono">5.65 · 6.34</td></tr>
+     <tr><td><span class="tk-sw" style="background: oklch(0.95 0.045 80); border-color: oklch(0.5 0.1 65)"></span>shift-2</td><td class="nm-mono">0.5 0.1 65 / 0.95 0.045 80</td><td class="nm-mono">0.82 0.11 75 / 0.3 0.05 75</td><td class="num nm-mono">6.16 · 9.30</td><td class="num nm-mono">14.92 · 12.22</td><td class="num nm-mono">5.88 · 6.17</td></tr>
+     <tr><td><span class="tk-sw" style="background: oklch(0.94 0.035 305); border-color: oklch(0.5 0.14 305)"></span>shift-3</td><td class="nm-mono">0.5 0.14 305 / 0.94 0.035 305</td><td class="nm-mono">0.78 0.12 305 / 0.29 0.06 305</td><td class="num nm-mono">6.41 · 7.89</td><td class="num nm-mono">14.38 · 12.83</td><td class="num nm-mono">5.67 · 6.48</td></tr>
+    </tbody>
+   </table></div>
+   <p class="tk-sub">Light · dark. Edge on lane-alt: 6.13, 5.78, 6.01 light; 8.15, 9.17, 7.78 dark. Fill distance (CIEDE2000) from the break fill at least 7.5, from overtime at least 15.4, from non-working at least 11.2.</p>
+  </section>
+  <section class="tk-sec" aria-labelledby="tb">
+   <h2 id="tb">B: shift-N fill at 3:1, block-border edge, black text</h2>
+   <p class="tk-sub">Three new tokens per theme. The fill alone meets 3:1 on the lane; text is black, as on the board's order blocks.</p>
+   <div class="nm-table-wrap"><table class="nm-table">
+    <caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Variation B tokens and contrast</caption>
+    <thead><tr><th scope="col">Token</th><th scope="col">Light</th><th scope="col">Dark</th><th scope="col" style="text-align: right">Fill on card</th><th scope="col" style="text-align: right">Black on fill</th></tr></thead>
+    <tbody>
+     <tr><td><span class="tk-sw" style="background: oklch(0.62 0.1 250); border-color: oklch(0.22 0.01 250)"></span>shift-1</td><td class="nm-mono">0.62 0.1 250</td><td class="nm-mono">0.68 0.1 250</td><td class="num nm-mono">3.62 · 5.74</td><td class="num nm-mono">5.80 · 7.33</td></tr>
+     <tr><td><span class="tk-sw" style="background: oklch(0.64 0.11 75); border-color: oklch(0.22 0.01 250)"></span>shift-2</td><td class="nm-mono">0.64 0.11 75</td><td class="nm-mono">0.74 0.11 75</td><td class="num nm-mono">3.42 · 7.03</td><td class="num nm-mono">6.14 · 8.97</td></tr>
+     <tr><td><span class="tk-sw" style="background: oklch(0.62 0.12 305); border-color: oklch(0.22 0.01 250)"></span>shift-3</td><td class="nm-mono">0.62 0.12 305</td><td class="nm-mono">0.66 0.12 305</td><td class="num nm-mono">3.82 · 5.05</td><td class="num nm-mono">5.49 · 6.44</td></tr>
+    </tbody>
+   </table></div>
+   <p class="tk-sub">Light · dark. Fill on lane-alt: 3.40, 3.21, 3.59 light. Muted text cannot sit on these fills, so a block's second line is black too. The heavy fills compete with overtime and read like order blocks on the board.</p>
+  </section>
+ </div>
+ <section class="tk-sec" aria-labelledby="tc">
+  <h2 id="tc">Why new tokens</h2>
+  <ul class="tk-rules">
+   <li>info, warning, success and destructive already mean planned, warning, overtime and non-working; three shifts would borrow two meanings.</li>
+   <li>palette-1 to palette-20 group orders on the board and group-1, group-2 mark equipment groups; a shift in an order colour would read as an order.</li>
+   <li>The build adds the pairs to apps/web/src/styles/tokens.css and their pairs to tokens.contrast.test.ts, and the design system republishes its tokens (ADR 0079).</li>
+  </ul>
+ </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
