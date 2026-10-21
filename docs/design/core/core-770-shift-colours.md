@@ -32,7 +32,7 @@ The artboards are in the canvas's `.dc.html` format and render with [core/suppor
 - The colour follows the shift by its order in the calendar version: the first shift takes shift-1, the second shift-2 and the third shift-3, on every day. A fourth shift starts over at shift-1.
 - Colour is never the only cue (WCAG 1.4.1): each block keeps the shift's name and times, the legend above the view names every shift with its times, and the pattern table writes each shift's name beside its key.
 - Break stays muted and dashed, overtime the success pair, non-working hatched destructive, and closed time has no fill. The order palette and the equipment group colours stay unused.
-- Two lathes on calendar B3 join the pages fixture beside G1, so the drawn calendar has machines (Krister, 2026-10-21).
+- Two lathes on calendar B3 join the pages fixture beside G1, so the drawn calendar has machines (Krister, 2026-10-21). They are not plannable, so the machine page does not promise them on the board or the Gantt, which read G1 only.
 
 ## Tokens
 
@@ -62,9 +62,13 @@ The PNGs of the frames are not in this record yet. The session that recorded the
 - The week view's region is focusable and scrolls sideways once the view is narrower than 52 rem; the design's 320 frames draw it at 884 px.
 - The week's description groups shifts with the same days: "Monday to Friday Early 06:00 to 14:00 and Late 14:00 to 22:00, Monday to Thursday Night 22:00 to 06:00, each shift with two breaks".
 - The calendars list writes several shifts with their names ("Mon to Fri Early 06:00 to 14:00, ..."); a calendar with one shift keeps "Mon to Fri 06:00 to 15:00".
-- The pattern table lists a weekday's breaks on one line per shift.
+- The pattern table lists a weekday's breaks on one line per shift. Each line names its shift for a page reader, and a shift without breaks says "No breaks", so the lines stay beside their shifts.
+- The pattern's lead counts the shifts and names them when there are several, as the design's "Three shifts: Early, Late and Night."
+- Blocks, legend items and rows are keyed by the shift's order, since two shifts of a version may share a name.
+- When the shifts' break counts differ, the week's description gives each shift its own count.
 
 ## Known limits
 
-- The design system republishes its tokens with the six shift tokens after the build merges (ADR 0079).
+- The design system republished its tokens with the six shift tokens at version 1792603577-72c4, from commit 819cce0 on the build branch (ADR 0079).
+- The week view still decides closures per plant date, sorts a break by its start and gives lanes only to overtime. Issue #780 clips shifts, breaks and closures to the windows of ADR 0025 rule 7.
 - A calendar with more than three shifts repeats the colours; its names keep the shifts apart.
