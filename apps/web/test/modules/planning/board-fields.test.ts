@@ -104,4 +104,19 @@ describe('the board fields a plant shows (plan 07, Board settings; #762)', () =>
     expect(lines.first).toBe('C');
     expect(lines.extraNames).toEqual(['DRAWING_REV C']);
   });
+
+  it('#762 Setup and run keeps the retool a run saves, as the Gantt card says it', () => {
+    const withRun = {
+      ...snapshot,
+      runs: [{ savedSetups: [{ jobOrderId: 'jo-1001-10', setupS: 1800 }] }],
+    } as unknown as GanttSnapshot;
+    const [field] = shownFields(['setupAndRun'], rowOf('jo-1001-10'), withRun, machineName);
+    expect(field?.value).toBe('30 min, retool saved by the run (30 min), 5 h');
+  });
+
+  it('#762 Late by adds no words to the name of a block of an order on time', () => {
+    const lines = blockLines(['article', 'lateBy'], rowOf('jo-1001-10'), snapshot, machineName);
+    expect(lines.second).toBe('Not late');
+    expect(lines.extraNames).toEqual([]);
+  });
 });

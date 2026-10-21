@@ -153,6 +153,40 @@ describe('the board fields page in plant settings (plan 07, Board settings; #762
     expect(line?.textContent).toBe('600 pcs');
   });
 
+  it('#762 Save keeps the page as it is, with focus on Save and the saved line shown once', async () => {
+    renderBoardFields();
+    const block = await findList('Block fields');
+    await userEvent.click(within(block).getByRole('radio', { name: 'Set for Plant A' }));
+    await userEvent.click(within(block).getByRole('button', { name: 'Remove End' }));
+    await userEvent.type(screen.getByRole('textbox', { name: /^Reason/ }), 'Shorter blocks');
+
+    const save = screen.getByRole('button', { name: 'Save board fields' });
+    await userEvent.click(save);
+
+    expect(screen.getByRole('main').textContent).toContain('Board fields saved.');
+    expect(document.activeElement).toBe(save);
+    expect((screen.getByRole('textbox', { name: /^Reason/ }) as HTMLTextAreaElement).value).toBe(
+      'Shorter blocks',
+    );
+    expect(screen.queryByText('Changes not saved')).toBeNull();
+  });
+
+  it('#762 adding the field that fills the block list moves focus to its Remove button', async () => {
+    renderBoardFields();
+    const block = await findList('Block fields');
+    await userEvent.click(within(block).getByRole('radio', { name: 'Set for Plant A' }));
+    await userEvent.click(within(block).getByRole('button', { name: 'Add block field' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add block field' });
+    await userEvent.click(within(dialog).getByRole('checkbox', { name: /^ERP change/ }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Add 1 field' }));
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(block).getByRole('button', { name: 'Remove ERP change' }),
+      ),
+    );
+  });
+
   it('#762 Use the company value again drops Plant A’s list on Save', async () => {
     const store = createG1BoardFieldsStore();
     store.save(plant, { hover: ['status'] });
