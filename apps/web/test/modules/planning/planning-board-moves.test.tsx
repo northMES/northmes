@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { findGantt, planningHref, renderGanttRoute } from './gantt-fixtures.tsx';
@@ -124,5 +124,47 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     expect(row.textContent).toContain('CNC 2');
     expect(row.textContent).toContain('Wed 4 Nov 06:00');
     expect(row.textContent).toContain('In my draft, not saved');
+  });
+
+  it('IN4 a pointer drag previews the snapped span and the drop puts the move in my draft', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const cell = block(board, '1001.10');
+
+    // At Week a px is 3 min 45 s: 64 px is the 4 h step, Tue 15:30, which snaps to Wed 06:00.
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 132, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 164, clientY: 10, pointerId: 1 });
+    await waitFor(() => {
+      expect(
+        board.querySelector('[data-move-preview="jo-1001-10"]')?.getAttribute('data-from-ms'),
+      ).toBe(String(Date.UTC(2026, 10, 4, 5)));
+    });
+    expect(board.querySelector('[data-drag-tooltip]')?.textContent).toBe(
+      'Wed 4 Nov 06:00 to Wed 4 Nov 12:15, +1 row moves',
+    );
+    fireEvent.pointerUp(cell, { clientX: 164, clientY: 10, pointerId: 1, button: 0 });
+    await waitFor(() => {
+      expect(spoken()).toBe(
+        '1001.10 moved to CNC 1, Wed 4 Nov 06:00 to Wed 4 Nov 12:15. 1 row moves with it. Not saved.',
+      );
+    });
+    expect(block(board, '1001.10').getAttribute('data-states')).toContain('draft');
+    expect(screen.getByRole('button', { name: 'My draft, 2 changes' })).toBeTruthy();
+  });
+
+  it('IN4 Escape during a drag cancels it and the block stays', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const cell = block(board, '1001.10');
+
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 164, clientY: 10, pointerId: 1 });
+    await waitFor(() => expect(board.querySelector('[data-move-preview]')).not.toBeNull());
+    fireEvent.keyDown(cell, { key: 'Escape' });
+    await waitFor(() => expect(spoken()).toBe('Move cancelled.'));
+    fireEvent.pointerUp(cell, { clientX: 164, clientY: 10, pointerId: 1, button: 0 });
+    expect(board.querySelector('[data-move-preview]')).toBeNull();
+    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
   });
 });
