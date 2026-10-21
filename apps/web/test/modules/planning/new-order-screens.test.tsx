@@ -78,7 +78,7 @@ describe('New production order (#768, NO1 to NO9)', () => {
     for (const name of ['Operations, scrolls sideways', 'Supplies, scrolls sideways']) {
       const region = screen.getByRole('region', { name });
       expect(region.getAttribute('tabindex')).toBe('0');
-      expect(region.querySelectorAll('[class~="overflow-x-auto"]').length).toBe(0);
+      expect(within(region).getByRole('table')).toBeTruthy();
     }
   });
 

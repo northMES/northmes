@@ -329,7 +329,12 @@ function NewOrderForm({
         }
       >
         {routing !== undefined && (
-          <div className="overflow-x-auto">
+          <section
+            aria-label="Operations, scrolls sideways"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: a region that scrolls sideways takes focus, so the keyboard scrolls it (WCAG 2.1.1).
+            tabIndex={0}
+            className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-(--focus-outline) [&>[data-slot=table-container]]:overflow-visible"
+          >
             <Table>
               <TableCaption className="sr-only">Operations</TableCaption>
               <TableHeader>
@@ -353,7 +358,7 @@ function NewOrderForm({
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </section>
         )}
       </FormSection>
       <FormSection
@@ -367,7 +372,12 @@ function NewOrderForm({
         </p>
         {errors.lines !== undefined && <p className="text-sm text-destructive">{errors.lines}</p>}
         {chosen.length > 0 && (
-          <div className="overflow-x-auto">
+          <section
+            aria-label="Supplies, scrolls sideways"
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: a region that scrolls sideways takes focus, so the keyboard scrolls it (WCAG 2.1.1).
+            tabIndex={0}
+            className="overflow-x-auto focus-visible:outline-2 focus-visible:outline-(--focus-outline) [&>[data-slot=table-container]]:overflow-visible"
+          >
             <Table>
               <TableCaption className="sr-only">Supplies</TableCaption>
               <TableHeader>
@@ -405,7 +415,7 @@ function NewOrderForm({
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </section>
         )}
         <div className="flex flex-wrap items-end gap-2">
           <SelectField
