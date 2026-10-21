@@ -152,7 +152,11 @@ export function BoardFieldsPicker({
             Cancel
           </Button>
           <Button type="button" disabled={chosen.length === 0} onClick={() => onAdd(ordered)}>
-            {chosen.length === 1 ? 'Add 1 field' : `Add ${chosen.length} fields`}
+            {chosen.length === 0
+              ? 'Add fields'
+              : chosen.length === 1
+                ? 'Add 1 field'
+                : `Add ${chosen.length} fields`}
           </Button>
         </DialogFooter>
       </DialogContent>
