@@ -285,6 +285,11 @@ export function BoardGrid({
                 aria-selected={row.order.id === selectedOrderId}
                 onFocus={() => onFocusTarget(focusKeys.block(row.jobOrder.id))}
                 onClick={() => onSelectOrder(row.order.id)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  onSelectOrder(row.order.id);
+                }}
                 className="flex h-7 items-center gap-1.5 rounded-sm border border-foreground bg-card px-2 text-xs"
               >
                 <span className="font-mono font-bold">{row.jobOrder.displayNumber}</span>

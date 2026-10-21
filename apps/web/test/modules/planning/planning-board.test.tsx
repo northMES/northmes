@@ -287,7 +287,11 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
       board.querySelector<HTMLElement>(`[role="gridcell"][data-job-order="${job}"]`) as HTMLElement;
 
     await user.click(block('1001.10'));
-    expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02', order: 'po-1001' });
+    expect(router.state.location.search).toEqual({
+      zoom: 'week',
+      from: '2026-11-02',
+      order: 'po-1001',
+    });
     expect(block('1001.10').getAttribute('aria-selected')).toBe('true');
     expect(block('1001.20').getAttribute('aria-selected')).toBe('true');
     expect(block('1001.20').querySelector('[data-selection-bar]')).not.toBeNull();
@@ -319,7 +323,9 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     const card = await screen.findByRole('tooltip');
     expect(within(card).getByText('1003.20 Gear blank 32')).toBeTruthy();
     expect(within(card).getByText('Late by 15 h 15 min')).toBeTruthy();
-    const field = (label: string) => within(card).getByText(label).nextElementSibling?.textContent;
+    const field = (label: string) =>
+      Array.from(card.querySelectorAll('dt')).find((term) => term.textContent === label)
+        ?.nextElementSibling?.textContent;
     expect(field('Operation')).toBe('20, Mill');
     expect(field('Quantity')).toBe('600 pcs');
     expect(field('Setup start')).toBe('Wed 4 Nov 12:45');

@@ -4,10 +4,12 @@ import { formatPlantTime, formatSpan } from '@northmes/contracts/format';
 import { cn } from 'cn';
 import { Clock, ClockAlert, Lock, type LucideIcon, Pencil, Play, UserPen } from 'lucide-react';
 import type { FocusEvent } from 'react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { TimeScale } from '../../timeline/time-scale.ts';
 import { type JobOrderRow, quantityText } from '../gantt/gantt-rows.ts';
 import { type BoardBlockState, boardBlockStates, borderMarkerOf } from './board-block-states.ts';
+import { BoardHoverCard } from './board-hover-card.tsx';
 
 /** The widths from which a block shows its job number and its second line (D3, BO12). */
 export const blockDensity = { compact: 66, full: 120 } as const;
@@ -58,7 +60,7 @@ export function BoardBlock({
   /** Whether the block's order is the selected one, which draws the 3 px bar on top. */
   readonly selected: boolean;
   readonly onFocus: (event: FocusEvent<HTMLDivElement>) => void;
-  /** A click selects the block's order. */
+  /** A click, Enter or Space selects the block's order. */
   readonly onSelect: () => void;
 }) {
   const { jobOrder, order } = row;
@@ -83,79 +85,94 @@ export function BoardBlock({
     ...states.map((state) => state.text),
   ].join(', ');
   return (
-    <div
-      role="gridcell"
-      tabIndex={focusable ? 0 : -1}
-      data-job-order={jobOrder.displayNumber}
-      data-board-focus={jobOrder.id}
-      data-states={states.map((state) => state.kind).join(' ') || undefined}
-      aria-selected={selected}
-      aria-labelledby={`${id}-number ${id}-article ${id}-facts`}
-      onFocus={onFocus}
-      onClick={onSelect}
-      className="absolute top-1 h-11 overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-black focus-visible:z-10"
-      style={{ left: `${left}px`, width: `${width}px`, background: `var(--${order.color})` }}
-    >
-      {selected && (
-        <span
-          aria-hidden
-          data-selection-bar
-          className="pointer-events-none absolute inset-x-0 top-0 h-0.75 bg-foreground"
-        />
-      )}
-      {marker !== undefined && (
-        <span
-          aria-hidden
-          data-marker={marker}
-          className={cn('pointer-events-none absolute border-current', markerClasses[marker])}
-        />
-      )}
-      {conflict && (
-        <span
-          aria-hidden
-          data-conflict-edge
-          className="pointer-events-none absolute inset-y-0 right-0 w-1.75"
-          style={{
-            background:
-              'repeating-linear-gradient(135deg, currentColor 0 3px, transparent 3px 6px)',
-          }}
-        />
-      )}
-      <span
-        className={cn(
-          'relative flex items-center gap-1',
-          width < blockDensity.compact && 'sr-only',
-          conflict && 'pe-2',
-        )}
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <div
+            role="gridcell"
+            tabIndex={focusable ? 0 : -1}
+            data-job-order={jobOrder.displayNumber}
+            data-board-focus={jobOrder.id}
+            data-states={states.map((state) => state.kind).join(' ') || undefined}
+            aria-selected={selected}
+            aria-labelledby={`${id}-number ${id}-article ${id}-facts`}
+            onFocus={onFocus}
+            onClick={onSelect}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              event.preventDefault();
+              onSelect();
+            }}
+            className="absolute top-1 h-11 overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-black focus-visible:z-10"
+            style={{ left: `${left}px`, width: `${width}px`, background: `var(--${order.color})` }}
+          />
+        }
       >
-        <span id={`${id}-number`} className="shrink-0 font-mono font-bold">
-          {jobOrder.displayNumber}
-        </span>
+        {selected && (
+          <span
+            aria-hidden
+            data-selection-bar
+            className="pointer-events-none absolute inset-x-0 top-0 h-0.75 bg-foreground"
+          />
+        )}
+        {marker !== undefined && (
+          <span
+            aria-hidden
+            data-marker={marker}
+            className={cn('pointer-events-none absolute border-current', markerClasses[marker])}
+          />
+        )}
+        {conflict && (
+          <span
+            aria-hidden
+            data-conflict-edge
+            className="pointer-events-none absolute inset-y-0 right-0 w-1.75"
+            style={{
+              background:
+                'repeating-linear-gradient(135deg, currentColor 0 3px, transparent 3px 6px)',
+            }}
+          />
+        )}
         <span
-          id={`${id}-article`}
-          className={cn('min-w-0 truncate', width < blockDensity.full && 'sr-only')}
+          className={cn(
+            'relative flex items-center gap-1',
+            width < blockDensity.compact && 'sr-only',
+            conflict && 'pe-2',
+          )}
         >
-          {order.article}
-          <span className="sr-only">,</span>
+          <span id={`${id}-number`} className="shrink-0 font-mono font-bold">
+            {jobOrder.displayNumber}
+          </span>
+          <span
+            id={`${id}-article`}
+            className={cn('min-w-0 truncate', width < blockDensity.full && 'sr-only')}
+          >
+            {order.article}
+            <span className="sr-only">,</span>
+          </span>
+          {icons.length > 0 && (
+            <span aria-hidden className="ms-auto flex shrink-0 items-center gap-0.5">
+              {icons.map(({ kind, icon: Icon }) => (
+                <Icon key={kind} data-state-icon={kind} className="size-3.5" />
+              ))}
+            </span>
+          )}
         </span>
-        {icons.length > 0 && (
-          <span aria-hidden className="ms-auto flex shrink-0 items-center gap-0.5">
-            {icons.map(({ kind, icon: Icon }) => (
-              <Icon key={kind} data-state-icon={kind} className="size-3.5" />
-            ))}
+        <span id={`${id}-facts`} className="sr-only">
+          {facts}
+        </span>
+        {width >= blockDensity.compact && (
+          <span aria-hidden className={cn('relative block truncate', conflict && 'pe-2')}>
+            {width >= blockDensity.full
+              ? `${quantityText(jobOrder.quantity)}, ends ${formatPlantTime(placement.endMs, timeZone)}`
+              : quantityText(jobOrder.quantity)}
           </span>
         )}
-      </span>
-      <span id={`${id}-facts`} className="sr-only">
-        {facts}
-      </span>
-      {width >= blockDensity.compact && (
-        <span aria-hidden className={cn('relative block truncate', conflict && 'pe-2')}>
-          {width >= blockDensity.full
-            ? `${quantityText(jobOrder.quantity)}, ends ${formatPlantTime(placement.endMs, timeZone)}`
-            : quantityText(jobOrder.quantity)}
-        </span>
-      )}
-    </div>
+      </TooltipTrigger>
+      {/* Base UI's popup has no role; the board's hover card is a tooltip, as the Gantt's. */}
+      <TooltipContent role="tooltip" side="bottom" align="start" className="max-w-none px-3 py-2.5">
+        <BoardHoverCard row={row} snapshot={snapshot} machine={machine} states={states} />
+      </TooltipContent>
+    </Tooltip>
   );
 }
