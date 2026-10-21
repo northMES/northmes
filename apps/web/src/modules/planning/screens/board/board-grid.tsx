@@ -82,7 +82,7 @@ function MoveOutline({
         data-move-preview={preview.jobOrderId}
         data-from-ms={preview.span.setupStartMs}
         data-to-ms={preview.span.endMs}
-        className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground bg-foreground/10"
+        className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground"
         style={{
           left: `${left}px`,
           width: `${Math.max(2, scale.x(preview.span.endMs) - left)}px`,

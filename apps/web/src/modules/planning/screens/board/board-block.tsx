@@ -266,7 +266,9 @@ export function BoardBlock({
             }}
             className={cn(
               'absolute top-1 h-11 touch-none overflow-hidden border select-none border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-black focus-visible:z-10',
-              moving && 'opacity-60',
+              // The origin of a move keeps its text at full contrast (WCAG 1.4.3): a dashed
+              // border marks it, not a dimmed fill (design D3, IN4, the origin slot).
+              moving && 'border-2 border-dashed border-foreground',
             )}
             style={{ left: `${left}px`, width: `${width}px`, background: `var(--${order.color})` }}
           />
