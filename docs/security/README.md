@@ -151,3 +151,4 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | A security note in every pull request | built | ADR 0076; `.github/PULL_REQUEST_TEMPLATE.md`, checked by `test/meta/security-docs.test.ts`; `CI / pr security` (`scripts/ci/pr-security.mjs`, `scripts/ci/pr-security.test.ts`) fails a pull request whose Security section is missing, empty or a bare none |
 | A test with every behaviour change, and a reason for every deleted test | built | AGENTS.md; `CI / pr tests` (`scripts/ci/pr-tests.mjs`, `scripts/ci/pr-tests.test.ts`) fails a `feat`, `fix` or `security` pull request that changes source and no test, and a pull request that deletes a test without a `## Removed tests` section |
 | An internal audit before each release and each quarter | decided | ADR 0076 |
+
