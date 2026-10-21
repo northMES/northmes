@@ -6,6 +6,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   createG1PlanningRulesStore,
+  createPlanningRulesStore,
   type PlanningRulesStore,
 } from '../../../src/modules/planning/planning-rules-store.ts';
 import { plant, renderPlanningAt } from './gantt-fixtures.tsx';
@@ -141,6 +142,82 @@ describe('the planning rules page in plant settings (plan 07, Settings; #766, PS
     expect(within(summary).getByRole('link', { name: /Planning factor/ })).toBeTruthy();
     expect(factorInput.getAttribute('aria-invalid')).toBe('true');
     expect(rules.get().plants[plant]?.frozenHours).toBe(24);
+  });
+
+  it('PS4 a frozen window above 720 h and a lock expiry above 24 h are refused', async () => {
+    const rules = renderRules();
+    const frozen = await findRule('Frozen window');
+    const input = within(frozen).getByRole('textbox', { name: /Frozen window at Plant A/ });
+    await userEvent.clear(input);
+    await userEvent.type(input, '100000000');
+    const lock = await findRule('Lock expiry after idle time');
+    await userEvent.click(within(lock).getByRole('radio', { name: 'Set for Plant A' }));
+    const minutes = within(lock).getByRole('textbox', { name: /Lock expiry after idle time at Plant A/ });
+    await userEvent.clear(minutes);
+    await userEvent.type(minutes, '1441');
+    await userEvent.click(screen.getByRole('button', { name: 'Save planning rules' }));
+
+    expect(await screen.findByRole('group', { name: '2 rules need a change' })).toBeTruthy();
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(minutes.getAttribute('aria-invalid')).toBe('true');
+    expect(rules.get().plants[plant]?.frozenHours).toBe(24);
+  });
+
+  it('PS4 a choice without a value at either scope asks for one and is refused until it has one', async () => {
+    const rules = createPlanningRulesStore({
+      company: { planningFactorSource: 'none', frozenHours: 24, softLockIdleExpiry: 1800 },
+      plants: {},
+    });
+    renderRules(rules);
+    const card = await findRule('Purchase requisitions count as incoming stock');
+    const select = within(card).getByRole('combobox', {
+      name: /Purchase requisitions count as incoming stock at Plant A/,
+    }) as HTMLSelectElement;
+    expect(select.value).toBe('');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save planning rules' }));
+    expect(await screen.findByRole('group', { name: '1 rule needs a change' })).toBeTruthy();
+    expect(select.getAttribute('aria-invalid')).toBe('true');
+
+    await userEvent.selectOptions(select, 'true');
+    await userEvent.click(screen.getByRole('button', { name: 'Save planning rules' }));
+    await waitFor(() => expect(rules.get().plants[plant]?.countPurchaseRequisitions).toBe(true));
+  });
+
+  it('PS4 a rule that only has its recorded default uses it, and a Save keeps the plant free of it (ADR 0027)', async () => {
+    const rules = createPlanningRulesStore({
+      company: { frozenHours: 24, softLockIdleExpiry: 1800, countPurchaseRequisitions: false },
+      plants: {},
+    });
+    renderRules(rules);
+    const deadline = await findRule('Deadline time when the ERP sends a date only');
+    expect(checked(deadline, 'Use the default, Start of day, 00:00')).toBe(true);
+    expect(within(deadline).getByText('No value', { selector: 'b' })).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save planning rules' }));
+    await waitFor(() => expect(screen.getByText('Planning rules saved.')).toBeTruthy());
+    expect(rules.get().plants[plant]?.deadlineRule).toBeUndefined();
+  });
+
+  it('PS4 the error summary drops a rule that no longer applies, and a reason counts as a change that Save clears', async () => {
+    renderRules();
+    const source = await findRule('What divides run time');
+    const sourceSelect = within(source).getByRole('combobox', { name: /What divides run time at Plant A/ });
+    await userEvent.selectOptions(sourceSelect, 'factor');
+    const factor = await findRule('Planning factor');
+    await userEvent.type(within(factor).getByRole('textbox', { name: /Planning factor at Plant A/ }), '2.5');
+    await userEvent.click(screen.getByRole('button', { name: 'Save planning rules' }));
+    expect(await screen.findByRole('group', { name: '1 rule needs a change' })).toBeTruthy();
+
+    await userEvent.selectOptions(sourceSelect, 'none');
+    expect(screen.queryByRole('group', { name: /needs? a change$/ })).toBeNull();
+
+    const reason = screen.getByRole('textbox', { name: /Reason/ }) as HTMLTextAreaElement;
+    await userEvent.type(reason, 'Pilot week');
+    expect(screen.getByText('Changes not saved')).toBeTruthy();
+    await userEvent.click(screen.getByRole('button', { name: 'Save planning rules' }));
+    await waitFor(() => expect(screen.getByText('Planning rules saved.')).toBeTruthy());
+    expect(reason.value).toBe('');
   });
 
   it('PS5 to PS7 the preview key opens the loading, failed and no-access states', async () => {

@@ -7,7 +7,10 @@ import {
   ganttSettingsWith,
   planningRuleDefinitions,
 } from '../../../src/modules/planning/planning-rules.ts';
-import { createG1PlanningRulesStore } from '../../../src/modules/planning/planning-rules-store.ts';
+import {
+  createG1PlanningRulesStore,
+  createPlanningRulesStore,
+} from '../../../src/modules/planning/planning-rules-store.ts';
 
 describe('the planning rules of a plant over its company (plan 07, Settings; #766)', () => {
   it('lists the eight rules of plan 07 in its order, each with its default and the ADR that records it', () => {
@@ -18,7 +21,7 @@ describe('the planning rules of a plant over its company (plan 07, Settings; #76
       ['leadTimeBasis', 'ADR 0027'],
       ['retoolOverlapsLeadTime', 'ADR 0028'],
       ['deadlineRule', 'ADR 0027'],
-      ['softLockIdleExpiryMinutes', 'ADR 0029'],
+      ['softLockIdleExpiry', 'ADR 0029'],
       ['countPurchaseRequisitions', 'ADR 0028'],
     ]);
     const withoutDefault = planningRuleDefinitions
@@ -27,7 +30,7 @@ describe('the planning rules of a plant over its company (plan 07, Settings; #76
     expect(withoutDefault).toEqual([
       'planningFactor',
       'frozenHours',
-      'softLockIdleExpiryMinutes',
+      'softLockIdleExpiry',
       'countPurchaseRequisitions',
     ]);
   });
@@ -39,8 +42,20 @@ describe('the planning rules of a plant over its company (plan 07, Settings; #76
     expect(rules.deadlineRule).toEqual({ value: 'endOfShift', from: 'plant' });
     expect(rules.leadTimeBasis).toEqual({ value: 'elapsed', from: 'company' });
     expect(rules.frozenHours).toEqual({ value: 24, from: 'plant' });
-    expect(rules.softLockIdleExpiryMinutes).toEqual({ value: 30, from: 'company' });
+    expect(rules.softLockIdleExpiry).toEqual({ value: 1800, from: 'company' });
     expect(rules.planningFactor).toEqual({ value: undefined, from: undefined });
+  });
+
+  it('takes the recorded default where neither the plant nor the company sets a rule (ADR 0027)', () => {
+    const store = createPlanningRulesStore({ company: {}, plants: {} });
+    const rules = effectivePlanningRules(store.get(), 'plant-b');
+
+    expect(rules.deadlineRule).toEqual({ value: 'startOfDay', from: 'default' });
+    expect(rules.retoolOverlapsLeadTime).toEqual({ value: true, from: 'default' });
+    expect(rules.frozenHours).toEqual({ value: undefined, from: undefined });
+    expect(
+      ganttSettingsWith({ ...g1.settings, deadlineRule: 'endOfShift' }, rules).deadlineRule,
+    ).toBe('startOfDay');
   });
 
   it("saves a plant's value, and a null takes the company's value again", () => {
