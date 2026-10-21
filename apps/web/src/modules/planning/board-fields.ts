@@ -140,8 +140,17 @@ const coreFields: readonly CoreField[] = [
     id: 'setupAndRun',
     label: 'Setup and run',
     description: 'The planned setup and run durations',
-    value: ({ jobOrder }) =>
-      `${formatDuration(jobOrder.plannedSetupS)}, ${formatDuration(jobOrder.plannedRunS)}`,
+    // The retool a run saves stays in the words, as the Gantt's own Setup, run line says it.
+    value: ({ jobOrder }, snapshot) => {
+      const saved = snapshot.runs
+        ?.flatMap((run) => run.savedSetups)
+        .find((each) => each.jobOrderId === jobOrder.id);
+      const setup = formatDuration(jobOrder.plannedSetupS);
+      const run = formatDuration(jobOrder.plannedRunS);
+      return saved === undefined
+        ? `${setup}, ${run}`
+        : `${setup}, retool saved by the run (${formatDuration(saved.setupS)}), ${run}`;
+    },
     named: true,
   },
   {
@@ -160,6 +169,8 @@ const coreFields: readonly CoreField[] = [
       if (analysis === undefined) return undefined;
       return analysis.late ? formatDuration(-analysis.slackElapsedS) : 'Not late';
     },
+    // The block's name already says "late by" among its state cues, and nothing when on time.
+    named: true,
   },
   {
     id: 'freeFloat',
@@ -256,9 +267,14 @@ export function boardFieldCatalog(snapshot: GanttSnapshot): {
   };
 }
 
-/** The option of a field id, or an option that says its source is gone (F0 question 5). */
-export function boardFieldOption(id: string, snapshot: GanttSnapshot): BoardFieldOption {
-  const catalog = boardFieldCatalog(snapshot);
+/** The catalog's three groups, as boardFieldCatalog answers them. */
+export type BoardFieldCatalog = ReturnType<typeof boardFieldCatalog>;
+
+/**
+ * The option of a field id in a catalog, or an option that says its source is gone (#762, F0
+ * question 5): blocks and the hover card skip such a field, and the page names it Not available.
+ */
+export function boardFieldOption(id: string, catalog: BoardFieldCatalog): BoardFieldOption {
   const known = [...catalog.core, ...catalog.erp, ...catalog.module].find(
     (option) => option.id === id,
   );

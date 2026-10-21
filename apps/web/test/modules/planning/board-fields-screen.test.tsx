@@ -200,11 +200,12 @@ describe('the board fields page in plant settings (plan 07, Board settings; #762
     expect(store.get().plants[plant]).toEqual({});
   });
 
-  it('#762 previews job order 1001.10 with the chosen fields as the board and the Gantt draw it', async () => {
+  it('#762 previews job order 1001.10 with the chosen fields as the Gantt draws it', async () => {
     renderBoardFields();
     const preview = await screen.findByRole('region', { name: 'Preview' });
 
-    expect(within(preview).getByText('1001.10 Bracket L')).toBeTruthy();
+    // The full block and the compact block both draw the first field beside the job number.
+    expect(within(preview).getAllByText('1001.10 Bracket L')).toHaveLength(2);
     expect(within(preview).getByText('600 pcs, ends Wed 4 Nov 08:00')).toBeTruthy();
     expect(within(preview).getByText('Hallberg Verkstad AB, Svea Komponent AB')).toBeTruthy();
     expect(

@@ -24,8 +24,9 @@ export type FormActionsCancel =
 
 /**
  * The Save bar of a form page (design ui-222, DE7 and NA20; core-304, NO15): sticky at the bottom
- * of the page, with the submit button, Cancel as a link, and "Changes not saved" while the form has
- * changes. The page's scroll-padding-bottom keeps a focused field clear of it (WCAG 2.4.11).
+ * of the page, with the submit button, Cancel (a link, or a button that resets a form that stays on
+ * its page), "Changes not saved" while the form has changes, and an optional note. The page's
+ * scroll-padding-bottom keeps a focused field clear of it (WCAG 2.4.11).
  */
 export function FormActions({
   saveLabel,

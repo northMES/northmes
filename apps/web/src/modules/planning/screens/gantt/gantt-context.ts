@@ -59,8 +59,8 @@ export interface GanttViewContext {
   readonly runActions?: GanttRunActions;
   /** Show critical chain from a row's menu. */
   readonly toggleChain?: (orderId: string) => void;
-  /** The plant's block and hover fields (#762); the company's lists when none are given. */
-  readonly boardFields?: BoardFieldLists;
+  /** The plant's block and hover fields (#762). */
+  readonly boardFields: BoardFieldLists;
 }
 
 const GanttContext = createContext<GanttViewContext | undefined>(undefined);

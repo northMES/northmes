@@ -85,7 +85,12 @@ export function BoardFieldsEditor({
     setPicking(false);
     if (added.length === 0) return;
     const next = [...ids, ...added];
-    focusNext.current = 'add';
+    const last = next[next.length - 1];
+    // A list the fields fill disables Add, so focus goes to the last field's Remove instead.
+    focusNext.current =
+      limit !== undefined && next.length >= limit && last !== undefined
+        ? { id: last, action: 'remove' }
+        : 'add';
     onChange(next);
     setStatus(
       `${added.length === 1 ? `${optionOf(added[0] ?? '').label} added` : `${added.length} fields added`}. ${countText(next.length)}`,

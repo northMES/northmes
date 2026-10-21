@@ -57,9 +57,7 @@ export function BoardFieldsListCard({
       <div className="grid gap-x-6 gap-y-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="grid content-start gap-1">
           <code className="font-mono text-xs text-muted-foreground">{text.settingKey}</code>
-          <p className="text-xs text-muted-foreground">
-            Default: {text.defaultText}. A plan proposal in plan 07, Settings.
-          </p>
+          <p className="text-xs text-muted-foreground">Proposed default: {text.defaultText}.</p>
           <div className="mt-1 grid gap-0.5 rounded-md bg-muted px-2.5 py-2">
             <span className="text-xs text-muted-foreground">Company value</span>
             <b className="font-medium">{companyText}</b>

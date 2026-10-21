@@ -17,7 +17,6 @@ import {
   SheetTitle,
 } from '../../../../ui/primitives/sheet.tsx';
 import { shownFields } from '../../board-fields.ts';
-import { useBoardFieldSettings } from '../../board-fields-store.ts';
 import { bindingSentence } from '../../gantt-analysis.ts';
 import type { ConstraintLine } from '../../gantt-data.ts';
 import { orderNumbersText } from '../../gantt-draft.ts';
@@ -236,10 +235,9 @@ function JobOrderDetails({
   readonly onMoveApplied: (jobOrderId: string) => void;
 }) {
   const { snapshot, timeZone, machineName, chainRowIds, boardFields } = useGanttView();
-  const company = useBoardFieldSettings().company;
   const { jobOrder, operation, order, analysis } = row;
   // Every hover field shows here too, in the plant's order (plan 07, Board accessibility; #762).
-  const hoverFields = shownFields((boardFields ?? company).hover, row, snapshot, machineName);
+  const hoverFields = shownFields(boardFields.hover, row, snapshot, machineName);
   const durations = durationsOf(row, snapshot);
   const float = analysis?.float;
   const release = releaseText(row, timeZone, snapshot.settings.retoolOverlapsLeadTime);

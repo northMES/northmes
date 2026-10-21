@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { formatSpan } from '@northmes/contracts/format';
 import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import {
   type BoardFieldLists,
@@ -85,19 +84,9 @@ export function BoardFieldsPreview({
   const lines = blockLines(lists.block, row, snapshot, machineName);
   const hover = shownFields(lists.hover, row, snapshot, machineName);
   const { operation, order, jobOrder } = row;
-  const timeZone = snapshot.plant.timeZone;
-  const span =
-    jobOrder.placement === undefined
-      ? ''
-      : formatSpan(jobOrder.placement.setupStartMs, jobOrder.placement.endMs, timeZone);
-  const name = [
-    `${operation.displayNumber} ${operation.name}`,
-    order.article,
-    `${jobOrder.quantity} pcs`,
-    machineName(jobOrder.equipment),
-    span,
-    ...lines.extraNames,
-  ].join(', ');
+  // The block's name always says the row, article, quantity, machine, times, durations, status and
+  // states; the block fields add only the words it does not already say.
+  const added = lines.extraNames.join(', ');
   return (
     <FormSection
       title="Preview"
@@ -119,14 +108,13 @@ export function BoardFieldsPreview({
             />
           </span>
           <p className="text-xs font-semibold text-muted-foreground">
-            Compact block, 66 to 119 px, and a bar under 66 px
+            Compact block, 48 to 119 px, and a bar under 48 px
           </p>
           <span className="relative block h-12 overflow-hidden rounded border border-border bg-lane">
             <PreviewBlock
               number={operation.displayNumber}
               color={order.color}
-              first=""
-              second={lines.first}
+              first={lines.first ?? ''}
               width={104}
             />
             <span
@@ -159,7 +147,11 @@ export function BoardFieldsPreview({
           </div>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">The block's name for screen readers: {name}.</p>
+      <p className="text-xs text-muted-foreground">
+        {added === ''
+          ? `The block's name for screen readers needs no more words: it already says ${operation.displayNumber}, the article, quantity, machine and times.`
+          : `The block's name for screen readers adds: ${added}.`}
+      </p>
       <p className="text-xs text-muted-foreground">
         {hover.length > 0
           ? `Details lists the same ${hover.length} fields in this order.`

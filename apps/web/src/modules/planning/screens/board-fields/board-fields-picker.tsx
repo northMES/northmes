@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cn } from 'cn';
-import { useEffect, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button } from '../../../../ui/primitives/button.tsx';
@@ -50,12 +50,12 @@ export function BoardFieldsPicker({
   const [chosen, setChosen] = useState<readonly string[]>([]);
   const [query, setQuery] = useState('');
   const baseId = useId();
-  useEffect(() => {
-    if (open) {
-      setChosen([]);
-      setQuery('');
-    }
-  }, [open]);
+  // The picker starts empty each time: what it held goes when it closes, by Add or by Cancel.
+  const close = (then: () => void) => {
+    setChosen([]);
+    setQuery('');
+    then();
+  };
   const groups = [
     { key: 'core', title: 'NorthMES fields', options: catalog.core },
     { key: 'erp', title: 'ERP fields, found in the imported orders', options: catalog.erp },
@@ -75,7 +75,7 @@ export function BoardFieldsPicker({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) onCancel();
+        if (!next) close(onCancel);
       }}
     >
       <DialogContent className="max-h-[calc(100vh-2rem)] grid-rows-[auto_auto_minmax(0,1fr)_auto] sm:max-w-xl">
@@ -97,12 +97,13 @@ export function BoardFieldsPicker({
                 <legend className="pb-1 text-xs font-semibold text-muted-foreground">
                   {group.title}
                 </legend>
-                {shown.map((option) => {
+                {shown.map((option, index) => {
                   const isAdded = added.includes(option.id);
                   const isChosen = chosen.includes(option.id);
                   const disabled =
                     isAdded || (!isChosen && roomLeft !== undefined && roomLeft <= 0);
-                  const id = `${baseId}-${option.id}`;
+                  // ERP keys are as the ERP sent them, so the element ids take the position.
+                  const id = `${baseId}-${group.key}-${index}`;
                   return (
                     <label
                       key={option.id}
@@ -117,7 +118,6 @@ export function BoardFieldsPicker({
                         id={id}
                         checked={isAdded || isChosen}
                         disabled={disabled}
-                        aria-describedby={`${id}-description`}
                         onCheckedChange={(checked) =>
                           setChosen((current) =>
                             checked
@@ -132,9 +132,7 @@ export function BoardFieldsPicker({
                         >
                           {option.label}
                         </span>
-                        <span id={`${id}-description`} className="text-xs text-muted-foreground">
-                          {option.description}
-                        </span>
+                        <span className="text-xs text-muted-foreground">{option.description}</span>
                       </span>
                       <Badge variant="secondary">{isAdded ? 'Added' : option.sourceLabel}</Badge>
                     </label>
@@ -148,10 +146,14 @@ export function BoardFieldsPicker({
           <p className="me-auto text-sm text-muted-foreground">
             {chosen.length === 1 ? '1 field chosen' : `${chosen.length} fields chosen`}
           </p>
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={() => close(onCancel)}>
             Cancel
           </Button>
-          <Button type="button" disabled={chosen.length === 0} onClick={() => onAdd(ordered)}>
+          <Button
+            type="button"
+            disabled={chosen.length === 0}
+            onClick={() => close(() => onAdd(ordered))}
+          >
             {chosen.length === 0
               ? 'Add fields'
               : chosen.length === 1

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // The board fields as saved, in memory (#762): the company's lists from the G1 pages fixture and
-// each plant's own lists once it sets them on the board fields page. The board and the order Gantt
-// read the same store, so a Save shows on their blocks and hover cards at once. The planning
-// settings API replaces the memory when it exists; the shapes are plan 07's.
+// each plant's own lists once it sets them on the board fields page. The order Gantt reads the same
+// store, so a Save shows on its blocks, hover cards and Details at once; the planning board reads
+// it once it draws blocks (#763). The planning settings API replaces the memory when it exists; the
+// shapes are plan 07's.
 import { g1Pages } from '@northmes/planning-domain';
 import { createContext, useContext, useMemo, useSyncExternalStore } from 'react';
 import {

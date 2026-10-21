@@ -45,6 +45,9 @@ test.describe('the board fields page', () => {
     await checkA11y('the board fields at 320');
     await page.setViewportSize({ width: 1440, height: 900 });
 
+    // Cancel leaves the form clean, so the guard against unsaved changes lets the page go.
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.getByText('Changes not saved')).toHaveCount(0);
     await page.goto(boardFields({ preview: 'loading' }));
     await expect(page.getByText('Loading the board fields')).toBeVisible();
     await checkA11y('the board fields loading', { busy: true });

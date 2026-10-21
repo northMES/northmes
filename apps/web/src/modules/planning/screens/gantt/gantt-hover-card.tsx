@@ -6,8 +6,9 @@ import type { GanttSnapshot } from '../../gantt-data.ts';
 import { durationsOf } from './gantt-block-states.ts';
 import { type JobOrderRow, quantityText, savedSetupOf } from './gantt-rows.ts';
 
-/** One line of the hover card: a label and its value. */
+/** One line of the hover card: its field id or analysis line, a label and its value. */
 export interface HoverField {
+  readonly id: string;
   readonly label: string;
   readonly value: string;
 }
@@ -28,19 +29,21 @@ export function hoverFields(
   const timeZone = snapshot.plant.timeZone;
   const { jobOrder, analysis } = row;
   const fields: HoverField[] = shownFields(hoverIds, row, snapshot, machineName).map((field) => ({
+    id: field.id,
     label: field.label,
     value: field.value,
   }));
   const durations = durationsOf(row, snapshot);
   if (durations !== undefined) {
     fields.push(
-      { label: 'Working', value: durations.working },
-      { label: 'Elapsed', value: durations.elapsed },
+      { id: 'analysis:working', label: 'Working', value: durations.working },
+      { id: 'analysis:elapsed', label: 'Elapsed', value: durations.elapsed },
     );
   }
   if (!hoverIds.includes('setupAndRun')) {
     const saved = savedSetupOf(snapshot, jobOrder.id);
     fields.push({
+      id: 'analysis:setupAndRun',
       label: 'Setup, run',
       value:
         saved === undefined
@@ -53,10 +56,11 @@ export function hoverFields(
       analysis.float.freeFloatWorkingS === 0
         ? '0'
         : formatDuration(analysis.float.freeFloatWorkingS);
-    fields.push({ label: 'Free float', value: free });
+    fields.push({ id: 'analysis:freeFloat', label: 'Free float', value: free });
   }
   if (analysis?.release !== undefined) {
     fields.push({
+      id: 'analysis:release',
       label: 'Released from',
       value: `${analysis.release.fromRow} at ${formatPlantDateTime(analysis.release.atMs, timeZone)}`,
     });
@@ -64,6 +68,7 @@ export function hoverFields(
   if (analysis !== undefined) {
     const broken = analysis.constraints.filter((line) => !line.holds).length;
     fields.push({
+      id: 'analysis:constraints',
       label: 'Constraints',
       value:
         broken === 0
@@ -96,7 +101,7 @@ export function GanttHoverCard({
       </p>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
         {hoverFields(row, snapshot, machineName, hoverIds).map((field) => (
-          <div key={field.label} className="contents">
+          <div key={field.id} className="contents">
             <dt className="opacity-80">{field.label}</dt>
             <dd className="text-end font-mono text-xs">{field.value}</dd>
           </div>

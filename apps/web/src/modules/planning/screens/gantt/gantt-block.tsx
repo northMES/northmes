@@ -5,7 +5,6 @@ import { Clock, Lock, Pencil } from 'lucide-react';
 import { type KeyboardEvent, type PointerEvent, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import { blockLines } from '../../board-fields.ts';
-import { useBoardFieldSettings } from '../../board-fields-store.ts';
 import { blockName, blockStates } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
 import { GanttHoverCard } from './gantt-hover-card.tsx';
@@ -42,17 +41,7 @@ export function GanttBlock({
   readonly onChain: boolean;
   readonly onSelect: () => void;
 }) {
-  const {
-    scale,
-    snapshot,
-    machineName,
-    timeZone,
-    draftRowIds,
-    move,
-    boardFields: shown,
-  } = useGanttView();
-  const company = useBoardFieldSettings().company;
-  const boardFields = shown ?? company;
+  const { scale, snapshot, machineName, timeZone, draftRowIds, move, boardFields } = useGanttView();
   const { jobOrder, operation, order } = row;
   // The press in progress: where it started, and whether it has become a drag.
   const press = useRef<{ clientX: number; setupStartMs: number; dragging: boolean } | undefined>(

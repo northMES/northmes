@@ -9,13 +9,11 @@ import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
-import { announce } from '../../../../ui/lib/announce.ts';
 import { Skeleton } from '../../../../ui/primitives/skeleton.tsx';
 import {
   type BoardFieldLists,
   boardFieldCatalog,
   boardFieldOption,
-  effectiveBoardFields,
   maxBlockFields,
 } from '../../board-fields.ts';
 import { boardFieldsSearch } from '../../board-fields-search.ts';
@@ -37,7 +35,7 @@ const blockText: BoardFieldsListText = {
   description: `The fields a job order block shows after its job number and state markers, in this order. Full blocks show every field on two lines, compact blocks the first, bars none. Up to ${maxBlockFields} fields.`,
   defaultText: 'Article, Quantity, End',
   effect:
-    'The board and the Gantt draw these fields on every job order block after you save. A module field draws at the trailing edge.',
+    'The Gantt draws these fields on every job order block after you save, and the planning board once it draws blocks. A module field draws at the trailing edge.',
   addLabel: 'Add block field',
   emptyTitle: 'No block fields',
   emptyText: 'Blocks show the job number and the state markers only.',
@@ -52,7 +50,7 @@ const hoverText: BoardFieldsListText = {
   defaultText:
     'Operation, Article, Quantity, Setup start, End, Machine, Order deadline, Status, Customer',
   effect:
-    'The hover card and Details list these fields for every job order after you save. The hover card opens on hover and on keyboard focus.',
+    "The Gantt's hover card and Details list these fields for every job order after you save. The hover card opens on hover and on keyboard focus.",
   addLabel: 'Add hover fields',
   emptyTitle: 'No hover fields',
   emptyText:
@@ -80,8 +78,9 @@ function BoardFieldsForm({
   const [own, setOwn] = useState<OwnLists>(saved);
   const [savedNow, setSavedNow] = useState<OwnLists>(saved);
   const [status, setStatus] = useState('');
+  const [reason, setReason] = useState('');
   const catalog = useMemo(() => boardFieldCatalog(snapshot), [snapshot]);
-  const optionOf = (id: string) => boardFieldOption(id, snapshot);
+  const optionOf = (id: string) => boardFieldOption(id, catalog);
   const plantName = snapshot.plants?.find((each) => each.slug === plant)?.name ?? plant;
   const dirty = !sameLists(own, savedNow);
   const shown: BoardFieldLists = {
@@ -97,7 +96,6 @@ function BoardFieldsForm({
         store.save(plant, own);
         setSavedNow(own);
         setStatus('Board fields saved.');
-        announce('Board fields saved.');
       }}
     >
       <UnsavedChangesGuard when={dirty} />
@@ -106,7 +104,12 @@ function BoardFieldsForm({
         {setCount === 0
           ? 'Both lists use the company value.'
           : `${setCount} ${setCount === 1 ? 'list is' : 'lists are'} set for ${plantName}.`}{' '}
-        A changed list applies to the board and the Gantt after you save.
+        A changed list applies to the Gantt after you save.
+      </p>
+      <p className="text-xs text-muted-foreground">
+        {snapshot.fixture !== undefined && `Showing fixture ${snapshot.fixture}. `}
+        Saved lists stay in this browser tab until planning settings have their API; a reload starts
+        from the company value again.
       </p>
       <BoardFieldsListCard
         text={blockText}
@@ -132,6 +135,8 @@ function BoardFieldsForm({
           label="Reason"
           optional
           maxLength={500}
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
           hint="Shown in the history of the planning settings once it exists. Do not enter personal data. Up to 500 characters."
         />
       </FormSection>
@@ -143,6 +148,7 @@ function BoardFieldsForm({
         saving={false}
         onCancel={() => {
           setOwn(savedNow);
+          setReason('');
           setStatus('');
         }}
         dirty={dirty}
@@ -180,21 +186,18 @@ export function BoardFieldsScreen() {
       icon: Lock,
       title: 'You need the permission to change board fields at this plant',
       description:
-        'Board fields are planning settings. Ask your plant admin for a role with planning.settings:manage.',
+        'Board fields are planning settings. Ask your plant admin for a role that can change the plant settings.',
     };
   } else if (preview === 'error' || (snapshot === undefined && error !== undefined)) {
     state = {
       status: 'error',
       title: 'Could not load the board fields',
-      description:
-        'The board and the Gantt keep the fields they show now. Check the connection, then try again. If it fails again, give your plant admin the correlation id.',
       error: error ?? new Error('Previewed failure'),
       onRetry: retry,
     };
   } else if (preview === 'loading' || snapshot === undefined) {
     state = { status: 'loading' };
   }
-  const lists = effectiveBoardFields(settings, plant);
   return (
     <PageFrame title="Board fields" state={state}>
       {state.status === 'loading' && (
@@ -206,8 +209,8 @@ export function BoardFieldsScreen() {
       )}
       {state.status === 'ready' && snapshot !== undefined && (
         <BoardFieldsForm
-          // A save elsewhere or a changed preview starts the form again from what is saved.
-          key={`${preview ?? ''}:${JSON.stringify(lists)}`}
+          // A changed preview starts the form again; a Save keeps it, its focus and its reason.
+          key={preview ?? 'saved'}
           snapshot={snapshot}
           plant={plant}
           company={company}
