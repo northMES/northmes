@@ -65,7 +65,24 @@ describe('coreLinks', () => {
       'articles',
       'articleGroups',
       'people',
+      'machines',
+      'calendars',
       'settings',
     ]);
+  });
+
+  it('E06 coreLinks builds the hrefs of the machines and the calendars of a plant at the plant root', () => {
+    expect(coreLinks.machines({ plant: 'plant-a' }, { group: 'MACH' }).href).toBe(
+      '/plant-a/machines?group=MACH',
+    );
+    expect(coreLinks.machines.machine({ plant: 'plant-a', equipmentId: 'CNC1' }).href).toBe(
+      '/plant-a/machines/CNC1',
+    );
+    expect(coreLinks.machines.machine.edit({ plant: 'plant-a', equipmentId: 'CNC1' }).href).toBe(
+      '/plant-a/machines/CNC1/edit',
+    );
+    expect(coreLinks.calendars.calendar({ plant: 'plant-a', calendarId: 'A1' }).href).toBe(
+      '/plant-a/calendars/A1',
+    );
   });
 });
