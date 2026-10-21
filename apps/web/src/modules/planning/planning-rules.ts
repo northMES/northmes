@@ -183,7 +183,10 @@ export function effectivePlanningRules(
  * scope sets keeps the base value. What divides run time does not change the mock plan: the
  * fixture's durations are fixed.
  */
-export function ganttSettingsWith(base: GanttSettings, rules: EffectivePlanningRules): GanttSettings {
+export function ganttSettingsWith(
+  base: GanttSettings,
+  rules: EffectivePlanningRules,
+): GanttSettings {
   return {
     ...base,
     ...(rules.deadlineRule.value !== undefined && { deadlineRule: rules.deadlineRule.value }),
