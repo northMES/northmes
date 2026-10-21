@@ -156,4 +156,48 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
       ).toBeTruthy();
     }
   });
+
+  it('BO1 lists the job orders without a place as chips in the pinned Not placed row', async () => {
+    const g1 = g1Snapshot();
+    const snapshot = {
+      ...g1,
+      productionOrders: g1.productionOrders.map((order) =>
+        order.number !== '1005'
+          ? order
+          : {
+              ...order,
+              jobOrders: order.jobOrders.map((row) => {
+                if (row.displayNumber !== '1005.20') return row;
+                const { placement: _, equipment: __, ...unplaced } = row;
+                return unplaced;
+              }),
+            },
+      ),
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    const notPlaced = within(board).getByRole('rowheader', { name: named('Not placed, 1 job order') });
+    const row = notPlaced.closest<HTMLElement>('[role="row"]') as HTMLElement;
+
+    expect(row.getAttribute('aria-rowindex')).toBe('2');
+    expect(
+      within(row).getByRole('gridcell', { name: named('1005.20 Bracket L, not placed') }),
+    ).toBeTruthy();
+  });
+
+  it('BO1 opens at the week of now with the defaults out of the URL, and Later replaces from', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({}, undefined, 'board');
+    const board = await findBoard();
+
+    expect(board.getAttribute('aria-label')).toBe('plant-a board, W45, Mon 2 Nov to Sun 8 Nov');
+    expect(screen.getByRole('heading', { level: 1, name: 'Planning board' })).toBeTruthy();
+    expect(screen.getByText('Showing fixture G1.')).toBeTruthy();
+    expect(screen.getByText('ERP data as of Mon 2 Nov 06:40')).toBeTruthy();
+    expect(router.state.location.search).toEqual({});
+
+    await user.click(screen.getByRole('button', { name: 'Show later range' }));
+    expect(await screen.findByRole('grid', { name: 'plant-a board, W46, Mon 9 Nov to Sun 15 Nov' })).toBeTruthy();
+    expect(router.state.location.search).toEqual({ from: '2026-11-09' });
+  });
 });
