@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { planningLinks } from '@northmes/planning-contracts';
 import { useNavigate } from '@tanstack/react-router';
-import { useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +43,12 @@ export function BlockMenu({
   const row = order?.jobOrders.find((each) => each.id === menu?.jobOrderId);
   const refused = menu === undefined ? undefined : moveRefusalOf(snapshot, menu.jobOrderId);
   const reasonId = useId();
+  // Move hands focus to the Move dialog: the menu then returns none to the block when its exit
+  // ends, which in a browser comes after the dialog has opened and taken focus.
+  const toDialog = useRef(false);
+  useEffect(() => {
+    if (open) toDialog.current = false;
+  }, [open, menu]);
   return (
     <DropdownMenu
       open={open && menu !== undefined}
@@ -53,7 +59,7 @@ export function BlockMenu({
       <DropdownMenuContent
         anchor={menu?.anchor}
         aria-label={`Actions for ${row?.displayNumber ?? ''}`}
-        finalFocus={() => menu?.anchor ?? false}
+        finalFocus={() => (toDialog.current ? false : (menu?.anchor ?? false))}
         className="w-56"
       >
         {/* A Move that cannot run keeps its place, named Move and described by its reason (D3). */}
@@ -61,7 +67,9 @@ export function BlockMenu({
           disabled={refused !== undefined}
           aria-describedby={refused === undefined ? undefined : reasonId}
           onClick={() => {
-            if (menu !== undefined && refused === undefined) onMove(menu.jobOrderId);
+            if (menu === undefined || refused !== undefined) return;
+            toDialog.current = true;
+            onMove(menu.jobOrderId);
           }}
         >
           Move
