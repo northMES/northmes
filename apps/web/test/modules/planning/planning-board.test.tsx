@@ -44,11 +44,15 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
 
     expect(board.getAttribute('aria-label')).toBe('plant-a board, W45, Mon 2 Nov to Sun 8 Nov');
     expect(
-      within(board).getByRole('button', { name: 'Collapse Machining' }).getAttribute('aria-expanded'),
+      within(board)
+        .getByRole('button', { name: 'Collapse Machining' })
+        .getAttribute('aria-expanded'),
     ).toBe('true');
-    expect(within(board).getAllByRole('rowheader').map((header) => header.textContent)).toEqual(
-      expect.arrayContaining(['CNC 1', 'CNC 2', 'Mill 1']),
-    );
+    expect(
+      within(board)
+        .getAllByRole('rowheader')
+        .map((header) => header.textContent),
+    ).toEqual(expect.arrayContaining(['CNC 1', 'CNC 2', 'Mill 1']));
     expect(jobNumbers(machineRow(board, 'CNC 1'))).toEqual(['1001.10', '1003.10', '1004.10']);
     expect(jobNumbers(machineRow(board, 'CNC 2'))).toEqual(['1001.20', '1002.10']);
     expect(jobNumbers(machineRow(board, 'Mill 1'))).toEqual(['1003.20', '1004.20', '1006.10']);
@@ -109,7 +113,9 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(
       within(board).getByRole('button', { name: 'Expand Machining' }).getAttribute('aria-expanded'),
     ).toBe('false');
-    expect(document.activeElement).toBe(within(board).getByRole('button', { name: 'Expand Machining' }));
+    expect(document.activeElement).toBe(
+      within(board).getByRole('button', { name: 'Expand Machining' }),
+    );
     await user.keyboard(' ');
     expect(within(board).getByRole('rowheader', { name: 'CNC 1' })).toBeTruthy();
     await user.keyboard('{ArrowDown}{ArrowRight}');
@@ -176,7 +182,9 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     };
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
     const board = await findBoard();
-    const notPlaced = within(board).getByRole('rowheader', { name: named('Not placed, 1 job order') });
+    const notPlaced = within(board).getByRole('rowheader', {
+      name: named('Not placed, 1 job order'),
+    });
     const row = notPlaced.closest<HTMLElement>('[role="row"]') as HTMLElement;
 
     expect(row.getAttribute('aria-rowindex')).toBe('2');
@@ -197,7 +205,9 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(router.state.location.search).toEqual({});
 
     await user.click(screen.getByRole('button', { name: 'Show later range' }));
-    expect(await screen.findByRole('grid', { name: 'plant-a board, W46, Mon 9 Nov to Sun 15 Nov' })).toBeTruthy();
+    expect(
+      await screen.findByRole('grid', { name: 'plant-a board, W46, Mon 9 Nov to Sun 15 Nov' }),
+    ).toBeTruthy();
     expect(router.state.location.search).toEqual({ from: '2026-11-09' });
   });
 });

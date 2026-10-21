@@ -141,7 +141,8 @@ export function BoardScreen() {
     [model, collapsed],
   );
   const known = (key: string | undefined) =>
-    key !== undefined && lines.some((line) => line.header === key || line.cells.some((cell) => cell.key === key));
+    key !== undefined &&
+    lines.some((line) => line.header === key || line.cells.some((cell) => cell.key === key));
   const tabStop = known(focused)
     ? focused
     : snapshot === undefined

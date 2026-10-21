@@ -42,7 +42,11 @@ function nearestIn(line: BoardLine, atMs: number | undefined): string | undefine
   const cells = line.cells;
   if (atMs === undefined) return cells[0]?.key;
   const running = cells.find(
-    (cell) => cell.fromMs !== undefined && cell.toMs !== undefined && cell.fromMs <= atMs && atMs < cell.toMs,
+    (cell) =>
+      cell.fromMs !== undefined &&
+      cell.toMs !== undefined &&
+      cell.fromMs <= atMs &&
+      atMs < cell.toMs,
   );
   if (running !== undefined) return running.key;
   let best: BoardCell | undefined;
@@ -56,7 +60,11 @@ function nearestIn(line: BoardLine, atMs: number | undefined): string | undefine
 }
 
 /** The index of the machine line `steps` machine lines away, else of the last one there is. */
-function machineLineFrom(lines: readonly BoardLine[], from: number, steps: number): number | undefined {
+function machineLineFrom(
+  lines: readonly BoardLine[],
+  from: number,
+  steps: number,
+): number | undefined {
   const direction = Math.sign(steps);
   let found: number | undefined;
   let left = Math.abs(steps);

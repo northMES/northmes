@@ -3,10 +3,14 @@
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import type { KeyboardEvent, ReactNode } from 'react';
+import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { TimeScale } from '../../timeline/time-scale.ts';
 import { GanttMarkerLayer, overlayMarkers } from '../gantt/gantt-marker-layer.tsx';
-import { GanttTimeHeader, TimeCellShading, timeHeaderHeightRem } from '../gantt/gantt-time-area.tsx';
-import type { GanttSnapshot } from '../../gantt-data.ts';
+import {
+  GanttTimeHeader,
+  TimeCellShading,
+  timeHeaderHeightRem,
+} from '../gantt/gantt-time-area.tsx';
 import { BoardBlock } from './board-block.tsx';
 import type { BoardModel } from './board-rows.ts';
 
@@ -213,12 +217,7 @@ export function BoardGrid({
         scrollPaddingInlineStart: `${machineWidth + 8}px`,
       }}
     >
-      <Row
-        index={1}
-        heightRem={headerRem}
-        columns={columns}
-        className="sticky top-0 z-20 bg-muted"
-      >
+      <Row index={1} heightRem={headerRem} columns={columns} className="sticky top-0 z-20 bg-muted">
         <div
           role="columnheader"
           className="sticky start-0 z-10 flex flex-col justify-center border-e border-border bg-muted px-3"
@@ -226,7 +225,8 @@ export function BoardGrid({
           <span className="text-xs font-medium">Machines</span>
           <span className="text-xs text-muted-foreground">
             <span className="sr-only">, </span>
-            {machineCount} in {model.groups.length === 1 ? '1 group' : `${model.groups.length} groups`}
+            {machineCount} in{' '}
+            {model.groups.length === 1 ? '1 group' : `${model.groups.length} groups`}
           </span>
         </div>
         <GanttTimeHeader scale={scale} nowMs={snapshot.nowMs} />

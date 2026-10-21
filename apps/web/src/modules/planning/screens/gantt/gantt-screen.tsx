@@ -43,7 +43,6 @@ import {
   withZoom,
 } from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
-import { remPx, useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
   type ClosedWindow,
@@ -56,6 +55,7 @@ import {
   shiftedFrom,
   zoomPresets,
 } from '../../timeline/time-scale.ts';
+import { remPx, useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { chainOf } from './gantt-chain.ts';
 import {
   type GanttMoveActions,
