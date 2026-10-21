@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { scan, scanProject } from '../../scripts/lint/deprecated-apis.mjs';
+import { scan, scanProjects } from '../../scripts/lint/deprecated-apis.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
@@ -60,7 +62,54 @@ describe('deprecated-apis', () => {
     ]);
   });
 
-  it('OSPS interfaces_current the web and the example plugins use no deprecated API', () => {
+  it('OSPS interfaces_current a scan of tsconfig.json projects in worker threads names each finding, in the order of the projects', async () => {
+    const base = mkdtempSync(join(tmpdir(), 'northmes-deprecated-apis-'));
+    try {
+      const write = (path: string, lines: string[]) => {
+        mkdirSync(dirname(join(base, path)), { recursive: true });
+        writeFileSync(join(base, path), lines.join('\n'));
+      };
+      const tsconfig = JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          noEmit: true,
+          module: 'esnext',
+          moduleResolution: 'bundler',
+          allowImportingTsExtensions: true,
+          types: [],
+        },
+        include: ['src'],
+      });
+      for (const project of ['first', 'second']) {
+        write(`${project}/tsconfig.json`, [tsconfig]);
+        write(`${project}/src/old.ts`, [
+          '/** @deprecated Use next. */',
+          'export function old() {}',
+          '',
+        ]);
+      }
+      write('first/src/screen.ts', ["import { old } from './old.ts';", '']);
+      write('second/src/screen.ts', ["import { old } from './old.ts';", '', 'old();', '']);
+
+      const findings = await scanProjects(base, ['second/tsconfig.json', 'first/tsconfig.json']);
+
+      expect(findings.map(describeFinding)).toEqual([
+        "second/src/screen.ts:1:10 TS6385 'old' is deprecated.",
+        "second/src/screen.ts:3:1 TS6387 The signature '(): void' of 'old' is deprecated.",
+        "first/src/screen.ts:1:10 TS6385 'old' is deprecated.",
+      ]);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  it('OSPS interfaces_current a project whose scan fails in its worker thread fails the scan, naming the tsconfig', async () => {
+    await expect(scanProjects(root, ['examples/missing/tsconfig.json'])).rejects.toThrow(
+      'examples/missing/tsconfig.json',
+    );
+  });
+
+  it('OSPS interfaces_current the web and the example plugins use no deprecated API', async () => {
     const configs = [
       'apps/web/tsconfig.json',
       ...readdirSync(`${root}examples`)
@@ -68,8 +117,9 @@ describe('deprecated-apis', () => {
         .map((name) => `examples/${name}/tsconfig.json`),
     ];
 
-    expect(configs.flatMap((config) => scanProject(root, config)).map(describeFinding)).toEqual([]);
-    // A language service per tsconfig type-checks each project, which takes up to 35 s on a CI
-    // runner for the web and the four examples.
+    expect((await scanProjects(root, configs)).map(describeFinding)).toEqual([]);
+    // Run in the test's own thread, the scan took 40 to 69 s in CI / test under --coverage, and 18
+    // to 31 s in the same job's run without coverage. In worker threads it takes the time of a run
+    // without coverage in both.
   }, 60_000);
 });
