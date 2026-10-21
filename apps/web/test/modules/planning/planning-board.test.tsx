@@ -278,4 +278,33 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
       }),
     ).toBe(block('1001.10'));
   });
+
+  it('BO1 selects the order of a clicked job order: the URL names it and every job order of it is selected', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const block = (job: string) =>
+      board.querySelector<HTMLElement>(`[role="gridcell"][data-job-order="${job}"]`) as HTMLElement;
+
+    await user.click(block('1001.10'));
+    expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02', order: 'po-1001' });
+    expect(block('1001.10').getAttribute('aria-selected')).toBe('true');
+    expect(block('1001.20').getAttribute('aria-selected')).toBe('true');
+    expect(block('1001.20').querySelector('[data-selection-bar]')).not.toBeNull();
+    expect(block('1003.10').getAttribute('aria-selected')).toBe('false');
+    expect(block('1003.10').querySelector('[data-selection-bar]')).toBeNull();
+
+    // Escape clears the selection and keeps focus on the job order.
+    await user.keyboard('{Escape}');
+    expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
+    expect(block('1001.10').getAttribute('aria-selected')).toBe('false');
+    expect(document.activeElement).toBe(block('1001.10'));
+  });
+
+  it('TA8 enters the grid at the selected job order when the URL names an order', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02', order: 'po-1003' }, undefined, 'board');
+    const board = await findBoard();
+
+    expect(board.querySelector('[tabindex="0"]')?.getAttribute('data-job-order')).toBe('1003.10');
+  });
 });
