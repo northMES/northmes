@@ -30,7 +30,9 @@ describe('the pages fixture beside G1 (plan 18, the planning pages)', () => {
     const plants = new Set(g1Pages.plants.map((plant) => plant.slug));
     expect(plants.has(g1.plant.slug)).toBe(true);
     for (const line of g1Pages.customerOrderLines) {
-      expect(plants.has(line.deliveringPlant), `${line.customerOrder} line ${line.line}`).toBe(true);
+      expect(plants.has(line.deliveringPlant), `${line.customerOrder} line ${line.line}`).toBe(
+        true,
+      );
     }
   });
 
