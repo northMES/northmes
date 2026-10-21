@@ -307,4 +307,32 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
 
     expect(board.querySelector('[tabindex="0"]')?.getAttribute('data-job-order')).toBe('1003.10');
   });
+
+  it('IN1 opens the hover card on hover and on focus with the job order, its states and its fields', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const block = (job: string) =>
+      board.querySelector<HTMLElement>(`[role="gridcell"][data-job-order="${job}"]`) as HTMLElement;
+
+    await user.hover(block('1003.20'));
+    const card = await screen.findByRole('tooltip');
+    expect(within(card).getByText('1003.20 Gear blank 32')).toBeTruthy();
+    expect(within(card).getByText('Late by 15 h 15 min')).toBeTruthy();
+    const field = (label: string) => within(card).getByText(label).nextElementSibling?.textContent;
+    expect(field('Operation')).toBe('20, Mill');
+    expect(field('Quantity')).toBe('600 pcs');
+    expect(field('Setup start')).toBe('Wed 4 Nov 12:45');
+    expect(field('End')).toBe('Thu 5 Nov 06:15');
+    expect(field('Planned')).toBe('Setup 0 min, run 2 h 30 min');
+    expect(field('Machine')).toBe('Mill 1');
+    expect(field('Order deadline')).toBe('Wed 4 Nov 15:00');
+    expect(field('Status')).toBe('Planned');
+    await user.unhover(block('1003.20'));
+
+    block('1002.10').focus();
+    const focused = await screen.findByRole('tooltip');
+    expect(within(focused).getByText('1002.10 Housing P')).toBeTruthy();
+    expect(within(focused).getByText('Locked')).toBeTruthy();
+  });
 });
