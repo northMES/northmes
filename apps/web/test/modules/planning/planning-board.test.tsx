@@ -210,4 +210,27 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     ).toBeTruthy();
     expect(router.state.location.search).toEqual({ from: '2026-11-09' });
   });
+
+  it('BO12 draws the states of G1 in shape and in the name: a locked job order and the late ones', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const block = (job: string) =>
+      board.querySelector<HTMLElement>(`[role="gridcell"][data-job-order="${job}"]`) as HTMLElement;
+
+    expect(block('1002.10').getAttribute('data-states')).toBe('locked');
+    expect(
+      within(board).getByRole('gridcell', {
+        name: named('1002.10 Housing P, 420 pcs, CNC 2, Thu 5 Nov 11:30 to Thu 5 Nov 15:00, locked'),
+      }),
+    ).toBe(block('1002.10'));
+    expect(block('1003.20').getAttribute('data-states')).toBe('late');
+    expect(
+      within(board).getByRole('gridcell', {
+        name: named(
+          '1003.20 Gear blank 32, 600 pcs, Mill 1, Wed 4 Nov 12:45 to Thu 5 Nov 06:15, late by 15 h 15 min',
+        ),
+      }),
+    ).toBe(block('1003.20'));
+    expect(block('1001.10').getAttribute('data-states')).toBeNull();
+  });
 });
