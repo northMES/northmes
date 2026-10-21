@@ -4,7 +4,7 @@ Claude Code sessions on NorthMES run inside the Claude Code sandbox, in auto mod
 
 ## 1. Code owner review on `main`
 
-In the `main` branch ruleset, turn on "Require review from Code Owners", set the required approvals to 0, and require the `risk gate` status check from the GitHub Actions app ([ADR 0086](../adr/0086-risk-tiered-review-and-merge-of-agent-pull-requests.md)). `.github/CODEOWNERS` names `@Krister-Johansson` for the patterns of `.github/risk-paths`, so a pull request that touches a risk path merges only with the maintainer's approval, and the risk gate holds one that is high for another reason. Turn on auto-merge in the repository settings. Do the code owner step before step 2: until then, an approval from the machine user would count as one the ruleset requires.
+In the `main` branch ruleset, turn on "Require review from Code Owners", set the required approvals to 0, and require the `risk gate` status check from the GitHub Actions app ([ADR 0086](../adr/0086-risk-tiered-review-and-merge-of-agent-pull-requests.md)). The risk gate fails a high pull request, one that touches a risk path included, until the maintainer approves its head commit. With 0 required approvals GitHub does not enforce code owner review, so `.github/CODEOWNERS`, which names `@Krister-Johansson` for the patterns of `.github/risk-paths`, only requests his review there. Turn on auto-merge in the repository settings. Do the code owner step before step 2: until then, an approval from the machine user would count as one the ruleset requires.
 
 ## 2. The machine user and its token
 

@@ -46,7 +46,7 @@ Chosen option: "A deterministic floor from changed paths and the validation impa
 4. **Shadow phase.** The gate, the labels and the Blast radius section start while CODEOWNERS still names the maintainer for every path, so he reviews every pull request and notes where he disagrees with the tier. The switch in rule 5 follows when he is satisfied with the tiers, in a pull request of its own.
 5. **The switch.**
    * `.github/CODEOWNERS` names the maintainer for the patterns of `.github/risk-paths` only, and a meta test keeps the two lists equal.
-   * The `main` ruleset requires 0 approvals, keeps code owner review, conversation resolution and stale review dismissal, and requires `risk gate` from the GitHub Actions app, so a status set by another integration or a token does not satisfy it. A pull request that touches a risk path needs the maintainer's approval through GitHub itself; one that is high for another reason waits on the risk gate.
+   * The `main` ruleset requires 0 approvals, keeps code owner review, conversation resolution and stale review dismissal, and requires `risk gate` from the GitHub Actions app, so a status set by another integration or a token does not satisfy it. The risk gate holds every high pull request, one that touches a risk path included, until the maintainer approves its head commit. With 0 required approvals GitHub does not enforce code owner review: a probe pull request on a risk path on 2026-10-22 had the maintainer requested as code owner and no required review ([#808](https://github.com/northMES/northmes/pull/808)). CODEOWNERS still requests his review on the risk paths.
    * Auto-merge is turned on for the repository.
    * A session turns on auto-merge for a low pull request through a project script, which refuses unless `northmes-agent` opened the pull request and the `risk gate` check run on the head commit concluded with success for the low tier. It reads the check run, not the `risk:low` label, because the machine user can set labels itself. GitHub merges it once every required check passes. The deny rule `Bash(gh pr merge*)` stays, so a session never merges directly.
    * The maintainer adds an `autoMode.allow` entry for that script to his `~/.claude/settings.json`, because merging a pull request no person approved is one of auto mode's default blocks.
@@ -59,7 +59,7 @@ ADR 0050 is accepted, so its text stays as it was. ADR 0065 and ADR 0084 are pro
 | Line | Replaced by |
 |---|---|
 | ADR 0050: auto-merge is off | Auto-merge is on; a session turns it on for a low pull request through the project script |
-| ADR 0065: every pull request needs one approving review | A pull request needs the maintainer's approval when it touches a risk path (code owner review) or is high for another reason (`risk gate`) |
+| ADR 0065: every pull request needs one approving review | A high pull request, one that touches a risk path included, needs the maintainer's approval through the required `risk gate` |
 | ADR 0065: CodeRabbit reviews every agent pull request | CodeRabbit reviews high pull requests |
 | ADR 0084 rule 5: CODEOWNERS names the maintainer for every path, and agents do not merge | CODEOWNERS names the maintainer for the risk paths; a session turns on auto-merge for a low pull request and never merges directly |
 | ADR 0084 driver: a change to `main` needs a human reviewer outside the session | A high change to `main` needs one; a low change is reviewed by two fresh-context subagents and the deterministic gate |
