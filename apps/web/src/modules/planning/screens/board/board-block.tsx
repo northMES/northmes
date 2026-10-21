@@ -66,6 +66,7 @@ export function BoardBlock({
   selected,
   onFocus,
   onSelect,
+  onOpenDetails,
   onMenu,
 }: {
   readonly row: JobOrderRow;
@@ -79,8 +80,10 @@ export function BoardBlock({
   /** Whether the block's order is the selected one, which draws the 3 px bar on top. */
   readonly selected: boolean;
   readonly onFocus: (event: FocusEvent<HTMLDivElement>) => void;
-  /** A click, Enter or Space selects the block's order; M enters keyboard move mode. */
+  /** Space selects the block's order; M enters keyboard move mode. */
   readonly onSelect: () => void;
+  /** A click or Enter opens the block's Details, which selects its order too. */
+  readonly onOpenDetails: () => void;
   /** Shift+F10, the context menu key or a right click opens the block menu at the block. */
   readonly onMenu: (anchor: HTMLElement) => void;
 }) {
@@ -150,7 +153,8 @@ export function BoardBlock({
     }
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
-    onSelect();
+    if (event.key === 'Enter') onOpenDetails();
+    else onSelect();
   };
   const marker = borderMarkerOf(states);
   const conflict = states.some((state) => state.kind === 'conflict');
@@ -245,7 +249,7 @@ export function BoardBlock({
                 event.stopPropagation();
                 return;
               }
-              onSelect();
+              onOpenDetails();
             }}
             onContextMenu={(event) => {
               event.preventDefault();
