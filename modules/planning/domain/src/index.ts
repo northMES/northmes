@@ -81,6 +81,11 @@ export {
   g1Inventory,
   ganttInventoryFixture,
 } from './fixtures/gantt-inventory.ts';
+export {
+  type GanttMasterDataFixture,
+  g1MasterData,
+  ganttMasterDataFixture,
+} from './fixtures/gantt-master-data.ts';
 export { type GanttPagesFixture, g1Pages, ganttPagesFixture } from './fixtures/gantt-pages.ts';
 export {
   type BindingConstraint,

@@ -27,6 +27,9 @@ import { coreModule } from '../../../src/modules/core/index.ts';
 import type { PlantSettingsSource } from '../../../src/modules/core/plant-settings-data.ts';
 import { g1PlantSettingsSource } from '../../../src/modules/core/plant-settings-data-g1.ts';
 import { PlantSettingsSourceProvider } from '../../../src/modules/core/plant-settings-source-context.ts';
+import type { RoutingsSource } from '../../../src/modules/core/routings-data.ts';
+import { g1RoutingsSource } from '../../../src/modules/core/routings-data-g1.ts';
+import { RoutingsSourceProvider } from '../../../src/modules/core/routings-source-context.ts';
 import { CoreArticles } from '../../../src/modules/core/screens/articles/articles.graphql.ts';
 import type { WarehousesSource } from '../../../src/modules/core/warehouses-data.ts';
 import { g1WarehousesSource } from '../../../src/modules/core/warehouses-data-g1.ts';
@@ -66,7 +69,7 @@ function SettingsStub() {
  * MockedProvider that answers each of mocks once and the contributions the shell would give the
  * slots, and returns the router, whose state.location shows the URL. A hold from holdRequests
  * keeps its requests from the mocks until the test releases them. The plant settings pages read
- * plantSettingsSource, the customers pages customersSource and the warehouses warehousesSource,
+ * plantSettingsSource, the customers pages customersSource, the warehouses warehousesSource and the routings routingsSource,
  * the fixture G1 when the test gives none.
  */
 export function renderCoreAt(
@@ -78,12 +81,14 @@ export function renderCoreAt(
     plantSettingsSource = g1PlantSettingsSource,
     customersSource = g1CustomersSource,
     warehousesSource = g1WarehousesSource,
+    routingsSource = g1RoutingsSource,
   }: {
     readonly contributions?: readonly SlotContribution[];
     readonly hold?: ApolloLink;
     readonly plantSettingsSource?: PlantSettingsSource;
     readonly customersSource?: CustomersSource;
     readonly warehousesSource?: WarehousesSource;
+    readonly routingsSource?: RoutingsSource;
   } = {},
 ) {
   const router = createRouter({
@@ -100,7 +105,9 @@ export function renderCoreAt(
         <PlantSettingsSourceProvider value={plantSettingsSource}>
           <CustomersSourceProvider value={customersSource}>
             <WarehousesSourceProvider value={warehousesSource}>
-              <RouterProvider router={router} />
+              <RoutingsSourceProvider value={routingsSource}>
+                <RouterProvider router={router} />
+              </RoutingsSourceProvider>
             </WarehousesSourceProvider>
           </CustomersSourceProvider>
         </PlantSettingsSourceProvider>

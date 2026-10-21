@@ -1,0 +1,159 @@
+{
+  "id": "G1-master-data",
+  "description": "What the routing, tools and equipment group pages show beside the fixture G1 (design #729): for each routing operation of G1's articles, how its cycle time was entered, its OEE target, the machines it allows with their overrides, the tools it may use and whether a planner keeps NorthMES values; the tools of the company and the plant; and the equipment groups' scope and color source. The rates, lead times and allowed machines themselves stay G1's and the pages fixture's. Every name, number and time is fictional.",
+  "routings": [
+    {
+      "article": "Bracket L",
+      "erpVersion": 3,
+      "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
+      "operations": [
+        {
+          "sequence": 10,
+          "cycleEntered": { "value": 120, "unit": "piecesPerHour" },
+          "oeeTarget": 0.85,
+          "machines": [
+            { "code": "CNC1", "default": true, "source": "erp" },
+            { "code": "CNC2", "default": false, "retoolSeconds": 2400, "source": "erp" }
+          ],
+          "tools": [{ "code": "T-118", "source": "erp" }, { "code": "T-204", "source": "erp" }]
+        },
+        {
+          "sequence": 20,
+          "cycleEntered": { "value": 60, "unit": "seconds" },
+          "oeeTarget": 0.8,
+          "kept": {
+            "since": { "instant": "2026-10-28T13:05:00Z", "plantLocal": "2026-10-28T14:05:00" },
+            "by": "Alex Lund",
+            "reason": "Parts are deburred by hand between turning and milling",
+            "erpLeadTimeSeconds": 1800
+          },
+          "machines": [
+            { "code": "CNC2", "default": true, "source": "erp" },
+            {
+              "code": "MILL1",
+              "default": false,
+              "cycleSeconds": 45,
+              "source": "northmes",
+              "addedBy": "Alex Lund"
+            }
+          ],
+          "tools": [{ "code": "T-311", "piecesPerCycle": 2, "source": "erp" }]
+        }
+      ]
+    },
+    {
+      "article": "Housing P",
+      "erpVersion": 1,
+      "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
+      "operations": [
+        {
+          "sequence": 10,
+          "cycleEntered": { "value": 30, "unit": "seconds" },
+          "oeeTarget": 0.85,
+          "machines": [{ "code": "CNC2", "default": true, "source": "erp" }],
+          "tools": [{ "code": "T-312", "source": "erp" }]
+        }
+      ]
+    },
+    {
+      "article": "Gear blank 32",
+      "erpVersion": 2,
+      "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
+      "operations": [
+        {
+          "sequence": 10,
+          "cycleEntered": { "value": 150, "unit": "piecesPerHour" },
+          "oeeTarget": 0.85,
+          "machines": [{ "code": "CNC1", "default": true, "source": "erp" }],
+          "tools": [{ "code": "T-118", "source": "erp" }]
+        },
+        {
+          "sequence": 20,
+          "cycleEntered": { "value": 15, "unit": "seconds" },
+          "oeeTarget": 0.8,
+          "machines": [{ "code": "MILL1", "default": true, "source": "erp" }],
+          "tools": []
+        }
+      ]
+    },
+    {
+      "article": "Hub 12",
+      "erpVersion": 1,
+      "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
+      "operations": [
+        {
+          "sequence": 10,
+          "cycleEntered": { "value": 120, "unit": "piecesPerHour" },
+          "oeeTarget": 0.85,
+          "machines": [{ "code": "CNC1", "default": true, "source": "erp" }],
+          "tools": [{ "code": "T-118", "source": "erp" }]
+        },
+        {
+          "sequence": 20,
+          "cycleEntered": { "value": 20, "unit": "seconds" },
+          "oeeTarget": 0.8,
+          "machines": [{ "code": "MILL1", "default": true, "source": "erp" }],
+          "tools": [{ "code": "T-905", "source": "erp" }]
+        }
+      ]
+    },
+    {
+      "article": "Shaft 8",
+      "erpVersion": 1,
+      "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
+      "operations": [
+        {
+          "sequence": 10,
+          "cycleEntered": { "value": 200, "unit": "piecesPerHour" },
+          "oeeTarget": 0.8,
+          "machines": [{ "code": "MILL1", "default": true, "source": "erp" }],
+          "tools": [{ "code": "T-415", "source": "erp" }]
+        }
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "code": "T-118",
+      "name": "Soft jaws 40",
+      "plant": null,
+      "source": "erp",
+      "importedAt": { "instant": "2026-10-08T04:40:00Z", "plantLocal": "2026-10-08T06:40:00" }
+    },
+    {
+      "code": "T-204",
+      "name": "Form tool BR-L",
+      "plant": null,
+      "source": "erp",
+      "importedAt": { "instant": "2026-10-08T04:40:00Z", "plantLocal": "2026-10-08T06:40:00" }
+    },
+    {
+      "code": "T-311",
+      "name": "Fixture BR-L 2-up",
+      "plant": "plant-a",
+      "source": "erp",
+      "importedAt": { "instant": "2026-10-08T04:40:00Z", "plantLocal": "2026-10-08T06:40:00" }
+    },
+    {
+      "code": "T-312",
+      "name": "Fixture HP 1-up",
+      "plant": "plant-a",
+      "source": "erp",
+      "importedAt": { "instant": "2026-10-08T04:40:00Z", "plantLocal": "2026-10-08T06:40:00" }
+    },
+    {
+      "code": "T-415",
+      "name": "Collet 12",
+      "plant": null,
+      "source": "erp",
+      "importedAt": { "instant": "2026-10-08T04:40:00Z", "plantLocal": "2026-10-08T06:40:00" }
+    },
+    {
+      "code": "T-905",
+      "name": "T-905",
+      "plant": "plant-a",
+      "source": "import",
+      "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" }
+    }
+  ]
+}

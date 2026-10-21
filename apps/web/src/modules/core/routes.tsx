@@ -24,6 +24,7 @@ import {
   urlSearchOf as urlSearchOfMachineList,
 } from './plant-settings-search.ts';
 import { roleListSearch } from './role-list-search.ts';
+import { routingPageSearch } from './routing-search.ts';
 import { userListSearch } from './user-list-search.ts';
 import {
   urlSearchOf as urlSearchOfWarehouseList,
@@ -219,6 +220,34 @@ export function coreRoutes(plantRoute: PlantRoute) {
     validateSearch: customerPageSearch,
     component: lazyScreen('CustomerScreen'),
   });
+  // The routings register under Master data (design #729), on the fixture G1 until core's
+  // routing API.
+  const routingsRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.routings).path,
+  });
+  const routingListRoute = createRoute({
+    getParentRoute: () => routingsRoute,
+    path: '/',
+    validateSearch: routingPageSearch,
+    component: lazyScreen('RoutingsScreen'),
+  });
+  const routingRoute = createRoute({
+    getParentRoute: () => routingsRoute,
+    path: linkEntry(coreLinks.routings.routing).path,
+  });
+  const routingDetailRoute = createRoute({
+    getParentRoute: () => routingRoute,
+    path: '/',
+    validateSearch: routingPageSearch,
+    component: lazyScreen('RoutingScreen'),
+  });
+  const editRoutingOperationRoute = createRoute({
+    getParentRoute: () => routingRoute,
+    path: linkEntry(coreLinks.routings.routing.editOperation).path,
+    validateSearch: routingPageSearch,
+    component: lazyScreen('EditRoutingOperationScreen'),
+  });
   return coreRoute.addChildren([
     withoutCoreSegment(coreRoute, 2),
     dashboardRoute,
@@ -243,6 +272,10 @@ export function coreRoutes(plantRoute: PlantRoute) {
     ]),
     calendarsRoute.addChildren([calendarListRoute, calendarRoute]),
     customersRoute.addChildren([customerListRoute, customerRoute]),
+    routingsRoute.addChildren([
+      routingListRoute,
+      routingRoute.addChildren([routingDetailRoute, editRoutingOperationRoute]),
+    ]),
   ]);
 }
 

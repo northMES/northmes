@@ -12,6 +12,7 @@ import { formatDateTime } from '../../../../ui/lib/date-time.ts';
 import { languageName } from '../../../../ui/lib/languages.ts';
 import type { Article } from '../../article.graphql.ts';
 import { plantsLabel } from '../../article-plants.ts';
+import { ArticleRouting } from '../../components/article-routing/index.ts';
 import { useArticle } from '../../use-article.tsx';
 import { ArticleActions } from './article-actions.tsx';
 
@@ -172,7 +173,7 @@ function ArticleSections({ article }: { readonly article: Article | undefined })
 
 /**
  * An article's page (design ui-222, DE1): its number in the h1 with its name beside it, and its
- * sections, with Archive and Edit in the page actions; an archived article carries the Archived
+ * sections and its routing (design #729), with Archive and Edit in the page actions; an archived article carries the Archived
  * badge and offers Restore. Its plants show in Origin, and Edit changes them (ADR 0073). While
  * it loads the h1 reads Article (A12); an
  * article that does not exist, or that the plant cannot see, shows the not-found state (ST7), and
@@ -203,6 +204,7 @@ export function ArticleScreen() {
         </p>
       )}
       <ArticleSections article={article} />
+      {article !== undefined && <ArticleRouting code={article.code} name={article.name} />}
     </PageFrame>
   );
 }
