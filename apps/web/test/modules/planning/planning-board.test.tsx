@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GanttDataSource } from '../../../src/modules/planning/gantt-data.ts';
@@ -37,6 +37,51 @@ function jobNumbers(row: HTMLElement): string[] {
   return within(row)
     .getAllByRole('gridcell')
     .map((cell) => cell.getAttribute('data-job-order') ?? '');
+}
+
+/** G1 with one job order moved to a machine and a span, and with other changes to it. */
+function withJobOrder(
+  snapshot: ReturnType<typeof g1Snapshot>,
+  job: string,
+  change: {
+    readonly equipment?: string;
+    readonly fromMs?: number;
+    readonly toMs?: number;
+    readonly held?: boolean;
+  },
+): ReturnType<typeof g1Snapshot> {
+  return {
+    ...snapshot,
+    productionOrders: snapshot.productionOrders.map((order) => ({
+      ...order,
+      jobOrders: order.jobOrders.map((row) => {
+        if (row.displayNumber !== job || row.placement === undefined) return row;
+        const setupStartMs = change.fromMs ?? row.placement.setupStartMs;
+        const endMs = change.toMs ?? row.placement.endMs;
+        return {
+          ...row,
+          ...(change.equipment !== undefined && { equipment: change.equipment }),
+          ...(change.held !== undefined && { held: change.held }),
+          placement: {
+            setupStartMs,
+            runStartMs: setupStartMs,
+            endMs,
+            segments: [{ fromMs: setupStartMs, toMs: endMs }],
+          },
+        };
+      }),
+    })),
+  };
+}
+
+/** The IN27 board: 1002.10 on CNC 1 right after 1003.10, so at 4 weeks the two share a cluster. */
+function clusterSnapshot(change: { readonly held?: boolean } = {}) {
+  return withJobOrder(g1Snapshot(), '1002.10', {
+    equipment: 'CNC1',
+    fromMs: Date.UTC(2026, 10, 4, 11, 45),
+    toMs: Date.UTC(2026, 10, 4, 15, 15),
+    ...change,
+  });
 }
 
 describe('the planning board (plan 07, Planning board in release 1; design D3)', () => {
@@ -373,7 +418,7 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     const board = await findBoard();
     const row = machineRow(board, 'CNC 1');
     const cluster = within(row).getByRole('gridcell', {
-      name: named('2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 locked, 1 late'),
+      name: named('2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 late, 1 locked'),
     });
 
     expect(within(row).getAllByRole('gridcell')).toHaveLength(4);
@@ -441,5 +486,139 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
       await screen.findByRole('heading', { level: 2, name: /could not be loaded|Could not load/ }),
     ).toBeTruthy();
     expect(screen.queryByRole('grid')).toBeNull();
+  });
+
+  it('plan 07 one Escape closes the hover card, and the next clears the selection', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const block = board.querySelector<HTMLElement>('[role="gridcell"][data-job-order="1003.20"]');
+    block?.focus();
+    await screen.findByRole('tooltip');
+    await user.keyboard('{Enter}');
+    expect(router.state.location.search).toMatchObject({ order: 'po-1003' });
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
+    expect(router.state.location.search).toMatchObject({ order: 'po-1003' });
+    await user.keyboard('{Escape}');
+    expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
+    expect(document.activeElement).toBe(block);
+  });
+
+  it('ADR0021 a cluster with a late and a held job order names the late before the held', async () => {
+    renderGanttRoute(
+      { zoom: '4weeks', from: '2026-11-02' },
+      sourceOf(clusterSnapshot({ held: true })),
+      'board',
+    );
+    const board = await findBoard();
+
+    expect(
+      within(machineRow(board, 'CNC 1')).getByRole('gridcell', {
+        name: named(
+          '2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 late, 1 being edited by another planner, 1 locked',
+        ),
+      }),
+    ).toBeTruthy();
+  });
+
+  it('IN27 a row of the cluster popover selects its order, closes the popover and marks the cluster', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute(
+      { zoom: '4weeks', from: '2026-11-02' },
+      sourceOf(clusterSnapshot()),
+      'board',
+    );
+    const board = await findBoard();
+    const cluster = board.querySelector<HTMLElement>(
+      '[data-cluster="1003.10 1002.10"]',
+    ) as HTMLElement;
+
+    await user.click(cluster);
+    const popover = await screen.findByRole('dialog', { name: /^2 jobs on CNC 1/ });
+    await user.click(within(popover).getByRole('button', { name: '1002.10 Housing P' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(router.state.location.search).toMatchObject({ order: 'po-1002' });
+    expect(cluster.getAttribute('aria-selected')).toBe('true');
+    expect(cluster.querySelector('[data-selection-bar]')).not.toBeNull();
+    expect(board.querySelector('[tabindex="0"]')).toBe(cluster);
+  });
+
+  it('BO1 a Not placed chip selects its order by click or Enter and shows the selection', async () => {
+    const user = userEvent.setup();
+    const g1 = g1Snapshot();
+    const snapshot = {
+      ...g1,
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) => {
+          if (row.displayNumber !== '1005.20') return row;
+          const { placement: _, equipment: __, ...unplaced } = row;
+          return unplaced;
+        }),
+      })),
+    };
+    const router = renderGanttRoute(
+      { zoom: 'week', from: '2026-11-02' },
+      sourceOf(snapshot),
+      'board',
+    );
+    const board = await findBoard();
+    const chip = board.querySelector<HTMLElement>(
+      '[aria-rowindex="2"] [data-job-order="1005.20"]',
+    ) as HTMLElement;
+
+    chip.focus();
+    await user.keyboard('{Enter}');
+    expect(router.state.location.search).toMatchObject({ order: 'po-1005' });
+    expect(chip.getAttribute('aria-selected')).toBe('true');
+    expect(chip.querySelector('[data-selection-bar]')).not.toBeNull();
+  });
+
+  it('URL state a change of the selected order adds a history entry, so Back returns to the order before', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const block = (job: string) =>
+      board.querySelector<HTMLElement>(`[role="gridcell"][data-job-order="${job}"]`) as HTMLElement;
+
+    await user.click(block('1001.10'));
+    await user.click(block('1003.10'));
+    expect(router.state.location.search).toMatchObject({ order: 'po-1003' });
+    router.history.back();
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ order: 'po-1001' }));
+  });
+
+  it('plan 07 a hard-locked job order in the past is not overdue', async () => {
+    const g1 = g1Snapshot();
+    renderGanttRoute(
+      { zoom: 'week', from: '2026-11-02' },
+      sourceOf({ ...g1, nowMs: Date.UTC(2026, 10, 5, 12) }),
+      'board',
+    );
+    const board = await findBoard();
+
+    expect(
+      board
+        .querySelector('[role="gridcell"][data-job-order="1002.10"]')
+        ?.getAttribute('data-states'),
+    ).toBe('locked');
+  });
+
+  it('BO8 a wide job order after a narrow one keeps its own cell', async () => {
+    const snapshot = withJobOrder(g1Snapshot(), '1004.10', {
+      fromMs: Date.UTC(2026, 10, 4, 12),
+      toMs: Date.UTC(2026, 10, 5, 13),
+    });
+    renderGanttRoute({ zoom: '4weeks', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+
+    expect(jobNumbers(machineRow(board, 'CNC 1'))).toEqual([
+      '1001.10',
+      '1003.10',
+      '1004.10',
+      '1005.10',
+    ]);
   });
 });
