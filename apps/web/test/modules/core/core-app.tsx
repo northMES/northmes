@@ -21,10 +21,8 @@ import { render, within } from '@testing-library/react';
 import { from, mergeMap } from 'rxjs';
 import { CoreArticle } from '../../../src/modules/core/article.graphql.ts';
 import { coreModule } from '../../../src/modules/core/index.ts';
-import {
-  g1PlantSettingsSource,
-  type PlantSettingsSource,
-} from '../../../src/modules/core/plant-settings-data.ts';
+import type { PlantSettingsSource } from '../../../src/modules/core/plant-settings-data.ts';
+import { g1PlantSettingsSource } from '../../../src/modules/core/plant-settings-data-g1.ts';
 import { PlantSettingsSourceProvider } from '../../../src/modules/core/plant-settings-source-context.ts';
 import { CoreArticles } from '../../../src/modules/core/screens/articles/articles.graphql.ts';
 

@@ -126,5 +126,3 @@ export class PlantSettingsForbidden extends Error {
     this.name = 'PlantSettingsForbidden';
   }
 }
-
-export { g1PlantSettingsSource } from './plant-settings-data-g1.ts';

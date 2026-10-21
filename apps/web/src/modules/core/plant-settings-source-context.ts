@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import {
-  g1PlantSettingsSource,
-  type PlantSettingsPreview,
-  type PlantSettingsSnapshot,
-  type PlantSettingsSource,
+import type {
+  PlantSettingsPreview,
+  PlantSettingsSnapshot,
+  PlantSettingsSource,
 } from './plant-settings-data.ts';
+import { g1PlantSettingsSource } from './plant-settings-data-g1.ts';
 
 const PlantSettingsSourceContext = createContext<PlantSettingsSource>(g1PlantSettingsSource);
 
