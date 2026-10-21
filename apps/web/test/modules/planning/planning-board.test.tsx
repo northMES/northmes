@@ -3,6 +3,8 @@
 import { cleanup, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import type { GanttDataSource } from '../../../src/modules/planning/gantt-data.ts';
+import { g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
@@ -189,7 +191,7 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
 
     expect(row.getAttribute('aria-rowindex')).toBe('2');
     expect(
-      within(row).getByRole('gridcell', { name: named('1005.20 Bracket L, not placed') }),
+      within(row).getByRole('gridcell', { name: named('1005.20 Bracket L, 600 pcs, not placed') }),
     ).toBeTruthy();
   });
 
@@ -397,5 +399,47 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.activeElement).toBe(cluster);
+  });
+
+  it('DR32 puts the Tab stop on the Not placed cell when no machine has a job order in the range', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-16' }, undefined, 'board');
+    const board = await findBoard();
+
+    const stops = board.querySelectorAll('[tabindex="0"]');
+    expect(stops).toHaveLength(1);
+    expect(stops[0]?.textContent).toBe('No job orders without a place');
+  });
+
+  it('TA10 leaves the arrow keys with a modifier to the browser', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const first = board.querySelector<HTMLElement>('[role="gridcell"][data-job-order="1001.10"]');
+    first?.focus();
+
+    await user.keyboard('{Shift>}{ArrowRight}{/Shift}{Control>}{End}{/Control}');
+    expect(document.activeElement).toBe(first);
+  });
+
+  it('DR20 shows the error state when a later range fails to load, not the range before', async () => {
+    const user = userEvent.setup();
+    let loads = 0;
+    const failingLater: GanttDataSource = {
+      load: async (input) => {
+        loads += 1;
+        if (loads > 1 && input.from.startsWith('2026-11-08')) {
+          throw new Error('The plan server did not answer');
+        }
+        return g1DataSource.load(input);
+      },
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, failingLater, 'board');
+    await findBoard();
+
+    await user.click(screen.getByRole('button', { name: 'Show later range' }));
+    expect(
+      await screen.findByRole('heading', { level: 2, name: /could not be loaded|Could not load/ }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('grid')).toBeNull();
   });
 });
