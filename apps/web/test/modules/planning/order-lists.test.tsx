@@ -226,7 +226,7 @@ describe('the customer orders list (plan 07; design #687, CO1 and CO2)', () => {
     expect(none.textContent).toContain('No production order yet');
     expect(
       within(none)
-        .getByRole('link', { name: 'New production order for customer order 40211 line 2' })
+        .getByRole('link', { name: 'New order for customer order 40211 line 2' })
         .getAttribute('href'),
     ).toBe('/plant-a/planning/orders/new?line=40211-2');
   });

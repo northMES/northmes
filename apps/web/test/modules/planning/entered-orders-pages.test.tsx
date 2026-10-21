@@ -13,6 +13,7 @@ const created = { createdAtMs: Date.parse('2026-11-02T08:45:00Z'), createdBy: 'A
 function entered() {
   const store = createEnteredOrdersStore();
   store.addProductionOrder({
+    plant: 'plant-a',
     number: 'N-1007',
     article: 'Hub 12',
     quantity: 250,
@@ -23,6 +24,7 @@ function entered() {
     ...created,
   });
   store.addCustomerOrder({
+    plant: 'plant-a',
     number: '40231',
     customerCode: 'K-1211',
     customersReference: 'LM-2026-140',

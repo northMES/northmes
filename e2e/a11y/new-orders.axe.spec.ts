@@ -42,11 +42,21 @@ test.describe('the new order forms', () => {
     await page.getByRole('button', { name: 'Create order' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Order N-1007' })).toBeVisible();
 
-    await page.goto(
-      withSearch(planningLinks.gantt({ plant }).href, { zoom: 'week', from: '2026-11-02' }),
-    );
-    await expect(page.getByRole('row', { name: /Not placed/ })).toBeVisible();
+    // The order lives in the tab's memory, so the Gantt opens through the app, not a new load.
+    await page.getByRole('link', { name: 'Zoom to order on the Gantt' }).click();
+    await expect(page.getByRole('row', { name: /Not placed/ })).toContainText('N-1007.10');
     await checkA11y('the Gantt after a created order');
+
+    await page.goto(withSearch(form, { line: '40211-2', preview: 'saveError' }));
+    await page.getByRole('button', { name: 'Create order' }).click();
+    await expect(page.getByRole('group', { name: 'Could not create the order' })).toBeFocused();
+    await checkA11y('New production order with a server error');
+
+    await page.goto(withSearch(form, { preview: 'error' }));
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Could not load the form' }),
+    ).toBeVisible();
+    await checkA11y('New production order that could not load');
 
     await page.goto(withSearch(form, { preview: 'loading' }));
     await expect(page.getByText('Loading articles and customer order lines')).toBeVisible();
@@ -85,6 +95,23 @@ test.describe('the new order forms', () => {
     await page.setViewportSize({ width: 320, height: 900 });
     await checkA11y('New customer order at 320');
     await page.setViewportSize({ width: 1440, height: 900 });
+
+    await page.goto(withSearch(form, { preview: 'saveError' }));
+    await page.getByRole('combobox', { name: 'Customer' }).selectOption('K-1211');
+    await page.getByRole('combobox', { name: 'Article of line 1' }).selectOption('Shaft 8');
+    await page.getByRole('textbox', { name: 'Quantity of line 1, pcs' }).fill('200');
+    await page.getByRole('textbox', { name: 'Wanted date of line 1' }).fill('2026-11-25');
+    await page.getByRole('button', { name: 'Create customer order' }).click();
+    await expect(
+      page.getByRole('group', { name: 'Could not create the customer order' }),
+    ).toBeFocused();
+    await checkA11y('New customer order with a server error');
+
+    await page.goto(withSearch(form, { preview: 'error' }));
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Could not load the form' }),
+    ).toBeVisible();
+    await checkA11y('New customer order that could not load');
 
     await page.goto(withSearch(form, { preview: 'loading' }));
     await expect(page.getByText('Loading customers and articles')).toBeVisible();

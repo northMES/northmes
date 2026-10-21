@@ -108,6 +108,57 @@ describe('New production order (#768, NO1 to NO9)', () => {
     ).toBeTruthy();
   });
 
+  it('NO1 a line that another order supplies, or that does not exist, is not taken over', async () => {
+    renderAt(planningLinks.orders.new({ plant }, { line: '40211-1' }).href);
+    await screen.findByRole('heading', { level: 1, name: 'New production order' });
+
+    expect(screen.getByText('Started from the production orders list')).toBeTruthy();
+    expect(choice('Article').value).toBe('');
+    expect(screen.queryByRole('table', { name: 'Supplies' })).toBeNull();
+  });
+
+  it('NO4 a quantity in whole pieces only: 1,000 and 2.5 are refused', async () => {
+    renderAt(planningLinks.orders.new({ plant }, { line: '40211-2' }).href);
+    await screen.findByRole('heading', { level: 1, name: 'New production order' });
+    const quantity = field(/^Quantity/);
+
+    for (const typed of ['1,000', '2.5']) {
+      await userEvent.clear(quantity);
+      await userEvent.type(quantity, typed);
+      await userEvent.click(screen.getByRole('button', { name: 'Create order' }));
+      expect(await screen.findByRole('group', { name: '1 field needs a change' })).toBeTruthy();
+      expect(quantity.getAttribute('aria-invalid')).toBe('true');
+    }
+  });
+
+  it('NO8 a save that fails keeps the entries and names the correlation id', async () => {
+    const { entered } = renderAt(
+      planningLinks.orders.new({ plant }, { line: '40211-2', preview: 'saveError' }).href,
+    );
+    await screen.findByRole('heading', { level: 1, name: 'New production order' });
+    await userEvent.click(screen.getByRole('button', { name: 'Create order' }));
+
+    const summary = await screen.findByRole('group', { name: 'Could not create the order' });
+    expect(summary.textContent).toContain('Correlation id');
+    expect(field(/^Quantity/).value).toBe('250');
+    expect(entered.get().productionOrders).toEqual([]);
+  });
+
+  it('NO1 Create order takes the place of the form in the history and says the order was created', async () => {
+    const { router } = renderAt(planningLinks.orders.new({ plant }, { line: '40211-2' }).href);
+    await screen.findByRole('heading', { level: 1, name: 'New production order' });
+    const before = router.history.length;
+    await userEvent.click(screen.getByRole('button', { name: 'Create order' }));
+    await screen.findByRole('heading', { level: 1, name: 'Order N-1007' });
+
+    expect(router.history.length).toBe(before);
+    await waitFor(() =>
+      expect(document.querySelector('[aria-live="polite"]')?.textContent).toContain(
+        'Order N-1007 created.',
+      ),
+    );
+  });
+
   it('NO6, NO7 and NO9 the preview key opens the loading, no article and no-access states', async () => {
     renderAt(planningLinks.orders.new({ plant }, { preview: 'loading' }).href);
     expect(await screen.findByText('Loading articles and customer order lines')).toBeTruthy();
@@ -115,6 +166,10 @@ describe('New production order (#768, NO1 to NO9)', () => {
 
     renderAt(planningLinks.orders.new({ plant }, { preview: 'empty' }).href);
     expect(await screen.findByText('No article can be ordered yet')).toBeTruthy();
+    cleanup();
+
+    renderAt(planningLinks.orders.new({ plant }, { preview: 'error' }).href);
+    expect(await screen.findByText('Could not load the form')).toBeTruthy();
     cleanup();
 
     renderAt(planningLinks.orders.new({ plant }, { preview: 'forbidden' }).href);
@@ -194,6 +249,84 @@ describe('New customer order (#768, NC1 to NC7)', () => {
     expect(entered.get().customerOrders).toEqual([]);
   });
 
+  it('NC1 a supply that no longer has the quantity free goes back to Not supplied, and two lines cannot share more than an order has free', async () => {
+    renderAt(planningLinks.customerOrders.new({ plant }).href);
+    await screen.findByRole('heading', { level: 1, name: 'New customer order' });
+    await userEvent.selectOptions(choice('Article of line 1'), 'Hub 12');
+    await userEvent.type(field('Quantity of line 1, pcs'), '1000');
+    await userEvent.selectOptions(choice('Supply of line 1'), '1004');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add line' }));
+    await userEvent.selectOptions(choice('Article of line 2'), 'Hub 12');
+    await userEvent.type(field('Quantity of line 2, pcs'), '1000');
+    // Line 1 takes 1 000 of the 1 200 pcs 1004 has free, so 200 are left for line 2.
+    expect(
+      within(choice('Supply of line 2')).queryByRole('option', { name: /Order 1004/ }),
+    ).toBeNull();
+
+    await userEvent.clear(field('Quantity of line 1, pcs'));
+    await userEvent.type(field('Quantity of line 1, pcs'), '1500');
+    expect(choice('Supply of line 1').value).toBe('');
+  });
+
+  it('NC1 only one line opens New production order after creating, and a number must suit an address', async () => {
+    const { entered } = renderAt(planningLinks.customerOrders.new({ plant }).href);
+    await screen.findByRole('heading', { level: 1, name: 'New customer order' });
+    await userEvent.clear(field('Number'));
+    await userEvent.type(field('Number'), 'new');
+    await userEvent.selectOptions(choice('Customer'), 'K-1211');
+    for (const n of [1, 2]) {
+      if (n === 2) await userEvent.click(screen.getByRole('button', { name: 'Add line' }));
+      await userEvent.selectOptions(choice(`Article of line ${n}`), 'Gear blank 32');
+      await userEvent.type(field(`Quantity of line ${n}, pcs`), '100');
+      await userEvent.type(field(`Wanted date of line ${n}`), '2026-11-27');
+      await userEvent.selectOptions(choice(`Supply of line ${n}`), 'new');
+    }
+    await userEvent.click(screen.getByRole('button', { name: 'Create customer order' }));
+
+    const summary = await screen.findByRole('group', { name: '2 fields need a change' });
+    expect(within(summary).getByText(/new is a word the address takes/)).toBeTruthy();
+    expect(within(summary).getByText(/Only one line can open New production order/)).toBeTruthy();
+    expect(entered.get().customerOrders).toEqual([]);
+  });
+
+  it('NC1 an error stays with its line when a line above it is removed', async () => {
+    renderAt(planningLinks.customerOrders.new({ plant }).href);
+    await screen.findByRole('heading', { level: 1, name: 'New customer order' });
+    await userEvent.selectOptions(choice('Customer'), 'K-1211');
+    await userEvent.selectOptions(choice('Article of line 1'), 'Hub 12');
+    await userEvent.type(field('Wanted date of line 1'), '2026-11-27');
+    await userEvent.click(screen.getByRole('button', { name: 'Add line' }));
+    await userEvent.selectOptions(choice('Article of line 2'), 'Shaft 8');
+    await userEvent.type(field('Quantity of line 2, pcs'), '200');
+    await userEvent.type(field('Wanted date of line 2'), '2026-11-25');
+    await userEvent.click(screen.getByRole('button', { name: 'Create customer order' }));
+    expect(field('Quantity of line 1, pcs').getAttribute('aria-invalid')).toBe('true');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove line 1' }));
+    expect(field('Quantity of line 1, pcs').value).toBe('200');
+    expect(field('Quantity of line 1, pcs').getAttribute('aria-invalid')).toBeNull();
+  });
+
+  it('NC6 a save that fails keeps the entries and names the correlation id', async () => {
+    const { entered } = renderAt(
+      planningLinks.customerOrders.new({ plant }, { preview: 'saveError' }).href,
+    );
+    await screen.findByRole('heading', { level: 1, name: 'New customer order' });
+    await userEvent.selectOptions(choice('Customer'), 'K-1211');
+    await userEvent.selectOptions(choice('Article of line 1'), 'Shaft 8');
+    await userEvent.type(field('Quantity of line 1, pcs'), '200');
+    await userEvent.type(field('Wanted date of line 1'), '2026-11-25');
+    await userEvent.click(screen.getByRole('button', { name: 'Create customer order' }));
+
+    const summary = await screen.findByRole('group', {
+      name: 'Could not create the customer order',
+    });
+    expect(summary.textContent).toContain('Correlation id');
+    expect(field('Quantity of line 1, pcs').value).toBe('200');
+    expect(entered.get().customerOrders).toEqual([]);
+  });
+
   it('NC4, NC5 and NC7 the preview key opens the loading, no customers and no-access states', async () => {
     renderAt(planningLinks.customerOrders.new({ plant }, { preview: 'loading' }).href);
     expect(await screen.findByText('Loading customers and articles')).toBeTruthy();
@@ -201,6 +334,10 @@ describe('New customer order (#768, NC1 to NC7)', () => {
 
     renderAt(planningLinks.customerOrders.new({ plant }, { preview: 'empty' }).href);
     expect(await screen.findByText('No customers yet')).toBeTruthy();
+    cleanup();
+
+    renderAt(planningLinks.customerOrders.new({ plant }, { preview: 'error' }).href);
+    expect(await screen.findByText('Could not load the form')).toBeTruthy();
     cleanup();
 
     renderAt(planningLinks.customerOrders.new({ plant }, { preview: 'forbidden' }).href);

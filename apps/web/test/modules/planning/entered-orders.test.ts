@@ -3,6 +3,7 @@
 
 import { g1, g1Pages } from '@northmes/planning-domain';
 import { describe, expect, it } from 'vitest';
+import { enteredAt } from '../../../src/modules/planning/entered-orders.ts';
 import { createEnteredOrdersStore } from '../../../src/modules/planning/entered-orders-store.ts';
 import { g1Snapshot, g1Week } from '../../../src/modules/planning/gantt-data-g1.ts';
 
@@ -13,6 +14,7 @@ describe('orders entered by hand on mock data (#768)', () => {
     const store = createEnteredOrdersStore();
     expect(store.nextProductionOrderNumber()).toBe('N-1007');
     store.addProductionOrder({
+      plant: 'plant-a',
       number: 'N-1007',
       article: 'Hub 12',
       quantity: 250,
@@ -25,9 +27,27 @@ describe('orders entered by hand on mock data (#768)', () => {
     expect(store.nextProductionOrderNumber()).toBe('N-1008');
   });
 
+  it('keeps each order with the plant it was entered at', () => {
+    const store = createEnteredOrdersStore();
+    store.addProductionOrder({
+      plant: 'plant-a',
+      number: 'N-1007',
+      article: 'Hub 12',
+      quantity: 250,
+      deadlineDate: '2026-11-20',
+      priority: null,
+      color: 'palette-8',
+      suppliedLines: [],
+      ...created,
+    });
+    expect(enteredAt(store.get(), 'plant-a').productionOrders).toHaveLength(1);
+    expect(enteredAt(store.get(), 'plant-b').productionOrders).toEqual([]);
+  });
+
   it('adds a production order, released, with an unplaced job order per routing operation, and the line it supplies', () => {
     const store = createEnteredOrdersStore();
     store.addProductionOrder({
+      plant: 'plant-a',
       number: 'N-1007',
       article: 'Hub 12',
       quantity: 250,
@@ -69,6 +89,7 @@ describe('orders entered by hand on mock data (#768)', () => {
   it('adds a customer order with its lines, one of them supplied by an open order with quantity free', () => {
     const store = createEnteredOrdersStore();
     store.addCustomerOrder({
+      plant: 'plant-a',
       number: '40231',
       customerCode: 'K-1211',
       customersReference: 'LM-2026-140',
