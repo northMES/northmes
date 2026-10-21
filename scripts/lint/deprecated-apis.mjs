@@ -9,10 +9,11 @@
 // the symbol is deprecated, such as rxjs's from and TanStack Router's useBlocker, also when the code
 // calls a current one.
 //
-// test/meta/deprecated-apis.test.ts runs the scan over apps/web's tsconfig.json, so pnpm check fails
-// on a finding.
+// test/meta/deprecated-apis.test.ts runs the scan over the tsconfig.json of apps/web and of each
+// example plugin with scanProjects, so pnpm check fails on a finding.
 
 import path from 'node:path';
+import { Worker } from 'node:worker_threads';
 import ts from 'typescript';
 
 /**
@@ -111,4 +112,36 @@ export function scanProject(root, configPath) {
   if (parsed === undefined) throw new Error(`${configPath}: no tsconfig`);
   const fileNames = parsed.fileNames.filter((fileName) => !fileName.includes('/node_modules/'));
   return findDeprecated(root, fileNames, parsed.options, ts.sys.readFile);
+}
+
+/**
+ * scanProject for each tsconfig.json, each in a worker thread of its own, so the projects are
+ * checked in parallel. A test run with --coverage starts V8's precise coverage on the test's own
+ * thread only, and its block counters slow the type checker two to three times; a worker thread
+ * runs without them.
+ * @param {string} root The directory the findings' paths are relative to.
+ * @param {string[]} configPaths The tsconfig.json files, relative to root.
+ * @returns {Promise<Finding[]>} The findings of each project, in the order of configPaths.
+ */
+export async function scanProjects(root, configPaths) {
+  const findings = await Promise.all(
+    configPaths.map(
+      (configPath) =>
+        /** @type {Promise<Finding[]>} */ (
+          new Promise((resolve, reject) => {
+            const worker = new Worker(new URL('./deprecated-apis-worker.mjs', import.meta.url), {
+              workerData: { root, configPath },
+            });
+            worker.once('message', resolve);
+            worker.once('error', (error) => {
+              reject(new Error(`${configPath}: ${error.message}`, { cause: error }));
+            });
+            worker.once('exit', (code) => {
+              reject(new Error(`${configPath}: the scan's worker exited with code ${code}`));
+            });
+          })
+        ),
+    ),
+  );
+  return findings.flat();
 }
