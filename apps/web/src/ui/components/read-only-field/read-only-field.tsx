@@ -30,7 +30,7 @@ export function ReadOnlyField({ label, value, hint, tag }: ReadOnlyFieldProps) {
         <FieldLabel htmlFor={id} className="block text-xs font-semibold text-foreground">
           {label}
         </FieldLabel>
-        <Badge variant="outline" className="h-4.5 gap-1 px-1.5 text-[0.6875rem]">
+        <Badge variant="outline" className="h-4.5 gap-1 px-1.5 text-tick">
           <Lock aria-hidden className="size-3" />
           {tag}
         </Badge>
