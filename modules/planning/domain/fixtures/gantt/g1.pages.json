@@ -1,6 +1,6 @@
 {
   "id": "G1-pages",
-  "description": "What the planning pages show beside the fixture G1 (docs/plan/18-gantt-timeline.md, the planning pages of the product owner round): the ERP connection, four customers and seven customer order lines, where each order came from, the routings, the history of order 1001, the assembly bench and the calendar deviations the plant admin added. Every name, number and time is fictional. Times are plant time, Europe/Stockholm, no clock change in the range.",
+  "description": "What the planning pages show beside the fixture G1 (docs/plan/18-gantt-timeline.md, the planning pages of the product owner round): the ERP connection, four customers and seven customer order lines, where each order came from, the routings, the history of order 1001, the assembly bench, the two lathes on the three-shift calendar B3 and the calendar deviations the plant admin added. Every name, number and time is fictional. Times are plant time, Europe/Stockholm, no clock change in the range.",
   "erp": {
     "connectionName": "Pyramid",
     "importedAt": {
@@ -205,6 +205,22 @@
       "isPlannable": false,
       "calendar": null,
       "owner": "northmes"
+    },
+    {
+      "code": "LATHE1",
+      "name": "Lathe 1",
+      "group": "MACH",
+      "isPlannable": true,
+      "calendar": "B3",
+      "owner": "erp"
+    },
+    {
+      "code": "LATHE2",
+      "name": "Lathe 2",
+      "group": "MACH",
+      "isPlannable": true,
+      "calendar": "B3",
+      "owner": "erp"
     }
   ],
   "equipmentOwners": { "CNC1": "erp", "CNC2": "erp", "MILL1": "erp" },
@@ -231,5 +247,56 @@
         "addedAt": { "instant": "2026-10-12T07:30:00Z", "plantLocal": "2026-10-12T09:30:00" }
       }
     ]
-  }
+  },
+  "calendars": [
+    {
+      "name": "B3",
+      "effectiveFrom": "2026-01-05",
+      "cycleWeeks": 1,
+      "shifts": [
+        {
+          "name": "Early",
+          "weekdays": [1, 2, 3, 4, 5],
+          "start": "06:00",
+          "end": "14:00",
+          "breaks": [{ "start": "09:00", "end": "09:15" }, { "start": "11:30", "end": "12:00" }],
+          "workingSeconds": 26100
+        },
+        {
+          "name": "Late",
+          "weekdays": [1, 2, 3, 4, 5],
+          "start": "14:00",
+          "end": "22:00",
+          "breaks": [{ "start": "17:00", "end": "17:15" }, { "start": "19:30", "end": "20:00" }],
+          "workingSeconds": 26100
+        },
+        {
+          "name": "Night",
+          "weekdays": [1, 2, 3, 4],
+          "start": "22:00",
+          "end": "06:00",
+          "breaks": [{ "start": "01:00", "end": "01:30" }, { "start": "03:30", "end": "03:45" }],
+          "workingSeconds": 26100
+        }
+      ],
+      "deviations": [
+        {
+          "kind": "nonWorking",
+          "startsLocal": "2026-11-09T00:00",
+          "endsLocal": "2026-11-10T00:00",
+          "reason": "Plant holiday",
+          "addedBy": "Jonas Holm",
+          "addedAt": { "instant": "2026-10-12T07:30:00Z", "plantLocal": "2026-10-12T09:30:00" }
+        },
+        {
+          "kind": "overtime",
+          "startsLocal": "2026-11-14T06:00",
+          "endsLocal": "2026-11-14T12:00",
+          "reason": "Catch up after the holiday",
+          "addedBy": "Jonas Holm",
+          "addedAt": { "instant": "2026-11-02T13:10:00Z", "plantLocal": "2026-11-02T14:10:00" }
+        }
+      ]
+    }
+  ]
 }

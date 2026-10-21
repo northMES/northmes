@@ -25,6 +25,7 @@ import {
   type PlantCalendarDeviation,
   PlantSettingsForbidden,
   type PlantSettingsSnapshot,
+  type PlantShift,
 } from '../../plant-settings-data.ts';
 import {
   calendarDay,
@@ -48,6 +49,35 @@ const cell = 'px-3 py-2 whitespace-normal';
 
 /** The pixels of one hour in the week view, and the hour the view starts at (design #688, CA1). */
 const hourPx = 36;
+
+/**
+ * The edge and fill of each shift by its order in the calendar version (#770): a fourth shift
+ * starts over at the first color, and its name stays written in each block and in the legend.
+ */
+const shiftColors = [
+  'border-shift-1 bg-shift-1-subtle',
+  'border-shift-2 bg-shift-2-subtle',
+  'border-shift-3 bg-shift-3-subtle',
+] as const;
+
+function shiftColor(order: number): string {
+  return shiftColors[order % shiftColors.length] ?? shiftColors[0];
+}
+
+/** "Early 06:00 to 14:00": a shift's name and times. */
+function shiftLabel(shift: PlantShift): string {
+  return `${shift.name} ${shift.start} to ${shift.end}`;
+}
+
+/** A shift's color key in the pattern table and the legend, beside its written name. */
+function ShiftKey({ order }: { readonly order: number }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn('inline-block size-3.5 shrink-0 rounded-[3px] border', shiftColor(order))}
+    />
+  );
+}
 
 /** A section of the page: a card named by its h2, with a line under the heading. */
 function Section({
@@ -105,9 +135,8 @@ function wholeDay(deviation: PlantCalendarDeviation): boolean {
   return clockOf(deviation.startsLocal) === '00:00' && clockOf(deviation.endsLocal) === '00:00';
 }
 
-/** The Shift pattern section (CA1): one row per weekday, and the working time per week. */
+/** The Shift pattern section (CA1): one row per weekday with its shifts, and the working time per week. */
 function PatternSection({ calendar }: { readonly calendar: PlantCalendar }) {
-  const work = hoursText(calendar.workingSecondsPerDay);
   return (
     <Section
       title="Shift pattern"
@@ -136,28 +165,40 @@ function PatternSection({ calendar }: { readonly calendar: PlantCalendar }) {
         </TableHeader>
         <TableBody>
           {[1, 2, 3, 4, 5, 6, 7].map((weekday) => {
-            const working = calendar.weekdays.includes(weekday);
+            const shifts = calendar.shifts
+              .map((shift, order) => ({ shift, order }))
+              .filter(({ shift }) => shift.weekdays.includes(weekday));
+            const work = shifts.reduce((sum, { shift }) => sum + shift.workingSeconds, 0);
             return (
               <TableRow key={weekday}>
-                <TableCell className={cell}>{weekdayName(weekday)}</TableCell>
-                <TableCell className={cn(cell, 'font-mono')}>
-                  {working
-                    ? `${calendar.shiftName} ${calendar.shift.start} to ${calendar.shift.end}`
-                    : 'Closed'}
-                </TableCell>
-                <TableCell className={cn(cell, 'font-mono')}>
-                  {working && (
-                    <span className="flex flex-col">
-                      {calendar.breaks.map((each) => (
-                        <span key={each.start}>
-                          {each.start} to {each.end}
+                <TableCell className={cn(cell, 'align-top')}>{weekdayName(weekday)}</TableCell>
+                <TableCell className={cn(cell, 'align-top')}>
+                  {shifts.length === 0 ? (
+                    <span className="text-muted-foreground">Closed</span>
+                  ) : (
+                    <span className="flex flex-col gap-1.5">
+                      {shifts.map(({ shift, order }) => (
+                        <span key={shift.name} className="flex items-center gap-2 font-mono">
+                          <ShiftKey order={order} />
+                          {shiftLabel(shift)}
                         </span>
                       ))}
                     </span>
                   )}
                 </TableCell>
-                <TableCell className={cn(cell, 'text-end font-mono')}>
-                  {working ? work : '0 min'}
+                <TableCell className={cn(cell, 'align-top font-mono')}>
+                  {shifts.length > 0 && (
+                    <span className="flex flex-col gap-1.5">
+                      {shifts.map(({ shift }) => (
+                        <span key={shift.name} className="leading-5">
+                          {shift.breaks.map((each) => `${each.start} to ${each.end}`).join(', ')}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className={cn(cell, 'text-end align-top font-mono')}>
+                  {shifts.length === 0 ? '0 min' : hoursText(work)}
                 </TableCell>
               </TableRow>
             );
@@ -265,12 +306,14 @@ interface DayBlock {
   readonly to: number;
   readonly label: string;
   readonly sub?: string;
+  /** A shift's order in the calendar version, which picks its color. */
+  readonly order?: number;
 }
 
 /**
- * The blocks of one day from its view under ADR 0025's precedence (`calendarDay`): the shift and
- * its breaks, the overtime that applies, the closure of the day, and with all machines the
- * machines' own closures.
+ * The blocks of one day from its view under ADR 0025's precedence (`calendarDay`): each shift that
+ * starts on the day and its breaks, the part after midnight of the shifts of the day before, the
+ * overtime that applies, the closure of the day, and with all machines the machines' own closures.
  */
 function blocksOf(
   calendar: PlantCalendar,
@@ -284,13 +327,6 @@ function blocksOf(
   readonly machineClosures: readonly PlantCalendarDeviation[];
 } {
   const day = calendarDay(calendar, date, weekday, machine);
-  const start = hoursOf(calendar.shift.start);
-  const end = hoursOf(calendar.shift.end);
-  // A shift belongs to the date it starts and may cross midnight (ADR 0025 rule 1): its part
-  // after midnight, with the breaks in it, sits at the top of the next day.
-  const crosses = end <= start;
-  const afterMidnight = (clock: string) => crosses && hoursOf(clock) < start;
-  const label = `${calendar.shiftName} ${calendar.shift.start} to ${calendar.shift.end}`;
   const breakBlock = (each: { readonly start: string; readonly end: string }, id: string) => ({
     id,
     kind: 'break' as const,
@@ -300,33 +336,43 @@ function blocksOf(
   });
   const blocks: DayBlock[] = [];
   const weekdayBefore = weekday === 1 ? 7 : weekday - 1;
-  // A closure of this day covers the part after midnight; one of the day before does not.
-  if (crosses && calendar.weekdays.includes(weekdayBefore) && day.closed === undefined) {
-    blocks.push({
-      id: 'shift-before',
-      kind: 'shift',
-      from: 0,
-      to: end,
-      label,
-      sub: `From ${weekdayName(weekdayBefore).slice(0, 3)}`,
-    });
-    for (const each of calendar.breaks.filter((one) => afterMidnight(one.start))) {
-      blocks.push(breakBlock(each, `break-before-${each.start}`));
+  calendar.shifts.forEach((shift, order) => {
+    const start = hoursOf(shift.start);
+    const end = hoursOf(shift.end);
+    // A shift belongs to the date it starts and may cross midnight (ADR 0025 rule 1): its part
+    // after midnight, with the breaks in it, sits at the top of the next day.
+    const crosses = end <= start;
+    const afterMidnight = (clock: string) => crosses && hoursOf(clock) < start;
+    // A closure of this day covers the part after midnight; one of the day before does not.
+    if (crosses && shift.weekdays.includes(weekdayBefore) && day.closed === undefined) {
+      blocks.push({
+        id: `${shift.name}-before`,
+        kind: 'shift',
+        order,
+        from: 0,
+        to: end,
+        label: shiftLabel(shift),
+        sub: `From ${weekdayName(weekdayBefore).slice(0, 3)}`,
+      });
+      for (const each of shift.breaks.filter((one) => afterMidnight(one.start))) {
+        blocks.push(breakBlock(each, `${shift.name}-break-before-${each.start}`));
+      }
     }
-  }
-  if (day.working) {
-    blocks.push({
-      id: 'shift',
-      kind: 'shift',
-      from: start,
-      to: crosses ? 24 : end,
-      label,
-      sub: hoursText(calendar.workingSecondsPerDay),
-    });
-    for (const each of calendar.breaks.filter((one) => !afterMidnight(one.start))) {
-      blocks.push(breakBlock(each, `break-${each.start}`));
+    if (day.closed === undefined && shift.weekdays.includes(weekday)) {
+      blocks.push({
+        id: shift.name,
+        kind: 'shift',
+        order,
+        from: start,
+        to: crosses ? 24 : end,
+        label: shiftLabel(shift),
+        sub: hoursText(shift.workingSeconds),
+      });
+      for (const each of shift.breaks.filter((one) => !afterMidnight(one.start))) {
+        blocks.push(breakBlock(each, `${shift.name}-break-${each.start}`));
+      }
     }
-  }
+  });
   for (const deviation of day.overtime) {
     // The part of the deviation on this day: from midnight when it began the day before, to
     // midnight when it ends on a later day.
@@ -406,7 +452,8 @@ function reasonText(deviation: PlantCalendarDeviation): string {
 }
 
 const blockClass: Readonly<Record<DayBlock['kind'], string>> = {
-  shift: 'border-info bg-info-subtle text-foreground',
+  // A shift's edge and fill come from its order (shiftColor).
+  shift: 'text-foreground',
   break: 'border-dashed border-input bg-muted text-muted-foreground',
   overtime: 'border-success bg-success-subtle text-foreground',
   closed: 'border-destructive bg-destructive-subtle text-destructive',
@@ -423,6 +470,47 @@ function countWord(count: number): string {
   return ['no', 'one', 'two', 'three'][count] ?? String(count);
 }
 
+/** "Monday to Friday", "Monday, Wednesday and Friday" or "Monday": the days a shift starts on. */
+function daysSentence(weekdays: readonly number[]): string {
+  const days = [...weekdays].sort((a, b) => a - b);
+  const first = days[0];
+  const last = days[days.length - 1];
+  // A span only for consecutive days, as shiftText writes it.
+  const consecutive = first !== undefined && last !== undefined && last - first + 1 === days.length;
+  if (first === undefined || last === undefined) return 'no working days';
+  if (first === last) return weekdayName(first);
+  return consecutive
+    ? `${weekdayName(first)} to ${weekdayName(last)}`
+    : listText(days.map(weekdayName));
+}
+
+/**
+ * The pattern in a sentence: "Monday to Friday 06:00 to 15:00 with two breaks" for one shift, and
+ * the shifts grouped by their days for several: "Monday to Friday Early 06:00 to 14:00 and Late
+ * 14:00 to 22:00, Monday to Thursday Night 22:00 to 06:00, each shift with two breaks".
+ */
+function patternDescription(calendar: PlantCalendar): string {
+  const breaks = (count: number) => `${countWord(count)} break${count === 1 ? '' : 's'}`;
+  const [only, ...others] = calendar.shifts;
+  if (only === undefined) return 'no working days';
+  if (others.length === 0) {
+    return only.weekdays.length === 0
+      ? 'no working days'
+      : `${daysSentence(only.weekdays)} ${only.start} to ${only.end} with ${breaks(only.breaks.length)}`;
+  }
+  const groups = new Map<string, PlantShift[]>();
+  for (const shift of calendar.shifts) {
+    const key = daysSentence(shift.weekdays);
+    groups.set(key, [...(groups.get(key) ?? []), shift]);
+  }
+  const parts = [...groups].map(([days, shifts]) => `${days} ${listText(shifts.map(shiftLabel))}`);
+  const counts = new Set(calendar.shifts.map((shift) => shift.breaks.length));
+  const [count] = counts;
+  return counts.size === 1 && count !== undefined
+    ? `${parts.join(', ')}, each shift with ${breaks(count)}`
+    : parts.join(', ');
+}
+
 /**
  * The accessible description of the week (CA1): the pattern, then each deviation in view:
  * "Week 45: Monday to Friday 06:00 to 15:00 with two breaks, Saturday 06:00 to 10:00 overtime on
@@ -434,24 +522,7 @@ function weekDescription(
   machine: string | undefined,
   machineName: (code: string) => string,
 ): string {
-  const days = [...calendar.weekdays].sort((a, b) => a - b);
-  const first = days[0];
-  const last = days[days.length - 1];
-  // A span only for consecutive days, as shiftText writes it.
-  const consecutive = first !== undefined && last !== undefined && last - first + 1 === days.length;
-  const span =
-    first === undefined || last === undefined
-      ? 'no working days'
-      : first === last
-        ? weekdayName(first)
-        : consecutive
-          ? `${weekdayName(first)} to ${weekdayName(last)}`
-          : listText(days.map(weekdayName));
-  const pattern =
-    first === undefined
-      ? span
-      : `${span} ${calendar.shift.start} to ${calendar.shift.end} with ${countWord(calendar.breaks.length)} break${calendar.breaks.length === 1 ? '' : 's'}`;
-  const parts = [pattern];
+  const parts = [patternDescription(calendar)];
   daysOf(week).forEach((date, index) => {
     const weekday = index + 1;
     const day = calendarDay(calendar, date, weekday, machine);
@@ -492,8 +563,10 @@ function WeekSection({
     blocksOf(calendar, date, index + 1, machine, machineName),
   );
   const hours = perDay.flatMap(({ blocks }) => blocks.flatMap((block) => [block.from, block.to]));
-  const startHour = Math.max(0, Math.floor(Math.min(hoursOf(calendar.shift.start), ...hours)) - 1);
-  const endHour = Math.min(24, Math.ceil(Math.max(hoursOf(calendar.shift.end), ...hours)) + 1);
+  const starts = calendar.shifts.map((shift) => hoursOf(shift.start));
+  const ends = calendar.shifts.map((shift) => hoursOf(shift.end));
+  const startHour = Math.max(0, Math.floor(Math.min(...starts, ...hours)) - 1);
+  const endHour = Math.min(24, Math.ceil(Math.max(...ends, ...hours)) + 1);
   const y = (hour: number) => (hour - startHour) * hourPx;
   const height = y(endHour);
   return (
@@ -534,126 +607,157 @@ function WeekSection({
           <ChevronRight />
         </IconButton>
       </div>
-      <div
-        role="img"
-        aria-label={weekDescription(calendar, week, machine, machineName)}
-        className="grid grid-cols-[2.75rem_repeat(7,minmax(0,1fr))] overflow-hidden rounded-md border border-border bg-card"
+      {/* The legend names each shift before the view, so a shift's color is never the only cue. */}
+      <ul aria-label="Legend" className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+        {calendar.shifts.map((shift, order) => (
+          <li key={shift.name} className="inline-flex items-center gap-1.5">
+            <ShiftKey order={order} />
+            <span>{shiftLabel(shift)}</span>
+          </li>
+        ))}
+        {(
+          [
+            ['Break', 'border-dashed border-input bg-muted'],
+            ['Overtime deviation', 'border-success bg-success-subtle'],
+            [
+              'Non-working deviation',
+              'border-destructive bg-[repeating-linear-gradient(135deg,var(--destructive-subtle)_0_3px,transparent_3px_6px)]',
+            ],
+            ['Closed time', 'border-border bg-card'],
+          ] as const
+        ).map(([label, key]) => (
+          <li key={label} className="inline-flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className={cn('inline-block size-3.5 shrink-0 rounded-[3px] border', key)}
+            />
+            <span>{label}</span>
+          </li>
+        ))}
+      </ul>
+      {/* Narrower than the week, the view scrolls sideways in its own region (design #770, CS3). */}
+      <section
+        aria-label="Week view"
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: a scrolling region takes keyboard focus so it can scroll.
+        tabIndex={0}
+        className="overflow-x-auto rounded-md border border-border"
       >
         <div
-          className="relative border-r border-border"
-          style={{ height: height + 40, marginTop: 0 }}
+          role="img"
+          aria-label={weekDescription(calendar, week, machine, machineName)}
+          className="grid min-w-[52rem] grid-cols-[2.75rem_repeat(7,minmax(0,1fr))] overflow-hidden bg-card"
         >
-          {Array.from({ length: endHour - startHour + 1 }, (_, index) => startHour + index).map(
-            (hour) => (
-              <span
-                key={hour}
-                className="absolute right-1.5 -translate-y-1/2 font-mono text-tick text-muted-foreground"
-                style={{ top: 40 + y(hour) }}
-              >
-                {String(hour).padStart(2, '0')}:00
-              </span>
-            ),
-          )}
-        </div>
-        {days.map((date, index) => {
-          const { blocks, closed, machineClosures } = perDay[index] ?? {
-            blocks: [],
-            closed: undefined,
-            machineClosures: [],
-          };
-          const weekend = !calendar.weekdays.includes(index + 1);
-          return (
-            <div key={date} className="flex flex-col border-l border-border first:border-l-0">
-              <div
-                className={cn(
-                  'flex h-10 flex-col border-b border-border bg-muted px-2 py-1 text-xs leading-4 font-medium',
-                  weekend && 'text-muted-foreground',
-                )}
-              >
-                <span>{weekdayName(index + 1).slice(0, 3)}</span>
-                <span className="text-muted-foreground">{formatPlantDay(date).slice(4)}</span>
-              </div>
-              <div
-                className={cn(
-                  'relative',
-                  closed !== undefined &&
-                    'bg-[repeating-linear-gradient(135deg,var(--destructive-subtle)_0_6px,transparent_6px_12px)]',
-                )}
-                style={{
-                  height,
-                  backgroundImage:
-                    closed === undefined
-                      ? `repeating-linear-gradient(to bottom, var(--border) 0 1px, transparent 1px ${hourPx}px)`
-                      : undefined,
-                }}
-              >
-                {blocks.map((block) => (
-                  <div
-                    key={block.id}
-                    className={cn(
-                      'absolute overflow-hidden rounded-sm border px-1.5 text-xs leading-4',
-                      block.lanes === 1 && 'inset-x-1',
-                      block.kind === 'break' ? 'py-0 text-tick' : 'py-1',
-                      blockClass[block.kind],
-                    )}
-                    style={{
-                      top: y(block.from),
-                      height: y(block.to) - y(block.from),
-                      // Lane of lanes across the day's width inside its 0.25rem inset.
-                      ...(block.lanes > 1 && {
-                        left: `calc(0.25rem + (100% - 0.5rem) * ${block.lane / block.lanes})`,
-                        width: `calc((100% - 0.5rem) / ${block.lanes})`,
-                      }),
-                    }}
-                  >
-                    <span className={cn('block', block.kind !== 'break' && 'font-semibold')}>
-                      {block.label}
-                    </span>
-                    {block.sub !== undefined && (
-                      <span className="text-muted-foreground">{block.sub}</span>
-                    )}
-                  </div>
-                ))}
-                {/* The day's closures stack in one column after the blocks, so none covers
+          <div
+            className="relative border-r border-border"
+            style={{ height: height + 40, marginTop: 0 }}
+          >
+            {Array.from({ length: endHour - startHour + 1 }, (_, index) => startHour + index).map(
+              (hour) => (
+                <span
+                  key={hour}
+                  className="absolute right-1.5 -translate-y-1/2 font-mono text-tick text-muted-foreground"
+                  style={{ top: 40 + y(hour) }}
+                >
+                  {String(hour).padStart(2, '0')}:00
+                </span>
+              ),
+            )}
+          </div>
+          {days.map((date, index) => {
+            const { blocks, closed, machineClosures } = perDay[index] ?? {
+              blocks: [],
+              closed: undefined,
+              machineClosures: [],
+            };
+            const weekend = !calendar.shifts.some((shift) => shift.weekdays.includes(index + 1));
+            return (
+              <div key={date} className="flex flex-col border-l border-border first:border-l-0">
+                <div
+                  className={cn(
+                    'flex h-10 flex-col border-b border-border bg-muted px-2 py-1 text-xs leading-4 font-medium',
+                    weekend && 'text-muted-foreground',
+                  )}
+                >
+                  <span>{weekdayName(index + 1).slice(0, 3)}</span>
+                  <span className="text-muted-foreground">{formatPlantDay(date).slice(4)}</span>
+                </div>
+                <div
+                  className={cn(
+                    'relative',
+                    closed !== undefined &&
+                      'bg-[repeating-linear-gradient(135deg,var(--destructive-subtle)_0_6px,transparent_6px_12px)]',
+                  )}
+                  style={{
+                    height,
+                    backgroundImage:
+                      closed === undefined
+                        ? `repeating-linear-gradient(to bottom, var(--border) 0 1px, transparent 1px ${hourPx}px)`
+                        : undefined,
+                  }}
+                >
+                  {blocks.map((block) => (
+                    <div
+                      key={block.id}
+                      className={cn(
+                        'absolute overflow-hidden rounded-sm border px-1.5 text-xs leading-4',
+                        block.lanes === 1 && 'inset-x-1',
+                        block.kind === 'break' ? 'py-0 text-tick' : 'py-1',
+                        blockClass[block.kind],
+                        block.kind === 'shift' && shiftColor(block.order ?? 0),
+                      )}
+                      style={{
+                        top: y(block.from),
+                        height: y(block.to) - y(block.from),
+                        // Lane of lanes across the day's width inside its 0.25rem inset.
+                        ...(block.lanes > 1 && {
+                          left: `calc(0.25rem + (100% - 0.5rem) * ${block.lane / block.lanes})`,
+                          width: `calc((100% - 0.5rem) / ${block.lanes})`,
+                        }),
+                      }}
+                    >
+                      <span className={cn('block', block.kind !== 'break' && 'font-semibold')}>
+                        {block.label}
+                      </span>
+                      {block.sub !== undefined && (
+                        <span className="text-muted-foreground">{block.sub}</span>
+                      )}
+                    </div>
+                  ))}
+                  {/* The day's closures stack in one column after the blocks, so none covers
                     another and a stack that reaches into the shift stays on top. */}
-                {(closed !== undefined || machineClosures.length > 0) && (
-                  <div className="absolute inset-x-1 top-1 flex flex-col gap-0.5">
-                    {closed !== undefined && (
-                      <div
-                        className={cn(
-                          'rounded-sm border px-1.5 py-1 text-xs leading-4',
-                          blockClass.closed,
-                        )}
-                      >
-                        <span className="block font-semibold">Closed</span>
-                        <span>{closed.reason ?? 'Non-working'}</span>
-                      </div>
-                    )}
-                    {/* With all machines, a machine's own closed day closes only that machine. */}
-                    {machineClosures.map((closure) => (
-                      <div
-                        key={closure.id}
-                        className={cn(
-                          'rounded-sm border border-dashed px-1.5 py-0.5 text-tick',
-                          blockClass.closed,
-                        )}
-                      >
-                        Closed{onMachines(closure, machineName)}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  {(closed !== undefined || machineClosures.length > 0) && (
+                    <div className="absolute inset-x-1 top-1 flex flex-col gap-0.5">
+                      {closed !== undefined && (
+                        <div
+                          className={cn(
+                            'rounded-sm border px-1.5 py-1 text-xs leading-4',
+                            blockClass.closed,
+                          )}
+                        >
+                          <span className="block font-semibold">Closed</span>
+                          <span>{closed.reason ?? 'Non-working'}</span>
+                        </div>
+                      )}
+                      {/* With all machines, a machine's own closed day closes only that machine. */}
+                      {machineClosures.map((closure) => (
+                        <div
+                          key={closure.id}
+                          className={cn(
+                            'rounded-sm border border-dashed px-1.5 py-0.5 text-tick',
+                            blockClass.closed,
+                          )}
+                        >
+                          Closed{onMachines(closure, machineName)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-      <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span>
-          Shift on the info pair, breaks on the muted surface, overtime on the success pair,
-        </span>
-        <span>a non-working deviation hatched. Closed time has no fill.</span>
-      </p>
+            );
+          })}
+        </div>
+      </section>
     </Section>
   );
 }
@@ -709,7 +813,7 @@ export function CalendarScreen() {
       meta={
         loaded ? (
           <span className="text-sm text-muted-foreground">
-            Plant calendar of the plant, used by{' '}
+            {calendar.plantDefault ? 'Plant calendar' : 'Calendar'} of the plant, used by{' '}
             {listText(calendar.machines.map(machineNamer(snapshot)))}. Times are plant time,{' '}
             {snapshot.plant.timeZone}.
           </span>

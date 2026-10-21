@@ -535,9 +535,13 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
   it('CA1 a night shift sits on the day it starts and continues after midnight on the next day (ADR 0025 rule 1)', async () => {
     const w45 = await weekOfA1((a1) => ({
       ...a1,
-      shiftName: 'Night',
-      shift: { start: '22:00', end: '06:00' },
-      breaks: [{ start: '02:00', end: '02:30' }],
+      shifts: a1.shifts.map((day) => ({
+        ...day,
+        name: 'Night',
+        start: '22:00',
+        end: '06:00',
+        breaks: [{ start: '02:00', end: '02:30' }],
+      })),
       deviations: [],
     }));
 
@@ -577,7 +581,11 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
 
     // The legend names every shift with its times before the view, so color is never the only cue.
     const legend = screen.getByRole('list', { name: 'Legend' });
-    expect(within(legend).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+    expect(
+      within(legend)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
       'Early 06:00 to 14:00',
       'Late 14:00 to 22:00',
       'Night 22:00 to 06:00',

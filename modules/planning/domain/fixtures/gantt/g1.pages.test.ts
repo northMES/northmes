@@ -97,7 +97,7 @@ describe('the pages fixture beside G1 (plan 18, the planning pages)', () => {
     }
   });
 
-  it("gives each shift of its calendars the working time of its span minus its breaks (#770)", () => {
+  it('gives each shift of its calendars the working time of its span minus its breaks (#770)', () => {
     const minutes = (clock: string) => {
       const [hours = 0, rest = 0] = clock.split(':').map(Number);
       return hours * 60 + rest;
