@@ -210,32 +210,33 @@ describe('the Settings button', () => {
     expect(within(screen.getByRole('banner')).queryByRole('link', { name: 'Settings' })).toBeNull();
   });
 
-  it('E04-S02 a plant admin finds People in plant settings, and the main sidebar has no Administration group', async () => {
+  it('E04-S02 a plant admin finds the plant page first in plant settings, and the main sidebar has no Administration group (#767)', async () => {
     const { fetch } = api(['core.user:read', 'core.role:read', 'core.roleAssignment:manage']);
     renderShellAt('/plant-a/articles', shellModules, { fetch });
 
     const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
-    expect(button.getAttribute('href')).toBe('/plant-a/people');
+    await waitFor(() => expect(button.getAttribute('href')).toBe('/plant-a/plant'));
     const sidebar = screen.getByRole('navigation', { name: 'Main' });
     expect(within(sidebar).queryByText('Administration')).toBeNull();
     expect(linksIn(sidebar).map(([label]) => label)).not.toContain('People');
     expect(linksIn(sidebar).map(([label]) => label)).not.toContain('Users');
   });
 
-  it("E06 a plant admin, who manages the plant's roles, finds Machines and Calendars after People in plant settings", async () => {
+  it("E06 a plant admin, who manages the plant's roles, finds Plant, then People, Machines and Calendars in plant settings (#767)", async () => {
     const { fetch } = api(['core.user:read', 'core.roleAssignment:manage']);
     renderShellAt('/plant-a/articles', shellModules, { fetch });
 
     const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
-    await waitFor(() => expect(button.getAttribute('href')).toBe('/plant-a/people'));
+    await waitFor(() => expect(button.getAttribute('href')).toBe('/plant-a/plant'));
     await userEvent.click(button);
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     await waitFor(() =>
-      expect(linksIn(settings).slice(0, 3)).toEqual([
+      expect(linksIn(settings).slice(0, 4)).toEqual([
+        ['Plant', '/plant-a/plant'],
         ['People', '/plant-a/people'],
         ['Machines', '/plant-a/machines'],
         ['Calendars', '/plant-a/calendars'],
