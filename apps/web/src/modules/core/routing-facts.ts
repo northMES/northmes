@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatDuration } from '@northmes/contracts/format';
+import { cyclesFor, type Rates, runSecondsFor, setupSeconds } from '@northmes/planning-domain';
 import type { RoutingOperation } from './routings-data.ts';
 
 /** Where an input of the planned duration comes from (ADR 0027). */
@@ -24,16 +25,17 @@ export interface PlannedDuration {
 /**
  * The planned duration of an operation (plan 07, Planned duration; ADR 0027): a tool's pieces per
  * cycle wins over the machine's, the machine's over the operation's; the machine's cycle time,
- * cycles per piece and retool over the operation's. Setup is retool plus fixed time; run is
- * ceil(quantity × cycles per piece ÷ pieces per cycle) cycles of the cycle time, divided by the
- * planning factor, 1 while the plant's planning factor source is none.
+ * cycles per piece and retool over the operation's. The arithmetic is the domain's, which the
+ * Gantt's durations use: setup is retool plus fixed time; run is ceil(quantity × cycles per piece
+ * ÷ pieces per cycle) cycles of the cycle time over the planning factor, up to the whole second.
+ * The planning factor is the operation's OEE target where the plant uses it, else 1.
  */
 export function plannedDuration(
   operation: RoutingOperation,
   machineCode: string,
   toolCode: string | undefined,
   quantity: number,
-  planningFactor = 1,
+  planningFactorSource: 'none' | 'oeeTarget' = 'none',
 ): PlannedDuration {
   const machine = operation.machines.find((each) => each.code === machineCode);
   const tool = operation.tools.find((each) => each.code === toolCode);
@@ -62,14 +64,21 @@ export function plannedDuration(
     value: operation.fixedSeconds,
     source: 'Operation',
   };
-  const factor: DurationInput = {
-    label: 'Planning factor',
-    value: planningFactor,
-    source: 'Plant setting',
+  const factor: DurationInput =
+    planningFactorSource === 'oeeTarget'
+      ? { label: 'Planning factor', value: operation.oeeTarget, source: 'Operation' }
+      : { label: 'Planning factor', value: 1, source: 'Plant setting' };
+  const rates: Rates = {
+    cycleSeconds: cycle.value,
+    piecesPerCycle: pieces.value,
+    cyclesPerPiece: perPiece.value,
+    planningFactor: factor.value,
+    retoolSeconds: retool.value,
+    fixedSeconds: fixed.value,
   };
-  const setupS = retool.value + fixed.value;
-  const cycles = Math.ceil((quantity * perPiece.value) / pieces.value);
-  const runS = (cycles * cycle.value) / factor.value;
+  const setupS = setupSeconds(rates);
+  const cycles = cyclesFor(quantity, rates);
+  const runS = runSecondsFor(quantity, rates);
   return {
     inputs: [cycle, pieces, perPiece, retool, fixed, factor],
     setupS,

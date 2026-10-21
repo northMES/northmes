@@ -64,7 +64,7 @@ export const coreLinks = defineCoreLinks(
       path: 'routings',
       children: {
         routing: {
-          path: '$articleId',
+          path: '$articleNumber',
           children: { editOperation: { path: 'operations/$sequence/edit' } },
         },
       },

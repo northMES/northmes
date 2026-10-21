@@ -76,4 +76,45 @@ describe('the planned duration of an operation (plan 07, Planned duration; ADR 0
     expect(plannedDuration(operation(10), 'CNC1', undefined, 600).totalS).toBe(19_800);
     expect(plannedDuration(operation(10), 'CNC2', undefined, 600).totalS).toBe(20_400);
   });
+
+  it('#729 RO1 divides the run by the OEE target when the plant uses it, rounding up as the domain does', () => {
+    const duration = plannedDuration(operation(20), 'CNC2', undefined, 600, 'oeeTarget');
+
+    expect(duration.inputs.at(-1)).toEqual({
+      label: 'Planning factor',
+      value: 0.8,
+      source: 'Operation',
+    });
+    expect(duration.runS).toBe(45_000);
+    expect(plannedDuration(operation(10), 'CNC1', undefined, 7, 'oeeTarget').runS).toBe(248);
+  });
+
+  it("#729 RO1 lets a tool's pieces per cycle win over a machine's, and the machine's cycles per piece over the operation's", () => {
+    const synthetic = {
+      ...operation(20),
+      machines: [
+        {
+          code: 'X1',
+          name: 'X 1',
+          default: true,
+          piecesPerCycle: 3,
+          cyclesPerPiece: 2,
+          source: 'erp' as const,
+        },
+      ],
+      tools: [{ code: 'TX', name: 'Tool X', piecesPerCycle: 2, source: 'erp' as const }],
+    };
+
+    const withTool = plannedDuration(synthetic, 'X1', 'TX', 10);
+    expect(withTool.inputs.find((input) => input.label === 'Pieces per cycle')).toMatchObject({
+      value: 2,
+      source: 'Tool',
+    });
+    expect(withTool.inputs.find((input) => input.label === 'Cycles per piece')).toMatchObject({
+      value: 2,
+      source: 'Machine',
+    });
+    expect(withTool.cycles).toBe(10);
+    expect(plannedDuration(synthetic, 'X1', undefined, 10).cycles).toBe(7);
+  });
 });

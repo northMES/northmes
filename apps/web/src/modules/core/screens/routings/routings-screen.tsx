@@ -21,7 +21,7 @@ function columnsOf(plant: string): DataTableColumn<Routing>[] {
       cell: (routing) => (
         <span className="flex flex-col">
           <Link
-            to={coreLinks.routings.routing({ plant, articleId: routing.articleNumber }).href}
+            to={coreLinks.routings.routing({ plant, articleNumber: routing.articleNumber }).href}
             className={`font-mono ${link}`}
           >
             {routing.articleNumber}
@@ -50,7 +50,7 @@ function columnsOf(plant: string): DataTableColumn<Routing>[] {
         return kept === 0 ? (
           <span className="text-xs text-muted-foreground">None</span>
         ) : (
-          `${kept} kept in NorthMES`
+          `${kept} operation${kept === 1 ? '' : 's'}`
         );
       },
     },
@@ -92,7 +92,7 @@ export function RoutingsScreen() {
       status: 'empty',
       icon: Route,
       title: 'No routings yet',
-      description: 'Routings come from the ERP with the articles’ operations.',
+      description: "Routings come from the ERP with the articles' operations.",
     };
   }
   return (

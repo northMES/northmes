@@ -23,7 +23,7 @@ test.describe('the routing pages', () => {
     await expect(page.getByRole('table', { name: 'Routings' })).toBeVisible();
     await checkA11y('the routings list');
 
-    const bracket = coreLinks.routings.routing({ plant, articleId: '20-1001' }).href;
+    const bracket = coreLinks.routings.routing({ plant, articleNumber: '20-1001' }).href;
     await page.goto(bracket);
     await expect(page.getByRole('heading', { level: 1, name: 'Bracket L' })).toBeVisible();
     await expect(
@@ -31,8 +31,17 @@ test.describe('the routing pages', () => {
     ).toBeVisible();
     await checkA11y('the routing of Bracket L');
 
+    // At 320 px the wide tables scroll sideways in their own focusable regions.
+    await page.setViewportSize({ width: 320, height: 900 });
+    await page.goto(bracket);
+    await expect(
+      page.getByRole('region', { name: 'Allowed machines of operation 20, scrolls sideways' }),
+    ).toBeVisible();
+    await checkA11y('the routing of Bracket L at 320 px');
+    await page.setViewportSize({ width: 1440, height: 900 });
+
     await page.goto(
-      coreLinks.routings.routing.editOperation({ plant, articleId: '20-1001', sequence: '20' })
+      coreLinks.routings.routing.editOperation({ plant, articleNumber: '20-1001', sequence: '20' })
         .href,
     );
     await expect(

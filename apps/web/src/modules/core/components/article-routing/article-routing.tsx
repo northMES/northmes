@@ -5,6 +5,7 @@ import { useShell } from '@northmes/web-sdk';
 import { Link } from '@tanstack/react-router';
 import { useId } from 'react';
 import { buttonVariants } from '../../../../ui/primitives/button.tsx';
+import { RoutingsForbidden } from '../../routings-data.ts';
 import { useRoutings } from '../../routings-source-context.ts';
 
 /**
@@ -16,8 +17,13 @@ import { useRoutings } from '../../routings-source-context.ts';
 export function ArticleRouting({ code, name }: { readonly code: string; readonly name: string }) {
   const { plant } = useShell();
   const id = useId();
-  const { snapshot } = useRoutings(undefined);
-  const routing = snapshot?.routings.find((each) => each.articleNumber === code);
+  const { snapshot, error } = useRoutings(undefined);
+  // The fixture holds one plant's routings; another plant has none of them.
+  const routing =
+    snapshot?.plant.slug === plant
+      ? snapshot.routings.find((each) => each.articleNumber === code)
+      : undefined;
+  const fixture = snapshot?.fixture === undefined ? '' : ` Showing fixture ${snapshot.fixture}.`;
   return (
     <section
       aria-labelledby={id}
@@ -26,23 +32,29 @@ export function ArticleRouting({ code, name }: { readonly code: string; readonly
       <h2 id={id} className="text-base font-semibold">
         Routing
       </h2>
-      {snapshot === undefined ? (
+      {snapshot === undefined && error instanceof RoutingsForbidden ? (
+        <p className="text-sm text-muted-foreground">
+          You need the permission to read routings at this plant.
+        </p>
+      ) : snapshot === undefined && error !== undefined ? (
+        <p className="text-sm text-destructive">
+          The routing could not be loaded. Reload the page to try again.
+        </p>
+      ) : snapshot === undefined ? (
         <p className="text-sm text-muted-foreground">Loading the routing.</p>
       ) : routing === undefined ? (
-        <>
-          <p className="text-sm font-medium">{name} has no routing</p>
-          <p className="text-sm text-muted-foreground">
-            Routings come from the ERP with the article’s operations, or are created for orders that
-            NorthMES releases. Without a routing an order of {name} cannot be released or planned.
-          </p>
-        </>
+        <p className="text-sm text-muted-foreground">
+          {snapshot.fixture === undefined
+            ? `${name} has no routing. Routings come from the ERP with the article's operations; without one an order of ${name} cannot be released or planned.`
+            : `The fixture ${snapshot.fixture} has no routing for ${name}. Routings read the fixture until the routing API exists.`}
+        </p>
       ) : (
         <>
           <p className="text-sm text-muted-foreground">
-            {`ERP routing version ${routing.erpVersion}, ${routing.operations.length} operation${routing.operations.length === 1 ? '' : 's'}.`}
+            {`ERP routing version ${routing.erpVersion}, ${routing.operations.length} operation${routing.operations.length === 1 ? '' : 's'}.${fixture}`}
           </p>
           <Link
-            to={coreLinks.routings.routing({ plant, articleId: routing.articleNumber }).href}
+            to={coreLinks.routings.routing({ plant, articleNumber: routing.articleNumber }).href}
             className={`${buttonVariants({ variant: 'outline' })} self-start`}
           >
             Open the routing of {routing.articleName}

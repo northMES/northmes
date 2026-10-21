@@ -19,11 +19,13 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/primitives/table.tsx';
+import { ScrollTable } from '../../components/scroll-table/index.ts';
 import { SourceTag } from '../../components/source-tag/index.ts';
 import {
   enteredText,
   operationSourceKind,
   percentText,
+  routingActionReason,
   secondsText,
   timeOrNone,
   timeOrZero,
@@ -48,102 +50,106 @@ const override = 'font-semibold';
 function OperationsTable({ routing }: { readonly routing: Routing }) {
   const { plant } = useShell();
   return (
-    <Table>
-      <TableCaption className="sr-only">
-        Operations of {routing.articleName} in routing sequence
-      </TableCaption>
-      <TableHeader className="bg-muted">
-        <TableRow className="hover:bg-transparent">
-          {[
-            'No.',
-            'Name',
-            'Cycle time',
-            'Retool',
-            'Fixed time',
-            'OEE target',
-            'Pieces per cycle',
-            'Cycles per piece',
-            'Lead time',
-            'Send-ahead',
-            'Machines',
-            'Source',
-          ].map((label) => (
-            <TableHead key={label} scope="col" className={head}>
-              {label}
+    <ScrollTable label={`Operations of ${routing.articleName}`}>
+      <Table>
+        <TableCaption className="sr-only">
+          Operations of {routing.articleName} in routing sequence
+        </TableCaption>
+        <TableHeader className="bg-muted">
+          <TableRow className="hover:bg-transparent">
+            {[
+              'No.',
+              'Name',
+              'Cycle time',
+              'Retool',
+              'Fixed time',
+              'OEE target',
+              'Pieces per cycle',
+              'Cycles per piece',
+              'Lead time',
+              'Send-ahead',
+              'Machines',
+              'Source',
+            ].map((label) => (
+              <TableHead key={label} scope="col" className={head}>
+                {label}
+              </TableHead>
+            ))}
+            <TableHead scope="col" className={head}>
+              <span className="sr-only">Actions</span>
             </TableHead>
-          ))}
-          <TableHead scope="col" className={head}>
-            <span className="sr-only">Actions</span>
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {routing.operations.map((operation) => {
-          const defaultMachine = operation.machines.find((machine) => machine.default);
-          const entered = enteredText(operation);
-          return (
-            <TableRow key={operation.sequence}>
-              <TableCell className={cn(cell, 'font-mono')}>{operation.sequence}</TableCell>
-              <TableCell className={cell}>{operation.name}</TableCell>
-              <TableCell className={cn(cell, 'font-mono')}>
-                <span className="flex flex-col">
-                  <span>{secondsText(operation.cycleSeconds)}</span>
-                  {entered !== undefined && (
-                    <span className="text-xs text-muted-foreground">{entered}</span>
-                  )}
-                </span>
-              </TableCell>
-              <TableCell className={cn(cell, 'font-mono')}>
-                {timeOrZero(operation.retoolSeconds)}
-              </TableCell>
-              <TableCell className={cn(cell, 'font-mono')}>
-                {timeOrZero(operation.fixedSeconds)}
-              </TableCell>
-              <TableCell className={cn(cell, 'font-mono')}>
-                {percentText(operation.oeeTarget)}
-              </TableCell>
-              <TableCell className={cn(cell, 'font-mono')}>{operation.piecesPerCycle}</TableCell>
-              <TableCell className={cn(cell, 'font-mono')}>{operation.cyclesPerPiece}</TableCell>
-              <TableCell
-                className={cn(cell, 'font-mono', operation.kept !== undefined && override)}
-              >
-                {timeOrNone(operation.leadTimeS)}
-              </TableCell>
-              <TableCell className={cn(cell, 'font-mono')}>
-                {operation.sendAheadQuantity === 0 ? 'None' : `${operation.sendAheadQuantity} pcs`}
-              </TableCell>
-              <TableCell className={cell}>
-                <span className="flex flex-col">
-                  <span>{defaultMachine?.name ?? ''}, default</span>
-                  <span className="text-xs text-muted-foreground">
-                    {operation.machines.length} allowed
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {routing.operations.map((operation) => {
+            const defaultMachine = operation.machines.find((machine) => machine.default);
+            const entered = enteredText(operation);
+            return (
+              <TableRow key={operation.sequence}>
+                <TableCell className={cn(cell, 'font-mono')}>{operation.sequence}</TableCell>
+                <TableCell className={cell}>{operation.name}</TableCell>
+                <TableCell className={cn(cell, 'font-mono')}>
+                  <span className="flex flex-col">
+                    <span>{secondsText(operation.cycleSeconds)}</span>
+                    {entered !== undefined && (
+                      <span className="text-xs text-muted-foreground">{entered}</span>
+                    )}
                   </span>
-                </span>
-              </TableCell>
-              <TableCell className={cell}>
-                <SourceTag kind={operationSourceKind(operation)} />
-              </TableCell>
-              <TableCell className={cell}>
-                <Link
-                  to={
-                    coreLinks.routings.routing.editOperation({
-                      plant,
-                      articleId: routing.articleNumber,
-                      sequence: String(operation.sequence),
-                    }).href
-                  }
-                  aria-label={`Edit operation ${operation.sequence}`}
-                  className={cn(buttonVariants({ variant: 'outline' }), 'h-8 px-2.5')}
+                </TableCell>
+                <TableCell className={cn(cell, 'font-mono')}>
+                  {timeOrZero(operation.retoolSeconds)}
+                </TableCell>
+                <TableCell className={cn(cell, 'font-mono')}>
+                  {timeOrZero(operation.fixedSeconds)}
+                </TableCell>
+                <TableCell className={cn(cell, 'font-mono')}>
+                  {percentText(operation.oeeTarget)}
+                </TableCell>
+                <TableCell className={cn(cell, 'font-mono')}>{operation.piecesPerCycle}</TableCell>
+                <TableCell className={cn(cell, 'font-mono')}>{operation.cyclesPerPiece}</TableCell>
+                <TableCell
+                  className={cn(cell, 'font-mono', operation.kept !== undefined && override)}
                 >
-                  <Pencil aria-hidden />
-                  Edit
-                </Link>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+                  {timeOrNone(operation.leadTimeS)}
+                </TableCell>
+                <TableCell className={cn(cell, 'font-mono')}>
+                  {operation.sendAheadQuantity === 0
+                    ? 'None'
+                    : `${operation.sendAheadQuantity} pcs`}
+                </TableCell>
+                <TableCell className={cell}>
+                  <span className="flex flex-col">
+                    <span>{defaultMachine?.name ?? ''}, default</span>
+                    <span className="text-xs text-muted-foreground">
+                      {operation.machines.length} allowed
+                    </span>
+                  </span>
+                </TableCell>
+                <TableCell className={cell}>
+                  <SourceTag kind={operationSourceKind(operation)} />
+                </TableCell>
+                <TableCell className={cell}>
+                  <Link
+                    to={
+                      coreLinks.routings.routing.editOperation({
+                        plant,
+                        articleNumber: routing.articleNumber,
+                        sequence: String(operation.sequence),
+                      }).href
+                    }
+                    aria-label={`Edit operation ${operation.sequence}`}
+                    className={cn(buttonVariants({ variant: 'outline' }), 'h-8 px-2.5')}
+                  >
+                    <Pencil aria-hidden />
+                    Edit
+                  </Link>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </ScrollTable>
   );
 }
 
@@ -189,7 +195,7 @@ function OperationSection({
           to={
             coreLinks.routings.routing.editOperation({
               plant,
-              articleId: routing.articleNumber,
+              articleNumber: routing.articleNumber,
               sequence: String(operation.sequence),
             }).href
           }
@@ -220,56 +226,60 @@ function OperationSection({
         </div>
       )}
       <Part title="Allowed machines">
-        <Table>
-          <TableCaption className="sr-only">
-            Allowed machines of operation {operation.sequence}
-          </TableCaption>
-          <TableHeader className="bg-muted">
-            <TableRow className="hover:bg-transparent">
-              {[
-                'Machine',
-                'Default',
-                'Cycle time',
-                'Pieces per cycle',
-                'Cycles per piece',
-                'Retool',
-                'Source',
-              ].map((label) => (
-                <TableHead key={label} scope="col" className={head}>
-                  {label}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {operation.machines.map((machine) => (
-              <TableRow key={machine.code}>
-                <TableCell className={cell}>
-                  <span className="flex flex-col">
-                    <span>{machine.name}</span>
-                    <span className="font-mono text-xs text-muted-foreground">{machine.code}</span>
-                  </span>
-                </TableCell>
-                <TableCell className={cell}>{machine.default ? 'Default' : ''}</TableCell>
-                <TableCell className={cn(cell, 'font-mono')}>
-                  {value(machine.cycleSeconds, operation.cycleSeconds, secondsText)}
-                </TableCell>
-                <TableCell className={cn(cell, 'font-mono')}>
-                  {value(machine.piecesPerCycle, operation.piecesPerCycle, String)}
-                </TableCell>
-                <TableCell className={cn(cell, 'font-mono')}>
-                  {value(machine.cyclesPerPiece, operation.cyclesPerPiece, String)}
-                </TableCell>
-                <TableCell className={cn(cell, 'font-mono')}>
-                  {value(machine.retoolSeconds, operation.retoolSeconds, timeOrZero)}
-                </TableCell>
-                <TableCell className={cell}>
-                  <SourceTag kind={machine.source === 'northmes' ? 'northmes' : 'erp'} />
-                </TableCell>
+        <ScrollTable label={`Allowed machines of operation ${operation.sequence}`}>
+          <Table>
+            <TableCaption className="sr-only">
+              Allowed machines of operation {operation.sequence}
+            </TableCaption>
+            <TableHeader className="bg-muted">
+              <TableRow className="hover:bg-transparent">
+                {[
+                  'Machine',
+                  'Default',
+                  'Cycle time',
+                  'Pieces per cycle',
+                  'Cycles per piece',
+                  'Retool',
+                  'Source',
+                ].map((label) => (
+                  <TableHead key={label} scope="col" className={head}>
+                    {label}
+                  </TableHead>
+                ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {operation.machines.map((machine) => (
+                <TableRow key={machine.code}>
+                  <TableCell className={cell}>
+                    <span className="flex flex-col">
+                      <span>{machine.name}</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {machine.code}
+                      </span>
+                    </span>
+                  </TableCell>
+                  <TableCell className={cell}>{machine.default ? 'Default' : ''}</TableCell>
+                  <TableCell className={cn(cell, 'font-mono')}>
+                    {value(machine.cycleSeconds, operation.cycleSeconds, secondsText)}
+                  </TableCell>
+                  <TableCell className={cn(cell, 'font-mono')}>
+                    {value(machine.piecesPerCycle, operation.piecesPerCycle, String)}
+                  </TableCell>
+                  <TableCell className={cn(cell, 'font-mono')}>
+                    {value(machine.cyclesPerPiece, operation.cyclesPerPiece, String)}
+                  </TableCell>
+                  <TableCell className={cn(cell, 'font-mono')}>
+                    {value(machine.retoolSeconds, operation.retoolSeconds, timeOrZero)}
+                  </TableCell>
+                  <TableCell className={cell}>
+                    <SourceTag kind={machine.source === 'northmes' ? 'northmes' : 'erp'} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ScrollTable>
         <p className="text-xs text-muted-foreground">
           A muted value inherits the operation's. The OEE target comes from the operation only; a
           machine cannot override it.
@@ -281,36 +291,40 @@ function OperationSection({
             Operation {operation.sequence} uses no tool.
           </p>
         ) : (
-          <Table>
-            <TableCaption className="sr-only">Tools of operation {operation.sequence}</TableCaption>
-            <TableHeader className="bg-muted">
-              <TableRow className="hover:bg-transparent">
-                {['Tool', 'Name', 'Pieces per cycle', 'Source'].map((label) => (
-                  <TableHead key={label} scope="col" className={head}>
-                    {label}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {operation.tools.map((tool) => (
-                <TableRow key={tool.code}>
-                  <TableCell className={cn(cell, 'font-mono')}>{tool.code}</TableCell>
-                  <TableCell className={cell}>{tool.name}</TableCell>
-                  <TableCell className={cn(cell, 'font-mono')}>
-                    {tool.piecesPerCycle === undefined ? (
-                      <span className={inherited}>No override</span>
-                    ) : (
-                      <span className={override}>{tool.piecesPerCycle}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className={cell}>
-                    <SourceTag kind={tool.source === 'northmes' ? 'northmes' : 'erp'} />
-                  </TableCell>
+          <ScrollTable label={`Tools of operation ${operation.sequence}`}>
+            <Table>
+              <TableCaption className="sr-only">
+                Tools of operation {operation.sequence}
+              </TableCaption>
+              <TableHeader className="bg-muted">
+                <TableRow className="hover:bg-transparent">
+                  {['Tool', 'Name', 'Pieces per cycle', 'Source'].map((label) => (
+                    <TableHead key={label} scope="col" className={head}>
+                      {label}
+                    </TableHead>
+                  ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {operation.tools.map((tool) => (
+                  <TableRow key={tool.code}>
+                    <TableCell className={cn(cell, 'font-mono')}>{tool.code}</TableCell>
+                    <TableCell className={cell}>{tool.name}</TableCell>
+                    <TableCell className={cn(cell, 'font-mono')}>
+                      {tool.piecesPerCycle === undefined ? (
+                        <span className={inherited}>No override</span>
+                      ) : (
+                        <span className={override}>{tool.piecesPerCycle}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className={cell}>
+                      <SourceTag kind={tool.source === 'northmes' ? 'northmes' : 'erp'} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollTable>
         )}
         <p className="text-xs text-muted-foreground">
           The tool a job order uses is chosen in NorthMES and never sent to the ERP.
@@ -322,38 +336,44 @@ function OperationSection({
             Operation {operation.sequence} consumes no material.
           </p>
         ) : (
-          <Table>
-            <TableCaption className="sr-only">
-              Materials of operation {operation.sequence}
-            </TableCaption>
-            <TableHeader className="bg-muted">
-              <TableRow className="hover:bg-transparent">
-                {['Article', 'Name', 'Per piece', 'Source warehouse', 'Source'].map((label) => (
-                  <TableHead key={label} scope="col" className={head}>
-                    {label}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {operation.materials.map((material) => (
-                <TableRow key={material.number}>
-                  <TableCell className={cn(cell, 'font-mono')}>{material.number}</TableCell>
-                  <TableCell className={cell}>{material.name}</TableCell>
-                  <TableCell className={cn(cell, 'font-mono')}>
-                    {material.perPiece} {material.unit}
-                  </TableCell>
-                  <TableCell className={cn(cell, 'font-mono')}>{material.warehouse}</TableCell>
-                  <TableCell className={cell}>
-                    <SourceTag kind="erp" />
-                  </TableCell>
+          <ScrollTable label={`Materials of operation ${operation.sequence}`}>
+            <Table>
+              <TableCaption className="sr-only">
+                Materials of operation {operation.sequence}
+              </TableCaption>
+              <TableHeader className="bg-muted">
+                <TableRow className="hover:bg-transparent">
+                  {['Article', 'Name', 'Per piece', 'Source warehouse', 'Source'].map((label) => (
+                    <TableHead key={label} scope="col" className={head}>
+                      {label}
+                    </TableHead>
+                  ))}
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {operation.materials.map((material) => (
+                  <TableRow key={material.number}>
+                    <TableCell className={cn(cell, 'font-mono')}>{material.number}</TableCell>
+                    <TableCell className={cell}>{material.name}</TableCell>
+                    <TableCell className={cn(cell, 'font-mono')}>
+                      {material.perPiece} {material.unit}
+                    </TableCell>
+                    <TableCell className={cn(cell, 'font-mono')}>{material.warehouse}</TableCell>
+                    <TableCell className={cell}>
+                      <SourceTag kind="erp" />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollTable>
         )}
       </Part>
-      <RoutingDuration routing={routing} operation={operation} />
+      <RoutingDuration
+        routing={routing}
+        operation={operation}
+        planningFactorSource={snapshot.planningFactorSource}
+      />
       <p className="text-xs text-muted-foreground">
         A tool's pieces per cycle wins over the machine's, the machine's over the operation's. The
         OEE target, {percentText(operation.oeeTarget)}, is{' '}
@@ -362,6 +382,7 @@ function OperationSection({
           : 'the planning factor.'}{' '}
         Rates freeze on a job order when it is placed.
       </p>
+      <p className="text-xs text-muted-foreground">{routingActionReason}</p>
     </section>
   );
 }
@@ -376,10 +397,10 @@ function OperationSection({
  */
 export function RoutingScreen() {
   const { plant } = useShell();
-  const { articleId = '' } = useParams({ strict: false });
+  const { articleNumber = '' } = useParams({ strict: false });
   const search = routingPageSearch(useSearch({ strict: false }));
   const { snapshot, error, retry } = useRoutings(search.preview);
-  const routing = snapshot?.routings.find((each) => each.articleNumber === articleId);
+  const routing = snapshot?.routings.find((each) => each.articleNumber === articleNumber);
 
   let state: PageState = { status: 'ready' };
   if (snapshot === undefined && error instanceof RoutingsForbidden) {
@@ -398,8 +419,7 @@ export function RoutingScreen() {
       status: 'empty',
       icon: Route,
       title: 'This article has no routing',
-      description:
-        'Routings come from the ERP with the article’s operations, or are created here for orders that NorthMES releases. Without a routing an order of the article cannot be released or planned.',
+      description: `Routings come from the ERP with the article's operations, or are created here for orders that NorthMES releases. Without a routing an order of the article cannot be released or planned. ${routingActionReason}`,
       action: (
         <Button variant="outline" disabled>
           Create routing

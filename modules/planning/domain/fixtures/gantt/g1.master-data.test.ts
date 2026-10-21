@@ -8,7 +8,8 @@ import { g1Pages } from '../../src/fixtures/gantt-pages.ts';
 /**
  * The master data fixture beside G1 (design #729): what the routing, tools and equipment group
  * pages add to G1's operations. The test guards that it agrees with G1 and the pages fixture on
- * every operation and allowed machine, so the routing page never contradicts the Gantt.
+ * every operation, cycle time and allowed machine. The machine overrides are the master data's
+ * own: G1's job orders do not apply them yet when a planner moves one.
  */
 describe('the master data fixture beside G1 (design #729)', () => {
   const tools = new Set(g1MasterData.tools.map((tool) => tool.code));
@@ -56,6 +57,35 @@ describe('the master data fixture beside G1 (design #729)', () => {
         expect(leadTimes.get(`${routing.article} ${operation.sequence}`)).not.toBe(
           operation.kept.erpLeadTimeSeconds,
         );
+      }
+    }
+  });
+
+  it("#729 enters each cycle time as G1's own, in seconds or in pieces per hour", () => {
+    for (const routing of g1MasterData.routings) {
+      const order = g1.productionOrders.find((each) => each.article === routing.article);
+      for (const operation of routing.operations) {
+        const rates = order?.operations.find((each) => each.sequence === operation.sequence)?.rates;
+        const name = `${routing.article} ${operation.sequence}`;
+        expect(rates, name).toBeDefined();
+        const seconds =
+          operation.cycleEntered.unit === 'seconds'
+            ? operation.cycleEntered.value
+            : (3600 / operation.cycleEntered.value) * (rates?.piecesPerCycle ?? 1);
+        expect(seconds, name).toBe(rates?.cycleSeconds);
+      }
+    }
+  });
+
+  it('#729 details no routing and no operation that G1 and the pages fixture lack', () => {
+    for (const routing of g1MasterData.routings) {
+      const named = g1Pages.routings.find((each) => each.article === routing.article);
+      expect(named, routing.article).toBeDefined();
+      for (const operation of routing.operations) {
+        expect(
+          named?.operations.some((each) => each.sequence === operation.sequence),
+          `${routing.article} ${operation.sequence}`,
+        ).toBe(true);
       }
     }
   });

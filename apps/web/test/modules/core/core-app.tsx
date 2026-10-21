@@ -69,8 +69,8 @@ function SettingsStub() {
  * MockedProvider that answers each of mocks once and the contributions the shell would give the
  * slots, and returns the router, whose state.location shows the URL. A hold from holdRequests
  * keeps its requests from the mocks until the test releases them. The plant settings pages read
- * plantSettingsSource, the customers pages customersSource, the warehouses warehousesSource and the routings routingsSource,
- * the fixture G1 when the test gives none.
+ * plantSettingsSource, the customers pages customersSource, the warehouses warehousesSource and
+ * the routings routingsSource, the fixture G1 when the test gives none.
  */
 export function renderCoreAt(
   href: string,

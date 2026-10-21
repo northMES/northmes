@@ -5,7 +5,7 @@ import { useShell } from '@northmes/web-sdk';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { Lock } from 'lucide-react';
-import { type FormEvent, useId, useState } from 'react';
+import { useId, useState } from 'react';
 import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { ReadOnlyField } from '../../../../ui/components/read-only-field/index.ts';
@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/primitives/table.tsx';
+import { ScrollTable } from '../../components/scroll-table/index.ts';
 import { SourceTag } from '../../components/source-tag/index.ts';
 import { routingActionReason, secondsText, timeOrNone, timeOrZero } from '../../routing-facts.ts';
 import { routingPageSearch } from '../../routing-search.ts';
@@ -46,12 +47,12 @@ function shown(value: number): string {
  */
 export function EditRoutingOperationScreen() {
   const { plant } = useShell();
-  const { articleId = '', sequence = '' } = useParams({ strict: false });
+  const { articleNumber = '', sequence = '' } = useParams({ strict: false });
   const search = routingPageSearch(useSearch({ strict: false }));
   const { snapshot, error, retry } = useRoutings(search.preview);
-  const routing = snapshot?.routings.find((each) => each.articleNumber === articleId);
+  const routing = snapshot?.routings.find((each) => each.articleNumber === articleNumber);
   const operation = routing?.operations.find((each) => String(each.sequence) === sequence);
-  const back = coreLinks.routings.routing({ plant, articleId }).href;
+  const back = coreLinks.routings.routing({ plant, articleNumber }).href;
 
   let state: PageState = { status: 'ready' };
   if (snapshot === undefined && error instanceof RoutingsForbidden) {
@@ -124,20 +125,22 @@ function OperationForm({
   });
   const set = (key: keyof typeof values) => (event: { target: { value: string } }) =>
     setValues((current) => ({ ...current, [key]: event.target.value }));
-  const field = (key: keyof typeof values, label: string, hint: string, readOnly = !keep) => (
+  // While Keep is off the import owns the values, so the fields read only and look it.
+  const field = (key: keyof typeof values, label: string, hint: string, numeric = true) => (
     <TextField
       label={label}
       value={values[key]}
       onChange={set(key)}
       hint={hint}
-      inputMode="decimal"
-      readOnly={readOnly}
+      readOnly={!keep}
+      className={keep ? undefined : '[&_input]:bg-muted'}
+      {...(numeric && { inputMode: 'decimal' as const })}
     />
   );
   return (
     <form
       className="grid max-w-3xl gap-4"
-      onSubmit={(event: FormEvent) => event.preventDefault()}
+      onSubmit={(event) => event.preventDefault()}
       aria-describedby="edit-routing-reason"
     >
       <Field orientation="horizontal" className="items-start rounded-md border border-border p-3">
@@ -158,8 +161,12 @@ function OperationForm({
             tag="Always from the ERP"
             hint="The ERP's operation number identifies the operation."
           />
-          {field('name', 'Name', 'The name on the board and the job order list.')}
-          {field('cycle', 'Cycle time', 'Seconds. Enter seconds per cycle or pieces per hour.')}
+          {field('name', 'Name', 'The name on the board and the job order list.', false)}
+          {field(
+            'cycle',
+            'Cycle time',
+            `Seconds per cycle.${operation.cycleEntered.unit === 'piecesPerHour' ? ` Entered as ${operation.cycleEntered.value} pcs/h.` : ''}`,
+          )}
           {field('retool', 'Retool', 'Minutes.')}
           {field('fixed', 'Fixed time', 'Minutes.')}
           {field(
@@ -172,55 +179,115 @@ function OperationForm({
           {field(
             'lead',
             'Lead time',
-            `${operation.kept === undefined ? '' : `The ERP sends ${timeOrNone(operation.kept.erpLeadTimeS)}. `}Waiting time before this operation, elapsed.`,
+            `Hours. ${operation.kept === undefined ? '' : `The ERP sends ${timeOrNone(operation.kept.erpLeadTimeS)}. `}Waiting time before this operation, elapsed.`,
           )}
           {field('sendAhead', 'Send-ahead', 'Pieces of this operation that release the next one.')}
         </div>
       </FormSection>
       <FormSection title="Allowed machines">
         <p className="text-sm text-muted-foreground">
-          An empty field inherits the operation's value.
+          A blank cell inherits the operation's value. Adding a machine waits with Save for the
+          routing API.
         </p>
-        <Table>
-          <TableCaption className="sr-only">
-            Allowed machines of operation {operation.sequence}
-          </TableCaption>
-          <TableHeader className="bg-muted">
-            <TableRow className="hover:bg-transparent">
-              {['Machine', 'Default', 'Cycle time', 'Retool', 'Source'].map((label) => (
-                <TableHead key={label} scope="col" className={head}>
-                  {label}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {operation.machines.map((machine) => (
-              <TableRow key={machine.code}>
-                <TableCell className={cell}>
-                  <span className="flex flex-col">
-                    <span>{machine.name}</span>
-                    <span className="font-mono text-xs text-muted-foreground">{machine.code}</span>
-                  </span>
-                </TableCell>
-                <TableCell className={cell}>{machine.default ? 'Default' : ''}</TableCell>
-                <TableCell className={cn(cell, 'font-mono')}>
-                  {machine.cycleSeconds === undefined ? '' : secondsText(machine.cycleSeconds)}
-                </TableCell>
-                <TableCell className={cn(cell, 'font-mono')}>
-                  {machine.retoolSeconds === undefined ? '' : timeOrZero(machine.retoolSeconds)}
-                </TableCell>
-                <TableCell className={cell}>
-                  {machine.addedBy === undefined ? (
-                    <SourceTag kind={machine.source === 'northmes' ? 'northmes' : 'erp'} />
-                  ) : (
-                    `Added by ${machine.addedBy}`
-                  )}
-                </TableCell>
+        <ScrollTable label={`Allowed machines of operation ${operation.sequence}`}>
+          <Table>
+            <TableCaption className="sr-only">
+              Allowed machines of operation {operation.sequence}
+            </TableCaption>
+            <TableHeader className="bg-muted">
+              <TableRow className="hover:bg-transparent">
+                {[
+                  'Machine',
+                  'Default',
+                  'Cycle time',
+                  'Pieces per cycle',
+                  'Cycles per piece',
+                  'Retool',
+                  'Source',
+                ].map((label) => (
+                  <TableHead key={label} scope="col" className={head}>
+                    {label}
+                  </TableHead>
+                ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {operation.machines.map((machine) => (
+                <TableRow key={machine.code}>
+                  <TableCell className={cell}>
+                    <span className="flex flex-col">
+                      <span>{machine.name}</span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {machine.code}
+                      </span>
+                    </span>
+                  </TableCell>
+                  <TableCell className={cell}>{machine.default ? 'Default' : ''}</TableCell>
+                  <TableCell className={cn(cell, 'font-mono')}>
+                    {machine.cycleSeconds === undefined ? '' : secondsText(machine.cycleSeconds)}
+                  </TableCell>
+                  <TableCell className={cn(cell, 'font-mono')}>
+                    {machine.piecesPerCycle ?? ''}
+                  </TableCell>
+                  <TableCell className={cn(cell, 'font-mono')}>
+                    {machine.cyclesPerPiece ?? ''}
+                  </TableCell>
+                  <TableCell className={cn(cell, 'font-mono')}>
+                    {machine.retoolSeconds === undefined ? '' : timeOrZero(machine.retoolSeconds)}
+                  </TableCell>
+                  <TableCell className={cell}>
+                    {machine.addedBy === undefined ? (
+                      <SourceTag kind={machine.source === 'northmes' ? 'northmes' : 'erp'} />
+                    ) : (
+                      `Added by ${machine.addedBy}`
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ScrollTable>
+      </FormSection>
+      <FormSection title="Tools">
+        <p className="text-sm text-muted-foreground">
+          A tool's pieces per cycle wins over the machine's.
+        </p>
+        {operation.tools.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Operation {operation.sequence} uses no tool.
+          </p>
+        ) : (
+          <ScrollTable label={`Tools of operation ${operation.sequence}`}>
+            <Table>
+              <TableCaption className="sr-only">
+                Tools of operation {operation.sequence}
+              </TableCaption>
+              <TableHeader className="bg-muted">
+                <TableRow className="hover:bg-transparent">
+                  {['Tool', 'Name', 'Pieces per cycle', 'Source'].map((label) => (
+                    <TableHead key={label} scope="col" className={head}>
+                      {label}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {operation.tools.map((tool) => (
+                  <TableRow key={tool.code}>
+                    <TableCell className={cn(cell, 'font-mono')}>{tool.code}</TableCell>
+                    <TableCell className={cell}>{tool.name}</TableCell>
+                    <TableCell className={cn(cell, 'font-mono')}>
+                      {tool.piecesPerCycle ?? ''}
+                    </TableCell>
+                    <TableCell className={cell}>
+                      <SourceTag kind={tool.source === 'northmes' ? 'northmes' : 'erp'} />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </ScrollTable>
+        )}
       </FormSection>
       <FormSection title="Materials">
         <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -237,7 +304,12 @@ function OperationForm({
         value={values.reason}
         onChange={set('reason')}
         maxLength={500}
-        hint="Shown in History. 3 to 500 characters."
+        readOnly={!keep}
+        hint={
+          keep
+            ? 'Shown in History. 3 to 500 characters.'
+            : 'Turn on Keep NorthMES values to change the operation and give the reason.'
+        }
       />
       <div className="flex flex-wrap items-center gap-2 border-t border-border pt-3">
         <Button type="submit" disabled>

@@ -23,7 +23,7 @@ function withSearch(href: string, search: Record<string, string>): string {
 }
 
 const routings = coreLinks.routings({ plant }).href;
-const bracket = coreLinks.routings.routing({ plant, articleId: '20-1001' }).href;
+const bracket = coreLinks.routings.routing({ plant, articleNumber: '20-1001' }).href;
 
 describe('the routings register (design #729)', () => {
   it('#729 lists the routing of each article with its operations, version and kept operations', async () => {
@@ -31,7 +31,7 @@ describe('the routings register (design #729)', () => {
     const table = await screen.findByRole('table', { name: 'Routings' });
 
     expect(bodyRows(table)).toEqual([
-      ['20-1001Bracket L', '2', '3', '1 kept in NorthMES'],
+      ['20-1001Bracket L', '2', '3', '1 operation'],
       ['20-1002Housing P', '1', '1', 'None'],
       ['20-1003Gear blank 32', '2', '2', 'None'],
       ['20-1004Hub 12', '2', '1', 'None'],
@@ -92,7 +92,7 @@ describe("an article's routing (design #729, RO1 to RO8)", () => {
         .getAllByRole('link', { name: /^Edit operation/ })[1]
         ?.getAttribute('href'),
     ).toBe(
-      coreLinks.routings.routing.editOperation({ plant, articleId: '20-1001', sequence: '20' })
+      coreLinks.routings.routing.editOperation({ plant, articleNumber: '20-1001', sequence: '20' })
         .href,
     );
   });
@@ -114,6 +114,14 @@ describe("an article's routing (design #729, RO1 to RO8)", () => {
       ['CNC 2CNC2', 'Default', '60 s', '1', '1', '0', 'From the ERP'],
       ['Mill 1MILL1', '', '45 s', '1', '1', '0', 'Set in NorthMES'],
     ]);
+    expect(
+      within(section).getByRole('region', {
+        name: 'Allowed machines of operation 20, scrolls sideways',
+      }),
+    ).toBeTruthy();
+    expect(section.textContent).toContain(
+      'Changes to routings wait for the routing API; these pages read the fixture G1.',
+    );
     const tools = within(section).getByRole('table', { name: 'Tools of operation 20' });
     expect(bodyRows(tools)).toEqual([['T-311', 'Fixture BR-L 2-up', '2', 'From the ERP']]);
     expect(section.textContent).toContain('Operation 20 consumes no material.');
@@ -171,7 +179,7 @@ describe("an article's routing (design #729, RO1 to RO8)", () => {
 describe('the edit form of a routing operation (design #729, RO4)', () => {
   it('#729 RO4 shows operation 20 with Keep NorthMES values on, the ERP lead time, its machines and the reason; Save waits for the API', async () => {
     renderCoreAt(
-      coreLinks.routings.routing.editOperation({ plant, articleId: '20-1001', sequence: '20' })
+      coreLinks.routings.routing.editOperation({ plant, articleNumber: '20-1001', sequence: '20' })
         .href,
       [],
     );
@@ -187,10 +195,17 @@ describe('the edit form of a routing operation (design #729, RO4)', () => {
       '1',
     );
     expect(
-      screen.getByText('The ERP sends 30 min. Waiting time before this operation, elapsed.'),
+      screen.getByText('Hours. The ERP sends 30 min. Waiting time before this operation, elapsed.'),
     ).toBeTruthy();
+    expect(screen.getByRole('textbox', { name: 'Name' }).getAttribute('inputmode')).toBeNull();
     const machines = screen.getByRole('table', { name: 'Allowed machines of operation 20' });
-    expect(bodyRows(machines).map((row) => row[0])).toEqual(['CNC 2CNC2', 'Mill 1MILL1']);
+    expect(bodyRows(machines)).toEqual([
+      ['CNC 2CNC2', 'Default', '', '', '', '', 'From the ERP'],
+      ['Mill 1MILL1', '', '45 s', '', '', '', 'Added by Alex Lund'],
+    ]);
+    expect(bodyRows(screen.getByRole('table', { name: 'Tools of operation 20' }))).toEqual([
+      ['T-311', 'Fixture BR-L 2-up', '2', 'From the ERP'],
+    ]);
     expect(
       (screen.getByRole('textbox', { name: /^Reason for the change/ }) as HTMLTextAreaElement)
         .value,
@@ -223,6 +238,25 @@ describe('the Routing section of an article page (design #729, RO6)', () => {
       viewerQuery(['core.article:read']),
     ]);
     const none = await screen.findByRole('region', { name: 'Routing' });
-    expect(none.textContent).toContain('Axle 20 mm has no routing');
+    expect(none.textContent).toContain('The fixture G1 has no routing for Axle 20 mm.');
+  });
+
+  it('#729 says so when the routing cannot be loaded, instead of loading for ever', async () => {
+    const axle = article('AX-500', 'Axle 20 mm');
+    renderCoreAt(
+      coreLinks.articles.article({ plant, articleId: axle.id }).href,
+      [articleQuery(axle), viewerQuery(['core.article:read'])],
+      {
+        routingsSource: {
+          load: async () => {
+            throw new Error('down');
+          },
+        },
+      },
+    );
+    const section = await screen.findByRole('region', { name: 'Routing' });
+    await within(section).findByText(
+      'The routing could not be loaded. Reload the page to try again.',
+    );
   });
 });

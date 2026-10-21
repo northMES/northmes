@@ -12,11 +12,19 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/primitives/table.tsx';
-import { plannedDuration } from '../../routing-facts.ts';
+import { ScrollTable } from '../../components/scroll-table/index.ts';
+import { plannedDuration, secondsText, timeOrZero } from '../../routing-facts.ts';
 import type { Routing, RoutingOperation } from '../../routings-data.ts';
 
 const head = 'h-auto px-2 py-1.5 text-xs font-semibold text-muted-foreground';
 const cell = 'px-2 py-1.5 whitespace-normal';
+
+/** An input with its unit: "60 s", "40 min", or a plain number for a count or a factor. */
+function inputText(label: string, value: number): string {
+  if (label === 'Cycle time') return secondsText(value);
+  if (label === 'Retool' || label === 'Fixed time') return timeOrZero(value);
+  return String(value);
+}
 
 /** "10 h" or "7 h 30 min": a planned time. */
 function plannedText(seconds: number): string {
@@ -32,9 +40,11 @@ function plannedText(seconds: number): string {
 export function RoutingDuration({
   routing,
   operation,
+  planningFactorSource,
 }: {
   readonly routing: Routing;
   readonly operation: RoutingOperation;
+  readonly planningFactorSource: 'none' | 'oeeTarget';
 }) {
   const id = useId();
   const order = routing.openOrders[0];
@@ -42,7 +52,13 @@ export function RoutingDuration({
   const fallback = operation.machines.find((machine) => machine.default) ?? operation.machines[0];
   const [machine, setMachine] = useState(fallback?.code ?? '');
   const [tool, setTool] = useState('');
-  const duration = plannedDuration(operation, machine, tool === '' ? undefined : tool, quantity);
+  const duration = plannedDuration(
+    operation,
+    machine,
+    tool === '' ? undefined : tool,
+    quantity,
+    planningFactorSource,
+  );
   const value = (label: string) =>
     duration.inputs.find((input) => input.label === label)?.value ?? 0;
   const machineName = (code: string) =>
@@ -103,7 +119,7 @@ export function RoutingDuration({
         {duration.inputs.map((input) => (
           <div key={input.label} className="contents">
             <dt className="text-muted-foreground">{input.label}</dt>
-            <dd className="text-end font-mono">{input.value}</dd>
+            <dd className="text-end font-mono">{inputText(input.label, input.value)}</dd>
             <dd className="text-xs text-muted-foreground">{input.source}</dd>
           </div>
         ))}
@@ -120,39 +136,47 @@ export function RoutingDuration({
         <dd className="font-mono font-semibold">{plannedText(duration.totalS)}</dd>
       </dl>
       {others.length > 0 && (
-        <Table>
-          <TableCaption className="sr-only">Planned time on the other choices</TableCaption>
-          <TableHeader className="bg-muted">
-            <TableRow className="hover:bg-transparent">
-              <TableHead scope="col" className={head}>
-                Choice
-              </TableHead>
-              <TableHead scope="col" className={`${head} text-end`}>
-                Cycles
-              </TableHead>
-              <TableHead scope="col" className={`${head} text-end`}>
-                Planned
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {others.map((choice) => {
-              const other = plannedDuration(operation, choice.machine, choice.tool, quantity);
-              return (
-                <TableRow key={`${choice.machine}-${choice.tool ?? ''}`}>
-                  <TableCell className={cell}>
-                    {machineName(choice.machine)}
-                    {choice.tool === undefined ? '' : ` with ${choice.tool}`}
-                  </TableCell>
-                  <TableCell className={`${cell} text-end font-mono`}>{other.cycles}</TableCell>
-                  <TableCell className={`${cell} text-end font-mono`}>
-                    {plannedText(other.totalS)}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+        <ScrollTable label="Planned time on the other choices">
+          <Table>
+            <TableCaption className="sr-only">Planned time on the other choices</TableCaption>
+            <TableHeader className="bg-muted">
+              <TableRow className="hover:bg-transparent">
+                <TableHead scope="col" className={head}>
+                  Choice
+                </TableHead>
+                <TableHead scope="col" className={`${head} text-end`}>
+                  Cycles
+                </TableHead>
+                <TableHead scope="col" className={`${head} text-end`}>
+                  Planned
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {others.map((choice) => {
+                const other = plannedDuration(
+                  operation,
+                  choice.machine,
+                  choice.tool,
+                  quantity,
+                  planningFactorSource,
+                );
+                return (
+                  <TableRow key={`${choice.machine}-${choice.tool ?? ''}`}>
+                    <TableCell className={cell}>
+                      {machineName(choice.machine)}
+                      {choice.tool === undefined ? '' : ` with ${choice.tool}`}
+                    </TableCell>
+                    <TableCell className={`${cell} text-end font-mono`}>{other.cycles}</TableCell>
+                    <TableCell className={`${cell} text-end font-mono`}>
+                      {plannedText(other.totalS)}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </ScrollTable>
       )}
     </fieldset>
   );
