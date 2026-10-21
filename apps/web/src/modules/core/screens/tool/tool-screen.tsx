@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { formatPlantDateTime, formatPlantDay } from '@northmes/contracts/format';
+import { formatPlantDateTime } from '@northmes/contracts/format';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { Lock, Pencil } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
-import { Temporal } from 'temporal-polyfill';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
