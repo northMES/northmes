@@ -100,6 +100,16 @@ export const shellModules: readonly ShellModule[] = [
           { label: 'Customers', icon: 'Building2', link: coreLinks.customers },
         ],
       },
+      // The plant's own page comes first in plant settings (design #767), on the fixture G1 until
+      // the plant API (#419) gives it core.plant:update; until then it shows to a user who
+      // administers the plant's roles, as the machines do.
+      {
+        label: 'Plant',
+        icon: 'Factory',
+        link: coreLinks.plant,
+        permission: 'core.roleAssignment:manage',
+        area: 'settings',
+      },
       {
         label: 'People',
         icon: 'Users',
