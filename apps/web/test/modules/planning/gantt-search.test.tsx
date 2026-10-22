@@ -126,10 +126,10 @@ describe('the Gantt page (plan 18, URL state)', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Gantt');
   });
 
-  it('the board route without view=gantt shows the board stub and no view control', async () => {
+  it('the board route without view=gantt shows the planning board and no view control', async () => {
     renderGanttRoute({ zoom: 'week' }, undefined, 'board');
 
-    expect(await screen.findByText('No production orders yet')).toBeTruthy();
+    expect(await screen.findByRole('grid', { name: /^plant-a board, / })).toBeTruthy();
     expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
     expect(screen.queryByRole('treegrid')).toBeNull();
   });

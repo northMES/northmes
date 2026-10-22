@@ -1,0 +1,60 @@
+# Re-runs the risk gate after an approval (ADR 0086). A review starts a new Risk run whose risk gate
+# check passes, but GitHub keeps the failed or cancelled checks of the other Risk runs at the same
+# commit next to it (an earlier push, an edit, a comment review), and the required check stays
+# failed. Once a run that a review started passes, this workflow re-runs those other runs; they read
+# the reviews again and find the approval. A workflow_run workflow runs from the default branch, so
+# a pull request cannot change it. The re-runs join the Risk workflow's concurrency group, which
+# cancels a run in progress, so they go one at a time, one refresh per commit at a time, and only
+# while the commit is the head of an open pull request, so a re-run never cancels a run for a newer
+# push. A re-run that passes and was started by a review starts one more refresh, which finds
+# nothing left to do.
+name: Risk refresh
+
+on:
+  workflow_run:
+    workflows: [Risk]
+    types: [completed]
+
+permissions: {}
+
+concurrency:
+  group: risk-refresh-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  risk-refresh:
+    name: risk refresh
+    if: github.event.workflow_run.event == 'pull_request_review' && github.event.workflow_run.conclusion == 'success'
+    permissions:
+      actions: write
+      pull-requests: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Re-run the other failed and cancelled Risk runs at the head commit, one at a time
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          STARTED_BY: ${{ github.event.workflow_run.id }}
+        run: |
+          still_head() {
+            gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA/pulls" \
+              --jq '.[] | select(.state == "open") | .head.sha' | grep -qx "$HEAD_SHA"
+          }
+          ids=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA" \
+            --jq '.workflow_runs[] | select(.conclusion == "failure" or .conclusion == "cancelled") | .id')
+          for id in $ids; do
+            [ "$id" = "$STARTED_BY" ] && continue
+            still_head || { echo "$HEAD_SHA is not the head of an open pull request; nothing more to re-run."; exit 0; }
+            attempt=$(gh run view "$id" --repo "$GITHUB_REPOSITORY" --json attempt --jq .attempt)
+            if ! gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/rerun-failed-jobs"; then
+              echo "::warning::Could not re-run Risk run $id."
+              continue
+            fi
+            # The re-run request returns before the new attempt exists; wait for it before watching.
+            for _ in $(seq 1 30); do
+              [ "$(gh run view "$id" --repo "$GITHUB_REPOSITORY" --json attempt --jq .attempt)" -gt "$attempt" ] && break
+              sleep 5
+            done
+            gh run watch "$id" --repo "$GITHUB_REPOSITORY" --interval 10 > /dev/null || true
+          done
