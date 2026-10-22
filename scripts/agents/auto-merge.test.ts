@@ -49,6 +49,12 @@ describe('ADR0086 one step after the pull request opens', () => {
     ).toEqual({ autoMerge: true, reviewer: undefined, comment: undefined });
   });
 
+  it('ADR0086 refuses a pull request that does not target main, where the ruleset and the risk gate do not apply', () => {
+    expect(() =>
+      shipPlan({ authorId: agent, risk: low, body: blastRadius, baseRef: 'feat/planning-board-rows' }),
+    ).toThrow(/main/);
+  });
+
   it('ADR0086 refuses a pull request that northmes-agent did not open', () => {
     expect(() => shipPlan({ authorId: maintainer, risk: low, body: blastRadius })).toThrow(
       /northmes-agent/,
