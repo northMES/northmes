@@ -15,7 +15,9 @@ function ganttHref(search: Record<string, string>): string {
 }
 
 test.describe('the order Gantt', () => {
-  test('ADR0021 each state of the order Gantt passes the WCAG 2.2 AA rules', async ({
+  // ADR 0021's check of each state, one test per group of states, so that no test runs more than
+  // three axe passes over the full grid inside the 60 s budget of the config.
+  test('ADR0021 the populated Gantt, a collapsed order and an expanded order with its links pass the WCAG 2.2 AA rules', async ({
     page,
     signIn,
     checkA11y,
@@ -32,8 +34,15 @@ test.describe('the order Gantt', () => {
     await page.getByRole('button', { name: 'Expand order 1001' }).click();
     await expect(gantt.locator('[data-link="jo-1001-10-jo-1001-20"]')).toHaveCount(1);
     await checkA11y('an expanded order with its links');
+  });
 
-    await page.goto(ganttHref({ zoom: 'week', from: '2026-11-02', order: 'po-1003', chain: '1' }));
+  test('ADR0021 the chain highlight and the Details drawer of a job order pass the WCAG 2.2 AA rules', async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
+    await signIn(ganttHref({ zoom: 'week', from: '2026-11-02', order: 'po-1003', chain: '1' }));
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     // The chain in the URL opens the order's Details with its explanation; the modal drawer keeps
     // the grid behind it hidden from the role query until it closes.
     const drawer = page.locator('[role="dialog"][data-details-drawer]');
@@ -54,8 +63,16 @@ test.describe('the order Gantt', () => {
     await expect(drawer).toHaveCSS('opacity', '1');
     await expect(drawer.getByRole('heading', { level: 2 })).toHaveText('1001.20 Mill');
     await checkA11y('the Details drawer of a job order');
-    await drawer.getByRole('button', { name: 'Close' }).click();
-    await expect(drawer).toBeHidden();
+  });
+
+  test('ADR0021 the review step of a run and the run row above its orders pass the WCAG 2.2 AA rules', async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
+    await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+    await expect(gantt).toBeVisible();
 
     // A run (plan 18, Runs), by keyboard: Space selects 1001, Shift+Space adds 1005, Shift+F10
     // opens the row menu, Combine into a run opens the review step, and Combine draws the run row
@@ -95,6 +112,15 @@ test.describe('the order Gantt', () => {
     await page.getByRole('menuitem', { name: 'Split run' }).dispatchEvent('click');
     await expect(run).toHaveCount(0);
     await expect(page.getByRole('menu')).toHaveCount(0);
+  });
+
+  test('ADR0021 the workload panel passes the WCAG 2.2 AA rules', async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
+    await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
+    await expect(page.getByRole('treegrid', { name: /order Gantt/ })).toBeVisible();
 
     await page.getByRole('button', { name: 'Board options' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Workload' }).click();
