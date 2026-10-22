@@ -52,8 +52,15 @@ export function BoardBlock({
       data-board-focus={jobOrder.id}
       aria-labelledby={`${id}-number ${id}-article ${id}-facts`}
       onFocus={onFocus}
-      className="absolute top-1 h-11 overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-black focus-visible:z-10"
-      style={{ left: `${left}px`, width: `${width}px`, background: `var(--${order.color})` }}
+      className="absolute top-1 h-11 overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 focus-visible:z-10"
+      style={{
+        left: `${left}px`,
+        width: `${width}px`,
+        background: `var(--${order.color})`,
+        // Every palette fill takes pure black text in both themes (D1, P12); the theme removes the
+        // palette classes, so the color is set here, and the state markers draw in currentColor.
+        color: 'black',
+      }}
     >
       <span
         className={cn(
