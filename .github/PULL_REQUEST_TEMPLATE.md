@@ -8,6 +8,10 @@
 
 <!-- ADR 0051 rule 18: none, UI only, records, security, calculation or data migration. -->
 
+## Blast radius
+
+<!-- ADR 0086: what the blast-radius subagent returns, unchanged. What breaks for whom if this is wrong, whether a revert undoes it, how far it reaches and which test would catch it, then a last line Tier: low or Tier: high. -->
+
 ## Checks
 
 <!-- pnpm check, and anything else you ran. -->
