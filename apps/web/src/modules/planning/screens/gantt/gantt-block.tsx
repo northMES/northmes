@@ -181,7 +181,7 @@ export function GanttBlock({
               onPointerCancel={() => endPress(false)}
               onKeyDown={onKeyDown}
               className={cn(
-                'absolute top-1 h-11 touch-none overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-black outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                'absolute top-1 h-11 touch-none overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                 selected && 'border-t-3 border-t-black',
                 inDraft && 'border-3 border-double border-black',
                 moving && 'opacity-60',
@@ -190,6 +190,9 @@ export function GanttBlock({
                 left: `${left}px`,
                 width: `${width}px`,
                 background: `var(--${order.color})`,
+                // Every palette fill takes pure black text in both themes (D1, P12); the theme
+                // removes the palette classes, so the color is set here.
+                color: 'black',
               }}
             />
           }
