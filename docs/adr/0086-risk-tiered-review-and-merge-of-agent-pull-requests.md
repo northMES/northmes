@@ -52,7 +52,7 @@ The fixed floor covers the review machinery only (Krister, 2026-10-22): the file
    * Auto-merge is turned on for the repository.
    * Right after its pull request opens, a session runs one project script, `pnpm agent:auto-merge <number>`, whatever the tier. It refuses unless `northmes-agent` opened the pull request, and turns on auto-merge, so GitHub merges once every required check passes. For a high pull request it also asks the maintainer to review, comments with the gate's reasons and the Blast radius section, and asks CodeRabbit to review, so the pull request merges by itself once the maintainer approves its head commit. The required `risk gate` is the control: it stays failed on a high pull request until that approval. The deny rule `Bash(gh pr merge*)` stays, so a session never merges directly.
    * The maintainer adds an `autoMode.allow` entry for that script to his `~/.claude/settings.json`, because merging a pull request no person approved is one of auto mode's default blocks.
-6. **CodeRabbit.** After the switch CodeRabbit reviews high pull requests only: `reviews.auto_review.enabled: false` with `reviews.auto_review.labels: ["risk:high"]`, and a session posts `@coderabbitai review` on a high pull request while the repository is under CodeRabbit's limit for automatic reviews.
+6. **CodeRabbit.** After the switch CodeRabbit reviews high pull requests only: `reviews.auto_review.enabled: false` with `reviews.auto_review.labels: ["risk:high"]`, and the project script posts `@coderabbitai review` on a high pull request.
 
 ### Changes to ADR 0050, ADR 0065 and ADR 0084
 
@@ -60,17 +60,17 @@ ADR 0050 is accepted, so its text stays as it was. ADR 0065 and ADR 0084 are pro
 
 | Line | Replaced by |
 |---|---|
-| ADR 0050: auto-merge is off | Auto-merge is on; a session turns it on for a low pull request through the project script |
+| ADR 0050: auto-merge is off | Auto-merge is on; a session turns it on for every pull request it opens through the project script |
 | ADR 0065: every pull request needs one approving review | A pull request needs the maintainer's approval when it touches a risk path (code owner review) or is high for another reason (`risk gate`) |
 | ADR 0065: CodeRabbit reviews every agent pull request | CodeRabbit reviews high pull requests |
-| ADR 0084 rule 5: CODEOWNERS names the maintainer for every path, and agents do not merge | CODEOWNERS names the maintainer for the risk paths; a session turns on auto-merge for a low pull request and never merges directly |
+| ADR 0084 rule 5: CODEOWNERS names the maintainer for every path, and agents do not merge | CODEOWNERS names the maintainer for the risk paths; a session turns on auto-merge through the project script, which merges at once only a pull request whose required checks have all passed |
 | ADR 0084 driver: a change to `main` needs a human reviewer outside the session | A high change to `main` needs one; a low change is reviewed by two fresh-context subagents and the deterministic gate |
 
 ### Consequences
 
 * Good, because a low pull request merges when its checks pass, so agent sessions finish without waiting for the maintainer.
 * Good, because the maintainer's and CodeRabbit's attention goes to the changes where a mistake costs the most.
-* Good, because the risk paths and the gate are themselves risk paths, and the gate runs from the default branch, so a pull request cannot widen the low tier.
+* Good, because the review machinery, the gate included, is on the risk paths and the gate runs from the default branch, so a pull request cannot loosen how pull requests are judged.
 * Bad, because a low change with a defect reaches `main` without a person reading it (accepted risk A-08, which the risk register records with the switch). Tests, the two fresh-context reviews and a revert bound the harm.
 * Bad, because the maintainer's own pull requests are always high and he cannot approve them himself, so they go through agent sessions as ADR 0084 says. The gate names one maintainer by user id, and a second maintainer needs a change to it.
 * Bad, because OpenSSF Scorecard counts a merge without a human review against Code-Review, and 0 required approvals scores lower on Branch-Protection.
@@ -90,11 +90,11 @@ ADR 0050 is accepted, so its text stays as it was. ADR 0065 and ADR 0084 are pro
 ### Let the session's own judgment decide
 
 * Good, because it needs no new CI.
-* Bad, because a prompt injection in an issue or a comment could ask for the low tier, and nothing outside the session would catch it.
+* Bad, because a prompt injection in an issue or a comment could ask for the low tier, and nothing outside the session would catch it. The chosen option accepts this outside the review machinery (A-08) and keeps a fixed floor for the machinery itself.
 
 ### A deterministic floor raised by a fresh-context blast-radius review
 
-* Good, because the session's judgment can only add caution.
+* Good, because the session's judgment adds caution where the paths cannot see the harm. Since 2026-10-22 it also decides the tier outside the review machinery.
 * Good, because it costs no API key and no CI model calls.
 * Neutral, because the blast-radius review runs in the same session's environment as the author, so its independence is a fresh context, not a separate trust zone.
 * Bad, because two places name the risky paths until the meta test ties CODEOWNERS to `.github/risk-paths`.
@@ -106,4 +106,4 @@ ADR 0050 is accepted, so its text stays as it was. ADR 0065 and ADR 0084 are pro
 
 ## More information
 
-ADR 0049 already kept tasks that touch authentication, row-level security or secrets on handoff's guided graph; `.github/risk-paths` is the same idea for pull requests. Vercel reported in April 2026 that an agent reviews and merges a majority of the pull requests in its largest monorepo without a human reviewer, based on a classifier of the diff's blast radius. Rewind's write-up on AI-approved pull requests describes the same split: the model's findings feed a deterministic verdict, and a protected policy file forces a human for authentication, secrets, infrastructure and governance files. Revisit when a second maintainer joins, or when a low pull request causes an incident.
+ADR 0049 already kept tasks that touch authentication, row-level security or secrets on handoff's guided graph; `.github/risk-paths` was the same idea for pull requests, and since 2026-10-22 it keeps only the governance files, leaving authentication, secrets and data to the blast-radius review. Vercel reported in April 2026 that an agent reviews and merges a majority of the pull requests in its largest monorepo without a human reviewer, based on a classifier of the diff's blast radius. Rewind's write-up on AI-approved pull requests describes the same split: the model's findings feed a deterministic verdict, and a protected policy file forces a human for authentication, secrets, infrastructure and governance files. Revisit when a second maintainer joins, or when a low pull request causes an incident.

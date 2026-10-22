@@ -43,6 +43,12 @@ describe('ADR0086 one step after the pull request opens', () => {
     expect(plan.comment).toContain('merges by itself once you approve');
   });
 
+  it('ADR0086 asks only once: a second run on a pull request it already asked about posts nothing', () => {
+    expect(
+      shipPlan({ authorId: agent, risk: high, body: blastRadius, alreadyAsked: true }),
+    ).toEqual({ autoMerge: true, reviewer: undefined, comment: undefined });
+  });
+
   it('ADR0086 refuses a pull request that northmes-agent did not open', () => {
     expect(() => shipPlan({ authorId: maintainer, risk: low, body: blastRadius })).toThrow(
       /northmes-agent/,

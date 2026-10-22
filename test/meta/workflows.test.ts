@@ -445,8 +445,9 @@ describe('workflows', () => {
   // its tier (ADR 0086). Only the label job holds the write token.
   const riskGatePermissions = { contents: 'read', 'pull-requests': 'read' };
   const riskLabelPermissions = { contents: 'read', 'pull-requests': 'write' };
-  // Risk refresh re-runs a failed Risk run once a review made the gate pass, and reads no files.
-  const riskRefreshPermissions = { actions: 'write' };
+  // Risk refresh re-runs the other failed Risk runs once a review made the gate pass, and reads
+  // which pull requests the commit heads; it reads no files.
+  const riskRefreshPermissions = { actions: 'write', 'pull-requests': 'read' };
 
   it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what CI / cla reads, what Risk / risk gate reads, what Risk / risk label writes, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
     const jobs = allJobs();
@@ -929,14 +930,23 @@ describe('workflows', () => {
     expect(rerun?.env).toEqual({
       GH_TOKEN: expression('github.token'),
       HEAD_SHA: expression('github.event.workflow_run.head_sha'),
+      STARTED_BY: expression('github.event.workflow_run.id'),
     });
     expect(rerun?.run).toContain(
-      'actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA&event=pull_request',
+      'actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA',
     );
     expect(rerun?.run).toContain(
       'select(.conclusion == "failure" or .conclusion == "cancelled")',
     );
+    expect(rerun?.run).toContain('[ "$id" = "$STARTED_BY" ] && continue');
     expect(rerun?.run).toContain('gh run watch');
+    expect(rerun?.run).toContain('select(.state == "open")');
+    expect(
+      (workflow as Workflow & { concurrency?: unknown }).concurrency,
+    ).toEqual({
+      group: `risk-refresh-${expression('github.event.workflow_run.head_sha')}`,
+      'cancel-in-progress': false,
+    });
     expect(rerun?.run).toContain('still_head ||');
   });
 

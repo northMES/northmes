@@ -15,22 +15,25 @@ import { agent, checkRisk } from '../ci/risk-gate.mjs';
 
 const maintainerLogin = 'Krister-Johansson';
 
+// The first line of the comment for the maintainer, which also tells a second run it already asked.
+const askLine = `@${maintainerLogin} this pull request waits for your review. It merges by itself once you approve its head commit.`;
+
 /**
  * What the script does for a pull request: auto-merge, and for a high one a review request and a
  * comment for the maintainer.
- * @param {{ authorId: number, risk: { tier: 'low' | 'high', reasons: readonly string[] }, body: string }} pull
+ * @param {{ authorId: number, risk: { tier: 'low' | 'high', reasons: readonly string[] }, body: string, alreadyAsked?: boolean }} pull
  * @returns {{ autoMerge: true, reviewer: string | undefined, comment: string | undefined }}
  */
-export function shipPlan({ authorId, risk, body }) {
+export function shipPlan({ authorId, risk, body, alreadyAsked = false }) {
   if (authorId !== agent) {
     throw new Error('Only a pull request that northmes-agent opened takes this step.');
   }
-  if (risk.tier === 'low') {
+  if (risk.tier === 'low' || alreadyAsked) {
     return { autoMerge: true, reviewer: undefined, comment: undefined };
   }
   const blastRadius = section(body, 'Blast radius');
   const comment = [
-    `@${maintainerLogin} this pull request waits for your review. It merges by itself once you approve its head commit.`,
+    askLine,
     '',
     'The risk gate made it high because it:',
     ...risk.reasons.map((reason) => `- ${reason}`),
@@ -70,26 +73,20 @@ if (import.meta.main) {
     token,
     pullNumber,
   });
+  const comments = await github(`repos/${repository}/issues/${pullNumber}/comments?per_page=100`, token);
+  const alreadyAsked = comments.some(
+    (comment) => comment.user?.id === agent && comment.body?.startsWith(askLine),
+  );
   let plan;
   try {
-    plan = shipPlan({ authorId: pull.user.id, risk, body: pull.body ?? '' });
+    plan = shipPlan({ authorId: pull.user.id, risk, body: pull.body ?? '', alreadyAsked });
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
-  if (plan.reviewer) {
-    await github(`repos/${repository}/pulls/${pullNumber}/requested_reviewers`, token, {
-      method: 'POST',
-      body: JSON.stringify({ reviewers: [plan.reviewer] }),
-    });
-    for (const body of [plan.comment, '@coderabbitai review']) {
-      await github(`repos/${repository}/issues/${pullNumber}/comments`, token, {
-        method: 'POST',
-        body: JSON.stringify({ body }),
-      });
-    }
-  }
-  // GitHub takes auto-merge only for a pull request that cannot merge yet, so a clean one merges now.
+  // Auto-merge first, so a refusal leaves no comment that promises a merge. GitHub takes auto-merge
+  // only for a pull request that cannot merge yet, so a clean one, whose required checks (the risk
+  // gate included) have all passed, is merged now through the same call GitHub would make.
   const now = pull.mergeable_state === 'clean';
   const mutation = now ? 'mergePullRequest' : 'enablePullRequestAutoMerge';
   const { errors } = await github('graphql', token, {
@@ -102,6 +99,18 @@ if (import.meta.main) {
   if (errors) {
     console.error(`GitHub refused ${mutation}: ${errors.map(({ message }) => message).join('; ')}`);
     process.exit(1);
+  }
+  if (plan.reviewer && !now) {
+    await github(`repos/${repository}/pulls/${pullNumber}/requested_reviewers`, token, {
+      method: 'POST',
+      body: JSON.stringify({ reviewers: [plan.reviewer] }),
+    });
+    for (const body of [plan.comment, '@coderabbitai review']) {
+      await github(`repos/${repository}/issues/${pullNumber}/comments`, token, {
+        method: 'POST',
+        body: JSON.stringify({ body }),
+      });
+    }
   }
   console.log(
     now
