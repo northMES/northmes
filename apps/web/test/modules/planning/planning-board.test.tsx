@@ -254,4 +254,14 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     ).toBeTruthy();
     expect(screen.queryByRole('grid')).toBeNull();
   });
+
+  it('D1 draws block text in pure black on the order color, in both themes', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+
+    // The palette classes are removed from the theme, so the color is set on the block itself.
+    for (const cell of board.querySelectorAll<HTMLElement>('[role="gridcell"][data-job-order]')) {
+      expect(cell.style.color).toBe('black');
+    }
+  });
 });
