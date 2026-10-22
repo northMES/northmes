@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { readFileSync } from 'node:fs';
-import { type Color, inGamut, parse, toGamut, wcagContrast } from 'culori';
+import { type Color, differenceCiede2000, inGamut, parse, toGamut, wcagContrast } from 'culori';
 import { describe, expect, it } from 'vitest';
 
 type Theme = 'light' | 'dark';
@@ -122,6 +122,10 @@ const d1Tokens = [
   '--group-1',
   '--group-2',
 ];
+
+// The shift colors of the calendar's week view (#770, variation A): each shift's edge and its
+// subtle fill, by the shift's order in the calendar version.
+const shiftTokens = [1, 2, 3].flatMap((shift) => [`--shift-${shift}`, `--shift-${shift}-subtle`]);
 
 // The text pairs of the D1 contrast table, P1 to P11, at 4.5:1.
 const textPairs = [
@@ -269,8 +273,8 @@ const aliases = [
 ] as const;
 
 describe.each(['light', 'dark'] as const)('the D1 tokens in %s', (theme) => {
-  it('E04-S01 tokens.css holds every D1 color token', () => {
-    expect([...tokens[theme].keys()].sort()).toEqual([...d1Tokens].sort());
+  it('E04-S01 tokens.css holds every D1 color token and the shift tokens of #770', () => {
+    expect([...tokens[theme].keys()].sort()).toEqual([...d1Tokens, ...shiftTokens].sort());
   });
 
   it('E04-S01 every text pair meets 4.5:1', () => {
@@ -334,5 +338,40 @@ describe('the D1 rule checks', () => {
       );
       expect(new Set(palette).size, theme).toBe(20);
     }
+  });
+});
+
+describe.each(['light', 'dark'] as const)('the shift tokens of #770 in %s', (theme) => {
+  const shifts = [1, 2, 3];
+
+  it('#770 each shift edge meets 3:1 on the card the week view draws on and on both lanes', () => {
+    const edges = shifts.flatMap((shift) =>
+      ['--card', '--lane', '--lane-alt'].map((surface) => [`--shift-${shift}`, surface] as const),
+    );
+    expect(failures(theme, edges, 3)).toEqual([]);
+  });
+
+  it('#770 the block text and its second line meet 4.5:1 on each shift fill', () => {
+    const text = shifts.flatMap((shift) =>
+      ['--foreground', '--muted-foreground'].map(
+        (foreground) => [foreground, `--shift-${shift}-subtle`] as const,
+      ),
+    );
+    expect(failures(theme, text, 4.5)).toEqual([]);
+  });
+
+  it('#770 each shift fill stays apart from the break, overtime and non-working fills and from the other shifts', () => {
+    const distance = differenceCiede2000();
+    const fills = shifts.map((shift) => `--shift-${shift}-subtle`);
+    const others = ['--muted', '--success-subtle', '--destructive-subtle'];
+    const pairs = fills.flatMap((fill, index) => [
+      ...others.map((other) => [fill, other] as const),
+      ...fills.slice(index + 1).map((other) => [fill, other] as const),
+    ]);
+    const close = pairs
+      .map(([a, b]) => [a, b, distance(color(theme, a), color(theme, b))] as const)
+      .filter(([, , value]) => value < 7)
+      .map(([a, b, value]) => `${a} and ${b}: ${value.toFixed(1)} < 7`);
+    expect(close).toEqual([]);
   });
 });

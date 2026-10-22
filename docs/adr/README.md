@@ -9,7 +9,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | Area | ADRs |
 |---|---|
 | Release 1 scope | 0055 |
-| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063, 0065, 0069, 0079, 0084, 0085 |
+| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063, 0065, 0069, 0079, 0084, 0085, 0086, 0087 |
 | Architecture, modules and plugins | 0002, 0003, 0022, 0037, 0057, 0064, 0068, 0070, 0075 |
 | Data and platform | 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014, 0017, 0023, 0024, 0054, 0059, 0060, 0066, 0071 |
 | GraphQL, realtime and MCP | 0015, 0016, 0018, 0034, 0070 |
@@ -21,7 +21,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | Testing | 0041, 0042, 0077 |
 | Operations | 0043, 0044, 0045, 0046, 0047, 0052, 0072, 0075 |
 | Licensing | 0039, 0040, 0056 |
-| Regulated readiness and security | 0051, 0076, 0084 |
+| Regulated readiness and security | 0051, 0076, 0084, 0086, 0087 |
 
 ## Adding an ADR
 
@@ -182,5 +182,7 @@ On 2026-10-15 the index holds 81 ADRs: 48 accepted and 33 proposed, 78 for relea
 | 0083 | [Runs of production orders of one article](0083-runs-of-production-orders-of-one-article.md) | proposed | later | maintainer (any number of orders in a run; each order keeps its own job orders; the saved retools as the run's rule; the earliest deadline with the early warning; the split as the reverse; the run as a draft record until Save, then a committed grouping); product owner (a started or hard-locked order in a run; whether the ERP learns of a run; a hand-set run deadline; the retool as what a run saves, the fixed time kept) |
 | 0084 | [Agent sessions in auto mode inside the Claude Code sandbox, with their own GitHub identity and the maintainer's approval on main](0084-agent-sessions-in-auto-mode-inside-the-claude-code-sandbox-with-their-own-github-identity-and-the-maintainers-approval-on-main.md) | proposed | 1 | maintainer (the machine user's name and its token's 90-day expiry; the TLS trust service opened for gh; code owner review on main, so the maintainer's own pull requests need another approver; the Docker socket and local ports as accepted risk A-07; pnpm install outside the session until pnpm's store lock works in the sandbox) |
 | 0085 | [Replay evals of agent delivery from merged pull requests, graded by their hidden tests, pnpm check and a calibrated rubric](0085-replay-evals-of-agent-delivery-from-merged-pull-requests-graded-by-their-hidden-tests-pnpm-check-and-a-calibrated-rubric.md) | proposed | 1 | maintainer (M-95: the monthly credit limit on the eval key and the harness's cost and time cap per comparison; M-96: the 90-minute agent limit, the turn limit, the 30-minute grading limit and concurrency 2 on the maintainer's machine; M-97: rework as a later fix pull request that names it or at least three CodeRabbit change requests; M-98: eval tasks without lockfile changes, a trial that changes the lockfile failing, grading inside the sandbox and the commit sentence in the trial prompt; M-99: evals/ as a private workspace package) |
+| 0086 | [Risk-tiered review and merge of agent pull requests](0086-risk-tiered-review-and-merge-of-agent-pull-requests.md) | proposed | 1 | maintainer (the paths in .github/risk-paths; the shadow phase and when it ends; the switch of the main ruleset to code owner review on the risk paths only, with risk gate required from the GitHub Actions app; the lower OpenSSF Scorecard Code-Review and Branch-Protection scores; accepted risk A-08, recorded with the switch) |
+| 0087 | [Unattended agent sessions in bypass mode inside the sandbox, with installs from main's manifests](0087-unattended-agent-sessions-in-bypass-mode-inside-the-sandbox-with-installs-from-mains-manifests.md) | proposed | 1 | maintainer (bypass mode instead of auto mode for unattended sessions, as accepted risk A-09; the install hook in the maintainer's user settings, which installs outside the sandbox only when every install input equals main) |
 
-Next free number: 0086. Only Krister Johansson sets a status to accepted.
+Next free number: 0088. Only Krister Johansson sets a status to accepted.
