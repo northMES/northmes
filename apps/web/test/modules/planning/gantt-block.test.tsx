@@ -88,7 +88,7 @@ describe('the block of a job order row (plan 18, Blocks across closed time)', ()
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
-    // The palette classes are removed from the theme, so the color is set on the block itself.
-    expect(blockOf(gantt, 'jo-1001-10').style.color).toBe('black');
+    // The palette's text token, black in both themes; the palette of Tailwind is removed.
+    expect(blockOf(gantt, 'jo-1001-10').classList).toContain('text-palette-foreground');
   });
 });

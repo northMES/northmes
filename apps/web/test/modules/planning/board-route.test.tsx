@@ -13,4 +13,10 @@ describe('planning web module', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Planning board' })).toBeTruthy();
   });
+
+  it("E02-S05 a plant's planningLinks.release href opens Release orders", async () => {
+    renderPlanningAt(planningLinks.release({ plant }).href);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Release orders' })).toBeTruthy();
+  });
 });
