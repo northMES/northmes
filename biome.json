@@ -209,6 +209,18 @@
           }
         }
       }
+    },
+    {
+      "includes": [
+        "**/*.svg"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noSvgWithoutTitle": "off"
+          }
+        }
+      }
     }
   ]
 }
