@@ -21,10 +21,10 @@ const askLine = `@${maintainerLogin} this pull request waits for your review. It
 /**
  * What the script does for a pull request: auto-merge, and for a high one a review request and a
  * comment for the maintainer.
- * @param {{ authorId: number, risk: { tier: 'low' | 'high', reasons: readonly string[] }, body: string, alreadyAsked?: boolean, baseRef?: string }} pull
+ * @param {{ authorId: number, risk: { tier: 'low' | 'high', reasons: readonly string[] }, body: string, alreadyAsked?: boolean, baseRef: string }} pull
  * @returns {{ autoMerge: true, reviewer: string | undefined, comment: string | undefined }}
  */
-export function shipPlan({ authorId, risk, body, alreadyAsked = false, baseRef = 'main' }) {
+export function shipPlan({ authorId, risk, body, alreadyAsked = false, baseRef }) {
   if (authorId !== agent) {
     throw new Error('Only a pull request that northmes-agent opened takes this step.');
   }
