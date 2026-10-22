@@ -261,7 +261,7 @@ export function BoardBlock({
               if (inMoveMode) move?.cancel({ refocus: false });
             }}
             className={cn(
-              'absolute top-1 h-11 touch-none overflow-hidden border select-none border-block-border px-1.5 py-0.5 text-start text-xs leading-4 focus-visible:z-10',
+              'absolute top-1 h-11 touch-none overflow-hidden border select-none border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-palette-foreground focus-visible:z-10',
               // The origin of a move keeps its text at full contrast (WCAG 1.4.3): a dashed
               // border marks it, not a dimmed fill (design D3, IN4, the origin slot).
               moving && 'border-2 border-dashed border-foreground',
@@ -270,10 +270,6 @@ export function BoardBlock({
               left: `${left}px`,
               width: `${width}px`,
               background: `var(--${order.color})`,
-              // Every palette fill takes pure black text in both themes (D1, P12); the theme removes
-              // the palette classes, so the color is set here, and the state markers draw in
-              // currentColor.
-              color: 'black',
             }}
           />
         }
