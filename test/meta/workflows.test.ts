@@ -464,9 +464,9 @@ describe('workflows', () => {
                 ? riskLabelPermissions
                 : job.name === 'risk refresh'
                   ? riskRefreshPermissions
-                  : job.name === 'Scorecard analysis'
-                    ? scorecardPermissions
-                    : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
+                : job.name === 'Scorecard analysis'
+              ? scorecardPermissions
+              : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
       expect(job.permissions, where).toEqual(expected);
     }
   });
@@ -810,7 +810,7 @@ describe('workflows', () => {
 
   // CI checks out the pull request's merge commit; its first parent is the base branch, so a depth
   // of 2 holds both sides of the diff. The job reads code only, so it keeps no credentials.
-  it('CI / pr tests checks out the merge commit with its first parent and without credentials', () => {
+  it("CI / pr tests checks out the merge commit with its first parent and without credentials", () => {
     const { job } = jobNamed('pr tests');
 
     expect(job.permissions).toEqual({ contents: 'read' });
@@ -896,11 +896,7 @@ describe('workflows', () => {
       GH_TOKEN: expression('github.token'),
       DEFAULT_BRANCH: expression('github.event.repository.default_branch'),
     });
-    for (const file of [
-      'scripts/ci/risk-gate.mjs',
-      'scripts/ci/pull-request.mjs',
-      'scripts/ci/annotation.mjs',
-    ]) {
+    for (const file of ['scripts/ci/risk-gate.mjs', 'scripts/ci/pull-request.mjs', 'scripts/ci/annotation.mjs']) {
       expect(download?.run).toContain(`contents/${file}?ref=$DEFAULT_BRANCH`);
     }
     expect(check).toEqual({
@@ -914,11 +910,11 @@ describe('workflows', () => {
     });
   });
 
-  // GitHub keeps the failed risk gate check of the run from before the approval next to the passing
-  // one from the review, and the required check stays failed. Risk refresh re-runs that earlier run,
-  // which now finds the approval. A workflow_run workflow runs from the default branch, so a pull
-  // request cannot change it, and it sits outside the Risk workflow's concurrency group, so the
-  // re-run does not cancel the run that started it.
+  // GitHub keeps the failed or cancelled risk gate checks of the runs from before the approval next
+  // to the passing one from the review, and the required check stays failed. Risk refresh re-runs
+  // those earlier runs, which now find the approval. A workflow_run workflow runs from the default
+  // branch, so a pull request cannot change it. Its re-runs join the Risk workflow's concurrency
+  // group, so they go one at a time and only while the commit is still the pull request's head.
   it('ADR0086 Risk refresh re-runs the failed pull request runs of Risk at the head commit once a review run passed', () => {
     const { workflow, job } = jobNamed('risk refresh');
     const steps = job.steps ?? [];
@@ -935,8 +931,13 @@ describe('workflows', () => {
       HEAD_SHA: expression('github.event.workflow_run.head_sha'),
     });
     expect(rerun?.run).toContain(
-      'actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA&event=pull_request&status=failure',
+      'actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA&event=pull_request',
     );
+    expect(rerun?.run).toContain(
+      'select(.conclusion == "failure" or .conclusion == "cancelled")',
+    );
+    expect(rerun?.run).toContain('gh run watch');
+    expect(rerun?.run).toContain('still_head ||');
   });
 
   // Without a checkout the job cannot read .node-version, so it names the same version.

@@ -1,11 +1,12 @@
 # Re-runs the risk gate after an approval (ADR 0086). A review starts a new Risk run whose risk gate
-# check passes, but GitHub keeps the failed check of the run from before the approval next to it, and
-# the required check stays failed. Once a run that a review started passes, this workflow re-runs
-# the failed pull request runs of Risk at the same head commit; they read the reviews again and find
-# the approval. A workflow_run workflow runs from the default branch, so a pull request cannot
-# change it, and it sits outside the Risk workflow's concurrency group, so the re-run does not
-# cancel the run that started it. A re-run that still fails starts nothing here, because only a run
-# that a review started counts.
+# check passes, but GitHub keeps the failed or cancelled checks of the runs from before the approval
+# next to it, and the required check stays failed. Once a run that a review started passes, this
+# workflow re-runs those earlier pull request runs of Risk at the same head commit; they read the
+# reviews again and find the approval. A workflow_run workflow runs from the default branch, so a
+# pull request cannot change it. The re-runs join the Risk workflow's concurrency group, which
+# cancels a run in progress, so they go one at a time, and only while the commit is still the pull
+# request's head, so a re-run never cancels a run for a newer push. A re-run that fails again starts
+# nothing here, because only a run that a review started counts.
 name: Risk refresh
 
 on:
@@ -23,13 +24,21 @@ jobs:
       actions: write
     runs-on: ubuntu-24.04
     steps:
-      - name: Re-run the failed Risk runs at the head commit
+      - name: Re-run the failed and cancelled Risk runs at the head commit, one at a time
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          ids=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA&event=pull_request&status=failure" \
-            --jq '.workflow_runs[].id')
+          still_head() {
+            gh api "repos/$GITHUB_REPOSITORY/commits/$HEAD_SHA/pulls" --jq '.[].head.sha' | grep -qx "$HEAD_SHA"
+          }
+          ids=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA&event=pull_request" \
+            --jq '.workflow_runs[] | select(.conclusion == "failure" or .conclusion == "cancelled") | .id')
           for id in $ids; do
-            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/rerun-failed-jobs"
+            still_head || { echo "$HEAD_SHA is no longer the head commit; nothing more to re-run."; exit 0; }
+            if gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/rerun-failed-jobs"; then
+              gh run watch "$id" --repo "$GITHUB_REPOSITORY" --interval 10 > /dev/null || true
+            else
+              echo "::warning::Could not re-run Risk run $id."
+            fi
           done
