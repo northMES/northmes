@@ -107,6 +107,17 @@ export const shellModules: readonly ShellModule[] = [
         permission: 'core.user:read',
         area: 'settings',
       },
+      // The plant's own page (design #767) reads the fixture G1 until the plant API (#419) gives it
+      // core.plant:update; until then it shows to a user who administers the plant's roles, as
+      // the machines do. It follows People, so the Settings button keeps opening a page on live
+      // data; it moves first, as the design draws it, once it reads the plant from the server.
+      {
+        label: 'Plant',
+        icon: 'Factory',
+        link: coreLinks.plant,
+        permission: 'core.roleAssignment:manage',
+        area: 'settings',
+      },
       // Plant settings (ADR 0066; design shell-313 and #688): the machines and the calendars read
       // the fixture G1 until core's equipment and calendars have their API and permissions; until
       // then they show to a user who administers the plant's roles there, the plant admin and the
