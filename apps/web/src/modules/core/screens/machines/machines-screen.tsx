@@ -23,6 +23,7 @@ import {
 } from '../../../../ui/primitives/dropdown-menu.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import { GroupColor } from '../../components/group-color/index.ts';
+import { machineCountText } from '../../equipment-group-facts.ts';
 import {
   type PlantMachine,
   PlantSettingsForbidden,
@@ -206,6 +207,13 @@ function matches(row: MachineRow, view: MachineListSearch, except?: 'group' | 'c
   return except === 'calendar' || view.calendar === undefined || view.calendar.includes(calendar);
 }
 
+/** The groups that hold machines at the plant: a company group with none here leads nowhere. */
+function groupsHere(snapshot: PlantSettingsSnapshot): PlantSettingsSnapshot['equipmentGroups'] {
+  return snapshot.equipmentGroups.filter((group) =>
+    snapshot.equipment.some((machine) => machine.group === group.code),
+  );
+}
+
 /** The equipment groups above the table (MA1): each a link to the list filtered to it. */
 function EquipmentGroups({
   snapshot,
@@ -236,7 +244,7 @@ function EquipmentGroups({
         </Button>
       </div>
       <div className="flex flex-wrap gap-2">
-        {snapshot.equipmentGroups.map((group) => {
+        {groupsHere(snapshot).map((group) => {
           const count = rows.filter((row) => row.machine.group === group.code).length;
           return (
             <Link
@@ -248,9 +256,7 @@ function EquipmentGroups({
               {/* The spaces keep the link's name "Machining MACH 3 machines" in words. */}
               <span>{group.name}</span>{' '}
               <span className="font-mono text-xs text-muted-foreground">{group.code}</span>{' '}
-              <span className="text-xs text-muted-foreground">
-                {count === 1 ? '1 machine' : `${count} machines`}
-              </span>
+              <span className="text-xs text-muted-foreground">{machineCountText(count)}</span>
             </Link>
           );
         })}
@@ -324,9 +330,8 @@ export function MachinesScreen() {
 
   const forbidden = snapshot === undefined && error instanceof PlantSettingsForbidden;
   const plannable = rows.filter((row) => row.machine.isPlannable).length;
-  const statusLine = `${rows.length} machine${rows.length === 1 ? '' : 's'}, ${plannable} plannable, ${
-    snapshot?.equipmentGroups.length ?? 0
-  } equipment group${snapshot?.equipmentGroups.length === 1 ? '' : 's'}${
+  const groupCount = snapshot === undefined ? 0 : groupsHere(snapshot).length;
+  const statusLine = `${rows.length} machine${rows.length === 1 ? '' : 's'}, ${plannable} plannable, ${groupCount} equipment group${groupCount === 1 ? '' : 's'}${
     view.plannable === 1 ? ', plannable only' : ''
   }. Sorted by code. Allowed in counts the routing operations that may run on the machine.`;
   const announced = useRef<string | undefined>(undefined);

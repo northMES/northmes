@@ -1,8 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { type GanttFixture, type GanttPagesFixture, g1, g1Pages } from '@northmes/planning-domain';
+import {
+  type GanttFixture,
+  type GanttMasterDataFixture,
+  type GanttPagesFixture,
+  g1,
+  g1MasterData,
+  g1Pages,
+} from '@northmes/planning-domain';
 import {
   type PlantSettingsForbidden as Forbidden,
+  type PlantEquipmentGroup,
   PlantSettingsForbidden,
   type PlantSettingsSnapshot,
   type PlantSettingsSource,
@@ -19,17 +27,54 @@ function orderIdOf(number: string): string {
 }
 
 /**
+ * The equipment groups of G1, the pages fixture and the master data fixture, each with its scope,
+ * where its color came from and its source as the master data fixture details them; a group it
+ * does not detail is the plant's, from the ERP with the ERP's color.
+ */
+function groupsOf(
+  fixture: GanttFixture,
+  pages: GanttPagesFixture,
+  masterData: GanttMasterDataFixture,
+  plantName: string,
+): PlantEquipmentGroup[] {
+  const details = new Map(masterData.equipmentGroups.map((detail) => [detail.code, detail]));
+  const own = masterData.equipmentGroups.flatMap((detail) =>
+    detail.name === undefined || detail.color === undefined
+      ? []
+      : [{ code: detail.code, name: detail.name, color: detail.color }],
+  );
+  return [...fixture.equipmentGroups, ...pages.equipmentGroups, ...own].map((group) => {
+    const detail = details.get(group.code);
+    return {
+      code: group.code,
+      name: group.name,
+      color: group.color,
+      scope:
+        detail?.scope === 'company'
+          ? { kind: 'company', name: masterData.company.name }
+          : { kind: 'plant', name: plantName },
+      colorFrom: detail?.colorFrom ?? 'erp',
+      owner: detail?.source ?? 'erp',
+    };
+  });
+}
+
+/**
  * The plant settings snapshot of the fixture G1 with the pages fixture beside it: G1's machines
- * with the owners the pages fixture names and the assembly bench and lathes it adds, both
- * equipment groups, the routings, every placed job order of G1 as the committed plan, the A1
- * calendar with the deviations the plant admin added, and the three-shift calendar B3 of the
- * lathes. The deviations and B3 stay out of the Gantt's calendar on purpose:
- * a holiday on Mon 9 Nov would move 1006.10 and break G1's expected values (F0 assumption 9).
+ * with the owners the pages fixture names and the assembly bench and lathes it adds, the
+ * equipment groups with the company group the master data fixture adds, the routings, every
+ * placed job order of G1 as the committed plan, the A1 calendar with the deviations the plant
+ * admin added, and the three-shift calendar B3 of the lathes. The deviations and B3 stay out of
+ * the Gantt's calendar on purpose: a holiday on Mon 9 Nov would move 1006.10 and break G1's
+ * expected values (F0 assumption 9).
  */
 export function g1PlantSettingsSnapshot(
   fixture: GanttFixture = g1,
   pages: GanttPagesFixture = g1Pages,
+  masterData: GanttMasterDataFixture = g1MasterData,
 ): PlantSettingsSnapshot {
+  const plantName =
+    pages.plants.find((plant) => plant.slug === fixture.plant.slug)?.name ?? fixture.plant.slug;
   const operationName = new Map(
     fixture.productionOrders.flatMap((order) =>
       order.operations.map((operation) => [operation.displayNumber, operation.name] as const),
@@ -57,10 +102,11 @@ export function g1PlantSettingsSnapshot(
     }));
   return {
     fixture: fixture.id,
-    plant: fixture.plant,
+    plant: { ...fixture.plant, name: plantName },
+    company: { name: masterData.company.name },
     nowMs: ms(fixture.now.instant),
     erp: { name: pages.erp.connectionName, importedAtMs: ms(pages.erp.importedAt.instant) },
-    equipmentGroups: [...fixture.equipmentGroups, ...pages.equipmentGroups],
+    equipmentGroups: groupsOf(fixture, pages, masterData, plantName),
     equipment,
     routings: pages.routings,
     jobOrders: fixture.productionOrders.flatMap((order) =>
@@ -124,7 +170,7 @@ export const g1PlantSettingsSource: PlantSettingsSource = {
       case 'loading':
         return never;
       case 'empty':
-        return { ...g1PlantSettingsSnapshot(), equipment: [], jobOrders: [] };
+        return { ...g1PlantSettingsSnapshot(), equipmentGroups: [], equipment: [], jobOrders: [] };
       case 'error':
         throw new Error('The plant settings could not be loaded');
       case 'forbidden':
