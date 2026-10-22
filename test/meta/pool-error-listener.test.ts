@@ -198,6 +198,93 @@ describe('pool-error-listener', () => {
     expect(findings).toEqual([{ path, line: 3 }]);
   });
 
+  it('ADR0041 a pg Client in test code needs an error listener before use, like a pool', () => {
+    const findings = scan([
+      {
+        path: 'apps/backend/test/modules/core/listened.int.test.ts',
+        text: [
+          "import { Client } from 'pg';",
+          'const client = new Client({ connectionString: url });',
+          "client.on('error', () => {});",
+          'await client.connect();',
+        ].join('\n'),
+      },
+      {
+        path: 'apps/backend/test/modules/core/unlistened.int.test.ts',
+        text: [
+          "import { Client } from 'pg';",
+          'async function open(): Promise<Client> {',
+          '  const client = new Client({ connectionString: url });',
+          '  await client.connect();',
+          '  return client;',
+          '}',
+        ].join('\n'),
+      },
+      {
+        path: 'e2e/fixtures.ts',
+        text: [
+          "import pg from 'pg';",
+          'const client = new pg.Client({ connectionString: url });',
+          "client.once('error', () => {});",
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([
+      { path: 'apps/backend/test/modules/core/unlistened.int.test.ts', line: 3 },
+      { path: 'e2e/fixtures.ts', line: 2 },
+    ]);
+  });
+
+  it('ADR0041 test code is a test file, a file under test/ or e2e/, the testing package and a testing module', () => {
+    const unlistened = [
+      "import { Client } from 'pg';",
+      'const client = new Client({ connectionString: url });',
+      'await client.connect();',
+    ].join('\n');
+    const paths = [
+      'scripts/stack/dev-up.int.test.ts',
+      'modules/planning/backend/src/orders.test.ts',
+      'apps/backend/test/global-setup.ts',
+      'e2e/support/database.ts',
+      'packages/testing/src/client.ts',
+      'apps/backend/src/testing.ts',
+      'apps/backend/src/migrate/runner.ts',
+      'scripts/stack/seed.mjs',
+    ];
+
+    const findings = scan(paths.map((path) => ({ path, text: unlistened })));
+
+    expect(findings).toEqual(paths.slice(0, 6).map((path) => ({ path, line: 2 })));
+  });
+
+  it('ADR0041 a Client counts only when it comes from pg, under any name', () => {
+    const path = 'apps/backend/test/clients.int.test.ts';
+
+    const findings = scan([
+      {
+        path,
+        text: [
+          "import { Client as PgClient } from 'pg';",
+          "import * as postgres from 'pg';",
+          "import { Client } from 'some-other-library';",
+          "import * as other from 'some-other-library';",
+          'const first = new PgClient({ connectionString: url });',
+          'const second = new (postgres.Client)({ connectionString: url });',
+          'const third = new postgres.default.Client({ connectionString: url });',
+          'const fourth = new Client();',
+          'const fifth = new other.Client();',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([
+      { path, line: 5 },
+      { path, line: 6 },
+      { path, line: 7 },
+    ]);
+  });
+
   it('ADR0041 a Pool in a comment or a string is not a finding', () => {
     const findings = scan([
       {
