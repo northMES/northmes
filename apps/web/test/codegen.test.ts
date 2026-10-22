@@ -24,15 +24,15 @@ function schemaWith(type: string, line: string, replacement: string): string {
 }
 
 /**
- * The type errors of the web's files under `dir`, and of every file they import, with each generated
- * file replaced by the one `files` holds: what `pnpm typecheck` would report there after `pnpm gen`
- * wrote them. The program starts from one screen's files and not the whole tsconfig, because the
- * imports reach the generated documents the screen reads, and a check of the whole web takes more
- * than a minute in CI under coverage. Each error is its file, relative to apps/web, and its
- * message.
+ * The type errors of the web's files under `screenDir`, and of every file they import, with each
+ * generated file replaced by the one `files` holds: what `pnpm typecheck` would report there after
+ * `pnpm gen` wrote them. The program starts from one screen's files and not the whole tsconfig,
+ * because the imports reach the generated documents the screen reads; with the whole tsconfig,
+ * checked twice, the test took 71.5 s to 122.9 s in CI under coverage. Each error is its file,
+ * relative to apps/web, and its message.
  */
 function typeErrorsWith(
-  dir: string,
+  screenDir: string,
   files: readonly { path: string; content: string }[],
 ): string[] {
   const configPath = join(webDir, 'tsconfig.json');
@@ -42,7 +42,9 @@ function typeErrorsWith(
   const host = ts.createCompilerHost(parsed.options);
   const readFile = host.readFile.bind(host);
   host.readFile = (file) => overlay.get(file) ?? readFile(file);
-  const rootNames = parsed.fileNames.filter((file) => file.startsWith(`${join(webDir, dir)}/`));
+  const rootNames = parsed.fileNames.filter((file) =>
+    file.startsWith(`${join(webDir, screenDir)}/`),
+  );
   expect(rootNames).not.toEqual([]);
   const program = ts.createProgram({ rootNames, options: parsed.options, host });
   return ts
@@ -127,7 +129,7 @@ describe("the web's typed documents", () => {
     expect(unchanged).toEqual([]);
     expect(changed.length).toBeGreaterThan(0);
     // The generated documents follow the schema; the error is in the code that reads them.
-    expect(changed.filter((error) => /\.gen\.ts: /.test(error))).toEqual([]);
+    expect(changed.filter((error) => /^[^:]+\.gen\.ts: /.test(error))).toEqual([]);
     expect(changed.some((error) => error.startsWith(`${screen}/`))).toBe(true);
   });
 });
