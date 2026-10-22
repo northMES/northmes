@@ -100,6 +100,8 @@ export function TimeCellShading({
             key={window.fromMs}
             aria-hidden
             data-shading={gap ? 'gap' : 'closed'}
+            data-from-ms={window.fromMs}
+            data-to-ms={window.toMs}
             className={cn('absolute top-0 bottom-0', gap ? 'gantt-gap' : 'bg-off-time')}
             style={{ left: `${left}px`, width: `${right - left}px` }}
           />

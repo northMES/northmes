@@ -117,6 +117,7 @@
   --color-palette-18: var(--palette-18);
   --color-palette-19: var(--palette-19);
   --color-palette-20: var(--palette-20);
+  --color-palette-foreground: var(--palette-foreground);
   --color-group-1: var(--group-1);
   --color-group-2: var(--group-2);
   --color-shift-1: var(--shift-1);
