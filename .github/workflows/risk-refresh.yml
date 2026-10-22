@@ -1,0 +1,35 @@
+# Re-runs the risk gate after an approval (ADR 0086). A review starts a new Risk run whose risk gate
+# check passes, but GitHub keeps the failed check of the run from before the approval next to it, and
+# the required check stays failed. Once a run that a review started passes, this workflow re-runs
+# the failed pull request runs of Risk at the same head commit; they read the reviews again and find
+# the approval. A workflow_run workflow runs from the default branch, so a pull request cannot
+# change it, and it sits outside the Risk workflow's concurrency group, so the re-run does not
+# cancel the run that started it. A re-run that still fails starts nothing here, because only a run
+# that a review started counts.
+name: Risk refresh
+
+on:
+  workflow_run:
+    workflows: [Risk]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  risk-refresh:
+    name: risk refresh
+    if: github.event.workflow_run.event == 'pull_request_review' && github.event.workflow_run.conclusion == 'success'
+    permissions:
+      actions: write
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Re-run the failed Risk runs at the head commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          ids=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA&event=pull_request&status=failure" \
+            --jq '.workflow_runs[].id')
+          for id in $ids; do
+            gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/rerun-failed-jobs"
+          done

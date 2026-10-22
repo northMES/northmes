@@ -464,9 +464,9 @@ describe('workflows', () => {
                 ? riskLabelPermissions
                 : job.name === 'risk refresh'
                   ? riskRefreshPermissions
-                : job.name === 'Scorecard analysis'
-              ? scorecardPermissions
-              : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
+                  : job.name === 'Scorecard analysis'
+                    ? scorecardPermissions
+                    : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
       expect(job.permissions, where).toEqual(expected);
     }
   });
@@ -810,7 +810,7 @@ describe('workflows', () => {
 
   // CI checks out the pull request's merge commit; its first parent is the base branch, so a depth
   // of 2 holds both sides of the diff. The job reads code only, so it keeps no credentials.
-  it("CI / pr tests checks out the merge commit with its first parent and without credentials", () => {
+  it('CI / pr tests checks out the merge commit with its first parent and without credentials', () => {
     const { job } = jobNamed('pr tests');
 
     expect(job.permissions).toEqual({ contents: 'read' });
@@ -896,7 +896,11 @@ describe('workflows', () => {
       GH_TOKEN: expression('github.token'),
       DEFAULT_BRANCH: expression('github.event.repository.default_branch'),
     });
-    for (const file of ['scripts/ci/risk-gate.mjs', 'scripts/ci/pull-request.mjs', 'scripts/ci/annotation.mjs']) {
+    for (const file of [
+      'scripts/ci/risk-gate.mjs',
+      'scripts/ci/pull-request.mjs',
+      'scripts/ci/annotation.mjs',
+    ]) {
       expect(download?.run).toContain(`contents/${file}?ref=$DEFAULT_BRANCH`);
     }
     expect(check).toEqual({
@@ -930,7 +934,9 @@ describe('workflows', () => {
       GH_TOKEN: expression('github.token'),
       HEAD_SHA: expression('github.event.workflow_run.head_sha'),
     });
-    expect(rerun?.run).toContain('actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA&event=pull_request&status=failure');
+    expect(rerun?.run).toContain(
+      'actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA&event=pull_request&status=failure',
+    );
   });
 
   // Without a checkout the job cannot read .node-version, so it names the same version.

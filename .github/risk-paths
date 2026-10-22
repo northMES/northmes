@@ -1,6 +1,8 @@
-# The paths where a wrong merge is expensive or touches a security control (ADR 0086). A pull
-# request that changes one of them, or renames a file out of one, is high risk: it merges only after
-# the maintainer approves its head commit. Risk / risk gate reads this file from the default branch,
+# The review machinery (ADR 0086): the files that decide how a pull request is judged and merged,
+# and what agent sessions are told and allowed to do. A pull request that changes one of them, or
+# renames a file out of one, is high risk: it merges only after the maintainer approves its head
+# commit. Every other change gets the tier its blast-radius review judges, so this list names only
+# what a session must not be able to loosen by declaring a low tier. Risk / risk gate reads this file from the default branch,
 # so a pull request cannot change the paths that judge it.
 #
 # The patterns follow CODEOWNERS: a leading slash or a slash inside anchors a pattern at the root, a
@@ -9,84 +11,14 @@
 # files directly in its folder. The gate refuses a pattern with whitespace, ! or [, so write an
 # inline comment on a line of its own.
 
-# Migrations, row-level security and database roles
-**/migrations/**
-/apps/backend/src/db/
-/apps/backend/src/migrate/
-
-# Authentication, permissions and access
-/apps/backend/src/modules/core/infrastructure/auth/
-/apps/backend/src/modules/core/api/access/
-/apps/backend/src/modules/core/core/access/
-/apps/backend/src/modules/*/permissions.ts
-/apps/backend/src/principal.ts
-/apps/backend/src/graphql/principal.ts
-/apps/backend/src/graphql/limits.ts
-/apps/backend/src/graphql/cost.ts
-/apps/backend/src/graphql/server.ts
-/apps/backend/src/graphql/yoga.driver.ts
-/apps/backend/src/http/
-/apps/backend/src/admin/
-/apps/backend/src/boot/
-/apps/backend/src/commands/command-bus.ts
-/apps/web/src/auth/
-/packages/sdk/src/commands/
-
-# Secrets, configuration and deployment
-/packages/sdk/src/config/
-/packages/testing/src/credentials.ts
-/deploy/
-/Dockerfile
-/infra/
-
-# Plugins (signed archives, ADR 0075)
-/apps/backend/src/plugins/
-
-# The public API contract
-/schema/openapi-v1.json
-
-# Repository controls: CI, its scripts, the meta tests that guard the controls, and bot settings
+# CI, the gate and its scripts, and the meta tests that guard the controls
 /.github/
 /scripts/ci/
-/scripts/cla/
-/scripts/lint/
-/scripts/release/
 /scripts/agents/
 /test/meta/
-/.coderabbit.yaml
-/renovate.json
-/osv-scanner.toml
-/release-please-config.json
 
 # Agent configuration and instructions
 /.claude/
 /CLAUDE.md
 /AGENTS.md
 /skills-lock.json
-
-# Dependencies, the workspace and the license gate
-/package.json
-/pnpm-workspace.yaml
-/pnpm-lock.yaml
-/license-exceptions.json
-/license-clarifications.json
-
-# What decides which tests and lint rules run, and on which Node
-/vitest.config.ts
-/playwright.config.ts
-/turbo.json
-/biome.json
-/.node-version
-/.nvmrc
-/.dockerignore
-
-# Licensing: a merged license change cannot be taken back by a revert
-/LICENSE
-/NOTICE
-/CLA.md
-/CLA-corporate.md
-
-# Decisions and security documents
-/docs/adr/
-/docs/security/
-/SECURITY.md
