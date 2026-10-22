@@ -42,6 +42,8 @@ export interface BoardGridProps {
   readonly onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   readonly gridRef: (node: HTMLDivElement | null) => void;
   readonly height: number | undefined;
+  /** True while the grid still draws the range before, and the range it names is loading. */
+  readonly busy?: boolean;
 }
 
 /** A row of the grid: the row header column and the time column, as CSS grid columns. */
@@ -99,6 +101,7 @@ export function BoardGrid({
   onKeyDown,
   gridRef,
   height,
+  busy,
 }: BoardGridProps) {
   const timeZone = snapshot.plant.timeZone;
   const columns = `${machineWidth}px ${timeWidth}px`;
@@ -214,6 +217,7 @@ export function BoardGrid({
       role="grid"
       aria-label={name}
       aria-rowcount={rowIndex}
+      aria-busy={busy || undefined}
       onKeyDown={onKeyDown}
       className="min-h-0 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
       style={{
