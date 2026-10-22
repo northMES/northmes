@@ -144,7 +144,38 @@ describe('code-reviewer agent', () => {
 
     expect(claude).toContain('`code-reviewer` subagent');
   });
+
+  // CodeRabbit's path instructions are the one source of the rules both reviews apply, so the
+  // agent reads them from .coderabbit.yaml and a rule changes in one place.
+  it('ADR0065 the code-reviewer agent applies the path instructions of .coderabbit.yaml and copies none of them', () => {
+    const body = agentBody(path);
+    const config = parse(readFileSync(join(root, '.coderabbit.yaml'), 'utf8')) as CodeRabbitConfig;
+    const sentences = config.reviews.path_instructions
+      .flatMap((entry) => entry.instructions.split(/(?<=\.)\s+|\n/))
+      .map((sentence) => sentence.replace(/^- /, '').trim())
+      .filter((sentence) => sentence.length > 30);
+
+    expect(body).toContain('`reviews.path_instructions` in `.coderabbit.yaml`');
+    expect(sentences.filter((sentence) => body.includes(sentence))).toEqual([]);
+  });
+
+  // At level high the code-review skill keeps 10 findings and cuts the minor ones first.
+  it('ADR0065 the code-reviewer agent keeps every finding of the code-review skill', () => {
+    expect(agentBody(path)).toContain('code-review skill at level high with `--max-findings all`');
+  });
 });
+
+/** The part of .coderabbit.yaml that the code-reviewer agent reads. */
+interface CodeRabbitConfig {
+  readonly reviews: {
+    readonly path_instructions: readonly { readonly path: string; readonly instructions: string }[];
+  };
+}
+
+/** The instructions of a Claude Code agent file: everything after its frontmatter. */
+function agentBody(path: string): string {
+  return readFileSync(join(root, path), 'utf8').split(/^---$/m).slice(2).join('---');
+}
 
 // The blast-radius review before the pull request (ADR 0086) runs as a project subagent in a fresh
 // context, like the code review. It judges how much harm a wrong merge would do and ends with the
