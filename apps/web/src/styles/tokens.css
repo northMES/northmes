@@ -102,6 +102,13 @@
   /* Equipment group colors (2) */
   --group-1: oklch(0.62 0.1 195);
   --group-2: oklch(0.62 0.1 300);
+  /* Shifts on the calendar's week view (#770): an edge and a subtle fill per shift, by its order */
+  --shift-1: oklch(0.48 0.12 250);
+  --shift-1-subtle: oklch(0.935 0.03 250);
+  --shift-2: oklch(0.5 0.1 65);
+  --shift-2-subtle: oklch(0.95 0.045 80);
+  --shift-3: oklch(0.5 0.14 305);
+  --shift-3-subtle: oklch(0.94 0.035 305);
 
   /* Shared values */
   --radius: 0.375rem;
@@ -207,5 +214,12 @@
     /* Equipment group colors (2) */
     --group-1: oklch(0.68 0.1 195);
     --group-2: oklch(0.68 0.1 300);
+    /* Shifts on the calendar's week view (#770) */
+    --shift-1: oklch(0.78 0.1 250);
+    --shift-1-subtle: oklch(0.29 0.05 250);
+    --shift-2: oklch(0.82 0.11 75);
+    --shift-2-subtle: oklch(0.3 0.05 75);
+    --shift-3: oklch(0.78 0.12 305);
+    --shift-3-subtle: oklch(0.29 0.06 305);
   }
 }
