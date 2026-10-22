@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { CircleAlert, RotateCw, WifiOff } from 'lucide-react';
 import { useEffect } from 'react';
+import { ProductLogo } from '../ui/components/product-logo/index.ts';
 import { SkipLink } from '../ui/components/skip-link/index.ts';
 import { StatePanel } from '../ui/components/state-panel/index.ts';
 import { announce } from '../ui/lib/announce.ts';
@@ -20,7 +21,7 @@ export interface BootFailureProps {
 const mainId = 'main';
 
 /**
- * NorthMES could not start (design shell-306, BO3 to BO7): the boot page's layout, with the mark in
+ * NorthMES could not start (design shell-306, BO3 to BO7): the boot page's layout, with the logo in
  * the header and no Help or account menu, since nothing is known about the user. A card holds the
  * h1, what went wrong and Reload page. After a server error (BO3) it says to reload; after no
  * answer (BO6) it says the page tries again every 10 seconds. Nothing takes focus on this first
@@ -36,13 +37,7 @@ export function BootFailure({ kind, onReload }: BootFailureProps) {
     <div className="flex min-h-svh flex-col bg-background text-foreground">
       <SkipLink targetId={mainId} />
       <header className="flex h-14 items-center gap-2 border-b border-border px-4">
-        <span
-          aria-hidden
-          className="grid size-6 place-items-center rounded-md bg-primary text-xs font-semibold text-primary-foreground"
-        >
-          N
-        </span>
-        <span className="font-semibold">NorthMES</span>
+        <ProductLogo />
       </header>
       <main
         id={mainId}

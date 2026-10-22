@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatDuration, formatPlantDay } from '@northmes/contracts/format';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
+import { announce } from '../../../../ui/lib/announce.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import {
   Dialog,
@@ -37,6 +38,26 @@ function daysText(days: number): string {
   return days === 1 ? '1 day' : `${days} days`;
 }
 
+/** How long the outcome waits after a change before the announcer says it: typing has paused. */
+const settleMs = 500;
+
+/**
+ * Says a message through the app's announcer when it changes and then holds for a moment, so
+ * typing a quantity says the last outcome once. The first message is not said: the dialog that
+ * opens with it is read as a whole.
+ */
+function useAnnouncedChange(message: string): void {
+  const said = useRef(message);
+  useEffect(() => {
+    if (message === said.current) return;
+    const timer = setTimeout(() => {
+      said.current = message;
+      announce(message);
+    }, settleMs);
+    return () => clearTimeout(timer);
+  }, [message]);
+}
+
 /** What the picked order supplies after the change, and what that does to the plan (KO3). */
 function Outcome({
   snapshot,
@@ -62,16 +83,18 @@ function Outcome({
     : days >= 0
       ? `Its deadline stays ${deadline}, ${daysText(days)} before the wanted date, so nothing moves on the plan.`
       : `Its deadline stays ${deadline}, ${daysText(-days)} after the wanted date. Nothing moves on the plan.`;
+  const supplies = `Order ${order.number} then supplies ${quantityText(quantity)} to this line${
+    rest > 0 ? ` and ${quantityText(rest)} to stock` : ''
+  }`;
+  const effect = `${consequence}${candidate.stock ? ' It is no longer a stock order.' : ''}`;
+  useAnnouncedChange(`${supplies}. ${effect}`);
   return (
-    <div role="status" className="grid gap-0.5 rounded-md border border-info bg-info-subtle p-3">
-      <b className="font-medium">
-        Order {order.number} then supplies {quantityText(quantity)} to this line
-        {rest > 0 ? ` and ${quantityText(rest)} to stock` : ''}
-      </b>
-      <span>
-        {consequence}
-        {candidate.stock && ' It is no longer a stock order.'}
-      </span>
+    <div
+      data-supply-outcome
+      className="grid gap-0.5 rounded-md border border-info bg-info-subtle p-3"
+    >
+      <b className="font-medium">{supplies}</b>
+      <span>{effect}</span>
     </div>
   );
 }
