@@ -6,7 +6,8 @@ import { defineCoreLinks } from '@northmes/contracts';
  * The core module's link manifest (ADR 0062): at a plant, the dashboard at the plant root, the
  * plant's landing page with its open tab in `tab` (ADR 0078); the articles list, its new article
  * page, and each article's page with its edit page; the article groups, the new group page and each
- * group's page, which is its form; the customers and each customer's page; and in plant settings
+ * group's page, which is its form; the customers and each customer's page; the routings, each
+ * article's routing and the edit form of an operation; and in plant settings
  * the people of the plant with Add role and each person's page with Add role for that person. Its
  * settings section holds core's company settings pages (ADR 0066): the users, the new user page,
  * each user's page (its tab in `tab`) with Add role; the roles, the new role page (Start from in
@@ -54,6 +55,19 @@ export const coreLinks = defineCoreLinks(
     customers: {
       path: 'customers',
       children: { customer: { path: '$customerId' } },
+    },
+    /**
+     * The routings register under Master data (design #729): the list, each article's routing by
+     * the article number, and the edit form of one of its operations.
+     */
+    routings: {
+      path: 'routings',
+      children: {
+        routing: {
+          path: '$articleNumber',
+          children: { editOperation: { path: 'operations/$sequence/edit' } },
+        },
+      },
     },
   },
   {
