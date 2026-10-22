@@ -9,6 +9,7 @@ import type { ShellModule } from '../src/modules.ts';
 import { createShellRouter } from '../src/shell/index.ts';
 import { PageFrame } from '../src/ui/components/page-frame/index.ts';
 import { fakeSession } from './auth/fake-session.ts';
+import { expectLogo } from './product-logo.ts';
 
 afterEach(cleanup);
 
@@ -350,7 +351,7 @@ describe('a plant the user cannot open', () => {
     await screen.findByRole('heading', { level: 1, name: 'Page not found' });
 
     const banner = screen.getByRole('banner');
-    expect(banner.textContent).toContain('NorthMES');
+    expectLogo(banner);
     await user.click(within(banner).getByRole('button', { name: 'Alex Lund, alex.lund, account' }));
     await user.click(await screen.findByRole('menuitem', { name: 'Sign out' }));
 
