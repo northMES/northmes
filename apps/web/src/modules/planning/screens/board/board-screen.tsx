@@ -142,6 +142,8 @@ export function BoardScreen() {
     [navigate],
   );
   const [committed, setCommitted] = useState<GanttSnapshot | undefined>(undefined);
+  /** The range the snapshot was loaded for, so a range still loading reads as busy. */
+  const [loadedRange, setLoadedRange] = useState<string | undefined>(undefined);
   // The planner's draft, which the Gantt and the job order table share (plan 07, Drafts).
   const [draft, setDraft] = usePlanningDraft();
   const [draftOpen, setDraftOpen] = useState(false);
@@ -195,7 +197,9 @@ export function BoardScreen() {
         ...(search.preview !== undefined && { preview: search.preview }),
       })
       .then((loaded) => {
-        if (!cancelled) setCommitted(loaded);
+        if (cancelled) return;
+        setCommitted(loaded);
+        setLoadedRange(`${range.fromMs}/${range.toMs}`);
       })
       .catch((error: unknown) => {
         if (!cancelled) setLoadError(error ?? new Error('The board could not be loaded'));
@@ -656,6 +660,7 @@ export function BoardScreen() {
               onKeyDown={onKeyDown}
               gridRef={measureRef}
               height={fillHeight}
+              busy={loadedRange !== `${range.fromMs}/${range.toMs}`}
             />
           </div>
           <BlockMenu

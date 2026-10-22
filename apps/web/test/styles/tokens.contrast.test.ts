@@ -127,6 +127,9 @@ const d1Tokens = [
 // subtle fill, by the shift's order in the calendar version.
 const shiftTokens = [1, 2, 3].flatMap((shift) => [`--shift-${shift}`, `--shift-${shift}-subtle`]);
 
+// The text on an order or group fill: pure black in both themes, D1's rule for every palette fill.
+const fillTextTokens = ['--palette-foreground'];
+
 // The text pairs of the D1 contrast table, P1 to P11, at 4.5:1.
 const textPairs = [
   ['--foreground', '--background'],
@@ -273,8 +276,10 @@ const aliases = [
 ] as const;
 
 describe.each(['light', 'dark'] as const)('the D1 tokens in %s', (theme) => {
-  it('E04-S01 tokens.css holds every D1 color token and the shift tokens of #770', () => {
-    expect([...tokens[theme].keys()].sort()).toEqual([...d1Tokens, ...shiftTokens].sort());
+  it('E04-S01 tokens.css holds every D1 color token, the shift tokens of #770 and the palette text token', () => {
+    expect([...tokens[theme].keys()].sort()).toEqual(
+      [...d1Tokens, ...shiftTokens, ...fillTextTokens].sort(),
+    );
   });
 
   it('E04-S01 every text pair meets 4.5:1', () => {
@@ -303,10 +308,11 @@ describe.each(['light', 'dark'] as const)('the D1 tokens in %s', (theme) => {
   });
 
   it('E04-S01 black block text and its state markers meet 4.58:1 on every palette and group fill', () => {
+    expect(parse(tokens[theme].get('--palette-foreground') ?? '')).toMatchObject({ l: 0 });
     expect(
       failures(
         theme,
-        fills.map((fill) => ['#000000', fill] as const),
+        fills.map((fill) => ['--palette-foreground', fill] as const),
         4.58,
       ),
     ).toEqual([]);
