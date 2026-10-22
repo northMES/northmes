@@ -36,7 +36,7 @@ Deliver what the task or issue asks, at the scope it intends. Make routine judgm
 
 When an issue names a seam (the module boundary or interface to build at), build at that seam.
 
-Before the pull request opens, review the diff in a fresh context against the issue and its ADRs and handle the findings (`CLAUDE.md` gives the Claude Code steps). Review then happens on the pull request (CI, CodeRabbit and the maintainer), so hand the work over once `pnpm check` passes and the findings are handled.
+Before the pull request opens, review the diff in a fresh context against the issue and its ADRs and handle the findings (`CLAUDE.md` gives the Claude Code steps). A low pull request then merges on its checks; a high one is reviewed on the pull request by CodeRabbit and the maintainer ([ADR 0086](docs/adr/0086-risk-tiered-review-and-merge-of-agent-pull-requests.md)). Hand the work over once `pnpm check` passes and the findings are handled.
 
 ## Subagents
 

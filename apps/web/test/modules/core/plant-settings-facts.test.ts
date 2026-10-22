@@ -5,7 +5,13 @@ import type {
   PlantCalendar,
   PlantCalendarDeviation,
 } from '../../../src/modules/core/plant-settings-data.ts';
-import { calendarDay, shiftText } from '../../../src/modules/core/plant-settings-facts.ts';
+import {
+  calendarDay,
+  hoursText,
+  patternText,
+  shiftText,
+  weeklyWorkingSeconds,
+} from '../../../src/modules/core/plant-settings-facts.ts';
 import { machineListSearch } from '../../../src/modules/core/plant-settings-search.ts';
 
 /** A calendar of the fixture's shape with these deviations: Monday to Friday 06:00 to 15:00. */
@@ -15,17 +21,62 @@ function calendarWith(
 ): PlantCalendar {
   return {
     name: 'A1',
+    plantDefault: true,
     effectiveFrom: '2026-01-05',
     cycleWeeks: 1,
-    shiftName: 'Day',
-    weekdays,
-    shift: { start: '06:00', end: '15:00' },
-    breaks: [{ start: '08:30', end: '08:45' }],
-    workingSecondsPerDay: 31_500,
+    shifts: [
+      {
+        name: 'Day',
+        weekdays,
+        start: '06:00',
+        end: '15:00',
+        breaks: [{ start: '08:30', end: '08:45' }],
+        workingSeconds: 31_500,
+      },
+    ],
     machines: ['CNC1', 'CNC2', 'MILL1'],
     deviations,
   };
 }
+
+/** Early (7 h 15 min) and Late (7 h 45 min) Monday to Friday, Night (8 h) Monday to Thursday. */
+const threeShifts: PlantCalendar = {
+  name: 'B3',
+  plantDefault: false,
+  effectiveFrom: '2026-01-05',
+  cycleWeeks: 1,
+  shifts: [
+    {
+      name: 'Early',
+      weekdays: [1, 2, 3, 4, 5],
+      start: '06:00',
+      end: '14:00',
+      breaks: [
+        { start: '09:00', end: '09:15' },
+        { start: '11:30', end: '12:00' },
+      ],
+      workingSeconds: 26_100,
+    },
+    {
+      name: 'Late',
+      weekdays: [1, 2, 3, 4, 5],
+      start: '14:00',
+      end: '22:00',
+      breaks: [{ start: '17:00', end: '17:15' }],
+      workingSeconds: 27_900,
+    },
+    {
+      name: 'Night',
+      weekdays: [1, 2, 3, 4],
+      start: '22:00',
+      end: '06:00',
+      breaks: [],
+      workingSeconds: 28_800,
+    },
+  ],
+  machines: ['LATHE1', 'LATHE2'],
+  deviations: [],
+};
 
 const holiday: PlantCalendarDeviation = {
   id: 'holiday',
@@ -68,6 +119,26 @@ describe('shiftText (design #688, the calendars list and the machine page)', () 
 
   it('lists working days that are not consecutive, so no day reads as working that is not', () => {
     expect(shiftText(calendarWith([], [1, 3, 5]))).toBe('Mon, Wed, Fri 06:00 to 15:00');
+  });
+});
+
+describe('a calendar with several shifts (#770)', () => {
+  it('names each shift with its days and times', () => {
+    expect(shiftText(threeShifts)).toBe(
+      'Mon to Fri Early 06:00 to 14:00, Mon to Fri Late 14:00 to 22:00, Mon to Thu Night 22:00 to 06:00',
+    );
+  });
+
+  it('adds up each shift over the days it starts on', () => {
+    expect(hoursText(weeklyWorkingSeconds(threeShifts))).toBe('107 h');
+  });
+
+  it('writes each shift with its breaks for the machine page, and one shift without its name', () => {
+    expect(patternText(threeShifts)).toBe(
+      'Mon to Fri Early 06:00 to 14:00, breaks 09:00 to 09:15 and 11:30 to 12:00; Mon to Fri Late 14:00 to 22:00, break 17:00 to 17:15; Mon to Thu Night 22:00 to 06:00, no breaks',
+    );
+    expect(patternText(calendarWith([]))).toBe('Mon to Fri 06:00 to 15:00, break 08:30 to 08:45');
+    expect(patternText({ ...threeShifts, shifts: [] })).toBe('No shifts');
   });
 });
 

@@ -8,6 +8,7 @@ import type {
   PlantMachine,
   PlantRouting,
   PlantSettingsSnapshot,
+  PlantShift,
 } from './plant-settings-data.ts';
 
 /** The facts of the plant's machines and calendars that the plant settings pages share. */
@@ -77,23 +78,39 @@ export function weekdayName(isoWeekday: number): string {
   return weekdayNames[isoWeekday - 1] ?? String(isoWeekday);
 }
 
-/** "Mon to Fri 06:00 to 15:00": the working days as a span and the shift. */
-export function shiftText(calendar: PlantCalendar): string {
-  const days = [...calendar.weekdays].sort((a, b) => a - b);
+/** "Mon to Fri", "Mon, Wed, Fri" or "Mon": the days a shift starts on. */
+function daysText(weekdays: readonly number[]): string {
+  const days = [...weekdays].sort((a, b) => a - b);
   const first = days[0];
   const last = days[days.length - 1];
   const short = (day: number) => weekdayName(day).slice(0, 3);
   // A span only for consecutive days: Mon, Wed and Fri must not read as Mon to Fri.
   const consecutive = first !== undefined && last !== undefined && last - first + 1 === days.length;
-  const span =
-    first === undefined || last === undefined
-      ? 'No working days'
-      : first === last
-        ? short(first)
-        : consecutive
-          ? `${short(first)} to ${short(last)}`
-          : days.map(short).join(', ');
-  return `${span} ${calendar.shift.start} to ${calendar.shift.end}`;
+  if (first === undefined || last === undefined) return 'No working days';
+  if (first === last) return short(first);
+  return consecutive ? `${short(first)} to ${short(last)}` : days.map(short).join(', ');
+}
+
+/** The calendar's shifts each as "Mon to Fri Early 06:00 to 14:00"; one shift goes without its name. */
+function shiftParts(
+  calendar: PlantCalendar,
+): { readonly shift: PlantShift; readonly text: string }[] {
+  const named = calendar.shifts.length > 1;
+  return calendar.shifts.map((shift) => ({
+    shift,
+    text: `${daysText(shift.weekdays)} ${named ? `${shift.name} ` : ''}${shift.start} to ${shift.end}`,
+  }));
+}
+
+/**
+ * "Mon to Fri 06:00 to 15:00", or with several shifts "Mon to Fri Early 06:00 to 14:00, Mon to Thu
+ * Night 22:00 to 06:00": the days and times of each shift.
+ */
+export function shiftText(calendar: PlantCalendar): string {
+  if (calendar.shifts.length === 0) return 'No shifts';
+  return shiftParts(calendar)
+    .map(({ text }) => text)
+    .join(', ');
 }
 
 /** The plant date of a plant-local instant, "2026-11-07T06:00" to "2026-11-07". */
@@ -110,7 +127,7 @@ function onDate(deviation: PlantCalendarDeviation, date: string): boolean {
 
 /** What one plant day of a calendar holds for a machine, or for all machines. */
 export interface CalendarDayView {
-  /** The shift and its breaks apply. */
+  /** A shift starts on the day and the pattern applies. */
   readonly working: boolean;
   /** The overtime deviations that apply. */
   readonly overtime: readonly PlantCalendarDeviation[];
@@ -118,6 +135,11 @@ export interface CalendarDayView {
   readonly closed?: PlantCalendarDeviation;
   /** With all machines: the machines' own non-working deviations, which close no other machine. */
   readonly machineClosures: readonly PlantCalendarDeviation[];
+}
+
+/** Whether any shift of the calendar starts on the weekday. */
+function startsOn(calendar: PlantCalendar, weekday: number): boolean {
+  return calendar.shifts.some((shift) => shift.weekdays.includes(weekday));
 }
 
 /**
@@ -141,7 +163,7 @@ export function calendarDay(
   const plantOvertime = plantWide.filter((deviation) => deviation.kind === 'overtime');
   if (machine === undefined) {
     return {
-      working: plantClosed === undefined && calendar.weekdays.includes(weekday),
+      working: plantClosed === undefined && startsOn(calendar, weekday),
       overtime: [
         ...(plantClosed === undefined ? plantOvertime : []),
         ...scoped.filter((deviation) => deviation.kind === 'overtime'),
@@ -154,7 +176,7 @@ export function calendarDay(
   const machineClosed = own.find((deviation) => deviation.kind === 'nonWorking');
   const closed = machineClosed ?? plantClosed;
   return {
-    working: closed === undefined && calendar.weekdays.includes(weekday),
+    working: closed === undefined && startsOn(calendar, weekday),
     overtime:
       machineClosed !== undefined
         ? []
@@ -168,16 +190,30 @@ export function calendarDay(
 }
 
 /** "breaks 08:30 to 08:45 and 11:00 to 11:30", or "no breaks". */
-export function breaksText(calendar: PlantCalendar): string {
-  const spans = calendar.breaks.map((each) => `${each.start} to ${each.end}`);
+function breaksText(shift: PlantShift): string {
+  const spans = shift.breaks.map((each) => `${each.start} to ${each.end}`);
   if (spans.length === 0) return 'no breaks';
   if (spans.length === 1) return `break ${spans[0]}`;
   return `breaks ${spans.slice(0, -1).join(', ')} and ${spans[spans.length - 1]}`;
 }
 
-/** The working seconds of one cycle of the pattern, every working day once. */
+/**
+ * "Mon to Fri 06:00 to 15:00, breaks 08:30 to 08:45 and 11:00 to 11:30": each shift with its
+ * breaks, the shifts apart by semicolons.
+ */
+export function patternText(calendar: PlantCalendar): string {
+  if (calendar.shifts.length === 0) return 'No shifts';
+  return shiftParts(calendar)
+    .map(({ shift, text }) => `${text}, ${breaksText(shift)}`)
+    .join('; ');
+}
+
+/** The working seconds of one cycle of the pattern: each shift on every day it starts on. */
 export function weeklyWorkingSeconds(calendar: PlantCalendar): number {
-  return calendar.weekdays.length * calendar.workingSecondsPerDay;
+  return calendar.shifts.reduce(
+    (sum, shift) => sum + shift.weekdays.length * shift.workingSeconds,
+    0,
+  );
 }
 
 /** "41 h 15 min": a working time in hours form. */

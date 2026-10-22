@@ -29,8 +29,10 @@ function settings(): Settings {
 }
 
 describe('ADR0084 agent sessions run in the Claude Code sandbox', () => {
-  it('ADR0084 bypass permissions mode is disabled', () => {
-    expect(settings().permissions?.disableBypassPermissionsMode).toBe('disable');
+  // ADR 0087: unattended sessions run in bypass mode, so no prompt waits for a person. The sandbox
+  // below and the deny rules are the boundary, not the auto mode classifier.
+  it('ADR0087 bypass permissions mode is allowed', () => {
+    expect(settings().permissions?.disableBypassPermissionsMode).toBeUndefined();
   });
 
   it('ADR0084 the file tools and sandboxed commands read nothing outside the working directories', () => {
@@ -113,11 +115,17 @@ describe('ADR0084 agent sessions run in the Claude Code sandbox', () => {
     );
   });
 
-  it('ADR0084 CODEOWNERS names the maintainer for every path, so code owner review means his approval', () => {
-    const rules = read('.github/CODEOWNERS')
-      .split('\n')
-      .filter((line) => line.trim() !== '' && !line.startsWith('#'));
+  // ADR 0086 rule 5: code owner review on the risk paths makes the maintainer's approval the one that
+  // counts there, and a pull request that touches no risk path needs no approval.
+  it('ADR0086 CODEOWNERS names the maintainer for exactly the patterns of .github/risk-paths', () => {
+    const rules = (path: string) =>
+      read(path)
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line !== '' && !line.startsWith('#'));
 
-    expect(rules).toEqual(['* @Krister-Johansson']);
+    expect(rules('.github/CODEOWNERS')).toEqual(
+      rules('.github/risk-paths').map((pattern) => `${pattern} @Krister-Johansson`),
+    );
   });
 });

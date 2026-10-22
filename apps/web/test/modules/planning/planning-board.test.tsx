@@ -644,4 +644,39 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
       expect(cell.style.color).toBe('black');
     }
   });
+
+  it('BO1 lists a job order with a span but no machine in the Not placed row', async () => {
+    const g1 = g1Snapshot();
+    const snapshot = {
+      ...g1,
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) => {
+          if (row.displayNumber !== '1001.20') return row;
+          const { equipment: _, ...withoutMachine } = row;
+          return withoutMachine;
+        }),
+      })),
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+
+    const notPlaced = within(board).getByRole('rowheader', {
+      name: named('Not placed, 1 job order'),
+    });
+    const row = notPlaced.closest<HTMLElement>('[role="row"]') as HTMLElement;
+    expect(
+      within(row).getByRole('gridcell', { name: named('1001.20 Bracket L, 600 pcs, not placed') }),
+    ).toBeTruthy();
+    expect(jobNumbers(machineRow(board, 'CNC 2'))).toEqual(['1002.10']);
+  });
+
+  it('WCAG 2.5.8 a group button is at least --nm-target-min high, whatever the root font size', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+
+    expect(within(board).getByRole('button', { name: 'Collapse Machining' }).className).toContain(
+      'min-h-(--nm-target-min)',
+    );
+  });
 });
