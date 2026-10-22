@@ -69,14 +69,14 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
         'MACH',
         'Machining',
         'Plant A',
-        '3 machinesCNC 1, CNC 2, Mill 1',
+        '5 machinesCNC 1, CNC 2, Lathe 1, Lathe 2, Mill 1',
         'From the ERP',
         'From the ERP',
         'Edit',
       ],
     ]);
     expect(statusLine()).toBe(
-      '3 equipment groups, 4 machines. Sorted by code. HEAT is a company group with no machines at Plant A.',
+      '3 equipment groups, 6 machines. Sorted by code. HEAT is a company group with no machines at Plant A.',
     );
     expect(screen.getByRole('note').textContent).toBe(
       'A group keeps the color it has. A group new from the ERP takes the color the ERP sends, else the first of the 20 palette colors that no other group uses.',
@@ -177,19 +177,21 @@ describe("an equipment group's page (design #729, EG4)", () => {
       'Color 3The ERP sent it with the first import. The group keeps it: a later import color does not replace it.',
     );
     expect(
-      screen.getByText("3 machines at Plant A. A machine's group is set on the machine's page."),
+      screen.getByText("5 machines at Plant A. A machine's group is set on the machine's page."),
     ).toBeTruthy();
     const machines = screen.getByRole('table', { name: 'Machines in MACH' });
     expect(bodyRows(machines)).toEqual([
       ['CNC1', 'CNC 1', 'Yes', 'A1'],
       ['CNC2', 'CNC 2', 'Yes', 'A1'],
+      ['LATHE1', 'Lathe 1', 'No', 'B3'],
+      ['LATHE2', 'Lathe 2', 'No', 'B3'],
       ['MILL1', 'Mill 1', 'Yes', 'A1'],
     ]);
     expect(within(machines).getByRole('link', { name: 'CNC1' }).getAttribute('href')).toBe(
       coreLinks.machines.machine({ plant, equipmentId: 'CNC1' }).href,
     );
     expect(screen.getByRole('figure', { name: 'Machining on the board' }).textContent).toBe(
-      'Machining3 machinesCNC 1CNC 2Mill 1',
+      'Machining5 machinesCNC 1CNC 2Lathe 1Lathe 2Mill 1',
     );
     expect(screen.getByRole('link', { name: 'Edit equipment group' }).getAttribute('href')).toBe(
       editMach,
