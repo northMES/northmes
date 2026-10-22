@@ -99,6 +99,8 @@
   --palette-18: oklch(0.7 0.1 204);
   --palette-19: oklch(0.7 0.1 264);
   --palette-20: oklch(0.7 0.1 324);
+  /* The text on every palette and group fill, black in both themes (D1, P12). */
+  --palette-foreground: oklch(0 0 0);
   /* Equipment group colors (2) */
   --group-1: oklch(0.62 0.1 195);
   --group-2: oklch(0.62 0.1 300);
@@ -211,6 +213,8 @@
     --palette-18: oklch(0.62 0.1 204);
     --palette-19: oklch(0.62 0.1 264);
     --palette-20: oklch(0.62 0.1 324);
+    /* The text on every palette and group fill, black in both themes (D1, P12). */
+    --palette-foreground: oklch(0 0 0);
     /* Equipment group colors (2) */
     --group-1: oklch(0.68 0.1 195);
     --group-2: oklch(0.68 0.1 300);

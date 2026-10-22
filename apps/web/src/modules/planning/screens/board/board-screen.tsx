@@ -113,6 +113,8 @@ export function BoardScreen() {
     [navigate],
   );
   const [snapshot, setSnapshot] = useState<GanttSnapshot | undefined>(undefined);
+  /** The range the snapshot was loaded for, so a range still loading reads as busy. */
+  const [loadedRange, setLoadedRange] = useState<string | undefined>(undefined);
   const [loadError, setLoadError] = useState<unknown>(undefined);
   const [attempt, setAttempt] = useState(0);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
@@ -143,7 +145,9 @@ export function BoardScreen() {
         filter: {},
       })
       .then((loaded) => {
-        if (!cancelled) setSnapshot(loaded);
+        if (cancelled) return;
+        setSnapshot(loaded);
+        setLoadedRange(`${range.fromMs}/${range.toMs}`);
       })
       .catch((error: unknown) => {
         if (!cancelled) setLoadError(error ?? new Error('The board could not be loaded'));
@@ -338,6 +342,7 @@ export function BoardScreen() {
                 onKeyDown={onKeyDown}
                 gridRef={measureRef}
                 height={fillHeight}
+                busy={loadedRange !== `${range.fromMs}/${range.toMs}`}
               />
             </div>
           </GanttViewProvider>

@@ -621,13 +621,39 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
       '1005.10',
     ]);
   });
+  it('BO1 marks the board busy while a later range loads, and not once it has loaded', async () => {
+    const user = userEvent.setup();
+    let release: () => void = () => {};
+    const slowLater: GanttDataSource = {
+      load: async (input) => {
+        if (input.from.startsWith('2026-11-08')) {
+          await new Promise<void>((resolve) => {
+            release = resolve;
+          });
+        }
+        return g1DataSource.load(input);
+      },
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, slowLater, 'board');
+    expect((await findBoard()).getAttribute('aria-busy')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'Show later range' }));
+    const board = await screen.findByRole('grid', {
+      name: 'plant-a board, W46, Mon 9 Nov to Sun 15 Nov',
+    });
+    expect(board.getAttribute('aria-busy')).toBe('true');
+
+    release();
+    await waitFor(() => expect(board.getAttribute('aria-busy')).toBeNull());
+  });
+
   it('D1 draws block text in pure black on the order color, in both themes', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
 
-    // The palette classes are removed from the theme, so the color is set on the block itself.
+    // The palette's text token, black in both themes; the palette of Tailwind is removed.
     for (const cell of board.querySelectorAll<HTMLElement>('[role="gridcell"][data-job-order]')) {
-      expect(cell.style.color).toBe('black');
+      expect(cell.classList).toContain('text-palette-foreground');
     }
   });
 
