@@ -5,8 +5,7 @@ import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadEnv, serverEnvSchema } from '@northmes/sdk/config';
-import { bootBuilt } from '@northmes/testing';
-import pg from 'pg';
+import { bootBuilt, withClient } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { seedCompany, seedPlants } from './seed.mjs';
 import { prepareDatabase, startStack } from './stack.mjs';
@@ -51,13 +50,9 @@ function loginAs(role: string, key: string): string {
 }
 
 /** Runs sql as nm_app with both seed plants as its read scopes. */
-async function readAtSeedPlants(sql: string): Promise<Record<string, unknown>[]> {
-  const client = new pg.Client({
-    connectionString: loginAs('nm_app', 'NORTHMES_DB_APP_PASSWORD_FILE'),
-  });
-  client.on('error', () => {});
-  await client.connect();
-  try {
+function readAtSeedPlants(sql: string): Promise<Record<string, unknown>[]> {
+  const connectionString = loginAs('nm_app', 'NORTHMES_DB_APP_PASSWORD_FILE');
+  return withClient({ connectionString }, async (client) => {
     await client.query('begin');
     // Articles sit at the company's node (ADR 0073), which a request at a plant reads too.
     await client.query("select set_config('northmes.read_scopes', $1::uuid[]::text, true)", [
@@ -66,22 +61,16 @@ async function readAtSeedPlants(sql: string): Promise<Record<string, unknown>[]>
     const { rows } = await client.query(sql);
     await client.query('commit');
     return rows;
-  } finally {
-    await client.end();
-  }
+  });
 }
 
 /**
  * What the database steps leave behind: the migration records, read as nm_owner, and the ids of the
  * seed plants' articles and orders.
  */
-async function databaseState() {
-  const owner = new pg.Client({
-    connectionString: loginAs('nm_owner', 'NORTHMES_DB_OWNER_PASSWORD_FILE'),
-  });
-  owner.on('error', () => {});
-  await owner.connect();
-  try {
+function databaseState() {
+  const connectionString = loginAs('nm_owner', 'NORTHMES_DB_OWNER_PASSWORD_FILE');
+  return withClient({ connectionString }, async (owner) => {
     const migrations = await owner.query(
       'select module, name, applied_at from northmes_meta.migration order by module, name',
     );
@@ -90,9 +79,7 @@ async function databaseState() {
       articles: await readAtSeedPlants('select id from core.article order by id'),
       orders: await readAtSeedPlants('select id from planning.production_order order by id'),
     };
-  } finally {
-    await owner.end();
-  }
+  });
 }
 
 describe('the stack script', () => {

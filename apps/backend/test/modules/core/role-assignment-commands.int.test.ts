@@ -8,8 +8,14 @@ import {
   hostFactory,
   signIn,
 } from '@northmes/backend/testing';
-import { createTestApp, gqlClient, query, type TestApp, useTestDatabase } from '@northmes/testing';
-import { Client } from 'pg';
+import {
+  createTestApp,
+  gqlClient,
+  query,
+  type TestApp,
+  useTestDatabase,
+  withClient,
+} from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 const assignmentFields = 'id scope { kind name } user { id username } role { name }';
@@ -352,10 +358,7 @@ describe('coreAssignRole and coreRemoveRoleAssignment', () => {
     );
     // A change to the role, as coreUpdateRole makes it: it holds the role's lock while it adds a
     // permission that the plant admin does not hold.
-    const change = new Client({ connectionString: db.ownerUrl });
-    change.on('error', () => {});
-    await change.connect();
-    try {
+    await withClient({ connectionString: db.ownerUrl }, async (change) => {
       await change.query('begin');
       await change.query('set local role nm_mod_core');
       await change.query(
@@ -393,8 +396,6 @@ describe('coreAssignRole and coreRemoveRoleAssignment', () => {
           details: { scopeId: plantA, missingPermissions: ['core.article:archive'] },
         },
       ]);
-    } finally {
-      await change.end();
-    }
+    });
   });
 });

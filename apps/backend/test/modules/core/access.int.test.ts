@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { createTestApp, query, type TestApp, useTestDatabase } from '@northmes/testing';
-import { Client } from 'pg';
+import { createTestApp, query, type TestApp, useTestDatabase, withClient } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { can } from '../../../src/modules/core/core/access/access.ts';
 import { PrincipalService } from '../../../src/modules/core/core/access/principal.service.ts';
@@ -23,21 +22,19 @@ describe('roles, role assignments and the permission catalog', () => {
    * Runs one statement as core's owner role and answers the SQLSTATE that Postgres refused it with,
    * or 'accepted'. The statement rolls back either way.
    */
-  async function asCoreOwner(sql: string, params: readonly unknown[]): Promise<string> {
-    const client = new Client({ connectionString: db.ownerUrl });
-    client.on('error', () => {});
-    await client.connect();
-    try {
-      await client.query('begin');
-      await client.query('set local role nm_mod_core');
-      await client.query(sql, [...params]);
-      return 'accepted';
-    } catch (error) {
-      return (error as { code?: string }).code ?? String(error);
-    } finally {
-      await client.query('rollback').catch(() => undefined);
-      await client.end();
-    }
+  function asCoreOwner(sql: string, params: readonly unknown[]): Promise<string> {
+    return withClient({ connectionString: db.ownerUrl }, async (client) => {
+      try {
+        await client.query('begin');
+        await client.query('set local role nm_mod_core');
+        await client.query(sql, [...params]);
+        return 'accepted';
+      } catch (error) {
+        return (error as { code?: string }).code ?? String(error);
+      } finally {
+        await client.query('rollback').catch(() => undefined);
+      }
+    });
   }
 
   /** The principal of a user at the plant with this slug, as the server resolves it per request. */

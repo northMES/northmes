@@ -4,8 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
-import { query, useTestDatabase } from '@northmes/testing';
-import { Client } from 'pg';
+import { query, useTestDatabase, withClient } from '@northmes/testing';
+import type { Client } from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { render } from '../../../../scripts/gen-migration.mjs';
 import { checkCatalog } from '../../src/catalog/check-catalog.ts';
@@ -49,21 +49,6 @@ async function inTransaction<Result>(
   }
 }
 
-/** Runs `run` on a client that logs in with `connectionString`, and closes the client afterwards. */
-async function connected<Result>(
-  connectionString: string,
-  run: (client: Client) => Promise<Result>,
-): Promise<Result> {
-  const client = new Client({ connectionString });
-  client.on('error', () => {});
-  await client.connect();
-  try {
-    return await run(client);
-  } finally {
-    await client.end();
-  }
-}
-
 describe('the table template', () => {
   const db = useTestDatabase();
   let migrationsDir: string;
@@ -80,7 +65,7 @@ describe('the table template', () => {
     await migrate({ ownerUrl: db.ownerUrl, catalog });
 
     // The owner role bypasses the policies (ADR 0008), so the rows are written as it.
-    await connected(db.ownerUrl, async (client) => {
+    await withClient({ connectionString: db.ownerUrl }, async (client) => {
       await client.query('begin');
       await client.query(`set local role ${ownerRole}`);
       await client.query(`insert into ${table} (scope_id) values ($1), ($2)`, [plantA, plantB]);
@@ -99,8 +84,8 @@ describe('the table template', () => {
         return rows.map((row) => row.scope_id);
       });
 
-    const [neverSet, atPlantA, afterScopedTransaction] = await connected(
-      db.appUrl,
+    const [neverSet, atPlantA, afterScopedTransaction] = await withClient(
+      { connectionString: db.appUrl },
       async (client) => [
         await scopesOfRows(client, undefined),
         await scopesOfRows(client, [plantA]),
@@ -117,7 +102,7 @@ describe('the table template', () => {
 
   it('E02-S02 an update by nm_app bumps version through the inline trigger', async () => {
     // The update leaves every column as it is, so only the trigger changes version.
-    const updated = await connected(db.appUrl, (client) =>
+    const updated = await withClient({ connectionString: db.appUrl }, (client) =>
       inTransaction(client, [plantB], async () => {
         const { rows } = await client.query(
           `update ${table} set scope_id = scope_id where scope_id = $1 returning version`,
