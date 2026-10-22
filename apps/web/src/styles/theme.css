@@ -119,6 +119,12 @@
   --color-palette-20: var(--palette-20);
   --color-group-1: var(--group-1);
   --color-group-2: var(--group-2);
+  --color-shift-1: var(--shift-1);
+  --color-shift-1-subtle: var(--shift-1-subtle);
+  --color-shift-2: var(--shift-2);
+  --color-shift-2-subtle: var(--shift-2-subtle);
+  --color-shift-3: var(--shift-3);
+  --color-shift-3-subtle: var(--shift-3-subtle);
 
   /* The radius steps of D1 (Q21): 0.6, 0.8, 1 and 1.4 times --radius. */
   --radius-sm: calc(var(--radius) * 0.6);
