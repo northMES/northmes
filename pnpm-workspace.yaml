@@ -123,6 +123,8 @@ overrides:
   graphql: 'catalog:'
   react: 'catalog:'
   react-dom: 'catalog:'
-  # GHSA-7mx3-vvmw-hjmv (prototype pollution in mergeDeep) is fixed only in 12.0.1, and the GraphQL
-  # Code Generator plugins still ask for 11.x, so every older copy resolves to the fixed one.
-  '@graphql-tools/utils@<12.0.1': 12.0.1
+  # GHSA-7mx3-vvmw-hjmv (prototype pollution in mergeDeep) is fixed in 12.0.1 and
+  # GHSA-c4qx-w738-7hr3 (prototype pollution in mergeIncrementalResult) in 12.0.2. The GraphQL
+  # Code Generator plugins still ask for 11.x and @nestjs/graphql 14.0.2 pins exactly 12.0.1, so
+  # every older copy resolves to the fixed one.
+  '@graphql-tools/utils@<12.0.2': 12.0.2
