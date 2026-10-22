@@ -128,15 +128,20 @@ function scanProjectInWorker(root, configPath) {
     const worker = new Worker(new URL('./deprecated-apis-worker.mjs', import.meta.url), {
       workerData: { root, configPath },
     });
-    worker.once('message', resolve);
+    /** @type {Finding[] | undefined} */
+    let findings;
+    worker.once('message', (message) => {
+      findings = message;
+    });
     worker.once('error', (error) => {
       const message = error instanceof Error ? error.message : String(error);
       reject(new Error(`${configPath}: ${message}`, { cause: error }));
     });
-    // Node emits a worker's messages before its exit, so this rejects only a worker that ended
-    // without posting its findings.
+    // The findings count once the worker has ended, so the next project's worker starts after this
+    // one's program is gone. Node emits a worker's messages before its exit.
     worker.once('exit', (code) => {
-      reject(new Error(`${configPath}: the scan's worker exited with code ${code}`));
+      if (code === 0 && findings !== undefined) resolve(findings);
+      else reject(new Error(`${configPath}: the scan's worker exited with code ${code}`));
     });
   });
 }
