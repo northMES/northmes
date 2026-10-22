@@ -89,8 +89,8 @@ export const shellModules: readonly ShellModule[] = [
     links: [
       // The dashboard, the plant's landing page (ADR 0078, design shell-454).
       { label: 'Dashboard', icon: 'LayoutDashboard', link: coreLinks.dashboard },
-      // Master data holds the registers as they are built (D2 PL5). Routings and customers read
-      // the fixture G1 until they have their API (designs #728 and #729).
+      // Master data holds the registers as they are built (D2 PL5). Routings, tools and customers
+      // read the fixture G1 until they have their API (designs #728 and #729).
       {
         label: 'Master data',
         icon: 'Database',
@@ -98,6 +98,7 @@ export const shellModules: readonly ShellModule[] = [
           { label: 'Articles', icon: 'Package', link: coreLinks.articles },
           { label: 'Article groups', icon: 'Tags', link: coreLinks.articleGroups },
           { label: 'Routings', icon: 'Route', link: coreLinks.routings },
+          { label: 'Tools', icon: 'Hammer', link: coreLinks.tools },
           { label: 'Customers', icon: 'Building2', link: coreLinks.customers },
         ],
       },
