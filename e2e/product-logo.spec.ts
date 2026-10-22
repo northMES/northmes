@@ -12,7 +12,8 @@ const themes = [
 
 /**
  * Expects the banner's NorthMES logo, 32 px tall, with one of its two files drawn on screen, and
- * returns that file's SVG text. The build inlines the files as data URLs.
+ * returns that file's SVG text: decoded when the build inlined it as a data URL, else fetched from
+ * the server.
  */
 async function shownLogoSvg(page: Page): Promise<string> {
   const logo = page.getByRole('banner').getByRole('img', { name: 'NorthMES' });
@@ -22,8 +23,14 @@ async function shownLogoSvg(page: Page): Promise<string> {
   expect(await shown.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
   expect((await shown.boundingBox())?.height).toBe(32);
   const src = (await shown.getAttribute('src')) ?? '';
-  expect(src).toMatch(/^data:image\/svg\+xml,/);
-  return decodeURIComponent(src.slice(src.indexOf(',') + 1));
+  const inline = /^data:image\/svg\+xml(;base64)?,(.*)$/s.exec(src);
+  if (inline === null) {
+    const response = await page.request.get(src);
+    expect(response.status()).toBe(200);
+    return response.text();
+  }
+  const [, base64, data = ''] = inline;
+  return base64 === undefined ? decodeURIComponent(data) : Buffer.from(data, 'base64').toString();
 }
 
 test.describe('the NorthMES logo', () => {
@@ -38,12 +45,12 @@ test.describe('the NorthMES logo', () => {
       await expect(
         page.getByRole('heading', { level: 1, name: 'Sign in to NorthMES' }),
       ).toBeVisible();
-      expect(await shownLogoSvg(page)).toContain(`fill='${nameFill}'`);
+      expect(await shownLogoSvg(page)).toMatch(new RegExp(`fill=["']${nameFill}["']`));
       await checkA11y(`the sign-in page in the ${colorScheme} theme`);
 
       await signIn('/');
       await expect(page.getByRole('heading', { level: 1, name: 'Your plants' })).toBeVisible();
-      expect(await shownLogoSvg(page)).toContain(`fill='${nameFill}'`);
+      expect(await shownLogoSvg(page)).toMatch(new RegExp(`fill=["']${nameFill}["']`));
       await checkA11y(`Your plants in the ${colorScheme} theme`);
     });
   }

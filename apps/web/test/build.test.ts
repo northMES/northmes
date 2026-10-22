@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { build, defaultClientConditions, mergeConfig } from 'vite';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import config from '../vite.config.ts';
+import { svgOf } from './svg-of.ts';
 
 interface ManifestChunk {
   readonly file: string;
@@ -39,17 +40,12 @@ async function buildWeb() {
 }
 
 /**
- * The text of a file that the built index.html points at: a hashed file under the build folder,
- * or an SVG that Vite inlined as a data URL.
+ * The text of an SVG that the built index.html points at: a hashed file under /assets/, the one
+ * folder of the build the server serves as files, or an SVG that Vite inlined as a data URL.
  */
 function builtFileText(outDir: string, url: string): string {
-  const inline = /^data:image\/svg\+xml(;base64)?,(.*)$/s.exec(url);
-  if (inline === null) {
-    expect(url).toMatch(/^\/assets\/[\w-]+\.svg$/);
-    return readFileSync(join(outDir, url), 'utf8');
-  }
-  const [, base64, data = ''] = inline;
-  return base64 === undefined ? decodeURIComponent(data) : Buffer.from(data, 'base64').toString();
+  if (!url.startsWith('data:')) expect(url).toMatch(/^\/assets\/[\w-]+\.svg$/);
+  return svgOf(url, outDir);
 }
 
 describe('the web build', () => {
