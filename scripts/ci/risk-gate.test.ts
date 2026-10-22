@@ -333,43 +333,26 @@ describe('risk gate', () => {
     });
   });
 
-  // The gate guards itself: a pull request that edits the gate, its path list, the workflows or the
-  // agents' settings is high, and the default branch's copy judges it.
-  it("ADR0086 the repository's risk paths cover the gate, the controls and the migrations, and leave ordinary module code low", () => {
-    const repositoryPaths = readFileSync(new URL('../../.github/risk-paths', import.meta.url), 'utf8');
-    const high = [
-      '.github/risk-paths',
-      '.github/workflows/risk.yml',
-      '.github/CODEOWNERS',
-      'scripts/ci/risk-gate.mjs',
-      'scripts/ci/pull-request.mjs',
-      'scripts/agents/review-bash-guard.mjs',
-      '.claude/settings.json',
-      '.claude/agents/blast-radius.md',
-      'CLAUDE.md',
-      'AGENTS.md',
-      'test/meta/agent-sandbox.test.ts',
-      '.coderabbit.yaml',
-      'apps/backend/src/modules/planning/migrations/0003_runs.sql',
-      'apps/backend/src/modules/core/permissions.ts',
-      'pnpm-lock.yaml',
-      'docs/adr/0086-risk-tiered-review-and-merge.md',
-      'docs/security/threat-model.md',
-    ];
-    const low = [
-      'docs/guide/start.md',
-      'apps/web/src/modules/planning/screens/order-gantt.tsx',
-      'apps/backend/src/modules/planning/core/run.ts',
-      'apps/backend/src/graphql/root-fields.ts',
-      'packages/ui/src/button.tsx',
-    ];
+  // The gate guards itself: a pull request that edits the gate, its path list, the workflows, the
+  // meta tests or the agents' settings and instructions is high, and the default branch's copy judges
+  // it. The list names nothing else: every other change gets the tier the blast-radius review judges
+  // (ADR 0086 rule 1).
+  it("ADR0086 the repository's risk paths name exactly the review machinery", () => {
+    const patterns = readFileSync(new URL('../../.github/risk-paths', import.meta.url), 'utf8')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && !line.startsWith('#'));
 
-    for (const file of high) {
-      expect(assessRisk({ ...agentPull([file]), riskPaths: repositoryPaths }).tier, file).toBe('high');
-    }
-    for (const file of low) {
-      expect(assessRisk({ ...agentPull([file]), riskPaths: repositoryPaths }).tier, file).toBe('low');
-    }
+    expect(patterns).toEqual([
+      '/.github/',
+      '/scripts/ci/',
+      '/scripts/agents/',
+      '/test/meta/',
+      '/.claude/',
+      '/CLAUDE.md',
+      '/AGENTS.md',
+      '/skills-lock.json',
+    ]);
   });
 
   it('the job summary names the tier, each reason and what a high pull request waits for', () => {
