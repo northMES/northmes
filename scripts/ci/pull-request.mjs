@@ -16,6 +16,14 @@ export function isBotPullRequest({ author, headRef, fromFork }) {
   return author === renovate || (!fromFork && headRef.startsWith(releaseBranch));
 }
 
+// A Conventional Commit title marked as a breaking change: ! right before the colon.
+const breakingTitle = /^[a-z]+(?:\([^()\s]+\))?!: /;
+
+/** Whether the title marks a breaking change, as feat(core)!: ... does. */
+export function isBreakingTitle(title) {
+  return breakingTitle.test(title);
+}
+
 /** The Conventional Commit type of a title, such as feat in feat(planning)!: ..., or ''. */
 export function commitType(title) {
   return /^(\w+)(?:\([^()\s]+\))?!?: /.exec(title)?.[1] ?? '';
@@ -49,7 +57,7 @@ function withoutComments(text) {
   }
 }
 
-function escapeRegExp(text) {
+export function escapeRegExp(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 

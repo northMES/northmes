@@ -465,10 +465,10 @@ export function CustomerOrderScreen() {
     const { supply: _, ...rest } = search;
     navigate({ to: '.', search: rest, replace: true });
   }, [staleSupply, search, navigate]);
+  // A line that names no delivering plant is the open plant's, as the supply step reads it.
+  const deliveringSlug = supplyLine?.deliveringPlant ?? snapshot?.plant.slug ?? plant;
   const plantName =
-    snapshot?.plants?.find((each) => each.slug === supplyLine?.deliveringPlant)?.name ??
-    supplyLine?.deliveringPlant ??
-    '';
+    snapshot?.plants?.find((each) => each.slug === deliveringSlug)?.name ?? deliveringSlug;
   const withoutSupply = () => {
     const { supply: _, ...rest } = search;
     return rest;

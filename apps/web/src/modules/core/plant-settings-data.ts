@@ -80,18 +80,32 @@ export interface PlantCalendarDeviation {
   readonly addedAtMs?: number;
 }
 
-/** A working-time calendar of the plant (ADR 0025): one shift and its breaks on the weekdays. */
+/** A clock span of the plant, "06:00" to "14:00"; an end at or before the start is on the next date. */
+export interface PlantClockSpan {
+  readonly start: string;
+  readonly end: string;
+}
+
+/** A shift of a calendar version (ADR 0025, `calendar_shift`): its name, days, times and breaks. */
+export interface PlantShift extends PlantClockSpan {
+  readonly name: string;
+  /** ISO weekdays, 1 for Monday to 7 for Sunday, that the shift starts on. */
+  readonly weekdays: readonly number[];
+  readonly breaks: readonly PlantClockSpan[];
+  /** The working seconds of one shift: its length minus its breaks. */
+  readonly workingSeconds: number;
+}
+
+/** A working-time calendar of the plant (ADR 0025): its shifts and their breaks on the weekdays. */
 export interface PlantCalendar {
   readonly name: string;
+  /** The plant calendar, which a machine uses by default. */
+  readonly plantDefault: boolean;
   /** The plant date the version in effect started on. */
   readonly effectiveFrom: string;
   readonly cycleWeeks: number;
-  readonly shiftName: string;
-  /** ISO weekdays, 1 for Monday to 7 for Sunday, that are working days. */
-  readonly weekdays: readonly number[];
-  readonly shift: { readonly start: string; readonly end: string };
-  readonly breaks: readonly { readonly start: string; readonly end: string }[];
-  readonly workingSecondsPerDay: number;
+  /** In the version's order, which also orders their colors on the week view (#770). */
+  readonly shifts: readonly PlantShift[];
   /** The codes of the machines on this calendar. */
   readonly machines: readonly string[];
   readonly deviations: readonly PlantCalendarDeviation[];
