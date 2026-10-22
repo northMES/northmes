@@ -130,6 +130,8 @@ reviews:
     - '!docs/research/**'
     - '!docs/project-brief.md'
 
+  # The code-reviewer agent (.claude/agents/code-reviewer.md) applies these entries too, in the
+  # review before each pull request, so they are the one source of these rules for both reviews.
   path_instructions:
     - path: 'apps/backend/src/modules/**'
       instructions: |
