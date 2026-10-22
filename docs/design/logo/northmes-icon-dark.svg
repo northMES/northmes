@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140">
+  <title>NorthMES</title>
+  <rect width="140" height="140" rx="28" fill="#1f2022"/>
+  <rect x="24" y="36" width="64" height="20" rx="3" fill="#7fa2d6"/>
+  <path d="M47 62H96V82H47A3 3 0 0 1 44 79V65A3 3 0 0 1 47 62Z" fill="#6b9563"/>
+  <path d="M96 62H113A3 3 0 0 1 116 65V79A3 3 0 0 1 113 82H96Z" fill="#6b9563" fill-opacity="0.45"/>
+  <rect x="24" y="88" width="52" height="20" rx="3" fill="#b89968"/>
+  <rect x="96" y="26" width="3" height="92" rx="1.5" fill="#e08a7a"/>
+</svg>

@@ -1,4 +1,10 @@
-# NorthMES
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/design/logo/northmes-logo-on-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="docs/design/logo/northmes-logo.svg" />
+    <img src="docs/design/logo/northmes-logo.svg" alt="NorthMES" height="64" />
+  </picture>
+</h1>
 
 [![CI](https://github.com/northMES/northmes/actions/workflows/ci.yml/badge.svg)](https://github.com/northMES/northmes/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/northMES/northmes/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/northMES/northmes/actions/workflows/github-code-scanning/codeql)

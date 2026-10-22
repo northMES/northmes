@@ -12,6 +12,8 @@
       theme-boot plugin in vite.config.ts, because Vite bundles module scripts only.
     -->
     <meta name="color-scheme" content="light dark" />
+    <!-- The dark NorthMES icon, which reads on light and dark browser tabs alike. -->
+    <link rel="icon" type="image/svg+xml" href="/src/boot/favicon.svg" />
     <link rel="stylesheet" href="/src/styles/app.css" />
     <script vite-ignore src="/src/boot/theme-boot.js"></script>
     <!--
@@ -46,12 +48,19 @@
           >Skip to main content</a
         >
         <header class="flex h-14 items-center gap-2 border-b border-border px-4">
-          <span
-            aria-hidden="true"
-            class="grid size-6 place-items-center rounded-md bg-primary text-xs font-semibold text-primary-foreground"
-            >N</span
-          >
-          <span class="font-semibold">NorthMES</span>
+          <!-- The markup of ProductLogo in src/ui/components/product-logo. -->
+          <span role="img" aria-label="NorthMES" class="flex shrink-0">
+            <img
+              src="/src/ui/components/product-logo/northmes-logo.svg"
+              alt=""
+              class="h-8 w-auto dark:hidden"
+            />
+            <img
+              src="/src/ui/components/product-logo/northmes-logo-on-dark.svg"
+              alt=""
+              class="hidden h-8 w-auto dark:block"
+            />
+          </span>
         </header>
         <main
           id="main"
