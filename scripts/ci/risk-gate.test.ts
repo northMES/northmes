@@ -333,9 +333,11 @@ describe('risk gate', () => {
     });
   });
 
-  // The gate guards itself: a pull request that edits the gate, its path list, the workflows or the
-  // agents' settings is high, and the default branch's copy judges it.
-  it("ADR0086 the repository's risk paths cover the gate, the controls and the migrations, and leave ordinary module code low", () => {
+  // The gate guards itself: a pull request that edits the gate, its path list, the workflows, the
+  // meta tests or the agents' settings and instructions is high, and the default branch's copy judges
+  // it. Every other change, docs, dependencies, migrations and access code included, gets the tier
+  // the blast-radius review judges (ADR 0086 rule 1).
+  it("ADR0086 the repository's risk paths cover only the review machinery, and leave the rest to the blast-radius review", () => {
     const repositoryPaths = readFileSync(new URL('../../.github/risk-paths', import.meta.url), 'utf8');
     const high = [
       '.github/risk-paths',
@@ -349,14 +351,18 @@ describe('risk gate', () => {
       'CLAUDE.md',
       'AGENTS.md',
       'test/meta/agent-sandbox.test.ts',
+      'skills-lock.json',
+    ];
+    const low = [
       '.coderabbit.yaml',
       'apps/backend/src/modules/planning/migrations/0003_runs.sql',
       'apps/backend/src/modules/core/permissions.ts',
+      'package.json',
+      'pnpm-workspace.yaml',
       'pnpm-lock.yaml',
       'docs/adr/0086-risk-tiered-review-and-merge.md',
       'docs/security/threat-model.md',
-    ];
-    const low = [
+      'SECURITY.md',
       'docs/guide/start.md',
       'apps/web/src/modules/planning/screens/order-gantt.tsx',
       'apps/backend/src/modules/planning/core/run.ts',

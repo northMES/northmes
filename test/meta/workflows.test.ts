@@ -445,6 +445,8 @@ describe('workflows', () => {
   // its tier (ADR 0086). Only the label job holds the write token.
   const riskGatePermissions = { contents: 'read', 'pull-requests': 'read' };
   const riskLabelPermissions = { contents: 'read', 'pull-requests': 'write' };
+  // Risk refresh re-runs a failed Risk run once a review made the gate pass, and reads no files.
+  const riskRefreshPermissions = { actions: 'write' };
 
   it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what CI / cla reads, what Risk / risk gate reads, what Risk / risk label writes, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
     const jobs = allJobs();
@@ -460,6 +462,8 @@ describe('workflows', () => {
               ? riskGatePermissions
               : job.name === 'risk label'
                 ? riskLabelPermissions
+                : job.name === 'risk refresh'
+                  ? riskRefreshPermissions
                 : job.name === 'Scorecard analysis'
               ? scorecardPermissions
               : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
@@ -904,6 +908,29 @@ describe('workflows', () => {
         PR_NUMBER: expression('github.event.pull_request.number'),
       },
     });
+  });
+
+  // GitHub keeps the failed risk gate check of the run from before the approval next to the passing
+  // one from the review, and the required check stays failed. Risk refresh re-runs that earlier run,
+  // which now finds the approval. A workflow_run workflow runs from the default branch, so a pull
+  // request cannot change it, and it sits outside the Risk workflow's concurrency group, so the
+  // re-run does not cancel the run that started it.
+  it('ADR0086 Risk refresh re-runs the failed pull request runs of Risk at the head commit once a review run passed', () => {
+    const { workflow, job } = jobNamed('risk refresh');
+    const steps = job.steps ?? [];
+    const rerun = steps.find(({ run }) => run?.includes('rerun-failed-jobs'));
+
+    expect(workflow.path).toBe('.github/workflows/risk-refresh.yml');
+    expect(workflow.on).toEqual({ workflow_run: { workflows: ['Risk'], types: ['completed'] } });
+    expect(job.if).toBe(
+      "github.event.workflow_run.event == 'pull_request_review' && github.event.workflow_run.conclusion == 'success'",
+    );
+    expect(steps.some(({ uses }) => uses?.startsWith('actions/checkout@'))).toBe(false);
+    expect(rerun?.env).toEqual({
+      GH_TOKEN: expression('github.token'),
+      HEAD_SHA: expression('github.event.workflow_run.head_sha'),
+    });
+    expect(rerun?.run).toContain('actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA&event=pull_request&status=failure');
   });
 
   // Without a checkout the job cannot read .node-version, so it names the same version.
