@@ -62,7 +62,14 @@ reviews:
   enable_prompt_for_ai_agents: true
 
   auto_review:
-    enabled: true
+    # CodeRabbit reviews high pull requests only (ADR 0086 rule 6): Risk / risk
+    # gate labels each pull request risk:low or risk:high, and the label turns
+    # automatic reviews back on. A low pull request merges on its checks and the
+    # session's fresh-context reviews. Anyone can still post
+    # "@coderabbitai review" on any pull request.
+    enabled: false
+    labels:
+      - 'risk:high'
     # Only PRs to the default branch (main) are reviewed; drafts are skipped.
     drafts: false
     # Review every push. handoff's PR node waits for a review of the head

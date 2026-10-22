@@ -231,7 +231,7 @@ export function BoardGrid({
             aria-label={`${open ? 'Collapse' : 'Expand'} ${group.name}`}
             onClick={() => onToggleGroup(group.code)}
             onFocus={() => onFocusTarget(focusKeys.group(group.code))}
-            className="flex h-7 items-center gap-1.5 rounded-sm px-1 text-xs whitespace-nowrap"
+            className="flex h-7 min-h-(--nm-target-min) items-center gap-1.5 rounded-sm px-1 text-xs whitespace-nowrap"
           >
             {open ? (
               <ChevronDown aria-hidden className="size-4" />

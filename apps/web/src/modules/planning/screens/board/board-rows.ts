@@ -23,7 +23,7 @@ export interface BoardGroup {
   readonly machines: readonly BoardMachine[];
 }
 
-/** What the board draws of a snapshot over a range: the groups, and the rows without a place. */
+/** What the board draws of a snapshot over a range: the groups, and the rows without a span or a machine (gantt-data.ts). */
 export interface BoardModel {
   readonly groups: readonly BoardGroup[];
   readonly notPlaced: readonly JobOrderRow[];
@@ -81,6 +81,8 @@ export function boardModelOf(snapshot: GanttSnapshot, range: TimeRange): BoardMo
   });
   return {
     groups,
-    notPlaced: rows.filter((row) => row.jobOrder.placement === undefined).sort(byStart),
+    notPlaced: rows
+      .filter((row) => row.jobOrder.placement === undefined || row.jobOrder.equipment === undefined)
+      .sort(byStart),
   };
 }
