@@ -24,11 +24,17 @@ function schemaWith(type: string, line: string, replacement: string): string {
 }
 
 /**
- * The type errors of the web's tsconfig, with each generated file replaced by the one `files`
- * holds: what `pnpm typecheck` would report after `pnpm gen` wrote them. Each error is its file,
+ * The type errors of the web's files under `screenDir`, and of every file they import, with each
+ * generated file replaced by the one `files` holds: what `pnpm typecheck` would report there after
+ * `pnpm gen` wrote them. The program starts from one screen's files and not the whole tsconfig,
+ * because the imports reach the generated documents the screen reads; with the whole tsconfig,
+ * checked twice, the test took 71.5 s to 122.9 s in CI under coverage. Each error is its file,
  * relative to apps/web, and its message.
  */
-function typeErrorsWith(files: readonly { path: string; content: string }[]): string[] {
+function typeErrorsWith(
+  screenDir: string,
+  files: readonly { path: string; content: string }[],
+): string[] {
   const configPath = join(webDir, 'tsconfig.json');
   const { config } = ts.readConfigFile(configPath, ts.sys.readFile);
   const parsed = ts.parseJsonConfigFileContent(config, ts.sys, webDir, undefined, configPath);
@@ -36,7 +42,11 @@ function typeErrorsWith(files: readonly { path: string; content: string }[]): st
   const host = ts.createCompilerHost(parsed.options);
   const readFile = host.readFile.bind(host);
   host.readFile = (file) => overlay.get(file) ?? readFile(file);
-  const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options, host });
+  const rootNames = parsed.fileNames.filter((file) =>
+    file.startsWith(`${join(webDir, screenDir)}/`),
+  );
+  expect(rootNames).not.toEqual([]);
+  const program = ts.createProgram({ rootNames, options: parsed.options, host });
   return ts
     .getPreEmitDiagnostics(program)
     .filter((diagnostic) => diagnostic.category === ts.DiagnosticCategory.Error)
@@ -107,20 +117,19 @@ describe("the web's typed documents", () => {
   });
 
   it('a field whose type changed fails the typecheck in the screen that reads it until the screen follows', {
-    timeout: 120_000,
+    timeout: 60_000,
   }, async () => {
-    const unchanged = typeErrorsWith(await generateFrom(committedSchema));
+    const screen = 'src/modules/core/screens/edit-article';
+    const unchanged = typeErrorsWith(screen, await generateFrom(committedSchema));
     const changed = typeErrorsWith(
+      screen,
       await generateFrom(schemaWith('Article', 'version: Int!', '  version: String!\n')),
     );
 
     expect(unchanged).toEqual([]);
     expect(changed.length).toBeGreaterThan(0);
-    expect(changed.every((error) => error.startsWith('src/') || error.startsWith('test/'))).toBe(
-      true,
-    );
-    expect(
-      changed.some((error) => error.startsWith('src/modules/core/screens/edit-article/')),
-    ).toBe(true);
+    // The generated documents follow the schema; the error is in the code that reads them.
+    expect(changed.filter((error) => /^[^:]+\.gen\.ts: /.test(error))).toEqual([]);
+    expect(changed.some((error) => error.startsWith(`${screen}/`))).toBe(true);
   });
 });
