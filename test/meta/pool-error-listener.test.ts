@@ -249,13 +249,37 @@ describe('pool-error-listener', () => {
       'e2e/support/database.ts',
       'packages/testing/src/client.ts',
       'apps/backend/src/testing.ts',
+      'apps/web/src/testing.tsx',
+      'apps/backend/src/testing/core-owner.ts',
       'apps/backend/src/migrate/runner.ts',
       'scripts/stack/seed.mjs',
     ];
 
     const findings = scan(paths.map((path) => ({ path, text: unlistened })));
 
-    expect(findings).toEqual(paths.slice(0, 6).map((path) => ({ path, line: 2 })));
+    expect(findings).toEqual(paths.slice(0, 8).map((path) => ({ path, line: 2 })));
+  });
+
+  it('ADR0041 a Client destructured from pg is checked too', () => {
+    const path = 'e2e/support/clients.ts';
+
+    const findings = scan([
+      {
+        path,
+        text: [
+          "import pg from 'pg';",
+          'const { Client, Pool: PgPool } = pg;',
+          'const { Client: Renamed } = pg;',
+          'const first = new Client({ connectionString: url });',
+          'const second = new Renamed({ connectionString: url });',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([
+      { path, line: 4 },
+      { path, line: 5 },
+    ]);
   });
 
   it('ADR0041 a Client counts only when it comes from pg, under any name', () => {
