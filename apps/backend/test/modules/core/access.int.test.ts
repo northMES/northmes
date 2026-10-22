@@ -25,6 +25,7 @@ describe('roles, role assignments and the permission catalog', () => {
    */
   async function asCoreOwner(sql: string, params: readonly unknown[]): Promise<string> {
     const client = new Client({ connectionString: db.ownerUrl });
+    client.on('error', () => {});
     await client.connect();
     try {
       await client.query('begin');

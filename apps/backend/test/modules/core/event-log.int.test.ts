@@ -35,6 +35,7 @@ describe('the event log and its sequencer', () => {
   /** A connection as nm_app with an open transaction that writes and reads at `scope`. */
   async function openTransaction(scope: string): Promise<Client> {
     const client = new Client({ connectionString: db.appUrl });
+    client.on('error', () => {});
     clients.push(client);
     await client.connect();
     await client.query('begin');

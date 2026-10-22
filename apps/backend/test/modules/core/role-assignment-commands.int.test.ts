@@ -353,6 +353,7 @@ describe('coreAssignRole and coreRemoveRoleAssignment', () => {
     // A change to the role, as coreUpdateRole makes it: it holds the role's lock while it adds a
     // permission that the plant admin does not hold.
     const change = new Client({ connectionString: db.ownerUrl });
+    change.on('error', () => {});
     await change.connect();
     try {
       await change.query('begin');

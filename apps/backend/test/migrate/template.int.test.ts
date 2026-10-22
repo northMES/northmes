@@ -55,6 +55,7 @@ async function connected<Result>(
   run: (client: Client) => Promise<Result>,
 ): Promise<Result> {
   const client = new Client({ connectionString });
+  client.on('error', () => {});
   await client.connect();
   try {
     return await run(client);

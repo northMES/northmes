@@ -45,6 +45,7 @@ describe('the example article log plugin', () => {
   /** The plugin's entries of one article, read as the plugin's owner role, which RLS does not bind. */
   async function entriesOf(articleId: string) {
     const client = new Client({ connectionString: db.ownerUrl });
+    client.on('error', () => {});
     await client.connect();
     try {
       await client.query('set role nm_mod_example_article_log');

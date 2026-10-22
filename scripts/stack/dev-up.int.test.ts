@@ -55,6 +55,7 @@ async function readAtSeedPlants(sql: string): Promise<Record<string, unknown>[]>
   const client = new pg.Client({
     connectionString: loginAs('nm_app', 'NORTHMES_DB_APP_PASSWORD_FILE'),
   });
+  client.on('error', () => {});
   await client.connect();
   try {
     await client.query('begin');
@@ -78,6 +79,7 @@ async function databaseState() {
   const owner = new pg.Client({
     connectionString: loginAs('nm_owner', 'NORTHMES_DB_OWNER_PASSWORD_FILE'),
   });
+  owner.on('error', () => {});
   await owner.connect();
   try {
     const migrations = await owner.query(

@@ -66,6 +66,7 @@ export async function migrateTemplate({
 }: TemplateOptions): Promise<MigratedTemplate> {
   const name = templateName(catalog);
   const client = new Client(superuser);
+  client.on('error', () => {});
   await client.connect();
   try {
     const existing = await client.query('select 1 from pg_database where datname = $1', [name]);
