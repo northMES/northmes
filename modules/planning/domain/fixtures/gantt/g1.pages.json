@@ -8,7 +8,7 @@
       "plantLocal": "2026-11-02T06:40:00"
     }
   },
-  "plants": [{ "slug": "plant-a", "name": "Plant A" }],
+  "plants": [{ "slug": "plant-a", "name": "Plant A" }, { "slug": "plant-b", "name": "Plant B" }],
   "customers": [
     { "code": "K-1042", "name": "Hallberg Verkstad AB" },
     { "code": "K-1107", "name": "Svea Komponent AB" },
@@ -89,7 +89,7 @@
       "line": 1,
       "article": "Bracket L",
       "quantity": 300,
-      "wantedDate": "2026-11-10",
+      "wantedDate": "2026-11-13",
       "deliveringPlant": "plant-a",
       "productionOrder": "1005"
     }

@@ -15,6 +15,13 @@ describe('planningLinks', () => {
     ).toBe('/plant-a/planning/customer-orders/40211');
   });
 
+  it('#729 planningLinks.stock builds the hrefs of the Stock page and the stock of one article', () => {
+    expect(planningLinks.stock({ plant: 'plant-a' }).href).toBe('/plant-a/planning/stock');
+    expect(planningLinks.stock.article({ plant: 'plant-a', articleId: '30-2011' }).href).toBe(
+      '/plant-a/planning/stock/30-2011',
+    );
+  });
+
   it("planningLinks.release builds the href of a plant's list of orders to release", () => {
     expect(planningLinks.release({ plant: 'plant-a' }).href).toBe('/plant-a/planning/release');
   });

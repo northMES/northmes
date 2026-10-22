@@ -197,8 +197,8 @@ describe('the customer orders list (plan 07; design #687, CO1 and CO2)', () => {
       '40214-1',
       '40211-1',
       '40219-1',
-      '40223-1',
       '40216-1',
+      '40223-1',
       '40211-2',
     ]);
     expect(statusLine()).toBe(

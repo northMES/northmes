@@ -32,4 +32,6 @@ export const planningLinks = defineModuleLinks('planning', {
     path: 'customer-orders',
     children: { customerOrder: { path: '$customerOrderId' } },
   },
+  /** The stock of the plant and the stock of one article by its number (design #729). */
+  stock: { path: 'stock', children: { article: { path: '$articleId' } } },
 });
