@@ -1,54 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { MockedProvider } from '@apollo/client/testing/react';
 import { planningLinks } from '@northmes/planning-contracts';
-import { createShellRoutes } from '@northmes/web-sdk';
-import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { planningModule } from '../../../src/modules/planning/index.ts';
-import { PlanningBoard } from '../../../src/modules/planning/screens/board/board.graphql.ts';
+import { plant, renderPlanningAt } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
 describe('planning web module', () => {
-  it("E02-S05 a plant's planningLinks.board href opens the board stub", async () => {
-    const router = createRouter({
-      routeTree: createShellRoutes({ modules: [planningModule] }),
-      history: createMemoryHistory({
-        initialEntries: [planningLinks.board({ plant: 'plant-a' }).href],
-      }),
-    });
-    const boardQuery = {
-      request: { query: PlanningBoard },
-      result: {
-        data: {
-          planningProductionOrders: [
-            {
-              __typename: 'ProductionOrder',
-              id: 'order-7101',
-              number: '7101',
-              quantity: '40.000000',
-              status: 'planned',
-              version: 1,
-              article: {
-                __typename: 'Article',
-                id: 'article-7101',
-                code: 'BR-40',
-                name: 'Bracket 40 mm',
-              },
-            },
-          ],
-        },
-      },
-    };
+  it("E02-S05 a plant's planningLinks.board href opens the planning board", async () => {
+    renderPlanningAt(planningLinks.board({ plant }).href);
 
-    render(
-      <MockedProvider mocks={[boardQuery]}>
-        <RouterProvider router={router} />
-      </MockedProvider>,
-    );
+    expect(await screen.findByRole('heading', { level: 1, name: 'Planning board' })).toBeTruthy();
+  });
 
-    expect(await screen.findByText('Bracket 40 mm')).toBeTruthy();
+  it("E02-S05 a plant's planningLinks.release href opens Release orders", async () => {
+    renderPlanningAt(planningLinks.release({ plant }).href);
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Release orders' })).toBeTruthy();
   });
 });

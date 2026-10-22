@@ -29,7 +29,7 @@ export function useFocusPageHeading() {
     shownPath.current = pathname;
     if (left === undefined || left === pathname) return;
     const frame = requestAnimationFrame(() => {
-      // An h1 without a tabindex, such as the board stub's, cannot take focus, so main does.
+      // An h1 without a tabindex cannot take focus, so main does.
       const heading = main.current?.querySelector<HTMLElement>('h1[tabindex]');
       (heading ?? main.current)?.focus();
     });

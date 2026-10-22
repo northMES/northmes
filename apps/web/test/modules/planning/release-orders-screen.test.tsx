@@ -5,9 +5,9 @@ import { MockedProvider } from '@apollo/client/testing/react';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { PlanningBoard } from '../../../src/modules/planning/screens/board/board.graphql.ts';
-import { BoardScreen } from '../../../src/modules/planning/screens/board/index.ts';
-import { PlanningReleaseProductionOrder } from '../../../src/modules/planning/screens/board/release.graphql.ts';
+import { PlanningBoard } from '../../../src/modules/planning/screens/release-orders/board.graphql.ts';
+import { ReleaseOrdersScreen } from '../../../src/modules/planning/screens/release-orders/index.ts';
+import { PlanningReleaseProductionOrder } from '../../../src/modules/planning/screens/release-orders/release.graphql.ts';
 import { formatQuantity } from '../../../src/ui/lib/quantity.ts';
 
 afterEach(cleanup);
@@ -57,7 +57,7 @@ function releaseOf(id: string, result: MockLink.MockedResponse['result']): MockL
 function renderBoard(mocks: MockLink.MockedResponse[]) {
   render(
     <MockedProvider mocks={mocks}>
-      <BoardScreen />
+      <ReleaseOrdersScreen />
     </MockedProvider>,
   );
 }
@@ -82,8 +82,8 @@ function cellOf(row: HTMLElement, header: string): HTMLElement {
   return cell;
 }
 
-describe('BoardScreen', () => {
-  it('E02-S05 the board stub marks its table busy and draws skeleton rows until the production orders arrive', async () => {
+describe('ReleaseOrdersScreen', () => {
+  it('E02-S05 the release list marks its table busy and draws skeleton rows until the production orders arrive', async () => {
     renderBoard([{ ...boardQuery(order('PO-1', '40.000000', 'planned', bracket)), delay: 50 }]);
 
     const table = screen.getByRole('table', { name: 'Production orders' });
@@ -94,7 +94,7 @@ describe('BoardScreen', () => {
     expect(table.querySelectorAll('[data-slot="skeleton"]').length).toBe(0);
   });
 
-  it('E02-S05 the board stub lists production orders in a data table: order, article code and name, quantity without trailing zeros, status in words and Release', async () => {
+  it('E02-S05 the release list lists production orders in a data table: order, article code and name, quantity without trailing zeros, status in words and Release', async () => {
     renderBoard([
       boardQuery(
         order('7101', '40.000000', 'planned', bracket),
@@ -134,7 +134,7 @@ describe('BoardScreen', () => {
     expect(cellOf(row, 'Status').textContent).toBe('on_hold');
   });
 
-  it('E02-S05 the board stub shows the empty state when the plant has no production orders', async () => {
+  it('E02-S05 the release list shows the empty state when the plant has no production orders', async () => {
     renderBoard([boardQuery()]);
 
     expect(
@@ -144,7 +144,7 @@ describe('BoardScreen', () => {
     expect(screen.queryByRole('table')).toBeNull();
   });
 
-  it("E02-S05 the board stub shows the page frame's error state when its query fails, and Try again loads the orders", async () => {
+  it("E02-S05 the release list shows the page frame's error state when its query fails, and Try again loads the orders", async () => {
     renderBoard([
       { request: { query: PlanningBoard }, error: new Error('The API is not ready.') },
       boardQuery(order('7101', '40.000000', 'planned', bracket)),

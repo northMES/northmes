@@ -166,6 +166,8 @@ export const shellModules: readonly ShellModule[] = [
       { label: 'Customer orders', icon: 'Handshake', link: planningLinks.customerOrders },
       // Stock follows the order lists: planning owns the stock snapshot (design #729, assumption 1).
       { label: 'Stock', icon: 'Warehouse', link: planningLinks.stock },
+      // The walking-skeleton list with Release until the board's backend stories wire the board.
+      { label: 'Release orders', icon: 'ListChecks', link: planningLinks.release },
     ],
   },
 ];

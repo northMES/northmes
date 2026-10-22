@@ -21,4 +21,8 @@ describe('planningLinks', () => {
       '/plant-a/planning/stock/30-2011',
     );
   });
+
+  it("planningLinks.release builds the href of a plant's list of orders to release", () => {
+    expect(planningLinks.release({ plant: 'plant-a' }).href).toBe('/plant-a/planning/release');
+  });
 });
