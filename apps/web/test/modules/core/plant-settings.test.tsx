@@ -667,6 +667,41 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
     expect(within(screen.getByRole('img', { name: /^Week 45:/ })).getByText('12:00')).toBeTruthy();
   });
 
+  it('CA1 a break across midnight in a night shift shows on both dates (ADR 0025 rule 1)', async () => {
+    const w45 = await weekOfA1((a1) => ({
+      ...a1,
+      shifts: a1.shifts.map((day) => ({
+        ...day,
+        name: 'Night',
+        start: '22:00',
+        end: '06:00',
+        breaks: [{ start: '23:45', end: '00:15' }],
+      })),
+      deviations: [],
+    }));
+
+    // Monday to Friday hold 23:45 to midnight, Tuesday to Saturday midnight to 00:15.
+    expect(heightsOf(w45.getAllByText('Break 23:45 to 00:15'))).toEqual(Array(10).fill(hourPx / 4));
+  });
+
+  it('CA1 a night calendar in a week closed every day still draws the hours of its shifts', async () => {
+    const w45 = await weekOfA1((a1) => ({
+      ...a1,
+      shifts: a1.shifts.map((day) => ({ ...day, name: 'Night', start: '22:00', end: '06:00' })),
+      deviations: [
+        {
+          id: 'closed-week',
+          kind: 'nonWorking',
+          startsLocal: '2026-11-02T00:00',
+          endsLocal: '2026-11-09T00:00',
+        },
+      ],
+    }));
+
+    expect(w45.getByText('05:00')).toBeTruthy();
+    expect(w45.getByText('23:00')).toBeTruthy();
+  });
+
   it("CA1 plant overtime and a machine's overtime at the same time sit side by side", async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const w45 = await weekOfA1((a1) => ({
