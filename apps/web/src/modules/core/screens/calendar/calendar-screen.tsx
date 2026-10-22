@@ -365,6 +365,12 @@ function blocksOf(
     // after midnight, with the breaks in it, sits at the top of the next day.
     const crosses = end <= start;
     const afterMidnight = (clock: string) => crosses && hoursOf(clock) < start;
+    // A break that starts before midnight and ends after it, 23:45 to 00:15, shows on both dates.
+    const acrossMidnight = (one: { readonly start: string; readonly end: string }) =>
+      crosses &&
+      !afterMidnight(one.start) &&
+      hoursOf(one.end) > 0 &&
+      hoursOf(one.end) < hoursOf(one.start);
     // A closure of this day covers the part after midnight; one of the day before does not.
     if (crosses && shift.weekdays.includes(weekdayBefore) && day.closed === undefined) {
       blocks.push({
@@ -378,6 +384,13 @@ function blocksOf(
       });
       for (const each of shift.breaks.filter((one) => afterMidnight(one.start))) {
         blocks.push(breakBlock(each, `shift-${order}-break-before-${each.start}`));
+      }
+      for (const each of shift.breaks.filter(acrossMidnight)) {
+        blocks.push({
+          ...breakBlock(each, `shift-${order}-break-before-${each.start}`),
+          from: 0,
+          to: hoursOf(each.end),
+        });
       }
     }
     if (day.closed === undefined && shift.weekdays.includes(weekday)) {
@@ -595,12 +608,13 @@ function WeekSection({
   const hours = perDay.flatMap(({ blocks }) => blocks.flatMap((block) => [block.from, block.to]));
   const starts = calendar.shifts.map((shift) => hoursOf(shift.start));
   const ends = calendar.shifts.map((shift) => hoursOf(shift.end));
-  // A calendar without shifts and a week without deviations still draw a day, 06:00 to 18:00.
-  const bounds = [...starts, ...ends, ...hours];
+  // A week that draws no block takes its hours from every shift start and end, so a night shift
+  // still spans its hours; a calendar without shifts draws a day, 06:00 to 18:00.
+  const bounds = hours.length > 0 ? hours : [...starts, ...ends];
   const startHour =
-    bounds.length === 0 ? 6 : Math.max(0, Math.floor(Math.min(...starts, ...hours)) - 1);
+    bounds.length === 0 ? 6 : Math.max(0, Math.floor(Math.min(...starts, ...bounds)) - 1);
   const endHour =
-    bounds.length === 0 ? 18 : Math.min(24, Math.ceil(Math.max(...ends, ...hours)) + 1);
+    bounds.length === 0 ? 18 : Math.min(24, Math.ceil(Math.max(...ends, ...bounds)) + 1);
   const y = (hour: number) => (hour - startHour) * hourPx;
   const height = y(endHour);
   return (
