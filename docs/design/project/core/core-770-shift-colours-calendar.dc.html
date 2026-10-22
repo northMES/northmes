@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calendar B3, shift colours</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./core-770-shift-colours-tokens.css">
+<link rel="stylesheet" href="./core-770-shift-colours-bundle.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=IBM+Plex+Sans:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;padding:0}
+a{color:var(--link)}a:hover{color:var(--foreground)}
+.pg-root{display:flex;flex-direction:column;font-family:var(--font-sans);font-size:.875rem;line-height:1.25rem;background:var(--background);color:var(--foreground);overflow:hidden}
+.pg-root[data-theme="light"]{--shift-1:oklch(0.48 0.12 250);--shift-1-subtle:oklch(0.935 0.03 250);--shift-2:oklch(0.5 0.1 65);--shift-2-subtle:oklch(0.95 0.045 80);--shift-3:oklch(0.5 0.14 305);--shift-3-subtle:oklch(0.94 0.035 305);--shift-1-fill:oklch(0.62 0.1 250);--shift-2-fill:oklch(0.64 0.11 75);--shift-3-fill:oklch(0.62 0.12 305)}
+.pg-root[data-theme="dark"]{--shift-1:oklch(0.78 0.1 250);--shift-1-subtle:oklch(0.29 0.05 250);--shift-2:oklch(0.82 0.11 75);--shift-2-subtle:oklch(0.3 0.05 75);--shift-3:oklch(0.78 0.12 305);--shift-3-subtle:oklch(0.29 0.06 305);--shift-1-fill:oklch(0.68 0.1 250);--shift-2-fill:oklch(0.74 0.11 75);--shift-3-fill:oklch(0.66 0.12 305)}
+.pg-anno{flex:none;min-height:36px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;padding:6px 16px;box-sizing:border-box;font-size:.75rem;line-height:1rem;color:var(--muted-foreground);background:var(--muted);border-bottom:1px dashed var(--input)}
+.pg-anno b{font-weight:600;color:var(--foreground)}
+.pg-anno code{font-family:var(--font-mono);font-size:.75rem}
+.pg-anno .pg-issue{margin-left:auto;font-family:var(--font-mono)}
+.pg-root .nm-shell{border:0;border-radius:0;min-height:0;flex:1;min-width:0}
+.pg-root .nm-page{display:flex;flex-direction:column;gap:16px;padding:16px 24px 24px;flex:1;min-height:0;overflow:hidden}
+.pg-h1row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.pg-h1row .nm-page-title{margin:0}
+.pg-sub{color:var(--muted-foreground);font-size:.75rem;line-height:1rem}
+.pg-rowbtn{height:32px;padding:0 10px;font-size:.8125rem}
+.pg-iconbtn{height:32px;width:32px}
+.pg-cell2{display:grid;line-height:1rem}
+.pg-cell2 span+span{font-size:.75rem;color:var(--muted-foreground)}
+.pg-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-content:start;min-height:0}
+.pg-sec{display:grid;gap:12px;padding:16px;border:1px solid var(--border);border-radius:8.4px;background:var(--card);min-width:0}
+.pg-sec h2{margin:0;font-size:1rem;line-height:1.375rem;font-weight:600}
+.pg-sec .pg-sechead{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.pg-sec .pg-sechead h2{flex:1}
+.pg-sec .nm-table-wrap{border-radius:6px;overflow-x:auto}
+.pg-sec .nm-table td{padding:8px;vertical-align:top;white-space:normal}
+.pg-sec .nm-table th{height:36px}
+.pg-tabs .nm-tab[aria-selected="true"]{background:var(--card);color:var(--foreground);box-shadow:inset 0 -2px 0 var(--foreground)}
+.pg-settings{display:flex;gap:24px;flex:1;min-height:0}
+.pg-setnav{flex:none;width:220px;display:flex;flex-direction:column;gap:4px}
+.pg-setnav h2{margin:0 0 8px;font-size:1rem;line-height:1.375rem;font-weight:600;padding:0 8px}
+.pg-setnav .nm-nav-item{height:32px}
+.pg-setnav .pg-setfoot{margin-top:auto;padding:8px;border-top:1px solid var(--border);font-size:.8125rem}
+.pg-setmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:16px;min-height:0}
+.nm-crumbs li{white-space:nowrap}
+.nm-shell--rail .pg-setnav .nm-nav-item{width:100%;height:32px;padding:0 8px;justify-content:flex-start}
+.pg-titleedit{display:none}
+
+.pt-lines{display:grid;gap:6px}
+.pt-line{display:flex;align-items:center;gap:8px;white-space:nowrap;min-height:20px}
+.pt-closed{color:var(--muted-foreground)}
+.pt-line b{font-weight:600}
+
+.cal-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0;padding:0;list-style:none;font-size:.75rem;line-height:1rem}
+.cal-legend li{display:inline-flex;align-items:center;gap:6px}
+.cal-legend b{font-weight:600}
+.cal-key{display:inline-block;flex:none;width:14px;height:14px;box-sizing:border-box;border:1px solid;border-radius:3px}
+.cal-key--break{background:var(--muted);border:1px dashed var(--input)}
+.cal-key--ot{background:var(--success-subtle);border-color:var(--success)}
+.cal-key--hatch{border-color:var(--destructive);background:repeating-linear-gradient(135deg,var(--destructive-subtle) 0 3px,transparent 3px 6px)}
+.cal-key--closed{background:var(--card);border-color:var(--border)}
+.cal-scroll{overflow-x:auto;border:1px solid var(--border);border-radius:6px}
+.cal-grid{display:grid;grid-template-columns:44px repeat(7,minmax(0,1fr));background:var(--card);overflow:hidden}
+.cal-hours{position:relative;height:864px;margin-top:40px;border-right:1px solid var(--border)}
+.cal-hour{position:absolute;right:6px;transform:translateY(-50%);font-family:var(--font-mono);font-size:.6875rem;color:var(--muted-foreground)}
+.cal-day{display:flex;flex-direction:column;border-left:1px solid var(--border);min-width:0}
+.cal-day:nth-child(2){border-left:0}
+.cal-dayhead{display:flex;flex-direction:column;align-items:flex-start;height:40px;box-sizing:border-box;padding:4px 8px;font-size:.75rem;font-weight:500;background:var(--muted);border-bottom:1px solid var(--border);line-height:1rem}
+.cal-day.is-weekend .cal-dayhead{color:var(--muted-foreground)}
+.cal-col{position:relative;height:864px;background:repeating-linear-gradient(to bottom,var(--border) 0 1px,transparent 1px 36px)}
+.cal-day.is-holiday .cal-col{background:repeating-linear-gradient(135deg,var(--destructive-subtle) 0 6px,transparent 6px 12px)}
+.cal-block{position:absolute;left:4px;right:4px;box-sizing:border-box;border:1px solid;border-radius:3.6px;padding:4px 6px;font-size:.75rem;line-height:1rem;overflow:hidden;color:var(--foreground)}
+.cal-block b{display:block;font-weight:600}
+.cal-block span{color:var(--muted-foreground)}
+.cal-block.is-ot{border-color:var(--success);background:var(--success-subtle)}
+.cal-break{position:absolute;left:4px;right:4px;box-sizing:border-box;background:var(--muted);border:1px dashed var(--input);border-radius:3px;font-size:.6875rem;line-height:.875rem;color:var(--muted-foreground);padding:0 6px;overflow:hidden;white-space:nowrap}
+.cal-closed{position:absolute;left:4px;right:4px;top:4px;box-sizing:border-box;border:1px solid var(--destructive);background:var(--destructive-subtle);color:var(--destructive);border-radius:3.6px;padding:4px 6px;font-size:.75rem;line-height:1rem}
+.cal-closed b{display:block;font-weight:600}
+
+.is-a .s1{border-color:var(--shift-1);background:var(--shift-1-subtle)}
+.is-a .s2{border-color:var(--shift-2);background:var(--shift-2-subtle)}
+.is-a .s3{border-color:var(--shift-3);background:var(--shift-3-subtle)}
+.is-b .s1{border-color:var(--block-border);background:var(--shift-1-fill)}
+.is-b .s2{border-color:var(--block-border);background:var(--shift-2-fill)}
+.is-b .s3{border-color:var(--block-border);background:var(--shift-3-fill)}
+.is-b .cal-block.s1,.is-b .cal-block.s2,.is-b .cal-block.s3,.is-b .cal-block.s1 span,.is-b .cal-block.s2 span,.is-b .cal-block.s3 span{color:#000}
+
+.is-narrow .nm-sidebar{display:none}
+.is-narrow .pg-wideonly{display:none}
+.is-narrow .nm-topbar{padding:0 8px;gap:4px}
+.is-narrow .nm-crumbs li:nth-child(-n+6){display:none}
+.is-narrow .nm-crumbs{overflow:hidden}
+.is-narrow .nm-page{padding:12px 12px 16px;gap:12px}
+.is-narrow .pg-settings{flex-direction:column;gap:12px}
+.is-narrow .pg-setnav{width:auto}
+.is-narrow .pg-setnav h2{display:none}
+.is-narrow .pg-setnav .nm-nav{display:flex;flex-direction:row;gap:4px;overflow-x:auto;padding-bottom:4px}
+.is-narrow .pg-setnav .nm-nav-item{white-space:nowrap;width:auto}
+.is-narrow .pg-setnav .pg-setfoot{display:none}
+.is-narrow .pg-h1row .nm-page-title{font-size:1.25rem;line-height:1.75rem}
+.is-narrow .pg-titleedit{display:inline-flex;margin-left:auto}
+.is-narrow .pg-sections{grid-template-columns:minmax(0,1fr);gap:12px}
+.is-narrow .pg-sec{padding:12px}
+.is-narrow .cal-grid{width:884px}
+</style>
+</helmet>
+<div class="pg-root {{rootCls}}" data-theme="{{theme}}" style="width: {{width}}px; height: {{height}}px">
+ <div class="pg-anno"><b>{{frameId}}</b><span>Calendar B3 · variation {{variant}} · Plant A</span><code>/plant-a/core/calendars/B3</code><span class="pg-issue">#770</span></div>
+ <div class="nm-shell nm-shell--rail" style="position: relative">
+  <aside class="nm-sidebar" id="sb">
+   <nav aria-label="Main" style="display: contents">
+    <div class="nm-sidebar-head"><button class="nm-nav-item nm-nav-item--lg" type="button" aria-label="Acme AB, Plant A, switch plant"><span class="nm-mark" aria-hidden="true">A</span></button></div>
+    <div class="nm-sidebar-body">
+     <div class="nm-nav-group"><ul class="nm-nav" aria-label="Core">
+      <li><a class="nm-nav-item" href="#" aria-label="Dashboard"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span>Dashboard</span></a></li>
+      <li><button class="nm-nav-item" type="button" aria-label="Master data" aria-haspopup="menu" aria-expanded="false"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg><span>Master data</span></button></li>
+     </ul></div>
+     <div class="nm-nav-group"><ul class="nm-nav" aria-label="Planning">
+      <li><a class="nm-nav-item" href="#" aria-label="Planning board"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 6h8"/><path d="M12 16h6"/><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M8 11h7"/></svg><span>Planning board</span></a></li>
+      <li><a class="nm-nav-item" href="#" aria-label="Gantt"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h10"/><path d="M6 12h9"/><path d="M11 18h7"/></svg><span>Gantt</span></a></li>
+      <li><a class="nm-nav-item" href="#" aria-label="Production orders"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/></svg><span>Production orders</span></a></li>
+     </ul></div>
+    </div>
+    <div class="nm-sidebar-foot"><button class="nm-nav-item nm-nav-item--lg" type="button" aria-label="Jonas Holm, jonas.holm, account"><span class="nm-avatar" aria-hidden="true">JH</span></button></div>
+   </nav>
+  </aside>
+  <div class="nm-shell-main">
+   <header class="nm-topbar">
+    <button class="nm-btn nm-btn--ghost nm-btn--icon" type="button" aria-label="{{menuLabel}}" aria-expanded="false" aria-controls="sb"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg></button>
+    <nav aria-label="Breadcrumb" style="flex: 1; min-width: 0"><ol class="nm-crumbs"><li><a href="#">Acme AB</a></li><li aria-hidden="true"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></li><li><a href="#">Plant A</a></li><li aria-hidden="true"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></li><li><a href="#">Settings</a></li><li aria-hidden="true"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></li><li><a href="#">Calendars</a></li><li aria-hidden="true"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></li><li><span aria-current="page">Calendar B3</span></li></ol></nav>
+    <button class="nm-btn nm-btn--outline pg-wideonly" type="button"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>Edit</button>
+    <div class="nm-topbar-end">
+     <a class="nm-btn nm-btn--ghost nm-btn--icon is-current" href="#" aria-label="Settings" aria-current="true"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/></svg></a>
+     <button class="nm-btn nm-btn--ghost nm-btn--icon" type="button" aria-label="Help" aria-haspopup="menu"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></button>
+    </div>
+   </header>
+   <main class="nm-page" id="main">
+    <div class="pg-settings">
+     <nav class="pg-setnav" aria-label="Plant A settings"><h2>Plant A settings</h2><ul class="nm-nav"><li><a class="nm-nav-item" href="#">Plant</a></li><li><a class="nm-nav-item" href="#">Machines</a></li><li><a class="nm-nav-item" href="#">Equipment groups</a></li><li><a class="nm-nav-item" href="#" aria-current="page">Calendars</a></li><li><a class="nm-nav-item" href="#">Planning rules</a></li><li><a class="nm-nav-item" href="#">Presentation</a></li><li><a class="nm-nav-item" href="#">Stations</a></li></ul><div class="pg-setfoot"><a class="nm-link" href="#">Acme AB settings</a></div></nav>
+     <div class="pg-setmain">
+      <div class="pg-h1row"><h1 class="nm-page-title">Calendar B3</h1><button class="nm-btn nm-btn--outline pg-rowbtn pg-titleedit" type="button"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></svg>Edit</button><span class="pg-sub">Calendar of Plant A, used by Lathe 1 and Lathe 2. Times are plant time, Europe/Stockholm.</span></div>
+      <div class="pg-tabs nm-tabs" role="tablist" aria-label="Calendar B3"><button class="nm-tab" role="tab" type="button" aria-selected="true">General</button><button class="nm-tab" role="tab" type="button" aria-selected="false">History</button></div>
+      <div class="pg-sections" role="tabpanel">
+       <section class="pg-sec" aria-labelledby="s-p"><div class="pg-sechead"><h2 id="s-p">Shift pattern</h2><button class="nm-btn nm-btn--outline pg-rowbtn" type="button">New version</button></div>
+        <p class="pg-sub" style="margin: -8px 0 0">Version in effect since Mon 5 Jan 2026, one-week cycle anchored on Mondays. Three shifts: Early, Late and Night. A version in effect cannot change; a correction is a new version with an effective date.</p>
+        <div class="nm-table-wrap"><table class="nm-table"><caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Shift pattern of B3</caption>
+         <thead><tr><th scope="col">Weekday</th><th scope="col">Shifts</th><th scope="col">Breaks</th><th scope="col" style="text-align: right">Working time</th></tr></thead>
+         <tbody>
+          <tr><td>Monday</td><td><div class="pt-lines"><div class="pt-line"><span class="cal-key s1" aria-hidden="true"></span><b>Early</b><span class="nm-mono">06:00 to 14:00</span></div><div class="pt-line"><span class="cal-key s2" aria-hidden="true"></span><b>Late</b><span class="nm-mono">14:00 to 22:00</span></div><div class="pt-line"><span class="cal-key s3" aria-hidden="true"></span><b>Night</b><span class="nm-mono">22:00 to 06:00</span></div></div></td><td><div class="pt-lines nm-mono"><div class="pt-line">09:00 to 09:15, 11:30 to 12:00</div><div class="pt-line">17:00 to 17:15, 19:30 to 20:00</div><div class="pt-line">01:00 to 01:30, 03:30 to 03:45</div></div></td><td class="num nm-mono">21 h 45 min</td></tr>
+          <tr><td>Tuesday</td><td><div class="pt-lines"><div class="pt-line"><span class="cal-key s1" aria-hidden="true"></span><b>Early</b><span class="nm-mono">06:00 to 14:00</span></div><div class="pt-line"><span class="cal-key s2" aria-hidden="true"></span><b>Late</b><span class="nm-mono">14:00 to 22:00</span></div><div class="pt-line"><span class="cal-key s3" aria-hidden="true"></span><b>Night</b><span class="nm-mono">22:00 to 06:00</span></div></div></td><td><div class="pt-lines nm-mono"><div class="pt-line">09:00 to 09:15, 11:30 to 12:00</div><div class="pt-line">17:00 to 17:15, 19:30 to 20:00</div><div class="pt-line">01:00 to 01:30, 03:30 to 03:45</div></div></td><td class="num nm-mono">21 h 45 min</td></tr>
+          <tr><td>Wednesday</td><td><div class="pt-lines"><div class="pt-line"><span class="cal-key s1" aria-hidden="true"></span><b>Early</b><span class="nm-mono">06:00 to 14:00</span></div><div class="pt-line"><span class="cal-key s2" aria-hidden="true"></span><b>Late</b><span class="nm-mono">14:00 to 22:00</span></div><div class="pt-line"><span class="cal-key s3" aria-hidden="true"></span><b>Night</b><span class="nm-mono">22:00 to 06:00</span></div></div></td><td><div class="pt-lines nm-mono"><div class="pt-line">09:00 to 09:15, 11:30 to 12:00</div><div class="pt-line">17:00 to 17:15, 19:30 to 20:00</div><div class="pt-line">01:00 to 01:30, 03:30 to 03:45</div></div></td><td class="num nm-mono">21 h 45 min</td></tr>
+          <tr><td>Thursday</td><td><div class="pt-lines"><div class="pt-line"><span class="cal-key s1" aria-hidden="true"></span><b>Early</b><span class="nm-mono">06:00 to 14:00</span></div><div class="pt-line"><span class="cal-key s2" aria-hidden="true"></span><b>Late</b><span class="nm-mono">14:00 to 22:00</span></div><div class="pt-line"><span class="cal-key s3" aria-hidden="true"></span><b>Night</b><span class="nm-mono">22:00 to 06:00</span></div></div></td><td><div class="pt-lines nm-mono"><div class="pt-line">09:00 to 09:15, 11:30 to 12:00</div><div class="pt-line">17:00 to 17:15, 19:30 to 20:00</div><div class="pt-line">01:00 to 01:30, 03:30 to 03:45</div></div></td><td class="num nm-mono">21 h 45 min</td></tr>
+          <tr><td>Friday</td><td><div class="pt-lines"><div class="pt-line"><span class="cal-key s1" aria-hidden="true"></span><b>Early</b><span class="nm-mono">06:00 to 14:00</span></div><div class="pt-line"><span class="cal-key s2" aria-hidden="true"></span><b>Late</b><span class="nm-mono">14:00 to 22:00</span></div></div></td><td><div class="pt-lines nm-mono"><div class="pt-line">09:00 to 09:15, 11:30 to 12:00</div><div class="pt-line">17:00 to 17:15, 19:30 to 20:00</div></div></td><td class="num nm-mono">14 h 30 min</td></tr>
+          <tr><td>Saturday</td><td class="pt-closed">Closed</td><td></td><td class="num nm-mono">0 min</td></tr>
+          <tr><td>Sunday</td><td class="pt-closed">Closed</td><td></td><td class="num nm-mono">0 min</td></tr>
+          <tr style="background: var(--muted)"><td colspan="3" style="font-weight: 500">Per week</td><td class="num nm-mono" style="font-weight: 600">101 h 30 min</td></tr></tbody>
+        </table></div>
+       </section>
+       <section class="pg-sec" aria-labelledby="s-d" style="align-content: start"><div class="pg-sechead"><h2 id="s-d">Deviations</h2><button class="nm-btn nm-btn--outline pg-rowbtn" type="button"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>New deviation</button></div>
+        <p class="pg-sub" style="margin: -8px 0 0">Dated exceptions to the pattern. A machine's deviation wins over a plant-wide one; within one scope non-working wins over overtime (ADR 0025).</p>
+        <div class="nm-table-wrap"><table class="nm-table"><caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Deviations of B3</caption>
+         <thead><tr><th scope="col">Date</th><th scope="col">Kind</th><th scope="col">Applies to</th><th scope="col">Reason</th></tr></thead>
+         <tbody>
+          <tr><td><span class="pg-cell2"><span class="nm-mono">Mon 9 Nov 2026</span><span class="nm-mono">All day</span></span></td><td><span class="nm-badge nm-badge--late">Non-working</span></td><td>All machines, plant-wide</td><td>Plant holiday<span class="pg-sub" style="display: block">Added by Jonas Holm, 12 Oct 09:30</span></td></tr>
+          <tr><td><span class="pg-cell2"><span class="nm-mono">Sat 14 Nov 2026</span><span class="nm-mono">06:00 to 12:00</span></span></td><td><span class="nm-badge nm-badge--success">Overtime</span></td><td>All machines, plant-wide</td><td>Catch up after the holiday<span class="pg-sub" style="display: block">Added by Jonas Holm, 2 Nov 14:10</span></td></tr>
+         </tbody>
+        </table></div>
+       </section>
+       <section class="pg-sec" aria-labelledby="s-w" style="grid-column: 1 / -1"><div class="pg-sechead"><h2 id="s-w">Week</h2>
+         <div class="nm-tabs" role="group" aria-label="Machine"><button class="nm-tab" type="button" aria-pressed="true" style="background: var(--card); color: var(--foreground); box-shadow: inset 0 -2px 0 var(--foreground)">All machines</button><button class="nm-tab" type="button" aria-pressed="false">Lathe 1</button><button class="nm-tab" type="button" aria-pressed="false">Lathe 2</button></div>
+         <span style="display: inline-flex; align-items: center; gap: 8px"><button class="nm-btn nm-btn--outline nm-btn--icon" type="button" aria-label="Show the earlier week" style="height: 32px; width: 32px"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button><span class="nm-mono" style="font-size: .8125rem; font-weight: 500; white-space: nowrap">W46, Mon 9 Nov to Sun 15 Nov</span><button class="nm-btn nm-btn--outline nm-btn--icon" type="button" aria-label="Show the later week" style="height: 32px; width: 32px"><svg class="nm-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button></span>
+        </div>
+        <ul class="cal-legend" aria-label="Legend">
+         <li><span class="cal-key s1" aria-hidden="true"></span><span><b>Early</b> 06:00 to 14:00</span></li>
+         <li><span class="cal-key s2" aria-hidden="true"></span><span><b>Late</b> 14:00 to 22:00</span></li>
+         <li><span class="cal-key s3" aria-hidden="true"></span><span><b>Night</b> 22:00 to 06:00</span></li>
+         <li><span class="cal-key cal-key--break" aria-hidden="true"></span>Break</li>
+         <li><span class="cal-key cal-key--ot" aria-hidden="true"></span>Overtime deviation</li>
+         <li><span class="cal-key cal-key--hatch" aria-hidden="true"></span>Non-working deviation</li>
+         <li><span class="cal-key cal-key--closed" aria-hidden="true"></span>Closed time</li>
+        </ul>
+        <div class="cal-scroll">
+         <div class="cal-grid" role="img" aria-label="Week 46: Monday to Friday Early 06:00 to 14:00 and Late 14:00 to 22:00, Monday to Thursday Night 22:00 to 06:00, each shift with two breaks, Monday 9 Nov closed, plant holiday, Saturday 06:00 to 12:00 overtime">
+          <div class="cal-hours"><sc-for list="{{hours}}" as="h" hint-placeholder-count="25"><div class="cal-hour" style="top: {{h.y}}px">{{h.label}}</div></sc-for></div>
+          <sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+           <div class="cal-day {{d.cls}}"><div class="cal-dayhead">{{d.label}}<span class="pg-sub">{{d.date}}</span></div>
+            <div class="cal-col">
+             <sc-for list="{{d.blocks}}" as="b" hint-placeholder-count="2"><div class="cal-block {{b.cls}}" style="top: {{b.y}}px; height: {{b.h}}px"><b>{{b.label}}</b><span>{{b.sub}}</span></div></sc-for>
+             <sc-for list="{{d.breaks}}" as="k" hint-placeholder-count="2"><div class="cal-break" style="top: {{k.y}}px; height: {{k.h}}px">{{k.label}}</div></sc-for>
+             <sc-if value="{{d.holiday}}" hint-placeholder-val="{{false}}"><div class="cal-closed"><b>Closed</b>Plant holiday</div></sc-if>
+            </div>
+           </div>
+          </sc-for>
+         </div>
+        </div>
+       </section>
+      </div>
+     </div>
+    </div>
+   </main>
+  </div>
+ </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","default":"light","options":["light","dark"],"section":"State"},"variant":{"editor":"enum","default":"A","options":["A","B"],"section":"State"},"width":{"editor":"enum","default":"1440","options":["1440","320"],"section":"State"},"frameId":{"editor":null,"default":"CS1"},"$preview":{"width":1440,"height":2000}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var theme = this.props.theme || 'light';
+    var variant = this.props.variant || 'A';
+    var narrow = String(this.props.width || '1440') === '320';
+    var px = 36;
+    var y = function (t) { var p = t.split(':'); return ((+p[0]) + (+p[1]) / 60) * px; };
+    var shifts = [
+      { cls: 's1', name: 'Early', start: '06:00', end: '14:00', days: [1, 2, 3, 4, 5], breaks: [['09:00', '09:15'], ['11:30', '12:00']] },
+      { cls: 's2', name: 'Late', start: '14:00', end: '22:00', days: [1, 2, 3, 4, 5], breaks: [['17:00', '17:15'], ['19:30', '20:00']] },
+      { cls: 's3', name: 'Night', start: '22:00', end: '06:00', days: [1, 2, 3, 4], breaks: [['01:00', '01:30'], ['03:30', '03:45']] }
+    ];
+    var each = '7 h 15 min';
+    var names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    var work = ['21 h 45 min', '21 h 45 min', '21 h 45 min', '21 h 45 min', '14 h 30 min', '0 min', '0 min'];
+    var pattern = names.map(function (day, i) {
+      var lines = shifts.filter(function (s) { return s.days.indexOf(i + 1) !== -1; }).map(function (s) {
+        return { cls: s.cls, name: s.name, time: s.start + ' to ' + s.end, breaks: s.breaks.map(function (b) { return b[0] + ' to ' + b[1]; }).join(', ') };
+      });
+      return { day: day, lines: lines, closed: lines.length === 0, work: work[i] };
+    });
+    var hours = [];
+    for (var h = 0; h <= 24; h++) hours.push({ y: h * px, label: (h < 10 ? '0' : '') + h + ':00' });
+    var defs = [['Mon', '9 Nov'], ['Tue', '10 Nov'], ['Wed', '11 Nov'], ['Thu', '12 Nov'], ['Fri', '13 Nov'], ['Sat', '14 Nov'], ['Sun', '15 Nov']];
+    var short = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    var days = defs.map(function (d, i) {
+      var wd = i + 1, holiday = wd === 1, blocks = [], breaks = [];
+      var before = wd === 1 ? 7 : wd - 1;
+      shifts.forEach(function (s) {
+        var crosses = y(s.end) <= y(s.start);
+        if (crosses && s.days.indexOf(before) !== -1 && !holiday) {
+          blocks.push({ cls: s.cls, y: 0, h: y(s.end), label: s.name + ' ' + s.start + ' to ' + s.end, sub: 'From ' + short[before - 1] });
+          s.breaks.forEach(function (b) { if (y(b[0]) < y(s.start)) breaks.push({ y: y(b[0]), h: y(b[1]) - y(b[0]), label: 'Break ' + b[0] + ' to ' + b[1] }); });
+        }
+        if (s.days.indexOf(wd) !== -1 && !holiday) {
+          blocks.push({ cls: s.cls, y: y(s.start), h: (crosses ? 24 * px : y(s.end)) - y(s.start), label: s.name + ' ' + s.start + ' to ' + s.end, sub: each });
+          s.breaks.forEach(function (b) { if (!crosses || y(b[0]) >= y(s.start)) breaks.push({ y: y(b[0]), h: y(b[1]) - y(b[0]), label: 'Break ' + b[0] + ' to ' + b[1] }); });
+        }
+      });
+      if (wd === 6) blocks.push({ cls: 'is-ot', y: y('06:00'), h: y('12:00') - y('06:00'), label: 'Overtime 06:00 to 12:00', sub: 'All machines, 6 h' });
+      return { label: d[0], date: d[1], cls: (wd >= 6 ? 'is-weekend' : '') + (holiday ? ' is-holiday' : ''), holiday: holiday, blocks: blocks, breaks: breaks };
+    });
+    return {
+      theme: theme,
+      variant: variant,
+      rootCls: (variant === 'B' ? 'is-b' : 'is-a') + (narrow ? ' is-narrow' : ''),
+      width: narrow ? 320 : 1440,
+      height: narrow ? 2600 : 2000,
+      frameId: this.props.frameId || 'CS1',
+      menuLabel: narrow ? 'Open navigation' : 'Expand sidebar',
+      pattern: pattern,
+      hours: hours,
+      days: days
+    };
+  }
+}
+</script>
+</body>
+</html>
