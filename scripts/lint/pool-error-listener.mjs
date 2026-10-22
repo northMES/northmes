@@ -7,22 +7,24 @@
 // it fails a Vitest run as an unhandled error, and Vitest prints the pg client that pg-pool puts on
 // the error.
 //
-// A pg Client in test code gets the same handler: a client that a test holds open while
-// useTestDatabase drops its database emits error, and without a listener Vitest reports it as an
-// unhandled error. Test code is a *.test.* file, a file under a test/ or e2e/ directory, the
-// testing package (packages/testing/) and a testing module such as apps/backend/src/testing.ts.
+// A pg Client in test code gets the same handler: a client still open when Postgres ends its
+// connection, as when useTestDatabase drops the database with (force), emits error, and without a
+// listener Vitest reports it as an unhandled error. Test code is a *.test.* file, a file under a
+// test/ or e2e/ directory, the testing package (packages/testing/) and a testing module or
+// directory such as apps/backend/src/testing.ts.
 //
 // A pool construction is `new Pool(...)`, `new <anything>.Pool(...)`, or `new X(...)` where X is
 // imported as Pool from pg or as the default export of pg-pool. A client construction is
-// `new X(...)` where X is imported as Client from pg, or `new <pg>.Client(...)` where <pg> is the
-// default or namespace import of pg. A construction is a finding unless one of these holds:
+// `new X(...)` where X is imported as Client from pg or destructured from it
+// (`const { Client } = pg`), or `new <pg>.Client(...)` where <pg> is the default or namespace
+// import of pg. A construction is a finding unless one of these holds:
 // - `.on('error', ...)` is chained on the construction itself.
 // - The construction is assigned to a variable or a property, the first mention of that variable
 //   or property afterwards is `.on('error', ...)` on it, and that call is a statement of the block
 //   that holds the construction. So a listener inside an if, or in a later hook, does not count.
-// `.once` does not count, because pg-pool emits one error for each idle connection that ends, and a
-// client follows the same rule. The scan parses each file with TypeScript, so a Pool in a comment or
-// a string is not a finding.
+// `.once` does not count, because pg-pool emits one error for each idle connection that ends, and
+// a client follows the same rule. The scan parses each file with TypeScript, so a Pool in a comment
+// or a string is not a finding.
 //
 // test/meta/pool-error-listener.test.ts scans every TypeScript and JavaScript file that git tracks
 // outside docs/, so pnpm check fails on a finding.
@@ -34,15 +36,16 @@ import ts from 'typescript';
  * @typedef {{ path: string, line: number }} Finding
  */
 
-/** A cheap filter, so only files that may construct a pool or a client are parsed. */
-const mayConstruct = /\bPool\b|['"]pg-pool['"]|\bClient\b/;
+/** Cheap filters, so only files that may construct a pool, or in test code a client, are parsed. */
+const mayConstructPool = /\bPool\b|['"]pg-pool['"]/;
+const mayConstructPoolOrClient = /\bPool\b|['"]pg-pool['"]|\bClient\b/;
 
 /** The paths of test code, where a pg Client is checked too. */
 const testCode = [
   /\.test\.[cm]?[jt]sx?$/,
   /(^|\/)(test|e2e)\//,
   /^packages\/testing\//,
-  /(^|\/)testing\.[cm]?[jt]s$/,
+  /(^|\/)testing(\/|\.[cm]?[jt]sx?$)/,
 ];
 
 /** @param {string} path */
@@ -56,8 +59,9 @@ function isTestCode(path) {
 
 /**
  * The local names that a file imports pg under: Pool as in `import { Pool as PgPool } from 'pg'`
- * and `import BarePool from 'pg-pool'`, Client as in `import { Client } from 'pg'`, and the module
- * itself as in `import pg from 'pg'` and `import * as postgres from 'pg'`.
+ * and `import BarePool from 'pg-pool'`, Client as in `import { Client } from 'pg'` and
+ * `const { Client } = pg`, and the module itself as in `import pg from 'pg'` and
+ * `import * as postgres from 'pg'`.
  * @param {ts.SourceFile} source
  * @returns {PgNames}
  */
@@ -84,6 +88,24 @@ function importedPgNames(source) {
       }
     }
   }
+  /** @param {ts.Node} node */
+  const destructured = (node) => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isObjectBindingPattern(node.name) &&
+      node.initializer &&
+      ts.isIdentifier(node.initializer) &&
+      names.pg.has(node.initializer.text)
+    ) {
+      for (const element of node.name.elements) {
+        const imported = element.propertyName ?? element.name;
+        const isClient = ts.isIdentifier(imported) && imported.text === 'Client';
+        if (isClient && ts.isIdentifier(element.name)) names.client.add(element.name.text);
+      }
+    }
+    ts.forEachChild(node, destructured);
+  };
+  if (names.pg.size > 0) destructured(source);
   return names;
 }
 
@@ -265,10 +287,11 @@ export function scan(files) {
   /** @type {Finding[]} */
   const findings = [];
   for (const { path, text } of files) {
+    const checksClients = isTestCode(path);
+    const mayConstruct = checksClients ? mayConstructPoolOrClient : mayConstructPool;
     if (!mayConstruct.test(text)) continue;
     const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
     const names = importedPgNames(source);
-    const checksClients = isTestCode(path);
     /** @param {ts.Node} node */
     const visit = (node) => {
       const constructs =
