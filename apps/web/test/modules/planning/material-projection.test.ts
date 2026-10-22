@@ -5,7 +5,9 @@ import { g1Inventory } from '@northmes/planning-domain';
 import { describe, expect, it } from 'vitest';
 import type { GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { applyDraft, emptyDraft, moveInDraft } from '../../../src/modules/planning/gantt-draft.ts';
 import { g1InventorySnapshot } from '../../../src/modules/planning/inventory-data-g1.ts';
+import { inventoryOf } from '../../../src/modules/planning/inventory-of.ts';
 import {
   materialShortages,
   projectionOf,
@@ -86,7 +88,7 @@ describe('the projected balance of an article (plan 07, Material warnings; desig
   });
 
   it('#729 ST1 names a neutral reason for a balance below zero from the start, and the next incoming movement', () => {
-    const negative = g1InventorySnapshot(g1Snapshot(), undefined, {
+    const negative = g1InventorySnapshot(g1Snapshot(), {
       ...g1Inventory,
       stock: g1Inventory.stock.map((row) =>
         row.article === '20-1004' && row.warehouse === 'A-FG' ? { ...row, quantity: -5 } : row,
@@ -157,7 +159,7 @@ describe('the dates of derived movements (plan 07, Material warnings)', () => {
   });
 
   it('#729 counts purchase requisitions when the plant setting says so', () => {
-    const counted = g1InventorySnapshot(plan, undefined, {
+    const counted = g1InventorySnapshot(plan, {
       ...g1Inventory,
       countPurchaseRequisitions: true,
     });
@@ -165,5 +167,26 @@ describe('the dates of derived movements (plan 07, Material warnings)', () => {
     expect(projectionOf(counted, '30-2011').steps.every((step) => step.balance !== undefined)).toBe(
       true,
     );
+  });
+});
+
+describe('the material warning of a draft (plan 07, Material warnings)', () => {
+  it('#729 MW1 clears the warning of 1004.10 when the draft moves it after purchase order 7740', () => {
+    const committed = g1Snapshot();
+    const { draft } = moveInDraft(
+      committed,
+      emptyDraft,
+      { jobOrderId: 'jo-1004-10', setupStartMs: Date.parse('2026-11-10T05:00:00Z') },
+      { cascade: true },
+    );
+    const inventory = inventoryOf(applyDraft(committed, draft));
+
+    expect(inventory).toBeDefined();
+    if (inventory === undefined) return;
+    const consumption = projectionOf(inventory, '30-2011').steps.find(
+      (step) => step.movement.reference === '1004.10',
+    )?.movement;
+    expect(consumption?.atMs).toBe(Date.parse('2026-11-10T05:00:00Z'));
+    expect(materialShortages(inventory)).toEqual([]);
   });
 });

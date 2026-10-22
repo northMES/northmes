@@ -3,8 +3,10 @@
 import {
   availabilityOf,
   type GanttFixture,
+  type GanttInventoryFixture,
   type GanttPagesFixture,
   g1,
+  g1Inventory,
   g1Pages,
 } from '@northmes/planning-domain';
 import { analyzeGantt, placementWithSegments, workingCalendarOf } from './gantt-analysis.ts';
@@ -14,6 +16,7 @@ import type {
   GanttOperation,
   GanttOrder,
   GanttSnapshot,
+  GanttStock,
   HistoryEntry,
   OrderOrigin,
 } from './gantt-data.ts';
@@ -165,6 +168,22 @@ function pagesOf(fixture: GanttFixture, pages: GanttPagesFixture) {
   };
 }
 
+/** The stock of the inventory fixture beside G1, as a plan carries it (design #729). */
+export function stockOf(inventory: GanttInventoryFixture): GanttStock {
+  return {
+    stockAsOfMs: ms(inventory.stockImport.asOf.instant),
+    nextImportMs: ms(inventory.stockImport.next.instant),
+    projectedTo: inventory.projectedTo,
+    countPurchaseRequisitions: inventory.countPurchaseRequisitions,
+    warehouses: inventory.warehouses.map(({ code, name, plant }) => ({ code, name, plant })),
+    articles: inventory.articles,
+    balances: inventory.stock,
+    erpMovements: inventory.plannedMovements,
+    operationMaterials: inventory.operationMaterials,
+    outputWarehouse: inventory.outputWarehouse,
+  };
+}
+
 /**
  * The snapshot of the fixture G1 over a visible range, with its analysis from the domain
  * functions (plan 18, phase 2): the placements come from the fixture's job orders, everything
@@ -174,6 +193,7 @@ export function g1Snapshot(
   fixture: GanttFixture = g1,
   range = g1Week,
   pages: GanttPagesFixture = g1Pages,
+  inventory: GanttInventoryFixture = g1Inventory,
 ): GanttSnapshot {
   const calendar = workingCalendarOf(fixture.calendar, fixture.plant.timeZone);
   // The windows cover the fixture's placements and deadlines as well as the asked range, so a load
@@ -225,6 +245,7 @@ export function g1Snapshot(
     equipment: fixture.equipment,
     productionOrders: fixture.productionOrders.map((order) => orderOf(order, windowsOf, pages)),
     ...pagesOf(fixture, pages),
+    stock: stockOf(inventory),
   };
   return { ...base, analysis: analyzeGantt(base, range) };
 }
