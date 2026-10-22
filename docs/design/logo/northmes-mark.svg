@@ -1,5 +1,4 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="14 16 112 112">
-  <title>NorthMES</title>
   <rect x="24" y="36" width="64" height="20" rx="3" fill="#7fa2d6"/>
   <path d="M47 62H96V82H47A3 3 0 0 1 44 79V65A3 3 0 0 1 47 62Z" fill="#6b9563"/>
   <path d="M96 62H113A3 3 0 0 1 116 65V79A3 3 0 0 1 113 82H96Z" fill="#6b9563" fill-opacity="0.45"/>
