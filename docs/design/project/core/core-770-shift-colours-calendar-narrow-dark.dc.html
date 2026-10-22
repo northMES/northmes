@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calendar B3, variation A, dark, 320</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="./core-770-shift-colours-tokens.css">
+<link rel="stylesheet" href="./core-770-shift-colours-bundle.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0;padding:0}
+</style>
+</helmet>
+<div style="width: 320px; height: 2600px; overflow: hidden">
+<dc-import name="core-770-shift-colours-calendar" theme="dark" variant="A" width="320" frame-id="CS4" hint-size="320px,2600px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":320,"height":2600}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -441,7 +441,15 @@ describe('workflows', () => {
   // CI / cla reads the pull request and its commits through the API.
   const claPermissions = { contents: 'read', 'pull-requests': 'read' };
 
-  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what CI / cla reads, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
+  // Risk / risk gate reads the pull request, its files and reviews; Risk / risk label labels it with
+  // its tier (ADR 0086). Only the label job holds the write token.
+  const riskGatePermissions = { contents: 'read', 'pull-requests': 'read' };
+  const riskLabelPermissions = { contents: 'read', 'pull-requests': 'write' };
+  // Risk refresh re-runs the other failed Risk runs once a review made the gate pass, and reads
+  // which pull requests the commit heads; it reads no files.
+  const riskRefreshPermissions = { actions: 'write', 'pull-requests': 'read' };
+
+  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what CI / cla reads, what Risk / risk gate reads, what Risk / risk label writes, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
@@ -451,7 +459,13 @@ describe('workflows', () => {
           ? {}
           : job.name === 'cla'
             ? claPermissions
-            : job.name === 'Scorecard analysis'
+            : job.name === 'risk gate'
+              ? riskGatePermissions
+              : job.name === 'risk label'
+                ? riskLabelPermissions
+                : job.name === 'risk refresh'
+                  ? riskRefreshPermissions
+                : job.name === 'Scorecard analysis'
               ? scorecardPermissions
               : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
       expect(job.permissions, where).toEqual(expected);
@@ -868,14 +882,97 @@ describe('workflows', () => {
     });
   });
 
-  // Without a checkout the job cannot read .node-version, so it names the same version.
-  it('ADR0039 CI / cla sets up the Node version in .node-version', () => {
-    const { job } = jobNamed('cla');
-    const setup = (job.steps ?? []).find(({ uses }) => uses?.startsWith('actions/setup-node@'));
+  // A pull request runs its own copy of a workflow, so the gate's integrity rests on the check and
+  // the path list coming from the default branch, and on .github/ being a high-risk path.
+  it('ADR0086 Risk / risk gate runs on pull requests and reviews, checks out nothing and runs the check from the default branch', () => {
+    const { workflow, job } = jobNamed('risk gate');
+    const steps = job.steps ?? [];
+    const download = steps.find(({ run }) => run?.includes('gh api'));
+    const check = steps.find(({ id }) => id === 'risk');
 
-    expect(String(setup?.with?.['node-version'])).toBe(
-      readFileSync(`${root}.node-version`, 'utf8').trim(),
+    expect(workflow.path).toBe('.github/workflows/risk.yml');
+    expect(triggersOf(workflow.on)).toEqual(['pull_request', 'pull_request_review']);
+    expect(steps.some(({ uses }) => uses?.startsWith('actions/checkout@'))).toBe(false);
+    expect(download?.env).toEqual({
+      GH_TOKEN: expression('github.token'),
+      DEFAULT_BRANCH: expression('github.event.repository.default_branch'),
+    });
+    for (const file of ['scripts/ci/risk-gate.mjs', 'scripts/ci/pull-request.mjs', 'scripts/ci/annotation.mjs']) {
+      expect(download?.run).toContain(`contents/${file}?ref=$DEFAULT_BRANCH`);
+    }
+    expect(check).toEqual({
+      name: expect.any(String),
+      id: 'risk',
+      run: 'node "$RUNNER_TEMP/risk/scripts/ci/risk-gate.mjs"',
+      env: {
+        GITHUB_TOKEN: expression('github.token'),
+        PR_NUMBER: expression('github.event.pull_request.number'),
+      },
+    });
+  });
+
+  // GitHub keeps the failed or cancelled risk gate checks of the runs from before the approval next
+  // to the passing one from the review, and the required check stays failed. Risk refresh re-runs
+  // those earlier runs, which now find the approval. A workflow_run workflow runs from the default
+  // branch, so a pull request cannot change it. Its re-runs join the Risk workflow's concurrency
+  // group, so they go one at a time and only while the commit is still the pull request's head.
+  it('ADR0086 Risk refresh re-runs the failed pull request runs of Risk at the head commit once a review run passed', () => {
+    const { workflow, job } = jobNamed('risk refresh');
+    const steps = job.steps ?? [];
+    const rerun = steps.find(({ run }) => run?.includes('rerun-failed-jobs'));
+
+    expect(workflow.path).toBe('.github/workflows/risk-refresh.yml');
+    expect(workflow.on).toEqual({ workflow_run: { workflows: ['Risk'], types: ['completed'] } });
+    expect(job.if).toBe(
+      "github.event.workflow_run.event == 'pull_request_review' && github.event.workflow_run.conclusion == 'success'",
     );
+    expect(steps.some(({ uses }) => uses?.startsWith('actions/checkout@'))).toBe(false);
+    expect(rerun?.env).toEqual({
+      GH_TOKEN: expression('github.token'),
+      HEAD_SHA: expression('github.event.workflow_run.head_sha'),
+      STARTED_BY: expression('github.event.workflow_run.id'),
+    });
+    expect(rerun?.run).toContain(
+      'actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA',
+    );
+    expect(rerun?.run).toContain(
+      'select(.conclusion == "failure" or .conclusion == "cancelled")',
+    );
+    expect(rerun?.run).toContain('[ "$id" = "$STARTED_BY" ] && continue');
+    expect(rerun?.run).toContain('gh run watch');
+    expect(rerun?.run).toContain('select(.state == "open")');
+    expect(
+      (workflow as Workflow & { concurrency?: unknown }).concurrency,
+    ).toEqual({
+      group: `risk-refresh-${expression('github.event.workflow_run.head_sha')}`,
+      'cancel-in-progress': false,
+    });
+    expect(rerun?.run).toContain('still_head ||');
+  });
+
+  // Without a checkout the job cannot read .node-version, so it names the same version.
+  it('ADR0039 ADR0086 CI / cla and Risk / risk gate set up the Node version in .node-version', () => {
+    for (const name of ['cla', 'risk gate']) {
+      const { job } = jobNamed(name);
+      const setup = (job.steps ?? []).find(({ uses }) => uses?.startsWith('actions/setup-node@'));
+
+      expect(String(setup?.with?.['node-version']), name).toBe(
+        readFileSync(`${root}.node-version`, 'utf8').trim(),
+      );
+    }
+  });
+
+  // A review run and an edited run can overlap; the later one wins, so a stale label does not stay.
+  it('ADR0086 the Risk workflow runs one at a time per pull request and labels in a job of its own after the gate', () => {
+    const { workflow, job } = jobNamed('risk label');
+
+    expect((workflow as Workflow & { concurrency?: unknown }).concurrency).toEqual({
+      group: `risk-${expression('github.event.pull_request.number')}`,
+      'cancel-in-progress': true,
+    });
+    expect(needsOf(job)).toEqual(['risk-gate']);
+    expect(job.if).toBe("always() && needs.risk-gate.outputs.tier != ''");
+    expect(job.steps?.some(({ uses }) => uses?.startsWith('actions/checkout@'))).toBe(false);
   });
 
   // A required status check matches a check by its name and the app that reports it, not by the

@@ -1,2 +1,12 @@
-# Code owner review on main makes the maintainer's approval the one that counts (ADR 0084).
-* @Krister-Johansson
+# Code owner review on main (ADR 0084) applies to these paths only: they are the patterns of
+# .github/risk-paths, one for one, and test/meta/agent-sandbox.test.ts keeps the two lists equal.
+# A pull request that touches none of them needs no approval from the maintainer (ADR 0086).
+
+/.github/ @Krister-Johansson
+/scripts/ci/ @Krister-Johansson
+/scripts/agents/ @Krister-Johansson
+/test/meta/ @Krister-Johansson
+/.claude/ @Krister-Johansson
+/CLAUDE.md @Krister-Johansson
+/AGENTS.md @Krister-Johansson
+/skills-lock.json @Krister-Johansson
