@@ -4,6 +4,7 @@ import { CircleCheck, Info } from 'lucide-react';
 import { type SubmitEvent, useEffect, useRef, useState } from 'react';
 import { z } from 'zod';
 import { ErrorSummary, type SummaryError } from '../../ui/components/error-summary/index.ts';
+import { ProductLogo } from '../../ui/components/product-logo/index.ts';
 import { SkipLink } from '../../ui/components/skip-link/index.ts';
 import { TextField } from '../../ui/components/text-field/index.ts';
 import { announce } from '../../ui/lib/announce.ts';
@@ -203,13 +204,7 @@ export function SignInScreen({
     <div className="flex min-h-svh flex-col bg-background text-foreground">
       <SkipLink targetId={mainId} />
       <header className="flex h-14 items-center gap-2 border-b border-border px-4">
-        <span
-          aria-hidden
-          className="grid size-6 place-items-center rounded-md bg-primary text-xs font-semibold text-primary-foreground"
-        >
-          N
-        </span>
-        <span className="font-semibold">NorthMES</span>
+        <ProductLogo />
       </header>
       <main
         id={mainId}

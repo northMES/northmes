@@ -215,7 +215,11 @@ export function g1Snapshot(
       workingSecondsPerDay: fixture.calendar.workingSecondsPerDay,
       deviations: fixture.calendar.deviations,
     },
-    equipmentGroups: fixture.equipmentGroups.map(({ code, name }) => ({ code, name })),
+    equipmentGroups: fixture.equipmentGroups.map(({ code, name, color }) => ({
+      code,
+      name,
+      color,
+    })),
     equipment: fixture.equipment,
     productionOrders: fixture.productionOrders.map((order) => orderOf(order, windowsOf, pages)),
     ...pagesOf(fixture, pages),

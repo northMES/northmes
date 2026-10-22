@@ -20,9 +20,10 @@ function orderIdOf(number: string): string {
 
 /**
  * The plant settings snapshot of the fixture G1 with the pages fixture beside it: G1's machines
- * with the owners the pages fixture names and the assembly bench it adds, both equipment groups,
- * the routings, every placed job order of G1 as the committed plan, and the A1 calendar with the
- * deviations the plant admin added. The deviations stay out of the Gantt's calendar on purpose:
+ * with the owners the pages fixture names and the assembly bench and lathes it adds, both
+ * equipment groups, the routings, every placed job order of G1 as the committed plan, the A1
+ * calendar with the deviations the plant admin added, and the three-shift calendar B3 of the
+ * lathes. The deviations and B3 stay out of the Gantt's calendar on purpose:
  * a holiday on Mon 9 Nov would move 1006.10 and break G1's expected values (F0 assumption 9).
  */
 export function g1PlantSettingsSnapshot(
@@ -34,19 +35,33 @@ export function g1PlantSettingsSnapshot(
       order.operations.map((operation) => [operation.displayNumber, operation.name] as const),
     ),
   );
+  const equipment = [
+    ...fixture.equipment.map((machine) => ({
+      ...machine,
+      owner: pages.equipmentOwners[machine.code] ?? 'erp',
+    })),
+    ...pages.equipment,
+  ];
+  const machinesOn = (calendar: string) =>
+    equipment.filter((machine) => machine.calendar === calendar).map((machine) => machine.code);
+  const deviationsOf = (deviations: GanttPagesFixture['calendar']['deviations']) =>
+    deviations.map((deviation, index) => ({
+      id: `dev-${index + 1}`,
+      kind: deviation.kind,
+      startsLocal: deviation.startsLocal,
+      endsLocal: deviation.endsLocal,
+      ...(deviation.reason !== undefined && { reason: deviation.reason }),
+      ...(deviation.equipment !== undefined && { equipment: deviation.equipment }),
+      addedBy: deviation.addedBy,
+      addedAtMs: ms(deviation.addedAt.instant),
+    }));
   return {
     fixture: fixture.id,
     plant: fixture.plant,
     nowMs: ms(fixture.now.instant),
     erp: { name: pages.erp.connectionName, importedAtMs: ms(pages.erp.importedAt.instant) },
     equipmentGroups: [...fixture.equipmentGroups, ...pages.equipmentGroups],
-    equipment: [
-      ...fixture.equipment.map((machine) => ({
-        ...machine,
-        owner: pages.equipmentOwners[machine.code] ?? 'erp',
-      })),
-      ...pages.equipment,
-    ],
+    equipment,
     routings: pages.routings,
     jobOrders: fixture.productionOrders.flatMap((order) =>
       order.jobOrders.map((row) => ({
@@ -66,27 +81,30 @@ export function g1PlantSettingsSnapshot(
     calendars: [
       {
         name: fixture.calendar.name,
+        plantDefault: true,
         effectiveFrom: pages.calendar.effectiveFrom,
         cycleWeeks: pages.calendar.cycleWeeks,
-        shiftName: pages.calendar.shiftName,
-        weekdays: fixture.calendar.weekdays,
-        shift: fixture.calendar.shift,
-        breaks: fixture.calendar.breaks,
-        workingSecondsPerDay: fixture.calendar.workingSecondsPerDay,
-        machines: fixture.equipment
-          .filter((machine) => machine.calendar === fixture.calendar.name)
-          .map((machine) => machine.code),
-        deviations: pages.calendar.deviations.map((deviation, index) => ({
-          id: `dev-${index + 1}`,
-          kind: deviation.kind,
-          startsLocal: deviation.startsLocal,
-          endsLocal: deviation.endsLocal,
-          ...(deviation.reason !== undefined && { reason: deviation.reason }),
-          ...(deviation.equipment !== undefined && { equipment: deviation.equipment }),
-          addedBy: deviation.addedBy,
-          addedAtMs: ms(deviation.addedAt.instant),
-        })),
+        shifts: [
+          {
+            name: pages.calendar.shiftName,
+            weekdays: fixture.calendar.weekdays,
+            ...fixture.calendar.shift,
+            breaks: fixture.calendar.breaks,
+            workingSeconds: fixture.calendar.workingSecondsPerDay,
+          },
+        ],
+        machines: machinesOn(fixture.calendar.name),
+        deviations: deviationsOf(pages.calendar.deviations),
       },
+      ...pages.calendars.map((calendar) => ({
+        name: calendar.name,
+        plantDefault: false,
+        effectiveFrom: calendar.effectiveFrom,
+        cycleWeeks: calendar.cycleWeeks,
+        shifts: calendar.shifts,
+        machines: machinesOn(calendar.name),
+        deviations: deviationsOf(calendar.deviations),
+      })),
     ],
   };
 }

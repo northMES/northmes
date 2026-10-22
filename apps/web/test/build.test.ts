@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { build, defaultClientConditions, mergeConfig } from 'vite';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import config from '../vite.config.ts';
+import { svgOf } from './svg-of.ts';
 
 interface ManifestChunk {
   readonly file: string;
@@ -36,6 +37,15 @@ async function buildWeb() {
     }),
   );
   return outDir;
+}
+
+/**
+ * The text of an SVG that the built index.html points at: a hashed file under /assets/, the one
+ * folder of the build the server serves as files, or an SVG that Vite inlined as a data URL.
+ */
+function builtFileText(outDir: string, url: string): string {
+  if (!url.startsWith('data:')) expect(url).toMatch(/^\/assets\/[\w-]+\.svg$/);
+  return svgOf(url, outDir);
 }
 
 describe('the web build', () => {
@@ -127,5 +137,27 @@ describe('the web build', () => {
     expect(css).toContain('.sr-only');
     expect(css).toContain('.animate-spin');
     expect(css).toMatch(/body\{background-color:var\(--background\);color:var\(--foreground\)\}/);
+  });
+
+  it('E04-S02 the built index.html names the dark NorthMES icon as the favicon and shows the logo on the boot page, from files the server serves (BO1)', async () => {
+    const outDir = await buildWeb();
+    const html = readFileSync(join(outDir, 'index.html'), 'utf8');
+    const head = html.slice(0, html.search(/<\/head\s*>/i));
+    const icons = [...head.matchAll(/<link\b[^>]*\brel="icon"[^>]*>/gi)].map(([tag]) => tag);
+    expect(icons).toHaveLength(1);
+    const icon = icons[0] as string;
+    expect(icon).toMatch(/\stype="image\/svg\+xml"/);
+    // The dark tile, the one icon that reads on light and dark browser tabs alike.
+    const iconSvg = builtFileText(outDir, /\shref="([^"]*)"/.exec(icon)?.[1] ?? '');
+    expect(iconSvg).toMatch(/fill=["']#1f2022["']/);
+    expect(iconSvg).not.toMatch(/<script/i);
+
+    const header = /<header\b[\s\S]*?<\/header>/i.exec(html)?.[0] ?? '';
+    const sources = [...header.matchAll(/<img\b[^>]*\ssrc="([^"]*)"/gi)].map(([, src]) => src);
+    expect(sources).toHaveLength(2);
+    const [light, dark] = sources.map((src) => builtFileText(outDir, src as string));
+    // The name in dark text on the light theme, in light text on the dark one.
+    expect(light).toMatch(/fill=["']#1f2022["']/);
+    expect(dark).toMatch(/fill=["']#ececec["']/);
   });
 });

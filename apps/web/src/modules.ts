@@ -151,6 +151,8 @@ export const shellModules: readonly ShellModule[] = [
       // The order lists follow the timeline pages (design #687, F0 assumption 1).
       { label: 'Production orders', icon: 'ClipboardList', link: planningLinks.orders },
       { label: 'Customer orders', icon: 'Handshake', link: planningLinks.customerOrders },
+      // The walking-skeleton list with Release until the board's backend stories wire the board.
+      { label: 'Release orders', icon: 'ListChecks', link: planningLinks.release },
     ],
   },
 ];
