@@ -303,6 +303,16 @@ export function BoardScreen() {
       title: 'You cannot see the planning board at this plant',
       description:
         'The board needs the permission planning.jobOrder:read, and your role at this plant does not include it. Ask your plant admin for the Planner or Viewer role.',
+      // D3 draws no action on DR22, and the toolbar stays hidden. The job table and the order
+      // Gantt need the same permission, so the way out is the plant dashboard, which needs none.
+      action: (
+        <Link
+          to={coreLinks.dashboard({ plant }).href}
+          className={buttonVariants({ variant: 'outline' })}
+        >
+          Open the dashboard
+        </Link>
+      ),
     };
   } else if (loadError !== undefined) {
     // A failed load shows the error, also when the range before is still in memory: its rows
