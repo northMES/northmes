@@ -674,7 +674,7 @@ All workflows set `permissions: contents: read` at the top and raise permissions
 | `pr.yml` `pr gate` | pull request, also when edited | Needs every other job in `pr.yml`, and fails when one of them failed, was cancelled or was skipped |
 | `ci.yml` `cla` | pull request | The contributor license agreement check, before the first outside pull request |
 | `ci.yml` `plugin-outside` | pull request, push to `main` | Packs the MIT packages, installs an example plugin from the tarballs outside the repository, builds it, drops it into a plugins directory, boots and runs its e2e spec |
-| `ci.yml` `gate` | pull request, push to `main` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request |
+| `ci.yml` `gate` | pull request, push to `main` | Needs every other job in `ci.yml`, and fails when one of them failed, was cancelled or was skipped |
 | `supply-chain.yml` `license gate` | pull request, push to `main` | `pnpm sbom` per package and `scripts/license-gate.mjs` with the policy of [ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md) |
 | `supply-chain.yml` `dependency audit` | pull request | `pnpm audit --prod --audit-level high`, with assessed exceptions recorded |
 | `supply-chain.yml` `dependency review` | pull request | `actions/dependency-review-action`, once the dependency graph reads the lockfile |

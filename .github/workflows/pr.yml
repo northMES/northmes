@@ -1,10 +1,10 @@
 # The pull request checks, which read the pull request's title, body, author, branch or base
 # instead of its code alone. GitHub shows each job as PR / <job name>. They run in a workflow of their
 # own, so an edit to the title or body re-runs them and not the tests, the build and the end-to-end
-# specs of ci.yml. The main ruleset requires each job here as a status check by its job name, as
-# docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md decides, so a renamed, added or
-# removed job needs a ruleset edit: an added name after the merge, a removed or old name just
-# before it. test/meta/workflows.test.ts lists the job names. The scripts take the event values
+# specs of ci.yml. The main ruleset requires each job here except openapi diff as a status check
+# by its job name, as docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md decides, and
+# openapi diff fails a pull request through PR / pr gate. A renamed, added or removed job needs a
+# ruleset edit: an added name after the merge, a removed or old name just before it. test/meta/workflows.test.ts lists the job names. The scripts take the event values
 # from environment variables: interpolated into a run script, a title or body could inject shell
 # code.
 name: PR

@@ -237,8 +237,8 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
 
   # GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
-  # so CI / gate always runs and fails itself instead. On a pull request every job it needs runs,
-  # so a skipped one fails it too.
+  # so CI / gate always runs and fails itself instead. Every job it needs runs on a pull request and
+  # on a push to main, so a skipped one fails it too.
   gate:
     name: gate
     # The gate reads only the results of the jobs it needs, so its token gets no permissions.
@@ -250,5 +250,5 @@ jobs:
       - name: Fail when a job that CI / gate needs did not pass
         if: >-
           contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
-          || (github.event_name == 'pull_request' && contains(needs.*.result, 'skipped'))
+          || contains(needs.*.result, 'skipped')
         run: exit 1

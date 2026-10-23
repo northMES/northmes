@@ -455,7 +455,7 @@ flowchart LR
 
 ### Required checks
 
-The ruleset on `main` requires these checks by name, strict (the branch must be up to date). The checks from `lint` to `a11y` are jobs of `ci.yml`, which GitHub shows as `CI / <job name>`, for example `CI / lint`, except the pull request checks `pr title`, `linked issue`, `pr tests` and `pr gate`, which are jobs of `pr.yml`, shown as `PR / <job name>` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)):
+The ruleset on `main` requires these checks by name, strict (the branch must be up to date). The checks from `lint` to `a11y` are jobs of `ci.yml`, which GitHub shows as `CI / <job name>`, for example `CI / lint`, except the pull request checks `pr title`, `linked issue`, `pr security`, `pr tests` and `pr gate`, which are jobs of `pr.yml`, shown as `PR / <job name>` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)):
 
 | Check | Runs |
 |---|---|
@@ -468,7 +468,7 @@ The ruleset on `main` requires these checks by name, strict (the branch must be 
 | `linked issue` | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
 | `pr tests` | A `feat`, `fix` or `security` pull request that changes source changes a test, and a pull request that deletes a test says why under `## Removed tests` (`scripts/ci/pr-tests.mjs`) |
 | `pr gate` | Needs every other job in `pr.yml` (`pr title`, `linked issue`, `pr security`, `pr tests` and `openapi diff`), and fails when one of them failed, was cancelled or was skipped |
-| `gate` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `docs` (once `apps/docs` exists) and `cla` (before the first outside pull request). |
+| `gate` | Needs every other job in `ci.yml`, and fails when one of them failed, was cancelled or was skipped. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `docs` (once `apps/docs` exists) and `cla` (before the first outside pull request). |
 | `a11y` | The axe specs over the board states, from the first board pull request |
 | `license gate` | `pnpm sbom` and the license script ([12-operations-and-security.md](12-operations-and-security.md#license-gate)) |
 | `dependency audit` | `pnpm audit --prod --audit-level high` |
@@ -476,7 +476,7 @@ The ruleset on `main` requires these checks by name, strict (the branch must be 
 
 Each job in `ci.yml` is a required check of its own, so the merge box shows each kind of check as required ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)). A job that joins, leaves or changes its name in `ci.yml` needs a ruleset edit: an added name after the merge, a removed or old name just before it ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)), and `test/meta/workflows.test.ts` lists the job names. A required check matches by its name and the app alone, so no two workflows share a job name, which `test/meta/workflows.test.ts` checks. Required workflows have no `paths` filters, because a workflow skipped by a path filter leaves its required check waiting forever; a job that should run only for some paths decides in its first step.
 
-`openapi diff` is a job of `pr.yml` that `PR / pr gate` needs, because it reads the title, which came with core's public article routes ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [ADR 0073](../adr/0073-one-module-contract-for-rest-webmcp-and-later-mcp-with-oauth-clients-and-tokens.md)):
+`openapi diff` came with core's public article routes ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [ADR 0073](../adr/0073-one-module-contract-for-rest-webmcp-and-later-mcp-with-oauth-clients-and-tokens.md)). It reads the title, so it is a job of `pr.yml` that `PR / pr gate` needs:
 
 - It runs `oasdiff breaking` on the base branch's `schema/openapi-v1.json` and the pull request's, so each pull request sees only its own changes, and passes when the base branch has no document.
 - oasdiff runs from the `tufin/oasdiff` image pinned by digest in the job's `OASDIFF_IMAGE`, with `--network none` and the workspace mounted read-only, and Renovate updates its tag and digest together ([ADR 0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md)). The official action is not used, because it uploads the documents for a review page and sends telemetry by default.
