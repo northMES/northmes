@@ -783,6 +783,20 @@ describe('workflows', () => {
     );
   });
 
+  // A newer commit or edit on a pull request cancels the pull request's older CI run, and the newer
+  // run reports every required check on the head commit (ADR 0069). Each push to main runs in a
+  // group of its own that nothing cancels, so every commit on main keeps a full run.
+  it('ADR0069 CI cancels the older run of a pull request and never a run on a push to main', () => {
+    const { workflow } = jobNamed('gate');
+
+    expect((workflow as Workflow & { concurrency?: unknown }).concurrency).toEqual({
+      group: `${expression('github.workflow')}-${expression(
+        "github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id",
+      )}`,
+      'cancel-in-progress': expression("github.event_name == 'pull_request'"),
+    });
+  });
+
   // GitHub counts a skipped required check as passed, so CI / gate needs every job to fail a pull
   // request on which one of them did not run.
   it('CI / gate needs every other job in its workflow except CI / cla, which joins it before the first outside pull request', () => {
