@@ -64,7 +64,7 @@ const pullRequestChecks = ['pr title', 'linked issue', 'pr security', 'pr tests'
 const reportSteps = ['node scripts/ci/coverage-summary.mjs'];
 
 // The steps that prepare a job: installing the dependencies, which every pnpm script needs, and
-// adding the worktree that CI / fresh worktree installs and tests in. They check nothing, so no
+// adding the worktree that CI / test installs and tests in. They check nothing, so no
 // root script runs them. The worktree step names one directory, optionally quoted, made of path
 // characters and variables only, so no other command can run in it.
 function isSetupStep(run: string): boolean {
@@ -147,7 +147,6 @@ const ciJobs = [
   'build',
   'test',
   'react doctor',
-  'fresh worktree',
   'e2e',
   'pr title',
   'linked issue',
@@ -745,7 +744,7 @@ describe('workflows', () => {
 
   // GitHub skips a job when a job it needs failed, and a skipped required check counts as passed.
   // On a pull request every job that CI / gate needs runs, so a skipped one means lint, build or
-  // tests did not run. A push to main skips the pull request checks and CI / fresh worktree.
+  // tests did not run. A push to main skips the pull request checks.
   it('CI / gate runs after a failed, cancelled or skipped job and then fails', () => {
     const { job: gate } = jobNamed('gate');
 
@@ -813,7 +812,7 @@ describe('workflows', () => {
 
   // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
   // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
-  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue, pr security, pr tests, openapi diff, gate and cla', () => {
+  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, e2e, pr title, linked issue, pr security, pr tests, openapi diff, gate and cla', () => {
     const ci = workflows().find(({ name }) => name === 'CI');
 
     expect(ci, 'a workflow named CI').toBeDefined();
@@ -1209,20 +1208,18 @@ describe('workflows', () => {
     ]);
   });
 
-  // A handoff run starts in a fresh git worktree and runs tests right after one install, so the job
-  // adds a worktree, installs in it and runs the integration project there, with no build step.
-  // Tests that boot the built server build it through bootBuilt
+  // A handoff run starts in a fresh git worktree and runs tests right after one install, with no
+  // build step, so CI / test adds a worktree beside the checkout, installs in it and runs its tests
+  // and its coverage summary there. Tests that boot the built server build it through bootBuilt
   // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
-  // The job runs on pull requests only; on main, CI / test runs the same integration tests.
-  it('E02-S08 the fresh-worktree job runs git worktree add, pnpm install --frozen-lockfile and pnpm test:int and no build', () => {
-    const { id, job } = jobNamed('fresh worktree');
+  it('E02-S08 CI / test adds a git worktree beside the checkout, installs in it and runs its tests there, with no build', () => {
+    const { job } = jobNamed('test');
     const steps = job.steps ?? [];
     const runs = steps.flatMap(({ run }) => (run === undefined ? [] : [run.trim()]));
     const worktree = /^git worktree add --detach (\S+)$/.exec(runs[0] ?? '')?.[1];
+    const upload = steps.find(({ uses }) => uses?.startsWith('actions/upload-artifact@'));
 
-    expect(id).toBe('fresh-worktree');
-    expect(job.if).toBe("github.event_name == 'pull_request'");
-    expect(worktree, 'the directory that git worktree add creates').toBeDefined();
+    expect(worktree, 'the directory that git worktree add creates').toMatch(/^\.\.\/[\w-]+$/);
     expect(
       steps.map(({ uses, run, 'working-directory': directory }) => ({
         step: uses?.replace(/@.*$/, '') ?? run?.trim(),
@@ -1234,7 +1231,15 @@ describe('workflows', () => {
       { step: 'actions/setup-node', directory: undefined },
       { step: `git worktree add --detach ${worktree}`, directory: undefined },
       { step: 'pnpm install --frozen-lockfile', directory: worktree },
-      { step: 'pnpm test:int', directory: worktree },
+      { step: 'pnpm test:coverage', directory: worktree },
+      { step: 'node scripts/ci/coverage-summary.mjs', directory: worktree },
+      { step: 'actions/upload-artifact', directory: undefined },
+      { step: 'pnpm test:tz', directory: worktree },
+    ]);
+    // An action's path input is relative to the checkout, not to a step's working directory.
+    expect(String(upload?.with?.path).trim().split('\n')).toEqual([
+      `${worktree}/coverage/lcov.info`,
+      `${worktree}/coverage/lcov-report/`,
     ]);
     expect(runs.flatMap(commandsOf).filter((command) => /\b(?:build|tsc)\b/.test(command))).toEqual(
       [],
