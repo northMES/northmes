@@ -33,13 +33,16 @@ In `~/.claude/settings.json`, which applies to every project, set auto mode, lis
     "network": {
       "strictAllowlist": true,
       "allowedDomains": [
-        "github.com",
-        "*.github.com",
-        "*.githubusercontent.com",
         "registry.npmjs.org",
-        "*.npmjs.org",
-        "*.playwright.dev",
-        "*.microsoft.com"
+        "github.com",
+        "api.github.com",
+        "codeload.github.com",
+        "objects.githubusercontent.com",
+        "raw.githubusercontent.com",
+        "release-assets.githubusercontent.com",
+        "results-receiver.actions.githubusercontent.com",
+        "cdn.playwright.dev",
+        "playwright.download.prss.microsoft.com"
       ]
     },
     "filesystem": {
