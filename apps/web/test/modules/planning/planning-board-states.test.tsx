@@ -88,6 +88,18 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
     expect(screen.queryByRole('toolbar', { name: 'Board' })).toBeNull();
   });
 
+  it('DR22 leads to the plant dashboard, which needs no planning permission', async () => {
+    renderGanttRoute({ preview: 'forbidden' }, undefined, 'board');
+
+    await screen.findByRole('heading', {
+      level: 2,
+      name: 'You cannot see the planning board at this plant',
+    });
+    expect(screen.getByRole('link', { name: 'Open the dashboard' }).getAttribute('href')).toBe(
+      coreLinks.dashboard({ plant }).href,
+    );
+  });
+
   it('DR20 offers the job order table as a way out, for the same range', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02', preview: 'error' }, undefined, 'board');
 
