@@ -866,7 +866,7 @@ describe('workflows', () => {
 
   // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
   // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
-  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, e2e, pr title, linked issue, pr security, pr tests, openapi diff, gate and cla', () => {
+  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, e2e, gate and cla', () => {
     const ci = workflows().find(({ name }) => name === 'CI');
 
     expect(ci, 'a workflow named CI').toBeDefined();
