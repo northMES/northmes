@@ -13,6 +13,8 @@ import {
   timeHeaderHeightRem,
 } from '../gantt/gantt-time-area.tsx';
 import { BoardBlock } from './board-block.tsx';
+import type { BoardCellItem } from './board-cells.ts';
+import { BoardCluster } from './board-cluster.tsx';
 import type { BoardModel } from './board-rows.ts';
 
 /** The row heights of D3 in rem: 46 px for Not placed, 36 px for a group band, 52 px for a machine. */
@@ -31,6 +33,8 @@ export interface BoardGridProps {
   readonly name: string;
   readonly snapshot: GanttSnapshot;
   readonly model: BoardModel;
+  /** The cells of each machine row at the scale, blocks and clusters in time order, by machine. */
+  readonly cellsOf: (machine: string) => readonly BoardCellItem[];
   readonly scale: TimeScale;
   readonly machineWidth: number;
   readonly timeWidth: number;
@@ -38,6 +42,9 @@ export interface BoardGridProps {
   readonly onToggleGroup: (code: string) => void;
   /** The target that holds the grid's one Tab stop. */
   readonly tabStop: string | undefined;
+  /** The selected order, by id, whose job orders carry aria-selected. */
+  readonly selectedOrderId: string | undefined;
+  readonly onSelectOrder: (orderId: string) => void;
   readonly onFocusTarget: (key: string) => void;
   readonly onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   readonly gridRef: (node: HTMLDivElement | null) => void;
@@ -91,19 +98,21 @@ export function BoardGrid({
   name,
   snapshot,
   model,
+  cellsOf,
   scale,
   machineWidth,
   timeWidth,
   collapsed,
   onToggleGroup,
   tabStop,
+  selectedOrderId,
+  onSelectOrder,
   onFocusTarget,
   onKeyDown,
   gridRef,
   height,
   busy,
 }: BoardGridProps) {
-  const timeZone = snapshot.plant.timeZone;
   const columns = `${machineWidth}px ${timeWidth}px`;
   const machineCount = model.groups.reduce((sum, group) => sum + group.machines.length, 0);
   const tab = (key: string) => (key === tabStop ? 0 : -1);
@@ -162,6 +171,7 @@ export function BoardGrid({
       rowIndex += 1;
       bodyRem += boardRowRem.machine;
       const code = machine.equipment.code;
+      const cells = cellsOf(code);
       bodyRows.push(
         <Row key={code} index={rowIndex} heightRem={boardRowRem.machine} columns={columns}>
           <div
@@ -180,7 +190,7 @@ export function BoardGrid({
           </div>
           <div className="relative bg-lane">
             <TimeCellShading windows={machine.closed} scale={scale} />
-            {machine.blocks.length === 0 ? (
+            {cells.length === 0 ? (
               <div
                 role="gridcell"
                 tabIndex={tab(focusKeys.empty(code))}
@@ -193,17 +203,37 @@ export function BoardGrid({
                 No jobs in this range
               </div>
             ) : (
-              machine.blocks.map((row) => (
-                <BoardBlock
-                  key={row.id}
-                  row={row}
-                  scale={scale}
-                  machine={machine.equipment.name}
-                  timeZone={timeZone}
-                  focusable={tabStop === focusKeys.block(row.jobOrder.id)}
-                  onFocus={() => onFocusTarget(focusKeys.block(row.jobOrder.id))}
-                />
-              ))
+              cells.map((cell) =>
+                cell.kind === 'cluster' ? (
+                  <BoardCluster
+                    key={cell.key}
+                    rows={cell.rows}
+                    snapshot={snapshot}
+                    machine={machine.equipment.name}
+                    span={cell}
+                    left={cell.left}
+                    width={cell.width}
+                    focusKey={cell.key}
+                    focusable={tabStop === cell.key}
+                    selectedOrderId={selectedOrderId}
+                    onFocus={() => onFocusTarget(cell.key)}
+                    onSelectOrder={onSelectOrder}
+                  />
+                ) : (
+                  <BoardBlock
+                    key={cell.row.id}
+                    row={cell.row}
+                    left={cell.left}
+                    width={cell.width}
+                    snapshot={snapshot}
+                    machine={machine.equipment.name}
+                    focusable={tabStop === focusKeys.block(cell.row.jobOrder.id)}
+                    selected={cell.row.order.id === selectedOrderId}
+                    onFocus={() => onFocusTarget(focusKeys.block(cell.row.jobOrder.id))}
+                    onSelect={() => onSelectOrder(cell.row.order.id)}
+                  />
+                ),
+              )
             )}
           </div>
         </Row>,
@@ -216,6 +246,7 @@ export function BoardGrid({
       ref={gridRef}
       role="grid"
       aria-label={name}
+      aria-multiselectable="true"
       aria-rowcount={rowIndex}
       aria-busy={busy || undefined}
       onKeyDown={onKeyDown}
@@ -285,9 +316,23 @@ export function BoardGrid({
                 tabIndex={tab(focusKeys.block(row.jobOrder.id))}
                 data-board-focus={focusKeys.block(row.jobOrder.id)}
                 data-job-order={row.jobOrder.displayNumber}
+                aria-selected={row.order.id === selectedOrderId}
                 onFocus={() => onFocusTarget(focusKeys.block(row.jobOrder.id))}
-                className="flex h-7 items-center gap-1.5 rounded-sm border border-foreground bg-card px-2 text-xs"
+                onClick={() => onSelectOrder(row.order.id)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return;
+                  event.preventDefault();
+                  onSelectOrder(row.order.id);
+                }}
+                className="relative flex h-7 items-center gap-1.5 overflow-hidden rounded-sm border border-foreground bg-card px-2 text-xs"
               >
+                {row.order.id === selectedOrderId && (
+                  <span
+                    aria-hidden
+                    data-selection-bar
+                    className="pointer-events-none absolute inset-x-0 top-0 h-0.75 bg-foreground"
+                  />
+                )}
                 <span className="font-mono font-bold">{row.jobOrder.displayNumber}</span>
                 {row.order.article}
                 <span className="sr-only">, {quantityText(row.jobOrder.quantity)}, not placed</span>
