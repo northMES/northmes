@@ -34,6 +34,7 @@ interface Workflow {
   name?: string;
   on?: unknown;
   permissions?: Permissions;
+  concurrency?: unknown;
   jobs: Record<string, Job>;
 }
 
@@ -783,6 +784,20 @@ describe('workflows', () => {
     );
   });
 
+  // A newer commit or edit on a pull request cancels the pull request's older CI run, and the newer
+  // run reports every required check on the head commit. Each push to main runs in a group of its
+  // own that nothing cancels, so every commit on main keeps a full run.
+  it('CI cancels the older run of a pull request and never a run on a push to main', () => {
+    const { workflow } = jobNamed('gate');
+
+    expect(workflow.concurrency).toEqual({
+      group: `${expression('github.workflow')}-${expression(
+        "github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id",
+      )}`,
+      'cancel-in-progress': expression("github.event_name == 'pull_request'"),
+    });
+  });
+
   // GitHub counts a skipped required check as passed, so CI / gate needs every job to fail a pull
   // request on which one of them did not run.
   it('CI / gate needs every other job in its workflow except CI / cla, which joins it before the first outside pull request', () => {
@@ -941,9 +956,7 @@ describe('workflows', () => {
     expect(rerun?.run).toContain('[ "$id" = "$STARTED_BY" ] && continue');
     expect(rerun?.run).toContain('gh run watch');
     expect(rerun?.run).toContain('select(.state == "open")');
-    expect(
-      (workflow as Workflow & { concurrency?: unknown }).concurrency,
-    ).toEqual({
+    expect(workflow.concurrency).toEqual({
       group: `risk-refresh-${expression('github.event.workflow_run.head_sha')}`,
       'cancel-in-progress': false,
     });
@@ -966,7 +979,7 @@ describe('workflows', () => {
   it('ADR0086 the Risk workflow runs one at a time per pull request and labels in a job of its own after the gate', () => {
     const { workflow, job } = jobNamed('risk label');
 
-    expect((workflow as Workflow & { concurrency?: unknown }).concurrency).toEqual({
+    expect(workflow.concurrency).toEqual({
       group: `risk-${expression('github.event.pull_request.number')}`,
       'cancel-in-progress': true,
     });
