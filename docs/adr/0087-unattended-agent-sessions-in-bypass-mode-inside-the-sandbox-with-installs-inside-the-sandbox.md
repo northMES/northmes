@@ -5,7 +5,7 @@ decision-makers: Krister Johansson
 consulted: Claude Code documentation (permission modes, settings reference, hooks, CLAUDE_ENV_FILE); pnpm's install inputs and its store, virtual store and lock folders; two code reviews of an install hook outside the sandbox; probes of a sandboxed install in a new worktree on the maintainer's machine (2026-10-21 to 2026-10-23, pnpm 12.11.2)
 informed: contributors and coding agents
 release: "1"
-needs-confirmation: "maintainer (bypass mode instead of auto mode for unattended sessions, as accepted risk A-09; the environment hook in the maintainer's user settings, which points pnpm's store and virtual store outside the worktree; one shared store for all sessions, as accepted risk A-08)"
+needs-confirmation: "maintainer (bypass mode instead of auto mode for unattended sessions, as accepted risk A-09; the environment hook in the maintainer's user settings, which points pnpm's store and virtual store outside the worktree; one shared store for all sessions, as accepted risk A-10)"
 ---
 
 # Unattended agent sessions in bypass mode inside the sandbox, with installs inside the sandbox
@@ -49,13 +49,14 @@ ADR 0084 is proposed and points here. This ADR replaces these parts, and the res
 | Line | Replaced by |
 |---|---|
 | Rule 1: `.claude/settings.json` sets `disableBypassPermissionsMode: "disable"` | Bypass mode is allowed; the sandbox and the deny rules are the boundary in every mode |
+| Rule 3: no write path is added outside the working directory and the per-user temp directory | The maintainer's user settings add write grants for pnpm: `/tmp/pnpm-*` and `/private/tmp/pnpm-*` (with one level below each) for its lock folders, and `/private/tmp/claude-501` for the shared store, the virtual stores and the `gh` cache. No grant reaches a folder that holds code the maintainer runs outside the sandbox |
 | Rule 8: the maintainer runs `pnpm install` for a worktree | The session runs it inside the sandbox, with the store and virtual store outside the worktree |
 
 ### Consequences
 
 * Good, because an unattended session no longer stops on a prompt, and every worktree, a branch that changes a dependency included, gets its install without the maintainer.
 * Good, because no install runs outside the sandbox, so a branch's lockfile, workspace settings or lifecycle scripts never run with the maintainer's rights.
-* Bad, because every session shares one writable store and virtual store root in `/private/tmp/claude-501`, so one session can change packages that another session, or the maintainer running a worktree's scripts from a terminal, will run, and sessions can create or replace the `/tmp/pnpm-*` lock folders the maintainer's own pnpm uses (accepted risk A-08).
+* Bad, because every session shares one writable store and virtual store root in `/private/tmp/claude-501`, so one session can change packages that another session, or the maintainer running a worktree's scripts from a terminal, will run, and sessions can create or replace the `/tmp/pnpm-*` lock folders the maintainer's own pnpm uses (accepted risk A-10).
 * Bad, because in bypass mode Claude's Read, Edit, Write and WebFetch tools, MCP servers and hooks are checked only by the deny rules, without the classifier (accepted risk A-09).
 * Bad, because the hook and the write grants live in the maintainer's user settings, outside the repository, so they are checked by hand like the rest of ADR 0084's setup.
 

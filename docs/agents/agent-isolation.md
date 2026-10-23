@@ -21,7 +21,7 @@ A sandboxed command can read the macOS keychain, so no GitHub credential stays t
 
 ## 4. Claude Code settings
 
-In `~/.claude/settings.json`, which applies to every project, set auto mode, list the hosts sandboxed commands may reach, open the folders they need, deny the commands that would swap or print a GitHub token, and add the `SessionStart` hook of section 6. Every command still reaches only the listed hosts: a host outside the list is refused, whatever the command names. The write grants are for pnpm: its lock folders in `/tmp` (a `*` in a sandbox path stays within one folder, so each pattern comes twice), and `/private/tmp/claude-501` for the store, the virtual stores and the `gh` cache (use your own uid). Use the paths of your own Node and pnpm installs. Remove `skipDangerousModePermissionPrompt` if it is there.
+In `~/.claude/settings.json`, which applies to every project, set auto mode, list the hosts sandboxed commands may reach, open the folders they need, deny the commands that would swap or print a GitHub token, and add the `SessionStart` hook of section 6. Lock the list with `strictAllowlist`: without it, auto mode lets a command name hosts of its own, and bypass mode allows every host. With it, Claude Code refuses every host outside the list and ignores the repository's `allowedDomains`, so the list here covers the repository's hosts too. The lock and the list apply to every project that uses this configuration folder. The write grants are for pnpm: its lock folders in `/tmp` (a `*` in a sandbox path stays within one folder, so each pattern comes twice), and `/private/tmp/claude-501` for the store, the virtual stores and the `gh` cache (use your own uid). Use the paths of your own Node and pnpm installs. Remove `skipDangerousModePermissionPrompt` if it is there.
 
 ```json
 {
@@ -31,6 +31,7 @@ In `~/.claude/settings.json`, which applies to every project, set auto mode, lis
   },
   "sandbox": {
     "network": {
+      "strictAllowlist": true,
       "allowedDomains": [
         "github.com",
         "*.github.com",
@@ -136,4 +137,4 @@ Start a session in a worktree and ask it to run these commands and report each o
 - `docker run --rm -v "$HOME:/h:ro" alpine ls /h`, from your own terminal, fails with a file sharing error, because Docker Desktop does not share the folder.
 - `pnpm exec vitest run --project integration apps/backend/test/migrate.int.test.ts` passes.
 - In a new worktree, `echo "$pnpm_config_virtual_store_dir"` names its folder under `/private/tmp/claude-501/pnpm-vstore`, `pnpm install --frozen-lockfile` finishes, `readlink node_modules/typescript` points into that folder, and `pnpm check` passes.
-- `gh run view <id> --log-failed` prints a failed run's log, and `ls ~/.cache/gh` is refused.
+- `gh run view <id> --log-failed` prints a failed run's log, and `ls ~/.cache/gh` is refused, because the project blocks reads outside the working directory (ADR 0084 rule 2).
