@@ -21,7 +21,7 @@ A sandboxed command can read the macOS keychain, so no GitHub credential stays t
 
 ## 4. Claude Code settings
 
-In `~/.claude/settings.json`, which applies to every project, set auto mode, list the hosts sandboxed commands may reach, open the folders they need, deny the commands that would swap or print a GitHub token, and add the `SessionStart` hook of section 6. Lock the list with `strictAllowlist`: without it, auto mode lets a command name hosts of its own, and bypass mode allows every host. With it, Claude Code refuses every host outside the list and ignores the repository's `allowedDomains`, so the list here covers the repository's hosts too. The lock and the list apply to every project that uses this configuration folder. The write grants are for pnpm: its lock folders in `/tmp` (a `*` in a sandbox path stays within one folder, so each pattern comes twice), and `/private/tmp/claude-501` for the store, the virtual stores and the `gh` cache (use your own uid). Use the paths of your own Node and pnpm installs. Remove `skipDangerousModePermissionPrompt` if it is there.
+In `~/.claude/settings.json`, which applies to every project, set auto mode, list the hosts sandboxed commands may reach, open the folders they need, deny the commands that would swap or print a GitHub token, and add the `SessionStart` hook of section 6. Lock the list with `strictAllowlist`: without it, auto mode lets a command name hosts of its own, and bypass mode allows every host. With it, Claude Code refuses every host outside the list and ignores the repository's `allowedDomains`, so the list here covers the repository's hosts too. The lock and the list apply to every project that uses this configuration folder. The write grants are for pnpm: its lock folders in `/tmp` (a `*` in a sandbox path stays within one folder, so each pattern comes twice), and `/private/tmp/claude-501` for the store, the virtual stores and the `gh` cache (use your own uid). Do not grant writes to `~/Library/Caches/ms-playwright`: your own Playwright runs those browsers outside the sandbox, so sessions only read them. Use the paths of your own Node and pnpm installs. Remove `skipDangerousModePermissionPrompt` if it is there.
 
 ```json
 {
@@ -51,8 +51,7 @@ In `~/.claude/settings.json`, which applies to every project, set auto mode, lis
         "/tmp/pnpm-*/*",
         "/private/tmp/pnpm-*",
         "/private/tmp/pnpm-*/*",
-        "/private/tmp/claude-501",
-        "~/Library/Caches/ms-playwright"
+        "/private/tmp/claude-501"
       ],
       "allowRead": [
         "~/.nvm",

@@ -1,8 +1,8 @@
 ---
 status: "proposed"
 date: 2026-10-22
-decision-makers: Krister Johansson
-consulted: Claude Code documentation (permission modes, settings reference, hooks, CLAUDE_ENV_FILE); pnpm's install inputs and its store, virtual store and lock folders; two code reviews of an install hook outside the sandbox; probes of a sandboxed install in a new worktree on the maintainer's machine (2026-10-21 to 2026-10-23, pnpm 12.11.2)
+decision-makers: proposed by an agent session, to be confirmed by Krister Johansson
+consulted: Krister Johansson
 informed: contributors and coding agents
 release: "1"
 needs-confirmation: "maintainer (bypass mode instead of auto mode for unattended sessions, as accepted risk A-09; the environment hook in the maintainer's user settings, which points pnpm's store and virtual store outside the worktree; one shared store for all sessions, as accepted risk A-10)"
@@ -49,7 +49,7 @@ ADR 0084 is proposed and points here. This ADR replaces these parts, and the res
 | Line | Replaced by |
 |---|---|
 | Rule 1: `.claude/settings.json` sets `disableBypassPermissionsMode: "disable"` | Bypass mode is allowed; the sandbox and the deny rules are the boundary in every mode |
-| Rule 3: no write path is added outside the working directory and the per-user temp directory | The maintainer's user settings add write grants for pnpm: `/tmp/pnpm-*` and `/private/tmp/pnpm-*` (with one level below each) for its lock folders, and `/private/tmp/claude-501` for the shared store, the virtual stores and the `gh` cache. No grant reaches a folder that holds code the maintainer runs outside the sandbox |
+| Rule 3: no write path is added outside the working directory and the per-user temp directory | The maintainer's user settings add write grants for pnpm: `/tmp/pnpm-*` and `/private/tmp/pnpm-*` (with one level below each) for its lock folders, and `/private/tmp/claude-501` for the shared store, the virtual stores and the `gh` cache. No grant reaches a folder that holds code the maintainer runs outside the sandbox; sessions read the Playwright browsers in `~/Library/Caches/ms-playwright` but cannot change them |
 | Rule 8: the maintainer runs `pnpm install` for a worktree | The session runs it inside the sandbox, with the store and virtual store outside the worktree |
 
 ### Consequences
@@ -96,5 +96,7 @@ ADR 0084 is proposed and points here. This ADR replaces these parts, and the res
 * Bad, because `enableGlobalVirtualStore`, which would need no per-worktree path, breaks the typecheck (packages do not find `@types/react`), so each worktree keeps its own virtual store.
 
 ## More information
+
+Sources: Claude Code documentation (permission modes, settings reference, hooks, CLAUDE_ENV_FILE); pnpm's install inputs and its store, virtual store and lock folders; two code reviews of an install hook outside the sandbox; probes of a sandboxed install in new worktrees on the maintainer's machine (2026-10-21 to 2026-10-23, pnpm 12.11.2).
 
 Related ADRs: [0084](0084-agent-sessions-in-auto-mode-inside-the-claude-code-sandbox-with-their-own-github-identity-and-the-maintainers-approval-on-main.md) (the sandbox and the machine user), [0086](0086-risk-tiered-review-and-merge-of-agent-pull-requests.md) (risk tiers and auto-merge). Revisit when pnpm's lock folders follow `TMPDIR` or a setting (reported upstream), when the global virtual store works with the typecheck, or when a session is seen using a file tool or an MCP server against the deny rules.
