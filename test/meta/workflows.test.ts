@@ -57,6 +57,7 @@ function rootScript(name: string | undefined): string | undefined {
 
 // The pull request checks read the pull request instead of the code, so no root script runs them
 // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
+// They run in the PR workflow, so an edit to the title or body re-runs them and not the tests.
 const pullRequestChecks = ['pr title', 'linked issue', 'pr security', 'pr tests', 'openapi diff'];
 
 // The steps that copy a report of an earlier step into the job summary. They check nothing, so no
@@ -148,13 +149,12 @@ const ciJobs = [
   'test',
   'react doctor',
   'e2e',
-  'pr title',
-  'linked issue',
-  'pr security',
-  'pr tests',
-  'openapi diff',
   'gate',
 ];
+
+// The jobs of the PR workflow, which GitHub shows as PR / <job name>. The ruleset requires each of
+// them by its job name too, so they keep the names they had in the CI workflow.
+const prJobs = [...pullRequestChecks, 'pr gate'];
 
 // The jobs of the CI workflow that CI / gate does not need yet, and that the main ruleset does not
 // require. CI / cla joins CI / gate before the first outside pull request
@@ -165,7 +165,7 @@ const ungatedCiJobs = ['cla'];
 // (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md and
 // docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md). CodeQL runs as GitHub's default
 // setup, outside the workflow files.
-const requiredChecks = [...ciJobs, 'license gate', 'dependency audit'];
+const requiredChecks = [...ciJobs, ...prJobs, 'license gate', 'dependency audit'];
 
 // write-all grants id-token: write with every other permission.
 function holdsIdTokenWrite(permissions: Permissions | undefined): boolean {
@@ -449,13 +449,13 @@ describe('workflows', () => {
   // which pull requests the commit heads; it reads no files.
   const riskRefreshPermissions = { actions: 'write', 'pull-requests': 'read' };
 
-  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what CI / cla reads, what Risk / risk gate reads, what Risk / risk label writes, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
+  it('every job sets its own permissions: contents: read, none for CI / gate and PR / pr gate, which read no files, what CI / cla reads, what Risk / risk gate reads, what Risk / risk label writes, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
     for (const { where, job } of jobs) {
       const expected =
-        job.name === 'gate'
+        job.name === 'gate' || job.name === 'pr gate'
           ? {}
           : job.name === 'cla'
             ? claPermissions
@@ -744,7 +744,7 @@ describe('workflows', () => {
 
   // GitHub skips a job when a job it needs failed, and a skipped required check counts as passed.
   // On a pull request every job that CI / gate needs runs, so a skipped one means lint, build or
-  // tests did not run. A push to main skips the pull request checks.
+  // tests did not run.
   it('CI / gate runs after a failed, cancelled or skipped job and then fails', () => {
     const { job: gate } = jobNamed('gate');
 
@@ -761,29 +761,83 @@ describe('workflows', () => {
 
   // A push to main has no pull request to check. An event value interpolated into a run script
   // could inject shell code, so the scripts read the pull request from environment variables.
-  it('CI / pr title, CI / linked issue, CI / pr security, CI / pr tests and CI / openapi diff run on pull requests only and read the pull request from environment variables', () => {
+  it('PR / pr title, PR / linked issue, PR / pr security, PR / pr tests and PR / openapi diff run in the PR workflow and read the pull request from environment variables', () => {
     for (const [name, step] of Object.entries(pullRequestCheckSteps)) {
-      const { job } = jobNamed(name);
+      const { workflow, job } = jobNamed(name);
 
-      expect(job.if, name).toBe("github.event_name == 'pull_request'");
+      expect(workflow.path, name).toBe('.github/workflows/pr.yml');
       expect(job.steps, name).toContainEqual(expect.objectContaining(step));
     }
   });
 
-  // The opened, synchronize and reopened types are the default; edited re-runs both checks after a
-  // fix to the title or body.
-  it('ADR0076 CI / gate needs CI / pr title, CI / linked issue, CI / pr security and CI / pr tests, and an edited pull request re-runs them', () => {
-    const { workflow, id } = jobNamed('gate');
-    const needed = allNeedsOf(workflow.jobs, id).map((need) => workflow.jobs[need]?.name);
-    const on = workflow.on as { pull_request?: { types?: string[] } };
+  // The opened, synchronize and reopened types are the default; edited re-runs the pull request
+  // checks after a fix to the title or body.
+  it('ADR0076 the PR workflow runs on pull requests only, also when one is edited', () => {
+    const { workflow } = jobNamed('pr gate');
 
-    expect(needed).toEqual(expect.arrayContaining(pullRequestChecks));
-    expect(on.pull_request?.types).toEqual(
-      expect.arrayContaining(['opened', 'synchronize', 'reopened', 'edited']),
-    );
+    expect(workflow.name).toBe('PR');
+    expect(workflow.on).toEqual({
+      pull_request: { types: ['opened', 'synchronize', 'reopened', 'edited'] },
+    });
   });
 
-  // A newer commit or edit on a pull request cancels the pull request's older CI run, and the newer
+  // An edit changes the title or body and no code, so it re-runs only the PR workflow.
+  it('an edited pull request does not re-run CI', () => {
+    const { workflow } = jobNamed('gate');
+
+    expect(workflow.on).toEqual({
+      pull_request: { types: ['opened', 'synchronize', 'reopened'] },
+      push: { branches: ['main'] },
+    });
+  });
+
+  // GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
+  // so PR / pr gate always runs and fails itself instead. Every job it needs runs on every event of
+  // the workflow, so a skipped one fails it too.
+  it('ADR0076 PR / pr gate needs every other job of the PR workflow and fails after a failed, cancelled or skipped one', () => {
+    const { workflow, id, job } = jobNamed('pr gate');
+
+    expect(
+      allNeedsOf(workflow.jobs, id)
+        .map((need) => workflow.jobs[need]?.name)
+        .sort(),
+    ).toEqual([...pullRequestChecks].sort());
+    expect(job.if).toBe('always()');
+    expect(job.steps).toEqual([
+      expect.objectContaining({
+        if:
+          "contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')" +
+          " || contains(needs.*.result, 'skipped')",
+        run: 'exit 1',
+      }),
+    ]);
+  });
+
+  // The ruleset names each PR job, so a renamed, added or removed job needs a ruleset edit timed to
+  // its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
+  it('the PR workflow has exactly the jobs pr title, linked issue, pr security, pr tests, openapi diff and pr gate', () => {
+    const { workflow } = jobNamed('pr gate');
+
+    expect(
+      Object.values(workflow.jobs)
+        .map(({ name }) => name)
+        .sort(),
+    ).toEqual([...prJobs].sort());
+  });
+
+  // A newer commit or edit on a pull request cancels the older PR run of that pull request only.
+  // The group starts with the workflow name, so it never cancels a CI run.
+  it('PR cancels its own older run of a pull request and no CI run', () => {
+    const { workflow } = jobNamed('pr gate');
+
+    expect(workflow.concurrency).toEqual({
+      group: `${expression('github.workflow')}-${expression('github.event.pull_request.number')}`,
+      'cancel-in-progress': true,
+    });
+    expect(workflow.name).not.toBe(jobNamed('gate').workflow.name);
+  });
+
+  // A newer commit on a pull request cancels the pull request's older CI run, and the newer
   // run reports every required check on the head commit. Each push to main runs in a group of its
   // own that nothing cancels, so every commit on main keeps a full run.
   it('CI cancels the older run of a pull request and never a run on a push to main', () => {
@@ -825,7 +879,7 @@ describe('workflows', () => {
 
   // CI checks out the pull request's merge commit; its first parent is the base branch, so a depth
   // of 2 holds both sides of the diff. The job reads code only, so it keeps no credentials.
-  it("CI / pr tests checks out the merge commit with its first parent and without credentials", () => {
+  it("PR / pr tests checks out the merge commit with its first parent and without credentials", () => {
     const { job } = jobNamed('pr tests');
 
     expect(job.permissions).toEqual({ contents: 'read' });
@@ -840,13 +894,13 @@ describe('workflows', () => {
   // oasdiff compares the base branch's schema/openapi-v1.json with the pull request's (ADR 0064).
   // It runs from its image pinned by digest, without network, so neither document leaves the runner
   // and the image cannot change under the job; Renovate updates the tag and digest together.
-  it('ADR0064 CI / openapi diff runs oasdiff from its image pinned by digest, without network, on the base branch document and the pull request one', () => {
+  it('ADR0064 PR / openapi diff runs oasdiff from its image pinned by digest, without network, on the base branch document and the pull request one', () => {
     const { workflow, job } = jobNamed('openapi diff');
     const steps = job.steps ?? [];
     const checkouts = steps.filter(({ uses }) => uses?.startsWith('actions/checkout@'));
     const compare = steps.find(({ run }) => run?.includes('oasdiff') || run?.includes('OASDIFF'));
 
-    expect(workflow.path).toBe('.github/workflows/ci.yml');
+    expect(workflow.path).toBe('.github/workflows/pr.yml');
     expect(job.permissions).toEqual({ contents: 'read' });
     expect(job.env?.OASDIFF_IMAGE).toMatch(/^tufin\/oasdiff:v\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$/);
     expect(checkouts.map(({ with: inputs }) => inputs?.ref)).toEqual([
@@ -1101,7 +1155,7 @@ describe('workflows', () => {
   it('every run step in CI / gate calls a script that pnpm check or check:full contains', () => {
     const { workflow, id } = jobNamed('gate');
     const gated = allNeedsOf(workflow.jobs, id).filter(
-      (need) => ![...pullRequestChecks, ...ciOnlyChecks].includes(workflow.jobs[need]?.name ?? ''),
+      (need) => !ciOnlyChecks.includes(workflow.jobs[need]?.name ?? ''),
     );
     const contained = new Set(
       ['pnpm check', 'pnpm check:full']
