@@ -122,7 +122,7 @@ export pnpm_config_virtual_store_dir=/private/tmp/claude-501/pnpm-vstore/<worktr
 export XDG_CACHE_HOME=/private/tmp/claude-501/xdg-cache
 ```
 
-Use real paths: `/tmp` is a symlink, and pnpm refuses it for the hoist folder. `node_modules` in the worktree then holds only links into the virtual store. `XDG_CACHE_HOME` lets `gh run view --log-failed` cache run logs without opening your own `~/.cache/gh`; do not set it in the user-wide `env` block, because hooks and MCP servers outside the sandbox would then read a cache that sessions write. The hook also prints a warning when the worktree's `.claude/settings.local.json` does not set the machine user's token. A session in the main checkout gets no variables and must not install: a sandboxed install there removes part of your `node_modules` and then fails.
+Use real paths: `/tmp` is a symlink, and pnpm refuses it for the hoist folder. `node_modules` in the worktree then holds only links into the virtual store. `XDG_CACHE_HOME` lets `gh run view --log-failed` cache run logs without opening your own `~/.cache/gh`; do not set it in the user-wide `env` block, because hooks and MCP servers outside the sandbox would then read a cache that sessions write. The hook also prints a warning when the worktree's local settings file (.claude/settings.local.json) does not set the machine user's token. A session in the main checkout gets no variables and must not install: a sandboxed install there removes part of your `node_modules` and then fails.
 
 ## Checking it
 
