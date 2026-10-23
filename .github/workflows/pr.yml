@@ -1,0 +1,161 @@
+# The pull request checks, which read the pull request's title, body, author, branch or base
+# instead of its code alone. GitHub shows each job as PR / <job name>. They run in a workflow of their
+# own, so an edit to the title or body re-runs them and not the tests, the build and the end-to-end
+# specs of ci.yml. The main ruleset requires each job here as a status check by its job name, as
+# docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md decides, so a renamed, added or
+# removed job needs a ruleset edit: an added name after the merge, a removed or old name just
+# before it. test/meta/workflows.test.ts lists the job names. The scripts take the event values
+# from environment variables: interpolated into a run script, a title or body could inject shell
+# code.
+name: PR
+
+on:
+  # edited re-runs the checks after a fix to the title or body.
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+# A newer commit or edit on a pull request cancels the pull request's older PR run. The group starts
+# with the workflow name, so it never cancels a CI run. PR / pr gate still runs in the cancelled run
+# and fails it, and the newer run's checks replace those on the same commit once they finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# No job here needs more than reading the repository.
+permissions:
+  contents: read
+
+jobs:
+  pr-title:
+    name: pr title
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: node scripts/ci/pr-title.mjs
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+
+  # Renovate and release pull requests finish no issue and are exempt.
+  linked-issue:
+    name: linked issue
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: node scripts/ci/linked-issue.mjs
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+
+  # ADR 0076: every pull request body has a Security note, filled in.
+  pr-security:
+    name: pr security
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: node scripts/ci/pr-security.mjs
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+
+  # AGENTS.md: a feat, fix or security pull request that changes source changes a test, and a
+  # pull request that deletes a test says why under ## Removed tests.
+  pr-tests:
+    name: pr tests
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - run: node scripts/ci/pr-tests.mjs
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+
+  # ADR 0064: a pull request that breaks the public API fails, unless NorthMES is still 0.x and the
+  # title marks the break with !. oasdiff compares the base branch's schema/openapi-v1.json with the
+  # pull request's from its image pinned by digest, without network, so neither document leaves the
+  # runner; Renovate updates OASDIFF_IMAGE's tag and digest together. scripts/ci/openapi-diff.mjs
+  # decides from what oasdiff finds, and passes when the base branch has no document yet.
+  openapi-diff:
+    name: openapi diff
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    env:
+      OASDIFF_IMAGE: tufin/oasdiff:v1.33.0@sha256:6263a96dd2ef0726c54e21fea9b8e1607eac4841add0079324b424c1f52b819c
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check out the base branch's OpenAPI document
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+          sparse-checkout: schema
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - name: Compare the documents with oasdiff
+        run: |
+          if [ -f base/schema/openapi-v1.json ]; then
+            docker run --rm --network none -v "$GITHUB_WORKSPACE:/work:ro" -w /work \
+              "$OASDIFF_IMAGE" breaking base/schema/openapi-v1.json schema/openapi-v1.json \
+              --format json > "$RUNNER_TEMP/openapi-changes.json"
+          fi
+      - run: node scripts/ci/openapi-diff.mjs
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          OPENAPI_CHANGES: ${{ runner.temp }}/openapi-changes.json
+
+  # GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
+  # so PR / pr gate always runs and fails itself instead. Every job it needs runs on every event of
+  # this workflow, so a skipped one fails it too.
+  pr-gate:
+    name: pr gate
+    # The gate reads only the results of the jobs it needs, so its token gets no permissions.
+    permissions: {}
+    if: always()
+    needs: [pr-title, linked-issue, pr-security, pr-tests, openapi-diff]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Fail when a job that PR / pr gate needs did not pass
+        if: >-
+          contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+          || contains(needs.*.result, 'skipped')
+        run: exit 1
