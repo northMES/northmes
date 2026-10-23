@@ -34,6 +34,7 @@ interface Workflow {
   name?: string;
   on?: unknown;
   permissions?: Permissions;
+  concurrency?: unknown;
   jobs: Record<string, Job>;
 }
 
@@ -445,6 +446,9 @@ describe('workflows', () => {
   // its tier (ADR 0086). Only the label job holds the write token.
   const riskGatePermissions = { contents: 'read', 'pull-requests': 'read' };
   const riskLabelPermissions = { contents: 'read', 'pull-requests': 'write' };
+  // Risk refresh re-runs the other failed Risk runs once a review made the gate pass, and reads
+  // which pull requests the commit heads; it reads no files.
+  const riskRefreshPermissions = { actions: 'write', 'pull-requests': 'read' };
 
   it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what CI / cla reads, what Risk / risk gate reads, what Risk / risk label writes, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
     const jobs = allJobs();
@@ -460,6 +464,8 @@ describe('workflows', () => {
               ? riskGatePermissions
               : job.name === 'risk label'
                 ? riskLabelPermissions
+                : job.name === 'risk refresh'
+                  ? riskRefreshPermissions
                 : job.name === 'Scorecard analysis'
               ? scorecardPermissions
               : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
@@ -778,6 +784,20 @@ describe('workflows', () => {
     );
   });
 
+  // A newer commit or edit on a pull request cancels the pull request's older CI run, and the newer
+  // run reports every required check on the head commit. Each push to main runs in a group of its
+  // own that nothing cancels, so every commit on main keeps a full run.
+  it('CI cancels the older run of a pull request and never a run on a push to main', () => {
+    const { workflow } = jobNamed('gate');
+
+    expect(workflow.concurrency).toEqual({
+      group: `${expression('github.workflow')}-${expression(
+        "github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id",
+      )}`,
+      'cancel-in-progress': expression("github.event_name == 'pull_request'"),
+    });
+  });
+
   // GitHub counts a skipped required check as passed, so CI / gate needs every job to fail a pull
   // request on which one of them did not run.
   it('CI / gate needs every other job in its workflow except CI / cla, which joins it before the first outside pull request', () => {
@@ -906,6 +926,43 @@ describe('workflows', () => {
     });
   });
 
+  // GitHub keeps the failed or cancelled risk gate checks of the runs from before the approval next
+  // to the passing one from the review, and the required check stays failed. Risk refresh re-runs
+  // those earlier runs, which now find the approval. A workflow_run workflow runs from the default
+  // branch, so a pull request cannot change it. Its re-runs join the Risk workflow's concurrency
+  // group, so they go one at a time and only while the commit is still the pull request's head.
+  it('ADR0086 Risk refresh re-runs the failed pull request runs of Risk at the head commit once a review run passed', () => {
+    const { workflow, job } = jobNamed('risk refresh');
+    const steps = job.steps ?? [];
+    const rerun = steps.find(({ run }) => run?.includes('rerun-failed-jobs'));
+
+    expect(workflow.path).toBe('.github/workflows/risk-refresh.yml');
+    expect(workflow.on).toEqual({ workflow_run: { workflows: ['Risk'], types: ['completed'] } });
+    expect(job.if).toBe(
+      "github.event.workflow_run.event == 'pull_request_review' && github.event.workflow_run.conclusion == 'success'",
+    );
+    expect(steps.some(({ uses }) => uses?.startsWith('actions/checkout@'))).toBe(false);
+    expect(rerun?.env).toEqual({
+      GH_TOKEN: expression('github.token'),
+      HEAD_SHA: expression('github.event.workflow_run.head_sha'),
+      STARTED_BY: expression('github.event.workflow_run.id'),
+    });
+    expect(rerun?.run).toContain(
+      'actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA',
+    );
+    expect(rerun?.run).toContain(
+      'select(.conclusion == "failure" or .conclusion == "cancelled")',
+    );
+    expect(rerun?.run).toContain('[ "$id" = "$STARTED_BY" ] && continue');
+    expect(rerun?.run).toContain('gh run watch');
+    expect(rerun?.run).toContain('select(.state == "open")');
+    expect(workflow.concurrency).toEqual({
+      group: `risk-refresh-${expression('github.event.workflow_run.head_sha')}`,
+      'cancel-in-progress': false,
+    });
+    expect(rerun?.run).toContain('still_head ||');
+  });
+
   // Without a checkout the job cannot read .node-version, so it names the same version.
   it('ADR0039 ADR0086 CI / cla and Risk / risk gate set up the Node version in .node-version', () => {
     for (const name of ['cla', 'risk gate']) {
@@ -922,7 +979,7 @@ describe('workflows', () => {
   it('ADR0086 the Risk workflow runs one at a time per pull request and labels in a job of its own after the gate', () => {
     const { workflow, job } = jobNamed('risk label');
 
-    expect((workflow as Workflow & { concurrency?: unknown }).concurrency).toEqual({
+    expect(workflow.concurrency).toEqual({
       group: `risk-${expression('github.event.pull_request.number')}`,
       'cancel-in-progress': true,
     });

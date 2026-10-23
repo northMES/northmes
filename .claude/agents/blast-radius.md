@@ -25,8 +25,13 @@ Bash runs one read at a time: git diff, log, show, status, ls-files, rev-parse, 
    - How far does it reach? For source code, grep for the importers of every changed export: a shared package, the GraphQL or REST contract, a command or code every module calls reaches further than one screen. For CI, tooling, agent configuration and docs, name who or what reads the changed file: every pull request, every session, or one page.
    - Would the tests catch a wrong version? Name the test that pins the changed behaviour, or say that none does.
    - Does it touch a security control: authentication, permissions, row-level security, input validation, secrets, logging, dependencies, plugins, integrations, or the review and merge machinery?
-4. Choose the tier.
-   - `Tier: high` when the diff touches a risk path, when a revert cannot undo the change, when it reaches many modules or the public contract, when it changes calculations, stored records or a security control, when no test pins the changed behaviour, and whenever you are unsure.
-   - `Tier: low` only when a wrong version would be visible, contained to one area, caught by a named test and undone by a revert with nothing left behind.
+4. Choose the tier by one question: if this change is wrong, could it destroy or corrupt customer data, or open a way into the system that nobody checked? No list of files decides it; what the change does decides it.
+   - `Tier: high` when the diff touches a risk path (the review machinery), or when a wrong version could:
+     - delete, rewrite or mix up stored data, for example a migration, a backfill, a bulk update or a change to how records are written (a restore from backup loses everything written since, so lean high here when unsure);
+     - let someone see or do what they should not: authentication, permissions, row-level security, tenant scoping, or a new or changed entry point such as an API, a webhook or a plugin surface whose security nobody has checked;
+     - weaken or skip a check the project relies on, such as a test, a lint rule, the dependency audit, the license gate or a CI job, so that a later mistake gets through.
+   - `Tier: high` also when something in the change does not feel right to you and you would want a person to look before it merges. Say what in one sentence.
+   - `Tier: low` for everything else. A wrong version that CI or a user would notice and a revert would undo is low, whatever the files are: docs, ADRs, dependency updates, screens and ordinary module code.
+5. When the tier is high, end the section, before the Tier line, with a list headed `For the reviewer:` that names each place the reviewer should look as `path:line` and what could go wrong there.
 
-Return the section as markdown, ready to paste under `## Blast radius`: the five sentences of step 3, then a last line that is exactly `Tier: low` or `Tier: high`.
+Return the section as markdown, ready to paste under `## Blast radius`: the five sentences of step 3, the `For the reviewer:` list of step 5 when the tier is high, then a last line that is exactly `Tier: low` or `Tier: high`.
