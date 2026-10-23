@@ -17,6 +17,12 @@ on:
   push:
     branches: [main]
 
+# A newer commit or edit on a pull request cancels the pull request's older run. Each push to main
+# runs in a group of its own that nothing cancels.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 # No job here needs more than reading the repository.
 permissions:
   contents: read
