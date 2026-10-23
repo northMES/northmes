@@ -743,8 +743,8 @@ describe('workflows', () => {
   });
 
   // GitHub skips a job when a job it needs failed, and a skipped required check counts as passed.
-  // On a pull request every job that CI / gate needs runs, so a skipped one means lint, build or
-  // tests did not run.
+  // Every job that CI / gate needs runs on a pull request and on a push to main, so a skipped one
+  // means lint, build or tests did not run.
   it('CI / gate runs after a failed, cancelled or skipped job and then fails', () => {
     const { job: gate } = jobNamed('gate');
 
@@ -753,19 +753,21 @@ describe('workflows', () => {
       expect.objectContaining({
         if:
           "contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')" +
-          " || (github.event_name == 'pull_request' && contains(needs.*.result, 'skipped'))",
+          " || contains(needs.*.result, 'skipped')",
         run: 'exit 1',
       }),
     );
   });
 
-  // A push to main has no pull request to check. An event value interpolated into a run script
-  // could inject shell code, so the scripts read the pull request from environment variables.
+  // The pull request checks run in the PR workflow, and they run on each of its events: a skipped
+  // check counts as passed. An event value interpolated into a run script could inject shell code,
+  // so the scripts read the pull request from environment variables.
   it('PR / pr title, PR / linked issue, PR / pr security, PR / pr tests and PR / openapi diff run in the PR workflow and read the pull request from environment variables', () => {
     for (const [name, step] of Object.entries(pullRequestCheckSteps)) {
       const { workflow, job } = jobNamed(name);
 
       expect(workflow.path, name).toBe('.github/workflows/pr.yml');
+      expect(job.if, name).toBeUndefined();
       expect(job.steps, name).toContainEqual(expect.objectContaining(step));
     }
   });
@@ -877,8 +879,9 @@ describe('workflows', () => {
     ).toEqual([...ciJobs, ...ungatedCiJobs].sort());
   });
 
-  // CI checks out the pull request's merge commit; its first parent is the base branch, so a depth
-  // of 2 holds both sides of the diff. The job reads code only, so it keeps no credentials.
+  // The PR workflow checks out the pull request's merge commit; its first parent is the base
+  // branch, so a depth of 2 holds both sides of the diff. The job reads code only, so it keeps no
+  // credentials.
   it("PR / pr tests checks out the merge commit with its first parent and without credentials", () => {
     const { job } = jobNamed('pr tests');
 
