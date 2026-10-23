@@ -17,8 +17,10 @@ on:
   push:
     branches: [main]
 
-# A newer commit or edit on a pull request cancels the pull request's older run. Each push to main
-# runs in a group of its own that nothing cancels.
+# A newer commit or edit on a pull request cancels the pull request's older run. CI / gate still
+# runs in the cancelled run and fails it, and the newer run's checks replace those on the same
+# commit once they finish. A re-run of an older run joins the same group, so it cancels the current
+# one. Each push to main runs in a group of its own that nothing cancels.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
