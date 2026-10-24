@@ -67,6 +67,29 @@ describe('workspace', () => {
     }
   });
 
+  // A security fix may be younger than the release age; the exemption names that one version and the
+  // advisory it fixes, so it never waives the age for a whole package, and it goes once the lockfile
+  // no longer holds that version.
+  it('pnpm-workspace.yaml exempts only exact versions in the lockfile from minimumReleaseAge, each under a comment naming its advisory', () => {
+    const workspace = readWorkspace() as { minimumReleaseAgeExclude?: string[] };
+    const lines = readText('pnpm-workspace.yaml').split('\n');
+    const lockfile = readText('pnpm-lock.yaml');
+
+    for (const entry of workspace.minimumReleaseAgeExclude ?? []) {
+      expect(entry, entry).toMatch(/^(@[a-z0-9._-]+\/)?[a-z0-9._-]+@\d+\.\d+\.\d+$/);
+      const line = lines.findIndex((text) => text.trim() === `- ${entry}`);
+      expect(line, `${entry} as a block list item`).toBeGreaterThan(0);
+      expect(lines[line - 1] ?? '', `the comment above ${entry}`).toMatch(
+        /^\s*#.*GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}/,
+      );
+      // A scoped package's lockfile key is quoted: '@scope/name@1.2.3':
+      expect(
+        lockfile.includes(`\n  ${entry}:`) || lockfile.includes(`\n  '${entry}':`),
+        `${entry} in pnpm-lock.yaml`,
+      ).toBe(true);
+    }
+  });
+
   it('every workspace package.json sets a license field', () => {
     const patterns = readWorkspace().packages ?? [];
     expect(patterns, 'packages globs in pnpm-workspace.yaml').not.toHaveLength(0);
