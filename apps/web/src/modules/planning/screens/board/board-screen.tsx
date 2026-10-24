@@ -6,7 +6,13 @@ import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'r
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { RangeControls } from '../../components/range-controls/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
-import { type GanttSearch, ganttSearch, withFrom, withZoom } from '../../gantt-search.ts';
+import {
+  type GanttSearch,
+  ganttSearch,
+  withFrom,
+  withOrder,
+  withZoom,
+} from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
 import { plantTime } from '../../order-facts.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
@@ -20,6 +26,7 @@ import {
 } from '../../timeline/time-scale.ts';
 import { useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { type GanttViewContext, GanttViewProvider } from '../gantt/gantt-context.ts';
+import { type BoardCellItem, cellsOf } from './board-cells.ts';
 import { BoardGrid, focusKeys } from './board-grid.tsx';
 import { type BoardLine, boardEntry, boardFocusAfter } from './board-navigation.ts';
 import { type BoardModel, boardModelOf } from './board-rows.ts';
@@ -35,7 +42,11 @@ const machineColumnPx = 200;
 const machineColumnShare = 0.4;
 
 /** The lines of the grid that the arrow keys move over, in the grid's order. */
-function linesOf(model: BoardModel, collapsed: ReadonlySet<string>): BoardLine[] {
+function linesOf(
+  model: BoardModel,
+  cells: ReadonlyMap<string, readonly BoardCellItem[]>,
+  collapsed: ReadonlySet<string>,
+): BoardLine[] {
   const lines: BoardLine[] = [
     {
       kind: 'notPlaced',
@@ -50,19 +61,26 @@ function linesOf(model: BoardModel, collapsed: ReadonlySet<string>): BoardLine[]
     if (collapsed.has(group.code)) continue;
     for (const machine of group.machines) {
       const code = machine.equipment.code;
+      const row = cells.get(code) ?? [];
       lines.push({
         kind: 'machine',
         header: focusKeys.header(code),
         cells:
-          machine.blocks.length === 0
+          row.length === 0
             ? [{ key: focusKeys.empty(code) }]
-            : machine.blocks.map((row) => ({
-                key: focusKeys.block(row.jobOrder.id),
-                ...(row.jobOrder.placement !== undefined && {
-                  fromMs: row.jobOrder.placement.setupStartMs,
-                  toMs: row.jobOrder.placement.endMs,
-                }),
-              })),
+            : row.map((cell) => {
+                if (cell.kind === 'cluster') {
+                  return { key: cell.key, fromMs: cell.fromMs, toMs: cell.toMs };
+                }
+                const placement = cell.row.jobOrder.placement;
+                return {
+                  key: focusKeys.block(cell.row.jobOrder.id),
+                  ...(placement !== undefined && {
+                    fromMs: placement.setupStartMs,
+                    toMs: placement.endMs,
+                  }),
+                };
+              }),
       });
     }
   }
@@ -83,9 +101,15 @@ export function BoardScreen() {
   const rawSearch = useSearch({ strict: false });
   const search = useMemo(() => ganttSearch(rawSearch), [rawSearch]);
   const navigate = useNavigate();
+  // The range replaces the history entry; a change of the selected order pushes one, so Back
+  // returns to the order before (design D3, URL state).
   const setSearch = useCallback(
-    (next: GanttSearch) =>
-      navigate({ to: '.', search: next as Record<string, unknown>, replace: true }),
+    (next: GanttSearch, history: 'replace' | 'push' = 'replace') =>
+      navigate({
+        to: '.',
+        search: next as Record<string, unknown>,
+        replace: history === 'replace',
+      }),
     [navigate],
   );
   const [snapshot, setSnapshot] = useState<GanttSnapshot | undefined>(undefined);
@@ -143,18 +167,47 @@ export function BoardScreen() {
     () => createTimeScale({ range, zoom, timeZone, widthPx: timeWidth }),
     [range, zoom, timeZone, timeWidth],
   );
+  const cells = useMemo(() => {
+    const byMachine = new Map<string, readonly BoardCellItem[]>();
+    for (const group of model?.groups ?? []) {
+      for (const machine of group.machines) {
+        byMachine.set(machine.equipment.code, cellsOf(machine.blocks, scale));
+      }
+    }
+    return byMachine;
+  }, [model, scale]);
   const lines = useMemo(
-    () => (model === undefined ? [] : linesOf(model, collapsed)),
-    [model, collapsed],
+    () => (model === undefined ? [] : linesOf(model, cells, collapsed)),
+    [model, cells, collapsed],
   );
   const known = (key: string | undefined) =>
     key !== undefined &&
     lines.some((line) => line.header === key || line.cells.some((cell) => cell.key === key));
+  // Tab enters at the focused target while it is drawn, else at the selected order's first job
+  // order, else at the job order nearest now (design D3, Keyboard model).
+  // A job order of the selected order inside a cluster enters at its cluster.
+  const selectedEntry =
+    model === undefined || search.order === undefined
+      ? undefined
+      : [
+          ...model.notPlaced.map((row) => ({ key: focusKeys.block(row.jobOrder.id), rows: [row] })),
+          ...[...cells.values()].flatMap((row) =>
+            row.map((cell) =>
+              cell.kind === 'cluster'
+                ? { key: cell.key, rows: cell.rows }
+                : { key: focusKeys.block(cell.row.jobOrder.id), rows: [cell.row] },
+            ),
+          ),
+        ]
+          .filter((target) => target.rows.some((row) => row.order.id === search.order))
+          .map((target) => target.key)
+          .find((key) => known(key));
   const tabStop = known(focused)
     ? focused
-    : snapshot === undefined
-      ? undefined
-      : boardEntry(lines, snapshot.nowMs);
+    : (selectedEntry ?? (snapshot === undefined ? undefined : boardEntry(lines, snapshot.nowMs)));
+  const selectOrder = (orderId: string | undefined) => {
+    if (orderId !== search.order) void setSearch(withOrder(search, orderId), 'push');
+  };
 
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
@@ -200,6 +253,12 @@ export function BoardScreen() {
     if (key === null) return;
     // A key with a modifier belongs to the browser and to the commands of later stories.
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    // The Escape stack (plan 07): the selection is the last layer the grid ends.
+    if (event.key === 'Escape' && search.order !== undefined) {
+      event.preventDefault();
+      selectOrder(undefined);
+      return;
+    }
     const next = boardFocusAfter(lines, key, event.key);
     if (next === undefined) return;
     event.preventDefault();
@@ -263,6 +322,7 @@ export function BoardScreen() {
                 name={`${plant} board, ${label}`}
                 snapshot={snapshot}
                 model={model}
+                cellsOf={(code) => cells.get(code) ?? []}
                 scale={scale}
                 machineWidth={machineWidth}
                 timeWidth={timeWidth}
@@ -276,6 +336,8 @@ export function BoardScreen() {
                   })
                 }
                 tabStop={tabStop}
+                selectedOrderId={search.order}
+                onSelectOrder={selectOrder}
                 onFocusTarget={setFocused}
                 onKeyDown={onKeyDown}
                 gridRef={measureRef}
