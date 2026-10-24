@@ -5,7 +5,7 @@ decision-makers: Krister Johansson
 consulted: Claude Code documentation (sandboxing, permission modes, settings reference) for Claude Code 2.1.304; probes of the settings in headless sessions on the maintainer's machine; a review of the change in a fresh context
 informed: contributors and coding agents
 release: "1"
-needs-confirmation: "maintainer (the machine user's name and its token's 90-day expiry; the TLS trust service opened for gh; code owner review on main, so the maintainer's own pull requests need another approver; the Docker socket and local ports as accepted risk A-07; pnpm install outside the session until pnpm's store lock works in the sandbox)"
+needs-confirmation: "maintainer (the machine user's name and its token's 90-day expiry; the TLS trust service opened for gh; code owner review on main, so the maintainer's own pull requests need another approver; the Docker socket and local ports as accepted risk A-07; pnpm install inside the sandbox per ADR 0087)"
 ---
 
 # Agent sessions in auto mode inside the Claude Code sandbox, with their own GitHub identity and the maintainer's approval on main
@@ -48,7 +48,7 @@ Chosen option: "Auto mode inside the Claude Code sandbox, with an agent GitHub i
 5. **Approval and merge.** `.github/CODEOWNERS` names `@Krister-Johansson` for every path, and the `main` ruleset requires code owner review, so only the maintainer's approval lets a pull request merge. CodeRabbit still reviews, but its approval no longer satisfies the rule, which ends the 15-minute approval and closes A-06 once the ruleset changes. The ruleset changes before the machine user gets its token, because until then the machine user's approval would count as the one required. Agents do not merge: the maintainer merges, and `Bash(gh pr merge*)` is a deny rule. The deny rule matches the command as written, so `gh api` or a GraphQL mutation still gets past it; the control that holds is the ruleset, under which a merge needs the maintainer's approval and green checks. The ruleset keeps no bypass actors, so a pull request the maintainer writes himself needs another approver; until a second maintainer joins, his changes go through an agent session.
 6. **Docker.** Docker Desktop's file sharing is narrowed to folders that hold no credentials and no NorthMES checkout, never the home folder or `/Users`, so a container that a session starts cannot mount `~/.ssh` or a repository. No test bind-mounts a folder. A container still runs with the Docker VM's rights and its own network egress, which bypasses the sandbox proxy: that is accepted risk A-07, together with the local ports and the trust service of rule 3.
 7. **What stays outside the sandbox.** The sandbox wraps shell commands only. Claude's Read, Edit, Write and WebFetch tools, hooks and MCP servers follow permission rules and the auto mode classifier instead, which is why rules 2 and 3 repeat the paths as permission rules.
-8. **pnpm install.** pnpm 12.11.2 fails inside the macOS sandbox when it opens its store operation lock, also with a store in the temp directory, so the lock is not a path the sandbox can allow. Until [#739](https://github.com/northMES/northmes/issues/739) solves it, the maintainer runs `pnpm install` for a worktree from his own terminal, and a session that needs a new install asks him. No `excludedCommands` entry runs it unsandboxed, because a session can edit `pnpm-workspace.yaml` and the lockfile that such an install would act on.
+8. **pnpm install.** Replaced by ADR 0087: a session installs inside the sandbox, with pnpm's store and virtual store outside the worktree. No `excludedCommands` entry runs `pnpm install` unsandboxed, because a session can edit `pnpm-workspace.yaml` and the lockfile that such an install would act on.
 
 ### Changes to ADR 0039, ADR 0050 and ADR 0065
 
@@ -72,7 +72,7 @@ ADR 0039 is accepted, so its text stays as it was. This ADR adds one account to 
 * Bad, because every pull request waits for the maintainer, and pull requests he writes himself need another approver while he is the only maintainer.
 * Bad, because the Docker socket opens a path around the network allowlist, local binding opens every localhost port, the TLS trust service is open to every sandboxed command, and the proxy decides on host names without inspecting TLS (A-07).
 * Bad, because the machine user's Contents permission also lets it create `v*` tags and releases until [#738](https://github.com/northMES/northmes/issues/738) restricts them.
-* Bad, because `pnpm install` cannot run inside a session until pnpm's store lock works in the sandbox.
+* Bad, because `pnpm install` could not run inside a session until the store lock and the store were opened to the sandbox (ADR 0087).
 * Bad, because part of the setup lives outside the repository (the maintainer's user settings and local settings, the machine user, the ruleset, Docker Desktop), so it has to be checked by hand ([#737](https://github.com/northMES/northmes/issues/737)).
 * Neutral, because `.claude/settings.json` applies to every clone: on a system without the sandbox (Windows outside WSL2) Claude Code does not start in this repository, and on Linux the Docker socket list has no effect, because Claude Code ignores `allowUnixSockets` there.
 

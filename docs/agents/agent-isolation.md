@@ -1,6 +1,6 @@
 # Agent isolation setup
 
-Claude Code sessions on NorthMES run inside the Claude Code sandbox, in auto mode or, when nobody watches, in bypass mode ([ADR 0087](../adr/0087-unattended-agent-sessions-in-bypass-mode-inside-the-sandbox-with-installs-from-mains-manifests.md)), and act on GitHub as their own machine user ([ADR 0084](../adr/0084-agent-sessions-in-auto-mode-inside-the-claude-code-sandbox-with-their-own-github-identity-and-the-maintainers-approval-on-main.md)). `.claude/settings.json` holds the part every clone shares. This page lists the part that lives on the maintainer's machine and in GitHub, tracked in [#737](https://github.com/northMES/northmes/issues/737). Apply it in this order. The project settings deny `~/.ssh` and `~/.config/gh`, so a session that runs with them cannot push until steps 2 to 4 are done.
+Claude Code sessions on NorthMES run inside the Claude Code sandbox, in auto mode or, when nobody watches, in bypass mode ([ADR 0087](../adr/0087-unattended-agent-sessions-in-bypass-mode-inside-the-sandbox-with-installs-inside-the-sandbox.md)), and act on GitHub as their own machine user ([ADR 0084](../adr/0084-agent-sessions-in-auto-mode-inside-the-claude-code-sandbox-with-their-own-github-identity-and-the-maintainers-approval-on-main.md)). `.claude/settings.json` holds the part every clone shares. This page lists the part that lives on the maintainer's machine and in GitHub, tracked in [#737](https://github.com/northMES/northmes/issues/737). Apply it in this order. The project settings deny `~/.ssh` and `~/.config/gh`, so a session that runs with them cannot push until steps 2 to 4 are done.
 
 ## 1. Code owner review on `main`
 
@@ -21,11 +21,14 @@ A sandboxed command can read the macOS keychain, so no GitHub credential stays t
 
 ## 4. Claude Code settings
 
-In `~/.claude/settings.json`, which applies to every project, set auto mode, lock the network allowlist and open the folders that sandboxed commands need to read. Without the lock, auto mode lets a command name hosts of its own, which the classifier may open; with it, Claude Code refuses every host outside the list and ignores the repository's `allowedDomains`, so the list here repeats the one in `.claude/settings.json`. The lock and the list apply to every project that uses this configuration folder, so keep the list to these hosts: a host added here opens for NorthMES sessions too. Run a project that needs other hosts with its own configuration folder, for example `CLAUDE_CONFIG_DIR=~/.claude-other claude`, which has its own user settings. Use the paths of your own Node and pnpm installs. Remove `skipDangerousModePermissionPrompt` if it is there.
+In `~/.claude/settings.json`, which applies to every project, set auto mode, list the hosts sandboxed commands may reach, open the folders they need, deny the commands that would swap or print a GitHub token, and add the `SessionStart` hook of section 6. Lock the list with `strictAllowlist`: without it, auto mode lets a command name hosts of its own, and bypass mode allows every host. With it, Claude Code refuses every host outside the list and ignores the repository's `allowedDomains`, so the list here covers the repository's hosts too. The lock and the list apply to every project that uses this configuration folder. The write grants are for pnpm: its lock folders in `/tmp` (a `*` in a sandbox path stays within one folder, so each pattern comes twice), and `/private/tmp/claude-501` for the store, the virtual stores and the `gh` cache (use your own uid). Do not grant writes to `~/Library/Caches/ms-playwright`: your own Playwright runs those browsers outside the sandbox, so sessions only read them. Use the paths of your own Node and pnpm installs. Remove `skipDangerousModePermissionPrompt` if it is there.
 
 ```json
 {
-  "permissions": { "defaultMode": "auto" },
+  "permissions": {
+    "defaultMode": "auto",
+    "deny": ["Bash(gh auth login*)", "Bash(gh auth switch*)", "Bash(gh auth token*)", "Bash(security *)"]
+  },
   "sandbox": {
     "network": {
       "strictAllowlist": true,
@@ -37,24 +40,39 @@ In `~/.claude/settings.json`, which applies to every project, set auto mode, loc
         "objects.githubusercontent.com",
         "raw.githubusercontent.com",
         "release-assets.githubusercontent.com",
+        "results-receiver.actions.githubusercontent.com",
         "cdn.playwright.dev",
         "playwright.download.prss.microsoft.com"
       ]
     },
     "filesystem": {
+      "allowWrite": [
+        "/tmp/pnpm-*",
+        "/tmp/pnpm-*/*",
+        "/private/tmp/pnpm-*",
+        "/private/tmp/pnpm-*/*",
+        "/private/tmp/claude-501"
+      ],
       "allowRead": [
         "~/.nvm",
         "~/Library/pnpm",
         "~/Library/Caches/ms-playwright",
         "~/.docker/config.json",
-        "~/.config/gh-agent"
+        "~/.config/gh-agent",
+        "/tmp/pnpm-*",
+        "/tmp/pnpm-*/*",
+        "/private/tmp/pnpm-*",
+        "/private/tmp/pnpm-*/*"
       ]
     }
+  },
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "~/.claude/hooks/northmes-worktree-env.sh" }] }]
   }
 }
 ```
 
-Auto mode is the default. Start a session that runs while nobody watches in bypass mode, with `--dangerously-skip-permissions` or the Code tab's mode picker ([ADR 0087](../adr/0087-unattended-agent-sessions-in-bypass-mode-inside-the-sandbox-with-installs-from-mains-manifests.md)): the sandbox and the deny rules hold in both modes, and bypass mode only drops the classifier and its prompts. Auto mode blocks a merge that no person approved, so add an `autoMode.allow` entry for `pnpm agent:auto-merge`. When auto mode stops a session on another action it should allow, add an `autoMode.allow` or `autoMode.environment` entry; Claude Code reads `autoMode` from user and managed settings only.
+Auto mode is the default. Start a session that runs while nobody watches in bypass mode, with `--dangerously-skip-permissions` or the Code tab's mode picker ([ADR 0087](../adr/0087-unattended-agent-sessions-in-bypass-mode-inside-the-sandbox-with-installs-inside-the-sandbox.md)): the sandbox and the deny rules hold in both modes, and bypass mode only drops the classifier and its prompts. Auto mode blocks a merge that no person approved, so add an `autoMode.allow` entry for `pnpm agent:auto-merge`. When auto mode stops a session on another action it should allow, add an `autoMode.allow` or `autoMode.environment` entry; Claude Code reads `autoMode` from user and managed settings only.
 
 ```json
 {
@@ -99,7 +117,15 @@ In Docker Desktop, Settings, Resources, File sharing, remove `/Users` and share 
 
 ## 6. Worktree setup
 
-`pnpm install` fails inside the sandbox ([#739](https://github.com/northMES/northmes/issues/739)), so a hook in `~/.claude/settings.json` installs outside it ([ADR 0087](../adr/0087-unattended-agent-sessions-in-bypass-mode-inside-the-sandbox-with-installs-from-mains-manifests.md)). It runs `~/.claude/hooks/northmes-worktree-install.sh` on `SessionStart` (matcher `startup`) and on `PostToolUse` (matcher `Bash`), with a timeout of 600 seconds. For a Claude Code worktree of this repository (the folders under .claude/worktrees), after a session starts or a Bash call that runs git, the script hashes every file that decides what an install runs: each `package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `.npmrc`, `.pnpmfile.*` and `patches/`. A package.yaml or package.json5 counts too, because pnpm reads them in place of a `package.json`. When they changed since the last install, it compares the set with main's from `https://api.github.com/repos/northMES/northmes/git/trees/main?recursive=1`, and only when both sets hold the same paths with the same content does it run `pnpm install --frozen-lockfile --ignore-scripts --ignore-pnpmfile` and record the hashes in `node_modules/.northmes-install-manifest`. It computes the blob ids itself and runs no git in the worktree, because a session can change the worktree's refs and `.git/config`. It stops when the worktree holds a symlink outside `node_modules` or a `node_modules` that is a symlink. With scripts and the pnpmfile off, a file a session swaps between the check and the install runs no code: the install only fetches and links packages. A refused set is recorded in `node_modules/.northmes-install-refused`, so the hook calls the API again only when the set changes. A worktree whose branch changes one of those files gets no install: run `pnpm install --frozen-lockfile` in it from your own terminal after you have read the change.
+A session installs its worktree's dependencies itself, inside the sandbox, with `pnpm install --frozen-lockfile` ([ADR 0087](../adr/0087-unattended-agent-sessions-in-bypass-mode-inside-the-sandbox-with-installs-inside-the-sandbox.md)). The sandbox refuses every write to a `.claude` or `.vscode` folder in the working directory, and some packages ship one, so the packages must not land in the worktree. The `SessionStart` hook `~/.claude/hooks/northmes-worktree-env.sh` therefore writes three variables to `CLAUDE_ENV_FILE`, which Claude Code loads before each Bash command, when the session's folder (the hook input's `cwd`) is a folder directly under .claude/worktrees in this repository:
+
+```sh
+export pnpm_config_store_dir=/private/tmp/claude-501/pnpm-store
+export pnpm_config_virtual_store_dir=/private/tmp/claude-501/pnpm-vstore/<worktree folder>
+export XDG_CACHE_HOME=/private/tmp/claude-501/xdg-cache
+```
+
+Use real paths: `/tmp` is a symlink, and pnpm refuses it for the hoist folder. `node_modules` in the worktree then holds only links into the virtual store. `XDG_CACHE_HOME` lets `gh run view --log-failed` cache run logs without opening your own `~/.cache/gh`; do not set it in the user-wide `env` block, because hooks and MCP servers outside the sandbox would then read a cache that sessions write. The hook also prints a warning when the worktree's local settings file (.claude/settings.local.json) does not set the machine user's token. A session in the main checkout gets no variables and must not install: a sandboxed install there removes part of your `node_modules` and then fails.
 
 ## Checking it
 
@@ -112,4 +138,5 @@ Start a session in a worktree and ask it to run these commands and report each o
 - `git push --dry-run origin HEAD` reaches GitHub over HTTPS.
 - `docker run --rm -v "$HOME:/h:ro" alpine ls /h`, from your own terminal, fails with a file sharing error, because Docker Desktop does not share the folder.
 - `pnpm exec vitest run --project integration apps/backend/test/migrate.int.test.ts` passes.
-- In a new worktree at `main`, `node_modules/.northmes-install-manifest` exists after the session starts. After `echo '{}' > .pnpmfile.cjs`, `rm node_modules/.northmes-install-manifest` and a `git status`, the file stays missing, because the worktree no longer equals `main`. The same holds for a symlink to a `package.json`, and for a package.yaml in place of one.
+- In a new worktree, `echo "$pnpm_config_virtual_store_dir"` names its folder under `/private/tmp/claude-501/pnpm-vstore`, `pnpm install --frozen-lockfile` finishes, `readlink node_modules/typescript` points into that folder, and `pnpm check` passes.
+- `gh run view <id> --log-failed` prints a failed run's log, and `ls ~/.cache/gh` is refused, because the project blocks reads outside the working directory (ADR 0084 rule 2).
