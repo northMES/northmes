@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-// The check behind CI / linked issue. Every pull request finishes an issue, which its body names
+// The check behind PR / linked issue. Every pull request finishes an issue, which its body names
 // with Closes #N, so the issue closes when the pull request merges.
 
 import { errorAnnotation } from './annotation.mjs';
