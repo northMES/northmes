@@ -1266,17 +1266,19 @@ describe('workflows', () => {
   });
 
   // A handoff run starts in a fresh git worktree and runs tests right after one install, with no
-  // build step, so CI / test adds a worktree beside the checkout, installs in it and runs its tests
-  // and its coverage summary there. Tests that boot the built server build it through bootBuilt
+  // build step, so CI / test adds a worktree in the runner's temporary directory, installs in it and
+  // runs its tests and its coverage summary there. actions/upload-artifact refuses a path with a .
+  // or .. segment, so the worktree has an absolute path and the upload names it. Tests that boot the built server build it through bootBuilt
   // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
-  it('E02-S08 CI / test adds a git worktree beside the checkout, installs in it and runs its tests there, with no build', () => {
+  it('E02-S08 CI / test adds a git worktree in the runner temp directory, installs in it and runs its tests there, with no build', () => {
     const { job } = jobNamed('test');
     const steps = job.steps ?? [];
     const runs = steps.flatMap(({ run }) => (run === undefined ? [] : [run.trim()]));
-    const worktree = /^git worktree add --detach (\S+)$/.exec(runs[0] ?? '')?.[1];
+    const worktree = `${expression('runner.temp')}/fresh-worktree`;
     const upload = steps.find(({ uses }) => uses?.startsWith('actions/upload-artifact@'));
+    const paths = String(upload?.with?.path).trim().split('\n');
 
-    expect(worktree, 'the directory that git worktree add creates').toMatch(/^\.\.\/[\w-]+$/);
+    expect(runs[0]).toBe('git worktree add --detach "$RUNNER_TEMP/fresh-worktree"');
     expect(
       steps.map(({ uses, run, 'working-directory': directory }) => ({
         step: uses?.replace(/@.*$/, '') ?? run?.trim(),
@@ -1286,7 +1288,7 @@ describe('workflows', () => {
       { step: 'actions/checkout', directory: undefined },
       { step: 'pnpm/action-setup', directory: undefined },
       { step: 'actions/setup-node', directory: undefined },
-      { step: `git worktree add --detach ${worktree}`, directory: undefined },
+      { step: 'git worktree add --detach "$RUNNER_TEMP/fresh-worktree"', directory: undefined },
       { step: 'pnpm install --frozen-lockfile', directory: worktree },
       { step: 'pnpm test:coverage', directory: worktree },
       { step: 'node scripts/ci/coverage-summary.mjs', directory: worktree },
@@ -1294,10 +1296,11 @@ describe('workflows', () => {
       { step: 'pnpm test:tz', directory: worktree },
     ]);
     // An action's path input is relative to the checkout, not to a step's working directory.
-    expect(String(upload?.with?.path).trim().split('\n')).toEqual([
-      `${worktree}/coverage/lcov.info`,
-      `${worktree}/coverage/lcov-report/`,
-    ]);
+    expect(paths).toEqual([`${worktree}/coverage/lcov.info`, `${worktree}/coverage/lcov-report/`]);
+    for (const path of paths) {
+      expect(path.split('/'), path).not.toContain('..');
+      expect(path.split('/'), path).not.toContain('.');
+    }
     expect(runs.flatMap(commandsOf).filter((command) => /\b(?:build|tsc)\b/.test(command))).toEqual(
       [],
     );
