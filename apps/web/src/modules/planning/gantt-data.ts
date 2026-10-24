@@ -198,6 +198,14 @@ export interface CustomerOrderLine {
   readonly wantedDate: string;
   /** The id of the production order that supplies the line; none while there is none. */
   readonly productionOrderId?: string;
+  /** The slug of the plant that delivers the line, which a company admin sets (design #728). */
+  readonly deliveringPlant?: string;
+}
+
+/** A plant of the company that a customer order line names, with the name a page shows. */
+export interface CompanyPlant {
+  readonly slug: string;
+  readonly name: string;
 }
 
 export interface RoutingOperation {
@@ -323,6 +331,7 @@ export interface GanttSnapshot {
   // What the planning pages beside the Gantt show (the production order page and the lists); a
   // source that answers the Gantt alone leaves them out.
   readonly erp?: ErpConnection;
+  readonly plants?: readonly CompanyPlant[];
   readonly customers?: readonly Customer[];
   readonly customerOrderLines?: readonly CustomerOrderLine[];
   readonly routings?: readonly Routing[];

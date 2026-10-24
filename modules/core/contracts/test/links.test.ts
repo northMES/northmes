@@ -67,6 +67,7 @@ describe('coreLinks', () => {
       'people',
       'machines',
       'calendars',
+      'customers',
       'settings',
     ]);
   });
@@ -83,6 +84,15 @@ describe('coreLinks', () => {
     );
     expect(coreLinks.calendars.calendar({ plant: 'plant-a', calendarId: 'A1' }).href).toBe(
       '/plant-a/calendars/A1',
+    );
+  });
+
+  it('#728 coreLinks builds the hrefs of the customers register and a customer at the plant root', () => {
+    expect(coreLinks.customers({ plant: 'plant-a' }, { late: '1' }).href).toBe(
+      '/plant-a/customers?late=1',
+    );
+    expect(coreLinks.customers.customer({ plant: 'plant-a', customerId: 'K-1042' }).href).toBe(
+      '/plant-a/customers/K-1042',
     );
   });
 });

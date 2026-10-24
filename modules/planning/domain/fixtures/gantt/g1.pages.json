@@ -8,6 +8,7 @@
       "plantLocal": "2026-11-02T06:40:00"
     }
   },
+  "plants": [{ "slug": "plant-a", "name": "Plant A" }],
   "customers": [
     { "code": "K-1042", "name": "Hallberg Verkstad AB" },
     { "code": "K-1107", "name": "Svea Komponent AB" },
@@ -23,6 +24,7 @@
       "article": "Gear blank 32",
       "quantity": 600,
       "wantedDate": "2026-11-04",
+      "deliveringPlant": "plant-a",
       "productionOrder": "1003"
     },
     {
@@ -33,6 +35,7 @@
       "article": "Bracket L",
       "quantity": 400,
       "wantedDate": "2026-11-06",
+      "deliveringPlant": "plant-a",
       "productionOrder": "1001"
     },
     {
@@ -43,6 +46,7 @@
       "article": "Hub 12",
       "quantity": 250,
       "wantedDate": "2026-11-20",
+      "deliveringPlant": "plant-a",
       "productionOrder": null
     },
     {
@@ -53,6 +57,7 @@
       "article": "Housing P",
       "quantity": 420,
       "wantedDate": "2026-11-05",
+      "deliveringPlant": "plant-a",
       "productionOrder": "1002"
     },
     {
@@ -63,6 +68,7 @@
       "article": "Shaft 8",
       "quantity": 600,
       "wantedDate": "2026-11-13",
+      "deliveringPlant": "plant-a",
       "productionOrder": "1006"
     },
     {
@@ -73,6 +79,7 @@
       "article": "Bracket L",
       "quantity": 200,
       "wantedDate": "2026-11-09",
+      "deliveringPlant": "plant-a",
       "productionOrder": "1001"
     },
     {
@@ -83,6 +90,7 @@
       "article": "Bracket L",
       "quantity": 300,
       "wantedDate": "2026-11-10",
+      "deliveringPlant": "plant-a",
       "productionOrder": "1005"
     }
   ],

@@ -28,4 +28,13 @@ describe('StatusBadge', () => {
     expect(badge.className).toContain('bg-info-subtle');
     expect(badge.className).toContain('text-info');
   });
+
+  it('#728 the warning tone draws who needs a higher permission, such as A company admin, on the warning colours', () => {
+    render(<StatusBadge tone="warning">A company admin</StatusBadge>);
+
+    const badge = screen.getByText('A company admin');
+    expect(badge.getAttribute('data-tone')).toBe('warning');
+    expect(badge.className).toContain('bg-warning-subtle');
+    expect(badge.className).toContain('text-warning');
+  });
 });

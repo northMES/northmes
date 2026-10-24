@@ -105,6 +105,13 @@ describe('the production order page (plan 07, planning records; design #686, PO1
     expect(
       screen.getByText('2 customer order lines for Bracket L are gathered into this one order.'),
     ).toBeTruthy();
+    // Each line leads to its customer and its customer order (design #728).
+    expect(
+      within(demand).getByRole('link', { name: 'Hallberg Verkstad AB' }).getAttribute('href'),
+    ).toBe('/plant-a/customers/K-1042');
+    expect(within(demand).getByRole('link', { name: '40219' }).getAttribute('href')).toBe(
+      '/plant-a/planning/customer-orders/40219',
+    );
 
     const operations = screen.getByRole('table', { name: 'Operations in routing sequence' });
     expect(bodyRows(operations)).toEqual([

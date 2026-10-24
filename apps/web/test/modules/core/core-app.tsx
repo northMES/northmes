@@ -20,6 +20,9 @@ import {
 import { render, within } from '@testing-library/react';
 import { from, mergeMap } from 'rxjs';
 import { CoreArticle } from '../../../src/modules/core/article.graphql.ts';
+import type { CustomersSource } from '../../../src/modules/core/customers-data.ts';
+import { g1CustomersSource } from '../../../src/modules/core/customers-data-g1.ts';
+import { CustomersSourceProvider } from '../../../src/modules/core/customers-source-context.ts';
 import { coreModule } from '../../../src/modules/core/index.ts';
 import type { PlantSettingsSource } from '../../../src/modules/core/plant-settings-data.ts';
 import { g1PlantSettingsSource } from '../../../src/modules/core/plant-settings-data-g1.ts';
@@ -60,7 +63,8 @@ function SettingsStub() {
  * MockedProvider that answers each of mocks once and the contributions the shell would give the
  * slots, and returns the router, whose state.location shows the URL. A hold from holdRequests
  * keeps its requests from the mocks until the test releases them. The plant settings pages read
- * plantSettingsSource, the fixture G1 when the test gives none.
+ * plantSettingsSource and the customers pages customersSource, the fixture G1 when the test gives
+ * none.
  */
 export function renderCoreAt(
   href: string,
@@ -69,10 +73,12 @@ export function renderCoreAt(
     contributions = [],
     hold,
     plantSettingsSource = g1PlantSettingsSource,
+    customersSource = g1CustomersSource,
   }: {
     readonly contributions?: readonly SlotContribution[];
     readonly hold?: ApolloLink;
     readonly plantSettingsSource?: PlantSettingsSource;
+    readonly customersSource?: CustomersSource;
   } = {},
 ) {
   const router = createRouter({
@@ -87,7 +93,9 @@ export function renderCoreAt(
     <MockedProvider mocks={mocks} link={hold && ApolloLink.from([hold, new MockLink(mocks)])}>
       <ContributionsProvider value={contributions}>
         <PlantSettingsSourceProvider value={plantSettingsSource}>
-          <RouterProvider router={router} />
+          <CustomersSourceProvider value={customersSource}>
+            <RouterProvider router={router} />
+          </CustomersSourceProvider>
         </PlantSettingsSourceProvider>
       </ContributionsProvider>
     </MockedProvider>,

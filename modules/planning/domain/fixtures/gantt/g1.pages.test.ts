@@ -26,6 +26,16 @@ describe('the pages fixture beside G1 (plan 18, the planning pages)', () => {
     }
   });
 
+  it("#728 delivers every customer order line from a plant it names, G1's plant among them", () => {
+    const plants = new Set(g1Pages.plants.map((plant) => plant.slug));
+    expect(plants.has(g1.plant.slug)).toBe(true);
+    for (const line of g1Pages.customerOrderLines) {
+      expect(plants.has(line.deliveringPlant), `${line.customerOrder} line ${line.line}`).toBe(
+        true,
+      );
+    }
+  });
+
   it('gives every order of G1 an origin, and an origin to no order that neither G1 nor a line names', () => {
     for (const number of orderNumbers) {
       expect(g1Pages.orders, number).toHaveProperty(number);
