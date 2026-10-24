@@ -17,8 +17,8 @@
     },
     {
       "customType": "regex",
-      "description": "The oasdiff image of CI / openapi diff (.github/workflows/ci.yml)",
-      "managerFilePatterns": ["/^\\.github/workflows/ci\\.yml$/"],
+      "description": "The oasdiff image of PR / openapi diff (.github/workflows/pr.yml)",
+      "managerFilePatterns": ["/^\\.github/workflows/pr\\.yml$/"],
       "matchStrings": [
         "OASDIFF_IMAGE:\\s*(?<depName>[^:\\s]+):(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ],
