@@ -94,10 +94,10 @@ jobs:
   # A handoff run starts in a fresh git worktree and runs tests right after one install, with no
   # build step, as
   # docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md
-  # decides. So the job adds a worktree beside the checkout, installs in it and runs both legs and
-  # the coverage summary there; tests that boot the built server build it through bootBuilt. The
-  # upload step names the worktree in its paths, because an action's inputs are relative to the
-  # checkout.
+  # decides. So the job adds a worktree in the runner's temporary directory, installs in it and
+  # runs both legs and the coverage summary there; tests that boot the built server build it
+  # through bootBuilt. The upload step names the worktree's absolute path, because an action's
+  # inputs are relative to the checkout and upload-artifact refuses a path with a .. segment.
   test:
     name: test
     permissions:
@@ -118,28 +118,28 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .node-version
-      - run: git worktree add --detach ../fresh-worktree
+      - run: git worktree add --detach "$RUNNER_TEMP/fresh-worktree"
       - run: pnpm install --frozen-lockfile
-        working-directory: ../fresh-worktree
+        working-directory: ${{ runner.temp }}/fresh-worktree
       - id: utc
         run: pnpm test:coverage
-        working-directory: ../fresh-worktree
+        working-directory: ${{ runner.temp }}/fresh-worktree
         env:
           TZ: UTC
           NM_TEST_PG_TZ: UTC
       - run: node scripts/ci/coverage-summary.mjs
-        working-directory: ../fresh-worktree
+        working-directory: ${{ runner.temp }}/fresh-worktree
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coverage
           path: |
-            ../fresh-worktree/coverage/lcov.info
-            ../fresh-worktree/coverage/lcov-report/
+            ${{ runner.temp }}/fresh-worktree/coverage/lcov.info
+            ${{ runner.temp }}/fresh-worktree/coverage/lcov-report/
           if-no-files-found: error
           overwrite: true
       - if: "!cancelled() && steps.utc.outcome != 'skipped'"
         run: pnpm test:tz
-        working-directory: ../fresh-worktree
+        working-directory: ${{ runner.temp }}/fresh-worktree
 
   # react-doctor runs in CI only, under the reviewed license exception in
   # docs/adr/0040-dependency-license-policy-ci-gate-and-sbom.md, so neither pnpm check nor pnpm

@@ -462,7 +462,7 @@ The ruleset on `main` requires these checks by name, strict (the branch must be 
 | `lint` | turbo `lint`, then `pnpm gen --check` |
 | `typecheck` | turbo `typecheck` |
 | `build` | turbo `build` |
-| `test` | In a git worktree added beside the checkout, after one install there and with no build step: the unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg, in one job. The Europe/Stockholm leg also runs after a failed UTC leg |
+| `test` | In a git worktree added in the runner's temporary directory, after one install there and with no build step: the unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg, in one job. The Europe/Stockholm leg also runs after a failed UTC leg |
 | `react doctor` | `pnpm react-doctor`: react-doctor with `--no-telemetry` over `apps/web`, every `modules/*/web` and `packages/web-sdk`; an error fails it, and the next step copies the findings into the job summary and the log. CI only, under the license exception of [ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md) |
 | `pr title` | The title is a Conventional Commit with an allowed type |
 | `linked issue` | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
