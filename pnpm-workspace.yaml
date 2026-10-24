@@ -144,7 +144,7 @@ overrides:
   # every older copy resolves to the fixed one.
   '@graphql-tools/utils@<12.0.2': 12.0.2
   # GHSA-27r3-jxmh-p828 and GHSA-q7qp-rjg7-q26m: express and @nestjs/platform-express pull these in.
-  'body-parser@<2.4.0': 2.4.0
-  'multer@<2.5.0': 2.5.0
+  'body-parser@>=2.0.0 <2.4.0': 2.4.0
+  'multer@>=2.0.0 <2.5.0': 2.5.0
   # GHSA-xjj6-f33q-929c: testcontainers pulls in undici 8.
   'undici@>=8.0.0 <8.12.2': 8.12.2

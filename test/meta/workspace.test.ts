@@ -68,15 +68,25 @@ describe('workspace', () => {
   });
 
   // A security fix may be younger than the release age; the exemption names that one version and the
-  // advisory it fixes, so it never waives the age for a whole package.
-  it('pnpm-workspace.yaml exempts only exact versions from minimumReleaseAge, each under a comment naming its advisory', () => {
+  // advisory it fixes, so it never waives the age for a whole package, and it goes once the lockfile
+  // no longer holds that version.
+  it('pnpm-workspace.yaml exempts only exact versions in the lockfile from minimumReleaseAge, each under a comment naming its advisory', () => {
     const workspace = readWorkspace() as { minimumReleaseAgeExclude?: string[] };
-    const text = readText('pnpm-workspace.yaml');
+    const lines = readText('pnpm-workspace.yaml').split('\n');
+    const lockfile = readText('pnpm-lock.yaml');
 
     for (const entry of workspace.minimumReleaseAgeExclude ?? []) {
-      expect(entry, entry).toMatch(/^(@[a-z0-9.-]+\/)?[a-z0-9.-]+@\d+\.\d+\.\d+$/);
-      const line = text.split('\n').findIndex((l) => l.includes(`- ${entry}`) || l.includes(`'${entry}'`));
-      expect(text.split('\n')[line - 1] ?? '', `the comment above ${entry}`).toMatch(/GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}/);
+      expect(entry, entry).toMatch(/^(@[a-z0-9._-]+\/)?[a-z0-9._-]+@\d+\.\d+\.\d+$/);
+      const line = lines.findIndex((text) => text.trim() === `- ${entry}`);
+      expect(line, `${entry} as a block list item`).toBeGreaterThan(0);
+      expect(lines[line - 1] ?? '', `the comment above ${entry}`).toMatch(
+        /^\s*#.*GHSA-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}/,
+      );
+      // A scoped package's lockfile key is quoted: '@scope/name@1.2.3':
+      expect(
+        lockfile.includes(`\n  ${entry}:`) || lockfile.includes(`\n  '${entry}':`),
+        `${entry} in pnpm-lock.yaml`,
+      ).toBe(true);
     }
   });
 

@@ -251,8 +251,8 @@ overrides:
   react: 19.3.0
   react-dom: 19.3.0
   '@graphql-tools/utils@<12.0.2': 12.0.2
-  body-parser@<2.4.0: 2.4.0
-  multer@<2.5.0: 2.5.0
+  body-parser@>=2.0.0 <2.4.0: 2.4.0
+  multer@>=2.0.0 <2.5.0: 2.5.0
   undici@>=8.0.0 <8.12.2: 8.12.2
 
 importers:
