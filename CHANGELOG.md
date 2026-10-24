@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.2.0](https://github.com/northMES/northmes/compare/v0.1.0...v0.2.0) (2026-10-24)
+
+
+### Features
+
+* **ci:** sort pull requests into risk tiers with a blast-radius review and a risk gate ([#761](https://github.com/northMES/northmes/issues/761)) ([01fa5b8](https://github.com/northMES/northmes/commit/01fa5b8d50cb04c5a42eb4a6806e6e3d5c7c05db))
+* **core:** accept integration tokens on the public REST API, with optional rate limits per credential ([#684](https://github.com/northMES/northmes/issues/684)) ([28b6cf0](https://github.com/northMES/northmes/commit/28b6cf06854ba8d6eab2a589826e57b91ed458b7))
+* **core:** create, list and revoke integration tokens ([#673](https://github.com/northMES/northmes/issues/673)) ([b02464b](https://github.com/northMES/northmes/commit/b02464bff7552d74f14c4baa49d5272b0028fb34))
+* **core:** each shift in its own colour on the calendar's week view ([#781](https://github.com/northMES/northmes/issues/781)) ([5dfa8fd](https://github.com/northMES/northmes/commit/5dfa8fdf89b22970d84f7f9060dd0bd9eb7dfdbc))
+* **core:** publish the public API's OpenAPI document, with a breaking-change gate in CI ([#717](https://github.com/northMES/northmes/issues/717)) ([6b59d67](https://github.com/northMES/northmes/commit/6b59d674fbc148781b4b32426aea99c03c2f1beb))
+* **core:** serve article operations as public REST routes under /api/v1/core ([#671](https://github.com/northMES/northmes/issues/671)) ([6b4bf7e](https://github.com/northMES/northmes/commit/6b4bf7e4f916ca47f5f98caccdc1181f5f6b4810))
+* **core:** the machines, machine and calendar pages in plant settings on the fixture G1 ([#760](https://github.com/northMES/northmes/issues/760)) ([ff6c7f0](https://github.com/northMES/northmes/commit/ff6c7f0dea98e0d9e1be531efb63ae0930eea4b4))
+* **planning:** block states, selection, the hover card and clusters on the planning board ([#774](https://github.com/northMES/northmes/issues/774)) ([2046457](https://github.com/northMES/northmes/commit/20464575b5ff07488f62aa08096dcc108a5cadad))
+* **planning:** cascade a move through the later operations of an order ([#696](https://github.com/northMES/northmes/issues/696)) ([13de319](https://github.com/northMES/northmes/commit/13de3191a48cd8d62f2f61ae0ed34d83de081a14))
+* **planning:** combine orders of one article into a run on the order Gantt ([#715](https://github.com/northMES/northmes/issues/715)) ([9ee982d](https://github.com/northMES/northmes/commit/9ee982d192925625c7ec3df1a84bc9f2ef0d090f))
+* **planning:** combineIntoRun and splitRun, the run of orders of one article as pure functions ([#713](https://github.com/northMES/northmes/issues/713)) ([8ac40e9](https://github.com/northMES/northmes/commit/8ac40e97b5d2f04064fb47973ec7e953918dd3d1))
+* **planning:** float, wait, the binding constraint and the critical chain as domain functions ([#694](https://github.com/northMES/northmes/issues/694)) ([93046ca](https://github.com/northMES/northmes/commit/93046cafe4108a43e65ea059cc98ace97d9f1f10))
+* **planning:** move a job order on the Gantt, with the cascade preview and the My draft drawer ([#701](https://github.com/northMES/northmes/issues/701)) ([d34d123](https://github.com/northMES/northmes/commit/d34d123495f205198a02e567f89d000f58befe80))
+* **planning:** order 1005 in the fixture G1 and the run case GT10 ([#711](https://github.com/northMES/northmes/issues/711)) ([eed8873](https://github.com/northMES/northmes/commit/eed8873e0c6617e14c5c084f19172f0eed4d9dae))
+* **planning:** order Gantt on mock data, blocks, links and markers ([#662](https://github.com/northMES/northmes/issues/662)) ([845b5cb](https://github.com/northMES/northmes/commit/845b5cb738f48bcd640ec1015fafbe51f385b1f4))
+* **planning:** order Gantt on mock data, Details, chain and workload ([#667](https://github.com/northMES/northmes/issues/667)) ([93fc400](https://github.com/northMES/northmes/commit/93fc40011df7b2fb807f08a2997c37d183c6c500))
+* **planning:** order Gantt on mock data, keyboard and the axe spec ([#664](https://github.com/northMES/northmes/issues/664)) ([8c1c202](https://github.com/northMES/northmes/commit/8c1c2020dfe02934a88b87bfd41c357a1a508859))
+* **planning:** order Gantt on mock data, search and tree ([#661](https://github.com/northMES/northmes/issues/661)) ([640ef9c](https://github.com/northMES/northmes/commit/640ef9ca395f4a97838e4f92c8919c03fc205c9f))
+* **planning:** the calendar kernel of the planning domain, windows and work over availability ([#692](https://github.com/northMES/northmes/issues/692)) ([3efbcdf](https://github.com/northMES/northmes/commit/3efbcdf618d20ebccd1a8da7d158030952f7f1d2))
+* **planning:** the Gantt's analysis from the domain functions, with g1.expected.json as the oracle ([#700](https://github.com/northMES/northmes/issues/700)) ([bad32c3](https://github.com/northMES/northmes/commit/bad32c3c4f9c4093fc25ab21df9c1fa5d8a047a1))
+* **planning:** the job orders page under Planning, on the fixture G1 ([#721](https://github.com/northMES/northmes/issues/721)) ([01fbbc7](https://github.com/northMES/northmes/commit/01fbbc77c5f09144e70009b58e4a37463e231dfa))
+* **planning:** the order Gantt as its own page, with time scrolling, page height and a Details drawer ([#680](https://github.com/northMES/northmes/issues/680)) ([fb9bd9a](https://github.com/northMES/northmes/commit/fb9bd9acf5e991ad766863636594000770f8f379))
+* **planning:** the planning board's machine rows, time axis and blocks on the fixture G1 ([#773](https://github.com/northMES/northmes/issues/773)) ([10c1ee2](https://github.com/northMES/northmes/commit/10c1ee271d8c1665f868587ad216b41846125dd4))
+* **planning:** the production order page and its edit form on the fixture G1 ([#723](https://github.com/northMES/northmes/issues/723)) ([a9ab02b](https://github.com/northMES/northmes/commit/a9ab02b5a2075aba58303c2d10a945ccce52f1f2))
+* **planning:** the production orders and customer orders lists on the fixture G1 ([#725](https://github.com/northMES/northmes/issues/725)) ([f8ae38e](https://github.com/northMES/northmes/commit/f8ae38e848da396e13a5b46eee67367730845630))
+* **planning:** workload per bucket and the constraint list of a row as domain functions ([#698](https://github.com/northMES/northmes/issues/698)) ([e9ea615](https://github.com/northMES/northmes/commit/e9ea6157ea401a14af51e24610889090ccba87c1))
+* **web:** show the NorthMES logo in the header and as the favicon ([#814](https://github.com/northMES/northmes/issues/814)) ([584d5de](https://github.com/northMES/northmes/commit/584d5de12111cdaadb7f6ebccc6b9c9ba847a182))
+
+
+### Bug Fixes
+
+* **agents:** one step after a pull request opens, a harm-based risk tier, and an approval that turns the gate green ([#819](https://github.com/northMES/northmes/issues/819)) ([f358aa8](https://github.com/northMES/northmes/commit/f358aa8e809f861818e46ee3601265a1a899a29a))
+* **ci:** run the deprecated API scan outside the coverage counters ([#807](https://github.com/northMES/northmes/issues/807)) ([9644fdb](https://github.com/northMES/northmes/commit/9644fdb36075649ff40ed3af448dfbac101127be))
+* **core:** require a browser origin for password sign-in ([#645](https://github.com/northMES/northmes/issues/645)) ([600f21a](https://github.com/northMES/northmes/commit/600f21a28d4455833e84894ef9a02f19b6838fd7))
+* **deps:** raise @graphql-tools/utils to 12.0.2 for GHSA-c4qx-w738-7hr3 ([#817](https://github.com/northMES/northmes/issues/817)) ([9870a56](https://github.com/northMES/northmes/commit/9870a566bfcb02d0bd28e145df107e8074775824))
+* **deps:** raise the MCP SDK to 2.3.1 and vite to 8.3.3 past three high advisories ([#755](https://github.com/northMES/northmes/issues/755)) ([6a16640](https://github.com/northMES/northmes/commit/6a166401ad1cd218033f04e6c88273a3d9ae9c16))
+* **deps:** zod, body-parser, multer, undici and happy-dom for five advisories ([#832](https://github.com/northMES/northmes/issues/832)) ([e1a7a6d](https://github.com/northMES/northmes/commit/e1a7a6d9d73ecaa8a7c899773b1033973ae42373))
+* **dev:** start the server after a pretty-printed tsc build ([#677](https://github.com/northMES/northmes/issues/677)) ([8d19bf8](https://github.com/northMES/northmes/commit/8d19bf8d0def97f5c70cfb06979b0f5b4680d854))
+* **planning:** keep the browser's swipe navigation out of the Gantt and extend the time range at its edges ([#702](https://github.com/northMES/northmes/issues/702)) ([fba0b06](https://github.com/northMES/northmes/commit/fba0b066ee925b467c0c78564f233c01735d76be))
+* **web:** land on your plant, company settings or plant list after sign-in instead of Page not found ([#651](https://github.com/northMES/northmes/issues/651)) ([453cbfe](https://github.com/northMES/northmes/commit/453cbfeacee459b4d4b7cf1451ce8ec9af14095a))
+
 ## [0.1.0](https://github.com/northMES/northmes/compare/v0.0.1...v0.1.0) (2026-10-16)
 
 
