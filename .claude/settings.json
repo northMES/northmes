@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "disableBypassPermissionsMode": "disable",
     "blockReadsOutsideWorkingDirectories": true,
     "deny": [
       "Bash(npm *)",
@@ -57,12 +56,10 @@
         "raw.githubusercontent.com",
         "release-assets.githubusercontent.com",
         "cdn.playwright.dev",
-        "playwright.download.prss.microsoft.com"
+        "playwright.download.prss.microsoft.com",
+        "results-receiver.actions.githubusercontent.com"
       ],
-      "allowUnixSockets": [
-        "~/.docker/run/docker.sock",
-        "/var/run/docker.sock"
-      ],
+      "allowUnixSockets": ["~/.docker/run/docker.sock", "/var/run/docker.sock"],
       "allowLocalBinding": true
     }
   },

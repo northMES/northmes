@@ -1,0 +1,24 @@
+# The review machinery (ADR 0086): the files that decide how a pull request is judged and merged,
+# and what agent sessions are told and allowed to do. A pull request that changes one of them, or
+# renames a file out of one, is high risk: it merges only after the maintainer approves its head
+# commit. Every other change gets the tier its blast-radius review judges, so this list names only
+# what a session must not be able to loosen by declaring a low tier. Risk / risk gate reads this file from the default branch,
+# so a pull request cannot change the paths that judge it.
+#
+# The patterns follow CODEOWNERS: a leading slash or a slash inside anchors a pattern at the root, a
+# pattern with no slash matches at any depth, * stays within one folder, ** crosses folders, a
+# pattern that names a folder covers everything below it, and one that ends in /* covers only the
+# files directly in its folder. The gate refuses a pattern with whitespace, ! or [, so write an
+# inline comment on a line of its own.
+
+# CI, the gate and its scripts, and the meta tests that guard the controls
+/.github/
+/scripts/ci/
+/scripts/agents/
+/test/meta/
+
+# Agent configuration and instructions
+/.claude/
+/CLAUDE.md
+/AGENTS.md
+/skills-lock.json

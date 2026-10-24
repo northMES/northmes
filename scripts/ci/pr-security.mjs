@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-// The check behind CI / pr security. Every pull request body has a Security section that names the
+// The check behind PR / pr security. Every pull request body has a Security section that names the
 // controls the change touches and the threat each one meets, or says none with a reason (ADR 0076).
 
 import { errorAnnotation } from './annotation.mjs';
 import { givesNoReason, isBotPullRequest, section } from './pull-request.mjs';
 
-// Renovate's and release-please's pull requests are exempt, as for CI / linked issue: neither app
+// Renovate's and release-please's pull requests are exempt, as for PR / linked issue: neither app
 // writes the section, and dependency updates go through the license and supply-chain checks.
 export function checkPrSecurity({ body, author, headRef, fromFork }) {
   if (isBotPullRequest({ author, headRef, fromFork })) return { ok: true, message: '' };
