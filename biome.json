@@ -68,7 +68,8 @@
     },
     {
       "includes": [
-        "apps/web/src/modules/planning/screens/gantt/**"
+        "apps/web/src/modules/planning/screens/gantt/**",
+        "apps/web/src/modules/planning/screens/board/**"
       ],
       "linter": {
         "rules": {
@@ -205,6 +206,18 @@
                 ]
               }
             }
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/*.svg"
+      ],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noSvgWithoutTitle": "off"
           }
         }
       }
