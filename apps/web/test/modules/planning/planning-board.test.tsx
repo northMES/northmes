@@ -10,9 +10,13 @@ import { renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
-/** The board grid, once it has rendered. */
+/** The board grid, once it has loaded: while it loads, the grid's skeleton is busy. */
 async function findBoard(): Promise<HTMLElement> {
-  return screen.findByRole('grid', { name: /board/ });
+  return waitFor(() => {
+    const board = screen.getByRole('grid', { name: /board/ });
+    if (board.getAttribute('aria-busy') === 'true') throw new Error('The board is loading');
+    return board;
+  });
 }
 
 /** The machine row whose row header names the machine. */

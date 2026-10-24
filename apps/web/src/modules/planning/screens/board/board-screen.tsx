@@ -1,20 +1,26 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { useShell } from '@northmes/web-sdk';
-import { useNavigate, useSearch } from '@tanstack/react-router';
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
+
+import { coreLinks } from '@northmes/core-contracts';
+import { planningLinks } from '@northmes/planning-contracts';
+import { classifyError, useShell } from '@northmes/web-sdk';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
+import { Drill, ShieldOff } from 'lucide-react';
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { RangeControls } from '../../components/range-controls/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import {
-  type GanttSearch,
-  ganttSearch,
+  type BoardSearch,
+  boardSearch,
   withFrom,
   withOrder,
   withZoom,
 } from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
 import { plantTime } from '../../order-facts.ts';
+import { PlanningForbidden } from '../../planning-preview.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
   createTimeScale,
@@ -30,6 +36,7 @@ import { type BoardCellItem, cellsOf } from './board-cells.ts';
 import { BoardGrid, focusKeys } from './board-grid.tsx';
 import { type BoardLine, boardEntry, boardFocusAfter } from './board-navigation.ts';
 import { type BoardModel, boardModelOf } from './board-rows.ts';
+import { BoardSkeleton } from './board-skeleton.tsx';
 
 /** The board opens at Week, as the Gantt and the job order table do (D5; D3 open question 1). */
 const defaultZoom = 'week';
@@ -99,12 +106,12 @@ export function BoardScreen() {
   const source = useGanttSource();
   const { plant } = useShell();
   const rawSearch = useSearch({ strict: false });
-  const search = useMemo(() => ganttSearch(rawSearch), [rawSearch]);
+  const search = useMemo(() => boardSearch(rawSearch), [rawSearch]);
   const navigate = useNavigate();
   // The range replaces the history entry; a change of the selected order pushes one, so Back
   // returns to the order before (design D3, URL state).
   const setSearch = useCallback(
-    (next: GanttSearch, history: 'replace' | 'push' = 'replace') =>
+    (next: BoardSearch, history: 'replace' | 'push' = 'replace') =>
       navigate({
         to: '.',
         search: next as Record<string, unknown>,
@@ -117,6 +124,15 @@ export function BoardScreen() {
   const [loadedRange, setLoadedRange] = useState<string | undefined>(undefined);
   const [loadError, setLoadError] = useState<unknown>(undefined);
   const [attempt, setAttempt] = useState(0);
+  /** Settles the promise of Try again once the load it started has settled. */
+  const retryDone = useRef<(() => void) | undefined>(undefined);
+  // A change of the preview drops the board shown before, so the state it asks for shows at once.
+  const [shownPreview, setShownPreview] = useState(search.preview);
+  if (shownPreview !== search.preview) {
+    setShownPreview(search.preview);
+    setSnapshot(undefined);
+    setLoadError(undefined);
+  }
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [focused, setFocused] = useState<string | undefined>(undefined);
   const [width, measureRef] = useMeasuredWidth();
@@ -143,6 +159,7 @@ export function BoardScreen() {
         from: new Date(range.fromMs).toISOString(),
         to: new Date(range.toMs).toISOString(),
         filter: {},
+        ...(search.preview !== undefined && { preview: search.preview }),
       })
       .then((loaded) => {
         if (cancelled) return;
@@ -151,11 +168,16 @@ export function BoardScreen() {
       })
       .catch((error: unknown) => {
         if (!cancelled) setLoadError(error ?? new Error('The board could not be loaded'));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        retryDone.current?.();
+        retryDone.current = undefined;
       });
     return () => {
       cancelled = true;
     };
-  }, [source, range.fromMs, range.toMs, attempt]);
+  }, [source, range.fromMs, range.toMs, attempt, search.preview]);
 
   const model = useMemo(
     () => (snapshot === undefined ? undefined : boardModelOf(snapshot, range)),
@@ -265,26 +287,83 @@ export function BoardScreen() {
     focusTarget(next);
   };
 
+  // The page states of design D3 (DR17 to DR22): loading draws the grid's skeleton; no access and
+  // no machines to plan replace the board and its toolbar.
+  // A refusal shows no access also when a range before is still in memory: the mock source's
+  // refusal, or the API's FORBIDDEN of a server source.
+  const forbidden =
+    loadError !== undefined &&
+    (loadError instanceof PlanningForbidden || classifyError(loadError).page === 'forbidden');
+  const noMachines = model !== undefined && model.groups.length === 0;
   let state: PageState = { status: 'ready' };
-  // A failed load shows the error, also when the range before is still in memory: its rows would
-  // read as a range without job orders.
-  if (loadError !== undefined) {
+  if (forbidden) {
+    state = {
+      status: 'empty',
+      icon: ShieldOff,
+      title: 'You cannot see the planning board at this plant',
+      description:
+        'The board needs the permission planning.jobOrder:read, and your role at this plant does not include it. Ask your plant admin for the Planner or Viewer role.',
+      // D3 draws no action on DR22, and the toolbar stays hidden. The job table and the order
+      // Gantt need the same permission, so the way out is the plant dashboard, which needs none.
+      action: (
+        <Link
+          to={coreLinks.dashboard({ plant }).href}
+          className={buttonVariants({ variant: 'outline' })}
+        >
+          Open the dashboard
+        </Link>
+      ),
+    };
+  } else if (loadError !== undefined) {
+    // A failed load shows the error, also when the range before is still in memory: its rows
+    // would read as a range without job orders.
     state = {
       status: 'error',
-      title: 'Could not load the board',
+      title: 'The board could not be loaded',
+      description:
+        'Your draft and the saved plan are not affected. Try again, or open the job table for the same range.',
       error: loadError,
-      onRetry: async () => setAttempt((count) => count + 1),
+      onRetry: () =>
+        new Promise<void>((resolve) => {
+          retryDone.current = resolve;
+          setAttempt((count) => count + 1);
+        }),
+      action: (
+        <Link
+          to={planningLinks.jobOrders({ plant }, { zoom, from }).href}
+          className={buttonVariants({ variant: 'outline' })}
+        >
+          Open the job table
+        </Link>
+      ),
     };
   } else if (snapshot === undefined) {
     state = { status: 'loading' };
+  } else if (noMachines) {
+    state = {
+      status: 'empty',
+      icon: Drill,
+      title: 'No machines to plan at this plant yet',
+      description:
+        'The board shows the machines marked as plannable. A plant admin adds machines in Machines and marks them there.',
+      action: (
+        <Link
+          to={coreLinks.machines({ plant }).href}
+          className={buttonVariants({ variant: 'outline' })}
+        >
+          Open Machines
+        </Link>
+      ),
+    };
   }
   const label = rangeLabel(range, zoom, timeZone);
+  const gridName = `${plant} board, ${label}`;
 
   return (
     <PageFrame
       title="Planning board"
       meta={
-        snapshot?.erp === undefined ? undefined : (
+        snapshot?.erp === undefined || noMachines ? undefined : (
           <span className="text-sm text-muted-foreground">
             ERP data as of {plantTime(snapshot, snapshot.erp.importedAtMs)}
           </span>
@@ -292,34 +371,42 @@ export function BoardScreen() {
       }
       state={state}
       toolbar={
-        <div role="toolbar" aria-label="Board" className="flex flex-wrap items-center gap-2">
-          <RangeControls
-            presetLabel="Zoom"
-            zoom={zoom}
-            onZoomChange={(next) => void setSearch(withZoom(search, next))}
-            from={from}
-            onFromChange={(next) => void setSearch(withFrom(search, next))}
-            onEarlier={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'earlier')))}
-            onNow={() =>
-              void setSearch(withFrom(search, plantDateOf(snapshot?.nowMs ?? Date.now(), timeZone)))
-            }
-            onLater={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'later')))}
-            rangeLabel={label}
-          />
-        </div>
+        forbidden || noMachines ? undefined : (
+          <div role="toolbar" aria-label="Board" className="flex flex-wrap items-center gap-2">
+            <RangeControls
+              presetLabel="Zoom"
+              zoom={zoom}
+              onZoomChange={(next) => void setSearch(withZoom(search, next))}
+              from={from}
+              onFromChange={(next) => void setSearch(withFrom(search, next))}
+              onEarlier={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'earlier')))}
+              onNow={() =>
+                void setSearch(
+                  withFrom(search, plantDateOf(snapshot?.nowMs ?? Date.now(), timeZone)),
+                )
+              }
+              onLater={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'later')))}
+              rangeLabel={label}
+            />
+          </div>
+        )
       }
     >
       {snapshot?.fixture !== undefined && (
         <p className="text-xs text-muted-foreground">Showing fixture {snapshot.fixture}.</p>
       )}
+      {state.status === 'loading' && (
+        <BoardSkeleton name={gridName} machineWidth={machineWidth} gridRef={measureRef} />
+      )}
       {view !== undefined &&
         snapshot !== undefined &&
         model !== undefined &&
+        !noMachines &&
         loadError === undefined && (
           <GanttViewProvider value={view}>
             <div ref={fillRef} className="flex min-w-0 flex-col">
               <BoardGrid
-                name={`${plant} board, ${label}`}
+                name={gridName}
                 snapshot={snapshot}
                 model={model}
                 cellsOf={(code) => cells.get(code) ?? []}
