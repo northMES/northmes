@@ -23,16 +23,21 @@ describe('a pg client or pool in an error that Vitest reports', () => {
     pool.on('error', (error) => idleErrors.push(error));
     try {
       const idle = await pool.connect();
-      const { rows } = await idle.query<{ pid: number }>('select pg_backend_pid() as pid');
-      idle.release();
-      await query(db.appUrl, `select pg_terminate_backend(${Number(rows[0]?.pid)})`);
+      let pid: number | undefined;
+      try {
+        const { rows } = await idle.query<{ pid: number }>('select pg_backend_pid() as pid');
+        pid = rows[0]?.pid;
+      } finally {
+        idle.release();
+      }
+      await query(db.appUrl, `select pg_terminate_backend(${Number(pid)})`);
       await expect.poll(() => idleErrors.length).toBe(1);
       const report = reported(idleErrors[0]);
 
       expect(idleErrors[0]).toHaveProperty('client');
-      expect(report).toContain('"user":"nm_app"');
-      expect(report).toContain(`"database":"${db.databaseName}"`);
-      // A boolean, so a failure does not print the password either.
+      // Booleans, so a failure prints neither the report nor the password.
+      expect(report.includes('"user":"nm_app"')).toBe(true);
+      expect(report.includes(`"database":"${db.databaseName}"`)).toBe(true);
       expect(report.includes(password)).toBe(false);
     } finally {
       await pool.end();
@@ -45,8 +50,8 @@ describe('a pg client or pool in an error that Vitest reports', () => {
     try {
       const report = reported(Object.assign(new Error('the pool failed'), { pool }));
 
-      expect(report).toContain('"user":"nm_app"');
-      expect(report).toContain(`"database":"${db.databaseName}"`);
+      expect(report.includes('"user":"nm_app"')).toBe(true);
+      expect(report.includes(`"database":"${db.databaseName}"`)).toBe(true);
       expect(report.includes(password)).toBe(false);
     } finally {
       await pool.end();
