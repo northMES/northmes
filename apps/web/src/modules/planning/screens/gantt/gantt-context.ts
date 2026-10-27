@@ -16,7 +16,8 @@ export interface GanttMoveActions {
   readonly stepTime: (direction: -1 | 1) => void;
   readonly stepMachine: (direction: -1 | 1) => void;
   readonly commit: () => void;
-  readonly cancel: () => void;
+  /** Ends the move without a change; focus returns to the block unless refocus is false. */
+  readonly cancel: (options?: { readonly refocus?: boolean }) => void;
 }
 
 /** Whether an order can be combined into a run with the selection, and why not (plan 18, Runs). */
