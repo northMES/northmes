@@ -46,6 +46,10 @@ describe('event consumers', () => {
     testApp = await createTestApp({ modules: ['core'], hostFactory: withRecorder, database: db });
     await testApp.app.listen(0, '127.0.0.1');
     pool = new Pool({ connectionString: db.appUrl });
+    // Every pool has an error handler before use (ADR 0041). When useTestDatabase drops the
+    // database with (force), Postgres ends any connection still open with 57P01, and pg-pool emits
+    // that on the pool; without a listener it fails the run as an unhandled error.
+    pool.on('error', () => {});
   });
 
   afterAll(async () => {

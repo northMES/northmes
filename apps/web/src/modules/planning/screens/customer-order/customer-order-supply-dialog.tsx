@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatDuration, formatPlantDay } from '@northmes/contracts/format';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Temporal } from 'temporal-polyfill';
 import { TextField } from '../../../../ui/components/text-field/index.ts';
 import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
+import { announce } from '../../../../ui/lib/announce.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import {
   Dialog,
@@ -37,18 +38,44 @@ function daysText(days: number): string {
   return days === 1 ? '1 day' : `${days} days`;
 }
 
+/** How long the outcome waits after a change before the announcer says it: typing has paused. */
+const settleMs = 500;
+
+/**
+ * Says the outcome through the app's announcer when it changes and then holds for a moment, so
+ * typing a quantity says the last outcome once. The outcome the dialog opens with is not said: the
+ * dialog is read as a whole. An outcome that comes back after a refused quantity is said again.
+ */
+function useAnnouncedChange(message: string | undefined): void {
+  const said = useRef(message);
+  useEffect(() => {
+    if (message === said.current) return;
+    if (message === undefined) {
+      said.current = undefined;
+      return;
+    }
+    const timer = setTimeout(() => {
+      said.current = message;
+      announce(message);
+    }, settleMs);
+    return () => clearTimeout(timer);
+  }, [message]);
+}
+
+interface OutcomeText {
+  /** What the picked order then supplies. */
+  readonly supplies: string;
+  /** What that does to the plan. */
+  readonly effect: string;
+}
+
 /** What the picked order supplies after the change, and what that does to the plan (KO3). */
-function Outcome({
-  snapshot,
-  line,
-  candidate,
-  quantity,
-}: {
-  readonly snapshot: GanttSnapshot;
-  readonly line: CustomerOrderLine;
-  readonly candidate: SupplyCandidate;
-  readonly quantity: number;
-}) {
+function outcomeText(
+  snapshot: GanttSnapshot,
+  line: CustomerOrderLine,
+  candidate: SupplyCandidate,
+  quantity: number,
+): OutcomeText {
   const { order } = candidate;
   const analysis = snapshot.analysis.orders[order.id];
   const days = Temporal.PlainDate.from(order.deadlineDate).until(line.wantedDate).days;
@@ -62,16 +89,22 @@ function Outcome({
     : days >= 0
       ? `Its deadline stays ${deadline}, ${daysText(days)} before the wanted date, so nothing moves on the plan.`
       : `Its deadline stays ${deadline}, ${daysText(-days)} after the wanted date. Nothing moves on the plan.`;
+  return {
+    supplies: `Order ${order.number} then supplies ${quantityText(quantity)} to this line${
+      rest > 0 ? ` and ${quantityText(rest)} to stock` : ''
+    }`,
+    effect: `${consequence}${candidate.stock ? ' It is no longer a stock order.' : ''}`,
+  };
+}
+
+function Outcome({ supplies, effect }: OutcomeText) {
   return (
-    <div role="status" className="grid gap-0.5 rounded-md border border-info bg-info-subtle p-3">
-      <b className="font-medium">
-        Order {order.number} then supplies {quantityText(quantity)} to this line
-        {rest > 0 ? ` and ${quantityText(rest)} to stock` : ''}
-      </b>
-      <span>
-        {consequence}
-        {candidate.stock && ' It is no longer a stock order.'}
-      </span>
+    <div
+      data-supply-outcome
+      className="grid gap-0.5 rounded-md border border-info bg-info-subtle p-3"
+    >
+      <b className="font-medium">{supplies}</b>
+      <span>{effect}</span>
     </div>
   );
 }
@@ -134,6 +167,9 @@ function SupplyStep({
   const parsed = /^\d+$/.test(quantity.trim()) ? Number(quantity.trim()) : Number.NaN;
   const valid = Number.isInteger(parsed) && parsed > 0 && parsed <= line.quantity;
   const fits = valid && candidate !== undefined && parsed <= candidate.free;
+  // The step owns the announcement, so it outlives the outcome that a refused quantity hides.
+  const outcome = fits ? outcomeText(snapshot, line, candidate, parsed) : undefined;
+  useAnnouncedChange(outcome === undefined ? undefined : `${outcome.supplies}. ${outcome.effect}`);
   return (
     <>
       <DialogHeader>
@@ -200,9 +236,7 @@ function SupplyStep({
                 error: `Order ${candidate.order.number} has ${quantityText(candidate.free)} free.`,
               })}
           />
-          {fits && (
-            <Outcome snapshot={snapshot} line={line} candidate={candidate} quantity={parsed} />
-          )}
+          {outcome !== undefined && <Outcome {...outcome} />}
           <TextareaField
             label="Reason"
             optional

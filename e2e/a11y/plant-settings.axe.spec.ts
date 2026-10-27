@@ -6,7 +6,7 @@ import { expect, plant, test } from '../fixtures.ts';
 // The axe check of ADR 0021 over the states of the plant settings pages (E06; design #688): the
 // machines list and its loading, empty, failed and no-access states, a machine's page, the edit
 // form with its loading, failed-save and no-access states and the not-found state, the calendars
-// list and a calendar's page with its week view, and their no-access states. The pages read the fixture G1, so every state is
+// list and a calendar's page with its week view, a calendar with three shifts at 1280 and 320, and their no-access states. The pages read the fixture G1, so every state is
 // the same in every run; the preview key opens the states on mock data.
 
 /** An href of the seed plant with a search. */
@@ -131,6 +131,21 @@ test.describe('the plant settings pages', () => {
       'true',
     );
     await checkA11y('the week view of one machine');
+
+    // A calendar with three shifts: each shift in its own color, with the legend above the view
+    // (#770), and at 320 the view scrolling sideways in its focusable region.
+    await page.goto(
+      withSearch(coreLinks.calendars.calendar({ plant, calendarId: 'B3' }).href, {
+        week: '2026-11-09',
+      }),
+    );
+    await expect(page.getByRole('list', { name: 'Legend' })).toBeVisible();
+    await expect(page.getByRole('img', { name: /^Week 46:/ })).toBeVisible();
+    await checkA11y('a calendar with three shifts and its legend');
+    await page.setViewportSize({ width: 320, height: 800 });
+    await expect(page.getByRole('region', { name: 'Week view' })).toBeVisible();
+    await checkA11y('a calendar with three shifts at 320');
+    await page.setViewportSize({ width: 1280, height: 800 });
 
     const noAccess = 'You need the permission to read calendars at this plant';
     await page.goto(withSearch(coreLinks.calendars({ plant }).href, { preview: 'forbidden' }));

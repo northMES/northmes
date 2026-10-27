@@ -6,6 +6,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { saveReason } from '../../../src/modules/planning/mock-reasons.ts';
+import { politeRegionId } from '../../../src/ui/lib/announce.ts';
 import { plant, renderPlanningAt, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
@@ -21,6 +22,11 @@ function customerOrderHref(number: string, search: Record<string, string> = {}):
 function definition(term: string): string {
   const dt = screen.getByText(term, { selector: 'dt' });
   return dt.nextElementSibling?.textContent ?? '';
+}
+
+/** The outcome of the supply step: what the picked order then supplies. */
+function outcome(dialog: HTMLElement): string {
+  return dialog.querySelector('[data-supply-outcome]')?.textContent ?? '';
 }
 
 /** The text of each cell of a table's own body rows. */
@@ -136,14 +142,23 @@ describe("a customer order's page (design #728, KO1 to KO3)", () => {
       name: 'Quantity from order 1004 (pcs)',
     }) as HTMLInputElement;
     expect(quantity.value).toBe('250');
-    expect(within(dialog).getByRole('status').textContent).toBe(
+    expect(outcome(dialog)).toBe(
       'Order 1004 then supplies 250 pcs to this line and 950 pcs to stockIts deadline stays Fri 6 Nov 15:00, 14 days before the wanted date, so nothing moves on the plan. It is no longer a stock order.',
     );
 
+    // The outcome is no live region of its own: the app's announcer says it once typing pauses.
+    expect(within(dialog).queryByRole('status')).toBeNull();
     await userEvent.clear(quantity);
     await userEvent.type(quantity, '100');
-    expect(within(dialog).getByRole('status').textContent).toMatch(
+    expect(outcome(dialog)).toMatch(
       /^Order 1004 then supplies 100 pcs to this line and 1100 pcs to stock/,
+    );
+    await waitFor(
+      () =>
+        expect(document.getElementById(politeRegionId)?.textContent).toBe(
+          'Order 1004 then supplies 100 pcs to this line and 1100 pcs to stock. Its deadline stays Fri 6 Nov 15:00, 14 days before the wanted date, so nothing moves on the plan. It is no longer a stock order.',
+        ),
+      { timeout: 3000 },
     );
 
     expect(
@@ -181,6 +196,45 @@ describe("a customer order's page (design #728, KO1 to KO3)", () => {
     ).toBeTruthy();
   });
 
+  it('#728 KO3 announces the outcome that comes back once a refused quantity is fixed', async () => {
+    renderPlanningAt(customerOrderHref('40211', { supply: '2' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Supply line 2 from a production order',
+    });
+    const quantity = within(dialog).getByRole('textbox', {
+      name: 'Quantity from order 1004 (pcs)',
+    });
+
+    await userEvent.clear(quantity);
+    await userEvent.type(quantity, '300');
+    expect(outcome(dialog)).toBe('');
+    await userEvent.type(quantity, '{Backspace}');
+    expect(outcome(dialog)).toMatch(/^Order 1004 then supplies 30 pcs to this line/);
+    await waitFor(
+      () =>
+        expect(document.getElementById(politeRegionId)?.textContent).toBe(
+          'Order 1004 then supplies 30 pcs to this line and 1170 pcs to stock. Its deadline stays Fri 6 Nov 15:00, 14 days before the wanted date, so nothing moves on the plan. It is no longer a stock order.',
+        ),
+      { timeout: 3000 },
+    );
+  });
+
+  it('#728 KO3 names the open plant in the supply step of a line that names no delivering plant', async () => {
+    const snapshot = g1Snapshot();
+    const unset = {
+      ...snapshot,
+      customerOrderLines: snapshot.customerOrderLines?.map(({ deliveringPlant, ...line }) =>
+        line.id === '40211-2' ? line : { ...line, deliveringPlant },
+      ),
+    };
+    renderPlanningAt(customerOrderHref('40211', { supply: '2' }), sourceOf(unset));
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Supply line 2 from a production order',
+    });
+
+    expect(within(dialog).getByText(/ at Plant A with quantity free:$/)).toBeTruthy();
+  });
+
   it('#728 KO1 says a customer order does not exist, with the way back to Customer orders', async () => {
     renderPlanningAt(customerOrderHref('99999'));
     await screen.findByRole('heading', {
@@ -215,7 +269,7 @@ describe("a customer order's page (design #728, KO1 to KO3)", () => {
       name: 'Supply line 2 from a production order',
     });
 
-    expect(within(dialog).getByRole('status').textContent).toBe(
+    expect(outcome(dialog)).toBe(
       'Order 1004 then supplies 250 pcs to this line and 950 pcs to stockOrder 1004 is late by 1 h: it ends Fri 6 Nov 16:00, after its deadline Fri 6 Nov 15:00, so the line is late too. Nothing moves on the plan. It is no longer a stock order.',
     );
   });

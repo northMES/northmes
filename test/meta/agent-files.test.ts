@@ -145,3 +145,43 @@ describe('code-reviewer agent', () => {
     expect(claude).toContain('`code-reviewer` subagent');
   });
 });
+
+// The blast-radius review before the pull request (ADR 0086) runs as a project subagent in a fresh
+// context, like the code review. It judges how much harm a wrong merge would do and ends with the
+// Tier line that CI / risk gate reads, and it edits nothing.
+describe('blast-radius agent', () => {
+  const path = '.claude/agents/blast-radius.md';
+
+  it('ADR0086 the blast-radius agent has no file-edit tools and runs its Bash commands through the read-only guard', () => {
+    const agent = agentFrontmatter(path);
+    const tools = toolList(agent.tools);
+
+    expect(agent.name).toBe('blast-radius');
+    for (const editTool of ['Edit', 'Write', 'NotebookEdit']) {
+      expect(tools).not.toContain(editTool);
+    }
+    expect(agent.hooks?.PreToolUse).toContainEqual({
+      matcher: 'Bash',
+      hooks: [
+        {
+          type: 'command',
+          command: 'node "$CLAUDE_PROJECT_DIR"/scripts/agents/review-bash-guard.mjs',
+          onFailure: 'block',
+        },
+      ],
+    });
+  });
+
+  it('ADR0086 the blast-radius agent ends its section with the Tier line that the risk gate reads', () => {
+    const text = readFileSync(join(root, path), 'utf8');
+
+    expect(text).toContain('`Tier: low`');
+    expect(text).toContain('`Tier: high`');
+  });
+
+  it('ADR0086 CLAUDE.md sends the blast-radius review before the pull request to the blast-radius agent', () => {
+    const claude = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
+
+    expect(claude).toContain('`blast-radius` subagent');
+  });
+});

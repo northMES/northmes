@@ -83,4 +83,12 @@ describe('the block of a job order row (plan 18, Blocks across closed time)', ()
     expect(blockOf(gantt, 'jo-1001-20').className).toContain('border-t-3');
     expect(blockOf(gantt, 'jo-1003-10').className).not.toContain('border-t-3');
   });
+
+  it('D1 draws block text in pure black on the order color, in both themes', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    // The palette's text token, black in both themes; the palette of Tailwind is removed.
+    expect(blockOf(gantt, 'jo-1001-10').classList).toContain('text-palette-foreground');
+  });
 });

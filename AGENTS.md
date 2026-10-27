@@ -15,6 +15,7 @@ The plan lives in `docs/plan/`, the architecture decisions in `docs/adr/` (index
 - Start the subject of a commit that adds a failing test with `test:`.
 - Name and place web components and screens by the "Naming and folders" section of `.claude/skills/web-module/SKILL.md`.
 - Bring a new dependency in its own pull request, at a version older than Renovate's `minimumReleaseAge` window.
+- Open every pull request against `main`, cut small enough to merge on its own, behind a flag or without its screen if need be. Open no pull request on top of another. Work that needs an open pull request may start on a local branch from it, but push it and open its pull request only after the base merged, once the branch is rebuilt on `main` with `git rebase --onto origin/main <the base's last commit>`; a branch that was never pushed needs no force push. A change asked for on the base by a check or a review goes on the base as usual.
 - Do not run react-doctor, through `pnpm react-doctor` or any other command: it runs in CI only (`CI / react doctor`) until its vendor confirms that agents may run it (ADR 0040).
 - Packages published under MIT (`packages/sdk`, `packages/web-sdk`, `packages/ui`, `packages/contracts`, `packages/testing`, every `modules/*/contracts` package and the generator package) import only MIT or other permissive code, never the AGPL modules.
 
@@ -36,7 +37,7 @@ Deliver what the task or issue asks, at the scope it intends. Make routine judgm
 
 When an issue names a seam (the module boundary or interface to build at), build at that seam.
 
-Before the pull request opens, review the diff in a fresh context against the issue and its ADRs and handle the findings (`CLAUDE.md` gives the Claude Code steps). Review then happens on the pull request (CI, CodeRabbit and the maintainer), so hand the work over once `pnpm check` passes and the findings are handled.
+Before the pull request opens, review the diff in a fresh context against the issue and its ADRs and handle the findings (`CLAUDE.md` gives the Claude Code steps). A low pull request then merges on its checks; a high one is reviewed on the pull request by CodeRabbit and the maintainer ([ADR 0086](docs/adr/0086-risk-tiered-review-and-merge-of-agent-pull-requests.md)). Hand the work over once `pnpm check` passes and the findings are handled.
 
 ## Subagents
 

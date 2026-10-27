@@ -39,6 +39,13 @@ export function planningRoutes(plantRoute: PlantRoute) {
     },
     component: lazyRouteComponent(() => import('./screens.ts'), 'BoardScreen'),
   });
+  // The walking-skeleton list with Release, on a route of its own until the board's backend
+  // stories wire the board (Krister, 2026-10-21).
+  const releaseRoute = createRoute({
+    getParentRoute: () => planningRoute,
+    path: linkEntry(planningLinks.release).path,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'ReleaseOrdersScreen'),
+  });
   const ganttRoute = createRoute({
     getParentRoute: () => planningRoute,
     path: linkEntry(planningLinks.gantt).path,
@@ -100,6 +107,7 @@ export function planningRoutes(plantRoute: PlantRoute) {
   });
   return planningRoute.addChildren([
     boardRoute,
+    releaseRoute,
     ganttRoute,
     jobOrdersRoute,
     ordersRoute.addChildren([

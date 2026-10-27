@@ -8,6 +8,7 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { bootWeb } from '../src/boot/index.ts';
 import { themeStorageKey } from '../src/ui/lib/theme.ts';
+import { expectLogo } from './product-logo.ts';
 
 const indexHtml = readFileSync(join(import.meta.dirname, '..', 'index.html'), 'utf8');
 
@@ -77,6 +78,16 @@ describe('the boot page', () => {
     const [first] = within(root).getAllByRole('link');
     expect(first?.textContent).toBe('Skip to main content');
     expect(root.contains(document.getElementById('announcer-polite'))).toBe(false);
+  });
+
+  it('E04-S02 the banner of the boot page and of NorthMES could not start shows the NorthMES logo, the light file in the light theme and the on-dark file in the dark theme (BO1, BO3)', async () => {
+    const bootBanner = within(loadIndexHtml()).getByRole('banner');
+    expectLogo(bootBanner);
+    expect(bootBanner.textContent?.trim()).toBe('');
+
+    const { root } = await boot(async () => new Response('', { status: 500 }));
+    await within(root).findByRole('heading', { name: 'NorthMES could not start' });
+    expectLogo(within(root).getByRole('banner'));
   });
 
   it('E04-S02 the spinner of the boot page is 16 px even before the stylesheet applies (BO1)', () => {
