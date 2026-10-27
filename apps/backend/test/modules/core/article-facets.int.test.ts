@@ -6,6 +6,7 @@ import {
   givenCompany,
   hostFactory,
   queryAsCore,
+  signIn,
   signInAt,
 } from '@northmes/backend/testing';
 import {
@@ -50,6 +51,11 @@ type Filters = {
   sources?: (string | null)[];
 };
 
+/** The GraphQL code and errorCode of each error of an answer. */
+function refusals(answer: { errors?: readonly { extensions?: Record<string, unknown> }[] }) {
+  return answer.errors?.map(({ extensions }) => [extensions?.code, extensions?.errorCode]);
+}
+
 interface Facets {
   total: number;
   articleGroups: { id: string | null; code: string | null; name: string | null; count: number }[];
@@ -62,12 +68,19 @@ describe('the filters of coreArticles and their counts', () => {
   let testApp: TestApp | undefined;
   let gql: GqlClient;
   const groups = { hoses: randomUUIDv7(), shafts: randomUUIDv7(), housings: randomUUIDv7() };
+  // Plant A, where the articles are, its slug and its company.
+  let plantA = '';
+  let slugA = '';
+  let companyA = '';
 
   beforeAll(async () => {
     testApp = await createTestApp({ modules: ['core'], hostFactory, database: db });
     await testApp.app.listen(0, '127.0.0.1');
-    const { company, plants } = await givenCompany(db.ownerUrl, { plants: 2 });
-    const [plantA = '', plantB = ''] = plants;
+    const { company, plants, slugs } = await givenCompany(db.ownerUrl, { plants: 2 });
+    let plantB = '';
+    [plantA = '', plantB = ''] = plants;
+    [slugA = ''] = slugs;
+    companyA = company;
     for (const [id, code, name] of [
       [groups.hoses, 'HO', 'Hoses'],
       [groups.shafts, 'SH', 'Shafts'],
@@ -206,7 +219,50 @@ describe('the filters of coreArticles and their counts', () => {
       { id: groups.hoses, code: 'HO', name: 'Hoses', count: 2 },
       { id: null, code: null, name: null, count: 1 },
     ]);
-    expect(byGroup?.stockUnits).toHaveLength(4);
+    expect(byGroup?.stockUnits).toEqual([
+      { stockUnit: 'PIECE', count: 1 },
+      { stockUnit: 'METRE', count: 2 },
+      { stockUnit: 'KILOGRAM', count: 1 },
+      { stockUnit: 'LITRE', count: 1 },
+    ]);
+  });
+
+  it('E06-S06 a user without core.article:read at the plant gets FORBIDDEN with core.forbidden from coreArticleFacets, and no counts', async () => {
+    if (!testApp) throw new Error('the test app did not start');
+    const { authorization } = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: plantA, permissions: ['core.user:read'] },
+    ]);
+    const reader = gqlClient(await testApp.app.getUrl(), {
+      headers: { authorization, 'x-northmes-plant': slugA },
+    });
+
+    const answer = await reader.send(facetsQuery, {});
+
+    expect(answer.data).toBeNull();
+    expect(refusals(answer)).toEqual([['FORBIDDEN', 'core.forbidden']]);
+  });
+
+  it("E06-S06 in company settings coreArticleFacets with another company's id is core.forbidden, and answers no counts", async () => {
+    if (!testApp) throw new Error('the test app did not start');
+    const other = await givenCompany(db.ownerUrl);
+    const { authorization } = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: companyA, permissions: ['core.article:read'] },
+    ]);
+    const inSettings = gqlClient(await testApp.app.getUrl(), { headers: { authorization } });
+
+    const own = await inSettings.send<{ coreArticleFacets: Facets }>(
+      'query ($companyId: ID) { coreArticleFacets(companyId: $companyId) { total } }',
+      { companyId: companyA },
+    );
+    const elsewhere = await inSettings.send(
+      'query ($companyId: ID) { coreArticleFacets(companyId: $companyId) { total } }',
+      { companyId: other.company },
+    );
+
+    expect(own.errors).toBeUndefined();
+    expect(own.data?.coreArticleFacets.total).toBe(6);
+    expect(elsewhere.data).toBeNull();
+    expect(refusals(elsewhere)).toEqual([['FORBIDDEN', 'core.forbidden']]);
   });
 
   it('E06-S06 the counts take the archived articles in with includeArchived', async () => {

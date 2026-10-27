@@ -46,6 +46,7 @@ Related plan documents: [04-data-and-platform.md](04-data-and-platform.md) (data
 11. Pure domain code imports no Nest, Kysely, `pg` or `process.env`. The scheduling domain is the package `@northmes/planning-domain` in `modules/planning/domain` ([ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md)), and a lint test enforces the import ban there.
 12. Test names, file names and fixtures use glossary terms. `batch_row` does not appear in event, error or test names.
 13. Every command runs as a root pnpm script or with `pnpm --filter` from the repository root, never after a `cd` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)).
+14. A test can go red for the regression its name describes ([docs/agents/testing.md](../agents/testing.md) holds the rules and their fixes).
 
 ## Test tiers
 
