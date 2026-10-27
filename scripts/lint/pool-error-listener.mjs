@@ -7,15 +7,25 @@
 // it fails a Vitest run as an unhandled error, and Vitest prints the pg client that pg-pool puts on
 // the error.
 //
+// A pg Client in test code gets the same handler: a client still open when Postgres ends its
+// connection, as when useTestDatabase drops the database with (force), emits error, and without a
+// listener Vitest reports it as an unhandled error. Test code is a *.test.* file, a file under a
+// test/ or e2e/ directory, the testing package (packages/testing/) and a testing module or
+// directory such as apps/backend/src/testing.ts.
+//
 // A pool construction is `new Pool(...)`, `new <anything>.Pool(...)`, or `new X(...)` where X is
-// imported as Pool from pg or as the default export of pg-pool. It is a finding unless one of
-// these holds:
+// imported as Pool from pg or as the default export of pg-pool. A client construction is
+// `new X(...)` where X is imported as Client from pg or destructured from it
+// (`const { Client } = pg`, `const { Client } = require('pg')`), or `new <pg>.Client(...)` where
+// <pg> is the default or namespace import of pg or `require('pg')`. A construction is a finding
+// unless one of these holds:
 // - `.on('error', ...)` is chained on the construction itself.
 // - The construction is assigned to a variable or a property, the first mention of that variable
 //   or property afterwards is `.on('error', ...)` on it, and that call is a statement of the block
 //   that holds the construction. So a listener inside an if, or in a later hook, does not count.
-// `.once` does not count, because pg-pool emits one error for each idle connection that ends. The
-// scan parses each file with TypeScript, so a Pool in a comment or a string is not a finding.
+// `.once` does not count, because pg-pool emits one error for each idle connection that ends, and
+// a client follows the same rule. The scan parses each file with TypeScript, so a Pool in a comment
+// or a string is not a finding.
 //
 // test/meta/pool-error-listener.test.ts scans every TypeScript and JavaScript file that git tracks
 // outside docs/, so pnpm check fails on a finding.
@@ -27,31 +37,91 @@ import ts from 'typescript';
  * @typedef {{ path: string, line: number }} Finding
  */
 
-/** A cheap filter, so only files that may construct a pool are parsed. */
+/** Cheap filters, so only files that may construct a pool, or in test code a client, are parsed. */
 const mayConstructPool = /\bPool\b|['"]pg-pool['"]/;
+const mayConstructPoolOrClient = /\bPool\b|['"]pg-pool['"]|\bClient\b/;
+
+/** The paths of test code, where a pg Client is checked too. */
+const testCode = [
+  /\.test\.[cm]?[jt]sx?$/,
+  /(^|\/)(test|e2e)\//,
+  /^packages\/testing\//,
+  /(^|\/)testing(\/|\.[cm]?[jt]sx?$)/,
+];
+
+/** @param {string} path */
+function isTestCode(path) {
+  return testCode.some((pattern) => pattern.test(path));
+}
 
 /**
- * The local names that a file imports pg's Pool under: `import { Pool as PgPool } from 'pg'` and
- * `import BarePool from 'pg-pool'`.
- * @param {ts.SourceFile} source
- * @returns {Set<string>}
+ * @typedef {{ pool: Set<string>, client: Set<string>, pg: Set<string> }} PgNames
  */
-function importedPoolNames(source) {
-  const names = new Set(['Pool']);
+
+/**
+ * Whether `node` is `require('pg')`.
+ * @param {ts.Node} node
+ */
+function isRequireOfPg(node) {
+  if (!ts.isCallExpression(node) || !ts.isIdentifier(node.expression)) return false;
+  const [specifier] = node.arguments;
+  return (
+    node.expression.text === 'require' &&
+    specifier !== undefined &&
+    ts.isStringLiteralLike(specifier) &&
+    specifier.text === 'pg'
+  );
+}
+
+/**
+ * The local names that a file imports pg under: Pool as in `import { Pool as PgPool } from 'pg'`
+ * and `import BarePool from 'pg-pool'`, Client as in `import { Client } from 'pg'`,
+ * `const { Client } = pg` and `const { Client } = require('pg')`, and the module itself as in
+ * `import pg from 'pg'`, `import * as postgres from 'pg'` and `const pg = require('pg')`.
+ * @param {ts.SourceFile} source
+ * @returns {PgNames}
+ */
+function importedPgNames(source) {
+  /** @type {PgNames} */
+  const names = { pool: new Set(['Pool']), client: new Set(), pg: new Set() };
   for (const statement of source.statements) {
     if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) {
       continue;
     }
     const from = statement.moduleSpecifier.text;
     const clause = statement.importClause;
-    if (from === 'pg-pool' && clause?.name) names.add(clause.name.text);
+    if (from === 'pg-pool' && clause?.name) names.pool.add(clause.name.text);
+    if (from === 'pg' && clause?.name) names.pg.add(clause.name.text);
     const bindings = clause?.namedBindings;
+    if (from === 'pg' && bindings && ts.isNamespaceImport(bindings)) {
+      names.pg.add(bindings.name.text);
+    }
     if ((from === 'pg' || from === 'pg-pool') && bindings && ts.isNamedImports(bindings)) {
       for (const element of bindings.elements) {
-        if ((element.propertyName ?? element.name).text === 'Pool') names.add(element.name.text);
+        const imported = (element.propertyName ?? element.name).text;
+        if (imported === 'Pool') names.pool.add(element.name.text);
+        if (imported === 'Client' && from === 'pg') names.client.add(element.name.text);
       }
     }
   }
+  /** @param {ts.Node} node */
+  const declared = (node) => {
+    if (ts.isVariableDeclaration(node) && node.initializer) {
+      const { initializer } = node;
+      const required = isRequireOfPg(initializer);
+      if (required && ts.isIdentifier(node.name)) names.pg.add(node.name.text);
+      const isPg = required || (ts.isIdentifier(initializer) && names.pg.has(initializer.text));
+      if (isPg && ts.isObjectBindingPattern(node.name)) {
+        for (const element of node.name.elements) {
+          const imported = element.propertyName ?? element.name;
+          const isClient = ts.isIdentifier(imported) && imported.text === 'Client';
+          if (isClient && ts.isIdentifier(element.name)) names.client.add(element.name.text);
+        }
+      }
+    }
+    ts.forEachChild(node, declared);
+  };
+  declared(source);
   return names;
 }
 
@@ -65,6 +135,23 @@ function isPoolConstruction(node, poolNames) {
   const callee = ts.skipParentheses(node.expression);
   if (ts.isIdentifier(callee)) return poolNames.has(callee.text);
   return ts.isPropertyAccessExpression(callee) && callee.name.text === 'Pool';
+}
+
+/**
+ * Whether `node` is `new Client(...)` with Client from pg, or `new pg.Client(...)` and
+ * `new pg.default.Client(...)` with pg the module.
+ * @param {ts.Node} node
+ * @param {PgNames} names
+ * @returns {node is ts.NewExpression}
+ */
+function isClientConstruction(node, names) {
+  if (!ts.isNewExpression(node)) return false;
+  const callee = ts.skipParentheses(node.expression);
+  if (ts.isIdentifier(callee)) return names.client.has(callee.text);
+  if (!ts.isPropertyAccessExpression(callee) || callee.name.text !== 'Client') return false;
+  let root = callee.expression;
+  while (ts.isPropertyAccessExpression(root)) root = root.expression;
+  return ts.isIdentifier(root) && names.pg.has(root.text);
 }
 
 /**
@@ -207,8 +294,8 @@ function isListened(construction, source) {
 }
 
 /**
- * The pool constructions that get no error listener before use, in the order of the files and
- * their lines.
+ * The pool constructions, and the client constructions in test code, that get no error listener
+ * before use, in the order of the files and their lines.
  * @param {SourceFile[]} files
  * @returns {Finding[]}
  */
@@ -216,12 +303,17 @@ export function scan(files) {
   /** @type {Finding[]} */
   const findings = [];
   for (const { path, text } of files) {
-    if (!mayConstructPool.test(text)) continue;
+    const checksClients = isTestCode(path);
+    const mayConstruct = checksClients ? mayConstructPoolOrClient : mayConstructPool;
+    if (!mayConstruct.test(text)) continue;
     const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
-    const poolNames = importedPoolNames(source);
+    const names = importedPgNames(source);
     /** @param {ts.Node} node */
     const visit = (node) => {
-      if (isPoolConstruction(node, poolNames) && !isListened(node, source)) {
+      const constructs =
+        isPoolConstruction(node, names.pool) ||
+        (checksClients && isClientConstruction(node, names));
+      if (constructs && !isListened(node, source)) {
         const { line } = source.getLineAndCharacterOfPosition(node.getStart(source));
         findings.push({ path, line: line + 1 });
       }
