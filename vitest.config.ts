@@ -28,6 +28,9 @@ export default defineConfig({
     // Coverage is information only: the scheduling domain gets the first threshold
     // (docs/plan/11-quality-and-testing.md). CI / test publishes text-summary.txt in its job summary
     // and keeps the lcov report.
+    // autoAttachSubprocess stays off: the deprecated API scan (scripts/lint/deprecated-apis.mjs) runs
+    // its type checker in worker threads to stay outside the coverage counters, which slow it two to
+    // three times.
     coverage: {
       provider: 'v8',
       include: ['**/*.{ts,tsx,mts,mjs}'],
@@ -62,6 +65,8 @@ export default defineConfig({
             './packages/testing/src/global-setup.ts',
             './apps/backend/test/global-setup.ts',
           ],
+          // A pg client in a reported error shows no password.
+          setupFiles: ['./packages/testing/src/setup.ts'],
         },
       },
       {

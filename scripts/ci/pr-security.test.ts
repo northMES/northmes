@@ -7,7 +7,7 @@ import { checkPrSecurity } from './pr-security.mjs';
 
 const script = fileURLToPath(new URL('./pr-security.mjs', import.meta.url));
 
-// Runs the script as the CI / pr security job does, with the pull request in the environment.
+// Runs the script as the PR / pr security job does, with the pull request in the environment.
 function run(pullRequestEnv: Record<string, string>) {
   return spawnSync(process.execPath, [script], {
     env: { PATH: process.env.PATH, ...pullRequestEnv },
@@ -29,7 +29,7 @@ function body(security: string | undefined) {
   return `## What changes\nAdds the check.\n\nCloses #513\n\n${section}## Validation impact\nNone.\n`;
 }
 
-describe('CI / pr security', () => {
+describe('PR / pr security', () => {
   it('ADR0076 a body without a Security section fails', () => {
     const result = checkPrSecurity(pullRequest(body(undefined)));
 
@@ -88,7 +88,7 @@ describe('CI / pr security', () => {
     expect(checkPrSecurity(pullRequest(nextSection)).ok).toBe(false);
   });
 
-  // Renovate and release-please write their own bodies, as CI / linked issue allows (ADR 0076
+  // Renovate and release-please write their own bodies, as PR / linked issue allows (ADR 0076
   // covers dependency updates through the license gate and the supply-chain checks).
   it('ADR0076 a Renovate or release-please pull request passes without the section', () => {
     expect(checkPrSecurity({ ...pullRequest('Updates pg.'), author: 'renovate[bot]' }).ok).toBe(

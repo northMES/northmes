@@ -9,10 +9,11 @@
 // the symbol is deprecated, such as rxjs's from and TanStack Router's useBlocker, also when the code
 // calls a current one.
 //
-// test/meta/deprecated-apis.test.ts runs the scan over apps/web's tsconfig.json, so pnpm check fails
-// on a finding.
+// test/meta/deprecated-apis.test.ts runs the scan over the tsconfig.json of apps/web and of each
+// example plugin with scanProjects, so pnpm check fails on a finding.
 
 import path from 'node:path';
+import { Worker } from 'node:worker_threads';
 import ts from 'typescript';
 
 /**
@@ -111,4 +112,53 @@ export function scanProject(root, configPath) {
   if (parsed === undefined) throw new Error(`${configPath}: no tsconfig`);
   const fileNames = parsed.fileNames.filter((fileName) => !fileName.includes('/node_modules/'));
   return findDeprecated(root, fileNames, parsed.options, ts.sys.readFile);
+}
+
+/**
+ * scanProject in a worker thread, so the type checker runs outside the coverage counters. A test run
+ * with --coverage starts V8's precise coverage on the test's own thread only, and its block counters
+ * slow the type checker two to three times. Vitest's coverage.autoAttachSubprocess would count in
+ * worker threads too, so it stays off in vitest.config.ts.
+ * @param {string} root The directory the findings' paths are relative to.
+ * @param {string} configPath The tsconfig.json, relative to root.
+ * @returns {Promise<Finding[]>}
+ */
+function scanProjectInWorker(root, configPath) {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./deprecated-apis-worker.mjs', import.meta.url), {
+      workerData: { root, configPath },
+    });
+    /** @type {Finding[] | undefined} */
+    let findings;
+    worker.once('message', (message) => {
+      findings = message;
+    });
+    worker.once('error', (error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      reject(new Error(`${configPath}: ${message}`, { cause: error }));
+    });
+    // The findings count once the worker has ended, so the next project's worker starts after this
+    // one's program is gone. Node emits a worker's messages before its exit.
+    worker.once('exit', (code) => {
+      if (code === 0 && findings !== undefined) resolve(findings);
+      else reject(new Error(`${configPath}: the scan's worker exited with code ${code}`));
+    });
+  });
+}
+
+/**
+ * scanProject for each tsconfig.json, each in a worker thread of its own. The projects are checked
+ * one after another, so the scan holds one program at a time and takes one core of the runner the
+ * other tests share.
+ * @param {string} root The directory the findings' paths are relative to.
+ * @param {string[]} configPaths The tsconfig.json files, relative to root.
+ * @returns {Promise<Finding[]>} The findings of each project, in the order of configPaths.
+ */
+export async function scanProjects(root, configPaths) {
+  /** @type {Finding[]} */
+  const findings = [];
+  for (const configPath of configPaths) {
+    findings.push(...(await scanProjectInWorker(root, configPath)));
+  }
+  return findings;
 }

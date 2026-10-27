@@ -32,9 +32,9 @@ export function planningHref(page: PlanningPage, search: Record<string, string |
 
 /**
  * Renders the shell at a planning URL for a signed-in planner, the Gantt page unless another is
- * named, with a fake API that answers the shell's queries and the board stub's with no orders, and
- * returns the router, whose location the tests read for the view state. The Gantt reads the
- * fixture G1 unless a source is given.
+ * named, with a fake API that answers the shell's queries, and returns the router, whose location
+ * the tests read for the view state. The planning pages read the fixture G1 unless a source is
+ * given.
  */
 export function renderGanttRoute(
   search: Record<string, string | number>,
@@ -54,7 +54,6 @@ export function renderPlanningAt(href: string, source?: GanttDataSource, store?:
   const { fetch } = fakeApi({
     CoreCompanies: companies,
     CoreViewer: () => viewer(['planning.productionOrder:read'], []),
-    PlanningBoard: () => ({ planningProductionOrders: [] }),
   });
   const router = createShellRouter(shellModules, {
     session: fakeSession(),

@@ -9,6 +9,12 @@ import { defineModuleLinks } from '@northmes/contracts';
  */
 export const planningLinks = defineModuleLinks('planning', {
   board: { path: 'board' },
+  /**
+   * The production orders with Release, the walking-skeleton list that used to be the board: it
+   * keeps the real release path until the board's backend stories wire the board (Krister,
+   * 2026-10-21).
+   */
+  release: { path: 'release' },
   /** The order Gantt (plan 18), a page of its own beside the board (Krister, 2026-10-17). */
   gantt: { path: 'gantt' },
   /** The job order table (plan 07, Job order table view), the third page of the timeline. */

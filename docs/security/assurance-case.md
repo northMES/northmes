@@ -61,7 +61,7 @@ Each category of the OWASP Top 10 2021, the controls that counter it and their e
 
 ## How the case stays current
 
-- Every pull request names the controls it touches in its Security section, and `CI / pr security` fails one without it (ADR 0076 rule 2).
+- Every pull request names the controls it touches in its Security section, and `PR / pr security` fails one without it (ADR 0076 rule 2).
 - A new surface, trust boundary or integration adds its row to the threat model in the same pull request (rule 4).
 - The internal audit before each release and each quarter reads the code, the CI and the documents against the controls index and this page, and writes its report to `docs/security/audits/`.
 - A control moves to built only with the code, test or CI job that shows it, and this page moves with it.

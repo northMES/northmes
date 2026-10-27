@@ -35,7 +35,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-/** A screen whose h1 cannot take focus, as the board stub's. */
+/** A screen whose h1 cannot take focus. */
 function BoardScreen() {
   const { plant } = useShell();
   return <h1>Board of {plant}</h1>;
@@ -352,6 +352,7 @@ describe('the shell', () => {
         ['Job orders', '/plant-a/planning/job-orders'],
         ['Production orders', '/plant-a/planning/orders'],
         ['Customer orders', '/plant-a/planning/customer-orders'],
+        ['Release orders', '/plant-a/planning/release'],
       ],
     ]);
   });

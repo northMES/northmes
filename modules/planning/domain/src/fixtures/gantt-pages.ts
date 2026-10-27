@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { z } from 'zod';
 import pagesJson from '../../fixtures/gantt/g1.pages.json' with { type: 'json' };
-import { calendarDeviation, timePoint } from './gantt.ts';
+import { calendarDeviation, clock, timePoint } from './gantt.ts';
 
 /**
  * What the planning pages of the product owner round show beside the fixture G1: the ERP
@@ -140,6 +140,28 @@ export const ganttPagesFixture = z.object({
   moduleFields: z.array(moduleField),
   /** The board fields the company sets; a plant uses them until it sets its own (#762). */
   boardFields: z.object({ company: boardFieldLists }),
+  /** The calendars beside G1's A1, which only the plant settings pages show (#770). */
+  calendars: z.array(
+    z.object({
+      name: z.string(),
+      effectiveFrom: z.iso.date(),
+      cycleWeeks: z.number().int().positive(),
+      /** In the version's order. An end at or before the start is on the next date. */
+      shifts: z
+        .array(
+          z.object({
+            name: z.string(),
+            weekdays: z.array(z.number().int().min(1).max(7)),
+            start: clock,
+            end: clock,
+            breaks: z.array(z.object({ start: clock, end: clock })),
+            workingSeconds: z.number().int().positive(),
+          }),
+        )
+        .nonempty(),
+      deviations: z.array(enteredDeviation),
+    }),
+  ),
 });
 
 export type GanttPagesFixture = z.infer<typeof ganttPagesFixture>;
