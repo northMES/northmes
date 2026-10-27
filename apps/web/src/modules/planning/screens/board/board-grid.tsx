@@ -50,6 +50,8 @@ export interface BoardGridProps {
   /** The selected order, by id, whose job orders carry aria-selected. */
   readonly selectedOrderId: string | undefined;
   readonly onSelectOrder: (orderId: string) => void;
+  /** Opens the block menu of a job order at its block. */
+  readonly onBlockMenu: (jobOrderId: string, anchor: HTMLElement) => void;
   readonly onFocusTarget: (key: string) => void;
   readonly onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   readonly gridRef: (node: HTMLDivElement | null) => void;
@@ -80,7 +82,7 @@ function MoveOutline({
         data-move-preview={preview.jobOrderId}
         data-from-ms={preview.span.setupStartMs}
         data-to-ms={preview.span.endMs}
-        className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground bg-foreground/10"
+        className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground"
         style={{
           left: `${left}px`,
           width: `${Math.max(2, scale.x(preview.span.endMs) - left)}px`,
@@ -137,6 +139,7 @@ function Row({
   columns,
   className,
   top,
+  machine,
   children,
 }: {
   readonly index: number;
@@ -145,12 +148,15 @@ function Row({
   readonly className?: string;
   /** The offset in rem at which a sticky row sticks. */
   readonly top?: number;
+  /** The machine of a machine row, which a pointer drag reads to find its target. */
+  readonly machine?: string;
   readonly children: ReactNode;
 }) {
   return (
     <div
       role="row"
       aria-rowindex={index}
+      data-machine={machine}
       className={cn('grid border-b border-border', className)}
       style={{
         gridTemplateColumns: columns,
@@ -185,6 +191,7 @@ export function BoardGrid({
   preview,
   selectedOrderId,
   onSelectOrder,
+  onBlockMenu,
   onFocusTarget,
   onKeyDown,
   gridRef,
@@ -263,7 +270,13 @@ export function BoardGrid({
       const code = machine.equipment.code;
       const cells = cellsOf(code);
       bodyRows.push(
-        <Row key={code} index={rowIndex} heightRem={boardRowRem.machine} columns={columns}>
+        <Row
+          key={code}
+          index={rowIndex}
+          heightRem={boardRowRem.machine}
+          columns={columns}
+          machine={code}
+        >
           <div
             role="rowheader"
             tabIndex={tab(focusKeys.header(code))}
@@ -335,6 +348,7 @@ export function BoardGrid({
                     selected={cell.row.order.id === selectedOrderId}
                     onFocus={() => onFocusTarget(focusKeys.block(cell.row.jobOrder.id))}
                     onSelect={() => onSelectOrder(cell.row.order.id)}
+                    onMenu={(anchor) => onBlockMenu(cell.row.jobOrder.id, anchor)}
                   />
                 ),
               )
