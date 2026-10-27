@@ -12,7 +12,11 @@ let speaking = false;
 /** The timer of the step in progress, so a reset can clear it. */
 let pending: ReturnType<typeof setTimeout> | undefined;
 
-/** The polite live region; created at the end of body when the page has none, as in tests. */
+/**
+ * The polite live region; created at the end of body when the page has none, as in tests. It has
+ * role status, so a spec reads it by role; while a modal dialog hides the rest of the page from
+ * the accessibility tree, a role query needs includeHidden to reach it.
+ */
 function politeRegion(): HTMLElement {
   const existing = document.getElementById(politeRegionId);
   if (existing !== null) return existing;

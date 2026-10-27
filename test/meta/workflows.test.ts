@@ -147,9 +147,18 @@ const ungatedCiJobs = ['cla'];
 // The main ruleset requires each job of the CI, PR, Risk and supply-chain workflows as a status
 // check by its job name (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md). The
 // ruleset is the source of truth, and `pnpm repo:check-ruleset` compares it with the jobs of the
-// workflow files that scripts/repo/check-ruleset.mjs names; this file holds the invariants that
-// hold whatever the jobs are.
+// workflow files that scripts/repo/check-ruleset.mjs names; nothing runs that check in CI, so this
+// file pins the job lists of the CI and PR workflows, and the tests that pin them say so in their
+// names: a renamed, added or removed job fails them, and the change that makes them pass names the
+// ruleset edit that goes with it (an added name after the merge, a removed or old name just before).
 const requiredWorkflowPaths = rulesetWorkflowFiles.map((file) => `.github/workflows/${file}`);
+
+// The jobs of the CI workflow, which GitHub shows as CI / <job name>.
+const ciJobs = ['lint', 'typecheck', 'build', 'test', 'react doctor', 'e2e', 'gate'];
+
+// The jobs of the PR workflow, which GitHub shows as PR / <job name>. They keep the names they had
+// in the CI workflow, since the ruleset requires each by its job name.
+const prJobs = [...pullRequestChecks, 'pr gate'];
 
 // write-all grants id-token: write with every other permission.
 function holdsIdTokenWrite(permissions: Permissions | undefined): boolean {
@@ -346,10 +355,9 @@ describe('workflows', () => {
   it('the workflows whose jobs the ruleset requires have no paths filter', () => {
     const required = workflows().filter(({ path }) => requiredWorkflowPaths.includes(path));
 
-    expect(
-      required.map(({ path }) => path),
-      'the workflows check-ruleset names',
-    ).toEqual(requiredWorkflowPaths);
+    expect(required.map(({ path }) => path).sort(), 'the workflows check-ruleset names').toEqual(
+      [...requiredWorkflowPaths].sort(),
+    );
     for (const { path, on } of required) {
       const events = on !== null && typeof on === 'object' ? Object.entries(on) : [];
       for (const [event, filters] of events) {
@@ -810,6 +818,18 @@ describe('workflows', () => {
 
   // A newer commit or edit on a pull request cancels the older PR run of that pull request only.
   // The group starts with the workflow name, so it never cancels a CI run.
+  // ADR 0069: the ruleset names each PR job, so the list is pinned on purpose; a renamed, added or
+  // removed job needs a ruleset edit timed to its merge.
+  it('ADR0069 the job list of the PR workflow is pinned, because the main ruleset names each job: pr title, linked issue, pr security, pr tests, openapi diff and pr gate', () => {
+    const { workflow } = jobNamed('pr gate');
+
+    expect(
+      Object.values(workflow.jobs)
+        .map(({ name }) => name)
+        .sort(),
+    ).toEqual([...prJobs].sort());
+  });
+
   it('PR cancels its own older run of a pull request and no CI run', () => {
     const { workflow } = jobNamed('pr gate');
 
@@ -836,6 +856,19 @@ describe('workflows', () => {
 
   // GitHub counts a skipped required check as passed, so CI / gate needs every job to fail a pull
   // request on which one of them did not run.
+  // ADR 0069: the ruleset names each CI job, so the list is pinned on purpose; a renamed, added or
+  // removed job needs a ruleset edit timed to its merge.
+  it('ADR0069 the job list of the CI workflow is pinned, because the main ruleset names each job: lint, typecheck, build, test, react doctor, e2e, gate and cla', () => {
+    const ci = workflows().find(({ name }) => name === 'CI');
+
+    expect(ci, 'a workflow named CI').toBeDefined();
+    expect(
+      Object.values(ci?.jobs ?? {})
+        .map(({ name }) => name)
+        .sort(),
+    ).toEqual([...ciJobs, ...ungatedCiJobs].sort());
+  });
+
   it('CI / gate needs every other job in its workflow except CI / cla, which joins it before the first outside pull request', () => {
     const { workflow, id } = jobNamed('gate');
 
