@@ -334,18 +334,20 @@ describe('tooling', () => {
   });
 
   it('E05-S05 better-auth and its api-key and oauth-provider plugins are pinned exactly at one 1.7 version that apps/backend takes from the catalog', () => {
-    // ADR 0010 pins Better Auth 1.7.x exactly. 1.7.6 was the newest 1.7 release outside Renovate's
-    // 14-day window on 2026-10-09. The api-key plugin ships in its own package since 1.5, and the
-    // OAuth 2.1 provider since 1.7.0 removed the in-core oidcProvider; each must match
-    // better-auth's version. Username, organization, admin, jwt and bearer ship inside it.
+    // ADR 0010 pins Better Auth 1.7.x exactly. 1.7.7 (2026-09-30) was the newest 1.7 release
+    // outside Renovate's 14-day window on 2026-10-27 and the first that fixes GHSA-965c-763c-88jm
+    // and GHSA-r4xp-prcw-77qf, published that day, which turned the dependency audit red. The
+    // api-key plugin ships in its own package since 1.5, and the OAuth 2.1 provider since 1.7.0
+    // removed the in-core oidcProvider; each must match better-auth's version. Username,
+    // organization, admin, jwt and bearer ship inside it.
     const packages = ['better-auth', '@better-auth/api-key', '@better-auth/oauth-provider'];
     const catalog = readWorkspace().catalog ?? {};
     const backend = readJson<PackageJson>('apps/backend/package.json');
 
     expect(Object.fromEntries(packages.map((name) => [name, catalog[name]]))).toEqual({
-      'better-auth': '1.7.6',
-      '@better-auth/api-key': '1.7.6',
-      '@better-auth/oauth-provider': '1.7.6',
+      'better-auth': '1.7.7',
+      '@better-auth/api-key': '1.7.7',
+      '@better-auth/oauth-provider': '1.7.7',
     });
     for (const name of packages) {
       expect(backend.dependencies?.[name], `apps/backend dependencies ${name}`).toBe('catalog:');
