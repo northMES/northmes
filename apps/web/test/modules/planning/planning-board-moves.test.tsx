@@ -1,0 +1,272 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
+import { afterEach, describe, expect, it } from 'vitest';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { findGantt, planningHref, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
+
+afterEach(cleanup);
+
+/** The board grid, once it has loaded: while it loads, the grid's skeleton is busy. */
+async function findBoard(): Promise<HTMLElement> {
+  return waitFor(() => {
+    const board = screen.getByRole('grid', { name: /board/ });
+    if (board.getAttribute('aria-busy') === 'true') throw new Error('The board is loading');
+    return board;
+  });
+}
+
+/** The board cell of a job order. */
+function block(board: HTMLElement, job: string): HTMLElement {
+  const cell = board.querySelector<HTMLElement>(`[role="gridcell"][data-job-order="${job}"]`);
+  if (cell === null) throw new Error(`No cell for ${job}`);
+  return cell;
+}
+
+/** The machine row a cell lies in, by its row header. */
+function machineOf(cell: HTMLElement): string {
+  return cell.closest('[role="row"]')?.querySelector('[role="rowheader"]')?.textContent ?? '';
+}
+
+/** What the polite live region says. */
+function spoken(): string {
+  return document.getElementById('announcer-polite')?.textContent ?? '';
+}
+
+describe('moves on the planning board (plan 07, Moving without dragging; design D3, IN6)', () => {
+  it('IN6 M enters move mode; Right steps a snap, Down the next allowed machine, Enter puts the move in my draft', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+
+    await user.keyboard('m');
+    expect(block(board, '1001.10').getAttribute('data-move-mode')).toBe('true');
+    // Tue 11:30 plus the Week step of 4 h is Tue 15:30, closed, so the preview lands at Wed 06:00.
+    await user.keyboard('{ArrowRight}');
+    await waitFor(() => {
+      expect(
+        board.querySelector('[data-move-preview="jo-1001-10"]')?.getAttribute('data-from-ms'),
+      ).toBe(String(Date.UTC(2026, 10, 4, 5)));
+    });
+    await waitFor(() => {
+      expect(spoken()).toBe(
+        'CNC 1, Wed 4 Nov 06:00 to Wed 4 Nov 12:15. 1 row moves with it. Not saved.',
+      );
+    });
+
+    await user.keyboard('{ArrowDown}');
+    await waitFor(() => expect(spoken()).toContain('CNC 2, Wed 4 Nov 06:00'));
+    const preview = board.querySelector<HTMLElement>('[data-move-preview="jo-1001-10"]');
+    expect(preview === null ? '' : machineOf(preview)).toBe('CNC 2');
+
+    await user.keyboard('{Enter}');
+    await waitFor(() => {
+      expect(spoken()).toBe(
+        '1001.10 moved to CNC 2, Wed 4 Nov 06:00 to Wed 4 Nov 12:15. 1 row moves with it. Not saved.',
+      );
+    });
+    const moved = block(board, '1001.10');
+    await waitFor(() => expect(document.activeElement).toBe(block(board, '1001.10')));
+    expect(machineOf(moved)).toBe('CNC 2');
+    expect(moved.getAttribute('data-states')).toContain('draft');
+    expect(moved.getAttribute('data-move-mode')).toBeNull();
+    expect(screen.getByRole('button', { name: 'My draft, 2 changes' })).toBeTruthy();
+  });
+
+  it('IN6 Escape cancels move mode and keeps the plan as it was', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+
+    await user.keyboard('m{ArrowRight}{Escape}');
+    await waitFor(() => expect(spoken()).toBe('Move cancelled.'));
+    expect(board.querySelector('[data-move-preview]')).toBeNull();
+    expect(machineOf(block(board, '1001.10'))).toBe('CNC 1');
+    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+  });
+
+  it('IN6 a locked job order refuses move mode and says why', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1002.10').focus();
+
+    await user.keyboard('m');
+    expect(block(board, '1002.10').getAttribute('data-move-mode')).toBeNull();
+    // The app has one polite announcer; plan 07 asks for refusals to be assertive (a follow-up).
+    await waitFor(() => expect(spoken()).toBe('Cannot move 1002.10: locked.'));
+  });
+
+  it('a move on the board shows on the Gantt and in the job order table, in the same draft', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+    await user.keyboard('m{ArrowRight}{ArrowDown}{Enter}');
+    await waitFor(() => expect(spoken()).toContain('1001.10 moved to CNC 2'));
+
+    await router.navigate({ href: planningHref('gantt', { zoom: 'week', from: '2026-11-02' }) });
+    const gantt = await findGantt();
+    await waitFor(() => {
+      const ganttBlock = gantt.querySelector('[data-block="jo-1001-10"]');
+      expect(ganttBlock?.getAttribute('aria-label')).toContain('CNC 2, Wed 4 Nov 06:00');
+      expect(ganttBlock?.getAttribute('data-states')).toContain('draft');
+    });
+    expect(screen.getByRole('button', { name: 'My draft, 2 changes' })).toBeTruthy();
+
+    await router.navigate({
+      href: planningHref('jobOrders', { zoom: 'week', from: '2026-11-02' }),
+    });
+    const table = await screen.findByRole('table', { name: /^Job orders, / });
+    const row = await within(table).findByRole('row', { name: /^1001\.10 / });
+    expect(row.textContent).toContain('CNC 2');
+    expect(row.textContent).toContain('Wed 4 Nov 06:00');
+    expect(row.textContent).toContain('In my draft, not saved');
+  });
+
+  it('plan 07 a move that lands after the range moves the range with it and keeps focus on the block', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1006.10').focus();
+
+    // Fri 13:00 plus the 4 h step is Fri 17:00, closed, so the move lands on Mon 9 Nov 06:00.
+    await user.keyboard('m{ArrowRight}{Enter}');
+    await waitFor(() => expect(spoken()).toContain('1006.10 moved to Mill 1, Mon 9 Nov 06:00'));
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ from: '2026-11-09' }));
+    await waitFor(() =>
+      expect(document.activeElement?.getAttribute('data-job-order')).toBe('1006.10'),
+    );
+  });
+
+  it('IN6 in move mode the keys that would move focus stay with the moving block, and Escape cancels', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute(
+      { zoom: 'week', from: '2026-11-02', order: 'po-1001' },
+      undefined,
+      'board',
+    );
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+
+    await user.keyboard('m{ArrowRight}{Home}{End}{PageDown}');
+    expect(document.activeElement).toBe(block(board, '1001.10'));
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(spoken()).toBe('Move cancelled.'));
+    expect(board.querySelector('[data-move-preview]')).toBeNull();
+    expect(router.state.location.search).toMatchObject({ order: 'po-1001' });
+  });
+
+  it('IN6 Tab out of a moving block ends move mode without a change', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+
+    await user.keyboard('m{ArrowRight}');
+    await waitFor(() => expect(board.querySelector('[data-move-preview]')).not.toBeNull());
+    await user.tab();
+    await waitFor(() => expect(board.querySelector('[data-move-preview]')).toBeNull());
+    expect(board.contains(document.activeElement)).toBe(false);
+    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+  });
+
+  it('IN6 Down in move mode skips the machines of a collapsed group', async () => {
+    const g1 = g1Snapshot();
+    // A second group holds CNC 2, so collapsing it leaves 1001.10 one allowed machine to step to: none.
+    const snapshot = {
+      ...g1,
+      equipmentGroups: [...g1.equipmentGroups, { code: 'TURN', name: 'Turning' }],
+      equipment: g1.equipment.map((machine) =>
+        machine.code === 'CNC2' ? { ...machine, group: 'TURN' } : machine,
+      ),
+    };
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    await user.click(within(board).getByRole('button', { name: 'Collapse Turning' }));
+    block(board, '1001.10').focus();
+
+    await user.keyboard('m{ArrowDown}');
+    await waitFor(() => expect(spoken()).toContain('CNC 1, Tue 3 Nov 11:30'));
+    expect(spoken()).not.toContain('CNC 2');
+  });
+
+  it('a cluster names a job order that the draft moved', async () => {
+    const user = userEvent.setup();
+    const g1 = g1Snapshot();
+    // At Hours, two job orders of 6 min on CNC 1, 15 min apart: one 15 min step of 1003.10 puts
+    // 1002.10 inside its 24 px target.
+    const span = (
+      row: (typeof g1.productionOrders)[number]['jobOrders'][number],
+      fromMs: number,
+    ) => ({
+      ...row,
+      equipment: 'CNC1',
+      plannedSetupS: 0,
+      plannedRunS: 360,
+      placement: {
+        setupStartMs: fromMs,
+        runStartMs: fromMs,
+        endMs: fromMs + 360_000,
+        segments: [{ fromMs, toMs: fromMs + 360_000 }],
+      },
+    });
+    const snapshot = {
+      ...g1,
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) =>
+          row.displayNumber === '1003.10'
+            ? span(row, Date.UTC(2026, 10, 4, 7))
+            : row.displayNumber === '1002.10'
+              ? span(row, Date.UTC(2026, 10, 4, 7, 21))
+              : row,
+        ),
+      })),
+    };
+    renderGanttRoute({ zoom: 'hours', from: '2026-11-04' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    expect(board.querySelector('[data-cluster]')).toBeNull();
+    block(board, '1003.10').focus();
+    await user.keyboard('m{ArrowRight}{Enter}');
+    await waitFor(() => expect(spoken()).toContain('1003.10 moved to CNC 1'));
+
+    await waitFor(() =>
+      expect(board.querySelector('[data-cluster]')?.getAttribute('aria-label') ?? '').toContain(
+        '1 changed in your draft',
+      ),
+    );
+  });
+
+  it('My draft opens the drawer with the moves, and closing it returns focus to the button', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+    await user.keyboard('m{ArrowRight}{Enter}');
+    await waitFor(() => expect(spoken()).toContain('1001.10 moved to CNC 1'));
+
+    const button = screen.getByRole('button', { name: 'My draft, 2 changes' });
+    await user.click(button);
+    const drawer = await screen.findByRole('dialog', { name: /My draft/ });
+    expect(within(drawer).getAllByText(/1001\.10/).length).toBeGreaterThan(0);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole('button', { name: 'My draft, 2 changes' }),
+      ),
+    );
+  });
+
+  it('DR20 shows no My draft button while the board is not drawn', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02', preview: 'error' }, undefined, 'board');
+
+    await screen.findByRole('heading', { level: 2, name: 'The board could not be loaded' });
+    expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
+  });
+});
