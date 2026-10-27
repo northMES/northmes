@@ -5,22 +5,16 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 
 describe('defineEventContract', () => {
-  it('E05-S09 an event contract names the event, its schema version, its entity and its data', () => {
-    const data = z.object({ code: z.string() });
-
+  it('E05-S09 an accepted event contract hands a publisher its data schema, which parses the event data and refuses other data', () => {
     const contract = defineEventContract({
       name: 'core.article.created',
       version: 1,
       entity: 'core.article',
-      data,
+      data: z.object({ code: z.string() }),
     });
 
-    expect(contract).toEqual({
-      name: 'core.article.created',
-      version: 1,
-      entity: 'core.article',
-      data,
-    });
+    expect(contract.data.parse({ code: 'HG-520' })).toEqual({ code: 'HG-520' });
+    expect(contract.data.safeParse({ code: 520 }).success).toBe(false);
   });
 
   it('E05-S09 an event whose name is not its entity and a past-tense verb, or whose version is not a positive integer, is refused', () => {

@@ -44,7 +44,10 @@ describe('.claude/launch.json', () => {
       autoPort: true,
     });
     expect(demo?.port).not.toBe(3000);
-    expect(scripts.demo).toBe('node scripts/stack/demo.mjs');
+    // The root script that runtimeArgs names exists; gates.test.ts checks the file it runs.
+    expect(scripts, `the root script ${demo?.runtimeArgs?.[0]}`).toHaveProperty(
+      demo?.runtimeArgs?.[0] ?? '',
+    );
 
     // pnpm demo starts the stack, which took port 50001, and handoff gave the demo PORT 4567.
     const plan = await demoPlan({ PORT: '50001' }, { PORT: '4567' });
@@ -60,8 +63,6 @@ describe('.claude/launch.json', () => {
         NORTHMES_PUBLIC_ORIGIN: 'http://127.0.0.1:4567',
       },
     });
-    expect(plan.boardUrl).toBe(
-      'http://127.0.0.1:4567/plant-a/planning/board',
-    );
+    expect(plan.boardUrl).toBe('http://127.0.0.1:4567/plant-a/planning/board');
   });
 });

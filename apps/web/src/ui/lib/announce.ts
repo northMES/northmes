@@ -19,6 +19,7 @@ function politeRegion(): HTMLElement {
   const region = document.createElement('div');
   region.id = politeRegionId;
   region.className = 'sr-only';
+  region.setAttribute('role', 'status');
   region.setAttribute('aria-live', 'polite');
   region.setAttribute('aria-atomic', 'true');
   document.body.append(region);

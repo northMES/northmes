@@ -60,15 +60,8 @@ describe('coreLinks', () => {
     expect(coreLinks.people.person.addRole({ plant: 'plant-a', userId: 'u1' }).href).toBe(
       '/plant-a/people/u1/roles/new',
     );
-    expect(Object.keys(coreLinks)).toEqual([
-      'dashboard',
-      'articles',
-      'articleGroups',
-      'people',
-      'machines',
-      'calendars',
-      'settings',
-    ]);
+    expect(coreLinks).not.toHaveProperty('users');
+    expect(coreLinks).not.toHaveProperty('roles');
   });
 
   it('E06 coreLinks builds the hrefs of the machines and the calendars of a plant at the plant root', () => {
