@@ -6,7 +6,7 @@ export {
   bootBuilt,
   type NorthmesConfig,
 } from './boot-built.ts';
-export { query } from './client.ts';
+export { query, withClient } from './client.ts';
 export { configForTest } from './config-for-test.ts';
 export {
   type CreateTestAppOptions,

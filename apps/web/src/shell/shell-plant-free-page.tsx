@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router';
 import { Factory } from 'lucide-react';
 import type { ReactNode, RefObject } from 'react';
 import type { ShellModule } from '../modules.ts';
+import { ProductLogo } from '../ui/components/product-logo/index.ts';
 import { SkipLink } from '../ui/components/skip-link/index.ts';
 import { useScrollPaddingTop } from '../ui/lib/use-scroll-padding-top.ts';
 import type { ShellCompany } from './companies.graphql.ts';
@@ -21,7 +22,7 @@ export interface ShellPlantFreePageProps {
 
 /**
  * The frame of a page without a plant (D2 ST29, ST38, ST42): no sidebar, no switcher and no crumbs.
- * The top bar holds the NorthMES mark, Help and the account menu, so the user can sign out, and
+ * The top bar holds the NorthMES logo, Help and the account menu, so the user can sign out, and
  * main holds the page.
  */
 export function ShellPlantFreePage({
@@ -39,13 +40,8 @@ export function ShellPlantFreePage({
         ref={stickyBlock}
         className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background px-4"
       >
-        <span
-          aria-hidden
-          className="grid size-6 place-items-center rounded-md bg-primary text-xs font-semibold text-primary-foreground"
-        >
-          N
-        </span>
-        <span className="flex-1 font-semibold">NorthMES</span>
+        <ProductLogo />
+        <span className="flex-1" />
         {help}
         <ShellAccountMenu user={user} onSignOut={onSignOut} />
       </header>

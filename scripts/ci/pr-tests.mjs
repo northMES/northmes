@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-// The check behind CI / pr tests. NorthMES is built test first (AGENTS.md), so a pull request that
+// The check behind PR / pr tests. NorthMES is built test first (AGENTS.md), so a pull request that
 // changes behaviour changes a test too, and a pull request that deletes a test says why. Focused and
 // skipped tests are Biome's noFocusedTests and noSkippedTests, so CI / lint refuses them.
 

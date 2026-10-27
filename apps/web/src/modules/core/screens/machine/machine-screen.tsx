@@ -27,13 +27,12 @@ import {
 } from '../../plant-settings-data.ts';
 import {
   allowedIn,
-  breaksText,
   groupColorOf,
   groupNamer,
   machineNamer,
   openOrdersOf,
+  patternText,
   plantTime,
-  shiftText,
   weekOf,
 } from '../../plant-settings-facts.ts';
 import { plantSettingsActionReason } from '../../plant-settings-reasons.ts';
@@ -166,7 +165,7 @@ function MachineSection({
           note={
             calendar === undefined
               ? 'A machine without a calendar has no working time.'
-              : `${shiftText(calendar)}, ${breaksText(calendar)}. The plant calendar by default.`
+              : `${patternText(calendar)}.${calendar.plantDefault ? ' The plant calendar by default.' : ''}`
           }
         />
         <Definition

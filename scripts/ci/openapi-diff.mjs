@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-// The check behind CI / openapi diff (ADR 0064). The job runs oasdiff breaking on the base branch's
+// The check behind PR / openapi diff (ADR 0064). The job runs oasdiff breaking on the base branch's
 // schema/openapi-v1.json and the pull request's, writes what it finds as JSON, and this script
 // decides: an ERR-level change fails, unless NorthMES is still 0.x and the title carries !, the
 // breaking-change marker that also bumps the minor and puts the break in the changelog (ADR 0038).
@@ -9,13 +9,11 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { errorAnnotation } from './annotation.mjs';
+import { isBreakingTitle } from './pull-request.mjs';
 
 /** oasdiff's levels (checker/rules/level.go). */
 const ERR = 3;
 const WARN = 2;
-
-/** A Conventional Commit title marked as a breaking change: ! right before the colon. */
-const breakingTitle = /^[a-z]+(?:\([^()\s]+\))?!: /;
 
 /** A workflow command with its message encoded as GitHub decodes it. */
 function annotation(kind, message) {
@@ -52,7 +50,7 @@ export function checkBreaking({ changes, title, version }) {
   if (errors.length === 0) return { ok: true, lines };
   const listed = errors.map(describe).join('\n');
   const isZero = version.startsWith('0.');
-  if (isZero && breakingTitle.test(title)) {
+  if (isZero && isBreakingTitle(title)) {
     lines.push(
       annotation(
         'notice',

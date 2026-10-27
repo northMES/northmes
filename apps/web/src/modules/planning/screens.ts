@@ -13,3 +13,4 @@ export { JobOrdersScreen } from './screens/job-orders/index.ts';
 export { OrderScreen } from './screens/order/index.ts';
 export { PlanningRulesScreen } from './screens/planning-rules/index.ts';
 export { ProductionOrdersScreen } from './screens/production-orders/index.ts';
+export { ReleaseOrdersScreen } from './screens/release-orders/index.ts';

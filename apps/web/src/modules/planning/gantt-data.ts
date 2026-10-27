@@ -354,7 +354,12 @@ export interface GanttSnapshot {
   readonly fenceMs: number;
   /** The plant calendar, which summary rows shade and the machines of G1 share. */
   readonly calendar: GanttCalendar;
-  readonly equipmentGroups: readonly { readonly code: string; readonly name: string }[];
+  /** The equipment groups, each with its color as a palette token name when it has one. */
+  readonly equipmentGroups: readonly {
+    readonly code: string;
+    readonly name: string;
+    readonly color?: string;
+  }[];
   readonly equipment: readonly GanttEquipment[];
   readonly productionOrders: readonly GanttOrder[];
   /** The runs over the orders (ADR 0083): the draft's until Save, then the committed ones. */
