@@ -139,6 +139,19 @@ describe('code-reviewer agent', () => {
     });
   });
 
+  // The docs step reads the pages, not the diff alone, because a stale page is not in the diff
+  // (ADR 0088). The report names the pages it read, or says that no mapped surface was touched.
+  it('ADR0088 the code-reviewer agent reads the pages .github/docs-paths names for the surfaces the diff touches and the ADR the diff cites', () => {
+    const steps = readFileSync(join(root, path), 'utf8')
+      .split('\n')
+      .filter((line) => /^\d+\. /.test(line));
+    const docsStep = steps.find((step) => step.includes('`.github/docs-paths`')) ?? '';
+
+    expect(docsStep).toContain('ADR');
+    expect(docsStep).toMatch(/page.*line.*code/i);
+    expect(docsStep).toMatch(/no mapped surface/);
+  });
+
   it('ADR0065 CLAUDE.md sends the review before the pull request to the code-reviewer agent', () => {
     const claude = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
 

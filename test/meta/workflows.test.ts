@@ -58,7 +58,14 @@ function rootScript(name: string | undefined): string | undefined {
 // The pull request checks read the pull request instead of the code, so no root script runs them
 // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
 // They run in the PR workflow, so an edit to the title or body re-runs them and not the tests.
-const pullRequestChecks = ['pr title', 'linked issue', 'pr security', 'pr tests', 'openapi diff'];
+const pullRequestChecks = [
+  'pr title',
+  'linked issue',
+  'pr security',
+  'pr docs',
+  'pr tests',
+  'openapi diff',
+];
 
 // The steps that copy a report of an earlier step into the job summary. They check nothing, so no
 // root script runs them.
@@ -112,6 +119,15 @@ const pullRequestCheckSteps = {
   },
   'pr security': {
     run: 'node scripts/ci/pr-security.mjs',
+    env: {
+      PR_BODY: expression('github.event.pull_request.body'),
+      PR_AUTHOR: expression('github.event.pull_request.user.login'),
+      PR_HEAD_REF: expression('github.event.pull_request.head.ref'),
+      PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
+    },
+  },
+  'pr docs': {
+    run: 'node scripts/ci/pr-docs.mjs',
     env: {
       PR_BODY: expression('github.event.pull_request.body'),
       PR_AUTHOR: expression('github.event.pull_request.user.login'),
@@ -762,7 +778,7 @@ describe('workflows', () => {
   // The pull request checks run in the PR workflow, and they run on each of its events: a skipped
   // check counts as passed. An event value interpolated into a run script could inject shell code,
   // so the scripts read the pull request from environment variables.
-  it('PR / pr title, PR / linked issue, PR / pr security, PR / pr tests and PR / openapi diff run in the PR workflow and read the pull request from environment variables', () => {
+  it('PR / pr title, PR / linked issue, PR / pr security, PR / pr docs, PR / pr tests and PR / openapi diff run in the PR workflow and read the pull request from environment variables', () => {
     for (const [name, step] of Object.entries(pullRequestCheckSteps)) {
       const { workflow, job } = jobNamed(name);
 
@@ -817,7 +833,7 @@ describe('workflows', () => {
 
   // The ruleset names each PR job, so a renamed, added or removed job needs a ruleset edit timed to
   // its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
-  it('the PR workflow has exactly the jobs pr title, linked issue, pr security, pr tests, openapi diff and pr gate', () => {
+  it('the PR workflow has exactly the jobs pr title, linked issue, pr security, pr docs, pr tests, openapi diff and pr gate', () => {
     const { workflow } = jobNamed('pr gate');
 
     expect(
@@ -882,16 +898,18 @@ describe('workflows', () => {
   // The PR workflow checks out the pull request's merge commit; its first parent is the base
   // branch, so a depth of 2 holds both sides of the diff. The job reads code only, so it keeps no
   // credentials.
-  it("PR / pr tests checks out the merge commit with its first parent and without credentials", () => {
-    const { job } = jobNamed('pr tests');
+  it('PR / pr tests and PR / pr docs check out the merge commit with its first parent and without credentials', () => {
+    for (const name of ['pr tests', 'pr docs']) {
+      const { job } = jobNamed(name);
 
-    expect(job.permissions).toEqual({ contents: 'read' });
-    expect(job.steps?.[0]).toEqual(
-      expect.objectContaining({
-        uses: expect.stringMatching(/^actions\/checkout@[0-9a-f]{40}$/),
-        with: { 'fetch-depth': 2, 'persist-credentials': false },
-      }),
-    );
+      expect(job.permissions, name).toEqual({ contents: 'read' });
+      expect(job.steps?.[0], name).toEqual(
+        expect.objectContaining({
+          uses: expect.stringMatching(/^actions\/checkout@[0-9a-f]{40}$/),
+          with: { 'fetch-depth': 2, 'persist-credentials': false },
+        }),
+      );
+    }
   });
 
   // oasdiff compares the base branch's schema/openapi-v1.json with the pull request's (ADR 0064).

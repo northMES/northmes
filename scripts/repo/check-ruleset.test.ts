@@ -17,7 +17,7 @@ const workflows = [
   },
   {
     file: 'pr.yml',
-    jobs: jobs('pr title', 'linked issue', 'pr security', 'pr tests', 'openapi diff', 'pr gate'),
+    jobs: jobs('pr title', 'linked issue', 'pr security', 'pr docs', 'pr tests', 'openapi diff', 'pr gate'),
   },
   { file: 'risk.yml', jobs: jobs('risk gate', 'risk label') },
   { file: 'supply-chain.yml', jobs: jobs('license gate', 'dependency audit') },
@@ -33,6 +33,7 @@ const requiredNames = [
   'pr title',
   'linked issue',
   'pr security',
+  'pr docs',
   'pr tests',
   'pr gate',
   'risk gate',
