@@ -582,6 +582,32 @@ describe('articles at the company, assigned to plants', () => {
     await expect(read).rejects.toMatchObject({ code: 'core.not_found', status: 404 });
   });
 
+  // No route lets a read name a company other than the one its principal acts at, so the guard in
+  // requestScope has this service-level test (ADR 0073).
+  it('ADR0073-W3 ArticleService.byId for a principal acting at company A, asked for company B where the principal holds every article permission, is core.forbidden', async () => {
+    if (!testApp) throw new Error('the test app did not start');
+    const a = await givenCompany(db.ownerUrl);
+    const b = await givenCompany(db.ownerUrl);
+    const permissions = ['read', 'create', 'update', 'archive', 'assign'].map(
+      (action) => `core.article:${action}`,
+    );
+    const { userId } = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: a.company, permissions },
+      { scopeId: b.company, permissions },
+    ]);
+    const id = await givenArticle(db.ownerUrl, {
+      code: 'SH-213',
+      name: 'Shelf',
+      company: b.company,
+    });
+    const inSettings = await testApp.app.get(PrincipalService).forUser(userId, undefined);
+    const articles = testApp.app.get(ArticleService);
+
+    const read = runAs({ ...inSettings, companyId: a.company }, () => articles.byId(id, b.company));
+
+    await expect(read).rejects.toMatchObject({ code: 'core.forbidden', status: 403 });
+  });
+
   it('ADR0073-W2 as nm_app with read scopes {company, HEL} and write scopes {HEL}, an update of an article whose edit scope is the company affects 0 rows, and of one whose edit scope is HEL affects 1', async () => {
     const place = await givenHelAndSto();
     const shared = await givenArticle(db.ownerUrl, {

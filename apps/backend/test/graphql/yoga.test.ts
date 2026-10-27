@@ -43,18 +43,21 @@ async function* twoEvents(): AsyncGenerator<number> {
   yield 2;
 }
 
+/** The text of the error the broken fields throw, which no client may read. */
+const BROKEN_TEXT = 'connection to postgres://nm_app:secret@db failed';
+
+/** Throws as a database driver would, with the connection string in the message. */
+function broken(): never {
+  throw new Error(BROKEN_TEXT);
+}
+
 const schema = new GraphQLSchema({
   query: new GraphQLObjectType({
     name: 'Query',
     fields: {
       probePlant: { type: GraphQLString, resolve: plantOfPrincipal },
       probeLoaders: { type: GraphQLInt, resolve: loadersSeen },
-      probeBroken: {
-        type: GraphQLString,
-        resolve: () => {
-          throw new Error('connection to postgres://nm_app:secret@db failed');
-        },
-      },
+      probeBroken: { type: GraphQLString, resolve: broken },
     },
   }),
   subscription: new GraphQLObjectType({
@@ -62,9 +65,28 @@ const schema = new GraphQLSchema({
     fields: {
       probePlants: { type: GraphQLString, subscribe: twoEvents, resolve: plantOfPrincipal },
       probeEventLoaders: { type: GraphQLInt, subscribe: twoEvents, resolve: loadersSeen },
+      probeBrokenEvents: { type: GraphQLString, subscribe: twoEvents, resolve: broken },
     },
   }),
 });
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** The extensions of a masked error. */
+const maskedExtensions = {
+  code: 'INTERNAL_SERVER_ERROR',
+  errorCode: 'core.internal',
+  correlationId: expect.stringMatching(UUID),
+};
+
+interface ErrorAnswer {
+  errors?: { extensions?: Record<string, unknown> }[];
+}
+
+/** The correlation id of an answer's first error. */
+function correlationIdOf(answer: ErrorAnswer): unknown {
+  return answer.errors?.[0]?.extensions?.correlationId;
+}
 
 /** Sends one operation to the server, with the plant header when plantId is given. */
 function send(query: string, { plantId, sse = false }: { plantId?: string; sse?: boolean } = {}) {
@@ -127,37 +149,96 @@ describe('the GraphQL server', () => {
     expect(await eventData(response)).toEqual([{ probeEventLoaders: 0 }, { probeEventLoaders: 0 }]);
   });
 
-  it('E02-S03 an unexpected error reaches the client masked as core.internal with a correlation id, which the server log line names, and without its text', async () => {
+  it('E02-S03 an unexpected error reaches the client masked as core.internal with a correlation id, which the one server log line names with the stack, its URL password replaced, and without its text', async () => {
     const logged = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
     try {
       const response = await send('{ probeBroken }');
 
       const body = await response.text();
-      expect(JSON.parse(body)).toEqual({
+      const answer = JSON.parse(body) as ErrorAnswer;
+      expect(answer).toEqual({
         data: { probeBroken: null },
         errors: [
           {
             message: 'Unexpected error.',
             path: ['probeBroken'],
             locations: [{ line: 1, column: 3 }],
-            extensions: expect.objectContaining({
-              code: 'INTERNAL_SERVER_ERROR',
-              errorCode: 'core.internal',
-              correlationId: expect.stringMatching(
-                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-              ),
-            }),
+            extensions: expect.objectContaining(maskedExtensions),
           },
         ],
       });
       expect(body).not.toContain('secret');
-      const { correlationId } =
-        (JSON.parse(body) as { errors: { extensions: Record<string, string> }[] }).errors[0]
-          ?.extensions ?? {};
+      expect(logged).toHaveBeenCalledTimes(1);
       expect(logged).toHaveBeenCalledWith(
-        `A GraphQL operation failed with correlation id ${correlationId}`,
-        expect.stringContaining('connection to postgres://nm_app:secret@db failed'),
+        `A GraphQL operation failed with correlation id ${correlationIdOf(answer)}`,
+        expect.stringContaining('connection to postgres://nm_app:***@db failed\n    at broken'),
       );
+      expect(logged.mock.calls[0]?.[1]).not.toContain('secret');
+    } finally {
+      logged.mockRestore();
+    }
+  });
+
+  it('E02-S03 with NODE_ENV development a masked error still carries neither its text nor originalError', async () => {
+    vi.stubEnv('NODE_ENV', 'development');
+    const logged = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    try {
+      const response = await send('{ probeBroken }');
+
+      const body = await response.text();
+      expect(JSON.parse(body)).toMatchObject({
+        errors: [{ message: 'Unexpected error.', extensions: maskedExtensions }],
+      });
+      expect(body).not.toContain('originalError');
+      expect(body).not.toContain('secret');
+    } finally {
+      logged.mockRestore();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('E02-S03 an event of a subscription that fails reaches the client over SSE masked with a correlation id of its own, which the server log names, and without its text', async () => {
+    const logged = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    try {
+      const response = await send('subscription { probeBrokenEvents }', { sse: true });
+
+      const text = await response.text();
+      const events = [...text.matchAll(/^event: next\ndata: (.*)$/gm)].map(
+        ([, data]) => JSON.parse(data ?? '{}') as ErrorAnswer,
+      );
+      expect(events).toEqual([
+        {
+          data: { probeBrokenEvents: null },
+          errors: [
+            {
+              message: 'Unexpected error.',
+              path: ['probeBrokenEvents'],
+              locations: [{ line: 1, column: 16 }],
+              extensions: maskedExtensions,
+            },
+          ],
+        },
+        {
+          data: { probeBrokenEvents: null },
+          errors: [
+            {
+              message: 'Unexpected error.',
+              path: ['probeBrokenEvents'],
+              locations: [{ line: 1, column: 16 }],
+              extensions: maskedExtensions,
+            },
+          ],
+        },
+      ]);
+      expect(text).not.toContain('secret');
+      const ids = events.map(correlationIdOf);
+      expect(ids[0]).not.toBe(ids[1]);
+      for (const id of ids) {
+        expect(logged).toHaveBeenCalledWith(
+          `A GraphQL operation failed with correlation id ${id}`,
+          expect.stringContaining('connection to postgres://nm_app:***@db failed'),
+        );
+      }
     } finally {
       logged.mockRestore();
     }

@@ -18,7 +18,7 @@ describe('the backend test fixtures', () => {
     await testApp?.app.close();
   });
 
-  it('signIn fails with the status and body when /api/auth/token refuses the session token', async () => {
+  it('E05-S05 signIn fails with the status and body when /api/auth/token refuses the session token', async () => {
     if (!testApp) throw new Error('the test app did not start');
     const { plants } = await givenCompany(db.ownerUrl);
     const [plant = ''] = plants;
@@ -40,7 +40,7 @@ describe('the backend test fixtures', () => {
     }
   });
 
-  it('statementsDuring refuses a second recording of the same pool while the first runs', async () => {
+  it('E02-S04 statementsDuring refuses a second recording of the same pool while the first runs', async () => {
     if (!testApp) throw new Error('the test app did not start');
     const { app } = testApp;
     let finishFirst = () => {};

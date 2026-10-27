@@ -386,22 +386,16 @@ describe('the public article routes', () => {
     }
   });
 
-  it('ADR0073-W4 POST commands/create-article-group answers 201 with the group, which GET article-groups lists and GET article-groups/{id} returns, and a credential with core.articleGroup:read only gets 403 core.forbidden from the create', async () => {
+  it('ADR0073-W4 POST commands/create-article-group answers 201 with the group, which GET article-groups lists and GET article-groups/{id} returns', async () => {
     const { authorization } = await givenPlace([
       'core.articleGroup:read',
       'core.articleGroup:create',
     ]);
-    const reader = await givenPlace(['core.articleGroup:read']);
     const input = { id: randomUUIDv7(), code: code(), name: 'Flanges' };
 
     const created = await send(authorization, 'POST', 'commands/create-article-group', input);
     const listed = await send(authorization, 'GET', 'article-groups');
     const found = await send(authorization, 'GET', `article-groups/${input.id}`);
-    const refused = await send(reader.authorization, 'POST', 'commands/create-article-group', {
-      id: randomUUIDv7(),
-      code: code(),
-      name: 'Hoses',
-    });
 
     expect(created.status).toBe(201);
     expect(created.body).toEqual({
@@ -419,9 +413,22 @@ describe('the public article routes', () => {
     ]);
     expect(found.status).toBe(200);
     expect(found.body).toEqual(created.body);
+  });
+
+  it('ADR0073-W4 a credential with core.articleGroup:read only gets 403 core.forbidden as a problem from POST commands/create-article-group, and the list stays empty', async () => {
+    const { authorization } = await givenPlace(['core.articleGroup:read']);
+
+    const refused = await send(authorization, 'POST', 'commands/create-article-group', {
+      id: randomUUIDv7(),
+      code: code(),
+      name: 'Hoses',
+    });
+    const listed = await send(authorization, 'GET', 'article-groups');
+
     expect(refused.status).toBe(403);
     expect(refused.contentType).toMatch(/^application\/problem\+json/);
     expect(refused.body).toMatchObject({ title: 'Not permitted', code: 'core.forbidden' });
+    expect(listed.body.nodes).toEqual([]);
   });
 
   it('ADR0073-W4 a plant of another company in plant returns 403 core.plant_forbidden', async () => {

@@ -62,7 +62,9 @@ describe('northmes company', () => {
   async function adminsOf(companyId: string) {
     const run = await runCli(['company', 'list', '--json'], env);
     const companies = JSON.parse(run.out) as { id: string; admins: string[] }[];
-    return companies.find(({ id }) => id === companyId)?.admins ?? [];
+    const company = companies.find(({ id }) => id === companyId);
+    if (!company) throw new Error(`company list does not list ${companyId}`);
+    return company.admins;
   }
 
   /**

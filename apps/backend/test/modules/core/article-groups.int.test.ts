@@ -74,6 +74,14 @@ const forbidden = { code: 'FORBIDDEN', errorCode: 'core.forbidden' };
 
 const groupQuery = `query ($id: ID!) { coreArticleGroup(id: $id) { ${groupFields} } }`;
 
+/** The queries as company settings send them, with the company's id and no plant. */
+const listGroupsInSettings = `query ($companyId: ID) {
+  coreArticleGroups(companyId: $companyId) { totalCount edges { node { code } } }
+}`;
+const groupInSettings = `query ($id: ID!, $companyId: ID) {
+  coreArticleGroup(id: $id, companyId: $companyId) { code }
+}`;
+
 describe('article groups', () => {
   const db = useTestDatabase();
   let testApp: TestApp | undefined;
@@ -199,6 +207,29 @@ describe('article groups', () => {
     });
     expect(byId.errors).toBeUndefined();
     expect(byId.data).toEqual({ coreArticleGroup: null });
+  });
+
+  it("E06-S06 in company settings coreArticleGroups and coreArticleGroup with another company's id are core.forbidden, and answer no group", async () => {
+    const place = await givenPlace();
+    const other = await givenPlace();
+    const { group } = await create(other.companyAdmin, 'FL', 'Flanges');
+    const inSettings = await holderOf('core-company-admin', {
+      company: place.company,
+      scopeId: place.company,
+    });
+
+    const listed: Answer = await inSettings.send(listGroupsInSettings, {
+      companyId: other.company,
+    });
+    const one: Answer = await inSettings.send(groupInSettings, {
+      id: group?.id,
+      companyId: other.company,
+    });
+
+    expect(listed.data).toBeNull();
+    expect(refusal(listed)).toEqual(forbidden);
+    expect(one.data?.coreArticleGroup ?? null).toBeNull();
+    expect(refusal(one)).toEqual(forbidden);
   });
 
   it('E06-S06 a Plant admin gets core.forbidden on update, archive and restore of a group, which stays as it was', async () => {
