@@ -47,38 +47,52 @@ function checkbox(name: string): HTMLElement {
 }
 
 describe('the role editor', () => {
-  it('E05-S06 New role from Planner copies its permissions once and shows the difference, with no lock, since a new role is assigned nowhere; Create role opens the new role and announces it', async () => {
-    const user = userEvent.setup();
-    const created = role('Night planner', ['planning.productionOrder:read']);
-    const router = renderCoreAt(
-      coreLinks.settings.roles.new({ companyId }, { from: planner.id }).href,
-      [
-        settingsViewerQuery(jonas),
-        companiesQuery(),
-        rolesQuery([shiftLead, planner, viewerRole]),
-        catalogQuery(),
-        {
-          request: {
-            query: CoreCreateRole,
-            variables: ({
-              input,
-            }: {
-              input: { id: string; name: string; permissions: string[]; reason?: string };
-            }) =>
-              uuidv7.test(input.id) &&
-              input.name === 'Night planner' &&
-              input.permissions.join() === 'planning.productionOrder:read' &&
-              input.reason === 'Night shift plans its own orders',
-          },
-          result: { data: { coreCreateRole: created } },
-        } as MockLink.MockedResponse,
-      ],
-    );
+  /** The role Create role makes from Planner once Run autoplan and Release are unticked. */
+  const nightPlanner = role('Night planner', ['planning.productionOrder:read']);
+
+  /**
+   * Renders New role from Planner for Jonas Holm, with the roles list, the catalog and an answer
+   * to the create of Night planner with Read alone and the reason "Night shift plans its own
+   * orders".
+   */
+  function renderNewRoleFromPlanner() {
+    return renderCoreAt(coreLinks.settings.roles.new({ companyId }, { from: planner.id }).href, [
+      settingsViewerQuery(jonas),
+      companiesQuery(),
+      rolesQuery([shiftLead, planner, viewerRole]),
+      catalogQuery(),
+      {
+        request: {
+          query: CoreCreateRole,
+          variables: ({
+            input,
+          }: {
+            input: { id: string; name: string; permissions: string[]; reason?: string };
+          }) =>
+            uuidv7.test(input.id) &&
+            input.name === 'Night planner' &&
+            input.permissions.join() === 'planning.productionOrder:read' &&
+            input.reason === 'Night shift plans its own orders',
+        },
+        result: { data: { coreCreateRole: nightPlanner } },
+      } as MockLink.MockedResponse,
+    ]);
+  }
+
+  /** Unticks Run autoplan and Release production orders to the floor, so Read alone is left. */
+  async function untickToReadAlone(user: ReturnType<typeof userEvent.setup>) {
+    await screen.findByText('3 of 6 selected.');
+    await user.click(checkbox('Run autoplan'));
+    await user.click(checkbox('Release production orders to the floor'));
+    await waitFor(() => expect(screen.getByText('1 of 6 selected.')).toBeDefined());
+  }
+
+  it('E05-S06 New role from Planner puts Start from before Role name, says the permissions are copied once, and counts them as plain text', async () => {
+    renderNewRoleFromPlanner();
 
     expect(await screen.findByRole('heading', { level: 1, name: 'New role' })).toBeDefined();
     const startFrom = await screen.findByRole('combobox', { name: 'Start from' });
     expect(startFrom.textContent).toContain('Planner');
-    // Start from comes before Role name.
     const roleName = screen.getByRole('textbox', { name: 'Role name' });
     expect(
       startFrom.compareDocumentPosition(roleName) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -91,9 +105,15 @@ describe('the role editor', () => {
     // The count is plain text; a change says the new count through the announcer.
     const count = await screen.findByText('3 of 6 selected.');
     expect(count.getAttribute('role')).toBeNull();
+  });
 
-    // A new role is assigned nowhere, so the server asks for no permission to create it: nothing
-    // is locked, also Read users and Run autoplan, which the editor does not hold.
+  it('E05-S06 a new role locks nothing, since it is assigned nowhere; an untick by click or by Space says the new count through the announcer, and a module that is not installed never shows', async () => {
+    const user = userEvent.setup();
+    renderNewRoleFromPlanner();
+    await screen.findByText('3 of 6 selected.');
+
+    // The server asks for no permission to create a new role: nothing is locked, also Read users
+    // and Run autoplan, which the editor does not hold.
     await user.click(screen.getByRole('button', { name: /^Core/ }));
     expect(checkbox('Read users and their roles').hasAttribute('disabled')).toBe(false);
     expect(screen.queryByText('You do not hold it at Acme AB.')).toBeNull();
@@ -103,10 +123,8 @@ describe('the role editor', () => {
     expect(checkbox('Run autoplan').hasAttribute('disabled')).toBe(false);
     expect(screen.getByText('2 of 6 selected.')).toBeDefined();
     await waitFor(() => expect(spoken()).toBe('2 of 6 selected.'));
-    // The module that is not installed never shows.
     expect(screen.queryByText('kanban.board:read')).toBeNull();
 
-    await user.type(screen.getByRole('textbox', { name: 'Role name' }), 'Night planner');
     const release = checkbox('Release production orders to the floor');
     release.focus();
     await user.keyboard(' ');
@@ -115,8 +133,14 @@ describe('the role editor', () => {
     expect(release.getAttribute('aria-checked')).toBe('false');
     expect(screen.getByText('1 of 6 selected.')).toBeDefined();
     await waitFor(() => expect(spoken()).toBe('1 of 6 selected.'));
-    // The difference is a card above Permissions: a summary line, then what is added and removed,
-    // each with its line and id; the rows carry the same marks, a removed line struck through.
+  });
+
+  it('E05-S06 the difference from Planner is a card above Permissions: the summary, the removed lines with their ids, the Removed mark on the row, and the modules in sidebar order with their ids', async () => {
+    const user = userEvent.setup();
+    renderNewRoleFromPlanner();
+    await untickToReadAlone(user);
+    await user.type(screen.getByRole('textbox', { name: 'Role name' }), 'Night planner');
+
     const difference = screen.getByRole('region', { name: 'Difference from Planner' });
     const permissions = screen.getByRole('region', { name: 'Permissions' });
     expect(
@@ -139,7 +163,6 @@ describe('the role editor', () => {
     ]);
     const autoplanRow = checkbox('Run autoplan').closest('li') as HTMLElement;
     expect(within(autoplanRow).getByText('Removed')).toBeDefined();
-    // Modules come in the order of the sidebar, each id beside its line.
     expect(
       within(permissions)
         .getAllByRole('heading', { level: 3 })
@@ -150,8 +173,14 @@ describe('the role editor', () => {
         'Grouped by module in the order of the sidebar. Each line says what the permission allows; its id is for docs and support.',
       ),
     ).toBeDefined();
+  });
 
-    // The side column: who holds the role, the reason and the buttons.
+  it('E05-S06 the side column says nobody holds a new role yet and takes the reason, and Create role opens the new role and announces it', async () => {
+    const user = userEvent.setup();
+    const router = renderNewRoleFromPlanner();
+    await untickToReadAlone(user);
+    await user.type(screen.getByRole('textbox', { name: 'Role name' }), 'Night planner');
+
     const holders = screen.getByRole('region', { name: 'Who holds Night planner' });
     expect(
       within(holders).getByText(
@@ -171,7 +200,7 @@ describe('the role editor', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Night planner' })).toBeDefined();
     expect(router.state.location.pathname).toBe(
-      coreLinks.settings.roles.role({ companyId, roleId: created.id }).href,
+      coreLinks.settings.roles.role({ companyId, roleId: nightPlanner.id }).href,
     );
     await waitFor(() => expect(spoken()).toBe('Night planner created.'));
   });

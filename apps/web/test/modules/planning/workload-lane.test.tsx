@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { formatDuration, formatPlantDay } from '@northmes/contracts/format';
-import { g1Expected } from '@northmes/planning-domain';
 import { cleanup, screen, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -20,22 +18,6 @@ beforeEach(() => {
 afterEach(() => {
   window.localStorage.removeItem('northmes.planning.gantt.options');
 });
-
-/** The GT5 buckets of a machine for week 45, as the table prints them. */
-function expectedRows(equipment: string): string[][] {
-  return g1Expected.GT5_workload_week45.filter((bucket) => bucket.equipment === equipment).map(
-    (bucket) => [
-      formatPlantDay(bucket.productionDay),
-      formatDuration(bucket.availableS),
-      formatDuration(bucket.loadedS),
-      formatDuration(bucket.setupS),
-      formatDuration(bucket.runS),
-      formatDuration(Math.max(0, bucket.availableS - bucket.loadedS)),
-      `${Math.round(bucket.utilizationPermille / 10)} %`,
-      formatDuration(bucket.overloadS),
-    ],
-  );
-}
 
 describe('the workload lane (plan 18, The workload lane)', () => {
   it('GT5 shows a lane per machine, aria-hidden, under the time area when the option is on', async () => {
@@ -125,7 +107,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
     ).toBe('false');
   });
 
-  it('GT5 the lane header button opens the text table with every value, which equals GT5', async () => {
+  it('GT5 the lane header button opens the text table: the seven production days of week 45 and the visible range, with the GT5 values of Thu 5 Nov, a closed Saturday and the range', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     await findGantt();
 
@@ -141,7 +123,19 @@ describe('the workload lane (plan 18, The workload lane)', () => {
       .getAllByRole('row')
       .slice(1)
       .map((row) => Array.from(row.querySelectorAll('th, td')).map((cell) => cell.textContent));
-    expect(rows.slice(0, 5)).toEqual(expectedRows('CNC1'));
+    // Mon 2 Nov to Sun 8 Nov, then the visible range; the GT5 values of g1.expected.json are
+    // compared whole in gantt-analysis.test.ts.
+    expect(rows).toHaveLength(8);
+    expect(rows.map((row) => row[0])).toEqual([
+      'Mon 2 Nov',
+      'Tue 3 Nov',
+      'Wed 4 Nov',
+      'Thu 5 Nov',
+      'Fri 6 Nov',
+      'Sat 7 Nov',
+      'Sun 8 Nov',
+      'Visible range',
+    ]);
     // The weekend's production days are closed buckets, drawn as nothing and named closed.
     expect(rows[5]).toEqual([
       'Sat 7 Nov',

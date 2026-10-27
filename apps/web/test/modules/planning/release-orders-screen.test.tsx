@@ -8,7 +8,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { PlanningBoard } from '../../../src/modules/planning/screens/release-orders/board.graphql.ts';
 import { ReleaseOrdersScreen } from '../../../src/modules/planning/screens/release-orders/index.ts';
 import { PlanningReleaseProductionOrder } from '../../../src/modules/planning/screens/release-orders/release.graphql.ts';
-import { formatQuantity } from '../../../src/ui/lib/quantity.ts';
 
 afterEach(cleanup);
 
@@ -117,7 +116,7 @@ describe('ReleaseOrdersScreen', () => {
     ).toBeTruthy();
 
     const released = await rowOf('7102');
-    expect(cellOf(released, 'Quantity').textContent).toBe(formatQuantity('125.500000'));
+    expect(cellOf(released, 'Quantity').textContent).toBe('125.5');
     expect(cellOf(released, 'Status').textContent).toBe('Released');
     expect(within(released).queryByRole('button')).toBeNull();
     expect(within(table).queryByText('2')).toBeNull();

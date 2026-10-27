@@ -227,7 +227,7 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
 
     const allowed = screen.getByRole('table', { name: 'Routing operations that may run on CNC 1' });
     expect(bodyRows(allowed)).toEqual([
-      ['Bracket L', '10 Turn', 'CNC 2', expect.stringMatching(/^1001/)],
+      ['Bracket L', '10 Turn', 'CNC 2', '1001, 1005'],
       ['Gear blank 32', '10 Turn', 'None, only machine', '1003'],
       ['Hub 12', '10 Turn', 'None, only machine', '1004'],
     ]);
