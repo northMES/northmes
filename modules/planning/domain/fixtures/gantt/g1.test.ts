@@ -242,7 +242,9 @@ describe('fixture G1 (plan 18)', () => {
     }
   });
 
-  it('sums each workload bucket from its items and its setup and run parts', () => {
+  // A fixture lint: the arithmetic of the workload rule is tested in workload.test.ts against GT5;
+  // this test catches a hand edit of g1.expected.json that leaves a bucket inconsistent with itself.
+  it('fixture lint: each workload bucket of g1.expected.json agrees with its own items, setup, run and available seconds', () => {
     for (const bucket of values.GT5_workload_week45) {
       const label = `${bucket.equipment} ${bucket.productionDay}`;
       expect(bucket.setupS + bucket.runS, label).toBe(bucket.loadedS);
