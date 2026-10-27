@@ -14,6 +14,7 @@ This document says how NorthMES work moves from the plan to a released version. 
 | [0065](../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md) | proposed | CodeRabbit's check run, and 1 required approval on `main`, which is Krister's as code owner since ADR 0084 |
 | [0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md) | accepted | One version for everything, lockstep 0.x, release-please, API reports |
 | [0048](../adr/0048-documentation-on-docs7-at-docs-northmes-dev.md) | accepted | The docs site on Docs7 at docs.northmes.dev, public names under northmes.dev, the mail addresses |
+| [0088](../adr/0088-developer-documentation-kept-current-with-a-docs-section-per-pull-request-generated-references-and-executable-examples.md) | proposed | Developer documentation: the Build on NorthMES tab, one source per fact, a Docs section per pull request checked by `pr docs`, the review step reading the mapped pages, tutorials from the example plugins, screenshots per release |
 | [0041](../adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md) | accepted | Test first, Vitest projects, Testcontainers and Playwright |
 | [0042](../adr/0042-ai-in-tests-mocked-by-default-opt-in-live-runs.md) | accepted | Mocked AI by default, live runs only on request |
 | [0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md) | accepted | Source exports, one stack script for dev, demo and e2e, one gate command |
@@ -772,6 +773,7 @@ No job both installs dependencies and holds `id-token: write`.
 
 - Monthly minor releases, patches as needed. A patch release is image-only, with no migrations and rollback class image; the target from fix to customer bundle is 72 hours.
 - Before 1.0 only the latest minor gets fixes. After 1.0 one minor per year gets 12 months of fixes.
+- Before each release the maintainer runs the Docs screenshots workflow on `main` and commits the images it returns, so no release ships a picture of an older screen ([ADR 0088](../adr/0088-developer-documentation-kept-current-with-a-docs-section-per-pull-request-generated-references-and-executable-examples.md)).
 - Every pull request states its validation impact, so a regulated customer later can see what each change touched ([15-regulated-readiness.md](15-regulated-readiness.md)).
 - npm publishing of the MIT packages, with npm trusted publishing on GitHub-hosted runners, comes after the pilot.
 
@@ -783,6 +785,11 @@ No job both installs dependencies and holds `id-token: write`.
 - Release 1 generates the configuration reference and the permissions and roles reference. GraphQL reference (an in-house `graphql-js` script per subgraph), SDK reference and MCP tool reference land with the surfaces they document.
 - Module pages live in the site folder until external plugins exist. No versioned docs before 2.0.
 - Previews run locally with `docs7 dev`.
+- Developer documentation ([ADR 0088](../adr/0088-developer-documentation-kept-current-with-a-docs-section-per-pull-request-generated-references-and-executable-examples.md)) serves three audiences: integrators (REST, GraphQL, events, later MCP tools), plugin developers (the MIT packages and the extension points) and contributors, whose docs stay in the repository. The Build on NorthMES tab has the groups Overview, How NorthMES works, Integrate, Extend, Modules, Reference and Contribute. A page is added when its surface ships, never as a placeholder, because Docs7 publishes every file in the folder.
+- One source per fact: the Reference group is generated only (the GraphQL schema, the REST API per module, the SDK API reports, the error codes, the configuration keys, the permissions and roles, the event catalog), and a hand-written page that states a value gets a test that compares it with the exported constant.
+- Tutorials come from `examples/`: Your first plugin from `plugin-sidebar-page`, then one page per extension point built on its example plugin (`plugin-sidebar-page`, `plugin-article-count`, `plugin-article-log`, `plugin-validator`). A `pnpm gen` stage copies the code blocks from the example sources, so `pnpm gen --check` fails when a tutorial shows code CI does not build.
+- Docs with the surface: the pull request template has a `## Docs` section, `PR / pr docs` fails a pull request whose section is missing or says none without a reason, and `.github/docs-paths` maps each documented surface to its pages, so a diff that touches a mapped surface needs a reason that names it. A change under `docs/` alone is not a docs change for this check. The code-reviewer agent reads the mapped pages before the pull request and reports each statement the change makes wrong.
+- `ci / docs` also runs the snippet checks (GraphQL blocks against `schema/api.graphql`, backticked permissions, error codes and configuration keys against the code, TypeScript blocks against the packages) and lychee, each in report mode until the existing pages pass.
 - Docs7 refreshes the Context7 library on each production build, and `context7.json` points the repository index at the same folder.
 - Still open: the docs content license, Docs7's default `Content-Signal: ai-train=yes`, and a CAA record for Docs7's certificate authority under northmes.dev ([16-open-questions.md](16-open-questions.md)).
 
