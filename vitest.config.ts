@@ -65,6 +65,8 @@ export default defineConfig({
             './packages/testing/src/global-setup.ts',
             './apps/backend/test/global-setup.ts',
           ],
+          // A pg client in a reported error shows no password.
+          setupFiles: ['./packages/testing/src/setup.ts'],
         },
       },
       {

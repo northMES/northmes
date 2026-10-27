@@ -67,7 +67,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Audit trail in the command transaction, append-only, with old and new values | decided | ADR 0013, ADR 0051; [#443](https://github.com/northMES/northmes/issues/443) |
 | Security events (sign-in, denials, role and user changes, lockouts) | decided | ADR 0013; [#443](https://github.com/northMES/northmes/issues/443) |
 | Structured JSON logs with a UTC time, correlation id and credentials redacted | decided | ADR 0046; [#147](https://github.com/northMES/northmes/issues/147) |
-| No secrets in logs: password statements unlogged, pool errors without credentials | built | `bootstrap.ts`, `pool.ts` |
+| No secrets in logs: password statements unlogged, pool errors without credentials | built | `bootstrap.ts`, `pool.ts`; in test output `packages/testing/src/pg-serialization.ts` and its test, and every pool's error listener through `test/meta/pool-error-listener.test.ts` |
 | Tamper-evident audit seals | accepted | ADR 0051: deferred to B1 |
 
 ### 4. Data protection and integrity
