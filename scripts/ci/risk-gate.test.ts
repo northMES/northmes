@@ -380,6 +380,26 @@ describe('risk gate', () => {
     }
   });
 
+  // The path list is a reviewed security boundary (ADR 0086 rule 1), so its whole content is pinned
+  // on purpose: every edit to it is a two-place edit that a reviewer sees.
+  it("ADR0086 the repository's risk paths are pinned as the reviewed boundary: exactly .github, scripts/ci, scripts/agents, test/meta, .claude, CLAUDE.md, AGENTS.md and skills-lock.json", () => {
+    const patterns = readFileSync(new URL('../../.github/risk-paths', import.meta.url), 'utf8')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && !line.startsWith('#'));
+
+    expect(patterns).toEqual([
+      '/.github/',
+      '/scripts/ci/',
+      '/scripts/agents/',
+      '/test/meta/',
+      '/.claude/',
+      '/CLAUDE.md',
+      '/AGENTS.md',
+      '/skills-lock.json',
+    ]);
+  });
+
   it('the job summary names the tier, each reason and what a high pull request waits for', () => {
     expect(summary({ tier: 'low', reasons: [], ok: true })).toBe('Risk tier: **low**\n\n');
     expect(summary({ tier: 'high', reasons: ['declares a high blast radius'], ok: false })).toBe(
