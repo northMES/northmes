@@ -9,6 +9,7 @@ import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState }
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
+import { MoveDialog } from '../../components/move-dialog/index.ts';
 import { RangeControls } from '../../components/range-controls/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import {
@@ -21,6 +22,7 @@ import {
   draftRowIds,
   emptyDraft,
   moveBack,
+  moveInDraft,
   orderNumbersText,
   splitRunInDraft,
 } from '../../gantt-draft.ts';
@@ -43,12 +45,14 @@ import {
   rangeLabel,
   rangeOf,
   shiftedFrom,
+  zoomPresets,
 } from '../../timeline/time-scale.ts';
 import { useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { useMoveActions } from '../../use-move-actions.ts';
 import { type GanttViewContext, GanttViewProvider } from '../gantt/gantt-context.ts';
 import { changesText, GanttDraftDrawer } from '../gantt/gantt-draft-drawer.tsx';
-import { refusalMessage } from '../gantt/gantt-move.ts';
+import { movedMessage, previewOf, refusalMessage } from '../gantt/gantt-move.ts';
+import { BlockMenu } from './board-block-menu.tsx';
 import { type BoardCellItem, cellsOf } from './board-cells.ts';
 import { BoardGrid, focusKeys } from './board-grid.tsx';
 import { type BoardLine, boardEntry, boardFocusAfter } from './board-navigation.ts';
@@ -144,6 +148,14 @@ export function BoardScreen() {
   const [draftOpen, setDraftOpen] = useState(false);
   /** The element that opened the My draft drawer, which takes focus back when it closes. */
   const draftOpener = useRef<HTMLElement | undefined>(undefined);
+  // The block menu at its block, and the job order the Move dialog moves (design D3, IN7 and IN8).
+  const [menu, setMenu] = useState<{ jobOrderId: string; anchor: HTMLElement } | undefined>(
+    undefined,
+  );
+  const [menuOpen, setMenuOpen] = useState(false);
+  // The job order stays after the dialog closes, so the dialog fades out with its content.
+  const [moveDialogFor, setMoveDialogFor] = useState<string | undefined>(undefined);
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false);
   const [loadError, setLoadError] = useState<unknown>(undefined);
   const [attempt, setAttempt] = useState(0);
   /** Settles the promise of Try again once the load it started has settled. */
@@ -287,6 +299,44 @@ export function BoardScreen() {
     },
     machineSteps,
   });
+
+  // The Move dialog's job order, and the block that takes focus when it closes.
+  const moveDialogReturn = useRef<string | undefined>(undefined);
+  const moveDialogRow =
+    moveDialogFor === undefined || model === undefined
+      ? undefined
+      : model.groups
+          .flatMap((group) => group.machines.flatMap((machine) => machine.blocks))
+          .find((row) => row.jobOrder.id === moveDialogFor);
+  // Move in the dialog goes through the same draft move as a drag (plan 07, Moving without
+  // dragging), with its announcement, and focus returns to the block by id.
+  const moveFromDialog = (jobOrderId: string, equipment: string, setupStartMs: number) => {
+    if (committed === undefined || snapshot === undefined) return;
+    const preview = previewOf(
+      snapshot,
+      { jobOrderId, setupStartMs, equipment, source: 'keyboard' },
+      true,
+    );
+    const { draft: next, result } = moveInDraft(
+      committed,
+      draft,
+      { jobOrderId, setupStartMs, equipment },
+      { cascade: true },
+    );
+    if (result.refused !== undefined || preview === undefined) {
+      if (result.refused !== undefined && preview !== undefined) {
+        announce(refusalMessage(preview.displayNumber, result.refused));
+      }
+      return;
+    }
+    setDraft(next);
+    const machine = snapshot.equipment.find((each) => each.code === equipment)?.name ?? equipment;
+    announce(movedMessage(preview, machine, timeZone));
+    // Focus returns to the block by id; a block outside the range moves the range to it.
+    requestAnimationFrame(() => {
+      if (!focusTarget(focusKeys.block(jobOrderId))) setPendingFocus(jobOrderId);
+    });
+  };
 
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
@@ -539,6 +589,10 @@ export function BoardScreen() {
               {...(preview !== undefined && { preview })}
               selectedOrderId={search.order}
               onSelectOrder={selectOrder}
+              onBlockMenu={(jobOrderId, anchor) => {
+                setMenu({ jobOrderId, anchor });
+                setMenuOpen(true);
+              }}
               onFocusTarget={setFocused}
               onKeyDown={onKeyDown}
               gridRef={measureRef}
@@ -546,6 +600,40 @@ export function BoardScreen() {
               busy={loadedRange !== `${range.fromMs}/${range.toMs}`}
             />
           </div>
+          <BlockMenu
+            menu={menu}
+            open={menuOpen}
+            snapshot={snapshot}
+            plant={plant}
+            onClose={() => setMenuOpen(false)}
+            onMove={(jobOrderId) => {
+              setMenuOpen(false);
+              moveDialogReturn.current = jobOrderId;
+              setMoveDialogFor(jobOrderId);
+              setMoveDialogOpen(true);
+            }}
+          />
+          <MoveDialog
+            open={moveDialogOpen}
+            row={moveDialogRow}
+            snapshot={snapshot}
+            machineName={view.machineName}
+            stepMs={zoomPresets[zoom].stepMs}
+            presetLabel={zoomPresets[zoom].label}
+            onMove={(equipment, setupStartMs) => {
+              if (moveDialogFor === undefined) return;
+              setMoveDialogOpen(false);
+              moveFromDialog(moveDialogFor, equipment, setupStartMs);
+            }}
+            onCancel={() => setMoveDialogOpen(false)}
+            finalFocus={() =>
+              moveDialogReturn.current === undefined
+                ? null
+                : document.querySelector<HTMLElement>(
+                    `[data-board-focus="${CSS.escape(moveDialogReturn.current)}"]`,
+                  )
+            }
+          />
           <GanttDraftDrawer
             open={draftOpen}
             onClose={() => setDraftOpen(false)}
