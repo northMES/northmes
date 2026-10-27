@@ -89,12 +89,13 @@ function lineOf(args: readonly unknown[]): string {
 }
 
 /**
- * Yoga's log, written through the server's Logger at the same levels. An error Yoga logs after
- * masking it gets the line of logMasked, with the stack of the error and of its causes, instead of
- * Yoga's own, so a masked error gives one line, which names the correlation id.
+ * Yoga's log, written through the server's Logger at the same levels, without Yoga's debug lines,
+ * which its default logger leaves out too. An error Yoga logs after masking it gets the line of
+ * logMasked, with the stack of the error and of its causes, instead of Yoga's own, so a masked
+ * error gives one line, which names the correlation id.
  */
 const yogaLogger: YogaLogger = {
-  debug: (...args) => logger.debug(lineOf(args)),
+  debug: () => {},
   info: (...args) => logger.log(lineOf(args)),
   warn: (...args) => logger.warn(lineOf(args)),
   error: (...args) => {
