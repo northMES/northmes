@@ -4,6 +4,7 @@ import { useShell } from '@northmes/web-sdk';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { type KeyboardEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { useBoardFields } from '../../board-fields-store.ts';
 import { RangeControls } from '../../components/range-controls/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import {
@@ -209,6 +210,7 @@ export function BoardScreen() {
     if (orderId !== search.order) void setSearch(withOrder(search, orderId), 'push');
   };
 
+  const boardFields = useBoardFields(plant);
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
     const equipment = new Map(snapshot.equipment.map((machine) => [machine.code, machine]));
@@ -230,8 +232,9 @@ export function BoardScreen() {
       chainRowIds: new Set(),
       machineName: (code) =>
         code === undefined ? 'no machine' : (equipment.get(code)?.name ?? code),
+      boardFields,
     };
-  }, [snapshot, scale, timeZone, range, search.order, model]);
+  }, [snapshot, scale, timeZone, range, search.order, model, boardFields]);
 
   // A target takes focus and scrolls into view past the sticky axes, which the scroll padding keeps
   // clear (WCAG 2.4.11). A target in the sticky machine column or the pinned Not placed row is in
