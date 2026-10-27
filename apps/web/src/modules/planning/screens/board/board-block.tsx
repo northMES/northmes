@@ -3,9 +3,10 @@
 import { formatPlantTime, formatSpan } from '@northmes/contracts/format';
 import { cn } from 'cn';
 import { Clock, ClockAlert, Lock, type LucideIcon, Pencil, Play, UserPen } from 'lucide-react';
-import type { FocusEvent } from 'react';
+import type { FocusEvent, KeyboardEvent } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
+import { useGanttView } from '../gantt/gantt-context.ts';
 import { type JobOrderRow, quantityText } from '../gantt/gantt-rows.ts';
 import { type BoardBlockState, boardBlockStates, borderMarkerOf } from './board-block-states.ts';
 import { BoardHoverCard } from './board-hover-card.tsx';
@@ -62,14 +63,52 @@ export function BoardBlock({
   /** Whether the block's order is the selected one, which draws the 3 px bar on top. */
   readonly selected: boolean;
   readonly onFocus: (event: FocusEvent<HTMLDivElement>) => void;
-  /** A click, Enter or Space selects the block's order. */
+  /** A click, Enter or Space selects the block's order; M enters keyboard move mode. */
   readonly onSelect: () => void;
 }) {
+  const { draftRowIds, move } = useGanttView();
   const { jobOrder, order } = row;
   const placement = jobOrder.placement;
   if (placement === undefined) return null;
   const timeZone = snapshot.plant.timeZone;
-  const states = boardBlockStates(row, snapshot);
+  const states = boardBlockStates(row, snapshot, { inDraft: draftRowIds?.has(jobOrder.id) });
+  const moving = move?.state?.jobOrderId === jobOrder.id;
+  const inMoveMode = moving && move?.state?.source === 'keyboard';
+  // Keyboard move mode (plan 07, Moving without dragging): M on the focused block enters it; Left
+  // and Right step one snap, Up and Down the allowed machines, Enter commits to the draft and
+  // Escape cancels. The keys stay with the block while it moves, so the grid's arrows wait.
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (move !== undefined && moving) {
+      const step = {
+        ArrowLeft: () => move.stepTime(-1),
+        ArrowRight: () => move.stepTime(1),
+        ArrowUp: () => move.stepMachine(-1),
+        ArrowDown: () => move.stepMachine(1),
+        Enter: () => move.commit(),
+        Escape: () => move.cancel(),
+        // The keys that would move focus off the moving block wait until the move ends.
+        Home: () => {},
+        End: () => {},
+        PageUp: () => {},
+        PageDown: () => {},
+        ' ': () => {},
+      }[event.key];
+      if (step === undefined) return;
+      event.preventDefault();
+      event.stopPropagation();
+      step();
+      return;
+    }
+    if (move !== undefined && (event.key === 'm' || event.key === 'M')) {
+      event.preventDefault();
+      event.stopPropagation();
+      move.begin(jobOrder.id, 'keyboard');
+      return;
+    }
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    onSelect();
+  };
   const marker = borderMarkerOf(states);
   const conflict = states.some((state) => state.kind === 'conflict');
   const icons = states.flatMap((state) => {
@@ -93,16 +132,20 @@ export function BoardBlock({
             data-job-order={jobOrder.displayNumber}
             data-board-focus={jobOrder.id}
             data-states={states.map((state) => state.kind).join(' ') || undefined}
+            data-move-mode={inMoveMode ? 'true' : undefined}
             aria-selected={selected}
             aria-labelledby={`${id}-number ${id}-article ${id}-facts`}
             onFocus={onFocus}
             onClick={onSelect}
-            onKeyDown={(event) => {
-              if (event.key !== 'Enter' && event.key !== ' ') return;
-              event.preventDefault();
-              onSelect();
+            onKeyDown={onKeyDown}
+            onBlur={() => {
+              // Focus that leaves a block in keyboard move mode ends the move without a change.
+              if (inMoveMode) move?.cancel({ refocus: false });
             }}
-            className="absolute top-1 h-11 overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-palette-foreground focus-visible:z-10"
+            className={cn(
+              'absolute top-1 h-11 overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-palette-foreground focus-visible:z-10',
+              moving && 'opacity-60',
+            )}
             style={{
               left: `${left}px`,
               width: `${width}px`,
