@@ -333,15 +333,19 @@ describe('tooling', () => {
   });
 
   it('E05-S05 better-auth and its api-key and oauth-provider plugins are pinned exactly at one 1.7 version that apps/backend takes from the catalog', () => {
-    // ADR 0010 pins Better Auth 1.7.x exactly. The api-key plugin ships in its own package since
-    // 1.5, and the OAuth 2.1 provider since 1.7.0 removed the in-core oidcProvider; each must match
-    // better-auth's version. Username, organization, admin, jwt and bearer ship inside it.
+    // ADR 0010 pins Better Auth 1.7.x exactly. GHSA-965c-763c-88jm and GHSA-r4xp-prcw-77qf
+    // (published 2026-10-27) are fixed from 1.7.7, so the pin is 1.7.7 or later. The api-key
+    // plugin ships in its own package since 1.5, and the OAuth 2.1 provider since 1.7.0 removed
+    // the in-core oidcProvider; each must match better-auth's version. Username, organization,
+    // admin, jwt and bearer ship inside it.
     const plugins = ['@better-auth/api-key', '@better-auth/oauth-provider'];
     const catalog = readWorkspace().catalog ?? {};
     const backend = readJson<PackageJson>('apps/backend/package.json');
-    const version = catalog['better-auth'];
+    const version = catalog['better-auth'] ?? '';
+    const patch = Number(/^1\.7\.(\d+)$/.exec(version)?.[1]);
 
     expect(version).toMatch(/^1\.7\.\d+$/);
+    expect(patch, `${version} is 1.7.7 or later`).toBeGreaterThanOrEqual(7);
     for (const name of plugins) {
       expect(catalog[name], `catalog ${name}`).toBe(version);
     }
