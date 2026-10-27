@@ -50,14 +50,9 @@ function scroller(
   }
 }
 
+// The contained overscroll, so a sideways swipe at an edge never navigates the browser, is read
+// from computed style in e2e/planning/gantt-scroller.spec.ts.
 describe('the time scroller of the order Gantt (#685)', () => {
-  it('contains its overscroll, so a sideways swipe at an edge never navigates the browser', async () => {
-    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
-    const gantt = await findGantt();
-
-    expect(gantt.className).toContain('overscroll-contain');
-  });
-
   it('extends the range by one span of the preset when the scroll comes within one screen of the right edge, keeping from in the URL', async () => {
     const router = renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();

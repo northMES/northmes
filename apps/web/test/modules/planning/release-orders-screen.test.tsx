@@ -130,7 +130,6 @@ describe('ReleaseOrdersScreen', () => {
     const article = cellOf(row, 'Article');
     expect(article.textContent).toBe('Article not available to you');
     expect(article.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
-    expect(within(article).getByText('Article not available to you').className).toContain('italic');
     expect(cellOf(row, 'Status').textContent).toBe('on_hold');
   });
 

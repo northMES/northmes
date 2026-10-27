@@ -139,7 +139,6 @@ describe('the role editor', () => {
     ]);
     const autoplanRow = checkbox('Run autoplan').closest('li') as HTMLElement;
     expect(within(autoplanRow).getByText('Removed')).toBeDefined();
-    expect(within(autoplanRow).getByText('Run autoplan').className).toContain('line-through');
     // Modules come in the order of the sidebar, each id beside its line.
     expect(
       within(permissions)

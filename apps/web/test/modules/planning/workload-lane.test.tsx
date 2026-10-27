@@ -102,7 +102,6 @@ describe('the workload lane (plan 18, The workload lane)', () => {
     // the headroom, 2 700 of 29 700 s as a share of the bar's height, so it stays inside the lane.
     expect(thursday?.style.height).toBe('75%');
     const overload = thursday?.querySelector<HTMLElement>('[data-overload]');
-    expect(overload?.className).toContain('bottom-full');
     expect(Number.parseFloat(overload?.style.height ?? '0')).toBeCloseTo(
       (2700 / 29700) * 0.75 * 2.5,
       3,

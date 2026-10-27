@@ -64,6 +64,11 @@ function shiftColor(order: number): string {
   return shiftColors[order % shiftColors.length] ?? shiftColors[0];
 }
 
+/** The number of a shift's color, 1 to 3, which a block and the legend key of one shift share. */
+function shiftColorNumber(order: number): number {
+  return (order % shiftColors.length) + 1;
+}
+
 /** "Early 06:00 to 14:00": a shift's name and times. */
 function shiftLabel(shift: PlantShift): string {
   return `${shift.name} ${shift.start} to ${shift.end}`;
@@ -86,6 +91,7 @@ function ShiftKey({ order }: { readonly order: number }) {
   return (
     <span
       aria-hidden="true"
+      data-shift-color={shiftColorNumber(order)}
       className={cn('inline-block size-3.5 shrink-0 rounded-[3px] border', shiftColor(order))}
     />
   );
@@ -747,6 +753,9 @@ function WeekSection({
                   {blocks.map((block) => (
                     <div
                       key={block.id}
+                      data-shift-color={
+                        block.kind === 'shift' ? shiftColorNumber(block.order ?? 0) : undefined
+                      }
                       className={cn(
                         'absolute overflow-hidden rounded-sm border px-1.5 text-xs leading-4',
                         block.lanes === 1 && 'inset-x-1',

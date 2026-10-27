@@ -20,13 +20,7 @@ import {
   viewerRole,
 } from './access-fixtures.ts';
 import { answeredAfter, renderCoreAt, spoken } from './core-app.tsx';
-import {
-  blockMutation,
-  resetPasswordMutation,
-  temporaryPassword,
-  unblockMutation,
-  userAdmin,
-} from './user-fixtures.ts';
+import { resetPasswordMutation, temporaryPassword, userAdmin } from './user-fixtures.ts';
 
 afterEach(cleanup);
 
@@ -46,8 +40,8 @@ async function actionNames(): Promise<string[]> {
     .filter((name) => /^(Reset password|Block user|Unblock user)$/.test(name));
 }
 
-/** Whether a button has the destructive look, which only a confirm that takes something away has. */
-const destructive = (button: HTMLElement) => button.className.includes('text-destructive');
+/** Whether a button has the destructive variant, which only a confirm that takes something away has. */
+const destructive = (button: HTMLElement) => button.getAttribute('data-variant') === 'destructive';
 
 const reasonHint = "Shown in the user's history. Do not enter personal data. Up to 500 characters.";
 
@@ -152,11 +146,10 @@ describe("a user's actions", () => {
       settingsViewerQuery(userAdmin),
       companiesQuery(),
       userQuery(saraOfPage),
-      blockMutation(sara),
     ]);
 
     const block = await screen.findByRole('button', { name: 'Block user' });
-    expect([destructive(block), block.className.includes('border-input')]).toEqual([false, true]);
+    expect(block.getAttribute('data-variant')).toBe('outline');
     await browser.click(block);
     const dialog = await screen.findByRole('alertdialog', { name: 'Block Sara Nyberg?' });
 
@@ -178,7 +171,6 @@ describe("a user's actions", () => {
       settingsViewerQuery(userAdmin),
       companiesQuery(),
       userQuery({ ...saraOfPage, blocked: true }),
-      unblockMutation(sara),
     ]);
 
     await browser.click(await screen.findByRole('button', { name: 'Unblock user' }));

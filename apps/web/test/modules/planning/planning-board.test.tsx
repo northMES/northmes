@@ -651,15 +651,8 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     await waitFor(() => expect(board.getAttribute('aria-busy')).toBeNull());
   });
 
-  it('D1 draws block text in pure black on the order color, in both themes', async () => {
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
-    const board = await findBoard();
-
-    // The palette's text token, black in both themes; the palette of Tailwind is removed.
-    for (const cell of board.querySelectorAll<HTMLElement>('[role="gridcell"][data-job-order]')) {
-      expect(cell.classList).toContain('text-palette-foreground');
-    }
-  });
+  // The D1 block text in pure black in both themes, and the group button's target height (WCAG
+  // 2.5.8), are read from computed style in e2e/design-rules.spec.ts.
 
   it('BO1 lists a job order with a span but no machine in the Not placed row', async () => {
     const g1 = g1Snapshot();
@@ -685,14 +678,5 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
       within(row).getByRole('gridcell', { name: named('1001.20 Bracket L, 600 pcs, not placed') }),
     ).toBeTruthy();
     expect(jobNumbers(machineRow(board, 'CNC 2'))).toEqual(['1002.10']);
-  });
-
-  it('WCAG 2.5.8 a group button is at least --nm-target-min high, whatever the root font size', async () => {
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
-    const board = await findBoard();
-
-    expect(within(board).getByRole('button', { name: 'Collapse Machining' }).className).toContain(
-      'min-h-(--nm-target-min)',
-    );
   });
 });

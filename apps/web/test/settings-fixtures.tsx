@@ -226,7 +226,11 @@ export const reports: ShellModule = {
     id: 'reports',
     version: '0.1.0',
     routes: (plantRoute) =>
-      createRoute({ getParentRoute: () => plantRoute, path: 'reports', component: page('Reports') }),
+      createRoute({
+        getParentRoute: () => plantRoute,
+        path: 'reports',
+        component: page('Reports'),
+      }),
   }),
 };
 
