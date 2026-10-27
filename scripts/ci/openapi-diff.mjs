@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-// The check behind CI / openapi diff (ADR 0064). The job runs oasdiff breaking on the base branch's
+// The check behind PR / openapi diff (ADR 0064). The job runs oasdiff breaking on the base branch's
 // schema/openapi-v1.json and the pull request's, writes what it finds as JSON, and this script
 // decides: an ERR-level change fails, unless NorthMES is still 0.x and the title carries !, the
 // breaking-change marker that also bumps the minor and puts the break in the changelog (ADR 0038).

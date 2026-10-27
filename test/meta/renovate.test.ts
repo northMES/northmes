@@ -62,8 +62,8 @@ describe('renovate.json', () => {
     expect(`${groups?.depName}:${groups?.currentValue}@${groups?.currentDigest}`).toBe(image);
   });
 
-  it('ADR0064 the oasdiff image of CI / openapi diff has a manager that reads its tag and digest', () => {
-    const file = '.github/workflows/ci.yml';
+  it('ADR0064 the oasdiff image of PR / openapi diff has a manager that reads its tag and digest', () => {
+    const file = '.github/workflows/pr.yml';
     const text = readFileSync(`${root}${file}`, 'utf8');
     const image = /OASDIFF_IMAGE: (\S+)/.exec(text)?.[1];
     const manager = renovate.customManagers?.find((candidate) =>
