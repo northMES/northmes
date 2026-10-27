@@ -51,23 +51,19 @@ const cell = 'px-3 py-2 whitespace-normal';
 const hourPx = 36;
 
 /**
- * The edge and fill of each shift by its order in the calendar version (#770): a fourth shift
- * starts over at the first color, and its name stays written in each block and in the legend.
+ * The number of a shift's color, 1 to 3, by its order in the calendar version (#770): a fourth
+ * shift starts over at the first color, and its name stays written in each block and in the legend.
+ * A block and the legend key carry it as data-shift-color, which the edge and fill classes read.
  */
-const shiftColors = [
-  'border-shift-1 bg-shift-1-subtle',
-  'border-shift-2 bg-shift-2-subtle',
-  'border-shift-3 bg-shift-3-subtle',
-] as const;
+const shiftColorCount = 3;
 
-function shiftColor(order: number): string {
-  return shiftColors[order % shiftColors.length] ?? shiftColors[0];
-}
-
-/** The number of a shift's color, 1 to 3, which a block and the legend key of one shift share. */
 function shiftColorNumber(order: number): number {
-  return (order % shiftColors.length) + 1;
+  return (order % shiftColorCount) + 1;
 }
+
+/** The edge and fill of a shift block or legend key, from its data-shift-color. */
+const shiftColorClasses =
+  'data-[shift-color=1]:border-shift-1 data-[shift-color=1]:bg-shift-1-subtle data-[shift-color=2]:border-shift-2 data-[shift-color=2]:bg-shift-2-subtle data-[shift-color=3]:border-shift-3 data-[shift-color=3]:bg-shift-3-subtle';
 
 /** "Early 06:00 to 14:00": a shift's name and times. */
 function shiftLabel(shift: PlantShift): string {
@@ -92,7 +88,7 @@ function ShiftKey({ order }: { readonly order: number }) {
     <span
       aria-hidden="true"
       data-shift-color={shiftColorNumber(order)}
-      className={cn('inline-block size-3.5 shrink-0 rounded-[3px] border', shiftColor(order))}
+      className={cn('inline-block size-3.5 shrink-0 rounded-[3px] border', shiftColorClasses)}
     />
   );
 }
@@ -493,7 +489,7 @@ function reasonText(deviation: PlantCalendarDeviation): string {
 }
 
 const blockClass: Readonly<Record<DayBlock['kind'], string>> = {
-  // A shift's edge and fill come from its order (shiftColor).
+  // A shift's edge and fill come from its order (shiftColorNumber).
   shift: 'text-foreground',
   break: 'border-dashed border-input bg-muted text-muted-foreground',
   overtime: 'border-success bg-success-subtle text-foreground',
@@ -761,7 +757,7 @@ function WeekSection({
                         block.lanes === 1 && 'inset-x-1',
                         block.kind === 'break' ? 'py-0 text-tick' : 'py-1',
                         blockClass[block.kind],
-                        block.kind === 'shift' && shiftColor(block.order ?? 0),
+                        block.kind === 'shift' && shiftColorClasses,
                       )}
                       style={{
                         top: y(block.from),

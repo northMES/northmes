@@ -120,7 +120,8 @@ export function answeredAfter(first: string, ...held: readonly string[]): Apollo
   const { promise, resolve } = Promise.withResolvers<void>();
   return new ApolloLink((operation, forward) => {
     if (operation.operationName === first) {
-      return forward(operation).pipe(tap(() => resolve()));
+      // An error releases the held requests too, so a missing mock fails on its own message.
+      return forward(operation).pipe(tap({ next: () => resolve(), error: () => resolve() }));
     }
     return operation.operationName !== undefined && held.includes(operation.operationName)
       ? from(promise).pipe(mergeMap(() => forward(operation)))

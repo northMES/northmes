@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
@@ -85,12 +86,18 @@ describe("the web's typed documents", () => {
         'src/modules/planning/screens/release-orders/board.graphql.ts',
       ]),
     );
-    expect(files.map(({ path }) => path)).toEqual(
-      expect.arrayContaining([
-        'src/modules/core/article.graphql.gen.ts',
-        'src/modules/core/screens/articles/articles.graphql.gen.ts',
-        'src/modules/planning/screens/release-orders/board.graphql.gen.ts',
-      ]),
+    // One generated file per tracked operation file, no more: the tracked files are the other
+    // side of the cross-check, read from git rather than from the generator's own list.
+    const tracked = execFileSync('git', ['ls-files', 'src/**/*.graphql.ts'], {
+      cwd: webDir,
+      encoding: 'utf8',
+    })
+      .trim()
+      .split('\n')
+      .sort();
+    expect(tracked).toContain('src/modules/core/article.graphql.ts');
+    expect(files.map(({ path }) => path).sort()).toEqual(
+      tracked.map((path) => path.replace(/\.ts$/, '.gen.ts')),
     );
   });
 

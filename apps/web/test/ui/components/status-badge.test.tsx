@@ -20,7 +20,7 @@ describe('StatusBadge', () => {
     expect(badge.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('E02-S05 the info tone marks a state in progress, such as Planned, with data-tone info, which the info colours read', () => {
+  it('E02-S05 the info tone marks a state in progress, such as Planned, with data-tone info, from which the badge classes draw the info colours', () => {
     render(<StatusBadge tone="info">Planned</StatusBadge>);
 
     expect(screen.getByText('Planned').getAttribute('data-tone')).toBe('info');
