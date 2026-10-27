@@ -154,19 +154,24 @@ const pullRequestCheckSteps = {
   },
 };
 
+// A script and the local modules it imports, transitively, as repository paths: the files a job
+// that runs the script without a checkout must download.
+function localImportsOf(script: string, seen = new Set<string>()): string[] {
+  if (seen.has(script)) return [];
+  seen.add(script);
+  const source = readFileSync(`${root}${script}`, 'utf8');
+  const folder = script.slice(0, script.lastIndexOf('/') + 1);
+  for (const [, specifier = ''] of source.matchAll(/^import\s[^;]*?from\s+'(\.\.?\/[^']+)';/gm)) {
+    localImportsOf(`${folder}${specifier.replace(/^\.\//, '')}`, seen);
+  }
+  return [...seen];
+}
+
 // The jobs of the CI workflow, which GitHub shows as CI / <job name>. The main ruleset requires
 // each of them as a status check by its job name
 // (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md), so a change to this list
 // needs a ruleset edit: an added name after the merge, a removed or old name just before it.
-const ciJobs = [
-  'lint',
-  'typecheck',
-  'build',
-  'test',
-  'react doctor',
-  'e2e',
-  'gate',
-];
+const ciJobs = ['lint', 'typecheck', 'build', 'test', 'react doctor', 'e2e', 'gate'];
 
 // The jobs of the PR workflow, which GitHub shows as PR / <job name>. The ruleset requires each of
 // them by its job name too, so they keep the names they had in the CI workflow.
@@ -481,9 +486,9 @@ describe('workflows', () => {
                 ? riskLabelPermissions
                 : job.name === 'risk refresh'
                   ? riskRefreshPermissions
-                : job.name === 'Scorecard analysis'
-              ? scorecardPermissions
-              : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
+                  : job.name === 'Scorecard analysis'
+                    ? scorecardPermissions
+                    : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
       expect(job.permissions, where).toEqual(expected);
     }
   });
@@ -986,8 +991,11 @@ describe('workflows', () => {
       GH_TOKEN: expression('github.token'),
       DEFAULT_BRANCH: expression('github.event.repository.default_branch'),
     });
-    for (const file of ['scripts/ci/risk-gate.mjs', 'scripts/ci/pull-request.mjs', 'scripts/ci/annotation.mjs']) {
-      expect(download?.run).toContain(`contents/${file}?ref=$DEFAULT_BRANCH`);
+    // The job runs the gate without a checkout, so it downloads the gate and every local module the
+    // gate imports, transitively; a module moved out of risk-gate.mjs without its download would
+    // fail every pull request's risk gate once it merged.
+    for (const file of localImportsOf('scripts/ci/risk-gate.mjs')) {
+      expect(download?.run, file).toContain(`contents/${file}?ref=$DEFAULT_BRANCH`);
     }
     expect(check).toEqual({
       name: expect.any(String),
@@ -1021,12 +1029,8 @@ describe('workflows', () => {
       HEAD_SHA: expression('github.event.workflow_run.head_sha'),
       STARTED_BY: expression('github.event.workflow_run.id'),
     });
-    expect(rerun?.run).toContain(
-      'actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA',
-    );
-    expect(rerun?.run).toContain(
-      'select(.conclusion == "failure" or .conclusion == "cancelled")',
-    );
+    expect(rerun?.run).toContain('actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA');
+    expect(rerun?.run).toContain('select(.conclusion == "failure" or .conclusion == "cancelled")');
     expect(rerun?.run).toContain('[ "$id" = "$STARTED_BY" ] && continue');
     expect(rerun?.run).toContain('gh run watch');
     expect(rerun?.run).toContain('select(.state == "open")');
