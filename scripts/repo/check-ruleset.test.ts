@@ -46,6 +46,8 @@ function ruleset(checks: Check[], strict = true) {
   return {
     id: 24515911,
     name: 'main',
+    enforcement: 'active',
+    conditions: { ref_name: { include: ['~DEFAULT_BRANCH'], exclude: [] } },
     rules: [
       { type: 'deletion' },
       {
@@ -157,8 +159,42 @@ describe('check-ruleset', () => {
     expect(problems[0]).toContain('strict_required_status_checks_policy');
   });
 
+  it('a ruleset that is not active fails naming its enforcement', () => {
+    const problems = checkRuleset({ ...ruleset(matching), enforcement: 'evaluate' }, workflows);
+
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('enforcement');
+    expect(problems[0]).toContain('evaluate');
+  });
+
+  it('a ruleset that does not target the default branch fails naming its ref condition', () => {
+    const problems = checkRuleset(
+      {
+        ...ruleset(matching),
+        conditions: { ref_name: { include: ['refs/heads/release'], exclude: [] } },
+      },
+      workflows,
+    );
+
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('refs/heads/release');
+  });
+
+  it('a ruleset that excludes main fails naming its ref condition', () => {
+    const problems = checkRuleset(
+      {
+        ...ruleset(matching),
+        conditions: { ref_name: { include: ['~DEFAULT_BRANCH'], exclude: ['refs/heads/main'] } },
+      },
+      workflows,
+    );
+
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('refs/heads/main');
+  });
+
   it('a ruleset without a required_status_checks rule fails', () => {
-    const problems = checkRuleset({ id: 24515911, name: 'main', rules: [] }, workflows);
+    const problems = checkRuleset({ ...ruleset(matching), rules: [] }, workflows);
 
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain('required_status_checks');
