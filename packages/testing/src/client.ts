@@ -5,9 +5,9 @@ import { Client, type ClientConfig } from 'pg';
 /**
  * Runs `run` on a client connected with `config` and closes the client afterwards. Tests and test
  * helpers that need a client of their own build it here. The error listener keeps a connection that
- * the server terminates from surfacing as an unhandled error in the worker. It records the error,
- * and when `run` fails afterwards, the recorded error is thrown, because pg only reports that the
- * client is not queryable.
+ * the server terminates from surfacing as an unhandled error in the worker. It records the error
+ * and throws it in place of what `run` returns or throws, because pg then only reports that the
+ * client is not queryable, and a `run` may catch that and return.
  */
 export async function withClient<Result = void>(
   config: ClientConfig,
@@ -20,7 +20,9 @@ export async function withClient<Result = void>(
   });
   await client.connect();
   try {
-    return await run(client);
+    const result = await run(client);
+    if (connectionError) throw connectionError;
+    return result;
   } catch (error) {
     throw connectionError ?? error;
   } finally {
