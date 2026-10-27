@@ -7,7 +7,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { stages } from '../gen.mjs';
-import { checkPrTests, generatedFiles, parseNameStatus } from './pr-tests.mjs';
+import { checkPrTests, generatedFiles } from './pr-tests.mjs';
+import { parseNameStatus } from './pull-request.mjs';
 
 const script = fileURLToPath(new URL('./pr-tests.mjs', import.meta.url));
 

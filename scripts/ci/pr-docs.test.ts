@@ -109,9 +109,10 @@ describe('PR / pr docs', () => {
     ];
 
     for (const note of notes) {
-      expect(checkPrDocs(pullRequest(note, ['apps/web/src/app.tsx', 'e2e/app.spec.ts'])).ok, note).toBe(
-        true,
-      );
+      expect(
+        checkPrDocs(pullRequest(note, ['apps/web/src/app.tsx', 'e2e/app.spec.ts'])).ok,
+        note,
+      ).toBe(true);
     }
   });
 
@@ -164,9 +165,10 @@ describe('PR / pr docs', () => {
   // The contracts of a module lie inside the module, so one name covers both surfaces.
   it('ADR0088 naming a nested surface names the surface it lies in', () => {
     const result = checkPrDocs(
-      pullRequest('None: modules/core/contracts/ exports one more type that the schema describes.', [
-        'modules/core/contracts/src/index.ts',
-      ]),
+      pullRequest(
+        'None: modules/core/contracts/ exports one more type that the schema describes.',
+        ['modules/core/contracts/src/index.ts'],
+      ),
     );
 
     expect(result.ok).toBe(true);
@@ -214,7 +216,9 @@ describe('PR / pr docs', () => {
 
   it('ADR0088 a Docs section that names changed pages fails when no page under apps/docs changed', () => {
     const result = checkPrDocs(
-      pullRequest('The README of packages/sdk describes the new export.', ['packages/sdk/README.md']),
+      pullRequest('The README of packages/sdk describes the new export.', [
+        'packages/sdk/README.md',
+      ]),
     );
 
     expect(result.ok).toBe(false);

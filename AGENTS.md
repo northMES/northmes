@@ -29,6 +29,7 @@ NorthMES keeps itself ready for a third-party audit (IEC 62443-4-1, the ISO 2700
 - A client sees a masked error with a code and a correlation id, never a stack trace or an internal detail.
 - A change to a control starts with its security test: a refused permission, a hidden row, a refused input.
 - Every pull request description has a Security section. It names the controls the change touches and the threat each one meets, or says "none" with a reason.
+- Every pull request description has a Docs section. It names the pages under `apps/docs` the change updates, or says "none" with a reason that names the surface the change touches when `.github/docs-paths` maps it (ADR 0088).
 - A new surface, trust boundary or integration adds its row to the threat model. A change that adds a significant security or compliance risk says so and waits for the maintainer.
 
 ## Scope

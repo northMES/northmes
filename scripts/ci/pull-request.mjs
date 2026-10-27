@@ -82,3 +82,20 @@ export function section(body, heading) {
     .join('\n')
     .trim();
 }
+
+/**
+ * The changes of `git diff -z --name-status -M`: NUL-separated fields, the status and then the
+ * path, or for a rename or copy the old and the new path. A moved file counts under its new path.
+ * -z keeps every path as git stores it, where the plain output quotes unusual characters.
+ */
+export function parseNameStatus(output) {
+  const fields = output.split('\0');
+  const changes = [];
+  for (let index = 0; index < fields.length && fields[index] !== ''; ) {
+    const status = fields[index];
+    const count = /^[RC]/.test(status) ? 2 : 1;
+    changes.push({ status, path: fields[index + count] });
+    index += count + 1;
+  }
+  return changes;
+}
