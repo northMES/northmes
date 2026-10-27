@@ -229,11 +229,11 @@ test.describe('the design rules from computed style', () => {
     expect(quantity).toBeGreaterThan(0);
     const quantityHeader = headers.nth(quantity);
     const quantityCell = table
-      .locator('tr', { has: table.locator('[data-order="1001"]') })
+      .locator('tr:has([data-order="1001"])')
       .locator('th, td')
       .nth(quantity);
-    expect((await styleOf(quantityHeader, ['text-align']))['text-align']).toBe('end');
-    expect((await styleOf(quantityCell, ['text-align']))['text-align']).toBe('end');
+    await expect(quantityHeader).toHaveCSS('text-align', 'end');
+    await expect(quantityCell).toHaveCSS('text-align', 'end');
 
     const focused = page.locator(':focus');
     // The Article filter's menu holds checkbox items; the filter button, apart from the sort header.
@@ -295,15 +295,12 @@ test.describe('the design rules from computed style', () => {
     await checkA11y('the Gantt in the dark theme');
     await setTheme(gantt, 'light');
 
-    // The time header, the Not placed row and the Name column stay in view while the grid scrolls.
-    const header = gantt.getByRole('row').first();
-    expect((await styleOf(header, ['position'])).position).toBe('sticky');
-    expect(
-      (await styleOf(gantt.getByRole('row', { name: /Not placed/ }), ['position'])).position,
-    ).toBe('sticky');
-    expect((await styleOf(header.getByRole('columnheader').first(), ['position'])).position).toBe(
-      'sticky',
-    );
+    // The time header (row 1), the Not placed row (row 2) and the Name column stay in view while
+    // the grid scrolls.
+    const header = gantt.locator('[role="row"][aria-rowindex="1"]');
+    await expect(header).toHaveCSS('position', 'sticky');
+    await expect(gantt.locator('[role="row"][aria-rowindex="2"]')).toHaveCSS('position', 'sticky');
+    await expect(header.locator('[role="columnheader"]').first()).toHaveCSS('position', 'sticky');
 
     // WCAG 1.4.1: the chain outline is dashed and sits further in than the locked outline, so the
     // two differ in shape. The chain of 1003 holds 1003.10; 1002.10 is locked.
@@ -357,11 +354,13 @@ test.describe('the design rules from computed style', () => {
     signIn,
   }) => {
     await signIn(planningLinks.orders({ plant }).href);
+    // The list renders again when its answer arrives; the retrying assertions read the badge that
+    // stays.
+    await expect(page.getByText(/^Showing fixture G1\./)).toBeVisible();
     const badge = page.locator('[data-tone="info"]').first();
     await expect(badge).toHaveText('Planned');
-    const badgeStyle = await styleOf(badge, ['background-color', 'color']);
-    expect(badgeStyle['background-color']).toBe(await paint(page, 'var(--info-subtle)'));
-    expect(badgeStyle.color).toBe(await paint(page, 'var(--info)'));
+    await expect(badge).toHaveCSS('background-color', await paint(page, 'var(--info-subtle)'));
+    await expect(badge).toHaveCSS('color', await paint(page, 'var(--info)'));
 
     // Calendar B3 has three shifts; each block and its legend key take the shift's edge and fill.
     await page.goto(
@@ -377,9 +376,8 @@ test.describe('the design rules from computed style', () => {
         legend.locator(`[data-shift-color="${color}"]`),
         week.locator(`[data-shift-color="${color}"]`).first(),
       ]) {
-        const style = await styleOf(element, ['border-top-color', 'background-color']);
-        expect(style['border-top-color'], `shift ${color}`).toBe(edge);
-        expect(style['background-color'], `shift ${color}`).toBe(fill);
+        await expect(element, `shift ${color}`).toHaveCSS('border-top-color', edge);
+        await expect(element, `shift ${color}`).toHaveCSS('background-color', fill);
       }
     }
   });
