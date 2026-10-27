@@ -70,6 +70,18 @@ function refusal(answer: Answer) {
   return { code: extensions.code, errorCode: extensions.errorCode };
 }
 
+const forbidden = { code: 'FORBIDDEN', errorCode: 'core.forbidden' };
+
+const groupQuery = `query ($id: ID!) { coreArticleGroup(id: $id) { ${groupFields} } }`;
+
+/** The queries as company settings send them, with the company's id and no plant. */
+const listGroupsInSettings = `query ($companyId: ID) {
+  coreArticleGroups(companyId: $companyId) { totalCount edges { node { code } } }
+}`;
+const groupInSettings = `query ($id: ID!, $companyId: ID) {
+  coreArticleGroup(id: $id, companyId: $companyId) { code }
+}`;
+
 describe('article groups', () => {
   const db = useTestDatabase();
   let testApp: TestApp | undefined;
@@ -155,7 +167,95 @@ describe('article groups', () => {
 
     const { answer } = await create(plantAdmin, 'HO', 'Hoses');
 
-    expect(refusal(answer)).toEqual({ code: 'FORBIDDEN', errorCode: 'core.forbidden' });
+    expect(refusal(answer)).toEqual(forbidden);
+  });
+
+  it('E06-S06 a user with core.article:read only gets FORBIDDEN with core.forbidden from coreArticleGroups and coreArticleGroup, and no group', async () => {
+    if (!testApp) throw new Error('the test app did not start');
+    const place = await givenPlace();
+    const { group } = await create(place.companyAdmin, 'FL', 'Flanges');
+    const [plant = '', slug = ''] = [place.plants[0], place.slugs[0]];
+    const { authorization } = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: plant, permissions: ['core.article:read'] },
+    ]);
+    const reader = gqlClient(await testApp.app.getUrl(), {
+      headers: { authorization, 'x-northmes-plant': slug },
+    });
+
+    const listed: Answer = await reader.send(listGroups);
+    const one: Answer = await reader.send(groupQuery, { id: group?.id });
+
+    expect(listed.data).toBeNull();
+    expect(refusal(listed)).toEqual(forbidden);
+    expect(one.data?.coreArticleGroup ?? null).toBeNull();
+    expect(refusal(one)).toEqual(forbidden);
+  });
+
+  it("E06-S06 a plant lists the groups of its company only, and another company's group is null by id", async () => {
+    const acme = await givenPlace();
+    const other = await givenPlace();
+    await create(acme.companyAdmin, 'FL', 'Flanges');
+    const { group: foreign } = await create(other.companyAdmin, 'HO', 'Hoses');
+    await create(other.companyAdmin, 'SH', 'Shafts');
+
+    const listed: Answer = await acme.plantAdmin.send(listGroups);
+    const byId: Answer = await acme.plantAdmin.send(groupQuery, { id: foreign?.id });
+
+    expect(listed.data?.coreArticleGroups).toEqual({
+      totalCount: 1,
+      edges: [{ node: { code: 'FL', name: 'Flanges' } }],
+    });
+    expect(byId.errors).toBeUndefined();
+    expect(byId.data).toEqual({ coreArticleGroup: null });
+  });
+
+  it("E06-S06 in company settings coreArticleGroups and coreArticleGroup with another company's id are core.forbidden, and answer no group", async () => {
+    const place = await givenPlace();
+    const other = await givenPlace();
+    const { group } = await create(other.companyAdmin, 'FL', 'Flanges');
+    const inSettings = await holderOf('core-company-admin', {
+      company: place.company,
+      scopeId: place.company,
+    });
+
+    const listed: Answer = await inSettings.send(listGroupsInSettings, {
+      companyId: other.company,
+    });
+    const one: Answer = await inSettings.send(groupInSettings, {
+      id: group?.id,
+      companyId: other.company,
+    });
+
+    expect(listed.data).toBeNull();
+    expect(refusal(listed)).toEqual(forbidden);
+    expect(one.data?.coreArticleGroup ?? null).toBeNull();
+    expect(refusal(one)).toEqual(forbidden);
+  });
+
+  it('E06-S06 a Plant admin gets core.forbidden on update, archive and restore of a group, which stays as it was', async () => {
+    const { companyAdmin, plantAdmin } = await givenPlace();
+    const { group } = await create(companyAdmin, 'HS', 'Housings');
+    const id = group?.id ?? '';
+
+    const renamed: Answer = await plantAdmin.send(updateGroup, {
+      input: { id, expectedVersion: 1, code: 'HS', name: 'Housings, cast' },
+    });
+    const archived: Answer = await plantAdmin.send(archiveGroup, {
+      input: { id, expectedVersion: 1 },
+    });
+    const restored: Answer = await plantAdmin.send(restoreGroup, {
+      input: { id, expectedVersion: 1 },
+    });
+    const after: Answer = await companyAdmin.send(groupQuery, { id });
+
+    expect([renamed, archived, restored].map(refusal)).toEqual([forbidden, forbidden, forbidden]);
+    expect(after.data?.coreArticleGroup).toEqual({
+      id,
+      code: 'HS',
+      name: 'Housings',
+      version: 1,
+      archivedAt: null,
+    });
   });
 
   it('E06-S06 a code that another group of the company uses, in any case, is core.code_taken on code', async () => {
