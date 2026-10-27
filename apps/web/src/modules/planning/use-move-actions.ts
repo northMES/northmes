@@ -61,6 +61,10 @@ export function useMoveActions({
   readonly preview: MovePreview | undefined;
 } {
   const [moveState, setMoveState] = useState<MoveState | undefined>(undefined);
+  // Whether a move is in progress now: a commit or a cancel ends it at once, so an event that
+  // arrives before the next render, such as the blur when the moved block leaves its row in a
+  // browser, cannot end the same move a second time.
+  const active = useRef(false);
   const focusBlock = useRef(focus);
   const machineSteps = useRef(steps);
   // The latest callbacks, for the actions to call after the render that made them.
@@ -106,6 +110,7 @@ export function useMoveActions({
           announce(refusalMessage(row.displayNumber, refused));
           return false;
         }
+        active.current = true;
         setMoveState({
           jobOrderId,
           setupStartMs: row.placement.setupStartMs,
@@ -153,7 +158,8 @@ export function useMoveActions({
           return next === undefined ? current : { ...current, equipment: next };
         }),
       commit: () => {
-        if (moveState === undefined || preview === undefined) return;
+        if (!active.current || moveState === undefined || preview === undefined) return;
+        active.current = false;
         const { draft: next, result } = moveInDraft(
           committed,
           draft,
@@ -175,9 +181,10 @@ export function useMoveActions({
         requestAnimationFrame(() => focusBlock.current(moveState.jobOrderId));
       },
       cancel: (options) => {
-        if (moveState === undefined) return;
+        if (!active.current || moveState === undefined) return;
+        active.current = false;
         setMoveState(undefined);
-        announce('Move cancelled.');
+        if (options?.announce !== false) announce('Move cancelled.');
         if (options?.refocus !== false) {
           requestAnimationFrame(() => focusBlock.current(moveState.jobOrderId));
         }
