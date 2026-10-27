@@ -19,7 +19,7 @@ import {
   userQuery,
   viewerRole,
 } from './access-fixtures.ts';
-import { renderCoreAt, spoken } from './core-app.tsx';
+import { answeredAfter, renderCoreAt, spoken } from './core-app.tsx';
 import {
   blockMutation,
   resetPasswordMutation,
@@ -124,15 +124,15 @@ describe("a user's actions", () => {
 
   it('E05-S08 your own page has no Reset password and no Block user', async () => {
     const jonas = person('Jonas Holm', 'jonas');
-    renderCoreAt(pageOf(jonas), [
-      settingsViewerQuery(userAdmin),
-      companiesQuery(),
-      userQuery(user(jonas, [])),
-    ]);
+    // Your own page renders nothing else from the viewer's answer, so the user waits for it: the
+    // page shows with the permissions and the viewer's id known.
+    renderCoreAt(
+      pageOf(jonas),
+      [settingsViewerQuery(userAdmin), companiesQuery(), userQuery(user(jonas, []))],
+      { hold: answeredAfter('CoreViewer', 'CoreUser') },
+    );
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Jonas Holm' })).toBeDefined();
-    // The viewer's permissions arrive with the page; wait for them before the absence counts.
-    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(await actionNames()).toEqual([]);
   });
 

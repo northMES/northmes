@@ -89,22 +89,23 @@ describe('keyboard move mode on the order Gantt (plan 18, Tree grid semantics)',
 
   it('Left on a row at its release keeps the preview there instead of walking back through the horizon', async () => {
     // 1003.20 starts at its release Wed 12:45: no earlier start exists with cascade on, so one
-    // Left leaves the preview where it is, at once.
+    // Left leaves the preview where it is, and announces no instant on the way back.
     renderGanttRoute({ zoom: 'hours', from: '2026-11-04' });
     const gantt = await findGantt();
     rowOf(gantt, 'jo-1003-20').focus();
     await userEvent.keyboard('{ArrowRight}');
     await userEvent.keyboard('m');
-    const started = Date.now();
+    const preview = () =>
+      gantt.querySelector('[data-move-preview="jo-1003-20"]')?.getAttribute('data-from-ms');
+    await waitFor(() => {
+      expect(preview()).toBe(String(Date.UTC(2026, 10, 4, 11, 45)));
+    });
+    const announced = spoken();
 
     await userEvent.keyboard('{ArrowLeft}');
 
-    await waitFor(() => {
-      expect(
-        gantt.querySelector('[data-move-preview="jo-1003-20"]')?.getAttribute('data-from-ms'),
-      ).toBe(String(Date.UTC(2026, 10, 4, 11, 45)));
-    });
-    expect(Date.now() - started).toBeLessThan(1500);
+    expect(preview()).toBe(String(Date.UTC(2026, 10, 4, 11, 45)));
+    expect(spoken()).toBe(announced);
     await userEvent.keyboard('{Escape}');
   });
 
