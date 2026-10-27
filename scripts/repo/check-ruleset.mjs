@@ -3,14 +3,16 @@
 // `pnpm repo:check-ruleset`: compares the required status checks of the main ruleset with the jobs
 // of the workflows (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md). It names each
 // job the ruleset does not require, each required check that no job reports any more, and each
-// check required from the wrong app, and exits 1 when it finds one. Run it before and after merging
-// a change that renames, adds or removes a job, around the ruleset edit that change needs.
+// check required from the wrong app, checks that the ruleset is active on main with a strict
+// policy, and exits 1 when it finds a problem. It reads the workflows of the working tree, so run
+// it on an up-to-date main: before a change that renames, adds or removes a job, to start from a
+// clean match, and after the merge and the ruleset edit that follow it. Between the edit just
+// before the merge and the merge itself it names the jobs that the merge renames or removes.
 //
-// It reads the ruleset through `gh api`, with the login of the gh CLI that runs it. GitHub serves
-// a repository ruleset to anyone who can read the repository, so the maintainer's login, the
-// northmes-agent token and a workflow's GITHUB_TOKEN with `contents: read` all can; only the
-// bypass list needs write access to the ruleset, and the script does not read it. The script
-// changes nothing: a person edits the ruleset (ADR 0069).
+// It reads the ruleset through `gh api`, with the login of the gh CLI that runs it, which needs
+// read access to the repository: the maintainer's login and the northmes-agent token both read it.
+// Only the ruleset's bypass list needs write access to the ruleset, and the script does not read
+// it. The script changes nothing: a person edits the ruleset (ADR 0069).
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -34,19 +36,33 @@ const workflowFiles = ['ci.yml', 'pr.yml', 'risk.yml', 'supply-chain.yml'];
 // e2e through gate; risk label only labels the pull request (ADR 0086).
 const optional = new Set(['cla', 'e2e', 'openapi diff', 'risk label']);
 
+// The ref patterns that name main in a ruleset's condition; main is the default branch.
+const mainRefs = new Set(['~DEFAULT_BRANCH', '~ALL', 'refs/heads/main']);
+
 /**
- * The problems of the main ruleset's required status checks against the workflows' jobs.
- * @param {{ rules?: { type: string, parameters?: { strict_required_status_checks_policy?: boolean, required_status_checks?: { context: string, integration_id?: number }[] } }[] }} ruleset
+ * The problems of the main ruleset's enforcement, target and required status checks against the
+ * workflows' jobs.
+ * @param {{ enforcement?: string, conditions?: { ref_name?: { include?: string[], exclude?: string[] } }, rules?:{ type: string, parameters?: { strict_required_status_checks_policy?: boolean, required_status_checks?: { context: string, integration_id?: number }[] } }[] }} ruleset
  * @param {{ file: string, jobs: Record<string, { name?: string }> }[]} workflows
  * @returns {string[]} one line per problem, none when the ruleset matches
  */
 export function checkRuleset(ruleset, workflows) {
-  const rules = (ruleset.rules ?? []).filter(({ type }) => type === 'required_status_checks');
-  if (rules.length === 0) {
-    return ['The ruleset has no required_status_checks rule, so it requires no check.'];
+  const problems = [];
+  if (ruleset.enforcement !== 'active') {
+    problems.push(`enforcement is ${ruleset.enforcement}, not active, so the ruleset blocks no merge.`);
+  }
+  const { include = [], exclude = [] } = ruleset.conditions?.ref_name ?? {};
+  if (!include.some((ref) => mainRefs.has(ref)) || exclude.some((ref) => mainRefs.has(ref))) {
+    problems.push(
+      `the ref condition (include ${JSON.stringify(include)}, exclude ${JSON.stringify(exclude)}) does not cover main.`,
+    );
   }
 
-  const problems = [];
+  const rules = (ruleset.rules ?? []).filter(({ type }) => type === 'required_status_checks');
+  if (rules.length === 0) {
+    return [...problems, 'The ruleset has no required_status_checks rule, so it requires no check.'];
+  }
+
   if (rules.some(({ parameters }) => parameters?.strict_required_status_checks_policy !== true)) {
     problems.push(
       'strict_required_status_checks_policy is not true, so a pull request may merge without the latest main.',
@@ -84,7 +100,7 @@ export function checkRuleset(ruleset, workflows) {
     const want = expected.get(context)?.app ?? (optionalSource.has(context) ? githubActions : undefined);
     if (want === undefined) {
       problems.push(
-        `stale: the ruleset requires "${context}", which no job of ${workflowFiles.join(', ')} reports.`,
+        `stale: the ruleset requires "${context}", which no job of ${workflowFiles.join(', ')} reports. Remove it, or add its workflow to this check.`,
       );
     } else if (app !== want) {
       const from = app === undefined ? 'any app' : `app ${app}`;
@@ -102,6 +118,13 @@ function readWorkflows() {
 }
 
 if (import.meta.main) {
+  let workflows;
+  try {
+    workflows = readWorkflows();
+  } catch (error) {
+    console.error(`Cannot read the workflows: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(2);
+  }
   let ruleset;
   try {
     ruleset = JSON.parse(
@@ -116,7 +139,7 @@ if (import.meta.main) {
     );
     process.exit(2);
   }
-  const problems = checkRuleset(ruleset, readWorkflows());
+  const problems = checkRuleset(ruleset, workflows);
   if (problems.length > 0) {
     console.error(`The main ruleset (${mainRuleset}) does not match the workflow jobs:`);
     for (const problem of problems) {
@@ -124,5 +147,7 @@ if (import.meta.main) {
     }
     process.exit(1);
   }
-  console.log(`The main ruleset (${mainRuleset}) requires every workflow job, each from its app.`);
+  console.log(
+    `The main ruleset (${mainRuleset}) is active on main and requires every job of ${workflowFiles.join(', ')} that ADR 0069 requires, each from its app.`,
+  );
 }
