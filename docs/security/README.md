@@ -67,7 +67,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Audit trail in the command transaction, append-only, with old and new values | decided | ADR 0013, ADR 0051; [#443](https://github.com/northMES/northmes/issues/443) |
 | Security events (sign-in, denials, role and user changes, lockouts) | decided | ADR 0013; [#443](https://github.com/northMES/northmes/issues/443) |
 | Structured JSON logs with a UTC time, correlation id and credentials redacted | decided | ADR 0046; [#147](https://github.com/northMES/northmes/issues/147) |
-| No secrets in logs: password statements unlogged, pool errors without credentials | built | `bootstrap.ts`, `pool.ts` |
+| No secrets in logs: password statements unlogged, pool errors without credentials | built | `bootstrap.ts`, `pool.ts`; in test output `packages/testing/src/pg-serialization.ts` and its test, and every pool's error listener through `test/meta/pool-error-listener.test.ts` |
 | Tamper-evident audit seals | accepted | ADR 0051: deferred to B1 |
 
 ### 4. Data protection and integrity
@@ -85,7 +85,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 
 | Control | Status | Evidence |
 |---|---|---|
-| CI hardening: actions pinned by SHA, read-only tokens, no `pull_request_target`, inputs through `env` | built | `.github/workflows/ci.yml`; `test/meta/workflows.test.ts` |
+| CI hardening: actions pinned by SHA, read-only tokens, no `pull_request_target`, inputs through `env` | built | `.github/workflows/ci.yml`, `.github/workflows/pr.yml`; `test/meta/workflows.test.ts` |
 | Dependency audit on every pull request, push to `main` and week, failing on an unaccepted high or critical advisory | built | ADR 0040, ADR 0050; `.github/workflows/supply-chain.yml`, `pnpm-workspace.yaml`; `test/meta/workflows.test.ts` |
 | A VEX document for each dependency advisory that does not affect NorthMES | built | [vex/northmes.openvex.json](vex/northmes.openvex.json); `test/meta/security-docs.test.ts` |
 | License gate and CodeQL as required checks | decided for the license gate; built for CodeQL | ADR 0040, ADR 0050; [#7](https://github.com/northMES/northmes/issues/7), [#197](https://github.com/northMES/northmes/issues/197) |
@@ -100,7 +100,7 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 | Agent sessions run in auto mode, act on GitHub as a machine user whose token reaches one repository without Workflows or admin permissions, and the maintainer's GitHub credentials are out of the macOS keychain | decided | ADR 0084; [docs/agents/agent-isolation.md](../agents/agent-isolation.md); [#737](https://github.com/northMES/northmes/issues/737) |
 | Only the maintainer's approval lets a high pull request merge to `main` (the required risk gate) | built | ADR 0084, ADR 0086; the `main` ruleset requires `risk gate` from the GitHub Actions app since 2026-10-22, which fails a high pull request until the maintainer approves its head commit; with 0 required approvals the ruleset's code owner review is not enforced, and `.github/CODEOWNERS` only requests his review on the risk paths |
 | Only the release workflow creates `v*` tags and releases | gap | [#738](https://github.com/northMES/northmes/issues/738) |
-| The public REST API does not break silently: `CI / openapi diff` compares `schema/openapi-v1.json` with the base branch through oasdiff, pinned by digest and run without network, and fails on a breaking change unless a 0.x title marks it with `!` | built | ADR 0064; `.github/workflows/ci.yml`, `scripts/ci/openapi-diff.mjs`; `scripts/ci/openapi-diff.test.ts`, `test/meta/workflows.test.ts` |
+| The public REST API does not break silently: `PR / openapi diff` compares `schema/openapi-v1.json` with the base branch through oasdiff, pinned by digest and run without network, and fails on a breaking change unless a 0.x title marks it with `!` | built | ADR 0064; `.github/workflows/pr.yml`, `scripts/ci/openapi-diff.mjs`; `scripts/ci/openapi-diff.test.ts`, `test/meta/workflows.test.ts` |
 | Origin and license of third-party components | built | `LICENSE`, `NOTICE`, `skills-lock.json`, SPDX headers |
 | Contributions under a signed CLA: `CI / cla` checks the pull request author and every commit author against `.github/cla/signed.json` on the default branch, with no checkout and a read-only token. It runs outside `CI / gate` for now, and joins `CI / gate` and the main ruleset before the first outside pull request | built | ADR 0039; `scripts/cla/check.mjs`, `.github/workflows/ci.yml`; `scripts/cla/check.test.ts`, `test/meta/workflows.test.ts`. The CLA texts wait for legal review |
 
@@ -148,6 +148,6 @@ Status: **built** (code, a test or a CI job shows it), **decided** (an ADR or pl
 |---|---|---|
 | Decisions recorded as ADRs, checked by a meta test | built | `docs/adr`; `test/meta/adr.test.ts` |
 | Every pull request linked to an issue, with a Conventional Commit title | built | `scripts/ci/linked-issue.mjs`, `scripts/ci/pr-title.mjs` |
-| A security note in every pull request | built | ADR 0076; `.github/PULL_REQUEST_TEMPLATE.md`, checked by `test/meta/security-docs.test.ts`; `CI / pr security` (`scripts/ci/pr-security.mjs`, `scripts/ci/pr-security.test.ts`) fails a pull request whose Security section is missing, empty or a bare none |
-| A test with every behaviour change, and a reason for every deleted test | built | AGENTS.md; `CI / pr tests` (`scripts/ci/pr-tests.mjs`, `scripts/ci/pr-tests.test.ts`) fails a `feat`, `fix` or `security` pull request that changes source and no test, and a pull request that deletes a test without a `## Removed tests` section |
+| A security note in every pull request | built | ADR 0076; `.github/PULL_REQUEST_TEMPLATE.md`, checked by `test/meta/security-docs.test.ts`; `PR / pr security` (`scripts/ci/pr-security.mjs`, `scripts/ci/pr-security.test.ts`) fails a pull request whose Security section is missing, empty or a bare none |
+| A test with every behaviour change, and a reason for every deleted test | built | AGENTS.md; `PR / pr tests` (`scripts/ci/pr-tests.mjs`, `scripts/ci/pr-tests.test.ts`) fails a `feat`, `fix` or `security` pull request that changes source and no test, and a pull request that deletes a test without a `## Removed tests` section |
 | An internal audit before each release and each quarter | decided | ADR 0076 |

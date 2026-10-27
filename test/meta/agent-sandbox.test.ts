@@ -43,6 +43,8 @@ describe('ADR0084 agent sessions run in the Claude Code sandbox', () => {
   // enableWeakerNetworkIsolation is on. The other way the documentation offers, `gh *` in
   // excludedCommands, would run gh, its aliases and its extensions with full access. The Docker
   // sockets and local binding are what Testcontainers needs (accepted risk A-07).
+  // results-receiver.actions.githubusercontent.com serves the GitHub Actions logs that
+  // `gh run view --log-failed` downloads, so a session can read why its pull request's CI failed.
   it('ADR0084 the sandbox is exactly the reviewed one: no unsandboxed command, credential paths denied, a closed network allowlist', () => {
     expect(settings().sandbox).toEqual({
       enabled: true,
@@ -63,6 +65,7 @@ describe('ADR0084 agent sessions run in the Claude Code sandbox', () => {
           'release-assets.githubusercontent.com',
           'cdn.playwright.dev',
           'playwright.download.prss.microsoft.com',
+          'results-receiver.actions.githubusercontent.com',
         ],
         allowUnixSockets: ['~/.docker/run/docker.sock', '/var/run/docker.sock'],
         allowLocalBinding: true,
