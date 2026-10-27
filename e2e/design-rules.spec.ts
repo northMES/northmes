@@ -63,7 +63,8 @@ async function expectInsetMenuFocus(locator: Locator) {
   expect(style['outline-style']).toBe('solid');
   expect(style['outline-width']).toBe('2px');
   expect(style['outline-offset']).toBe('-2px');
-  expect(style['box-shadow']).toBe('none');
+  // No band: shadow-none computes to none, or to Tailwind's chain of transparent shadows.
+  expect(style['box-shadow']).toMatch(/^(none|(rgba\(0, 0, 0, 0\) 0px 0px 0px 0px(, )?)+)$/);
   expect(style['background-color']).not.toBe(transparent);
 }
 
@@ -97,6 +98,14 @@ function rulesIn(nav: Locator) {
     );
     return { separators, borders };
   });
+}
+
+/** The nav draws no rule: no separator, and its header, footer and nested lists have no border. */
+async function expectNoRules(nav: Locator) {
+  const rules = await rulesIn(nav);
+  expect(rules.separators).toBe(0);
+  expect(rules.borders.length).toBeGreaterThanOrEqual(2);
+  for (const border of rules.borders) expect(border).toMatch(/ 0px 0px 0px 0px$/);
 }
 
 /** A planning page of the seed plant with its search. */
@@ -154,10 +163,8 @@ test.describe('the design rules from computed style', () => {
 
     // No rule between the groups, under the plant switcher, above the user button or along the
     // nested entries.
-    expect(await rulesIn(nav)).toEqual({
-      separators: 0,
-      borders: ['header 0px 0px 0px 0px', 'footer 0px 0px 0px 0px', 'menu-sub 0px 0px 0px 0px'],
-    });
+    expect((await rulesIn(nav)).borders).toContain('menu-sub 0px 0px 0px 0px');
+    await expectNoRules(nav);
 
     // A closed group that holds the current page keeps aria-current and takes the --sidebar-accent
     // mark it had not while open.
@@ -171,17 +178,14 @@ test.describe('the design rules from computed style', () => {
 
     await page.getByRole('button', { name: 'Collapse sidebar' }).click();
     await expect(page.getByRole('button', { name: 'Expand sidebar' })).toBeVisible();
-    expect((await rulesIn(nav)).separators).toBe(0);
+    await expectNoRules(nav);
     await checkA11y('the articles list with the sidebar as the rail');
 
     await page.setViewportSize({ width: 320, height: 640 });
     await page.getByRole('button', { name: 'Open navigation' }).click();
     const sheet = page.getByRole('dialog', { name: 'Navigation' });
     await expect(sheet).toBeVisible();
-    expect(await rulesIn(sheet.getByRole('navigation', { name: 'Main' }))).toEqual({
-      separators: 0,
-      borders: ['header 0px 0px 0px 0px', 'footer 0px 0px 0px 0px', 'menu-sub 0px 0px 0px 0px'],
-    });
+    await expectNoRules(sheet.getByRole('navigation', { name: 'Main' }));
     await checkA11y('the navigation sheet at 320 px');
   });
 
@@ -237,12 +241,14 @@ test.describe('the design rules from computed style', () => {
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);
 
-    // The user menu holds plain items, Sign out among them.
+    // The user menu opens on its theme radio items; End reaches Sign out, a plain item.
     await page.getByRole('button', { name: /, account$/ }).focus();
     await page.keyboard.press('Enter');
-    const menu = page.getByRole('menu');
-    await expect(menu).toBeVisible();
-    await menu.getByRole('menuitem', { name: 'Sign out' }).focus();
+    await expect(page.getByRole('menu')).toBeVisible();
+    await expect(focused).toHaveAttribute('role', 'menuitemradio');
+    await page.keyboard.press('End');
+    await expect(focused).toHaveText('Sign out');
+    await expect(focused).toHaveAttribute('role', 'menuitem');
     await expectInsetMenuFocus(focused);
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);
