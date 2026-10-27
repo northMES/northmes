@@ -9,6 +9,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ShellModule } from '../../src/modules.ts';
 import { createShellRouter } from '../../src/shell/index.ts';
+import { expectLogo } from '../product-logo.ts';
 import {
   alexEmail,
   fakeSession,
@@ -122,6 +123,13 @@ describe('sign-in', () => {
     expect(new Headers(callsOf(fetch, 'Ping')[0]?.[1]?.headers).get('authorization')).toBe(
       'Bearer jwt-1',
     );
+  });
+
+  it('E05-S05 the banner of the sign-in page shows the NorthMES logo', async () => {
+    renderAt('/plant-a/quality', fakeSession({ signedIn: false }));
+
+    await screen.findByRole('heading', { level: 1, name: 'Sign in to NorthMES' });
+    expectLogo(screen.getByRole('banner'));
   });
 
   it('ADR 0075 with onSignedIn, signing in hands it the return path instead of navigating in place, so the boot loads the plugins with the session', async () => {
