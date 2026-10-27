@@ -8,13 +8,10 @@ import {
   hostFactory,
   signIn,
 } from '@northmes/backend/testing';
-import { DomainError } from '@northmes/sdk/errors';
 import type { OperationResult, Surface } from '@northmes/sdk/operations';
 import { createTestApp, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ArticleService } from '../../src/modules/core/core/article.service.ts';
 import { OperationRunner } from '../../src/operations/operation-runner.ts';
-import { PrincipalResolver, runAs } from '../../src/principal.ts';
 
 /** Every core.article permission. */
 const articlePermissions = ['read', 'create', 'update', 'archive', 'assign'].map(
@@ -373,41 +370,28 @@ describe('the operation runner with core', () => {
     expect(codesOf(inB)).toEqual([]);
   });
 
-  it('ADR0073-W3 a read at company A whose input names company B is core.forbidden', async () => {
+  it('ADR0073-W3 core.getArticle at company B, where the principal holds nothing, is 403 core.forbidden, and at company A an article of B is 404 core.not_found', async () => {
     if (!testApp) throw new Error('the test app did not start');
     const a = await givenCompany(db.ownerUrl, {});
     const b = await givenCompany(db.ownerUrl, {});
     const { authorization } = await signIn(testApp.app, db.ownerUrl, [
       { scopeId: a.company, permissions: articlePermissions },
-      { scopeId: b.company, permissions: articlePermissions },
     ]);
-    const principal = await testApp.app
-      .get(PrincipalResolver, { strict: false })
-      .resolve(new Headers({ authorization }));
-    if (!principal) throw new Error('the user did not resolve');
-    const service = testApp.app.get(ArticleService, { strict: false });
+    const id = await givenArticle(db.ownerUrl, { code: code(), name: 'Bolt', company: b.company });
 
-    const read = runAs({ ...principal, companyId: a.company }, () =>
-      service.byId(randomUUIDv7(), b.company),
+    const atB = await run(
+      'core.getArticle',
+      { id },
+      { headers: { authorization }, companyId: b.company },
+    );
+    const atA = await run(
+      'core.getArticle',
+      { id },
+      { headers: { authorization }, companyId: a.company },
     );
 
-    await expect(read).rejects.toMatchObject({ code: 'core.forbidden' });
-  });
-
-  it('ADR0073-W3 ArticleService.byIdOrThrow throws the DomainError core.not_found for an id of no article', async () => {
-    if (!testApp) throw new Error('the test app did not start');
-    const place = await givenPlace();
-    const principal = await testApp.app
-      .get(PrincipalResolver, { strict: false })
-      .resolve(
-        new Headers({ authorization: place.authorization, 'x-northmes-plant': place.helSlug }),
-      );
-    const service = testApp.app.get(ArticleService, { strict: false });
-
-    const read = runAs(principal, () => service.byIdOrThrow(randomUUIDv7()));
-
-    await expect(read).rejects.toBeInstanceOf(DomainError);
-    await expect(read).rejects.toMatchObject({ code: 'core.not_found', status: 404 });
+    expect(atB).toMatchObject({ ok: false, error: { status: 403, code: 'core.forbidden' } });
+    expect(atA).toMatchObject({ ok: false, error: { status: 404, code: 'core.not_found' } });
   });
 
   it('ADR0073-W3 an unknown operation is 404 core.not_found', async () => {
