@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { randomBytes } from 'node:crypto';
-import { createTestApp, type TestApp, useTestDatabase } from '@northmes/testing';
+import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AuthService } from '../../src/modules/core/core/access/auth.service.ts';
-import { fromBrowser, fromNewClient, hostFactory, queryAsCore } from '../../src/testing.ts';
+import { fromBrowser, fromNewClient, hostFactory } from '../../src/testing.ts';
 import { runCli } from '../fixtures/cli-run.ts';
 import { useServerEnv } from '../fixtures/server-env.ts';
 
@@ -33,8 +33,8 @@ describe('northmes admin reset-password', () => {
     return { id: user.id, username, email, password };
   }
 
-  /** The status of a sign-in with email and password. */
-  async function signInStatus(email: string, password: string) {
+  /** The status of a sign-in with email and password, and the session token on success. */
+  async function signInWith(email: string, password: string) {
     const response = await fetch(`${url}/api/auth/sign-in/email`, {
       method: 'POST',
       headers: {
@@ -44,10 +44,22 @@ describe('northmes admin reset-password', () => {
       },
       body: JSON.stringify({ email, password }),
     });
-    return response.status;
+    return { status: response.status, sessionToken: response.headers.get('set-auth-token') };
   }
 
-  it('E05-S05 reset-password prints a temporary password once, which signs the user in and must be replaced, and the old one stops working', {
+  /** The errorCode of the first error of a session's first API call, through /api/auth/token. */
+  async function firstCallErrorCode(sessionToken: string) {
+    const token = await fetch(`${url}/api/auth/token`, {
+      headers: { authorization: `Bearer ${sessionToken}` },
+    });
+    const { token: jwt } = (await token.json()) as { token: string };
+    const answer = await gqlClient(url, { headers: { authorization: `Bearer ${jwt}` } }).send(
+      '{ coreCompanies { id } }',
+    );
+    return answer.errors?.[0]?.extensions?.errorCode;
+  }
+
+  it('E05-S05 reset-password prints a temporary password once, which signs the user in and must be replaced at the first API call, and the old one stops working', {
     timeout: 60_000,
   }, async () => {
     const user = await givenSignedUpUser();
@@ -57,18 +69,16 @@ describe('northmes admin reset-password', () => {
       env,
     );
     const password = /Temporary password: (\S+)/.exec(run.out)?.[1] ?? '';
-    const [marked] = await queryAsCore<{ mustChangePassword: boolean }>(
-      db.ownerUrl,
-      'select "mustChangePassword" from auth."user" where id = $1',
-      [user.id],
-    );
+    const signedIn = await signInWith(user.email, password);
 
     expect(run.code).toBe(0);
     expect(password).toMatch(/^\S{12,}$/);
     expect(run.log.join('\n')).not.toContain(password);
-    expect(await signInStatus(user.email, password)).toBe(200);
-    expect(await signInStatus(user.email, user.password)).toBe(401);
-    expect(marked?.mustChangePassword).toBe(true);
+    expect(signedIn.status).toBe(200);
+    expect(await firstCallErrorCode(signedIn.sessionToken ?? '')).toBe(
+      'core.password_change_required',
+    );
+    expect((await signInWith(user.email, user.password)).status).toBe(401);
   });
 
   it('E05-S05 reset-password --json prints one object', { timeout: 60_000 }, async () => {

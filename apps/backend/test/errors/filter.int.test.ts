@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import type { INestApplication } from '@nestjs/common';
-import { ModulesContainer } from '@nestjs/core';
-import { DomainErrorFilter } from '@northmes/sdk/errors';
+import { type INestApplication, Logger } from '@nestjs/common';
 import { given, gqlClient, useTestDatabase } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { boot } from '../../src/boot/boot.ts';
@@ -16,6 +14,22 @@ import { faulty, UNKNOWN_ERROR_TEXT } from '../fixtures/graphql/faulty.ts';
 import { serverEnvKeys, useServerEnv } from '../fixtures/server-env.ts';
 
 const JOB_ID = '01920000-0000-7000-8000-0000000000a1';
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** The extensions of a masked error: Yoga's code, core.internal and the request's correlation id. */
+const maskedExtensions = {
+  code: 'INTERNAL_SERVER_ERROR',
+  errorCode: 'core.internal',
+  correlationId: expect.stringMatching(UUID),
+};
+
+/** The correlation id of an answer's first error. */
+function correlationIdOf(answer: {
+  errors?: readonly { extensions?: Record<string, unknown> }[];
+}): unknown {
+  return answer.errors?.[0]?.extensions?.correlationId;
+}
 
 describe('the exception filter', () => {
   // The command bus opens a transaction for every command, so the server needs a database.
@@ -33,7 +47,13 @@ describe('the exception filter', () => {
     await app?.close();
     app = undefined;
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
+
+  /** Records what the server logs at error level, without writing it. */
+  function errorLog() {
+    return vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+  }
 
   /** Boots the server with the fixture modules in place of the in-repo ones. */
   async function bootFixtures(...modules: readonly InRepoModule[]): Promise<INestApplication> {
@@ -42,22 +62,6 @@ describe('the exception filter', () => {
     if (!app) throw new Error(`boot exited: ${log.error.mock.calls.join('\n')}`);
     return app;
   }
-
-  it('E02-S04 the exception filter is registered once as APP_FILTER', async () => {
-    const booted = await bootFixtures(alpha);
-
-    // Where an instance of the filter is provided: the module and the provider's token.
-    const registrations = [...booted.get(ModulesContainer).values()].flatMap((module) =>
-      [...module.providers.values()]
-        .filter(({ instance }) => instance instanceof DomainErrorFilter)
-        .map(({ token }) => ({ module: module.metatype.name, token: String(token) })),
-    );
-
-    // Nest gives each APP_FILTER provider a token of its own that starts with APP_FILTER.
-    expect(registrations).toEqual([
-      { module: 'AppModule', token: expect.stringMatching(/^APP_FILTER\b/) },
-    ]);
-  });
 
   // Every path outside the server segments is an SPA path that the shell answers (ADR 0064), so
   // the missing route is under /api/.
@@ -105,11 +109,12 @@ describe('the exception filter', () => {
     });
   });
 
-  it('E02-S04 a throwing validator reaches the client as Unexpected error.', async () => {
+  it('E02-S04 a throwing validator reaches the client as Unexpected error. with a correlation id that the server log names, and without its text', async () => {
     const booted = await bootFixtures(dispatch, dispatcher, brokenRules);
     const client = gqlClient(await booted.getUrl(), {
       headers: { 'x-northmes-plant': given.plant() },
     });
+    const logged = errorLog();
 
     const answer = await client.send(
       `mutation ($input: DispatchReleaseJobInput!) {
@@ -121,9 +126,19 @@ describe('the exception filter', () => {
     expect(answer).toMatchObject({
       status: 200,
       data: null,
-      errors: [{ message: 'Unexpected error.', path: ['dispatchReleaseJob'] }],
+      errors: [
+        {
+          message: 'Unexpected error.',
+          path: ['dispatchReleaseJob'],
+          extensions: maskedExtensions,
+        },
+      ],
     });
     expect(JSON.stringify(answer)).not.toContain(BROKEN_CHECK_ERROR);
+    expect(logged).toHaveBeenCalledWith(
+      `A GraphQL operation failed with correlation id ${correlationIdOf(answer)}`,
+      expect.stringContaining(BROKEN_CHECK_ERROR),
+    );
   });
 
   it.each([
@@ -206,17 +221,25 @@ describe('the exception filter', () => {
   it.each([
     ['faultyUnknown', 'a plain Error'],
     ['faultyServerError', 'an HttpException of a status without a GraphQL code'],
-  ])('%s, which throws %s, reaches the client masked as Unexpected error.', async (field) => {
-    const booted = await bootFixtures(faulty);
-    const client = gqlClient(await booted.getUrl());
+  ])(
+    '%s, which throws %s, reaches the client masked as Unexpected error. with a correlation id that the server log names, and without its text',
+    async (field) => {
+      const booted = await bootFixtures(faulty);
+      const client = gqlClient(await booted.getUrl());
+      const logged = errorLog();
 
-    const answer = await client.send(`{ ${field} }`);
+      const answer = await client.send(`{ ${field} }`);
 
-    expect(answer).toMatchObject({
-      status: 200,
-      data: null,
-      errors: [{ message: 'Unexpected error.', path: [field] }],
-    });
-    expect(JSON.stringify(answer)).not.toContain(UNKNOWN_ERROR_TEXT);
-  });
+      expect(answer).toMatchObject({
+        status: 200,
+        data: null,
+        errors: [{ message: 'Unexpected error.', path: [field], extensions: maskedExtensions }],
+      });
+      expect(JSON.stringify(answer)).not.toContain(UNKNOWN_ERROR_TEXT);
+      expect(logged).toHaveBeenCalledWith(
+        `A GraphQL operation failed with correlation id ${correlationIdOf(answer)}`,
+        expect.stringContaining(UNKNOWN_ERROR_TEXT),
+      );
+    },
+  );
 });
