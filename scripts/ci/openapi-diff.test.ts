@@ -40,7 +40,7 @@ const warning = [
 // An added optional response field is no breaking change, so oasdiff breaking prints none.
 const addedOptionalResponseField: unknown[] = [];
 
-// Runs the script as the CI / openapi diff job does: the title in PR_TITLE, and oasdiff's output in
+// Runs the script as the PR / openapi diff job does: the title in PR_TITLE, and oasdiff's output in
 // the file OPENAPI_CHANGES names, or no file when the base branch has no document.
 function run(title: string, changes: unknown[] | undefined) {
   const dir = mkdtempSync(join(tmpdir(), 'openapi-diff-'));
@@ -52,7 +52,7 @@ function run(title: string, changes: unknown[] | undefined) {
   });
 }
 
-describe('CI / openapi diff', () => {
+describe('PR / openapi diff', () => {
   it('ADR0064 a removed response field under a title without ! fails and names the change', () => {
     const result = run('feat(core): rename the article name field', removedResponseField);
 

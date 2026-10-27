@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { createHash, randomBytes } from 'node:crypto';
-import { emptyTemplateDatabase, type PgConnection } from '@northmes/testing';
-import { Client } from 'pg';
+import { emptyTemplateDatabase, type PgConnection, withClient } from '@northmes/testing';
 import type { TestProject } from 'vitest/node';
 import { inRepoCatalog } from '../src/boot/boot.ts';
 import type { CatalogEntry } from '../src/catalog/check-catalog.ts';
@@ -65,9 +64,7 @@ export async function migrateTemplate({
   catalog,
 }: TemplateOptions): Promise<MigratedTemplate> {
   const name = templateName(catalog);
-  const client = new Client(superuser);
-  await client.connect();
-  try {
+  return withClient(superuser, async (client) => {
     const existing = await client.query('select 1 from pg_database where datname = $1', [name]);
     if (existing.rowCount !== 0) return { name, reused: true };
     const building = `${name}_${randomBytes(4).toString('hex')}`;
@@ -82,9 +79,7 @@ export async function migrateTemplate({
     await client.query(`alter database ${buildingId} rename to ${nameId}`);
     await client.query(`alter database ${nameId} is_template true`);
     return { name, reused: false };
-  } finally {
-    await client.end();
-  }
+  });
 }
 
 /**

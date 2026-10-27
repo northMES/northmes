@@ -21,12 +21,17 @@ const askLine = `@${maintainerLogin} this pull request waits for your review. It
 /**
  * What the script does for a pull request: auto-merge, and for a high one a review request and a
  * comment for the maintainer.
- * @param {{ authorId: number, risk: { tier: 'low' | 'high', reasons: readonly string[] }, body: string, alreadyAsked?: boolean }} pull
+ * @param {{ authorId: number, risk: { tier: 'low' | 'high', reasons: readonly string[] }, body: string, alreadyAsked?: boolean, baseRef: string }} pull
  * @returns {{ autoMerge: true, reviewer: string | undefined, comment: string | undefined }}
  */
-export function shipPlan({ authorId, risk, body, alreadyAsked = false }) {
+export function shipPlan({ authorId, risk, body, alreadyAsked = false, baseRef }) {
   if (authorId !== agent) {
     throw new Error('Only a pull request that northmes-agent opened takes this step.');
+  }
+  // The main ruleset, the risk gate included, guards only pull requests into main; another base
+  // would merge at once with no required check.
+  if (baseRef !== 'main') {
+    throw new Error(`The pull request targets ${baseRef}; open it against main (AGENTS.md).`);
   }
   if (risk.tier === 'low' || alreadyAsked) {
     return { autoMerge: true, reviewer: undefined, comment: undefined };
@@ -79,7 +84,13 @@ if (import.meta.main) {
   );
   let plan;
   try {
-    plan = shipPlan({ authorId: pull.user.id, risk, body: pull.body ?? '', alreadyAsked });
+    plan = shipPlan({
+      authorId: pull.user.id,
+      risk,
+      body: pull.body ?? '',
+      alreadyAsked,
+      baseRef: pull.base.ref,
+    });
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);

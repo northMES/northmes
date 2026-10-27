@@ -215,6 +215,25 @@ describe('withClient', () => {
 
     await expect(failure).rejects.toThrow(/terminating connection due to administrator command/);
   });
+
+  it('rethrows why the connection dropped when run catches the failed query and returns', async () => {
+    const app = { connectionString: appUrl };
+
+    const failure = withClient(app, async (client) => {
+      const { rows } = await client.query<{ pid: number }>('select pg_backend_pid() as pid');
+      const dropped = new Promise((resolve) => client.once('error', resolve));
+      await withClient(app, (other) =>
+        other.query('select pg_terminate_backend($1)', [rows[0]?.pid]),
+      );
+      await dropped;
+      return client.query('select 1').then(
+        () => 'accepted',
+        (error: Error) => error.message,
+      );
+    });
+
+    await expect(failure).rejects.toThrow(/terminating connection due to administrator command/);
+  });
 });
 
 describe('the global setup', () => {

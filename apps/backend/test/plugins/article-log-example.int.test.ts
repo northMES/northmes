@@ -2,8 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { randomUUIDv7 } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { createTestApp, given, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
-import { Client } from 'pg';
+import {
+  createTestApp,
+  given,
+  gqlClient,
+  type TestApp,
+  useTestDatabase,
+  withClient,
+} from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import manifest from '../../../../examples/plugin-article-log/src/manifest.ts';
 import {
@@ -43,10 +49,8 @@ describe('the example article log plugin', () => {
   });
 
   /** The plugin's entries of one article, read as the plugin's owner role, which RLS does not bind. */
-  async function entriesOf(articleId: string) {
-    const client = new Client({ connectionString: db.ownerUrl });
-    await client.connect();
-    try {
+  function entriesOf(articleId: string) {
+    return withClient({ connectionString: db.ownerUrl }, async (client) => {
       await client.query('set role nm_mod_example_article_log');
       const { rows } = await client.query(
         `select event, article_version::int as version, name
@@ -54,9 +58,7 @@ describe('the example article log plugin', () => {
         [articleId],
       );
       return rows;
-    } finally {
-      await client.end();
-    }
+    });
   }
 
   it('keeps one entry per article event, in the order the commands ran', {

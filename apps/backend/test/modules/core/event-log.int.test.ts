@@ -14,9 +14,14 @@ describe('the event log and its sequencer', () => {
   const db = useTestDatabase();
   const principal = { type: 'system', id: 'e05-s09-events' } as const;
   const clients: Client[] = [];
+  const connectionErrors: Error[] = [];
 
   afterEach(async () => {
     await Promise.all(clients.splice(0).map((client) => client.end()));
+    // A client whose connection the server ended fails its next query only as not queryable, so
+    // the test reports why the connection ended.
+    const [connectionError] = connectionErrors.splice(0);
+    if (connectionError) throw connectionError;
   });
 
   const insertEvent = `insert into core.event
@@ -35,6 +40,7 @@ describe('the event log and its sequencer', () => {
   /** A connection as nm_app with an open transaction that writes and reads at `scope`. */
   async function openTransaction(scope: string): Promise<Client> {
     const client = new Client({ connectionString: db.appUrl });
+    client.on('error', (error) => connectionErrors.push(error));
     clients.push(client);
     await client.connect();
     await client.query('begin');
