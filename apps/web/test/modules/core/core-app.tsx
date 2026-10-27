@@ -122,7 +122,7 @@ export function answeredAfter(first: string, ...held: readonly string[]): Apollo
     if (operation.operationName === first) {
       return forward(operation).pipe(tap(() => resolve()));
     }
-    return held.includes(operation.operationName)
+    return operation.operationName !== undefined && held.includes(operation.operationName)
       ? from(promise).pipe(mergeMap(() => forward(operation)))
       : forward(operation);
   });
