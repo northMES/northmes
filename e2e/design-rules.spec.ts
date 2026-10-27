@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { coreLinks } from '@northmes/core-contracts';
 import { planningLinks } from '@northmes/planning-contracts';
-import type { Locator } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { allPagesHref } from '../apps/web/src/shell/shell-pages.ts';
 import { expect, plant, test } from './fixtures.ts';
 
@@ -107,6 +107,18 @@ async function expectNoRules(nav: Locator) {
   expect(rules.separators).toBe(0);
   expect(rules.borders.length).toBeGreaterThanOrEqual(2);
   for (const border of rules.borders) expect(border).toMatch(/ 0px 0px 0px 0px$/);
+}
+
+/** The computed colour of a probe painted with a CSS colour, such as var(--info-subtle). */
+function paint(page: Page, color: string): Promise<string> {
+  return page.evaluate((value) => {
+    const probe = document.createElement('div');
+    probe.style.backgroundColor = value;
+    document.body.append(probe);
+    const painted = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return painted;
+  }, color);
 }
 
 /** A planning page of the seed plant with its search. */
@@ -338,5 +350,37 @@ test.describe('the design rules from computed style', () => {
     const group = page.getByRole('button', { name: 'Collapse Machining' });
     const box = await group.boundingBox();
     expect(box?.height ?? 0).toBeGreaterThanOrEqual(targetMinPx);
+  });
+
+  test('D1 a status badge draws its tone and a calendar shift its colour from the data attribute the unit tests read', async ({
+    page,
+    signIn,
+  }) => {
+    await signIn(planningLinks.orders({ plant }).href);
+    const badge = page.locator('[data-tone="info"]').first();
+    await expect(badge).toHaveText('Planned');
+    const badgeStyle = await styleOf(badge, ['background-color', 'color']);
+    expect(badgeStyle['background-color']).toBe(await paint(page, 'var(--info-subtle)'));
+    expect(badgeStyle.color).toBe(await paint(page, 'var(--info)'));
+
+    // Calendar B3 has three shifts; each block and its legend key take the shift's edge and fill.
+    await page.goto(
+      `${coreLinks.calendars.calendar({ plant, calendarId: 'B3' }).href}?week=2026-11-09`,
+    );
+    const legend = page.getByRole('list', { name: 'Legend' });
+    const week = page.getByRole('img', { name: /^Week 46:/ });
+    await expect(week).toBeVisible();
+    for (const color of [1, 2, 3]) {
+      const edge = await paint(page, `var(--shift-${color})`);
+      const fill = await paint(page, `var(--shift-${color}-subtle)`);
+      for (const element of [
+        legend.locator(`[data-shift-color="${color}"]`),
+        week.locator(`[data-shift-color="${color}"]`).first(),
+      ]) {
+        const style = await styleOf(element, ['border-top-color', 'background-color']);
+        expect(style['border-top-color'], `shift ${color}`).toBe(edge);
+        expect(style['background-color'], `shift ${color}`).toBe(fill);
+      }
+    }
   });
 });
