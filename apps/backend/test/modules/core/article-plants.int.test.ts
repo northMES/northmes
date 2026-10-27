@@ -10,6 +10,7 @@ import {
   queryAsCore,
   signIn,
 } from '@northmes/backend/testing';
+import { DomainError } from '@northmes/sdk/errors';
 import {
   createTestApp,
   type GqlClient,
@@ -265,6 +266,28 @@ describe('articles at the company, assigned to plants', () => {
     expect(await listed(inSettings.client, { companyId: place.company, unassigned: true })).toEqual(
       ['SH-210'],
     );
+  });
+
+  it("ADR0073-W2 in company settings coreArticles and coreArticle with another company's id are core.forbidden, and answer no article", async () => {
+    const place = await givenHelAndSto();
+    const other = await givenCompany(db.ownerUrl);
+    const id = await givenArticle(db.ownerUrl, {
+      code: 'SH-212',
+      name: 'Shelf board',
+      company: other.company,
+    });
+    const inSettings = await holderOf('core-company-admin', {
+      company: place.company,
+      scopeId: place.company,
+    });
+
+    const list = await inSettings.client.send(listQuery, { companyId: other.company });
+    const one = await inSettings.client.send(articleQuery, { id, companyId: other.company });
+
+    expect(list.data).toBeNull();
+    expect(refusals(list)).toEqual(forbidden);
+    expect(one.data?.coreArticle ?? null).toBeNull();
+    expect(refusals(one)).toEqual(forbidden);
   });
 
   it('ADR0073-W2 a Plant admin at HEL updates and archives an article assigned only to HEL, and gets core.forbidden for one assigned to HEL and STO or to All plants', async () => {
@@ -539,6 +562,24 @@ describe('articles at the company, assigned to plants', () => {
       code: 'core.article_not_assigned',
     });
     await expect(runAs(atSto, () => articles.requireAssigned(id))).resolves.toBeUndefined();
+  });
+
+  it('ADR0073-W3 ArticleService.byIdOrThrow throws the DomainError core.not_found for an id of no article', async () => {
+    if (!testApp) throw new Error('the test app did not start');
+    const place = await givenHelAndSto();
+    const [helSlug = ''] = place.slugs;
+    const admin = await holderOf('core-company-admin', {
+      company: place.company,
+      scopeId: place.company,
+      slug: helSlug,
+    });
+    const articles = testApp.app.get(ArticleService);
+    const atHel = await testApp.app.get(PrincipalService).forUser(admin.userId, helSlug);
+
+    const read = runAs(atHel, () => articles.byIdOrThrow(randomUUIDv7()));
+
+    await expect(read).rejects.toBeInstanceOf(DomainError);
+    await expect(read).rejects.toMatchObject({ code: 'core.not_found', status: 404 });
   });
 
   it('ADR0073-W2 as nm_app with read scopes {company, HEL} and write scopes {HEL}, an update of an article whose edit scope is the company affects 0 rows, and of one whose edit scope is HEL affects 1', async () => {
