@@ -13,6 +13,7 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "agent:auto-merge": "node scripts/agents/auto-merge.mjs",
+    "repo:check-ruleset": "node scripts/repo/check-ruleset.mjs",
     "gen": "node scripts/gen.mjs",
     "test": "vitest run --project unit --project integration --project web --project types",
     "test:coverage": "vitest run --coverage --project unit --project integration --project web --project types",
