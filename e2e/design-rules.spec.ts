@@ -288,19 +288,20 @@ test.describe('the design rules from computed style', () => {
       '1px',
     );
 
+    // The time header (row 1), the Not placed row (row 2) and the Name column stay in view while
+    // the grid scrolls. Read before any screenshot: the Argos full-page capture turns sticky
+    // elements static (e2e/snapshot.ts).
+    const header = gantt.locator('[role="row"][aria-rowindex="1"]');
+    await expect(header).toHaveCSS('position', 'sticky');
+    await expect(gantt.locator('[role="row"][aria-rowindex="2"]')).toHaveCSS('position', 'sticky');
+    await expect(header.locator('[role="columnheader"]').first()).toHaveCSS('position', 'sticky');
+
     // D1: block text in pure black on the order color, in the light and the dark theme.
     expect((await styleOf(block('jo-1001-10'), ['color'])).color).toMatch(black);
     await setTheme(gantt, 'dark');
     expect((await styleOf(block('jo-1001-10'), ['color'])).color).toMatch(black);
     await checkA11y('the Gantt in the dark theme');
     await setTheme(gantt, 'light');
-
-    // The time header (row 1), the Not placed row (row 2) and the Name column stay in view while
-    // the grid scrolls.
-    const header = gantt.locator('[role="row"][aria-rowindex="1"]');
-    await expect(header).toHaveCSS('position', 'sticky');
-    await expect(gantt.locator('[role="row"][aria-rowindex="2"]')).toHaveCSS('position', 'sticky');
-    await expect(header.locator('[role="columnheader"]').first()).toHaveCSS('position', 'sticky');
 
     // WCAG 1.4.1: the chain outline is dashed and sits further in than the locked outline, so the
     // two differ in shape. The chain of 1003 holds 1003.10; 1002.10 is locked.
