@@ -282,6 +282,27 @@ describe('pool-error-listener', () => {
     ]);
   });
 
+  it('ADR0041 a Client required from pg in CommonJS is checked too', () => {
+    const path = 'scripts/stack/clients.test.cjs';
+
+    const findings = scan([
+      {
+        path,
+        text: [
+          "const pg = require('pg');",
+          "const { Client } = require('pg');",
+          'const first = new pg.Client({ connectionString: url });',
+          'const second = new Client({ connectionString: url });',
+        ].join('\n'),
+      },
+    ]);
+
+    expect(findings).toEqual([
+      { path, line: 3 },
+      { path, line: 4 },
+    ]);
+  });
+
   it('ADR0041 a Client counts only when it comes from pg, under any name', () => {
     const path = 'apps/backend/test/clients.int.test.ts';
 
