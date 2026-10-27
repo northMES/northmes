@@ -295,13 +295,10 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
 
   it('IN6 in move mode the keys that would move focus stay with the moving block, and Escape cancels', async () => {
     const user = userEvent.setup();
-    const router = renderGanttRoute(
-      { zoom: 'week', from: '2026-11-02', order: 'po-1001' },
-      undefined,
-      'board',
-    );
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
     block(board, '1001.10').focus();
+    await user.keyboard(' ');
 
     await user.keyboard('m{ArrowRight}{Home}{End}{PageDown}');
     expect(document.activeElement).toBe(block(board, '1001.10'));

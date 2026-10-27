@@ -62,7 +62,7 @@ export function clusterName(
  * A cluster cell (plan 07, Targets and density; design D3, IN27): one target of at least 24 px
  * for the job orders too narrow to tell apart, named with their count, span and state counts.
  * Enter, Space or a click opens its popover, a dialog with one row per job order, and Escape
- * returns focus to the cluster. A row's button selects its order.
+ * returns focus to the cluster. A row's button opens its Details, which selects its order.
  */
 export function BoardCluster({
   rows,
@@ -76,6 +76,7 @@ export function BoardCluster({
   selectedOrderId,
   onFocus,
   onSelectOrder,
+  onOpenDetails,
 }: {
   readonly rows: readonly JobOrderRow[];
   readonly snapshot: GanttSnapshot;
@@ -89,6 +90,8 @@ export function BoardCluster({
   readonly selectedOrderId: string | undefined;
   readonly onFocus: (event: FocusEvent<HTMLDivElement>) => void;
   readonly onSelectOrder: (orderId: string) => void;
+  /** A row's button opens the Details of its job order, as a block's click does. */
+  readonly onOpenDetails: (jobOrderId: string) => void;
 }) {
   const { draftRowIds } = useGanttView();
   const [open, setOpen] = useState(false);
@@ -138,8 +141,8 @@ export function BoardCluster({
                 variant="ghost"
                 className="h-7 justify-start px-1.5 font-mono"
                 onClick={() => {
-                  onSelectOrder(row.order.id);
                   setOpen(false);
+                  onOpenDetails(row.jobOrder.id);
                 }}
               >
                 {row.jobOrder.displayNumber} {row.order.article}
