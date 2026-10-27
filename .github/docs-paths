@@ -3,7 +3,7 @@
 # pull request changes a file under a surface and its Docs section says none, the reason must name
 # the surface. The code-reviewer agent reads the pages of each surface the diff touches before the
 # pull request opens. test/meta/docs-paths.test.ts keeps the file in step with the folders: every
-# pattern matches a tracked file, every page exists, and every surface below has an entry.
+# pattern matches a tracked file, every page exists, and every surface ADR 0088 lists has an entry.
 #
 # An entry is a pattern in the syntax of .github/risk-paths (a leading slash anchors it at the root,
 # a pattern that names a folder covers everything below it), then the pages that describe the

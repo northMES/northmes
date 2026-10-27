@@ -177,9 +177,44 @@ describe('PR / pr docs', () => {
   it('ADR0088 a deleted or renamed file under a mapped surface touches it', () => {
     const changes = [
       { status: 'D', path: 'packages/sdk/src/old.ts' },
-      { status: 'R100', path: 'packages/sdk/src/new.ts' },
+      { status: 'R100', path: 'packages/sdk/src/new.ts', from: 'packages/sdk/src/old-name.ts' },
     ];
     const result = checkPrDocs({ ...pullRequest('None: nothing changed.'), changes });
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain('packages/sdk/');
+  });
+
+  // A file moved out of a surface changes that surface too: the SDK loses an export.
+  it('ADR0088 a file renamed out of a mapped surface touches the surface it came from', () => {
+    const changes = [
+      {
+        status: 'R090',
+        path: 'apps/backend/src/http/problem.ts',
+        from: 'packages/sdk/src/rest/problem.ts',
+      },
+    ];
+    const result = checkPrDocs({
+      ...pullRequest('None: apps/backend/src/http/ gains a helper moved in from the SDK.'),
+      changes,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toContain('packages/sdk/');
+    expect(result.message).not.toContain('apps/backend/src/http/');
+    expect(
+      checkPrDocs({
+        ...pullRequest('None: packages/sdk/src/rest/problem.ts moves to apps/backend/src/http/.'),
+        changes,
+      }).ok,
+    ).toBe(true);
+  });
+
+  // packages/sdk-extras is not packages/sdk: the name ends where the surface's path ends.
+  it('ADR0088 a surface is named by its whole path, not by a longer path that starts the same', () => {
+    const result = checkPrDocs(
+      pullRequest('None: packages/sdk-extras only gets a comment.', ['packages/sdk/src/index.ts']),
+    );
 
     expect(result.ok).toBe(false);
     expect(result.message).toContain('packages/sdk/');
@@ -223,6 +258,28 @@ describe('PR / pr docs', () => {
 
     expect(result.ok).toBe(false);
     expect(result.message).toMatch(/apps\/docs/);
+  });
+
+  // The message says both ways out, because a section that declines in other words ("No page
+  // changes: ...") lands here too.
+  it('ADR0088 a Docs section that neither starts with none nor comes with a page change is told both ways out', () => {
+    const result = checkPrDocs(pullRequest('No page changes: the type is internal.'));
+
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/start.*"None"/i);
+    expect(result.message).toMatch(/apps\/docs/);
+  });
+
+  it('ADR0088 none in code or emphasis marks still says none', () => {
+    const notes = [
+      '`None`: an internal type.',
+      '**None**: an internal type.',
+      '_None_, an internal type.',
+    ];
+
+    for (const none of notes) {
+      expect(checkPrDocs(pullRequest(none)).ok, none).toBe(true);
+    }
   });
 
   // GitHub renders a fenced block as code, so a heading in it is no section.

@@ -195,7 +195,7 @@ describe('PR / pr tests', () => {
 
     expect(parseNameStatus(output)).toEqual([
       { status: 'M', path: 'modules/a.ts' },
-      { status: 'R087', path: 'modules/new.test.ts' },
+      { status: 'R087', path: 'modules/new.test.ts', from: 'modules/old.test.ts' },
       { status: 'D', path: 'modules/planning/core/k\u00f6rning.test.ts' },
     ]);
   });

@@ -10,7 +10,13 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { errorAnnotation } from './annotation.mjs';
 import { entryLines, pathMatcher } from './path-patterns.mjs';
-import { givesNoReason, isBotPullRequest, parseNameStatus, section } from './pull-request.mjs';
+import {
+  escapeRegExp,
+  givesNoReason,
+  isBotPullRequest,
+  parseNameStatus,
+  section,
+} from './pull-request.mjs';
 
 export const docsPathsFile = '.github/docs-paths';
 
@@ -53,17 +59,20 @@ export function parseDocsPaths(text, file = docsPathsFile) {
   });
 }
 
-// A section that says none, with or without a reason: "None: ...", "none yet for ...", "N/A".
-const saysNone = /^[-*_\s]*(?:none|n\/a|na)\b/i;
+// A section that says none, with or without a reason: "None: ...", "none yet for ...", "N/A", also
+// in emphasis or code marks. A section that declines in other words ("No page changes: ...") is
+// read as naming pages, and the message for that case says both ways out.
+const saysNone = /^[-*_`\s]*(?:none|n\/a|na)(?![a-z0-9])/i;
 
-// Whether the section names the surface: its path with or without the trailing slash, or one of the
-// changed files under it, without regard to case.
+// Whether the section names the surface: its path, with or without the trailing slash and followed
+// by nothing that extends it (packages/sdk-extras does not name packages/sdk), or one of the changed
+// files under it, without regard to case. A nested surface's path names the surface it lies in too
+// (modules/core/contracts/ names modules/core/), which is the reading a nested change calls for.
 function namesSurface(docs, surface, files) {
   const text = docs.toLowerCase();
-  return (
-    text.includes(surface.replace(/\/$/, '').toLowerCase()) ||
-    files.some((file) => text.includes(file.toLowerCase()))
-  );
+  const path = surface.replace(/\/$/, '').toLowerCase();
+  const named = new RegExp(`${escapeRegExp(path)}(?![\\w.-])`);
+  return named.test(text) || files.some((file) => text.includes(file.toLowerCase()));
 }
 
 /**
@@ -87,7 +96,8 @@ export function checkPrDocs({ body, author, headRef, fromFork, changes, docsPath
       message: `The ## Docs section of the pull request body is empty or says none without a reason. Name the pages under ${docsSite} this change updates, or "None" with a reason that names the surface the change touches when ${docsPathsFile} maps it (ADR 0088).`,
     };
   }
-  const paths = changes.map(({ path }) => path);
+  // A file moved out of a surface changes that surface too, so a rename counts under both paths.
+  const paths = changes.flatMap(({ path, from }) => (from === undefined ? [path] : [path, from]));
   if (saysNone.test(docs)) {
     // Every mapped surface the change touches, deleted and renamed files included, that the reason
     // does not name.
@@ -109,7 +119,7 @@ export function checkPrDocs({ body, author, headRef, fromFork, changes, docsPath
   if (!paths.some((path) => path.startsWith(docsSite))) {
     return {
       ok: false,
-      message: `The ## Docs section names changed pages, and the pull request changes no file under ${docsSite}; a change under docs/ is no docs change. Change the page, or say "None" with a reason (ADR 0088).`,
+      message: `The ## Docs section does not start with "None", so it names changed pages, and the pull request changes no file under ${docsSite}; a change under docs/ is no docs change. Change the page, or start the section with "None" and give the reason (ADR 0088).`,
     };
   }
   return { ok: true, message: '' };

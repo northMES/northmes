@@ -33,7 +33,7 @@ const listedFiles = 3000;
 
 /** The matchers of .github/risk-paths: one pattern a line, # for a comment. */
 function riskPathMatchers(text) {
-  return entryLines(text).map((pattern) => pathMatcher(pattern));
+  return entryLines(text).map((pattern) => pathMatcher(pattern, '.github/risk-paths'));
 }
 
 /**

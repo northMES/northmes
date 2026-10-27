@@ -15,7 +15,7 @@ import { escapeRegExp } from './pull-request.mjs';
  * @param {string} file the file the pattern comes from, named in the error
  * @returns {RegExp}
  */
-export function pathMatcher(pattern, file = '.github/risk-paths') {
+export function pathMatcher(pattern, file) {
   if (/[\s![]/.test(pattern)) {
     throw new Error(
       `${file} has the pattern "${pattern}", with whitespace, ! or [, which the checks do not read.`,
