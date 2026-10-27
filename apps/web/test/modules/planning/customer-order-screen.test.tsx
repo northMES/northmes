@@ -196,6 +196,29 @@ describe("a customer order's page (design #728, KO1 to KO3)", () => {
     ).toBeTruthy();
   });
 
+  it('#728 KO3 announces the outcome that comes back once a refused quantity is fixed', async () => {
+    renderPlanningAt(customerOrderHref('40211', { supply: '2' }));
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Supply line 2 from a production order',
+    });
+    const quantity = within(dialog).getByRole('textbox', {
+      name: 'Quantity from order 1004 (pcs)',
+    });
+
+    await userEvent.clear(quantity);
+    await userEvent.type(quantity, '300');
+    expect(outcome(dialog)).toBe('');
+    await userEvent.type(quantity, '{Backspace}');
+    expect(outcome(dialog)).toMatch(/^Order 1004 then supplies 30 pcs to this line/);
+    await waitFor(
+      () =>
+        expect(document.getElementById(politeRegionId)?.textContent).toBe(
+          'Order 1004 then supplies 30 pcs to this line and 1170 pcs to stock. Its deadline stays Fri 6 Nov 15:00, 14 days before the wanted date, so nothing moves on the plan. It is no longer a stock order.',
+        ),
+      { timeout: 3000 },
+    );
+  });
+
   it('#728 KO3 names the open plant in the supply step of a line that names no delivering plant', async () => {
     const snapshot = g1Snapshot();
     const unset = {

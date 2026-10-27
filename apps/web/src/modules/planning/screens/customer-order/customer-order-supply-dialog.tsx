@@ -42,14 +42,18 @@ function daysText(days: number): string {
 const settleMs = 500;
 
 /**
- * Says a message through the app's announcer when it changes and then holds for a moment, so
- * typing a quantity says the last outcome once. The first message is not said: the dialog that
- * opens with it is read as a whole.
+ * Says the outcome through the app's announcer when it changes and then holds for a moment, so
+ * typing a quantity says the last outcome once. The outcome the dialog opens with is not said: the
+ * dialog is read as a whole. An outcome that comes back after a refused quantity is said again.
  */
-function useAnnouncedChange(message: string): void {
+function useAnnouncedChange(message: string | undefined): void {
   const said = useRef(message);
   useEffect(() => {
     if (message === said.current) return;
+    if (message === undefined) {
+      said.current = undefined;
+      return;
+    }
     const timer = setTimeout(() => {
       said.current = message;
       announce(message);
@@ -58,18 +62,20 @@ function useAnnouncedChange(message: string): void {
   }, [message]);
 }
 
+interface OutcomeText {
+  /** What the picked order then supplies. */
+  readonly supplies: string;
+  /** What that does to the plan. */
+  readonly effect: string;
+}
+
 /** What the picked order supplies after the change, and what that does to the plan (KO3). */
-function Outcome({
-  snapshot,
-  line,
-  candidate,
-  quantity,
-}: {
-  readonly snapshot: GanttSnapshot;
-  readonly line: CustomerOrderLine;
-  readonly candidate: SupplyCandidate;
-  readonly quantity: number;
-}) {
+function outcomeText(
+  snapshot: GanttSnapshot,
+  line: CustomerOrderLine,
+  candidate: SupplyCandidate,
+  quantity: number,
+): OutcomeText {
   const { order } = candidate;
   const analysis = snapshot.analysis.orders[order.id];
   const days = Temporal.PlainDate.from(order.deadlineDate).until(line.wantedDate).days;
@@ -83,11 +89,15 @@ function Outcome({
     : days >= 0
       ? `Its deadline stays ${deadline}, ${daysText(days)} before the wanted date, so nothing moves on the plan.`
       : `Its deadline stays ${deadline}, ${daysText(-days)} after the wanted date. Nothing moves on the plan.`;
-  const supplies = `Order ${order.number} then supplies ${quantityText(quantity)} to this line${
-    rest > 0 ? ` and ${quantityText(rest)} to stock` : ''
-  }`;
-  const effect = `${consequence}${candidate.stock ? ' It is no longer a stock order.' : ''}`;
-  useAnnouncedChange(`${supplies}. ${effect}`);
+  return {
+    supplies: `Order ${order.number} then supplies ${quantityText(quantity)} to this line${
+      rest > 0 ? ` and ${quantityText(rest)} to stock` : ''
+    }`,
+    effect: `${consequence}${candidate.stock ? ' It is no longer a stock order.' : ''}`,
+  };
+}
+
+function Outcome({ supplies, effect }: OutcomeText) {
   return (
     <div
       data-supply-outcome
@@ -157,6 +167,9 @@ function SupplyStep({
   const parsed = /^\d+$/.test(quantity.trim()) ? Number(quantity.trim()) : Number.NaN;
   const valid = Number.isInteger(parsed) && parsed > 0 && parsed <= line.quantity;
   const fits = valid && candidate !== undefined && parsed <= candidate.free;
+  // The step owns the announcement, so it outlives the outcome that a refused quantity hides.
+  const outcome = fits ? outcomeText(snapshot, line, candidate, parsed) : undefined;
+  useAnnouncedChange(outcome === undefined ? undefined : `${outcome.supplies}. ${outcome.effect}`);
   return (
     <>
       <DialogHeader>
@@ -223,9 +236,7 @@ function SupplyStep({
                 error: `Order ${candidate.order.number} has ${quantityText(candidate.free)} free.`,
               })}
           />
-          {fits && (
-            <Outcome snapshot={snapshot} line={line} candidate={candidate} quantity={parsed} />
-          )}
+          {outcome !== undefined && <Outcome {...outcome} />}
           <TextareaField
             label="Reason"
             optional

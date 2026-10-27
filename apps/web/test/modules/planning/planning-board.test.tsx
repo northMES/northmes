@@ -39,6 +39,51 @@ function jobNumbers(row: HTMLElement): string[] {
     .map((cell) => cell.getAttribute('data-job-order') ?? '');
 }
 
+/** G1 with one job order moved to a machine and a span, and with other changes to it. */
+function withJobOrder(
+  snapshot: ReturnType<typeof g1Snapshot>,
+  job: string,
+  change: {
+    readonly equipment?: string;
+    readonly fromMs?: number;
+    readonly toMs?: number;
+    readonly held?: boolean;
+  },
+): ReturnType<typeof g1Snapshot> {
+  return {
+    ...snapshot,
+    productionOrders: snapshot.productionOrders.map((order) => ({
+      ...order,
+      jobOrders: order.jobOrders.map((row) => {
+        if (row.displayNumber !== job || row.placement === undefined) return row;
+        const setupStartMs = change.fromMs ?? row.placement.setupStartMs;
+        const endMs = change.toMs ?? row.placement.endMs;
+        return {
+          ...row,
+          ...(change.equipment !== undefined && { equipment: change.equipment }),
+          ...(change.held !== undefined && { held: change.held }),
+          placement: {
+            setupStartMs,
+            runStartMs: setupStartMs,
+            endMs,
+            segments: [{ fromMs: setupStartMs, toMs: endMs }],
+          },
+        };
+      }),
+    })),
+  };
+}
+
+/** The IN27 board: 1002.10 on CNC 1 right after 1003.10, so at 4 weeks the two share a cluster. */
+function clusterSnapshot(change: { readonly held?: boolean } = {}) {
+  return withJobOrder(g1Snapshot(), '1002.10', {
+    equipment: 'CNC1',
+    fromMs: Date.UTC(2026, 10, 4, 11, 45),
+    toMs: Date.UTC(2026, 10, 4, 15, 15),
+    ...change,
+  });
+}
+
 describe('the planning board (plan 07, Planning board in release 1; design D3)', () => {
   it('BO1 shows the machines of G1 grouped by equipment group, each with its job orders in time order', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
@@ -213,6 +258,194 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(router.state.location.search).toEqual({ from: '2026-11-09' });
   });
 
+  it('BO12 draws the states of G1 in shape and in the name: a locked job order and the late ones', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const block = (job: string) =>
+      board.querySelector<HTMLElement>(`[role="gridcell"][data-job-order="${job}"]`) as HTMLElement;
+
+    expect(block('1002.10').getAttribute('data-states')).toBe('locked');
+    expect(
+      within(board).getByRole('gridcell', {
+        name: named(
+          '1002.10 Housing P, 420 pcs, CNC 2, Thu 5 Nov 11:30 to Thu 5 Nov 15:00, locked',
+        ),
+      }),
+    ).toBe(block('1002.10'));
+    expect(block('1003.20').getAttribute('data-states')).toBe('late');
+    expect(
+      within(board).getByRole('gridcell', {
+        name: named(
+          '1003.20 Gear blank 32, 600 pcs, Mill 1, Wed 4 Nov 12:45 to Thu 5 Nov 06:15, late by 15 h 15 min',
+        ),
+      }),
+    ).toBe(block('1003.20'));
+    expect(block('1001.10').getAttribute('data-states')).toBeNull();
+  });
+
+  it('BO12 marks a held, a started and an overdue job order by icon, border and words', async () => {
+    const g1 = g1Snapshot();
+    const snapshot = {
+      ...g1,
+      // Tue 3 Nov 12:00 in plant time: 1001.10 should have started at 11:30.
+      nowMs: Date.UTC(2026, 10, 3, 11),
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) =>
+          row.displayNumber === '1001.20'
+            ? { ...row, held: true }
+            : row.displayNumber === '1004.10'
+              ? { ...row, status: 'started' as const }
+              : row,
+        ),
+      })),
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    const block = (job: string) =>
+      board.querySelector<HTMLElement>(`[role="gridcell"][data-job-order="${job}"]`) as HTMLElement;
+
+    expect(block('1001.20').getAttribute('data-states')).toBe('held');
+    expect(block('1001.20').querySelector('[data-marker="held"]')).not.toBeNull();
+    expect(block('1001.20').querySelector('[data-state-icon="held"]')).not.toBeNull();
+    expect(
+      within(board).getByRole('gridcell', {
+        name: named(
+          '1001.20 Bracket L, 600 pcs, CNC 2, Wed 4 Nov 09:00 to Thu 5 Nov 10:45, being edited by another planner',
+        ),
+      }),
+    ).toBe(block('1001.20'));
+    expect(block('1004.10').getAttribute('data-states')).toBe('started');
+    expect(block('1004.10').querySelector('[data-state-icon="started"]')).not.toBeNull();
+    expect(
+      within(board).getByRole('gridcell', {
+        name: named(
+          '1001.10 Bracket L, 600 pcs, CNC 1, Tue 3 Nov 11:30 to Wed 4 Nov 08:00, overdue, planned 11:30, not started',
+        ),
+      }),
+    ).toBe(block('1001.10'));
+  });
+
+  it('BO1 selects the order of a clicked job order: the URL names it and every job order of it is selected', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const block = (job: string) =>
+      board.querySelector<HTMLElement>(`[role="gridcell"][data-job-order="${job}"]`) as HTMLElement;
+
+    await user.click(block('1001.10'));
+    expect(router.state.location.search).toEqual({
+      zoom: 'week',
+      from: '2026-11-02',
+      order: 'po-1001',
+    });
+    expect(block('1001.10').getAttribute('aria-selected')).toBe('true');
+    expect(block('1001.20').getAttribute('aria-selected')).toBe('true');
+    expect(block('1001.20').querySelector('[data-selection-bar]')).not.toBeNull();
+    expect(block('1003.10').getAttribute('aria-selected')).toBe('false');
+    expect(block('1003.10').querySelector('[data-selection-bar]')).toBeNull();
+
+    // Escape clears the selection and keeps focus on the job order.
+    await user.keyboard('{Escape}');
+    expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
+    expect(block('1001.10').getAttribute('aria-selected')).toBe('false');
+    expect(document.activeElement).toBe(block('1001.10'));
+  });
+
+  it('TA8 enters the grid at the selected job order when the URL names an order', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02', order: 'po-1003' }, undefined, 'board');
+    const board = await findBoard();
+
+    expect(board.querySelector('[tabindex="0"]')?.getAttribute('data-job-order')).toBe('1003.10');
+  });
+
+  it('IN1 opens the hover card on hover and on focus with the job order, its states and its fields', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const block = (job: string) =>
+      board.querySelector<HTMLElement>(`[role="gridcell"][data-job-order="${job}"]`) as HTMLElement;
+
+    await user.hover(block('1003.20'));
+    const card = await screen.findByRole('tooltip');
+    expect(within(card).getByText('1003.20 Gear blank 32')).toBeTruthy();
+    expect(within(card).getByText('Late by 15 h 15 min')).toBeTruthy();
+    const field = (label: string) =>
+      Array.from(card.querySelectorAll('dt')).find((term) => term.textContent === label)
+        ?.nextElementSibling?.textContent;
+    expect(field('Operation')).toBe('20, Mill');
+    expect(field('Quantity')).toBe('600 pcs');
+    expect(field('Setup start')).toBe('Wed 4 Nov 12:45');
+    expect(field('End')).toBe('Thu 5 Nov 06:15');
+    expect(field('Planned')).toBe('Setup 0 min, run 2 h 30 min');
+    expect(field('Machine')).toBe('Mill 1');
+    expect(field('Order deadline')).toBe('Wed 4 Nov 15:00');
+    expect(field('Status')).toBe('Planned');
+    await user.unhover(block('1003.20'));
+
+    block('1002.10').focus();
+    const focused = await screen.findByRole('tooltip');
+    expect(within(focused).getByText('1002.10 Housing P')).toBeTruthy();
+    expect(within(focused).getByText('Locked')).toBeTruthy();
+  });
+
+  it('IN27 merges job orders under 24 px wide into one cluster cell with its counts, and Enter opens its popover', async () => {
+    const user = userEvent.setup();
+    const g1 = g1Snapshot();
+    // 1002.10 moves onto CNC 1 right after 1003.10, so at 4 weeks the two lie within one 24 px target.
+    const snapshot = {
+      ...g1,
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) => {
+          if (row.displayNumber !== '1002.10' || row.placement === undefined) return row;
+          const setupStartMs = Date.UTC(2026, 10, 4, 11, 45);
+          const endMs = Date.UTC(2026, 10, 4, 15, 15);
+          return {
+            ...row,
+            equipment: 'CNC1',
+            placement: {
+              setupStartMs,
+              runStartMs: setupStartMs,
+              endMs,
+              segments: [{ fromMs: setupStartMs, toMs: endMs }],
+            },
+          };
+        }),
+      })),
+    };
+    renderGanttRoute({ zoom: '4weeks', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    const row = machineRow(board, 'CNC 1');
+    const cluster = within(row).getByRole('gridcell', {
+      name: named('2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 late, 1 locked'),
+    });
+
+    expect(within(row).getAllByRole('gridcell')).toHaveLength(4);
+    expect(cluster.getAttribute('aria-haspopup')).toBe('dialog');
+    expect(Number.parseFloat(cluster.style.width)).toBeGreaterThanOrEqual(24);
+    // A narrow job order alone keeps its own cell, 24 px wide.
+    const lone = row.querySelector<HTMLElement>('[data-job-order="1005.10"]') as HTMLElement;
+    expect(Number.parseFloat(lone.style.width)).toBeGreaterThanOrEqual(24);
+
+    cluster.focus();
+    await user.keyboard('{Enter}');
+    const popover = await screen.findByRole('dialog', {
+      name: '2 jobs on CNC 1, Wed 4 Nov 08:00 to Wed 4 Nov 16:15',
+    });
+    expect(cluster.getAttribute('aria-expanded')).toBe('true');
+    const rows = within(popover).getAllByRole('button', { name: /^100/ });
+    expect(rows.map((button) => button.textContent)).toEqual([
+      '1003.10 Gear blank 32',
+      '1002.10 Housing P',
+    ]);
+    expect(document.activeElement).toBe(rows[0]);
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(document.activeElement).toBe(cluster);
+  });
+
   it('DR32 puts the Tab stop on the Not placed cell when no machine has a job order in the range', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-16' }, undefined, 'board');
     const board = await findBoard();
@@ -255,6 +488,139 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(screen.queryByRole('grid')).toBeNull();
   });
 
+  it('plan 07 one Escape closes the hover card, and the next clears the selection', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const block = board.querySelector<HTMLElement>('[role="gridcell"][data-job-order="1003.20"]');
+    block?.focus();
+    await screen.findByRole('tooltip');
+    await user.keyboard('{Enter}');
+    expect(router.state.location.search).toMatchObject({ order: 'po-1003' });
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
+    expect(router.state.location.search).toMatchObject({ order: 'po-1003' });
+    await user.keyboard('{Escape}');
+    expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
+    expect(document.activeElement).toBe(block);
+  });
+
+  it('ADR0021 a cluster with a late and a held job order names the late before the held', async () => {
+    renderGanttRoute(
+      { zoom: '4weeks', from: '2026-11-02' },
+      sourceOf(clusterSnapshot({ held: true })),
+      'board',
+    );
+    const board = await findBoard();
+
+    expect(
+      within(machineRow(board, 'CNC 1')).getByRole('gridcell', {
+        name: named(
+          '2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 late, 1 being edited by another planner, 1 locked',
+        ),
+      }),
+    ).toBeTruthy();
+  });
+
+  it('IN27 a row of the cluster popover selects its order, closes the popover and marks the cluster', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute(
+      { zoom: '4weeks', from: '2026-11-02' },
+      sourceOf(clusterSnapshot()),
+      'board',
+    );
+    const board = await findBoard();
+    const cluster = board.querySelector<HTMLElement>(
+      '[data-cluster="1003.10 1002.10"]',
+    ) as HTMLElement;
+
+    await user.click(cluster);
+    const popover = await screen.findByRole('dialog', { name: /^2 jobs on CNC 1/ });
+    await user.click(within(popover).getByRole('button', { name: '1002.10 Housing P' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(router.state.location.search).toMatchObject({ order: 'po-1002' });
+    expect(cluster.getAttribute('aria-selected')).toBe('true');
+    expect(cluster.querySelector('[data-selection-bar]')).not.toBeNull();
+    expect(board.querySelector('[tabindex="0"]')).toBe(cluster);
+  });
+
+  it('BO1 a Not placed chip selects its order by click or Enter and shows the selection', async () => {
+    const user = userEvent.setup();
+    const g1 = g1Snapshot();
+    const snapshot = {
+      ...g1,
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) => {
+          if (row.displayNumber !== '1005.20') return row;
+          const { placement: _, equipment: __, ...unplaced } = row;
+          return unplaced;
+        }),
+      })),
+    };
+    const router = renderGanttRoute(
+      { zoom: 'week', from: '2026-11-02' },
+      sourceOf(snapshot),
+      'board',
+    );
+    const board = await findBoard();
+    const chip = board.querySelector<HTMLElement>(
+      '[aria-rowindex="2"] [data-job-order="1005.20"]',
+    ) as HTMLElement;
+
+    chip.focus();
+    await user.keyboard('{Enter}');
+    expect(router.state.location.search).toMatchObject({ order: 'po-1005' });
+    expect(chip.getAttribute('aria-selected')).toBe('true');
+    expect(chip.querySelector('[data-selection-bar]')).not.toBeNull();
+  });
+
+  it('URL state a change of the selected order adds a history entry, so Back returns to the order before', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const block = (job: string) =>
+      board.querySelector<HTMLElement>(`[role="gridcell"][data-job-order="${job}"]`) as HTMLElement;
+
+    await user.click(block('1001.10'));
+    await user.click(block('1003.10'));
+    expect(router.state.location.search).toMatchObject({ order: 'po-1003' });
+    router.history.back();
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ order: 'po-1001' }));
+  });
+
+  it('plan 07 a hard-locked job order in the past is not overdue', async () => {
+    const g1 = g1Snapshot();
+    renderGanttRoute(
+      { zoom: 'week', from: '2026-11-02' },
+      sourceOf({ ...g1, nowMs: Date.UTC(2026, 10, 5, 12) }),
+      'board',
+    );
+    const board = await findBoard();
+
+    expect(
+      board
+        .querySelector('[role="gridcell"][data-job-order="1002.10"]')
+        ?.getAttribute('data-states'),
+    ).toBe('locked');
+  });
+
+  it('BO8 a wide job order after a narrow one keeps its own cell', async () => {
+    const snapshot = withJobOrder(g1Snapshot(), '1004.10', {
+      fromMs: Date.UTC(2026, 10, 4, 12),
+      toMs: Date.UTC(2026, 10, 5, 13),
+    });
+    renderGanttRoute({ zoom: '4weeks', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+
+    expect(jobNumbers(machineRow(board, 'CNC 1'))).toEqual([
+      '1001.10',
+      '1003.10',
+      '1004.10',
+      '1005.10',
+    ]);
+  });
   it('BO1 marks the board busy while a later range loads, and not once it has loaded', async () => {
     const user = userEvent.setup();
     let release: () => void = () => {};
