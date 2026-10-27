@@ -3,6 +3,7 @@
 import { coreLinks } from '@northmes/core-contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import type { Locator } from '@playwright/test';
+import { allPagesHref } from '../apps/web/src/shell/shell-pages.ts';
 import { expect, plant, test } from './fixtures.ts';
 
 // The design rules that only a browser's layout shows, read from computed style and the boxes it
@@ -131,7 +132,7 @@ test.describe('the design rules from computed style', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Your plants' })).toBeVisible();
     await expectTargets(page.getByRole('main').getByRole('link'));
 
-    await page.goto(`/${plant}/all-pages`);
+    await page.goto(allPagesHref(plant));
     await expect(page.getByRole('heading', { level: 1, name: 'All pages' })).toBeVisible();
     await expectTargets(page.getByRole('main').getByRole('link'));
     await checkA11y('All pages');
