@@ -235,6 +235,7 @@ async function asCoreOwner<Result>(
   fn: (client: Client) => Promise<Result>,
 ): Promise<Result> {
   const client = new Client({ connectionString: ownerUrl });
+  client.on('error', () => {});
   await client.connect();
   try {
     await client.query('begin');

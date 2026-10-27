@@ -190,7 +190,7 @@ describe('risk gate', () => {
     }
   });
 
-  // CI / openapi diff lets a break of the public API through only when the title marks it with !.
+  // PR / openapi diff lets a break of the public API through only when the title marks it with !.
   it('a title that marks a breaking change makes the pull request high', () => {
     const result = assessRisk({ ...agentPull(['docs/guide/start.md']), title: 'feat(core)!: drop a field' });
 
