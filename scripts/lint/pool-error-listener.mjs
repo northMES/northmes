@@ -16,8 +16,9 @@
 // A pool construction is `new Pool(...)`, `new <anything>.Pool(...)`, or `new X(...)` where X is
 // imported as Pool from pg or as the default export of pg-pool. A client construction is
 // `new X(...)` where X is imported as Client from pg or destructured from it
-// (`const { Client } = pg`), or `new <pg>.Client(...)` where <pg> is the default or namespace
-// import of pg. A construction is a finding unless one of these holds:
+// (`const { Client } = pg`, `const { Client } = require('pg')`), or `new <pg>.Client(...)` where
+// <pg> is the default or namespace import of pg or `require('pg')`. A construction is a finding
+// unless one of these holds:
 // - `.on('error', ...)` is chained on the construction itself.
 // - The construction is assigned to a variable or a property, the first mention of that variable
 //   or property afterwards is `.on('error', ...)` on it, and that call is a statement of the block
@@ -58,10 +59,25 @@ function isTestCode(path) {
  */
 
 /**
+ * Whether `node` is `require('pg')`.
+ * @param {ts.Node} node
+ */
+function isRequireOfPg(node) {
+  if (!ts.isCallExpression(node) || !ts.isIdentifier(node.expression)) return false;
+  const [specifier] = node.arguments;
+  return (
+    node.expression.text === 'require' &&
+    specifier !== undefined &&
+    ts.isStringLiteralLike(specifier) &&
+    specifier.text === 'pg'
+  );
+}
+
+/**
  * The local names that a file imports pg under: Pool as in `import { Pool as PgPool } from 'pg'`
- * and `import BarePool from 'pg-pool'`, Client as in `import { Client } from 'pg'` and
- * `const { Client } = pg`, and the module itself as in `import pg from 'pg'` and
- * `import * as postgres from 'pg'`.
+ * and `import BarePool from 'pg-pool'`, Client as in `import { Client } from 'pg'`,
+ * `const { Client } = pg` and `const { Client } = require('pg')`, and the module itself as in
+ * `import pg from 'pg'`, `import * as postgres from 'pg'` and `const pg = require('pg')`.
  * @param {ts.SourceFile} source
  * @returns {PgNames}
  */
@@ -89,23 +105,23 @@ function importedPgNames(source) {
     }
   }
   /** @param {ts.Node} node */
-  const destructured = (node) => {
-    if (
-      ts.isVariableDeclaration(node) &&
-      ts.isObjectBindingPattern(node.name) &&
-      node.initializer &&
-      ts.isIdentifier(node.initializer) &&
-      names.pg.has(node.initializer.text)
-    ) {
-      for (const element of node.name.elements) {
-        const imported = element.propertyName ?? element.name;
-        const isClient = ts.isIdentifier(imported) && imported.text === 'Client';
-        if (isClient && ts.isIdentifier(element.name)) names.client.add(element.name.text);
+  const declared = (node) => {
+    if (ts.isVariableDeclaration(node) && node.initializer) {
+      const { initializer } = node;
+      const required = isRequireOfPg(initializer);
+      if (required && ts.isIdentifier(node.name)) names.pg.add(node.name.text);
+      const isPg = required || (ts.isIdentifier(initializer) && names.pg.has(initializer.text));
+      if (isPg && ts.isObjectBindingPattern(node.name)) {
+        for (const element of node.name.elements) {
+          const imported = element.propertyName ?? element.name;
+          const isClient = ts.isIdentifier(imported) && imported.text === 'Client';
+          if (isClient && ts.isIdentifier(element.name)) names.client.add(element.name.text);
+        }
       }
     }
-    ts.forEachChild(node, destructured);
+    ts.forEachChild(node, declared);
   };
-  if (names.pg.size > 0) destructured(source);
+  declared(source);
   return names;
 }
 
