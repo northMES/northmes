@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import { Logger } from '@nestjs/common';
 import type { RequestContext } from '@northmes/sdk/graphql';
 import { given } from '@northmes/testing';
 import { GraphQLInt, GraphQLObjectType, GraphQLSchema, GraphQLString } from 'graphql';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createGraphqlServer, GRAPHQL_PATH } from '../../src/graphql/server.ts';
 import { currentPrincipal, PLANT_HEADER, type Principal } from '../../src/principal.ts';
 
@@ -126,19 +127,39 @@ describe('the GraphQL server', () => {
     expect(await eventData(response)).toEqual([{ probeEventLoaders: 0 }, { probeEventLoaders: 0 }]);
   });
 
-  it('E02-S03 an unexpected error reaches the client masked', async () => {
-    const response = await send('{ probeBroken }');
+  it('E02-S03 an unexpected error reaches the client masked as core.internal with a correlation id, which the server log line names, and without its text', async () => {
+    const logged = vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
+    try {
+      const response = await send('{ probeBroken }');
 
-    const body = await response.text();
-    expect(JSON.parse(body)).toEqual({
-      data: { probeBroken: null },
-      errors: [
-        expect.objectContaining({
-          message: 'Unexpected error.',
-          path: ['probeBroken'],
-        }),
-      ],
-    });
-    expect(body).not.toContain('secret');
+      const body = await response.text();
+      expect(JSON.parse(body)).toEqual({
+        data: { probeBroken: null },
+        errors: [
+          {
+            message: 'Unexpected error.',
+            path: ['probeBroken'],
+            locations: [{ line: 1, column: 3 }],
+            extensions: expect.objectContaining({
+              code: 'INTERNAL_SERVER_ERROR',
+              errorCode: 'core.internal',
+              correlationId: expect.stringMatching(
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+              ),
+            }),
+          },
+        ],
+      });
+      expect(body).not.toContain('secret');
+      const { correlationId } =
+        (JSON.parse(body) as { errors: { extensions: Record<string, string> }[] }).errors[0]
+          ?.extensions ?? {};
+      expect(logged).toHaveBeenCalledWith(
+        `A GraphQL operation failed with correlation id ${correlationId}`,
+        expect.stringContaining('connection to postgres://nm_app:secret@db failed'),
+      );
+    } finally {
+      logged.mockRestore();
+    }
   });
 });
