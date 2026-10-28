@@ -154,6 +154,18 @@ describe("an article's routing (design #729, RO1 to RO8)", () => {
     );
   });
 
+  it("#729 another plant than the fixture's has none of its routings, so neither the register nor a routing page shows Plant A's", async () => {
+    renderCoreAt(coreLinks.routings({ plant: 'plant-b' }).href, []);
+    await screen.findByRole('heading', { level: 2, name: 'No routings yet' });
+
+    cleanup();
+    renderCoreAt(
+      coreLinks.routings.routing({ plant: 'plant-b', articleNumber: '20-1001' }).href,
+      [],
+    );
+    await screen.findByRole('heading', { level: 2, name: 'This article has no routing' });
+  });
+
   it('#729 RO5 to RO8 show the loading, failed and no-access states, and an article without a routing', async () => {
     renderCoreAt(withSearch(bracket, { preview: 'loading' }), []);
     await screen.findByRole('heading', { level: 1, name: 'Routing' });
@@ -214,6 +226,32 @@ describe('the edit form of a routing operation (design #729, RO4)', () => {
       true,
     );
     expect(screen.getByRole('link', { name: 'Cancel' }).getAttribute('href')).toBe(bracket);
+  });
+
+  it('#729 RO4 Keep NorthMES values off leaves the values to the import: the fields and the reason read only, and the reason says how to change them', async () => {
+    renderCoreAt(
+      coreLinks.routings.routing.editOperation({ plant, articleNumber: '20-1001', sequence: '20' })
+        .href,
+      [],
+    );
+    await screen.findByRole('heading', { level: 1, name: 'Edit operation 20 Mill' });
+    const leadTime = screen.getByRole('textbox', { name: 'Lead time' }) as HTMLInputElement;
+    const reason = screen.getByRole('textbox', {
+      name: /^Reason for the change/,
+    }) as HTMLTextAreaElement;
+    expect(leadTime.readOnly).toBe(false);
+    expect(reason.readOnly).toBe(false);
+
+    await userEvent.click(
+      screen.getByRole('checkbox', { name: 'Keep NorthMES values for this operation' }),
+    );
+
+    expect(leadTime.readOnly).toBe(true);
+    expect((screen.getByRole('textbox', { name: 'Name' }) as HTMLInputElement).readOnly).toBe(true);
+    expect(reason.readOnly).toBe(true);
+    expect(
+      screen.getByText('Turn on Keep NorthMES values to change the operation and give the reason.'),
+    ).toBeTruthy();
   });
 });
 
