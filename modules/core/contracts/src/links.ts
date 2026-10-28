@@ -7,7 +7,7 @@ import { defineCoreLinks } from '@northmes/contracts';
  * plant's landing page with its open tab in `tab` (ADR 0078); the articles list, its new article
  * page, and each article's page with its edit page; the article groups, the new group page and each
  * group's page, which is its form; the customers and each customer's page; and in plant settings
- * the people of the plant with Add role and each person's page with Add role for that person. Its settings section holds core's company
+ * the plant's own page, the people of the plant with Add role and each person's page with Add role for that person. Its settings section holds core's company
  * settings pages (ADR 0066): the users, the new user page, each user's page (its tab in `tab`) with
  * Add role; and the roles, the new role page (Start from in `from`), and each role's page (its tab
  * in `tab`) with its edit page (design core-304). Core's pages sit at the plant root and at the
@@ -32,6 +32,8 @@ export const coreLinks = defineCoreLinks(
         articleGroup: { path: '$articleGroupId' },
       },
     },
+    /** The plant's own page in plant settings (design #767): name, slug, zone and production day start. */
+    plant: { path: 'plant' },
     people: {
       path: 'people',
       children: {
