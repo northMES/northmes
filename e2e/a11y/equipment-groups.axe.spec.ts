@@ -6,9 +6,9 @@ import { expect, plant, test } from '../fixtures.ts';
 // The axe check of ADR 0021 over the equipment groups pages (design #729, EG1 to EG9): the list
 // with its Scope menu open, a group's page, the edit form with a color picked, the list, the page
 // and the form at 320 px, the list's loading, empty, failed and no-access states, the form's
-// loading and no-access states, and a group that does not exist. The pages read the
-// fixture G1, so every state is the same in every run; the preview key opens the states on mock
-// data.
+// loading, failed and no-access states, a group's loading, failed and no-access states, and a
+// group that does not exist. The pages read the fixture G1, so every state is the same in every
+// run; the preview key opens the states on mock data.
 
 /** An href with a search. */
 function withSearch(href: string, search: Record<string, string>): string {
@@ -57,7 +57,7 @@ test.describe('the equipment groups pages', () => {
     await checkA11y('the equipment groups list at 320 px');
     await page.goto(mach);
     await expect(
-      page.getByRole('heading', { level: 1, name: 'Equipment group MACH' }),
+      page.getByRole('region', { name: 'Machines in MACH, scrolls sideways' }),
     ).toBeVisible();
     await checkA11y('an equipment group at 320 px');
     await page.goto(editMach);
@@ -97,9 +97,40 @@ test.describe('the equipment groups pages', () => {
     await expect(page.getByText('Loading the equipment group.')).toBeVisible();
     await checkA11y('the edit form loading', { busy: true });
 
+    await page.goto(withSearch(editMach, { preview: 'error' }));
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Could not load the equipment group' }),
+    ).toBeVisible();
+    await checkA11y('the edit form failed');
+
     await page.goto(withSearch(editMach, { preview: 'forbidden' }));
     await expect(page.getByRole('link', { name: 'Back to equipment group MACH' })).toBeVisible();
     await checkA11y('the edit form without access');
+
+    // A group's page takes the same preview key.
+    await page.goto(withSearch(mach, { preview: 'loading' }));
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Equipment group MACH' }),
+    ).toBeVisible();
+    // The page frame marks the loading group busy; it draws no skeleton, so the busy element is
+    // empty and never visible.
+    await expect(page.locator('main [aria-busy="true"]')).toHaveCount(1);
+    await checkA11y('an equipment group loading', { busy: true });
+
+    await page.goto(withSearch(mach, { preview: 'error' }));
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Could not load the equipment group' }),
+    ).toBeVisible();
+    await checkA11y('an equipment group failed');
+
+    await page.goto(withSearch(mach, { preview: 'forbidden' }));
+    await expect(
+      page.getByRole('heading', {
+        level: 2,
+        name: 'You need the permission to manage the settings of this plant',
+      }),
+    ).toBeVisible();
+    await checkA11y('an equipment group without access');
 
     await page.goto(coreLinks.equipmentGroups.group({ plant, groupCode: 'NOPE' }).href);
     await expect(

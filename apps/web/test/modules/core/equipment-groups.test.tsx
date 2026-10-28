@@ -6,7 +6,6 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { PlantSettingsSource } from '../../../src/modules/core/plant-settings-data.ts';
 import { g1PlantSettingsSnapshot } from '../../../src/modules/core/plant-settings-data-g1.ts';
-import { plantSettingsActionReason } from '../../../src/modules/core/plant-settings-reasons.ts';
 import { plant, renderCoreAt } from './core-app.tsx';
 
 afterEach(cleanup);
@@ -83,7 +82,11 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
     );
     expect(screen.getByText('ERP data as of Mon 2 Nov 06:40')).toBeTruthy();
     expect(screen.getByText('Showing fixture G1.')).toBeTruthy();
-    expect(screen.getByText(plantSettingsActionReason)).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Changes to machines, groups and calendars wait for the equipment API; these pages read the fixture G1.',
+      ),
+    ).toBeTruthy();
     expect(within(table).getByRole('link', { name: 'MACH' }).getAttribute('href')).toBe(mach);
     expect(within(table).getByRole('link', { name: 'Edit MACH' }).getAttribute('href')).toBe(
       editMach,
@@ -94,7 +97,7 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
     expect(screen.getByRole('region', { name: 'Equipment groups, scrolls sideways' })).toBeTruthy();
   });
 
-  it('#729 EG1 filters by Scope through its menu and from the URL, with a chip and Clear filters', async () => {
+  it('#729 EG1 filters by Scope through its menu and from the URL, with a chip and Clear filters that gives focus back to Scope', async () => {
     const router = renderCoreAt(groups, []);
     const table = await screen.findByRole('table', { name: 'Equipment groups of Plant A' });
 
@@ -217,6 +220,14 @@ describe("an equipment group's page (design #729, EG4)", () => {
     expect(screen.queryByRole('table', { name: 'Machines in HEAT' })).toBeNull();
   });
 
+  it('#729 EG4 says the board draws no band for a group whose machines are not plannable', async () => {
+    renderCoreAt(coreLinks.equipmentGroups.group({ plant, groupCode: 'ASM' }).href, []);
+    await screen.findByRole('heading', { level: 1, name: 'Equipment group ASM' });
+    expect(screen.getByRole('figure', { name: 'Assembly on the board' }).textContent).toBe(
+      'AssemblyNo plannable machinesThe board draws no band for this group until a plannable machine joins it.',
+    );
+  });
+
   it('#729 EG4 names the group in the h1 while it loads', async () => {
     renderCoreAt(withSearch(mach, { preview: 'loading' }), []);
     await screen.findByRole('heading', { level: 1, name: 'Equipment group MACH' });
@@ -288,6 +299,15 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
     const name = screen.getByRole('textbox', { name: 'Name' }) as HTMLInputElement;
     expect(name.value).toBe('Assembly');
     expect(name.hasAttribute('readonly')).toBe(false);
+  });
+
+  it('#729 EG5 keeps the stored name in the preview while the Name field is blank', async () => {
+    renderCoreAt(coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'ASM' }).href, []);
+    const name = await screen.findByRole('textbox', { name: 'Name' });
+    await userEvent.clear(name);
+    expect(screen.getByRole('figure', { name: 'Assembly on the board' })).toBeTruthy();
+    await userEvent.type(name, 'Assembly line');
+    expect(screen.getByRole('figure', { name: 'Assembly line on the board' })).toBeTruthy();
   });
 
   it('#729 EG5 picks a color by keyboard and recolors the preview', async () => {
