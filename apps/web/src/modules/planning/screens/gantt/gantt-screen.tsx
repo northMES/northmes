@@ -14,6 +14,7 @@ import {
 } from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
+import { useBoardFields } from '../../board-fields-store.ts';
 import type { GanttDataSource, GanttSnapshot } from '../../gantt-data.ts';
 import {
   applyDraft,
@@ -513,6 +514,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     }
     return { materialShortages: byOperation, materialShortOrderIds: orderIds };
   }, [inventory]);
+  const boardFields = useBoardFields(plant);
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
     const equipment = new Map(snapshot.equipment.map((machine) => [machine.code, machine]));
@@ -540,6 +542,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       move: moveActions,
       runActions,
       toggleChain,
+      boardFields,
     };
   }, [
     snapshot,
@@ -558,6 +561,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     moveActions,
     runActions,
     toggleChain,
+    boardFields,
   ]);
   const { links, limited } =
     snapshot === undefined

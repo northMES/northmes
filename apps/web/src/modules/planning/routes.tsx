@@ -4,6 +4,7 @@ import { linkEntry } from '@northmes/contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import type { PlantRoute } from '@northmes/web-sdk';
 import { createRoute, lazyRouteComponent, Outlet, redirect } from '@tanstack/react-router';
+import { boardFieldsSearch } from './board-fields-search.ts';
 import { customerOrderPageSearch } from './customer-order-page-search.ts';
 import { boardSearch, ganttSearch } from './gantt-search.ts';
 import { jobOrdersSearch } from './job-orders-search.ts';
@@ -136,6 +137,18 @@ export function planningRoutes(plantRoute: PlantRoute) {
     validateSearch: stockArticleSearch,
     component: lazyRouteComponent(() => import('./screens.ts'), 'StockArticleScreen'),
   });
+  // Plant settings (ADR 0066; #762): the board fields, on the fixture G1 and the in-memory store
+  // until planning settings have their API. The page takes the state the URL previews.
+  const settingsRoute = createRoute({
+    getParentRoute: () => planningRoute,
+    path: linkEntry(planningLinks.settings).path,
+  });
+  const boardFieldsRoute = createRoute({
+    getParentRoute: () => settingsRoute,
+    path: linkEntry(planningLinks.settings.boardFields).path,
+    validateSearch: boardFieldsSearch,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'BoardFieldsScreen'),
+  });
   return planningRoute.addChildren([
     boardRoute,
     releaseRoute,
@@ -147,5 +160,6 @@ export function planningRoutes(plantRoute: PlantRoute) {
     ]),
     customerOrdersRoute.addChildren([customerOrderListRoute, customerOrderRoute]),
     stockRoute.addChildren([stockListRoute, stockArticleRoute]),
+    settingsRoute.addChildren([boardFieldsRoute]),
   ]);
 }

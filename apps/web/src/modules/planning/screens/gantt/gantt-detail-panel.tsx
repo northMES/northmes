@@ -16,6 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '../../../../ui/primitives/sheet.tsx';
+import { shownFields } from '../../board-fields.ts';
 import { bindingSentence } from '../../gantt-analysis.ts';
 import type { ConstraintLine } from '../../gantt-data.ts';
 import { orderNumbersText } from '../../gantt-draft.ts';
@@ -343,10 +344,19 @@ function JobOrderDetails({
   readonly onToggleChain: () => void;
   readonly onMoveApplied: (jobOrderId: string) => void;
 }) {
-  const { snapshot, timeZone, machineName, chainRowIds, materialShortages, inventory } =
-    useGanttView();
+  const {
+    snapshot,
+    timeZone,
+    machineName,
+    chainRowIds,
+    boardFields,
+    materialShortages,
+    inventory,
+  } = useGanttView();
   const { jobOrder, operation, order, analysis } = row;
   const shortages = materialShortages?.get(operation.displayNumber) ?? [];
+  // Every hover field shows here too, in the plant's order (plan 07, Board accessibility; #762).
+  const hoverFields = shownFields(boardFields.hover, row, snapshot, machineName);
   const durations = durationsOf(row, snapshot);
   const float = analysis?.float;
   const release = releaseText(row, timeZone, snapshot.settings.retoolOverlapsLeadTime);
@@ -446,6 +456,17 @@ function JobOrderDetails({
             inventory={inventory}
           />
         ))}
+      {hoverFields.length > 0 && (
+        <Section title="Hover fields">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[0.8125rem]">
+            {hoverFields.map((field) => (
+              <Field key={field.id} label={field.label}>
+                {field.value}
+              </Field>
+            ))}
+          </dl>
+        </Section>
+      )}
       {analysis !== undefined && <ConstraintList lines={analysis.constraints} />}
       <Section title="Float">
         <ul className="grid gap-1 text-[0.8125rem] leading-[1.125rem]">
