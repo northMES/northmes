@@ -51,6 +51,7 @@ import {
 import { useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { useMoveActions } from '../../use-move-actions.ts';
 import { type GanttViewContext, GanttViewProvider } from '../gantt/gantt-context.ts';
+import { GanttDetailDrawer } from '../gantt/gantt-detail-panel.tsx';
 import { changesText, GanttDraftDrawer } from '../gantt/gantt-draft-drawer.tsx';
 import { movedMessage, previewOf, refusalMessage } from '../gantt/gantt-move.ts';
 import { BlockMenu } from './board-block-menu.tsx';
@@ -275,6 +276,77 @@ export function BoardScreen() {
   const selectOrder = (orderId: string | undefined) => {
     if (orderId !== search.order) void setSearch(withOrder(search, orderId), 'push');
   };
+  // Details of a job order in the Gantt's drawer (Krister, 2026-10-21): a click or Enter opens it
+  // and selects the order, and a link that names an order opens its first job order in the range.
+  const [detailFor, setDetailFor] = useState<string | undefined>(undefined);
+  /** The block that takes focus when the drawer closes. */
+  const detailReturn = useRef<string | undefined>(undefined);
+  const allRows = useMemo(
+    () =>
+      model === undefined
+        ? []
+        : [
+            ...model.groups.flatMap((group) => group.machines.flatMap((machine) => machine.blocks)),
+            ...model.notPlaced,
+          ],
+    [model],
+  );
+  const openDetails = (jobOrderId: string) => {
+    const row = allRows.find((each) => each.jobOrder.id === jobOrderId);
+    if (row === undefined) return;
+    selectOrder(row.order.id);
+    detailReturn.current = jobOrderId;
+    setDetailFor(jobOrderId);
+  };
+  const detailRow =
+    detailFor === undefined ? undefined : allRows.find((row) => row.jobOrder.id === detailFor);
+  // The target that takes focus when Details closes: the block, else the cluster that holds it.
+  const detailTarget = (jobOrderId: string): HTMLElement | null => {
+    const byKey = (key: string) =>
+      document.querySelector<HTMLElement>(`[data-board-focus="${CSS.escape(key)}"]`);
+    const cluster = [...cells.values()]
+      .flat()
+      .find(
+        (cell) =>
+          cell.kind === 'cluster' && cell.rows.some((row) => row.jobOrder.id === jobOrderId),
+      );
+    return (
+      byKey(focusKeys.block(jobOrderId)) ??
+      (cluster === undefined
+        ? null
+        : byKey(cluster.kind === 'cluster' ? cluster.key : focusKeys.block(jobOrderId)))
+    );
+  };
+  // Details closes when its job order leaves the board, and when Back or Forward changes the
+  // selected order away from its order.
+  useEffect(() => {
+    if (detailFor !== undefined && detailRow === undefined) setDetailFor(undefined);
+  }, [detailFor, detailRow]);
+  const previousOrder = useRef(search.order);
+  useEffect(() => {
+    const before = previousOrder.current;
+    previousOrder.current = search.order;
+    if (before !== search.order && detailRow !== undefined && detailRow.order.id !== search.order) {
+      setDetailFor(undefined);
+    }
+  }, [search.order, detailRow]);
+  const openedFromLink = useRef(false);
+  useEffect(() => {
+    if (openedFromLink.current || model === undefined) return;
+    openedFromLink.current = true;
+    // The order's first operation in the range: by operation sequence, then by setup start.
+    const first = allRows
+      .filter((row) => row.order.id === search.order)
+      .sort(
+        (a, b) =>
+          a.operation.sequence - b.operation.sequence ||
+          (a.jobOrder.placement?.setupStartMs ?? Number.MAX_SAFE_INTEGER) -
+            (b.jobOrder.placement?.setupStartMs ?? Number.MAX_SAFE_INTEGER),
+      )[0];
+    if (first === undefined) return;
+    detailReturn.current = first.jobOrder.id;
+    setDetailFor(first.jobOrder.id);
+  }, [model, allRows, search.order]);
 
   const boardFields = useBoardFields(plant);
   // Up and Down in move mode step through the allowed machines in the board's row order, past the
@@ -592,6 +664,7 @@ export function BoardScreen() {
               {...(preview !== undefined && { preview })}
               selectedOrderId={search.order}
               onSelectOrder={selectOrder}
+              onOpenDetails={openDetails}
               onBlockMenu={(jobOrderId, anchor) => {
                 setMenu({ jobOrderId, anchor });
                 setMenuOpen(true);
@@ -635,6 +708,33 @@ export function BoardScreen() {
                 : document.querySelector<HTMLElement>(
                     `[data-board-focus="${CSS.escape(moveDialogReturn.current)}"]`,
                   )
+            }
+          />
+          <GanttDetailDrawer
+            row={detailRow}
+            chain={undefined}
+            onClose={() => {
+              // A move begun in Details ends with it, without a change (plan 07, the Escape stack).
+              if (moveActions?.state !== undefined) moveActions.cancel({ refocus: false });
+              setDetailFor(undefined);
+            }}
+            // The board draws no chain: Show critical chain opens the order's chain on the Gantt.
+            onToggleChain={(orderId) =>
+              void navigate({
+                href: planningLinks.gantt({ plant }, { zoom, from, order: orderId, chain: '1' })
+                  .href,
+              })
+            }
+            onFocusRow={(jobOrderId) => {
+              detailReturn.current = jobOrderId;
+              setDetailFor(undefined);
+            }}
+            onMoveApplied={(jobOrderId) => {
+              detailReturn.current = jobOrderId;
+              setDetailFor(undefined);
+            }}
+            finalFocus={() =>
+              detailReturn.current === undefined ? null : detailTarget(detailReturn.current)
             }
           />
           <GanttDraftDrawer
