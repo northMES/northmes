@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -113,14 +112,14 @@ describe('the shell', () => {
 
   it("ADR 0075 a shell with an import map admits it in script-src by the hash of the map's text", async () => {
     const url = await serve(['core'], shellWithImportMap);
-    const index = readFileSync(join(shellWithImportMap, 'index.html'), 'utf8');
-    const map = /<script type="importmap">([\s\S]*?)<\/script>/.exec(index)?.[1] ?? '';
-    const hash = createHash('sha256').update(map).digest('base64');
 
     const response = await fetch(`${url}/`);
 
+    // The SHA-256 of the text between the import map's script tags in the fixture's index.html, the
+    // surrounding whitespace included, as CSP level 3 hashes an inline script.
     expect(response.headers.get('content-security-policy')).toBe(
-      `default-src 'self'; script-src 'self' 'sha256-${hash}'; style-src 'self'; ` +
+      "default-src 'self'; script-src 'self' 'sha256-bUaJbzm8s4jw7LOvWQxAUNmdA4w9LtHJw+DSrBzPw+0='; " +
+        "style-src 'self'; " +
         "connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; " +
         "frame-ancestors 'none'",
     );

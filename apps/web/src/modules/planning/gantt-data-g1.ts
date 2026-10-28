@@ -29,6 +29,7 @@ import type {
   HistoryEntry,
   OrderOrigin,
 } from './gantt-data.ts';
+import { PlanningForbidden } from './planning-preview.ts';
 import { type EffectivePlanningRules, ganttSettingsWith } from './planning-rules.ts';
 
 /** An ISO instant as epoch milliseconds: the one place a snapshot's instants are parsed. */
@@ -412,6 +413,23 @@ export function g1Snapshot(
  * The screen shows "Showing fixture G1" while it is in use.
  */
 export const g1DataSource: GanttDataSource = {
-  load: async ({ from, to, rules, entered }) =>
-    g1Snapshot(g1, { fromMs: Date.parse(from), toMs: Date.parse(to) }, g1Pages, rules, entered),
+  load: async ({ from, to, preview, rules, entered }) => {
+    // The page states of design D3 on mock data: a load that never ends, one that fails, the
+    // API's refusal, and the plant before any machine is marked as plannable.
+    if (preview === 'loading') return new Promise<never>(() => {});
+    if (preview === 'error') throw new Error('The plan could not be loaded');
+    if (preview === 'forbidden') throw new PlanningForbidden();
+    const snapshot = g1Snapshot(
+      g1,
+      { fromMs: Date.parse(from), toMs: Date.parse(to) },
+      g1Pages,
+      rules,
+      entered,
+    );
+    if (preview !== 'empty') return snapshot;
+    return {
+      ...snapshot,
+      equipment: snapshot.equipment.map((machine) => ({ ...machine, isPlannable: false })),
+    };
+  },
 };

@@ -42,9 +42,9 @@ function daysText(days: number): string {
 const settleMs = 500;
 
 /**
- * Says the outcome through the app's announcer when it changes and then holds for a moment, so
- * typing a quantity says the last outcome once. The outcome the dialog opens with is not said: the
- * dialog is read as a whole. An outcome that comes back after a refused quantity is said again.
+ * Says the outcome, or why the quantity is refused, through the app's announcer when it changes and
+ * then holds for a moment, so typing a quantity says the last message once. The message the dialog
+ * opens with is not said: the dialog is read as a whole.
  */
 function useAnnouncedChange(message: string | undefined): void {
   const said = useRef(message);
@@ -167,9 +167,14 @@ function SupplyStep({
   const parsed = /^\d+$/.test(quantity.trim()) ? Number(quantity.trim()) : Number.NaN;
   const valid = Number.isInteger(parsed) && parsed > 0 && parsed <= line.quantity;
   const fits = valid && candidate !== undefined && parsed <= candidate.free;
-  // The step owns the announcement, so it outlives the outcome that a refused quantity hides.
   const outcome = fits ? outcomeText(snapshot, line, candidate, parsed) : undefined;
-  useAnnouncedChange(outcome === undefined ? undefined : `${outcome.supplies}. ${outcome.effect}`);
+  // The field's error is no live region, so the step announces a refusal as it does the outcome.
+  const refusal = !valid
+    ? `Enter a whole number from 1 to ${line.quantity}.`
+    : candidate !== undefined && !fits
+      ? `Order ${candidate.order.number} has ${quantityText(candidate.free)} free.`
+      : undefined;
+  useAnnouncedChange(outcome === undefined ? refusal : `${outcome.supplies}. ${outcome.effect}`);
   return (
     <>
       <DialogHeader>
@@ -228,13 +233,7 @@ function SupplyStep({
             value={quantity}
             onChange={(event) => setQuantity(event.target.value)}
             hint={`At most ${quantityText(line.quantity)}, the open quantity of the line.`}
-            {...(!valid && {
-              error: `Enter a whole number from 1 to ${line.quantity}.`,
-            })}
-            {...(valid &&
-              !fits && {
-                error: `Order ${candidate.order.number} has ${quantityText(candidate.free)} free.`,
-              })}
+            {...(refusal !== undefined && { error: refusal })}
           />
           {outcome !== undefined && <Outcome {...outcome} />}
           <TextareaField

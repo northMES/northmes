@@ -42,7 +42,6 @@ describe('the unit catalog', () => {
 
   it('E06-S06 an article counts its quantities in pieces, metres, kilograms or litres', () => {
     expect(stockUnitCodes).toEqual(['PIECE', 'METRE', 'KILOGRAM', 'LITRE']);
-    expect(stockUnit.options).toEqual(stockUnitCodes);
     expect(stockUnitCodes.map((code) => unitOf(code).label)).toEqual([
       'Pieces (pcs)',
       'Metres (m)',

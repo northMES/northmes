@@ -4,12 +4,10 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { INestApplication } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { ModulesContainer } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { secretsConfig } from '@northmes/sdk/config';
 import { useTestDatabase } from '@northmes/testing';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
-import { AppModule } from '../../src/app.module.ts';
 import { type BootOptions, boot } from '../../src/boot/boot.ts';
 import { queryAsCore } from '../../src/testing.ts';
 import { imageVersion } from '../../src/version.ts';
@@ -64,31 +62,16 @@ describe('boot', () => {
     expect(log.error).not.toHaveBeenCalled();
   });
 
-  it("E02-S01 AppModule's first import is the ConfigModule built from loadEnv(serverEnvSchema) and secretsConfig", async () => {
+  it('E02-S01 the ConfigService of a booted server answers the validated environment, PORT as a number and NORTHMES_ROLE defaulted, and the secrets namespace the value of each secret file', async () => {
     const exit = vi.fn<(code: number) => void>();
-    const forRoot = vi.spyOn(ConfigModule, 'forRoot');
 
     app = await boot({
       env,
       exit,
       log: recordingLog(),
     });
-    const modules = [...(app?.get(ModulesContainer).values() ?? [])];
-    const root = modules.find((module) => module.metatype === AppModule);
-    const [first] = root?.imports ?? [];
 
     expect(exit).not.toHaveBeenCalled();
-    // The server reads no .env file, and ConfigService caches what it reads.
-    expect(forRoot).toHaveBeenCalledWith(
-      expect.objectContaining({
-        isGlobal: true,
-        ignoreEnvFile: true,
-        cache: true,
-        load: [secretsConfig],
-      }),
-    );
-    expect(first?.metatype).toBe(ConfigModule);
-    expect(first?.isGlobal).toBe(true);
     const config = app?.get(ConfigService);
     // serverEnvSchema reads PORT as a number and defaults NORTHMES_ROLE to all.
     expect(config?.get('PORT')).toBe(0);

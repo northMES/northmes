@@ -3,13 +3,10 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { createReason } from '../../../src/modules/planning/mock-reasons.ts';
 import { renderGanttRoute } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
-
-const snapshot = g1Snapshot();
 
 /** The order numbers of the table's rows, in their order. */
 function orderRows(): string[] {
@@ -47,16 +44,12 @@ function rowOf(attribute: 'data-order' | 'data-line', value: string): HTMLElemen
 }
 
 describe('the production orders list (plan 07; design #687, PL1 to PL3)', () => {
-  const orderCount = snapshot.productionOrders.length;
-
   it('PL1 lists the orders by deadline, then priority, with their customers, status and the planning actions', async () => {
     renderGanttRoute({}, undefined, 'orders');
     const table = await screen.findByRole('table', { name: 'Production orders' });
 
     expect(orderRows()).toEqual(['1003', '1002', '1001', '1004', '1005', '1006']);
-    expect(statusLine()).toBe(
-      `${orderCount} production orders, 1 late. Sorted by deadline, then priority.`,
-    );
+    expect(statusLine()).toBe('6 production orders, 1 late. Sorted by deadline, then priority.');
     expect(screen.getByText('ERP data as of Mon 2 Nov 06:40')).toBeTruthy();
     expect(screen.getByText('Showing fixture G1.')).toBeTruthy();
     expect(
@@ -98,7 +91,7 @@ describe('the production orders list (plan 07; design #687, PL1 to PL3)', () => 
       '1 production order, 1 late, late only. Sorted by deadline, then priority.',
     );
     await userEvent.click(screen.getByRole('checkbox', { name: 'Late only' }));
-    await waitFor(() => expect(orderRows()).toHaveLength(orderCount));
+    await waitFor(() => expect(orderRows()).toHaveLength(6));
 
     await userEvent.click(filterButton('Article'));
     await userEvent.click(screen.getByRole('menuitemcheckbox', { name: /^Bracket L/ }));
@@ -110,7 +103,7 @@ describe('the production orders list (plan 07; design #687, PL1 to PL3)', () => 
     expect(screen.getByRole('button', { name: 'Article, 1 selected' })).toBeTruthy();
 
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
-    await waitFor(() => expect(orderRows()).toHaveLength(orderCount));
+    await waitFor(() => expect(orderRows()).toHaveLength(6));
     expect(router.state.location.search).toEqual({});
 
     await userEvent.type(
@@ -128,8 +121,9 @@ describe('the production orders list (plan 07; design #687, PL1 to PL3)', () => 
     await userEvent.click(screen.getByRole('button', { name: 'Group by' }));
     await userEvent.click(screen.getByRole('menuitemradio', { name: 'Article' }));
 
+    // G1 has two Bracket L orders of 600 pcs each.
     const group = await screen.findByRole('button', { name: /^Bracket L/ });
-    expect(group.textContent).toMatch(/^Bracket L ?[12] orders?, (600|1200) pcs$/);
+    expect(group.textContent).toBe('Bracket L 2 orders, 1200 pcs');
     expect(router.state.location.search).toEqual({ group: 'article' });
     expect(screen.getByRole('button', { name: 'Group by: Article' })).toBeTruthy();
     expect(statusLine()).toContain('groups sorted by article');
@@ -187,9 +181,6 @@ describe('the customers of the production orders list (design #728)', () => {
 });
 
 describe('the customer orders list (plan 07; design #687, CO1 and CO2)', () => {
-  const lines = snapshot.customerOrderLines ?? [];
-  const unsupplied = lines.filter((line) => line.productionOrderId === undefined).length;
-
   it('CO1 lists one row per customer order line by wanted date, with the order that supplies it', async () => {
     renderGanttRoute({}, undefined, 'customerOrders');
     await screen.findByRole('table', { name: 'Customer order lines' });
@@ -204,7 +195,7 @@ describe('the customer orders list (plan 07; design #687, CO1 and CO2)', () => {
       '40211-2',
     ]);
     expect(statusLine()).toBe(
-      `7 customer order lines, 1 supplied by a late order, ${unsupplied} without a production order. Sorted by wanted date.`,
+      '7 customer order lines, 1 supplied by a late order, 1 without a production order. Sorted by wanted date.',
     );
     const supplied = rowOf('data-line', '40211-1');
     expect(supplied.textContent).toContain('Hallberg Verkstad AB');
@@ -243,7 +234,7 @@ describe('the customer orders list (plan 07; design #687, CO1 and CO2)', () => {
     await userEvent.click(filterButton('Status'));
     await userEvent.click(screen.getByRole('menuitemcheckbox', { name: /^Not supplied/ }));
     await userEvent.keyboard('{Escape}');
-    await waitFor(() => expect(lineRows()).toHaveLength(unsupplied));
+    await waitFor(() => expect(lineRows()).toHaveLength(1));
     expect(lineRows()).toContain('40211-2');
     expect(router.state.location.search).toEqual({ status: 'none' });
   });
