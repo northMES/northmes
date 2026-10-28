@@ -13,6 +13,7 @@ import { CoreCreateArticle } from '../../../src/modules/core/screens/new-article
 import { CoreCreateArticleGroup } from '../../../src/modules/core/screens/new-article-group/create-article-group.graphql.ts';
 import { viewerQuery } from './access-fixtures.ts';
 import {
+  answeredAfter,
   article,
   articleQuery,
   bodyRows,
@@ -175,14 +176,16 @@ describe('article groups', () => {
   });
 
   it('E06-S06 a Plant admin reads the article groups without New article group', async () => {
-    renderCoreAt(coreLinks.articleGroups({ plant }).href, [
-      groupsQuery([flanges]),
-      viewerQuery(['core.articleGroup:read']),
-    ]);
+    // The viewer's answer renders nothing else on the list, so the list waits for it: the table
+    // shows with the permissions known.
+    renderCoreAt(
+      coreLinks.articleGroups({ plant }).href,
+      [groupsQuery([flanges]), viewerQuery(['core.articleGroup:read'])],
+      { hold: answeredAfter('CoreViewer', 'CoreArticleGroups') },
+    );
 
-    await screen.findByRole('table', { name: 'Article groups' });
-    // The viewer's answer arrives after the list; give it the time to show any action.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    const table = await screen.findByRole('table', { name: 'Article groups' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(1));
     expect(screen.queryByRole('link', { name: 'New article group' })).toBeNull();
   });
 

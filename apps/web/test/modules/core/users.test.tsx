@@ -28,7 +28,7 @@ import {
   user,
   viewerRole,
 } from './access-fixtures.ts';
-import { bodyRows, renderCoreAt, watchForSkeletonRows } from './core-app.tsx';
+import { answeredAfter, bodyRows, renderCoreAt, watchForSkeletonRows } from './core-app.tsx';
 import { resetPasswordMutation, temporaryPassword, userAdmin } from './user-fixtures.ts';
 
 afterEach(cleanup);
@@ -491,13 +491,14 @@ describe('users', () => {
     expect(itemsOf(await screen.findByRole('menu'))).toEqual(['Block user']);
     cleanup();
 
-    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
-      settingsViewerQuery(['core.user:read']),
-      companiesQuery(),
-      usersQuery(listed),
-    ]);
+    // A reader's answer renders nothing else on the list, so the users wait for it: the rows show
+    // with the permissions known.
+    renderCoreAt(
+      coreLinks.settings.users({ companyId }).href,
+      [settingsViewerQuery(['core.user:read']), companiesQuery(), usersQuery(listed)],
+      { hold: answeredAfter('CoreViewer', 'CoreUsers') },
+    );
     expect(await screen.findByRole('link', { name: 'Sara Nyberg' })).toBeDefined();
-    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.queryByRole('button', { name: /^Actions for/ })).toBeNull();
   });
 

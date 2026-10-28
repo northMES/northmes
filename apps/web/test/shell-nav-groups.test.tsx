@@ -148,45 +148,30 @@ describe('a nested group in a module sidebar group (D2 PL5)', () => {
     expect(document.activeElement).toBe(registers);
   });
 
-  it("E04-S02 a nested group's entries show keyboard focus with the D1 ring of app.css, and the current entry in --sidebar-primary", async () => {
+  // The D1 focus ring of a nested entry, the --sidebar-primary of the current entry and the
+  // --sidebar-accent mark of a closed group are read from computed style in e2e/design-rules.spec.ts.
+  it("E04-S02 a nested group's current entry alone carries data-active, the mark the sidebar draws in --sidebar-primary", async () => {
     renderAt('/plant-a/stock/warehouses');
     await screen.findByRole('heading', { level: 1, name: 'Warehouses' });
     const group = await stockGroup();
 
-    // happy-dom applies no Tailwind, so the test reads the classes.
     const warehouses = await within(group).findByRole('link', { name: 'Warehouses' });
     const bins = within(group).getByRole('link', { name: 'Bins' });
-    for (const link of [warehouses, bins]) {
-      const classes = link.className.split(' ');
-      expect(classes).not.toContain('outline-hidden');
-      expect(classes).not.toContain('focus-visible:ring-2');
-      expect(classes).not.toContain('ring-sidebar-ring');
-    }
     expect(warehouses.getAttribute('data-active')).not.toBeNull();
     expect(bins.getAttribute('data-active')).toBeNull();
-    expect(warehouses.className.split(' ')).toEqual(
-      expect.arrayContaining([
-        'data-active:bg-sidebar-primary',
-        'data-active:font-medium',
-        'data-active:text-sidebar-primary-foreground',
-      ]),
-    );
   });
 
-  it('E04-S02 a closed nested group that holds the current page carries aria-current="true" and a --sidebar-accent mark (KE28)', async () => {
+  it('E04-S02 a closed nested group that holds the current page keeps aria-current="true" (KE28)', async () => {
     const user = userEvent.setup();
     renderAt('/plant-a/stock/warehouses');
     await screen.findByRole('heading', { level: 1, name: 'Warehouses' });
     const registers = within(await stockGroup()).getByRole('button', { name: 'Registers' });
     expect(registers.getAttribute('aria-current')).toBe('true');
-    expect(registers.className.split(' ')).not.toContain('bg-sidebar-accent');
 
     await user.click(registers);
 
     expect(registers.getAttribute('aria-expanded')).toBe('false');
     expect(registers.getAttribute('aria-current')).toBe('true');
-    expect(registers.className.split(' ')).toContain('bg-sidebar-accent');
-    expect(registers.className.split(' ')).not.toContain('bg-sidebar-primary');
   });
 
   it('E04-S02 a nested group that does not hold the current page has no aria-current and no mark', async () => {

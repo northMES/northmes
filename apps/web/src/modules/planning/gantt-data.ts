@@ -22,6 +22,7 @@ import type {
   WorkloadBucket,
 } from '@northmes/planning-domain';
 import type { InventoryArticle, InventoryWarehouse, StockBalance } from './inventory-data.ts';
+import type { PlanningPreview } from './planning-preview.ts';
 
 export type {
   BindingConstraint,
@@ -56,6 +57,8 @@ export interface GanttLoadInput {
   /** The instant after the visible range, ISO 8601. */
   readonly to: string;
   readonly filter: GanttFilter;
+  /** The page state a mock source answers with instead of its data (design D3, DR17 to DR22). */
+  readonly preview?: PlanningPreview;
 }
 
 /** A working-time calendar of the plant (ADR 0025): weekdays, one shift and its breaks. */

@@ -7,7 +7,13 @@
 import { execFileSync } from 'node:child_process';
 import { matchesGlob } from 'node:path';
 import { errorAnnotation } from './annotation.mjs';
-import { commitType, givesNoReason, isBotPullRequest, section } from './pull-request.mjs';
+import {
+  commitType,
+  givesNoReason,
+  isBotPullRequest,
+  parseNameStatus,
+  section,
+} from './pull-request.mjs';
 
 const sourceRoots = ['apps/', 'modules/', 'packages/', 'examples/', 'scripts/'];
 const codeFile = /\.(?:[cm]?[jt]sx?|sql|graphql)$/;
@@ -77,23 +83,6 @@ export function checkPrTests({ title, body, author, headRef, fromFork, changes }
     };
   }
   return { ok: true, message: '' };
-}
-
-/**
- * The changes of `git diff -z --name-status -M`: NUL-separated fields, the status and then the
- * path, or for a rename or copy the old and the new path. A moved file counts under its new path.
- * -z keeps every path as git stores it, where the plain output quotes unusual characters.
- */
-export function parseNameStatus(output) {
-  const fields = output.split('\0');
-  const changes = [];
-  for (let index = 0; index < fields.length && fields[index] !== ''; ) {
-    const status = fields[index];
-    const count = /^[RC]/.test(status) ? 2 : 1;
-    changes.push({ status, path: fields[index + count] });
-    index += count + 1;
-  }
-  return changes;
 }
 
 // CI checks out the pull request's merge commit, whose first parent is the base branch, so HEAD^1

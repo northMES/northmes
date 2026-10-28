@@ -132,13 +132,14 @@ describe('the G1 analysis against g1.expected.json (plan 18, phase 2)', () => {
     expect(buckets).toEqual(g1Expected.GT5_workload_week45);
   });
 
-  it('GT7 the placements of every row equal the expected placements, segments included', () => {
+  it('GT7 the start, end and segments of every placement equal the expected placements', () => {
     for (const order of productionOrders) {
       for (const row of order.jobOrders) {
         const expected = g1Expected.placements[row.displayNumber];
-        expect(row.placement, row.displayNumber).toEqual({
+        // The oracle has no run start; gantt-data.test.ts pins it for 1001.10.
+        const { runStartMs: _, ...placement } = row.placement ?? {};
+        expect(placement, row.displayNumber).toEqual({
           setupStartMs: ms(expected?.start.instant ?? ''),
-          runStartMs: row.placement?.runStartMs,
           endMs: ms(expected?.end.instant ?? ''),
           segments: expected?.segments.map(({ from, to }) => ({ fromMs: ms(from), toMs: ms(to) })),
         });

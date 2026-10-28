@@ -29,7 +29,8 @@ const githubActions = 15368;
 // reports them: CodeQL comes from code scanning's default setup (ADR 0050).
 const otherApps = new Map([['CodeQL', 57789]]);
 
-const workflowFiles = ['ci.yml', 'pr.yml', 'risk.yml', 'supply-chain.yml'];
+/** The workflow files whose jobs the main ruleset requires; test/meta/workflows.test.ts reads it. */
+export const workflowFiles = ['ci.yml', 'pr.yml', 'risk.yml', 'supply-chain.yml'];
 
 // Jobs the ruleset may require but does not have to. cla joins before the first outside pull
 // request (ADR 0039), e2e when #281 lands; openapi diff fails a pull request through pr gate and
@@ -49,7 +50,9 @@ const mainRefs = new Set(['~DEFAULT_BRANCH', '~ALL', 'refs/heads/main']);
 export function checkRuleset(ruleset, workflows) {
   const problems = [];
   if (ruleset.enforcement !== 'active') {
-    problems.push(`enforcement is ${ruleset.enforcement}, not active, so the ruleset blocks no merge.`);
+    problems.push(
+      `enforcement is ${ruleset.enforcement}, not active, so the ruleset blocks no merge.`,
+    );
   }
   const { include = [], exclude = [] } = ruleset.conditions?.ref_name ?? {};
   if (!include.some((ref) => mainRefs.has(ref)) || exclude.some((ref) => mainRefs.has(ref))) {
@@ -60,7 +63,10 @@ export function checkRuleset(ruleset, workflows) {
 
   const rules = (ruleset.rules ?? []).filter(({ type }) => type === 'required_status_checks');
   if (rules.length === 0) {
-    return [...problems, 'The ruleset has no required_status_checks rule, so it requires no check.'];
+    return [
+      ...problems,
+      'The ruleset has no required_status_checks rule, so it requires no check.',
+    ];
   }
 
   if (rules.some(({ parameters }) => parameters?.strict_required_status_checks_policy !== true)) {
@@ -97,14 +103,17 @@ export function checkRuleset(ruleset, workflows) {
     }
   }
   for (const { context, integration_id: app } of required) {
-    const want = expected.get(context)?.app ?? (optionalSource.has(context) ? githubActions : undefined);
+    const want =
+      expected.get(context)?.app ?? (optionalSource.has(context) ? githubActions : undefined);
     if (want === undefined) {
       problems.push(
         `stale: the ruleset requires "${context}", which no job of ${workflowFiles.join(', ')} reports. Remove it, or add its workflow to this check.`,
       );
     } else if (app !== want) {
       const from = app === undefined ? 'any app' : `app ${app}`;
-      problems.push(`wrong app: the ruleset requires "${context}" from ${from}, not from app ${want}.`);
+      problems.push(
+        `wrong app: the ruleset requires "${context}" from ${from}, not from app ${want}.`,
+      );
     }
   }
   return problems;
@@ -122,7 +131,9 @@ if (import.meta.main) {
   try {
     workflows = readWorkflows();
   } catch (error) {
-    console.error(`Cannot read the workflows: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(
+      `Cannot read the workflows: ${error instanceof Error ? error.message : String(error)}`,
+    );
     process.exit(2);
   }
   let ruleset;
