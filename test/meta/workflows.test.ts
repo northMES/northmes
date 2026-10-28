@@ -59,7 +59,14 @@ function rootScript(name: string | undefined): string | undefined {
 // The pull request checks read the pull request instead of the code, so no root script runs them
 // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
 // They run in the PR workflow, so an edit to the title or body re-runs them and not the tests.
-const pullRequestChecks = ['pr title', 'linked issue', 'pr security', 'pr tests', 'openapi diff'];
+const pullRequestChecks = [
+  'pr title',
+  'linked issue',
+  'pr security',
+  'pr docs',
+  'pr tests',
+  'openapi diff',
+];
 
 // The steps that copy a report of an earlier step into the job summary. They check nothing, so no
 // root script runs them.
@@ -120,6 +127,15 @@ const pullRequestCheckSteps = {
       PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
     },
   },
+  'pr docs': {
+    run: 'node scripts/ci/pr-docs.mjs',
+    env: {
+      PR_BODY: expression('github.event.pull_request.body'),
+      PR_AUTHOR: expression('github.event.pull_request.user.login'),
+      PR_HEAD_REF: expression('github.event.pull_request.head.ref'),
+      PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
+    },
+  },
   'pr tests': {
     run: 'node scripts/ci/pr-tests.mjs',
     env: {
@@ -138,6 +154,19 @@ const pullRequestCheckSteps = {
     },
   },
 };
+
+// A script and the local modules it imports, transitively, as repository paths: the files a job
+// that runs the script without a checkout must download.
+function localImportsOf(script: string, seen = new Set<string>()): string[] {
+  if (seen.has(script)) return [];
+  seen.add(script);
+  const source = readFileSync(`${root}${script}`, 'utf8');
+  const folder = script.slice(0, script.lastIndexOf('/') + 1);
+  for (const [, specifier = ''] of source.matchAll(/^import\s[^;]*?from\s+'(\.\.?\/[^']+)';/gm)) {
+    localImportsOf(`${folder}${specifier.replace(/^\.\//, '')}`, seen);
+  }
+  return [...seen];
+}
 
 // The jobs of the CI workflow that CI / gate does not need yet, and that the main ruleset does not
 // require. CI / cla joins CI / gate before the first outside pull request
@@ -759,7 +788,7 @@ describe('workflows', () => {
   // The pull request checks run in the PR workflow, and they run on each of its events: a skipped
   // check counts as passed. An event value interpolated into a run script could inject shell code,
   // so the scripts read the pull request from environment variables.
-  it('PR / pr title, PR / linked issue, PR / pr security, PR / pr tests and PR / openapi diff run in the PR workflow and read the pull request from environment variables', () => {
+  it('PR / pr title, PR / linked issue, PR / pr security, PR / pr docs, PR / pr tests and PR / openapi diff run in the PR workflow and read the pull request from environment variables', () => {
     for (const [name, step] of Object.entries(pullRequestCheckSteps)) {
       const { workflow, job } = jobNamed(name);
 
@@ -820,7 +849,7 @@ describe('workflows', () => {
   // The group starts with the workflow name, so it never cancels a CI run.
   // ADR 0069: the ruleset names each PR job, so the list is pinned on purpose; a renamed, added or
   // removed job needs a ruleset edit timed to its merge.
-  it('ADR0069 the job list of the PR workflow is pinned, because the main ruleset names each job: pr title, linked issue, pr security, pr tests, openapi diff and pr gate', () => {
+  it('ADR0069 the job list of the PR workflow is pinned, because the main ruleset names each job: pr title, linked issue, pr security, pr docs, pr tests, openapi diff and pr gate', () => {
     const { workflow } = jobNamed('pr gate');
 
     expect(
@@ -883,16 +912,18 @@ describe('workflows', () => {
   // The PR workflow checks out the pull request's merge commit; its first parent is the base
   // branch, so a depth of 2 holds both sides of the diff. The job reads code only, so it keeps no
   // credentials.
-  it('PR / pr tests checks out the merge commit with its first parent and without credentials', () => {
-    const { job } = jobNamed('pr tests');
+  it('PR / pr tests and PR / pr docs check out the merge commit with its first parent and without credentials', () => {
+    for (const name of ['pr tests', 'pr docs']) {
+      const { job } = jobNamed(name);
 
-    expect(job.permissions).toEqual({ contents: 'read' });
-    expect(job.steps?.[0]).toEqual(
-      expect.objectContaining({
-        uses: expect.stringMatching(/^actions\/checkout@[0-9a-f]{40}$/),
-        with: { 'fetch-depth': 2, 'persist-credentials': false },
-      }),
-    );
+      expect(job.permissions, name).toEqual({ contents: 'read' });
+      expect(job.steps?.[0], name).toEqual(
+        expect.objectContaining({
+          uses: expect.stringMatching(/^actions\/checkout@[0-9a-f]{40}$/),
+          with: { 'fetch-depth': 2, 'persist-credentials': false },
+        }),
+      );
+    }
   });
 
   // oasdiff compares the base branch's schema/openapi-v1.json with the pull request's (ADR 0064).
@@ -973,12 +1004,11 @@ describe('workflows', () => {
       GH_TOKEN: expression('github.token'),
       DEFAULT_BRANCH: expression('github.event.repository.default_branch'),
     });
-    for (const file of [
-      'scripts/ci/risk-gate.mjs',
-      'scripts/ci/pull-request.mjs',
-      'scripts/ci/annotation.mjs',
-    ]) {
-      expect(download?.run).toContain(`contents/${file}?ref=$DEFAULT_BRANCH`);
+    // The job runs the gate without a checkout, so it downloads the gate and every local module the
+    // gate imports, transitively; a module moved out of risk-gate.mjs without its download would
+    // fail every pull request's risk gate once it merged.
+    for (const file of localImportsOf('scripts/ci/risk-gate.mjs')) {
+      expect(download?.run, file).toContain(`contents/${file}?ref=$DEFAULT_BRANCH`);
     }
     expect(check).toEqual({
       name: expect.any(String),
