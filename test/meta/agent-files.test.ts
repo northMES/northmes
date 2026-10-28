@@ -142,6 +142,38 @@ describe('code-reviewer agent', () => {
     expect(docsStep).toMatch(/page.*line.*code/i);
     expect(docsStep).toMatch(/no mapped surface/);
   });
+
+  // CodeRabbit's path instructions are the one source of the rules both reviews apply, so the
+  // agent reads them from .coderabbit.yaml and a rule changes in one place.
+  it('ADR0065 the code-reviewer agent applies the path instructions of .coderabbit.yaml and copies none of them', () => {
+    const body = agentBody(path);
+    const config = parse(readFileSync(join(root, '.coderabbit.yaml'), 'utf8')) as CodeRabbitConfig;
+    const instructions = config.reviews.path_instructions.map((entry) => entry.instructions);
+
+    expect(body).toContain('`reviews.path_instructions` in `.coderabbit.yaml`');
+    expect(instructions.length).toBeGreaterThan(0);
+    expect(sharedWordRuns(body, instructions)).toEqual([]);
+  });
+
+  // A branch that changes .coderabbit.yaml would otherwise choose the rules its own review applies.
+  it('ADR0065 the code-reviewer agent reads the path instructions from main when the branch changes them', () => {
+    expect(agentBody(path)).toContain('`git show origin/main:.coderabbit.yaml`');
+  });
+
+  it('ADR0065 the copy check finds an instruction pasted into the agent with other spacing and backticks', () => {
+    const instruction = 'Flag sql.raw, sql.lit, and sql.ref or sql.id with non-literal input.';
+    const body =
+      'Steps.\n\n- Flag `sql.raw`, `sql.lit`, and `sql.ref` or `sql.id`\n  with non-literal input.';
+
+    expect(sharedWordRuns(body, [instruction])).toEqual([
+      'flag sql.raw, sql.lit, and sql.ref or sql.id with',
+    ]);
+  });
+
+  // At level high the code-review skill keeps 10 findings and cuts the minor ones first.
+  it('ADR0065 the code-reviewer agent keeps every finding of the code-review skill', () => {
+    expect(agentBody(path)).toContain('code-review skill at level high with `--max-findings all`');
+  });
 });
 
 // CLAUDE.md names the subagents of the review before the pull request by their agent file, so a
@@ -161,6 +193,44 @@ describe('the agent files CLAUDE.md names', () => {
     }
   });
 });
+
+/** The part of .coderabbit.yaml that the code-reviewer agent reads. */
+interface CodeRabbitConfig {
+  readonly reviews: {
+    readonly path_instructions: readonly { readonly path: string; readonly instructions: string }[];
+  };
+}
+
+/** Words in lower case with backticks and list markers dropped, so formatting hides no copy. */
+function wordsOf(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replaceAll('`', '')
+    .split(/\s+/)
+    .filter((word) => word !== '' && word !== '-');
+}
+
+/**
+ * Each run of eight words that the agent's body shares with one of the instructions, the first
+ * run of each instruction only.
+ */
+function sharedWordRuns(body: string, instructions: readonly string[]): string[] {
+  const length = 8;
+  const bodyWords = ` ${wordsOf(body).join(' ')} `;
+  return instructions.flatMap((instruction) => {
+    const words = wordsOf(instruction);
+    const runs = words
+      .slice(0, Math.max(0, words.length - length + 1))
+      .map((_, start) => words.slice(start, start + length).join(' '));
+    const shared = runs.find((run) => bodyWords.includes(` ${run} `));
+    return shared === undefined ? [] : [shared];
+  });
+}
+
+/** The instructions of a Claude Code agent file: everything after its frontmatter. */
+function agentBody(path: string): string {
+  return readFileSync(join(root, path), 'utf8').split(/^---$/m).slice(2).join('---');
+}
 
 // The blast-radius review before the pull request (ADR 0086) runs as a project subagent in a fresh
 // context, like the code review. It judges how much harm a wrong merge would do and ends with the
