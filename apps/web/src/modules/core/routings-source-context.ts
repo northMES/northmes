@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { useShell } from '@northmes/web-sdk';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { RoutingsPreview, RoutingsSnapshot, RoutingsSource } from './routings-data.ts';
 import { g1RoutingsSource } from './routings-data-g1.ts';
 
@@ -23,10 +24,12 @@ export interface RoutingsState {
 
 /**
  * The snapshot a routing page reads: one load through the seam, with the page state the URL's
- * preview asks the mock source for. A change of the preview loads again.
+ * preview asks the mock source for. A change of the preview loads again. The fixture holds one
+ * plant's routings, so another plant than the snapshot's reads none of them.
  */
 export function useRoutings(preview: RoutingsPreview | undefined): RoutingsState {
   const source = useContext(RoutingsSourceContext);
+  const { plant } = useShell();
   const [snapshot, setSnapshot] = useState<RoutingsSnapshot | undefined>(undefined);
   const [error, setError] = useState<unknown>(undefined);
   const [attempt, setAttempt] = useState(0);
@@ -53,8 +56,15 @@ export function useRoutings(preview: RoutingsPreview | undefined): RoutingsState
       cancelled = true;
     };
   }, [source, preview, attempt]);
+  const ofPlant = useMemo(
+    () =>
+      snapshot === undefined || snapshot.plant.slug === plant
+        ? snapshot
+        : { ...snapshot, routings: [] },
+    [snapshot, plant],
+  );
   return {
-    snapshot,
+    snapshot: ofPlant,
     error,
     retry: () =>
       new Promise<void>((resolve) => {

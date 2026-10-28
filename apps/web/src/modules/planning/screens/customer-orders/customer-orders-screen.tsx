@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatDuration, formatPlantDate, formatPlantDay } from '@northmes/contracts/format';
+import { planningLinks } from '@northmes/planning-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ChartNoAxesGantt, Clock, Ellipsis, Plus } from 'lucide-react';
@@ -97,10 +98,14 @@ function RowActions({ row, view }: { readonly row: LineListRow; readonly view: C
   return (
     <span className="flex items-center justify-end gap-1">
       {links === undefined ? (
-        <Button variant="outline" className="h-8 px-2.5" disabled>
+        <Link
+          to={planningLinks.orders.new({ plant: view.plant }, { line: row.line.id }).href}
+          className={`${buttonVariants({ variant: 'outline' })} h-8 px-2.5`}
+          aria-label={`New order for customer order ${row.line.customerOrder} line ${row.line.line}`}
+        >
           <Plus aria-hidden />
           New order
-        </Button>
+        </Link>
       ) : (
         <Link to={links.gantt} className={`${buttonVariants({ variant: 'outline' })} h-8 px-2.5`}>
           <ChartNoAxesGantt aria-hidden />
@@ -121,7 +126,15 @@ function RowActions({ row, view }: { readonly row: LineListRow; readonly view: C
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-48">
           {links === undefined ? (
-            <DropdownMenuItem disabled>New order</DropdownMenuItem>
+            <DropdownMenuItem
+              render={
+                <Link
+                  to={planningLinks.orders.new({ plant: view.plant }, { line: row.line.id }).href}
+                />
+              }
+            >
+              New production order
+            </DropdownMenuItem>
           ) : (
             <>
               <DropdownMenuItem render={<Link to={links.order} />}>Open order</DropdownMenuItem>
@@ -300,7 +313,14 @@ export function CustomerOrdersScreen() {
     state = {
       status: 'empty',
       title: 'No customer orders yet',
-      description: 'Customer orders come from the ERP with the next import.',
+      description:
+        'Customer orders come from the ERP with the next import, or a planner enters one here.',
+      action: (
+        <Link to={planningLinks.customerOrders.new({ plant }).href} className={buttonVariants()}>
+          <Plus aria-hidden />
+          New customer order
+        </Link>
+      ),
     };
   }
   return (
@@ -312,6 +332,12 @@ export function CustomerOrdersScreen() {
             ERP data as of {plantTime(snapshot, snapshot.erp.importedAtMs)}
           </span>
         )
+      }
+      actions={
+        <Link to={planningLinks.customerOrders.new({ plant }).href} className={buttonVariants()}>
+          <Plus aria-hidden />
+          New customer order
+        </Link>
       }
       toolbar={
         <div className="flex flex-col gap-2">
