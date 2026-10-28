@@ -4,7 +4,8 @@ import { coreLinks } from '@northmes/core-contracts';
 import { expect, plant, test } from '../fixtures.ts';
 
 // The axe check of ADR 0021 over the tools pages (design #729, TO1 to TO8): the tools list with
-// its Scope menu open, a tool's page, and the list's loading, empty, failed and no-access states.
+// its Scope menu open, a tool's page, the list's loading, empty, failed and no-access states, and
+// a tool's loading, not-found, failed and no-access states.
 // The pages read the fixture G1, so every state is the same in every run; the preview key opens
 // the states on mock data.
 
@@ -65,5 +66,35 @@ test.describe('the tools pages', () => {
       page.getByRole('heading', { level: 2, name: 'You need the permission to read master data' }),
     ).toBeVisible();
     await checkA11y('the tools list without access');
+
+    // A tool's page takes the same preview key, and a code no tool has shows its not-found state.
+    const t311 = coreLinks.tools.tool({ plant, toolCode: 'T-311' }).href;
+    await page.goto(withSearch(t311, { preview: 'loading' }));
+    await expect(page.getByRole('heading', { level: 1, name: 'Tool T-311' })).toBeVisible();
+    // The page frame marks the loading tool busy; it draws no skeleton, so the busy element is
+    // empty and never visible.
+    await expect(page.locator('main [aria-busy="true"]')).toHaveCount(1);
+    await checkA11y('a tool loading', { busy: true });
+
+    await page.goto(coreLinks.tools.tool({ plant, toolCode: 'T-000' }).href);
+    await expect(
+      page.getByRole('heading', {
+        level: 2,
+        name: 'This tool does not exist or you cannot see it',
+      }),
+    ).toBeVisible();
+    await checkA11y('a tool that does not exist');
+
+    await page.goto(withSearch(t311, { preview: 'error' }));
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Could not load the tool' }),
+    ).toBeVisible();
+    await checkA11y('a tool failed');
+
+    await page.goto(withSearch(t311, { preview: 'forbidden' }));
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'You need the permission to read master data' }),
+    ).toBeVisible();
+    await checkA11y('a tool without access');
   });
 });
