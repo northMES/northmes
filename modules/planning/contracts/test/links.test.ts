@@ -15,6 +15,12 @@ describe('planningLinks', () => {
     ).toBe('/plant-a/planning/customer-orders/40211');
   });
 
+  it("#762 planningLinks.settings.boardFields builds the href of a plant's board fields page", () => {
+    expect(planningLinks.settings.boardFields({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/planning/settings/board-fields',
+    );
+  });
+
   it("planningLinks.release builds the href of a plant's list of orders to release", () => {
     expect(planningLinks.release({ plant: 'plant-a' }).href).toBe('/plant-a/planning/release');
   });

@@ -9,6 +9,7 @@ import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState }
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
+import { useBoardFields } from '../../board-fields-store.ts';
 import { MoveDialog } from '../../components/move-dialog/index.ts';
 import { RangeControls } from '../../components/range-controls/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
@@ -347,6 +348,7 @@ export function BoardScreen() {
     setDetailFor(first.jobOrder.id);
   }, [model, allRows, search.order]);
 
+  const boardFields = useBoardFields(plant);
   // Up and Down in move mode step through the allowed machines in the board's row order, past the
   // machines of collapsed groups (plan 07, Moving without dragging).
   const machineSteps = (allowed: readonly string[]) =>
@@ -433,8 +435,9 @@ export function BoardScreen() {
         code === undefined ? 'no machine' : (equipment.get(code)?.name ?? code),
       draftRowIds: draftIds,
       ...(moveActions !== undefined && { move: moveActions }),
+      boardFields,
     };
-  }, [snapshot, scale, timeZone, range, search.order, draftIds, moveActions, model]);
+  }, [snapshot, scale, timeZone, range, search.order, draftIds, moveActions, model, boardFields]);
 
   // A target takes focus and scrolls into view past the sticky axes, which the scroll padding keeps
   // clear (WCAG 2.4.11). A target in the sticky machine column or the pinned Not placed row is in

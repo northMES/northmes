@@ -32,4 +32,9 @@ export const planningLinks = defineModuleLinks('planning', {
     path: 'customer-orders',
     children: { customerOrder: { path: '$customerOrderId' } },
   },
+  /**
+   * The planning pages of plant settings (ADR 0066): the board fields, which choose what a job
+   * order block and its hover card show (plan 07, Board settings; #762).
+   */
+  settings: { path: 'settings', children: { boardFields: { path: 'board-fields' } } },
 });

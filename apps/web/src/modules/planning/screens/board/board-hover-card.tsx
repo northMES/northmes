@@ -40,30 +40,36 @@ export function boardHoverFields(
   const at = (ms: number) => formatPlantDateTime(ms, timeZone);
   const analysis = snapshot.analysis.orders[order.id];
   const fields: HoverField[] = [
-    { label: 'Operation', value: `${operation.sequence}, ${operation.name}` },
-    { label: 'Article', value: order.article },
-    { label: 'Quantity', value: quantityText(jobOrder.quantity) },
+    { id: 'operation', label: 'Operation', value: `${operation.sequence}, ${operation.name}` },
+    { id: 'article', label: 'Article', value: order.article },
+    { id: 'quantity', label: 'Quantity', value: quantityText(jobOrder.quantity) },
   ];
   if (jobOrder.placement !== undefined) {
     fields.push(
-      { label: 'Setup start', value: at(jobOrder.placement.setupStartMs) },
-      { label: 'Run start', value: at(jobOrder.placement.runStartMs) },
-      { label: 'End', value: at(jobOrder.placement.endMs) },
+      { id: 'setupStart', label: 'Setup start', value: at(jobOrder.placement.setupStartMs) },
+      { id: 'runStart', label: 'Run start', value: at(jobOrder.placement.runStartMs) },
+      { id: 'end', label: 'End', value: at(jobOrder.placement.endMs) },
     );
   }
   fields.push(
     {
+      id: 'setupAndRun',
       label: 'Planned',
       value: `Setup ${formatDuration(jobOrder.plannedSetupS)}, run ${formatDuration(jobOrder.plannedRunS)}`,
     },
-    { label: 'Machine', value: machine },
-    { label: 'Order deadline', value: at(order.deadlineMs) },
+    { id: 'machine', label: 'Machine', value: machine },
+    { id: 'orderDeadline', label: 'Order deadline', value: at(order.deadlineMs) },
     {
+      id: 'lateBy',
       label: 'Late by',
       value: analysis?.late ? formatDuration(-analysis.slackElapsedS) : 'Not late',
     },
-    { label: 'Status', value: statusLabel(jobOrder.status) },
-    { label: 'Soft lock', value: jobOrder.held === true ? 'Another planner' : 'Nobody' },
+    { id: 'status', label: 'Status', value: statusLabel(jobOrder.status) },
+    {
+      id: 'board:softLock',
+      label: 'Soft lock',
+      value: jobOrder.held === true ? 'Another planner' : 'Nobody',
+    },
   );
   return fields;
 }
@@ -103,7 +109,7 @@ export function BoardHoverCard({
       )}
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
         {boardHoverFields(row, snapshot, machine).map((field) => (
-          <div key={field.label} className="contents">
+          <div key={field.id} className="contents">
             <dt className="opacity-80">{field.label}</dt>
             <dd className="font-mono text-xs">{field.value}</dd>
           </div>

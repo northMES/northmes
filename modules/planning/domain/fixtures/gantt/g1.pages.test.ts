@@ -90,6 +90,37 @@ describe('the pages fixture beside G1 (plan 18, the planning pages)', () => {
     }
   });
 
+  it('#762 gives ERP data to imported orders only, each key once per order', () => {
+    for (const [number, origin] of Object.entries(g1Pages.orders)) {
+      const keys = (origin.externalData ?? []).map((entry) => entry.key);
+      if (origin.owner === 'northmes') expect(keys, number).toEqual([]);
+      expect(new Set(keys).size, number).toBe(keys.length);
+    }
+    const withData = Object.values(g1Pages.orders).filter(
+      (origin) => (origin.externalData ?? []).length > 0,
+    );
+    expect(withData.length).toBeGreaterThan(1);
+  });
+
+  it('#762 fills its module fields on job orders of G1 only', () => {
+    const jobOrders = new Set(
+      g1.productionOrders.flatMap((order) => order.jobOrders.map((row) => row.id)),
+    );
+    expect(g1Pages.moduleFields.length).toBeGreaterThan(0);
+    for (const field of g1Pages.moduleFields) {
+      for (const id of Object.keys(field.values)) {
+        expect(jobOrders.has(id), `${field.id} ${id}`).toBe(true);
+      }
+    }
+  });
+
+  it("#762 names the company's block fields and hover fields, at most 4 block fields", () => {
+    const { block, hover } = g1Pages.boardFields.company;
+    expect(block.length).toBeGreaterThan(0);
+    expect(block.length).toBeLessThanOrEqual(4);
+    expect(hover.length).toBeGreaterThan(0);
+  });
+
   it('names machines of the plant in its deviations, which G1 itself keeps empty', () => {
     expect(g1.calendar.deviations).toEqual([]);
     expect(g1Pages.calendar.deviations).toHaveLength(2);

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { createContext, useContext } from 'react';
+import type { BoardFieldLists } from '../../board-fields.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { ClosedWindow, TimeScale } from '../../timeline/time-scale.ts';
 import type { MovePreview, MoveState } from './gantt-move.ts';
@@ -62,6 +63,8 @@ export interface GanttViewContext {
   readonly runActions?: GanttRunActions;
   /** Show critical chain from a row's menu. */
   readonly toggleChain?: (orderId: string) => void;
+  /** The plant's block and hover fields (#762). */
+  readonly boardFields: BoardFieldLists;
 }
 
 const GanttContext = createContext<GanttViewContext | undefined>(undefined);
