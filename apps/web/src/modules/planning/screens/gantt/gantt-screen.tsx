@@ -102,6 +102,21 @@ const defaultZoom = 'week';
 const treePaneShare = 0.4;
 
 /**
+ * "Material short: 1004.10. No longer material short: 1005.20.", or nothing when no warning
+ * changed.
+ */
+function shortageChangeText(
+  added: readonly string[],
+  cleared: readonly string[],
+): string | undefined {
+  const parts = [
+    ...(added.length > 0 ? [`Material short: ${added.join(', ')}.`] : []),
+    ...(cleared.length > 0 ? [`No longer material short: ${cleared.join(', ')}.`] : []),
+  ];
+  return parts.length === 0 ? undefined : parts.join(' ');
+}
+
+/**
  * The order Gantt (plan 18, The order Gantt), the board route's view=gantt: the tree of orders,
  * operations and job orders on the left, the time area on the right, both inside one treegrid, the
  * pinned Not placed row under the time header, and the toolbar of D5. The URL holds the view, the
@@ -514,6 +529,23 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     }
     return { materialShortages: byOperation, materialShortOrderIds: orderIds };
   }, [inventory]);
+  // A draft change that makes an operation material short, or clears one, is said once after the
+  // move's own message. A load, a new range or a Save sets the warnings the Gantt shows, unsaid.
+  const spokenShortages = useRef<
+    { committed: GanttSnapshot; draft: typeof draft; operations: readonly string[] } | undefined
+  >(undefined);
+  useEffect(() => {
+    if (committed === undefined) return;
+    const operations = [...materialShortages.keys()];
+    const before = spokenShortages.current;
+    spokenShortages.current = { committed, draft, operations };
+    if (before === undefined || before.committed !== committed || before.draft === draft) return;
+    const message = shortageChangeText(
+      operations.filter((operation) => !before.operations.includes(operation)),
+      before.operations.filter((operation) => !operations.includes(operation)),
+    );
+    if (message !== undefined) announce(message);
+  }, [committed, draft, materialShortages]);
   const boardFields = useBoardFields(plant);
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
