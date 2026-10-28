@@ -70,6 +70,11 @@ test.describe('keyboard move mode on the order Gantt', () => {
     await expect(page.getByRole('button', { name: 'My draft, 2 changes' })).toBeVisible();
     await checkA11y('a row changed in the draft');
 
+    // Focus on the moved block keeps its hover card open, and the card lists the plant's hover
+    // fields (#762), so it can cover the toolbar. Escape closes it and keeps focus (D3, IN2).
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('tooltip')).toHaveCount(0);
+    await expect(block).toBeFocused();
     await page.getByRole('button', { name: 'My draft, 2 changes' }).click();
     const drawer = page.locator('[role="dialog"][data-draft-drawer]');
     await expect(drawer).toBeVisible();
