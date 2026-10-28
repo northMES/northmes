@@ -72,6 +72,29 @@ export const boardFieldLists = z.object({
   hover: z.array(z.string()),
 });
 
+/**
+ * The values of the planning rules of plan 07, Settings, at one scope; a rule left out takes the
+ * value of the scope above. The lock expiry is a duration in seconds, the canonical unit of plan
+ * 07's common columns. The upper bounds, 720 h for the frozen window and 24 h for the lock
+ * expiry, are plan proposals (#766). The Zod definitions move to @northmes/planning-contracts
+ * with the planning settings API.
+ */
+export const planningRuleValues = z
+  .object({
+    planningFactorSource: z.enum(['oeeTarget', 'factor', 'none']),
+    planningFactor: z.number().gt(0).max(2),
+    frozenHours: z.number().nonnegative().max(720),
+    leadTimeBasis: z.enum(['elapsed', 'working']),
+    retoolOverlapsLeadTime: z.boolean(),
+    deadlineRule: z.enum(['startOfDay', 'endOfShift']),
+    softLockIdleExpiry: z.number().int().positive().max(86_400),
+    countPurchaseRequisitions: z.boolean(),
+  })
+  .partial()
+  .strict();
+
+export type PlanningRuleValues = z.infer<typeof planningRuleValues>;
+
 export const routing = z.object({
   article: z.string(),
   version: z.number().int().positive(),
@@ -140,6 +163,15 @@ export const ganttPagesFixture = z.object({
   moduleFields: z.array(moduleField),
   /** The board fields the company sets; a plant uses them until it sets its own (#762). */
   boardFields: z.object({ company: boardFieldLists }),
+  /**
+   * The planning rules of plan 07, Settings (#766): the company's values and each plant's own, by
+   * slug. A rule neither sets has no value; the four without a recorded default need one before a
+   * plant opens (ADR 0066). The company's lock expiry and purchase requisitions are invented.
+   */
+  planningRules: z.object({
+    company: planningRuleValues,
+    plants: z.record(z.string(), planningRuleValues),
+  }),
   /** The calendars beside G1's A1, which only the plant settings pages show (#770). */
   calendars: z.array(
     z.object({

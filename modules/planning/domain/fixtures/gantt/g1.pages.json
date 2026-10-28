@@ -336,6 +336,23 @@
       ]
     }
   },
+  "planningRules": {
+    "company": {
+      "planningFactorSource": "oeeTarget",
+      "leadTimeBasis": "elapsed",
+      "retoolOverlapsLeadTime": true,
+      "deadlineRule": "startOfDay",
+      "softLockIdleExpiry": 1800,
+      "countPurchaseRequisitions": false
+    },
+    "plants": {
+      "plant-a": {
+        "planningFactorSource": "none",
+        "frozenHours": 24,
+        "deadlineRule": "endOfShift"
+      }
+    }
+  },
   "calendars": [
     {
       "name": "B3",

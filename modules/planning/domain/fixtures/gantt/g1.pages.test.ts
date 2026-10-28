@@ -121,6 +121,24 @@ describe('the pages fixture beside G1 (plan 18, the planning pages)', () => {
     expect(hover.length).toBeGreaterThan(0);
   });
 
+  it("#766 holds the company's planning rules and Plant A's own, which together are G1's settings", () => {
+    const { company, plants } = g1Pages.planningRules;
+    const plantA = { ...company, ...plants[g1.plant.slug] };
+    expect(plantA).toMatchObject({
+      planningFactorSource: g1.settings.planningFactorSource,
+      frozenHours: g1.settings.frozenHours,
+      leadTimeBasis: g1.settings.leadTimeBasis,
+      retoolOverlapsLeadTime: g1.settings.retoolOverlapsLeadTime,
+      deadlineRule: g1.settings.deadlineRule,
+    });
+    // Plant A sets three rules of its own; the rest come from the company.
+    expect(Object.keys(plants[g1.plant.slug] ?? {}).sort()).toEqual([
+      'deadlineRule',
+      'frozenHours',
+      'planningFactorSource',
+    ]);
+  });
+
   it('names machines of the plant in its deviations, which G1 itself keeps empty', () => {
     expect(g1.calendar.deviations).toEqual([]);
     expect(g1Pages.calendar.deviations).toHaveLength(2);
