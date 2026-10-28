@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 
@@ -37,6 +37,26 @@ const northmesImage = 'ghcr.io/northmes/northmes:${NORTHMES_VERSION:?set NORTHME
 
 const secretsOf = (service: Service | undefined) =>
   (service?.secrets ?? []).map((secret) => (typeof secret === 'string' ? secret : secret.source));
+
+/** The default of each `${VAR:-default}` interpolation in compose.yaml, by variable. */
+const composeDefaults: Record<string, string> = Object.fromEntries(
+  [...read('deploy/compose.yaml').matchAll(/\$\{([A-Z_]+):-([^}]*)\}/g)].map(([, name, value]) => [
+    name,
+    value,
+  ]),
+);
+
+/** The assignments of deploy/northmes.env.example: the active lines and the commented-out ones. */
+function exampleEnv(): { active: Record<string, string>; commented: Record<string, string> } {
+  const active: Record<string, string> = {};
+  const commented: Record<string, string> = {};
+  for (const line of read('deploy/northmes.env.example').split('\n')) {
+    const match = /^(#\s*)?([A-Z_]+)=(.*)$/.exec(line);
+    if (match?.[2] === undefined) continue;
+    (match[1] === undefined ? active : commented)[match[2]] = match[3] ?? '';
+  }
+  return { active, commented };
+}
 
 describe('the Compose bundle (ADR 0080)', () => {
   it('runs db, bootstrap, migrate, app and caddy, and backup when its profile is on', () => {
@@ -125,26 +145,50 @@ describe('the Compose bundle (ADR 0080)', () => {
     }
   });
 
-  it('caps app memory from .env and checks app health with node, which the image has', () => {
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
-    expect(services.app?.mem_limit).toBe('${NORTHMES_APP_MEM_LIMIT:-2g}');
+  it('caps app memory from .env with a default that the example .env shows, and checks app health with node, which the image has', () => {
+    expect(services.app?.mem_limit).toMatch(/^\$\{NORTHMES_APP_MEM_LIMIT:-\d+[gm]\}$/);
     expect(services.app?.healthcheck?.test.slice(0, 2)).toEqual(['CMD', 'node']);
-    expect(read('deploy/northmes.env.example')).toContain('# NORTHMES_APP_MEM_LIMIT=2g');
+    expect(exampleEnv().commented.NORTHMES_APP_MEM_LIMIT).toBe(
+      composeDefaults.NORTHMES_APP_MEM_LIMIT,
+    );
   });
 
-  it("passes the public API's rate limits from .env to app, off by default (ADR 0073)", () => {
-    expect(services.app?.environment).toMatchObject({
-      // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
-      NORTHMES_API_RATE_LIMIT: '${NORTHMES_API_RATE_LIMIT:-off}',
-      // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
-      NORTHMES_API_RATE_LIMIT_READS: '${NORTHMES_API_RATE_LIMIT_READS:-600}',
-      // biome-ignore lint/suspicious/noTemplateCurlyInString: Compose reads the placeholder from .env.
-      NORTHMES_API_RATE_LIMIT_WRITES: '${NORTHMES_API_RATE_LIMIT_WRITES:-60}',
-    });
-    const example = read('deploy/northmes.env.example');
-    expect(example).toContain('# NORTHMES_API_RATE_LIMIT=on');
-    expect(example).toContain('# NORTHMES_API_RATE_LIMIT_READS=600');
-    expect(example).toContain('# NORTHMES_API_RATE_LIMIT_WRITES=60');
+  it("passes the public API's rate limits from .env to app, off by default, with the limits the example .env shows (ADR 0073)", () => {
+    const { commented } = exampleEnv();
+
+    for (const name of [
+      'NORTHMES_API_RATE_LIMIT',
+      'NORTHMES_API_RATE_LIMIT_READS',
+      'NORTHMES_API_RATE_LIMIT_WRITES',
+    ]) {
+      expect(services.app?.environment?.[name], name).toMatch(
+        new RegExp(`^\\$\\{${name}:-[^}]+\\}$`),
+      );
+    }
+    expect(composeDefaults.NORTHMES_API_RATE_LIMIT).toBe('off');
+    // The example's line turns the limits on; its request counts are the defaults.
+    expect(commented.NORTHMES_API_RATE_LIMIT).toBe('on');
+    expect(commented.NORTHMES_API_RATE_LIMIT_READS).toBe(
+      composeDefaults.NORTHMES_API_RATE_LIMIT_READS,
+    );
+    expect(commented.NORTHMES_API_RATE_LIMIT_WRITES).toBe(
+      composeDefaults.NORTHMES_API_RATE_LIMIT_WRITES,
+    );
+    expect(Number(composeDefaults.NORTHMES_API_RATE_LIMIT_READS)).toBeGreaterThan(0);
+    expect(Number(composeDefaults.NORTHMES_API_RATE_LIMIT_WRITES)).toBeGreaterThan(0);
+  });
+
+  // A variable that compose.yaml reads from .env with a default has a line in the example, active
+  // or commented out, so an operator finds every setting there.
+  it('the example .env names every variable that compose.yaml reads with a default', () => {
+    const { active, commented } = exampleEnv();
+
+    expect(Object.keys(composeDefaults), 'variables with a default').not.toHaveLength(0);
+    for (const name of Object.keys(composeDefaults)) {
+      expect(name in active || name in commented, `${name} in deploy/northmes.env.example`).toBe(
+        true,
+      );
+    }
   });
 
   it('bootstrap, migrate and app reach the bundled db unless NORTHMES_DATABASE_URL names another server', () => {
@@ -160,8 +204,9 @@ describe('the Compose bundle (ADR 0080)', () => {
     );
   });
 
-  it('compose.external-db.yaml keeps db from starting and lets bootstrap start without it', () => {
-    const external = parse(read('deploy/compose.external-db.yaml')) as Compose;
+  it('compose.external-db.yaml keeps db from starting and lets bootstrap start without it, and the example .env shows the COMPOSE_FILE line that adds it', () => {
+    const externalFile = 'compose.external-db.yaml';
+    const external = parse(read(`deploy/${externalFile}`)) as Compose;
 
     expect(Object.keys(external.services).sort()).toEqual(['bootstrap', 'db']);
     expect(external.services.db?.profiles).toEqual(['bundled-db']);
@@ -169,9 +214,14 @@ describe('the Compose bundle (ADR 0080)', () => {
       condition: 'service_healthy',
       required: false,
     });
-    expect(read('deploy/northmes.env.example')).toContain(
-      '# COMPOSE_FILE=compose.yaml:compose.external-db.yaml',
-    );
+    // The commented COMPOSE_FILE line lists the main bundle first and the overlay after it, and
+    // each file it names is in deploy/.
+    const files = exampleEnv().commented.COMPOSE_FILE?.split(':') ?? [];
+    expect(files[0]).toBe('compose.yaml');
+    expect(files).toContain(externalFile);
+    for (const file of files) {
+      expect(existsSync(new URL(`../../deploy/${file}`, import.meta.url)), file).toBe(true);
+    }
   });
 
   it('ADR0045 backup starts only under the backup profile, on the pinned Postgres image, and writes to ./backups', () => {
@@ -187,14 +237,24 @@ describe('the Compose bundle (ADR 0080)', () => {
     expect(backup?.volumes).toEqual(
       expect.arrayContaining(['.:/bundle:ro', './backups:/backups', 'caddy-data:/data']),
     );
-    expect(read('deploy/backup.sh')).toContain('-mtime +6 -delete');
+  });
+
+  // backup.sh deletes a backup older than N days, which keeps N + 1 nightly backups, and the example
+  // .env tells the operator how many days are kept.
+  it('ADR0045 backup.sh keeps the days of backups that the example .env promises', () => {
+    const olderThan = /-mtime \+(\d+) -delete/.exec(read('deploy/backup.sh'))?.[1];
+    const promised = /kept (\d+) days/.exec(read('deploy/northmes.env.example'))?.[1];
+
+    expect(olderThan, 'a find -mtime +N -delete in deploy/backup.sh').toBeDefined();
+    expect(promised, 'a "kept N days" in deploy/northmes.env.example').toBeDefined();
+    expect(Number(olderThan) + 1).toBe(Number(promised));
   });
 
   it('ADR0045 the example .env turns the backup profile on for the bundled db, and the own-Postgres lines turn it off', () => {
-    const example = read('deploy/northmes.env.example');
+    const { active, commented } = exampleEnv();
 
-    expect(example.split('\n')).toContain('COMPOSE_PROFILES=backup');
-    expect(example).toContain('# COMPOSE_PROFILES=');
+    expect(active.COMPOSE_PROFILES?.split(',')).toContain('backup');
+    expect(commented.COMPOSE_PROFILES).toBe('');
   });
 
   it('the example .env holds the version line and no secret', () => {

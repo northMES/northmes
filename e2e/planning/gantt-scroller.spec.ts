@@ -13,28 +13,21 @@ function ganttHref(search: Record<string, string>): string {
 }
 
 test.describe('the time scroller of the order Gantt', () => {
-  test('#685 the grid contains its overscroll and a wheel past the left edge leaves the URL as it is', async ({
+  // The browser turns a sideways overscroll at an edge into a history navigation only when the
+  // scroller lets it through, and headless Chromium never does, so the computed style is the guard.
+  test('#685 the grid contains its overscroll, so a wheel past an edge never navigates the history', async ({
     page,
     signIn,
   }) => {
     await signIn(ganttHref({ zoom: 'day', from: '2026-11-04' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
-    const url = page.url();
 
     const overscroll = await gantt.evaluate((grid) => {
       const style = getComputedStyle(grid);
       return { x: style.overscrollBehaviorX, y: style.overscrollBehaviorY };
     });
     expect(overscroll).toEqual({ x: 'contain', y: 'contain' });
-
-    const box = await gantt.boundingBox();
-    if (box === null) throw new Error('no grid');
-    await page.mouse.move(box.x + box.width * 0.8, box.y + box.height / 2);
-    for (let count = 0; count < 5; count += 1) await page.mouse.wheel(-600, 0);
-    await page.waitForTimeout(300);
-    expect(page.url()).toBe(url);
-    await expect(gantt).toBeVisible();
   });
 
   test('#685 scrolling to the right edge loads the next span of the preset and keeps from', async ({

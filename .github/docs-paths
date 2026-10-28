@@ -1,0 +1,44 @@
+# The developer-facing surfaces and the pages under apps/docs that describe each one (ADR 0088).
+# PR / pr docs (scripts/ci/pr-docs.mjs) reads this file from the pull request's checkout: when a
+# pull request changes a file under a surface and its Docs section says none, the reason must name
+# the surface. The code-reviewer agent reads the pages of each surface the diff touches before the
+# pull request opens. test/meta/docs-paths.test.ts keeps the file in step with the folders: every
+# pattern matches a tracked file, every page exists, and every surface ADR 0088 lists has an entry.
+#
+# An entry is a pattern in the syntax of .github/risk-paths (a leading slash anchors it at the root,
+# a pattern that names a folder covers everything below it), then the pages that describe the
+# surface, separated by spaces, or "none yet" while the surface has no page. A page lives under
+# apps/docs; a file under docs/ describes a decision, not the product, and is no page. The screens
+# and the use guides are not mapped: user guides come in one docs task per epic (ADR 0049), and the
+# screenshots are regenerated before each release.
+
+# The HTTP surface: the public REST API, its credentials and rate limits, the trusted proxy and the
+# web origins. The install guide describes the rate limits; the REST, authentication and errors
+# pages of the Integrate group are not written yet.
+/apps/backend/src/http/ apps/docs/install.mdx
+
+# The GraphQL endpoint that the web app and plugin screens call: its authentication, plant header,
+# paging, errors and limits.
+/apps/backend/src/graphql/ apps/docs/api.mdx
+
+# The MIT packages that plugins build on (ADR 0056). The Extend pages and the SDK reference come
+# with the generators of ADR 0048.
+/packages/sdk/ none yet
+/packages/web-sdk/ none yet
+
+# Each module and its contracts package. The module pages under apps/docs/modules/<id>/ are
+# generated from the manifest and the contracts later.
+/modules/core/ none yet
+/modules/core/contracts/ none yet
+/modules/planning/ none yet
+/modules/planning/contracts/ none yet
+
+# The configuration schema (ADR 0060). The plugin guide describes the plugins list of
+# northmes.config.json; the configuration reference is generated later.
+/apps/backend/src/boot/config-file.ts apps/docs/plugins.mdx
+
+# The example plugins, which are the source of the tutorial pages once those exist.
+/examples/plugin-article-count/ none yet
+/examples/plugin-article-log/ none yet
+/examples/plugin-sidebar-page/ none yet
+/examples/plugin-validator/ none yet
