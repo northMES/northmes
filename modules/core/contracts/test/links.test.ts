@@ -79,6 +79,13 @@ describe('coreLinks', () => {
     );
   });
 
+  it('#767 coreLinks builds the href of the plant page in plant settings at the plant root', () => {
+    expect(coreLinks.plant({ plant: 'plant-a' }).href).toBe('/plant-a/plant');
+    expect(coreLinks.plant({ plant: 'plant-a' }, { preview: 'noCalendar' }).href).toBe(
+      '/plant-a/plant?preview=noCalendar',
+    );
+  });
+
   it('#728 coreLinks builds the hrefs of the customers register and a customer at the plant root', () => {
     expect(coreLinks.customers({ plant: 'plant-a' }, { late: '1' }).href).toBe(
       '/plant-a/customers?late=1',
