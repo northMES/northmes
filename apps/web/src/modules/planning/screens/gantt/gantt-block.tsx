@@ -4,11 +4,12 @@ import { cn } from 'cn';
 import { Clock, Lock, Pencil, TriangleAlert } from 'lucide-react';
 import { type KeyboardEvent, type PointerEvent, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
+import { blockLines } from '../../board-fields.ts';
 import { blockName, blockStates } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
 import { GanttHoverCard } from './gantt-hover-card.tsx';
 import { tooltipText } from './gantt-move.ts';
-import { type JobOrderRow, quantityText } from './gantt-rows.ts';
+import type { JobOrderRow } from './gantt-rows.ts';
 
 /** The width from which a block shows its first line, its second line, and the setup hatch (D3). */
 const density = { compact: 48, full: 120, setup: 66, cue: 16 } as const;
@@ -40,7 +41,7 @@ export function GanttBlock({
   readonly onChain: boolean;
   readonly onSelect: () => void;
 }) {
-  const { scale, snapshot, machineName, timeZone, draftRowIds, move, materialShortages } =
+  const { scale, snapshot, machineName, timeZone, draftRowIds, move, boardFields, materialShortages } =
     useGanttView();
   const { jobOrder, operation, order } = row;
   // The press in progress: where it started, and whether it has become a drag.
@@ -56,7 +57,13 @@ export function GanttBlock({
   const machine = machineName(jobOrder.equipment);
   const inDraft = draftRowIds?.has(jobOrder.id) === true;
   const material = materialShortages?.get(operation.displayNumber);
-  const name = blockName(row, snapshot, machine, { onChain, inDraft, material });
+  const lines = blockLines(boardFields.block, row, snapshot, machineName);
+  const name = blockName(row, snapshot, machine, {
+    onChain,
+    inDraft,
+    material,
+    extraNames: lines.extraNames,
+  });
   const states = blockStates(row, snapshot, { onChain, inDraft, material });
   const short = material !== undefined && material.length > 0;
   const locked = states.some((state) => state.kind === 'locked');
@@ -263,14 +270,25 @@ export function GanttBlock({
               {locked && <Lock aria-hidden className="size-3.5 shrink-0" />}
               {inDraft && <Pencil aria-hidden className="size-3.5 shrink-0" />}
               {late && <Clock aria-hidden className="size-3.5 shrink-0" />}
-              <span className="truncate">
-                {operation.displayNumber} {operation.name}
+              <span data-block-line="1" className="truncate">
+                {lines.first === undefined
+                  ? operation.displayNumber
+                  : `${operation.displayNumber} ${lines.first}`}
               </span>
             </span>
           )}
-          {width >= density.full && (
-            <span className="relative z-[2] block truncate">
-              {order.article}, {quantityText(jobOrder.quantity)}
+          {/* The block fields after the first (plan 07, Board settings; #762): the second line at
+              full density, with the module fields at its trailing edge (D3 IN29). */}
+          {width >= density.full && (lines.second !== '' || lines.trailing.length > 0) && (
+            <span className="relative z-[2] flex items-center gap-1.5">
+              <span data-block-line="2" className="min-w-0 flex-1 truncate">
+                {lines.second}
+              </span>
+              {lines.trailing.map((field) => (
+                <span key={field.id} data-block-trailing className="shrink-0 font-semibold">
+                  {field.text}
+                </span>
+              ))}
             </span>
           )}
         </TooltipTrigger>
@@ -284,7 +302,8 @@ export function GanttBlock({
           <GanttHoverCard
             row={row}
             snapshot={snapshot}
-            machineName={machine}
+            machineName={machineName}
+            hoverIds={boardFields.hover}
             material={material ?? []}
           />
         </TooltipContent>

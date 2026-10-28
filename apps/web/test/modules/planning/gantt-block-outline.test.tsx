@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
 import { cleanup, render } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
+import { createG1BoardFieldsStore } from '../../../src/modules/planning/board-fields-store.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { GanttBlock } from '../../../src/modules/planning/screens/gantt/gantt-block.tsx';
 import {
@@ -35,6 +37,7 @@ function renderBlock(jobOrderId: string, onChain: boolean) {
     selectedOrderIds: new Set<string>(),
     chainRowIds: new Set(onChain ? [jobOrderId] : []),
     machineName: (code) => code ?? 'no machine',
+    boardFields: createG1BoardFieldsStore().get().company,
   };
   const row = buildGanttRows(snapshot)
     .flatMap((level1) => (level1.kind === 'order' ? jobOrderRowsOf(level1) : []))
