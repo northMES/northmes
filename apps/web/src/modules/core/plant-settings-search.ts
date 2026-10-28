@@ -52,7 +52,14 @@ function commaList() {
     .catch(undefined);
 }
 
+/** The page states of the machines and calendars pages; noCalendar is the plant page's alone. */
 const preview = z.enum(['loading', 'empty', 'error', 'forbidden']).optional().catch(undefined);
+
+/** The page states of the plant page (design #767, PP4 to PP7). */
+const plantPreview = z
+  .enum(['loading', 'error', 'forbidden', 'noCalendar'])
+  .optional()
+  .catch(undefined);
 
 const machineListKeys = z.object({
   q: z
@@ -94,6 +101,15 @@ export function urlSearchOf(view: MachineListSearch): Record<string, unknown> {
 
 export function machinePageSearch(raw: Record<string, unknown>): MachinePageSearch {
   const parsed = preview.parse(raw.preview);
+  return parsed === undefined ? {} : { preview: parsed };
+}
+
+/**
+ * The URL keys of the plant page (design #767): the page state the mock source answers with,
+ * noCalendar among them, the plant before its first calendar version.
+ */
+export function plantPageSearch(raw: Record<string, unknown>): MachinePageSearch {
+  const parsed = plantPreview.parse(raw.preview);
   return parsed === undefined ? {} : { preview: parsed };
 }
 
