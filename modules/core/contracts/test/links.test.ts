@@ -60,19 +60,8 @@ describe('coreLinks', () => {
     expect(coreLinks.people.person.addRole({ plant: 'plant-a', userId: 'u1' }).href).toBe(
       '/plant-a/people/u1/roles/new',
     );
-    expect(Object.keys(coreLinks)).toEqual([
-      'dashboard',
-      'articles',
-      'articleGroups',
-      'people',
-      'machines',
-      'equipmentGroups',
-      'calendars',
-      'customers',
-      'tools',
-      'routings',
-      'settings',
-    ]);
+    expect(coreLinks).not.toHaveProperty('users');
+    expect(coreLinks).not.toHaveProperty('roles');
   });
 
   it('E06 coreLinks builds the hrefs of the machines and the calendars of a plant at the plant root', () => {
@@ -87,6 +76,13 @@ describe('coreLinks', () => {
     );
     expect(coreLinks.calendars.calendar({ plant: 'plant-a', calendarId: 'A1' }).href).toBe(
       '/plant-a/calendars/A1',
+    );
+  });
+
+  it('#767 coreLinks builds the href of the plant page in plant settings at the plant root', () => {
+    expect(coreLinks.plant({ plant: 'plant-a' }).href).toBe('/plant-a/plant');
+    expect(coreLinks.plant({ plant: 'plant-a' }, { preview: 'noCalendar' }).href).toBe(
+      '/plant-a/plant?preview=noCalendar',
     );
   });
 

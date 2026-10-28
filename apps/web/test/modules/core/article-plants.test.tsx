@@ -13,6 +13,7 @@ import { CoreCreateArticle } from '../../../src/modules/core/screens/new-article
 import { viewerQuery } from './access-fixtures.ts';
 import {
   type ArticleNode,
+  answeredAfter,
   article,
   articleQuery,
   articlesPage,
@@ -255,8 +256,8 @@ describe("an article's plants", () => {
 
     const origin = await screen.findByRole('region', { name: 'Origin' });
     await waitFor(() => expect(within(origin).getByText('Plant A')).toBeDefined());
-    // The viewer's answer arrives after the article; give it the time to show any section.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Edit shows once the viewer's answer arrived, so a Plants section would show by then too.
+    expect(await screen.findByRole('link', { name: 'Edit' })).toBeDefined();
     expect(screen.queryByRole('region', { name: 'Plants' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Save plants' })).toBeNull();
   });
@@ -332,13 +333,15 @@ describe("an article's plants", () => {
 
   it('ADR0073-W2 Edit article shows a Plant admin no Plants field', async () => {
     const axle = article('AX-500', 'Axle 20 mm');
-    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: axle.id }).href, [
-      articleQuery(axle),
-      plantEditor(),
-    ]);
+    // The viewer's answer renders nothing else on the edit page, so the article waits for it: the
+    // form then mounts with the permissions known.
+    renderCoreAt(
+      coreLinks.articles.article.edit({ plant, articleId: axle.id }).href,
+      [articleQuery(axle), plantEditor()],
+      { hold: answeredAfter('CoreViewer', 'CoreArticle') },
+    );
 
     expect(await screen.findByRole('textbox', { name: 'Name' })).toBeDefined();
-    await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.queryByRole('region', { name: 'Plants' })).toBeNull();
   });
   it("ADR0073-W2 an article's page shows a Plant admin the plants but no Plants section", async () => {
@@ -350,6 +353,8 @@ describe("an article's plants", () => {
 
     const origin = await screen.findByRole('region', { name: 'Origin' });
     await waitFor(() => expect(within(origin).getByText('Plant A')).toBeDefined());
+    // Edit shows once the viewer's answer arrived, so a Plants section would show by then too.
+    expect(await screen.findByRole('link', { name: 'Edit' })).toBeDefined();
     expect(screen.queryByRole('region', { name: 'Plants' })).toBeNull();
   });
   it('ADR0073-W2 a Plant admin gets Edit and Archive on an article of Plant A alone, and neither on one of Plant A and Plant B or of All plants', async () => {
@@ -360,18 +365,19 @@ describe("an article's plants", () => {
       { node: withPlants(own, true, []), offered: false },
     ];
     for (const { node, offered } of cases) {
-      renderCoreAt(coreLinks.articles.article({ plant, articleId: node.id }).href, [
-        articleQuery(node),
-        plantEditor(),
-      ]);
+      // The page reads the viewer with the article; the article waits for the viewer's answer, so
+      // the actions are those of the permissions once the article shows.
+      renderCoreAt(
+        coreLinks.articles.article({ plant, articleId: node.id }).href,
+        [articleQuery(node), plantEditor()],
+        { hold: answeredAfter('CoreViewer', 'CoreArticle') },
+      );
       const identity = await screen.findByRole('region', { name: 'Identity' });
       await waitFor(() => expect(within(identity).getByText('Axle 20 mm')).toBeDefined());
       if (offered) {
-        expect(await screen.findByRole('link', { name: 'Edit' })).toBeDefined();
+        expect(screen.getByRole('link', { name: 'Edit' })).toBeDefined();
         expect(screen.getByRole('button', { name: 'Archive' })).toBeDefined();
       } else {
-        // The viewer's answer arrives after the article; give it the time to show any action.
-        await new Promise((resolve) => setTimeout(resolve, 50));
         expect(screen.queryByRole('link', { name: 'Edit' })).toBeNull();
         expect(screen.queryByRole('button', { name: 'Archive' })).toBeNull();
       }
@@ -478,19 +484,22 @@ describe("an article's plants", () => {
   it('ADR0073-W2 Edit article saves an article without plants for a user without core.article:assign, whom no hidden Plants field holds back', async () => {
     const user = userEvent.setup();
     const unassigned = withPlants(article('AX-500', 'Axle 20 mm'), false, []);
-    renderCoreAt(coreLinks.articles.article.edit({ plant, articleId: unassigned.id }).href, [
-      articleQuery(unassigned),
-      companyEditor(),
-      updateOf(
-        { ...unassigned, name: 'Axle 22 mm' },
-        { data: { coreUpdateArticle: { ...unassigned, name: 'Axle 22 mm', version: 2 } } },
-      ),
-    ]);
+    // The form starts again when the viewer's answer arrives after the article, so the article
+    // waits for it and the typed name stays.
+    renderCoreAt(
+      coreLinks.articles.article.edit({ plant, articleId: unassigned.id }).href,
+      [
+        articleQuery(unassigned),
+        companyEditor(),
+        updateOf(
+          { ...unassigned, name: 'Axle 22 mm' },
+          { data: { coreUpdateArticle: { ...unassigned, name: 'Axle 22 mm', version: 2 } } },
+        ),
+      ],
+      { hold: answeredAfter('CoreViewer', 'CoreArticle') },
+    );
 
-    await screen.findByRole('textbox', { name: 'Name' });
-    // The viewer's answer arrives after the article; give it the time to settle the form.
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    const name = screen.getByRole('textbox', { name: 'Name' });
+    const name = await screen.findByRole('textbox', { name: 'Name' });
     await user.clear(name);
     await user.type(name, 'Axle 22 mm');
     await user.click(screen.getByRole('button', { name: 'Save article' }));

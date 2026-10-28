@@ -14,6 +14,7 @@ import type { Article } from '../../article.graphql.ts';
 import { plantsLabel } from '../../article-plants.ts';
 import { ArticleRouting } from '../../components/article-routing/index.ts';
 import { useArticle } from '../../use-article.tsx';
+import { useViewer } from '../../use-viewer.ts';
 import { ArticleActions } from './article-actions.tsx';
 
 /** A value of a definition list, or its skeleton while the article loads. */
@@ -182,12 +183,15 @@ function ArticleSections({ article }: { readonly article: Article | undefined })
 export function ArticleScreen() {
   const { plant } = useShell();
   const { article, state, reload } = useArticle();
+  const viewer = useViewer();
   return (
     <PageFrame
       title={article === undefined ? 'Article' : `Article ${article.code}`}
       crumbs={[{ label: 'Articles', href: coreLinks.articles({ plant }).href }]}
       actions={
-        article === undefined ? undefined : <ArticleActions article={article} reload={reload} />
+        article === undefined ? undefined : (
+          <ArticleActions article={article} reload={reload} viewer={viewer} />
+        )
       }
       meta={
         article === undefined ? undefined : (

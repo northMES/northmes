@@ -280,7 +280,7 @@ function change(text: string, from: string, to: string): string {
 }
 
 describe('plan README', () => {
-  it('docs/plan/README.md holds the ledger header, persona table, epic order and M0 ADR checklist that 14-roadmap.md states', () => {
+  describe('the README against the roadmap: the ledger header, the persona table, the epic order and the M0 ADR checklist', () => {
     const roadmap = [
       '# Roadmap',
       '',
@@ -370,7 +370,9 @@ describe('plan README', () => {
       ['docs/adr/0099-invented.md', { status: 'proposed', needsConfirmation: '' }],
     ]);
 
-    expect(readmeDrift(readme, roadmap, adrs)).toEqual([]);
+    it('a README that agrees with the roadmap has no drift', () => {
+      expect(readmeDrift(readme, roadmap, adrs)).toEqual([]);
+    });
 
     // Each case changes the README in one place and must report exactly that drift.
     const cases: { name: string; readme: string; problems: string[] }[] = [
@@ -528,75 +530,85 @@ describe('plan README', () => {
         ],
       },
     ];
-    for (const { name, readme: drifted, problems } of cases) {
-      expect.soft(readmeDrift(drifted, roadmap, adrs), name).toEqual(problems);
-    }
+    it.each(cases)('$name is reported', ({ readme: drifted, problems }) => {
+      expect(readmeDrift(drifted, roadmap, adrs)).toEqual(problems);
+    });
 
-    // GitHub ticks a box written `[X]` too.
-    expect(readmeDrift(change(readme, '- [x] [0004]', '- [X] [0004]'), roadmap, adrs)).toEqual([]);
+    it('a box ticked as [X], which GitHub ticks too, counts as ticked', () => {
+      expect(readmeDrift(change(readme, '- [x] [0004]', '- [X] [0004]'), roadmap, adrs)).toEqual(
+        [],
+      );
+    });
 
-    // The roadmap's tables need their separator rows too.
-    expect(
-      readmeDrift(
-        readme,
-        change(roadmap, '| Persona | Who |\n|---|---|\n', '| Persona | Who |\n'),
-        adrs,
-      ),
-    ).toEqual(['personas: 14-roadmap.md has no table']);
+    it("a roadmap table without its separator row is reported as the roadmap's missing table", () => {
+      expect(
+        readmeDrift(
+          readme,
+          change(roadmap, '| Persona | Who |\n|---|---|\n', '| Persona | Who |\n'),
+          adrs,
+        ),
+      ).toEqual(['personas: 14-roadmap.md has no table']);
+    });
 
     // An ADR listed twice in the checklist is reported once, however the two items differ, and its
     // link problems are not repeated.
-    expect(
-      readmeDrift(
-        change(
-          readme,
-          '- [x] [0004][adr-0004] tooling (accepted)',
-          '- [x] [0004][adr-0004] tooling (accepted)\n- [ ] [0004][adr-0004] tooling again',
-        ),
-        roadmap,
-        adrs,
-      ),
-    ).toEqual(["M0 checklist: ADR 0004 is listed more than once in README.md's checklist"]);
-    expect(
-      readmeDrift(
-        change(
-          change(readme, '0004-tooling.md', '0004-gone.md'),
-          '- [x] [0004][adr-0004] tooling (accepted)',
-          '- [x] [0004][adr-0004] tooling (accepted)\n- [x] [0004][adr-0004] tooling again',
-        ),
-        roadmap,
-        adrs,
-      ),
-    ).toEqual([
-      "M0 checklist: ADR 0004 is listed more than once in README.md's checklist",
-      'M0 checklist: ADR 0004 links to docs/adr/0004-gone.md, which is not tracked',
-    ]);
-
-    // An ADR that the M0 row links twice is reported once.
-    expect(
-      readmeDrift(
-        change(readme, '- [ ] [0003][adr-0003] module package (proposed)\n', ''),
-        change(
+    it('an ADR listed twice in the checklist is reported once, with its link problems once', () => {
+      expect(
+        readmeDrift(
+          change(
+            readme,
+            '- [x] [0004][adr-0004] tooling (accepted)',
+            '- [x] [0004][adr-0004] tooling (accepted)\n- [ ] [0004][adr-0004] tooling again',
+          ),
           roadmap,
-          'and [0003](../adr/0003-module.md).',
-          'and [0003](../adr/0003-module.md), again [0003](../adr/0003-module.md).',
+          adrs,
         ),
-        adrs,
-      ),
-    ).toEqual([
-      "M0 checklist: ADR 0003 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
-    ]);
+      ).toEqual(["M0 checklist: ADR 0004 is listed more than once in README.md's checklist"]);
+      expect(
+        readmeDrift(
+          change(
+            change(readme, '0004-tooling.md', '0004-gone.md'),
+            '- [x] [0004][adr-0004] tooling (accepted)',
+            '- [x] [0004][adr-0004] tooling (accepted)\n- [x] [0004][adr-0004] tooling again',
+          ),
+          roadmap,
+          adrs,
+        ),
+      ).toEqual([
+        "M0 checklist: ADR 0004 is listed more than once in README.md's checklist",
+        'M0 checklist: ADR 0004 links to docs/adr/0004-gone.md, which is not tracked',
+      ]);
+    });
 
-    // A README that lost its sections reports each one, instead of passing for lack of rows.
-    expect(readmeDrift('# NorthMES plan\n', roadmap, adrs)).toEqual([
-      'personas: README.md has no table',
-      'epic order: README.md has no table',
-      'ledger header: README.md has no ledger table',
-      "M0 checklist: ADR 0029 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
-      "M0 checklist: ADR 0004 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
-      "M0 checklist: ADR 0003 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
-    ]);
+    it('an ADR that the M0 row links twice is reported once', () => {
+      expect(
+        readmeDrift(
+          change(readme, '- [ ] [0003][adr-0003] module package (proposed)\n', ''),
+          change(
+            roadmap,
+            'and [0003](../adr/0003-module.md).',
+            'and [0003](../adr/0003-module.md), again [0003](../adr/0003-module.md).',
+          ),
+          adrs,
+        ),
+      ).toEqual([
+        "M0 checklist: ADR 0003 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
+      ]);
+    });
 
+    it('a README that lost its sections reports each one, instead of passing for lack of rows', () => {
+      expect(readmeDrift('# NorthMES plan\n', roadmap, adrs)).toEqual([
+        'personas: README.md has no table',
+        'epic order: README.md has no table',
+        'ledger header: README.md has no ledger table',
+        "M0 checklist: ADR 0029 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
+        "M0 checklist: ADR 0004 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
+        "M0 checklist: ADR 0003 is in the M0 row of 14-roadmap.md and missing from README.md's checklist",
+      ]);
+    });
+  });
+
+  it('docs/plan/README.md agrees with 14-roadmap.md and the tracked ADRs', () => {
     expect(
       readmeDrift(
         readFileSync(join(root, 'docs/plan/README.md'), 'utf8'),

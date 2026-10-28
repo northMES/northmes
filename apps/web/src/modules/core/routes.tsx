@@ -23,6 +23,7 @@ import {
   equipmentGroupPageSearch,
   machineListSearch,
   machinePageSearch,
+  plantPageSearch,
   urlSearchOf as urlSearchOfPlantSettingsList,
 } from './plant-settings-search.ts';
 import { roleListSearch } from './role-list-search.ts';
@@ -220,6 +221,13 @@ export function coreRoutes(plantRoute: PlantRoute) {
     validateSearch: equipmentGroupPageSearch,
     component: lazyScreen('EditEquipmentGroupScreen'),
   });
+  // The plant's own page in plant settings (design #767), on the fixture G1 until the plant API.
+  const plantPageRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.plant).path,
+    validateSearch: plantPageSearch,
+    component: lazyScreen('PlantScreen'),
+  });
   const calendarsRoute = createRoute({
     getParentRoute: () => coreRoute,
     path: linkEntry(coreLinks.calendars).path,
@@ -313,6 +321,7 @@ export function coreRoutes(plantRoute: PlantRoute) {
       newArticleGroupRoute,
       articleGroupRoute,
     ]),
+    plantPageRoute,
     peopleRoute.addChildren([
       peopleListRoute,
       peopleAddRoleRoute,

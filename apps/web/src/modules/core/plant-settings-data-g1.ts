@@ -175,6 +175,8 @@ export const g1PlantSettingsSource: PlantSettingsSource = {
         throw new Error('The plant settings could not be loaded');
       case 'forbidden':
         throw new PlantSettingsForbidden() as Forbidden;
+      case 'noCalendar':
+        return { ...g1PlantSettingsSnapshot(), calendars: [] };
       default:
         return g1PlantSettingsSnapshot();
     }

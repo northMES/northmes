@@ -2,7 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { randomUUIDv7 } from 'node:crypto';
 import { fromBrowser, fromNewClient, hostFactory, queryAsCore } from '@northmes/backend/testing';
-import { createTestApp, gqlClient, query, type TestApp, useTestDatabase } from '@northmes/testing';
+import {
+  createTestApp,
+  gqlClient,
+  type TestApp,
+  useTestDatabase,
+  withClient,
+} from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { devAdmin, devUsers, seed, seedCompany, seedPlants } from './seed.mjs';
 
@@ -122,9 +128,24 @@ describe('the seed', () => {
     });
   });
 
+  /** Reads core's role tables as nm_app with the seed company among its read scopes. */
+  const readAtSeedCompany = <Row>(sql: string, params: readonly unknown[]) =>
+    db.command(
+      {
+        principal: { type: 'system', id: devAdmin.id },
+        scopes: [seedCompany.id],
+        reason: 'E05 read the seed roles',
+      },
+      async (tx) => (await tx.query(sql, [...params])).rows as Row[],
+    );
+
   it("E05-S06 the dev admin holds core's Company admin at the seed company, with every installed permission, so the last-admin rule keeps the seed company's admin", async () => {
-    const roles = await queryAsCore<{ id: string; key: string; scope_id: string; all: boolean }>(
-      db.ownerUrl,
+    const roles = await readAtSeedCompany<{
+      id: string;
+      key: string;
+      scope_id: string;
+      all: boolean;
+    }>(
       `select a.id, r.key, a.scope_id,
               r.permissions @> (select array_agg(key) from core.permission where installed) as all
          from core.role_assignment a join core.role r on r.id = a.role_id
@@ -159,21 +180,21 @@ describe('the seed', () => {
   }
 
   it('E05-S08 the seed has a Plant admin, a planner, an operator and a viewer at plant-a, each with a dev-only password, an email under northmes.test and the role they are named for', async () => {
-    const roles = await queryAsCore<{ username: string; key: string; scope_id: string }>(
-      db.ownerUrl,
-      `select u.username, r.key, a.scope_id
+    const roles = await readAtSeedCompany<{ user_id: string; key: string; scope_id: string }>(
+      `select a.user_id, r.key, a.scope_id
          from core.role_assignment a
          join core.role r on r.id = a.role_id
-         join auth."user" u on u.id = a.user_id
         where a.user_id <> $1
-        order by u.username`,
+        order by a.user_id`,
       [devAdmin.id],
     );
-    const operator = await queryAsCore<{ name: string; permissions: string[]; origin: string }>(
-      db.ownerUrl,
-      `select name, permissions, origin from core.role where key = $1`,
-      [devUsers.operator.roleKey],
-    );
+    const operator = await readAtSeedCompany<{
+      name: string;
+      permissions: string[];
+      origin: string;
+    }>(`select name, permissions, origin from core.role where key = $1`, [
+      devUsers.operator.roleKey,
+    ]);
 
     expect(Object.values(devUsers).map(({ email }) => email.endsWith('@northmes.test'))).toEqual([
       true,
@@ -189,13 +210,13 @@ describe('the seed', () => {
     ).toEqual([]);
     expect(roles).toEqual(
       [
-        { username: devUsers.plantAdmin.username, key: 'core-plant-admin' },
-        { username: devUsers.planner.username, key: 'planning-planner' },
-        { username: devUsers.operator.username, key: devUsers.operator.roleKey },
-        { username: devUsers.viewer.username, key: 'planning-viewer' },
+        { user_id: devUsers.plantAdmin.id, key: 'core-plant-admin' },
+        { user_id: devUsers.planner.id, key: 'planning-planner' },
+        { user_id: devUsers.operator.id, key: devUsers.operator.roleKey },
+        { user_id: devUsers.viewer.id, key: 'planning-viewer' },
       ]
         .map((row) => ({ ...row, scope_id: seedPlants[0]?.id }))
-        .sort((a, b) => a.username.localeCompare(b.username)),
+        .sort((a, b) => a.user_id.localeCompare(b.user_id)),
     );
     expect(operator).toEqual([
       {
@@ -273,9 +294,10 @@ describe('the seed', () => {
   });
 
   it('E05-S05 a seed run on a database seeded before the dev admin had an email to sign in with moves the admin to that email', async () => {
-    await query(
-      db.authUrl,
-      `update auth."user" set email = 'admin@users.northmes.invalid' where id = '${devAdmin.id}'`,
+    await withClient({ connectionString: db.authUrl }, (client) =>
+      client.query(`update auth."user" set email = 'admin@users.northmes.invalid' where id = $1`, [
+        devAdmin.id,
+      ]),
     );
 
     await seed({ appUrl: db.appUrl, ownerUrl: db.ownerUrl });

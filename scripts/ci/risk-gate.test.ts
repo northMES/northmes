@@ -63,9 +63,10 @@ describe('risk gate', () => {
   // does a pattern with ! or [, which CODEOWNERS does not support.
   it('a risk path with whitespace, ! or [ makes the gate throw', () => {
     for (const pattern of ['/deploy/ # note', '/deploy/ @owner', '!/docs/', '/docs/[ab].md']) {
-      expect(() => assessRisk({ ...agentPull(['docs/a.md']), riskPaths: pattern }), pattern).toThrow(
-        /risk-paths/,
-      );
+      expect(
+        () => assessRisk({ ...agentPull(['docs/a.md']), riskPaths: pattern }),
+        pattern,
+      ).toThrow(/risk-paths/);
     }
   });
 
@@ -142,13 +143,18 @@ describe('risk gate', () => {
       expect(result.reasons, impact).toEqual([`has the validation impact ${firstLine}`]);
     }
     for (const impact of low) {
-      expect(assessRisk(agentPull(['docs/guide/start.md'], 'low', impact)).tier, impact).toBe('low');
+      expect(assessRisk(agentPull(['docs/guide/start.md'], 'low', impact)).tier, impact).toBe(
+        'low',
+      );
     }
   });
 
   it('a body without a Validation impact section makes the pull request high', () => {
     const pull = agentPull(['docs/guide/start.md']);
-    const result = assessRisk({ ...pull, body: pull.body.replace('## Validation impact', '## Notes') });
+    const result = assessRisk({
+      ...pull,
+      body: pull.body.replace('## Validation impact', '## Notes'),
+    });
 
     expect(result.tier).toBe('high');
     expect(result.reasons).toEqual(['has no Validation impact section']);
@@ -192,7 +198,10 @@ describe('risk gate', () => {
 
   // PR / openapi diff lets a break of the public API through only when the title marks it with !.
   it('a title that marks a breaking change makes the pull request high', () => {
-    const result = assessRisk({ ...agentPull(['docs/guide/start.md']), title: 'feat(core)!: drop a field' });
+    const result = assessRisk({
+      ...agentPull(['docs/guide/start.md']),
+      title: 'feat(core)!: drop a field',
+    });
 
     expect(result.tier).toBe('high');
     expect(result.reasons).toEqual(['marks a breaking change in its title']);
@@ -218,11 +227,15 @@ describe('risk gate', () => {
       expect(assessRisk(agentPull(['docs/guide/start.md'])).ok).toBe(true);
     });
 
-    it("a high pull request passes only once the maintainer approved its head commit", () => {
+    it('a high pull request passes only once the maintainer approved its head commit', () => {
       const cases: [string, ReturnType<typeof review>[], boolean][] = [
         ['no review', [], false],
         ['the maintainer approved the head commit', [review(maintainer, 'APPROVED')], true],
-        ['the maintainer approved an older commit', [review(maintainer, 'APPROVED', 'old456')], false],
+        [
+          'the maintainer approved an older commit',
+          [review(maintainer, 'APPROVED', 'old456')],
+          false,
+        ],
         ['another account approved', [review(agent, 'APPROVED')], false],
         [
           'the maintainer approved, then asked for changes',
@@ -335,9 +348,41 @@ describe('risk gate', () => {
 
   // The gate guards itself: a pull request that edits the gate, its path list, the workflows, the
   // meta tests or the agents' settings and instructions is high, and the default branch's copy judges
-  // it. The list names nothing else: every other change gets the tier the blast-radius review judges
-  // (ADR 0086 rule 1).
-  it("ADR0086 the repository's risk paths name exactly the review machinery", () => {
+  // it (ADR 0086 rule 1). test/meta/agent-sandbox.test.ts holds the list against CODEOWNERS; this
+  // test holds that the gate reads the repository's own list the way it reads the fixture above.
+  it("ADR0086 the repository's risk paths make a change to the gate, the workflows, the meta tests and the agent files high, and a module change low", () => {
+    const repositoryRiskPaths = readFileSync(
+      new URL('../../.github/risk-paths', import.meta.url),
+      'utf8',
+    );
+    const tierOf = (file: string) =>
+      assessRisk({ ...agentPull([file]), riskPaths: repositoryRiskPaths }).tier;
+
+    for (const file of [
+      'scripts/ci/risk-gate.mjs',
+      '.github/risk-paths',
+      '.github/workflows/ci.yml',
+      'test/meta/workflows.test.ts',
+      'scripts/agents/auto-merge.mjs',
+      '.claude/agents/blast-radius.md',
+      'CLAUDE.md',
+      'AGENTS.md',
+      'skills-lock.json',
+    ]) {
+      expect(tierOf(file), file).toBe('high');
+    }
+    for (const file of [
+      'apps/backend/src/modules/core/permissions.ts',
+      'modules/planning/domain/src/index.ts',
+      'docs/adr/0086-risk-tiered-review-and-merge-of-agent-pull-requests.md',
+    ]) {
+      expect(tierOf(file), file).toBe('low');
+    }
+  });
+
+  // The path list is a reviewed security boundary (ADR 0086 rule 1), so its whole content is pinned
+  // on purpose: every edit to it is a two-place edit that a reviewer sees.
+  it("ADR0086 the repository's risk paths are pinned as the reviewed boundary: exactly .github, scripts/ci, scripts/agents, test/meta, .claude, CLAUDE.md, AGENTS.md and skills-lock.json", () => {
     const patterns = readFileSync(new URL('../../.github/risk-paths', import.meta.url), 'utf8')
       .split(/\r?\n/)
       .map((line) => line.trim())
@@ -357,9 +402,7 @@ describe('risk gate', () => {
 
   it('the job summary names the tier, each reason and what a high pull request waits for', () => {
     expect(summary({ tier: 'low', reasons: [], ok: true })).toBe('Risk tier: **low**\n\n');
-    expect(
-      summary({ tier: 'high', reasons: ['declares a high blast radius'], ok: false }),
-    ).toBe(
+    expect(summary({ tier: 'high', reasons: ['declares a high blast radius'], ok: false })).toBe(
       'Risk tier: **high**\n\n- The pull request declares a high blast radius.\n\nA high pull request merges after the maintainer approves its head commit (ADR 0086).\n',
     );
   });

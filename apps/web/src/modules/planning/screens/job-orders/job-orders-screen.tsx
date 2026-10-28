@@ -19,6 +19,7 @@ import {
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import { RangeControls } from '../../components/range-controls/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
+import { applyDraft, draftRowIds } from '../../gantt-draft.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
 import {
   type JobOrdersSearch,
@@ -28,6 +29,7 @@ import {
   withLateOnly,
 } from '../../job-orders-search.ts';
 import { phase1Reason } from '../../mock-reasons.ts';
+import { usePlanningDraft } from '../../planning-draft.tsx';
 import {
   plantDateOf,
   rangeLabel,
@@ -137,15 +139,22 @@ export function JobOrdersScreen() {
   const sort = sortOf(search);
   // The rows of the loaded request, so a range change shows the rows of the view before, dimmed,
   // until its own rows arrive, never the old snapshot cut to the new range.
+  // The rows read the plan with the planner's draft applied, the draft the board and the Gantt
+  // write (plan 07, Drafts).
+  const [draft] = usePlanningDraft();
+  const applied = useMemo(
+    () => (loaded === undefined ? undefined : applyDraft(loaded.snapshot, draft, loaded.range)),
+    [loaded, draft],
+  );
   const rows = useMemo(
     () =>
-      loaded === undefined
+      loaded === undefined || applied === undefined
         ? []
         : sortedJobOrderRows(
-            jobOrderTableRows(loaded.snapshot, loaded.range, loaded.lateOnly),
+            jobOrderTableRows(applied, loaded.range, loaded.lateOnly, draftRowIds(draft)),
             sort,
           ),
-    [loaded, sort],
+    [loaded, applied, draft, sort],
   );
   const lateRows = rows.filter((row) => row.analysis?.late).length;
 
@@ -275,7 +284,7 @@ export function JobOrdersScreen() {
       <JobOrdersTable
         label={`Job orders, ${label}`}
         rows={rows}
-        snapshot={snapshot}
+        snapshot={applied ?? snapshot}
         zoom={zoom}
         from={from}
         sort={sort}

@@ -48,22 +48,20 @@ function renderBlock(jobOrderId: string, onChain: boolean) {
   return container;
 }
 
+// The two outlines differ in shape, the chain's dashed and further in than the locked one's; the
+// shapes are read from computed style in e2e/design-rules.spec.ts.
 describe('the outlines of a block (plan 07, Block states; WCAG 1.4.1)', () => {
-  it('draws the chain outline dashed and further in than the locked outline, so they differ in shape', () => {
+  it('draws the chain outline on a row of the chain, and no locked outline on one that is not locked', () => {
     const chain = renderBlock('jo-1003-10', true);
-    const outline = chain.querySelector('[data-chain-outline]');
 
-    expect(outline?.className).toContain('border-dashed');
-    expect(outline?.className).toContain('inset-1.5');
+    expect(chain.querySelector('[data-chain-outline]')).not.toBeNull();
     expect(chain.querySelector('[data-locked-outline]')).toBeNull();
   });
 
   it('keeps the locked outline beside the chain outline on a locked row of the chain', () => {
     const both = renderBlock('jo-1002-10', true);
-    const locked = both.querySelector('[data-locked-outline]');
 
-    expect(locked?.className).toContain('inset-0.5');
-    expect(locked?.className).not.toContain('border-dashed');
+    expect(both.querySelector('[data-locked-outline]')).not.toBeNull();
     expect(both.querySelector('[data-chain-outline]')).not.toBeNull();
     expect(both.querySelector('[data-block]')?.getAttribute('aria-label')).toContain(
       'locked, on the critical chain',
