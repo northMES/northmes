@@ -3,6 +3,11 @@
 import { planningLinks } from '@northmes/planning-contracts';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor } from '@testing-library/react';
+import {
+  type BoardFieldsStore,
+  BoardFieldsStoreProvider,
+  createG1BoardFieldsStore,
+} from '../../../src/modules/planning/board-fields-store.ts';
 import type { GanttDataSource, GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts';
 import { g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { GanttSourceProvider } from '../../../src/modules/planning/gantt-source-context.ts';
@@ -35,15 +40,17 @@ export function renderGanttRoute(
   search: Record<string, string | number>,
   source?: GanttDataSource,
   page: PlanningPage = 'gantt',
+  store?: BoardFieldsStore,
 ) {
-  return renderPlanningAt(planningHref(page, search), source);
+  return renderPlanningAt(planningHref(page, search), source, store);
 }
 
 /**
  * Renders the shell at any planning href for a signed-in planner, such as an order's page, with
- * the fake API of renderGanttRoute; the planning pages read the fixture G1 unless a source is given.
+ * the fake API of renderGanttRoute; the planning pages read the fixture G1 unless a source is given,
+ * and a fresh store of G1's board fields unless a store is given (#762).
  */
-export function renderPlanningAt(href: string, source?: GanttDataSource) {
+export function renderPlanningAt(href: string, source?: GanttDataSource, store?: BoardFieldsStore) {
   const { fetch } = fakeApi({
     CoreCompanies: companies,
     CoreViewer: () => viewer(['planning.productionOrder:read'], []),
@@ -54,9 +61,11 @@ export function renderPlanningAt(href: string, source?: GanttDataSource) {
     history: createMemoryHistory({ initialEntries: [href] }),
   });
   render(
-    <GanttSourceProvider value={source ?? g1DataSource}>
-      <RouterProvider router={router} />
-    </GanttSourceProvider>,
+    <BoardFieldsStoreProvider value={store ?? createG1BoardFieldsStore()}>
+      <GanttSourceProvider value={source ?? g1DataSource}>
+        <RouterProvider router={router} />
+      </GanttSourceProvider>
+    </BoardFieldsStoreProvider>,
   );
   return router;
 }

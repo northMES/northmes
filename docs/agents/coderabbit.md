@@ -8,7 +8,7 @@ CodeRabbit reviews high pull requests only ([ADR 0086](../adr/0086-risk-tiered-r
 
 It does not review the lockfiles (`pnpm-lock.yaml`, `skills-lock.json`), the committed GraphQL snapshot (`schema/*.graphql`), `pnpm gen` output (`*.gen.ts`), Vitest snapshots, generated reference docs under `apps/docs/reference`, `CHANGELOG.md`, the vendored skills in `.claude/skills` (except the security-audit validators and their tests, which run on the maintainer's machine), or the internal research material, which is gitignored and filtered only in case a file is committed. CodeRabbit's own defaults also skip images (including `*.svg`), `*.csv`, `*.map` and directories named `generated`, `__generated__` or `gen`.
 
-Path instructions tell it what to flag per area:
+Path instructions tell it what to flag per area. The `code-reviewer` agent (`.claude/agents/code-reviewer.md`) applies the same entries in the review before each pull request, so both reviews use a changed entry once it reaches `main`. While a pull request that changes `.coderabbit.yaml` is open, CodeRabbit reviews it with the branch's copy and the agent with the copy on `main`, path filters included, so the branch cannot weaken the agent's review of itself:
 
 | Path | What CodeRabbit flags |
 |---|---|
