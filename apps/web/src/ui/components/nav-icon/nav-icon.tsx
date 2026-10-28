@@ -20,6 +20,7 @@ import {
   Route,
   Shapes,
   Shield,
+  SlidersHorizontal,
   Table,
   Tags,
   Users,
@@ -49,6 +50,7 @@ const icons: Readonly<Record<NavIconName, LucideIcon>> = {
   Tags,
   Building2,
   Factory,
+  SlidersHorizontal,
 };
 
 /**

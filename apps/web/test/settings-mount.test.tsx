@@ -64,6 +64,21 @@ describe('company settings', () => {
     ).toMatchObject({ companyId });
   });
 
+  it("#766 a user's page under Users marks Users as the entry it lies under, and Roles not at all", async () => {
+    const { fetch } = companyAdmin();
+    renderShellAt(`/settings/${companyId}/users/u-1`, shellModules, { fetch });
+
+    const settings = await screen.findByRole('navigation', { name: 'Company settings' });
+    await waitFor(() =>
+      expect(
+        within(settings).getByRole('link', { name: 'Users' }).getAttribute('aria-current'),
+      ).toBe('true'),
+    );
+    expect(
+      within(settings).getByRole('link', { name: 'Roles' }).getAttribute('aria-current'),
+    ).toBeNull();
+  });
+
   it('E04-S02 company settings pages put the company name where the plant goes: in the title and in the trail after Settings', async () => {
     const { fetch } = companyAdmin();
     renderShellAt(`/settings/${companyId}/roles`, shellModules, { fetch });
