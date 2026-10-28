@@ -18,11 +18,7 @@ export function ArticleRouting({ code, name }: { readonly code: string; readonly
   const { plant } = useShell();
   const id = useId();
   const { snapshot, error } = useRoutings(undefined);
-  // The fixture holds one plant's routings; another plant has none of them.
-  const routing =
-    snapshot?.plant.slug === plant
-      ? snapshot.routings.find((each) => each.articleNumber === code)
-      : undefined;
+  const routing = snapshot?.routings.find((each) => each.articleNumber === code);
   const fixture = snapshot?.fixture === undefined ? '' : ` Showing fixture ${snapshot.fixture}.`;
   return (
     <section
