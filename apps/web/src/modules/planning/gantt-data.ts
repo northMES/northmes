@@ -21,6 +21,7 @@ import type {
   SavedSetup,
   WorkloadBucket,
 } from '@northmes/planning-domain';
+import type { InventoryArticle, InventoryWarehouse, StockBalance } from './inventory-data.ts';
 import type { PlanningPreview } from './planning-preview.ts';
 
 export type {
@@ -383,8 +384,53 @@ export interface GanttSnapshot {
   readonly routings?: readonly Routing[];
   /** The history of each order, newest first, by order id. */
   readonly history?: Readonly<Record<string, readonly HistoryEntry[]>>;
+  /** The stock the material warnings read; none from a source that answers without it. */
+  readonly stock?: GanttStock;
   /** The fields the installed modules contribute to the block fields slot (#762). */
   readonly moduleFields?: readonly ModuleField[];
+}
+
+/** A movement the ERP plans itself, dated by plant date (plan 07): a purchase, a transfer. */
+export interface ErpMovement {
+  readonly kind: 'purchase' | 'purchaseRequisition' | 'transferIn' | 'transferOut';
+  readonly reference: string;
+  readonly warehouse: string;
+  readonly article: string;
+  /** Signed: incoming is positive. */
+  readonly quantity: number;
+  /** The plant date, "2026-11-09". */
+  readonly date: string;
+}
+
+/** The material a routing operation consumes per piece, from a warehouse. */
+export interface OperationMaterial {
+  /** The article of the routing, as an order names it. */
+  readonly article: string;
+  readonly sequence: number;
+  /** The material's article number. */
+  readonly material: string;
+  readonly perPiece: number;
+  readonly warehouse: string;
+}
+
+/**
+ * The stock a plan reads for its material warnings (plan 07): the stock snapshot of the last
+ * import, the ERP's own movements and what each operation consumes. A source without it leaves it
+ * out, and no warning shows.
+ */
+export interface GanttStock {
+  readonly stockAsOfMs: number;
+  readonly nextImportMs?: number;
+  /** The last plant date the projection covers. */
+  readonly projectedTo: string;
+  readonly countPurchaseRequisitions: boolean;
+  readonly warehouses: readonly InventoryWarehouse[];
+  readonly articles: readonly InventoryArticle[];
+  readonly balances: readonly StockBalance[];
+  readonly erpMovements: readonly ErpMovement[];
+  readonly operationMaterials: readonly OperationMaterial[];
+  /** Where an order's output goes. */
+  readonly outputWarehouse: string;
 }
 
 /** Where the order Gantt reads from. */

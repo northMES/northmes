@@ -3,7 +3,8 @@
 import { formatDuration, formatPlantDateTime } from '@northmes/contracts/format';
 import { shownFields } from '../../board-fields.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
-import { durationsOf } from './gantt-block-states.ts';
+import type { MaterialShortage } from '../../material-projection.ts';
+import { durationsOf, materialShortText } from './gantt-block-states.ts';
 import { type JobOrderRow, quantityText, savedSetupOf } from './gantt-rows.ts';
 
 /** One line of the hover card: its field id or analysis line, a label and its value. */
@@ -11,6 +12,8 @@ export interface HoverField {
   readonly id: string;
   readonly label: string;
   readonly value: string;
+  /** A warning line, drawn on the warning surface: the material warning (design #729, MW1). */
+  readonly warning?: boolean;
 }
 
 /**
@@ -25,6 +28,7 @@ export function hoverFields(
   snapshot: GanttSnapshot,
   machineName: (code: string | undefined) => string,
   hoverIds: readonly string[],
+  material: readonly MaterialShortage[] = [],
 ): HoverField[] {
   const timeZone = snapshot.plant.timeZone;
   const { jobOrder, analysis } = row;
@@ -65,6 +69,14 @@ export function hoverFields(
       value: `${analysis.release.fromRow} at ${formatPlantDateTime(analysis.release.atMs, timeZone)}`,
     });
   }
+  for (const shortage of material) {
+    fields.push({
+      id: `material:${shortage.material.number}`,
+      label: 'Material short',
+      value: materialShortText(shortage, ' '),
+      warning: true,
+    });
+  }
   if (analysis !== undefined) {
     const broken = analysis.constraints.filter((line) => !line.holds).length;
     fields.push({
@@ -85,11 +97,13 @@ export function GanttHoverCard({
   snapshot,
   machineName,
   hoverIds,
+  material,
 }: {
   readonly row: JobOrderRow;
   readonly snapshot: GanttSnapshot;
   readonly machineName: (code: string | undefined) => string;
   readonly hoverIds: readonly string[];
+  readonly material?: readonly MaterialShortage[];
 }) {
   return (
     <div className="grid w-72 gap-1 text-data">
@@ -100,12 +114,22 @@ export function GanttHoverCard({
         {row.order.article}, {quantityText(row.jobOrder.quantity)}, order {row.order.number}
       </p>
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-        {hoverFields(row, snapshot, machineName, hoverIds).map((field) => (
-          <div key={field.id} className="contents">
-            <dt className="opacity-80">{field.label}</dt>
-            <dd className="text-end font-mono text-xs">{field.value}</dd>
-          </div>
-        ))}
+        {hoverFields(row, snapshot, machineName, hoverIds, material).map((field) =>
+          field.warning ? (
+            <div
+              key={field.id}
+              className="col-span-2 grid grid-cols-subgrid rounded-sm bg-warning-subtle px-1 text-foreground"
+            >
+              <dt>{field.label}</dt>
+              <dd className="text-end font-mono text-xs">{field.value}</dd>
+            </div>
+          ) : (
+            <div key={field.id} className="contents">
+              <dt className="opacity-80">{field.label}</dt>
+              <dd className="text-end font-mono text-xs">{field.value}</dd>
+            </div>
+          ),
+        )}
       </dl>
     </div>
   );

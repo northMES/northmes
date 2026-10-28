@@ -3,8 +3,10 @@
 import {
   availabilityOf,
   type GanttFixture,
+  type GanttInventoryFixture,
   type GanttPagesFixture,
   g1,
+  g1Inventory,
   g1Pages,
   resolveWallClock,
   runSecondsFor,
@@ -26,6 +28,7 @@ import type {
   GanttOrder,
   GanttSettings,
   GanttSnapshot,
+  GanttStock,
   HistoryEntry,
   OrderOrigin,
 } from './gantt-data.ts';
@@ -324,6 +327,22 @@ function pagesOf(fixture: GanttFixture, pages: GanttPagesFixture) {
   };
 }
 
+/** The stock of the inventory fixture beside G1, as a plan carries it (design #729). */
+export function stockOf(inventory: GanttInventoryFixture): GanttStock {
+  return {
+    stockAsOfMs: ms(inventory.stockImport.asOf.instant),
+    nextImportMs: ms(inventory.stockImport.next.instant),
+    projectedTo: inventory.projectedTo,
+    countPurchaseRequisitions: inventory.countPurchaseRequisitions,
+    warehouses: inventory.warehouses.map(({ code, name, plant }) => ({ code, name, plant })),
+    articles: inventory.articles,
+    balances: inventory.stock,
+    erpMovements: inventory.plannedMovements,
+    operationMaterials: inventory.operationMaterials,
+    outputWarehouse: inventory.outputWarehouse,
+  };
+}
+
 /**
  * The snapshot of the fixture G1 over a visible range, with its analysis from the domain
  * functions (plan 18, phase 2): the placements come from the fixture's job orders, everything
@@ -337,6 +356,7 @@ export function g1Snapshot(
   pages: GanttPagesFixture = g1Pages,
   rules?: EffectivePlanningRules,
   entered: EnteredOrders = noEnteredOrders,
+  inventory: GanttInventoryFixture = g1Inventory,
 ): GanttSnapshot {
   const fixtureSettings: GanttSettings = {
     deadlineRule: fixture.settings.deadlineRule,
@@ -403,6 +423,7 @@ export function g1Snapshot(
       ...entered.productionOrders.map((order) => enteredOrderOf(order, fixture, pages, settings)),
     ],
     ...withEnteredLines(pagesOf(fixture, pages), fixture, entered),
+    stock: stockOf(inventory),
   };
   return { ...base, analysis: analyzeGantt(base, range) };
 }

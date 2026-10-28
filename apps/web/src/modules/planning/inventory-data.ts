@@ -55,6 +55,11 @@ export interface PlannedMovement {
   readonly dateFrom: string;
   /** The ERP's own date of an overdue movement, a plant date. */
   readonly overdueSince?: string;
+  /**
+   * Where an overdue movement was dated before it moved to now: the movements counted at now keep
+   * their own order among themselves.
+   */
+  readonly dueMs?: number;
   /** The reference as the movements table writes it: "Purchase order 7712", "1003.10", "1001". */
   readonly reference: string;
   /** The job order that consumes, for a consumption. */
