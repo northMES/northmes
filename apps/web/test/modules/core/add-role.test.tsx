@@ -90,9 +90,13 @@ function option(listbox: HTMLElement, name: string): HTMLElement {
 }
 
 describe('Add role', () => {
-  it('E04-S02 in company settings Where offers each plant and the company, and the roles the assigner cannot give at the chosen place stay in the list, disabled, with what they need; Add role gives Viewer at Plant A, opens the Access tab and announces it', async () => {
-    const user = userEvent.setup();
-    const router = renderCoreAt(addRoleHref, [
+  /**
+   * Renders Add role for Anna Berg in company settings for the assigner, with the roles Operator,
+   * Shift lead, Planner and Viewer, an answer to Viewer at Plant A with the reason "Covers the
+   * night shift", and the permissions the Access tab reads after it.
+   */
+  function renderAddRole() {
+    return renderCoreAt(addRoleHref, [
       settingsViewerQuery(assigner),
       companiesQuery(),
       userQuery(annaOfPage),
@@ -111,6 +115,17 @@ describe('Add role', () => {
         },
       },
     ]);
+  }
+
+  /** Chooses Plant A only under Where, once the page shows, and returns the Role combobox. */
+  async function chosePlantA(user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
+    const where = await screen.findByRole('radiogroup', { name: 'Where' });
+    await user.click(within(where).getByRole('radio', { name: 'Plant A only' }));
+    return screen.getByRole('combobox', { name: 'Role' });
+  }
+
+  it('E04-S02 in company settings Where offers each plant and the company, none chosen, with where each applies, and the side card shows the person and what the person holds', async () => {
+    renderAddRole();
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Add role for Anna Berg' }),
@@ -125,18 +140,25 @@ describe('Add role', () => {
     expect(
       within(where).getByText('Applies to every plant of Acme AB, also plants created later.'),
     ).toBeDefined();
-    await user.click(within(where).getByRole('radio', { name: 'Plant A only' }));
+    expect(screen.getByRole('combobox', { name: 'Role' }).getAttribute('placeholder')).toBe(
+      'Choose a role',
+    );
     // The side column: the person and what the person holds already.
     const personCard = screen.getByRole('region', { name: 'Anna Berg' });
     expect(within(personCard).getByText('a.berg')).toBeDefined();
     expect(within(personCard).getByText('Operator at Plant A')).toBeDefined();
+  });
+
+  it('E04-S02 at Plant A the roles the assigner cannot give stay in the list, disabled, with what they need, and a role the person holds there is disabled with its reason', async () => {
+    const user = userEvent.setup();
+    renderAddRole();
+    await chosePlantA(user);
+
     expect(
       screen.getByText(
         'You can assign a role at Plant A when you hold every permission it includes there. A company admin of Acme AB can assign the others.',
       ),
     ).toBeDefined();
-    const role = screen.getByRole('combobox', { name: 'Role' });
-    expect(role.getAttribute('placeholder')).toBe('Choose a role');
     const roles = await openRoles(user);
     const assignable = within(roles).getByRole('group', {
       name: 'You can assign these at Plant A',
@@ -162,16 +184,31 @@ describe('Add role', () => {
       within(roles).getByText('Custom role. Anna Berg already holds it at Plant A.'),
     ).toBeDefined();
     expect(within(roles).getByText('Planning, default role. 1 permission.')).toBeDefined();
+  });
 
-    // The keyboard highlight is the active descendant, and the side card follows it.
+  it('E04-S02 the keyboard highlight in Role is its active descendant, and the side card follows it', async () => {
+    const user = userEvent.setup();
+    renderAddRole();
+    const role = await chosePlantA(user);
+    await openRoles(user);
+
     await user.keyboard('{ArrowDown}');
+
     await waitFor(() => expect(role.getAttribute('aria-activedescendant')).toBeTruthy());
     const highlighted = document.getElementById(role.getAttribute('aria-activedescendant') ?? '');
-    const name = highlighted?.querySelector('[data-role-name]')?.textContent ?? '';
+    expect(highlighted?.querySelector('[data-role-name]')?.textContent).toBe('Operator');
     // The listbox hides the page from the accessibility tree while it is open.
-    expect(await screen.findByText(`${name} at Plant A`, { selector: 'h2' })).toBeDefined();
+    expect(await screen.findByText('Operator at Plant A', { selector: 'h2' })).toBeDefined();
+  });
+
+  it('E04-S02 a chosen Viewer shows its card with the permission held; Add role with a reason gives Viewer at Plant A, opens the Access tab, announces it, and the roles list counts the new holder', async () => {
+    const user = userEvent.setup();
+    const router = renderAddRole();
+    await chosePlantA(user);
+    const roles = await openRoles(user);
 
     await user.click(option(roles, 'Viewer'));
+
     const card = await screen.findByRole('region', { name: 'Viewer at Plant A' });
     expect(
       within(card).getByText(

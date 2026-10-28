@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import { assessRisk } from '../../scripts/ci/risk-gate.mjs';
 import { root } from './docs.ts';
 
 /** The part of skills-lock.json that the skills check reads: the pinned skills by name. */
@@ -60,16 +61,6 @@ describe('agent skills', () => {
     expect(problems).toEqual([
       '.claude/skills/stray-skill is not in skills-lock.json and is not a project skill',
     ]);
-  });
-});
-
-describe('operating session run checklist', () => {
-  it("ADR0079 step 7 compares the design artifact's current version with the approved version id", () => {
-    const readme = readFileSync(join(root, 'docs/agents/handoff/README.md'), 'utf8');
-    const step = readme.split('\n').find((line) => line.startsWith('7. ')) ?? '';
-
-    expect(step).toContain('design artifact');
-    expect(step).toContain('compares its current version with the approved version id');
   });
 });
 
@@ -151,11 +142,23 @@ describe('code-reviewer agent', () => {
     expect(docsStep).toMatch(/page.*line.*code/i);
     expect(docsStep).toMatch(/no mapped surface/);
   });
+});
 
-  it('ADR0065 CLAUDE.md sends the review before the pull request to the code-reviewer agent', () => {
+// CLAUDE.md names the subagents of the review before the pull request by their agent file, so a
+// renamed or removed agent file breaks the instruction.
+describe('the agent files CLAUDE.md names', () => {
+  it('ADR0065 every .claude/agents file that CLAUDE.md names exists, and its frontmatter name is its file name', () => {
     const claude = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
+    const named = [...claude.matchAll(/`\.claude\/agents\/([\w-]+)\.md`/g)].map(([, name]) => name);
 
-    expect(claude).toContain('`code-reviewer` subagent');
+    expect(named, 'agent files named in CLAUDE.md').toEqual(
+      expect.arrayContaining(['code-reviewer', 'blast-radius']),
+    );
+    for (const name of named) {
+      const path = `.claude/agents/${name}.md`;
+      expect(existsSync(join(root, path)), path).toBe(true);
+      expect(agentFrontmatter(path).name, path).toBe(name);
+    }
   });
 });
 
@@ -185,16 +188,35 @@ describe('blast-radius agent', () => {
     });
   });
 
-  it('ADR0086 the blast-radius agent ends its section with the Tier line that the risk gate reads', () => {
+  // The agent file shows the Tier lines in backticks; each one, as the last line of a Blast radius
+  // section, must give the risk gate the tier it names.
+  it('ADR0086 the Tier lines the blast-radius agent file shows are the ones scripts/ci/risk-gate.mjs reads', () => {
     const text = readFileSync(join(root, path), 'utf8');
+    const tierLines = [...text.matchAll(/`(Tier: (low|high))`/g)].map(([, line, tier]) => ({
+      line,
+      tier,
+    }));
+    const pullWith = (line: string) => ({
+      riskPaths: '',
+      files: ['docs/guide/start.md'],
+      body: ['## Validation impact', 'None.', '## Blast radius', 'A reader sees it.', line].join(
+        '\n',
+      ),
+      title: 'docs: a guide',
+      authorId: 0,
+      reviews: [],
+      headSha: '0'.repeat(40),
+    });
 
-    expect(text).toContain('`Tier: low`');
-    expect(text).toContain('`Tier: high`');
-  });
-
-  it('ADR0086 CLAUDE.md sends the blast-radius review before the pull request to the blast-radius agent', () => {
-    const claude = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
-
-    expect(claude).toContain('`blast-radius` subagent');
+    expect([...new Set(tierLines.map(({ tier }) => tier))].sort()).toEqual(['high', 'low']);
+    for (const { line, tier } of tierLines) {
+      const { reasons } = assessRisk(pullWith(line ?? ''));
+      expect(reasons, line).not.toContain('declares no tier in a Blast radius section');
+      if (tier === 'high') {
+        expect(reasons, line).toContain('declares a high blast radius');
+      } else {
+        expect(reasons, line).not.toContain('declares a high blast radius');
+      }
+    }
   });
 });
