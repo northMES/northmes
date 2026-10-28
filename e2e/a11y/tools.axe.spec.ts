@@ -71,7 +71,9 @@ test.describe('the tools pages', () => {
     const t311 = coreLinks.tools.tool({ plant, toolCode: 'T-311' }).href;
     await page.goto(withSearch(t311, { preview: 'loading' }));
     await expect(page.getByRole('heading', { level: 1, name: 'Tool T-311' })).toBeVisible();
-    await expect(page.locator('[aria-busy="true"]').first()).toBeVisible();
+    // The page frame marks the loading tool busy; it draws no skeleton, so the busy element is
+    // empty and never visible.
+    await expect(page.locator('main [aria-busy="true"]')).toHaveCount(1);
     await checkA11y('a tool loading', { busy: true });
 
     await page.goto(coreLinks.tools.tool({ plant, toolCode: 'T-000' }).href);
