@@ -119,6 +119,20 @@ describe('New production order (#768, NO1 to NO9)', () => {
     ).toBeTruthy();
   });
 
+  it('NO1 a line picked for one article is let go when the article changes, so Add line waits for a line of the new article', async () => {
+    renderAt(planningLinks.orders.new({ plant }).href);
+    await screen.findByRole('heading', { level: 1, name: 'New production order' });
+    await userEvent.selectOptions(choice('Article'), 'Hub 12');
+    await userEvent.selectOptions(choice('Customer order line'), '40211-2');
+    const add = screen.getByRole('button', { name: 'Add line' });
+    expect(add.hasAttribute('disabled')).toBe(false);
+
+    await userEvent.selectOptions(choice('Article'), 'Gear blank 32');
+
+    expect(choice('Customer order line').value).toBe('');
+    expect(add.hasAttribute('disabled')).toBe(true);
+  });
+
   it('NO1 a line that another order supplies, or that does not exist, is not taken over', async () => {
     renderAt(planningLinks.orders.new({ plant }, { line: '40211-1' }).href);
     await screen.findByRole('heading', { level: 1, name: 'New production order' });
