@@ -227,7 +227,7 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
 
     const allowed = screen.getByRole('table', { name: 'Routing operations that may run on CNC 1' });
     expect(bodyRows(allowed)).toEqual([
-      ['Bracket L', '10 Turn', 'CNC 2', expect.stringMatching(/^1001/)],
+      ['Bracket L', '10 Turn', 'CNC 2', '1001, 1005'],
       ['Gear blank 32', '10 Turn', 'None, only machine', '1003'],
       ['Hub 12', '10 Turn', 'None, only machine', '1004'],
     ]);
@@ -599,7 +599,7 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
     );
   });
 
-  it('CS1 each shift keeps its own color on every day, its legend key included, the part after midnight too (#770)', async () => {
+  it('CS1 each shift keeps its own color number on every day, its legend key included, the part after midnight too (#770)', async () => {
     renderCoreAt(
       withSearch(coreLinks.calendars.calendar({ plant, calendarId: 'B3' }).href, {
         week: '2026-11-09',
@@ -609,18 +609,21 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
     const week = within(await screen.findByRole('img', { name: /^Week 46:/ }));
     const legend = within(screen.getByRole('list', { name: 'Legend' }));
 
-    for (const [name, shift] of [
-      ['Early 06:00 to 14:00', 'shift-1'],
-      ['Late 14:00 to 22:00', 'shift-2'],
-      ['Night 22:00 to 06:00', 'shift-3'],
+    // A block and the legend key carry the number of the shift's color, which its edge and fill
+    // tokens read: the first shift 1, the second 2, the third 3.
+    for (const [name, color] of [
+      ['Early 06:00 to 14:00', '1'],
+      ['Late 14:00 to 22:00', '2'],
+      ['Night 22:00 to 06:00', '3'],
     ] as const) {
-      const blocks = week.getAllByText(name).map((label) => label.parentElement?.className ?? '');
+      const blocks = week
+        .getAllByText(name)
+        .map((label) => label.parentElement?.getAttribute('data-shift-color'));
       expect(blocks.length, name).toBeGreaterThan(0);
       const item = legend.getAllByRole('listitem').find((each) => each.textContent === name);
       const key = item?.querySelector('[aria-hidden="true"]');
-      for (const block of [...blocks, key?.getAttribute('class') ?? '']) {
-        expect(block, name).toContain(`border-${shift}`);
-        expect(block, name).toContain(`bg-${shift}-subtle`);
+      for (const block of [...blocks, key?.getAttribute('data-shift-color')]) {
+        expect(block, name).toBe(color);
       }
     }
     // Tuesday holds Monday's night after midnight: the plant holiday closes Monday only.
