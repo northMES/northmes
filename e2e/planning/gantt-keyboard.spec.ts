@@ -22,7 +22,7 @@ test.describe('keyboard move mode on the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
-    const spoken = page.locator('#announcer-polite');
+    const spoken = page.getByRole('status');
 
     // Collapse order 1001 and expand it again from the keyboard, then walk into its first row.
     await page.getByRole('button', { name: 'Collapse order 1001' }).click();

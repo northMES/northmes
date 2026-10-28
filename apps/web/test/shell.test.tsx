@@ -3,30 +3,15 @@
 import { gql, type TypedDocumentNode } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { defineWebModule, useShell } from '@northmes/web-sdk';
-import {
-  createMemoryHistory,
-  createRoute,
-  RouterProvider,
-  useNavigate,
-} from '@tanstack/react-router';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { createRoute, useNavigate } from '@tanstack/react-router';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type ShellModule, shellModules } from '../src/modules.ts';
-import { createShellRouter } from '../src/shell/index.ts';
 import { PageFrame } from '../src/ui/components/page-frame/index.ts';
 import type { NavIconName } from '../src/ui/lib/nav-icon-names.ts';
 import { Button } from '../src/ui/primitives/button.tsx';
-import { fakeSession } from './auth/fake-session.ts';
-
-/** Resizes happy-dom's window, as the browser does at 320 px or on a desktop. */
-function setViewport(width: number, height: number) {
-  (
-    window as unknown as {
-      happyDOM: { setViewport(viewport: { width: number; height: number }): void };
-    }
-  ).happyDOM.setViewport({ width, height });
-}
+import { focusedName, linksIn, renderShellAt, setViewport } from './settings-fixtures.tsx';
 
 afterEach(() => {
   cleanup();
@@ -214,64 +199,10 @@ const audit: ShellModule = {
   }),
 };
 
-/** A module whose sidebar group holds a nested group, Registers, with Warehouses. */
-const stock: ShellModule = {
-  label: 'Stock',
-  order: 40,
-  links: [
-    {
-      label: 'Registers',
-      icon: 'Database',
-      links: [
-        {
-          label: 'Warehouses',
-          icon: 'Warehouse',
-          link: ({ plant }) => ({ href: `/${plant}/stock/warehouses` }),
-        },
-      ],
-    },
-  ],
-  module: defineWebModule({
-    id: 'stock',
-    version: '0.1.0',
-    routes: (plantRoute) => {
-      const stockRoute = createRoute({ getParentRoute: () => plantRoute, path: 'stock' });
-      return stockRoute.addChildren([
-        createRoute({
-          getParentRoute: () => stockRoute,
-          path: 'warehouses',
-          component: () => <PageFrame title="Warehouses">{null}</PageFrame>,
-        }),
-      ]);
-    },
-  }),
-};
-
-/** Renders the shell's router for the modules at path, for a signed-in viewer. */
-function renderShellAt(
-  path: string,
-  modules: Parameters<typeof createShellRouter>[0],
-  options: Partial<Parameters<typeof createShellRouter>[1]> = {},
-) {
-  const router = createShellRouter(modules, {
-    session: fakeSession(),
-    ...options,
-    history: createMemoryHistory({ initialEntries: [path] }),
-  });
-  render(<RouterProvider router={router} />);
-}
-
 /** The visible label of a sidebar group, which names its list of links. */
 function groupLabel(list: HTMLElement): string | null | undefined {
   const id = list.getAttribute('aria-labelledby');
   return id === null ? undefined : document.getElementById(id)?.textContent;
-}
-
-/** The text and href of each link in a sidebar group. */
-function linksIn(list: HTMLElement): (string | null)[][] {
-  return within(list)
-    .queryAllByRole('link')
-    .map((link) => [link.textContent, link.getAttribute('href')]);
 }
 
 /** The module groups of the sidebar's nav, Main. */
@@ -280,31 +211,6 @@ async function sidebarGroups(): Promise<HTMLElement[]> {
   return within(sidebar)
     .getAllByRole('list')
     .filter((list) => list.hasAttribute('aria-labelledby'));
-}
-
-/**
- * The rules drawn inside a sidebar's nav, Main: each separator, and the header, the footer or a
- * nested group's entries when they have a border. It reads the border classes, because happy-dom
- * applies no Tailwind.
- */
-function rulesIn(nav: HTMLElement): string[] {
-  const separators = [
-    ...nav.querySelectorAll('[role="separator"], [data-sidebar="separator"]'),
-  ].map(() => 'separator');
-  const bordered = ['header', 'footer', 'menu-sub'].flatMap((part) =>
-    [...nav.querySelectorAll(`[data-sidebar="${part}"]`)]
-      .filter((element) =>
-        element.className.split(/\s+/).some((name) => /^border(-[tblrxy])?(-\d+)?$/.test(name)),
-      )
-      .map(() => part),
-  );
-  return [...separators, ...bordered];
-}
-
-/** The accessible name of the focused element: its aria-label, else its text. */
-function focusedName(): string {
-  const element = document.activeElement;
-  return element?.getAttribute('aria-label') ?? element?.textContent?.trim() ?? '';
 }
 
 describe('the shell', () => {
@@ -569,38 +475,9 @@ describe('the shell', () => {
     expect(document.activeElement).toBe(link);
   });
 
-  it('E04-S02 the sidebar draws no rule between module groups, under the plant switcher or above the user button, labelled or as the rail', async () => {
-    const user = userEvent.setup();
-    renderShellAt('/plant-a/planning/board', [maintenance, planning, quality]);
-    await screen.findByRole('heading', { name: 'Board of plant-a' });
-    const nav = screen.getByRole('navigation', { name: 'Main' });
-    expect(rulesIn(nav)).toEqual([]);
-
-    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
-
-    expect(rulesIn(screen.getByRole('navigation', { name: 'Main' }))).toEqual([]);
-  });
-
-  it('E04-S02 a nested group draws no line along its entries', async () => {
-    renderShellAt('/plant-a/stock/warehouses', [planning, stock]);
-    await screen.findByRole('heading', { level: 1, name: 'Warehouses' });
-
-    const nav = screen.getByRole('navigation', { name: 'Main' });
-    expect(within(nav).getByRole('link', { name: 'Warehouses' })).toBeDefined();
-    expect(rulesIn(nav)).toEqual([]);
-  });
-
-  it('E04-S02 at 320 px the sheet draws no rule between module groups, under the plant switcher or above the user button', async () => {
-    setViewport(320, 640);
-    const user = userEvent.setup();
-    renderShellAt('/plant-a/planning/board', [maintenance, planning, quality]);
-    await screen.findByRole('heading', { name: 'Board of plant-a' });
-
-    await user.click(await screen.findByRole('button', { name: 'Open navigation' }));
-
-    const sheet = await screen.findByRole('dialog', { name: 'Navigation' });
-    expect(rulesIn(within(sheet).getByRole('navigation', { name: 'Main' }))).toEqual([]);
-  });
+  // The sidebar draws no rule between module groups, under the plant switcher, above the user
+  // button or along a nested group's entries, labelled, as the rail or as the sheet at 320 px:
+  // read from computed border widths in e2e/design-rules.spec.ts.
 
   it('E04-S02 at 320 px Open navigation opens the sheet with focus on Close navigation, and Escape closes it with focus back on Open navigation', async () => {
     setViewport(320, 640);

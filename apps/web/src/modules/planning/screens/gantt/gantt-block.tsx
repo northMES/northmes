@@ -171,6 +171,7 @@ export function GanttBlock({
               data-block={jobOrder.id}
               data-cell-focus
               data-states={states.map((state) => state.kind).join(' ') || undefined}
+              data-selected={selected || undefined}
               data-move-mode={inMoveMode ? 'true' : undefined}
               onClick={(event) => {
                 // The click after a drop reaches neither the block nor the row under it.

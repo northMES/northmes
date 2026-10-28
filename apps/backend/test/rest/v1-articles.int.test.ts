@@ -338,6 +338,99 @@ describe('the public article routes', () => {
     expect(answer.body).toMatchObject({ title: 'Not permitted', code: 'core.forbidden' });
   });
 
+  it('ADR0073-W4 a credential with core.article:read only gets 403 core.forbidden as a problem from every command route, and the article stays as it was', async () => {
+    const { hel, helSlug, authorization } = await givenPlace(['core.article:read']);
+    const id = await givenArticle(db.ownerUrl, { code: code(), name: 'Bolt', plants: [hel] });
+    // Each command route with an input the route would run, so the permission check is what refuses.
+    const commands = [
+      ['commands/create-article', { id: randomUUIDv7(), code: code(), name: 'Bolt' }],
+      ['commands/update-article', { id, expectedVersion: 1, code: code(), name: 'Bolt M8' }],
+      ['commands/set-article-plants', { id, expectedVersion: 1, allPlants: true, plants: [] }],
+      ['commands/archive-article', { id, expectedVersion: 1 }],
+      ['commands/restore-article', { id, expectedVersion: 1 }],
+      [
+        'commands/upsert-article',
+        { id: randomUUIDv7(), code: code(), name: 'Bolt', source: 'Pyramid' },
+      ],
+    ] as const;
+
+    for (const [path, body] of commands) {
+      const answer = await send(authorization, 'POST', path, body);
+
+      expect({ path, status: answer.status, contentType: answer.contentType }).toEqual({
+        path,
+        status: 403,
+        contentType: expect.stringMatching(/^application\/problem\+json/),
+      });
+      expect(answer.body).toMatchObject({ title: 'Not permitted', code: 'core.forbidden' });
+    }
+    const after = await send(authorization, 'GET', `articles/${id}`);
+    expect(after.body).toMatchObject({ id, version: 1, archivedAt: null, plants: [helSlug] });
+  });
+
+  it('ADR0073-W4 a credential without core.article:read gets 403 core.forbidden as a problem from GET articles and GET articles/{id}', async () => {
+    const { hel, authorization } = await givenPlace(['core.user:read']);
+    const id = await givenArticle(db.ownerUrl, { code: code(), name: 'Bolt', plants: [hel] });
+
+    for (const path of ['articles', `articles/${id}`]) {
+      const answer = await send(authorization, 'GET', path);
+
+      expect({ path, status: answer.status, contentType: answer.contentType }).toEqual({
+        path,
+        status: 403,
+        contentType: expect.stringMatching(/^application\/problem\+json/),
+      });
+      expect(answer.body).toMatchObject({ title: 'Not permitted', code: 'core.forbidden' });
+      expect(answer.body).not.toHaveProperty('nodes');
+      expect(answer.body).not.toHaveProperty('id');
+    }
+  });
+
+  it('ADR0073-W4 POST commands/create-article-group answers 201 with the group, which GET article-groups lists and GET article-groups/{id} returns', async () => {
+    const { authorization } = await givenPlace([
+      'core.articleGroup:read',
+      'core.articleGroup:create',
+    ]);
+    const input = { id: randomUUIDv7(), code: code(), name: 'Flanges' };
+
+    const created = await send(authorization, 'POST', 'commands/create-article-group', input);
+    const listed = await send(authorization, 'GET', 'article-groups');
+    const found = await send(authorization, 'GET', `article-groups/${input.id}`);
+
+    expect(created.status).toBe(201);
+    expect(created.body).toEqual({
+      id: input.id,
+      code: input.code,
+      name: 'Flanges',
+      translations: [],
+      version: 1,
+      archivedAt: null,
+      updatedAt: expect.any(String),
+    });
+    expect(listed.status).toBe(200);
+    expect((listed.body.nodes as { code: string }[]).map((node) => node.code)).toEqual([
+      input.code,
+    ]);
+    expect(found.status).toBe(200);
+    expect(found.body).toEqual(created.body);
+  });
+
+  it('ADR0073-W4 a credential with core.articleGroup:read only gets 403 core.forbidden as a problem from POST commands/create-article-group, and the list stays empty', async () => {
+    const { authorization } = await givenPlace(['core.articleGroup:read']);
+
+    const refused = await send(authorization, 'POST', 'commands/create-article-group', {
+      id: randomUUIDv7(),
+      code: code(),
+      name: 'Hoses',
+    });
+    const listed = await send(authorization, 'GET', 'article-groups');
+
+    expect(refused.status).toBe(403);
+    expect(refused.contentType).toMatch(/^application\/problem\+json/);
+    expect(refused.body).toMatchObject({ title: 'Not permitted', code: 'core.forbidden' });
+    expect(listed.body.nodes).toEqual([]);
+  });
+
   it('ADR0073-W4 a plant of another company in plant returns 403 core.plant_forbidden', async () => {
     const { authorization } = await givenPlace();
     const other = await givenCompany(db.ownerUrl, {});
