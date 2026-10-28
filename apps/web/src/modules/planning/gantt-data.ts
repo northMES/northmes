@@ -40,6 +40,8 @@ export type {
   WorkloadBucket,
 };
 
+import type { EffectivePlanningRules } from './planning-rules.ts';
+
 /** The zoom presets of the approved board design D3, by their URL ids (plan 18, Shared pieces). */
 export type ZoomPreset = 'hours' | 'day' | 'week' | '4weeks';
 
@@ -57,6 +59,11 @@ export interface GanttLoadInput {
   /** The instant after the visible range, ISO 8601. */
   readonly to: string;
   readonly filter: GanttFilter;
+  /**
+   * The plant's planning rules as saved (#766): the mock source applies them to its plan; a server
+   * source reads the plant's rules itself and ignores them.
+   */
+  readonly rules?: EffectivePlanningRules;
   /** The page state a mock source answers with instead of its data (design D3, DR17 to DR22). */
   readonly preview?: PlanningPreview;
 }
