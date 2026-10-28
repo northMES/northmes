@@ -105,6 +105,8 @@ export interface PlantSettingsSnapshot {
   readonly fixture?: string;
   readonly plant: {
     readonly slug: string;
+    /** The name a page shows, such as Plant A. */
+    readonly name: string;
     readonly timeZone: string;
     readonly productionDayStart: string;
   };
@@ -119,10 +121,12 @@ export interface PlantSettingsSnapshot {
 }
 
 /**
- * A page state the product owner can open on mock data (design #688, MA5 to MA8 and MF1 to MF4):
- * the mock source answers it instead of the fixture; a server source ignores it.
+ * A page state the product owner can open on mock data (design #688, MA5 to MA8 and MF1 to MF4;
+ * design #767, PP4 to PP7): the mock source answers it instead of the fixture; a server source
+ * ignores it. noCalendar is the plant before its first calendar version, whose zone and production
+ * day start may still change (ADR 0066).
  */
-export type PlantSettingsPreview = 'loading' | 'empty' | 'error' | 'forbidden';
+export type PlantSettingsPreview = 'loading' | 'empty' | 'error' | 'forbidden' | 'noCalendar';
 
 export interface PlantSettingsLoadInput {
   readonly preview?: PlantSettingsPreview;
