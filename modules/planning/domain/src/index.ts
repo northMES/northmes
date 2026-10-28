@@ -77,6 +77,11 @@ export {
   g1PlanContext,
 } from './fixtures/gantt-context.ts';
 export {
+  type GanttInventoryFixture,
+  g1Inventory,
+  ganttInventoryFixture,
+} from './fixtures/gantt-inventory.ts';
+export {
   type GanttPagesFixture,
   g1Pages,
   ganttPagesFixture,

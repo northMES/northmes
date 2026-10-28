@@ -14,3 +14,5 @@ export { OrderScreen } from './screens/order/index.ts';
 export { PlanningRulesScreen } from './screens/planning-rules/index.ts';
 export { ProductionOrdersScreen } from './screens/production-orders/index.ts';
 export { ReleaseOrdersScreen } from './screens/release-orders/index.ts';
+export { StockScreen } from './screens/stock/index.ts';
+export { StockArticleScreen } from './screens/stock-article/index.ts';

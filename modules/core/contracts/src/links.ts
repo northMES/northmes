@@ -7,13 +7,14 @@ import { defineCoreLinks } from '@northmes/contracts';
  * plant's landing page with its open tab in `tab` (ADR 0078); the articles list, its new article
  * page, and each article's page with its edit page; the article groups, the new group page and each
  * group's page, which is its form; the customers and each customer's page; and in plant settings
- * the plant's own page, the people of the plant with Add role and each person's page with Add role for that person. Its settings section holds core's company
- * settings pages (ADR 0066): the users, the new user page, each user's page (its tab in `tab`) with
- * Add role; and the roles, the new role page (Start from in `from`), and each role's page (its tab
- * in `tab`) with its edit page (design core-304). Core's pages sit at the plant root and at the
- * company settings root, without the module id, so the articles list is /plant-a/articles and the
- * users /settings/<company id>/users (ADR 0074). The web's routes take their paths from it, and
- * other modules, server code and end-to-end specs build core's URLs with it.
+ * the plant's own page, the people of the plant with Add role and each person's page with Add role
+ * for that person. Its settings section holds core's company settings pages (ADR 0066): the users,
+ * the new user page, each user's page (its tab in `tab`) with Add role; the roles, the new role page
+ * (Start from in `from`), and each role's page (its tab in `tab`) with its edit page (design
+ * core-304); and the warehouses (design #729). Core's pages sit at the plant root and at the company
+ * settings root, without the module id, so the articles list is /plant-a/articles and the users
+ * /settings/<company id>/users (ADR 0074). The web's routes take their paths from it, and other
+ * modules, server code and end-to-end specs build core's URLs with it.
  */
 export const coreLinks = defineCoreLinks(
   {
@@ -73,6 +74,8 @@ export const coreLinks = defineCoreLinks(
           role: { path: '$roleId', children: { edit: { path: 'edit' } } },
         },
       },
+      /** The company's warehouses and the plant each maps to (ADR 0032; design #729). */
+      warehouses: { path: 'warehouses' },
     },
   },
 );
