@@ -13,7 +13,8 @@ afterEach(cleanup);
 /** The board grid, once it has loaded: while it loads, the grid's skeleton is busy. */
 async function findBoard(): Promise<HTMLElement> {
   return waitFor(() => {
-    const board = screen.getByRole('grid', { name: /board/ });
+    // Hidden too: Details, a modal drawer, keeps the board behind it inert while it is open.
+    const board = screen.getByRole('grid', { name: /board/, hidden: true });
     if (board.getAttribute('aria-busy') === 'true') throw new Error('The board is loading');
     return board;
   });
@@ -349,7 +350,13 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(block('1003.10').getAttribute('aria-selected')).toBe('false');
     expect(block('1003.10').querySelector('[data-selection-bar]')).toBeNull();
 
-    // Escape clears the selection and keeps focus on the job order.
+    // A click opens Details too. One Escape closes one layer (plan 07): Details, then the hover
+    // card that focus on the block opens again, then the selection.
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(document.activeElement).toBe(block('1001.10')));
+    await screen.findByRole('tooltip');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     await user.keyboard('{Escape}');
     expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
     expect(block('1001.10').getAttribute('aria-selected')).toBe('false');
@@ -499,7 +506,7 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     const block = board.querySelector<HTMLElement>('[role="gridcell"][data-job-order="1003.20"]');
     block?.focus();
     await screen.findByRole('tooltip');
-    await user.keyboard('{Enter}');
+    await user.keyboard(' ');
     expect(router.state.location.search).toMatchObject({ order: 'po-1003' });
 
     await user.keyboard('{Escape}');
@@ -527,7 +534,7 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     ).toBeTruthy();
   });
 
-  it('IN27 a row of the cluster popover selects its order, closes the popover and marks the cluster', async () => {
+  it('IN27 a row of the cluster popover selects its order, closes the popover and marks the cluster, and opens Details', async () => {
     const user = userEvent.setup();
     const router = renderGanttRoute(
       { zoom: '4weeks', from: '2026-11-02' },
@@ -542,7 +549,10 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     await user.click(cluster);
     const popover = await screen.findByRole('dialog', { name: /^2 jobs on CNC 1/ });
     await user.click(within(popover).getByRole('button', { name: '1002.10 Housing P' }));
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    // The row opens its Details too, so the popover gives way to the Details drawer.
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: /^2 jobs on CNC 1/ })).toBeNull(),
+    );
     expect(router.state.location.search).toMatchObject({ order: 'po-1002' });
     expect(cluster.getAttribute('aria-selected')).toBe('true');
     expect(cluster.querySelector('[data-selection-bar]')).not.toBeNull();

@@ -50,6 +50,8 @@ export interface BoardGridProps {
   /** The selected order, by id, whose job orders carry aria-selected. */
   readonly selectedOrderId: string | undefined;
   readonly onSelectOrder: (orderId: string) => void;
+  /** Opens the Details of a job order, by id. */
+  readonly onOpenDetails: (jobOrderId: string) => void;
   /** Opens the block menu of a job order at its block. */
   readonly onBlockMenu: (jobOrderId: string, anchor: HTMLElement) => void;
   readonly onFocusTarget: (key: string) => void;
@@ -191,6 +193,7 @@ export function BoardGrid({
   preview,
   selectedOrderId,
   onSelectOrder,
+  onOpenDetails,
   onBlockMenu,
   onFocusTarget,
   onKeyDown,
@@ -335,6 +338,7 @@ export function BoardGrid({
                     selectedOrderId={selectedOrderId}
                     onFocus={() => onFocusTarget(cell.key)}
                     onSelectOrder={onSelectOrder}
+                    onOpenDetails={onOpenDetails}
                   />
                 ) : (
                   <BoardBlock
@@ -348,6 +352,7 @@ export function BoardGrid({
                     selected={cell.row.order.id === selectedOrderId}
                     onFocus={() => onFocusTarget(focusKeys.block(cell.row.jobOrder.id))}
                     onSelect={() => onSelectOrder(cell.row.order.id)}
+                    onOpenDetails={() => onOpenDetails(cell.row.jobOrder.id)}
                     onMenu={(anchor) => onBlockMenu(cell.row.jobOrder.id, anchor)}
                   />
                 ),
@@ -436,11 +441,12 @@ export function BoardGrid({
                 data-job-order={row.jobOrder.displayNumber}
                 aria-selected={row.order.id === selectedOrderId}
                 onFocus={() => onFocusTarget(focusKeys.block(row.jobOrder.id))}
-                onClick={() => onSelectOrder(row.order.id)}
+                onClick={() => onOpenDetails(row.jobOrder.id)}
                 onKeyDown={(event) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
-                  onSelectOrder(row.order.id);
+                  if (event.key === 'Enter') onOpenDetails(row.jobOrder.id);
+                  else onSelectOrder(row.order.id);
                 }}
                 className="relative flex h-7 items-center gap-1.5 overflow-hidden rounded-sm border border-foreground bg-card px-2 text-xs"
               >
