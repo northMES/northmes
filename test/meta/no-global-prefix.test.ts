@@ -35,6 +35,13 @@ function forbiddenCallLines(path: string, source: string): number[] {
   return lines;
 }
 
+// Whether a source file can call a forbidden method: its text holds a method name, or a unicode
+// escape that could spell one. Parsing takes most of the scan's time, and under CI's coverage
+// counters it ran past the test timeout, so only these files go through the parser.
+function mayCallForbiddenMethod(source: string): boolean {
+  return source.includes('\\u') || [...forbiddenMethods].some((name) => source.includes(name));
+}
+
 // Each call of setGlobalPrefix or enableVersioning in a source file under <base>/apps, as
 // "<path>:<line>" with the path relative to base.
 function globalPrefixCalls(base: string): string[] {
@@ -43,11 +50,11 @@ function globalPrefixCalls(base: string): string[] {
     exclude: ['**/node_modules', '**/dist'],
   }).sort();
 
-  return files.flatMap((path) =>
-    forbiddenCallLines(path, readFileSync(join(base, path), 'utf8')).map(
-      (line) => `${path}:${line}`,
-    ),
-  );
+  return files.flatMap((path) => {
+    const source = readFileSync(join(base, path), 'utf8');
+    if (!mayCallForbiddenMethod(source)) return [];
+    return forbiddenCallLines(path, source).map((line) => `${path}:${line}`);
+  });
 }
 
 function writeFixture(base: string, path: string, content: string): void {
@@ -102,6 +109,29 @@ describe('no global prefix', () => {
       expect(globalPrefixCalls(base)).toEqual([
         'apps/backend/src/main.ts:2',
         'apps/backend/src/main.ts:4',
+      ]);
+    } finally {
+      rmSync(base, { recursive: true, force: true });
+    }
+  });
+
+  it('E02-S03 a fixture call with a unicode escape in the method name fails the check', () => {
+    const base = mkdtempSync(join(tmpdir(), 'northmes-global-prefix-'));
+    try {
+      writeFixture(
+        base,
+        'apps/backend/src/main.ts',
+        [
+          'const app = await NestFactory.create(AppModule);',
+          "app.setGlobalPref\\u0069x('api');",
+          'app.enable\\u{56}ersioning({ type: VersioningType.URI });',
+          '',
+        ].join('\n'),
+      );
+
+      expect(globalPrefixCalls(base)).toEqual([
+        'apps/backend/src/main.ts:2',
+        'apps/backend/src/main.ts:3',
       ]);
     } finally {
       rmSync(base, { recursive: true, force: true });
