@@ -39,7 +39,8 @@ test.describe('the planning rules page', () => {
 
     await frozen.getByRole('textbox', { name: /Frozen window at Plant A/ }).fill('48');
     await page.getByRole('button', { name: 'Save planning rules' }).click();
-    await expect(page.getByText('Planning rules saved.')).toBeVisible();
+    // The form shows the message; the announcer's copy of it is the page's live region.
+    await expect(page.locator('form').getByText('Planning rules saved.')).toBeVisible();
     await checkA11y('the planning rules saved');
 
     await page.goto(planningRules({ preview: 'loading' }));
