@@ -71,12 +71,24 @@ export function ShellSettingsNav({
   pathname,
 }: ShellSettingsNavProps) {
   const titleId = useId();
+  // One entry is current: the one whose page holds the page on screen most closely, so Board
+  // fields under Planning rules' path marks Board fields alone (#766).
+  const closest = groups
+    .flatMap(({ entries }) => entries.map(({ href }) => href))
+    .filter((href) => currentOf(href, pathname) !== undefined)
+    .reduce<string | undefined>(
+      (best, href) => (best === undefined || href.length > best.length ? href : best),
+      undefined,
+    );
   const entry = ({ label, icon, href }: SettingsEntry) => {
-    const current = currentOf(href, pathname);
+    const current = href === closest ? currentOf(href, pathname) : undefined;
     return (
       <li key={href}>
         <Link
           to={href}
+          // The router marks a link active on its descendants too; exact leaves the marking to
+          // current, which names one entry.
+          activeOptions={{ exact: true }}
           aria-current={current}
           className={cn(
             'flex min-h-9 items-center gap-2 rounded-md border-l-2 border-transparent px-2 text-sm hover:bg-accent',
