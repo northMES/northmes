@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import {
+  Building2,
   CalendarCog,
   CalendarDays,
   ChartGantt,
@@ -45,6 +46,7 @@ const icons: Readonly<Record<NavIconName, LucideIcon>> = {
   Users,
   Shield,
   Tags,
+  Building2,
 };
 
 /**

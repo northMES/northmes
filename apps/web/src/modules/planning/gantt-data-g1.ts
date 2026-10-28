@@ -122,8 +122,8 @@ function withOrigin(origin: OrderOrigin | undefined): { readonly origin?: OrderO
 
 /**
  * What the planning pages show beside the Gantt, from the pages fixture: the ERP connection, the
- * customers and their lines (each line names its production order by the snapshot's id), the
- * routings and the history of each order, newest first.
+ * company's plants, the customers and their lines (each line names its production order by the
+ * snapshot's id), the routings and the history of each order, newest first.
  */
 function pagesOf(fixture: GanttFixture, pages: GanttPagesFixture) {
   const numbers = new Set(fixture.productionOrders.map((order) => order.number));
@@ -143,6 +143,7 @@ function pagesOf(fixture: GanttFixture, pages: GanttPagesFixture) {
   }
   return {
     erp: { name: pages.erp.connectionName, importedAtMs: ms(pages.erp.importedAt.instant) },
+    plants: pages.plants,
     customers: pages.customers,
     customerOrderLines: pages.customerOrderLines.map((line) => ({
       id: `${line.customerOrder}-${line.line}`,
@@ -153,6 +154,7 @@ function pagesOf(fixture: GanttFixture, pages: GanttPagesFixture) {
       article: line.article,
       quantity: line.quantity,
       wantedDate: line.wantedDate,
+      deliveringPlant: line.deliveringPlant,
       // A line whose order the snapshot lacks is not supplied, as a line without an order is.
       ...(line.productionOrder !== null &&
         numbers.has(line.productionOrder) && {

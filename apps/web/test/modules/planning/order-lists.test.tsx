@@ -159,6 +159,25 @@ describe('the production orders list (plan 07; design #687, PL1 to PL3)', () => 
   });
 });
 
+describe('the customers of the production orders list (design #728)', () => {
+  it('#728 PL1 leads from each customer of an order to its page, and names a stock order', async () => {
+    renderGanttRoute({}, undefined, 'orders');
+    await screen.findByRole('table', { name: 'Production orders' });
+
+    const shared = rowOf('data-order', '1001');
+    expect(
+      within(shared)
+        .getAllByRole('link')
+        .filter((link) => link.getAttribute('href')?.includes('/customers/'))
+        .map((link) => [link.textContent, link.getAttribute('href')]),
+    ).toEqual([
+      ['Hallberg Verkstad AB', '/plant-a/customers/K-1042'],
+      ['Svea Komponent AB', '/plant-a/customers/K-1107'],
+    ]);
+    expect(rowOf('data-order', '1004').textContent).toContain('Stock order');
+  });
+});
+
 describe('the customer orders list (plan 07; design #687, CO1 and CO2)', () => {
   it('CO1 lists one row per customer order line by wanted date, with the order that supplies it', async () => {
     renderGanttRoute({}, undefined, 'customerOrders');
@@ -214,6 +233,19 @@ describe('the customer orders list (plan 07; design #687, CO1 and CO2)', () => {
     await waitFor(() => expect(lineRows()).toHaveLength(1));
     expect(lineRows()).toContain('40211-2');
     expect(router.state.location.search).toEqual({ status: 'none' });
+  });
+
+  it('#728 CO1 leads from a line to its customer order and to its customer', async () => {
+    renderGanttRoute({}, undefined, 'customerOrders');
+    await screen.findByRole('table', { name: 'Customer order lines' });
+
+    const supplied = rowOf('data-line', '40211-1');
+    expect(within(supplied).getByRole('link', { name: '40211' }).getAttribute('href')).toBe(
+      '/plant-a/planning/customer-orders/40211',
+    );
+    expect(
+      within(supplied).getByRole('link', { name: 'Hallberg Verkstad AB' }).getAttribute('href'),
+    ).toBe('/plant-a/customers/K-1042');
   });
 
   it('CO1 the search finds a line by its customer order, its reference, its customer or its article', async () => {

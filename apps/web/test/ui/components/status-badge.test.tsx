@@ -25,4 +25,10 @@ describe('StatusBadge', () => {
 
     expect(screen.getByText('Planned').getAttribute('data-tone')).toBe('info');
   });
+
+  it('#728 the warning tone marks who needs a higher permission, such as A company admin, with data-tone warning, from which the badge classes draw the warning colours', () => {
+    render(<StatusBadge tone="warning">A company admin</StatusBadge>);
+
+    expect(screen.getByText('A company admin').getAttribute('data-tone')).toBe('warning');
+  });
 });

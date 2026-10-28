@@ -17,6 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/primitives/table.tsx';
+import { CustomerLink } from '../../components/customer-link/index.ts';
+import { CustomerOrderLink } from '../../components/customer-order-link/index.ts';
 import type { GanttOrder, GanttSnapshot, OrderAnalysis } from '../../gantt-data.ts';
 import { phase1Reason } from '../../mock-reasons.ts';
 import {
@@ -254,12 +256,17 @@ function DemandSection({
             {lines.map((line) => (
               <TableRow key={line.id}>
                 <TableCell className={cell}>
-                  {customers.get(line.customerCode) ?? line.customerCode}{' '}
+                  <CustomerLink
+                    code={line.customerCode}
+                    name={customers.get(line.customerCode) ?? line.customerCode}
+                  />{' '}
                   <span className="font-mono text-xs text-muted-foreground">
                     {line.customerCode}
                   </span>
                 </TableCell>
-                <TableCell className={cn(cell, 'font-mono')}>{line.customerOrder}</TableCell>
+                <TableCell className={cell}>
+                  <CustomerOrderLink number={line.customerOrder} />
+                </TableCell>
                 <TableCell className={cn(cell, 'font-mono')}>{line.line}</TableCell>
                 <TableCell className={cn(cell, 'font-mono')}>{line.customersReference}</TableCell>
                 <TableCell className={cn(cell, 'text-end font-mono')}>

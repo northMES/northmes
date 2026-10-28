@@ -13,6 +13,11 @@ import {
 import { dashboardSearch, newRoleSearch, rolePageSearch, userPageSearch } from './access-search.ts';
 import { articleListSearch, urlSearchOf } from './article-list-search.ts';
 import {
+  customerListSearch,
+  customerPageSearch,
+  urlSearchOf as urlSearchOfCustomerList,
+} from './customer-list-search.ts';
+import {
   calendarPageSearch,
   machineListSearch,
   machinePageSearch,
@@ -49,7 +54,8 @@ function withoutCoreSegment(parent: AnyRoute, at: number) {
 
 /**
  * The core module's routes under the shell's $plant route: the dashboard, the plant's landing page
- * (ADR 0078), the articles, the article groups, and People in plant settings (ADR 0066). The top route is pathless, so core's pages sit at the plant
+ * (ADR 0078), the articles, the article groups, the customers, and People, the machines and the
+ * calendars in plant settings (ADR 0066). The top route is pathless, so core's pages sit at the plant
  * root, as /plant-a/articles, and the old URLs with core in them lead there (ADR 0074). Each route
  * takes its path from its entry in coreLinks, so a path is written once, in the link manifest (ADR
  * 0062); a list and a record's page are the index routes of their entries. Each search definition
@@ -190,6 +196,25 @@ export function coreRoutes(plantRoute: PlantRoute) {
     validateSearch: calendarPageSearch,
     component: lazyScreen('CalendarScreen'),
   });
+  // The customers register under Master data (design #728), on the fixture G1 until customers have
+  // their API.
+  const customersRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.customers).path,
+  });
+  const customerListRoute = createRoute({
+    getParentRoute: () => customersRoute,
+    path: '/',
+    validateSearch: (raw: Record<string, unknown>) =>
+      urlSearchOfCustomerList(customerListSearch(raw)),
+    component: lazyScreen('CustomersScreen'),
+  });
+  const customerRoute = createRoute({
+    getParentRoute: () => customersRoute,
+    path: linkEntry(coreLinks.customers.customer).path,
+    validateSearch: customerPageSearch,
+    component: lazyScreen('CustomerScreen'),
+  });
   return coreRoute.addChildren([
     withoutCoreSegment(coreRoute, 2),
     dashboardRoute,
@@ -213,6 +238,7 @@ export function coreRoutes(plantRoute: PlantRoute) {
       machineRoute.addChildren([machineDetailRoute, editMachineRoute]),
     ]),
     calendarsRoute.addChildren([calendarListRoute, calendarRoute]),
+    customersRoute.addChildren([customerListRoute, customerRoute]),
   ]);
 }
 

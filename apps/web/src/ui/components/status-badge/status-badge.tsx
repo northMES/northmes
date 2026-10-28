@@ -6,14 +6,14 @@ import type { ReactNode } from 'react';
 import { Badge } from '../../primitives/badge.tsx';
 
 /** The colour of a state: neutral, in progress (such as Planned), done or fine, or stopped. */
-export type StatusTone = 'neutral' | 'info' | 'success' | 'destructive';
+export type StatusTone = 'neutral' | 'info' | 'success' | 'destructive' | 'warning';
 
 /**
  * The colours of each tone, read from data-tone, so the attribute a test reads is what draws them.
  * The D1 order status tokens --status-planned and its foreground equal the info pair.
  */
 const tones =
-  'data-[tone=neutral]:bg-muted data-[tone=neutral]:text-muted-foreground data-[tone=info]:bg-info-subtle data-[tone=info]:text-info data-[tone=success]:bg-success-subtle data-[tone=success]:text-success data-[tone=destructive]:bg-destructive-subtle data-[tone=destructive]:text-destructive';
+  'data-[tone=neutral]:bg-muted data-[tone=neutral]:text-muted-foreground data-[tone=info]:bg-info-subtle data-[tone=info]:text-info data-[tone=success]:bg-success-subtle data-[tone=success]:text-success data-[tone=destructive]:bg-destructive-subtle data-[tone=destructive]:text-destructive data-[tone=warning]:bg-warning-subtle data-[tone=warning]:text-warning';
 
 export interface StatusBadgeProps {
   readonly tone: StatusTone;
