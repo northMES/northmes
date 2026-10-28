@@ -268,4 +268,20 @@ describe('the Settings button', () => {
     expect(linksIn(settings).map(([label]) => label)).not.toContain('Machines');
     expect(linksIn(settings).map(([label]) => label)).not.toContain('Calendars');
   });
+
+  it('#729 a company admin, who manages the integrations, finds Warehouses in company settings, and one who only reads roles does not', async () => {
+    const admin = api([], ['core.role:read', 'core.integration:manage']);
+    renderShellAt(`/settings/${companyId}/roles`, shellModules, { fetch: admin.fetch });
+    const settings = await screen.findByRole('navigation', { name: 'Company settings' });
+    await waitFor(() =>
+      expect(linksIn(settings)).toContainEqual(['Warehouses', `/settings/${companyId}/warehouses`]),
+    );
+
+    cleanup();
+    const reader = api([], ['core.role:read']);
+    renderShellAt(`/settings/${companyId}/roles`, shellModules, { fetch: reader.fetch });
+    const readerSettings = await screen.findByRole('navigation', { name: 'Company settings' });
+    await waitFor(() => expect(linksIn(readerSettings).length).toBeGreaterThan(0));
+    expect(linksIn(readerSettings).map(([label]) => label)).not.toContain('Warehouses');
+  });
 });

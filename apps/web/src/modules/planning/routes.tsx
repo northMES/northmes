@@ -11,6 +11,11 @@ import { jobOrdersSearch } from './job-orders-search.ts';
 import { customerOrderListSearch, orderListSearch, urlSearchOf } from './order-list-search.ts';
 import { orderPageSearch } from './order-page-search.ts';
 import { createDraftStore, PlanningDraftProvider } from './planning-draft.tsx';
+import {
+  stockArticleSearch,
+  stockSearch,
+  urlSearchOf as urlSearchOfStock,
+} from './stock-search.ts';
 
 /**
  * The planning module's routes under the shell's $plant route. Each route takes its path from its
@@ -115,6 +120,23 @@ export function planningRoutes(plantRoute: PlantRoute) {
     path: linkEntry(planningLinks.orders.order.edit).path,
     component: lazyRouteComponent(() => import('./screens.ts'), 'EditOrderScreen'),
   });
+  // The stock of the plant and of one article (design #729), read-only, on the fixture G1.
+  const stockRoute = createRoute({
+    getParentRoute: () => planningRoute,
+    path: linkEntry(planningLinks.stock).path,
+  });
+  const stockListRoute = createRoute({
+    getParentRoute: () => stockRoute,
+    path: '/',
+    validateSearch: (raw: Record<string, unknown>) => urlSearchOfStock(stockSearch(raw)),
+    component: lazyRouteComponent(() => import('./screens.ts'), 'StockScreen'),
+  });
+  const stockArticleRoute = createRoute({
+    getParentRoute: () => stockRoute,
+    path: linkEntry(planningLinks.stock.article).path,
+    validateSearch: stockArticleSearch,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'StockArticleScreen'),
+  });
   // Plant settings (ADR 0066; #762): the board fields, on the fixture G1 and the in-memory store
   // until planning settings have their API. The page takes the state the URL previews.
   const settingsRoute = createRoute({
@@ -137,6 +159,7 @@ export function planningRoutes(plantRoute: PlantRoute) {
       orderRoute.addChildren([orderPageRoute, editOrderRoute]),
     ]),
     customerOrdersRoute.addChildren([customerOrderListRoute, customerOrderRoute]),
+    stockRoute.addChildren([stockListRoute, stockArticleRoute]),
     settingsRoute.addChildren([boardFieldsRoute]),
   ]);
 }
