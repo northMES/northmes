@@ -15,6 +15,18 @@ describe('planningLinks', () => {
     ).toBe('/plant-a/planning/customer-orders/40211');
   });
 
+  it('#768 planningLinks builds the hrefs of New production order, from a customer order line, and New customer order', () => {
+    expect(planningLinks.orders.new({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/planning/orders/new',
+    );
+    expect(planningLinks.orders.new({ plant: 'plant-a' }, { line: '40211-2' }).href).toBe(
+      '/plant-a/planning/orders/new?line=40211-2',
+    );
+    expect(planningLinks.customerOrders.new({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/planning/customer-orders/new',
+    );
+  });
+
   it('#729 planningLinks.stock builds the hrefs of the Stock page and the stock of one article', () => {
     expect(planningLinks.stock({ plant: 'plant-a' }).href).toBe('/plant-a/planning/stock');
     expect(planningLinks.stock.article({ plant: 'plant-a', articleId: '30-2011' }).href).toBe(
