@@ -1,0 +1,128 @@
+{
+  "id": "G1-inventory",
+  "description": "What the stock pages and the material warning show beside the fixture G1 (design #729): the company's warehouses and the plant each maps to, the article numbers and units, the materials each routing operation consumes, the stock balances as of the last import and the ERP's planned movements. Consumption, output and customer demand are not listed here: the pages derive them from G1's job orders and the pages fixture's customer order lines. Every name, number and quantity is fictional. Dates are plant dates, Europe/Stockholm.",
+  "defaultPlant": "plant-a",
+  "countPurchaseRequisitions": false,
+  "projectedTo": "2026-11-13",
+  "stockImport": {
+    "asOf": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" },
+    "next": { "instant": "2026-11-02T08:55:00Z", "plantLocal": "2026-11-02T09:55:00" }
+  },
+  "warehouses": [
+    { "code": "A-FG", "name": "Finished goods A", "externalCode": "110", "plant": "plant-a" },
+    { "code": "A-QH", "name": "Quality hold A", "externalCode": "190", "plant": "plant-a" },
+    { "code": "A-RM", "name": "Raw materials A", "externalCode": "100", "plant": "plant-a" },
+    { "code": "A-WIP", "name": "Production floor A", "externalCode": "120", "plant": "plant-a" },
+    { "code": "B-FG", "name": "Finished goods B", "externalCode": "210", "plant": "plant-b" },
+    { "code": "B-RM", "name": "Raw materials B", "externalCode": "200", "plant": "plant-b" },
+    { "code": "CON", "name": "Consignment stock", "externalCode": "900", "plant": null }
+  ],
+  "articles": [
+    { "number": "20-1001", "name": "Bracket L", "unit": "pcs", "kind": "finished" },
+    { "number": "20-1002", "name": "Housing P", "unit": "pcs", "kind": "finished" },
+    { "number": "20-1003", "name": "Gear blank 32", "unit": "pcs", "kind": "finished" },
+    { "number": "20-1004", "name": "Hub 12", "unit": "pcs", "kind": "finished" },
+    { "number": "20-1005", "name": "Shaft 8", "unit": "pcs", "kind": "finished" },
+    { "number": "30-2011", "name": "Round bar 36 C45", "unit": "m", "kind": "material" },
+    { "number": "30-2014", "name": "Round bar 12 S355", "unit": "m", "kind": "material" },
+    { "number": "30-2020", "name": "Flat bar 60x10 S235", "unit": "m", "kind": "material" },
+    { "number": "30-2030", "name": "Steel tube 52x6", "unit": "m", "kind": "material" }
+  ],
+  "outputWarehouse": "A-FG",
+  "operationMaterials": [
+    {
+      "article": "Bracket L",
+      "sequence": 10,
+      "material": "30-2020",
+      "perPiece": 0.12,
+      "warehouse": "A-RM"
+    },
+    {
+      "article": "Gear blank 32",
+      "sequence": 10,
+      "material": "30-2011",
+      "perPiece": 0.06,
+      "warehouse": "A-RM"
+    },
+    {
+      "article": "Hub 12",
+      "sequence": 10,
+      "material": "30-2011",
+      "perPiece": 0.085,
+      "warehouse": "A-RM"
+    },
+    {
+      "article": "Housing P",
+      "sequence": 10,
+      "material": "30-2030",
+      "perPiece": 0.15,
+      "warehouse": "A-RM"
+    },
+    {
+      "article": "Shaft 8",
+      "sequence": 10,
+      "material": "30-2014",
+      "perPiece": 0.09,
+      "warehouse": "A-RM"
+    }
+  ],
+  "stock": [
+    { "warehouse": "A-FG", "article": "20-1001", "quantity": 40 },
+    { "warehouse": "A-FG", "article": "20-1003", "quantity": 0 },
+    { "warehouse": "A-FG", "article": "20-1004", "quantity": 120 },
+    { "warehouse": "A-QH", "article": "30-2011", "quantity": 14 },
+    { "warehouse": "A-RM", "article": "30-2011", "quantity": 72 },
+    { "warehouse": "A-RM", "article": "30-2014", "quantity": 210 },
+    { "warehouse": "A-RM", "article": "30-2020", "quantity": 180 },
+    { "warehouse": "A-RM", "article": "30-2030", "quantity": 70 },
+    { "warehouse": "A-WIP", "article": "30-2011", "quantity": 6 },
+    { "warehouse": "B-FG", "article": "20-1002", "quantity": 80 },
+    { "warehouse": "B-FG", "article": "20-1005", "quantity": 150 },
+    { "warehouse": "B-RM", "article": "30-2011", "quantity": 210 },
+    { "warehouse": "B-RM", "article": "30-2030", "quantity": 95 },
+    { "warehouse": "CON", "article": "30-2011", "quantity": 40 },
+    { "warehouse": "CON", "article": "30-2020", "quantity": 25 }
+  ],
+  "plannedMovements": [
+    {
+      "kind": "purchase",
+      "reference": "Purchase order 7712",
+      "warehouse": "A-RM",
+      "article": "30-2011",
+      "quantity": 20,
+      "date": "2026-10-30"
+    },
+    {
+      "kind": "transferOut",
+      "reference": "Transfer 5520",
+      "warehouse": "A-RM",
+      "article": "30-2011",
+      "quantity": -30,
+      "date": "2026-11-03"
+    },
+    {
+      "kind": "transferIn",
+      "reference": "Transfer 5520",
+      "warehouse": "A-WIP",
+      "article": "30-2011",
+      "quantity": 30,
+      "date": "2026-11-03"
+    },
+    {
+      "kind": "purchaseRequisition",
+      "reference": "Purchase requisition 3301",
+      "warehouse": "A-RM",
+      "article": "30-2011",
+      "quantity": 60,
+      "date": "2026-11-06"
+    },
+    {
+      "kind": "purchase",
+      "reference": "Purchase order 7740",
+      "warehouse": "A-RM",
+      "article": "30-2011",
+      "quantity": 120,
+      "date": "2026-11-09"
+    }
+  ]
+}

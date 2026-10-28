@@ -281,7 +281,7 @@ describe("a customer's page (design #728, CC1 to CC6)", () => {
       ],
       [
         '40223 line 1PO-88437',
-        'Tue 10 Nov',
+        'Fri 13 Nov',
         'Bracket L',
         '300 pcs',
         'Order 1005Planned',

@@ -28,6 +28,9 @@ import type { PlantSettingsSource } from '../../../src/modules/core/plant-settin
 import { g1PlantSettingsSource } from '../../../src/modules/core/plant-settings-data-g1.ts';
 import { PlantSettingsSourceProvider } from '../../../src/modules/core/plant-settings-source-context.ts';
 import { CoreArticles } from '../../../src/modules/core/screens/articles/articles.graphql.ts';
+import type { WarehousesSource } from '../../../src/modules/core/warehouses-data.ts';
+import { g1WarehousesSource } from '../../../src/modules/core/warehouses-data-g1.ts';
+import { WarehousesSourceProvider } from '../../../src/modules/core/warehouses-source-context.ts';
 
 /** The plant of every test, as the $plant segment names it. */
 export const plant = 'plant-a';
@@ -63,8 +66,8 @@ function SettingsStub() {
  * MockedProvider that answers each of mocks once and the contributions the shell would give the
  * slots, and returns the router, whose state.location shows the URL. A hold from holdRequests
  * keeps its requests from the mocks until the test releases them. The plant settings pages read
- * plantSettingsSource and the customers pages customersSource, the fixture G1 when the test gives
- * none.
+ * plantSettingsSource, the customers pages customersSource and the warehouses warehousesSource,
+ * the fixture G1 when the test gives none.
  */
 export function renderCoreAt(
   href: string,
@@ -74,11 +77,13 @@ export function renderCoreAt(
     hold,
     plantSettingsSource = g1PlantSettingsSource,
     customersSource = g1CustomersSource,
+    warehousesSource = g1WarehousesSource,
   }: {
     readonly contributions?: readonly SlotContribution[];
     readonly hold?: ApolloLink;
     readonly plantSettingsSource?: PlantSettingsSource;
     readonly customersSource?: CustomersSource;
+    readonly warehousesSource?: WarehousesSource;
   } = {},
 ) {
   const router = createRouter({
@@ -94,7 +99,9 @@ export function renderCoreAt(
       <ContributionsProvider value={contributions}>
         <PlantSettingsSourceProvider value={plantSettingsSource}>
           <CustomersSourceProvider value={customersSource}>
-            <RouterProvider router={router} />
+            <WarehousesSourceProvider value={warehousesSource}>
+              <RouterProvider router={router} />
+            </WarehousesSourceProvider>
           </CustomersSourceProvider>
         </PlantSettingsSourceProvider>
       </ContributionsProvider>

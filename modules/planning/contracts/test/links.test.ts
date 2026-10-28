@@ -27,6 +27,13 @@ describe('planningLinks', () => {
     );
   });
 
+  it('#729 planningLinks.stock builds the hrefs of the Stock page and the stock of one article', () => {
+    expect(planningLinks.stock({ plant: 'plant-a' }).href).toBe('/plant-a/planning/stock');
+    expect(planningLinks.stock.article({ plant: 'plant-a', articleId: '30-2011' }).href).toBe(
+      '/plant-a/planning/stock/30-2011',
+    );
+  });
+
   it("#762 planningLinks.settings.boardFields builds the href of a plant's board fields page", () => {
     expect(planningLinks.settings.boardFields({ plant: 'plant-a' }).href).toBe(
       '/plant-a/planning/settings/board-fields',

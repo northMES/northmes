@@ -26,6 +26,10 @@ import {
 } from './plant-settings-search.ts';
 import { roleListSearch } from './role-list-search.ts';
 import { userListSearch } from './user-list-search.ts';
+import {
+  urlSearchOf as urlSearchOfWarehouseList,
+  warehouseListSearch,
+} from './warehouse-list-search.ts';
 
 /** A screen of screens.ts as a route component, which loads the screens' chunk on first use. */
 function lazyScreen(name: keyof typeof import('./screens.ts')) {
@@ -253,10 +257,10 @@ export function coreRoutes(plantRoute: PlantRoute) {
 
 /**
  * The core module's company settings routes under the shell's /settings/$companyId route (ADR
- * 0066): the users with a user's page and Add role, and the roles with a role's page and its
- * editor. Their paths come from the settings section of coreLinks. The top route is pathless, so
- * the users sit at /settings/<company id>/users, and the old URLs with core in them lead there
- * (ADR 0074).
+ * 0066): the users with a user's page and Add role, the roles with a role's page and its editor,
+ * and the warehouses. Their paths come from the settings section of coreLinks. The top route is
+ * pathless, so the users sit at /settings/<company id>/users, and the old URLs with core in them
+ * lead there (ADR 0074).
  */
 export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
   const coreRoute = createRoute({ getParentRoute: () => settingsRoute, id: coreModuleId });
@@ -322,8 +326,17 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
     path: linkEntry(coreLinks.settings.roles.role.edit).path,
     component: lazyScreen('EditRoleScreen'),
   });
+  // The company's warehouses (design #729), on the inventory fixture until core's warehouse API.
+  const warehousesRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.settings.warehouses).path,
+    validateSearch: (raw: Record<string, unknown>) =>
+      urlSearchOfWarehouseList(warehouseListSearch(raw)),
+    component: lazyScreen('WarehousesScreen'),
+  });
   return coreRoute.addChildren([
     withoutCoreSegment(coreRoute, 3),
+    warehousesRoute,
     usersRoute.addChildren([
       userListRoute,
       newUserRoute,

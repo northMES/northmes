@@ -11,6 +11,7 @@ import { FormSection } from '../../../../ui/components/form-section/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
 import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-guard/index.ts';
+import { announce } from '../../../../ui/lib/announce.ts';
 import { fieldId } from '../../../../ui/lib/field-id.ts';
 import { Skeleton } from '../../../../ui/primitives/skeleton.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
@@ -205,11 +206,16 @@ function PlanningRulesForm({
     const change: Record<string, RuleValue | null> = {};
     for (const rule of planningRuleDefinitions) {
       const draft = drafts[rule.key];
-      if (!applies(rule.key) || draft.choice === 'company') {
+      if (draft.choice === 'company') {
         change[rule.key] = null;
         continue;
       }
       const value = parsedValue(rule, draft.text);
+      // A rule the plant does not use keeps its own value, as the page says, when it has one.
+      if (!applies(rule.key)) {
+        if (value !== undefined) change[rule.key] = value;
+        continue;
+      }
       if (value === undefined)
         found[rule.key] = valueErrors[rule.key] ?? `Choose a value for ${rule.label}.`;
       else change[rule.key] = value;
@@ -224,6 +230,7 @@ function PlanningRulesForm({
     setSavedDrafts(drafts);
     setReason('');
     setStatus('Planning rules saved.');
+    announce('Planning rules saved.');
   };
 
   // A rule that no longer takes its own value leaves the summary, so no link points to a field
@@ -317,9 +324,7 @@ function PlanningRulesForm({
           hint="Shown in the history of the planning settings once it exists. Do not enter personal data. Up to 500 characters."
         />
       </FormSection>
-      <p role="status" className="text-sm text-muted-foreground">
-        {status}
-      </p>
+      <p className="text-sm text-muted-foreground">{status}</p>
       <FormActions
         saveLabel="Save planning rules"
         saving={false}
