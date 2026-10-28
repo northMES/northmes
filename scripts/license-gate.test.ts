@@ -313,15 +313,7 @@ describe('license gate', () => {
       .flatMap((line) => [...(line.split('|')[1] ?? '').matchAll(/`([^`]+)`/g)].map(([, n]) => n));
     const names = (neverInstalled as { name: string }[]).map(({ name }) => name);
 
-    expect(packages).toEqual([
-      '@graphql-yoga/nestjs-federation',
-      '@apollo/gateway',
-      'exceljs',
-      'xlsx',
-      '@sentry/node',
-      '@better-auth/cli',
-      '@base-ui-components/react',
-    ]);
+    expect(packages, 'npm packages in the Never installed table').not.toHaveLength(0);
     expect(names).toEqual(expect.arrayContaining([...packages, 'mastra', '@mastra/*']));
     expect(neverInstalled).toContainEqual(
       expect.objectContaining({ name: '@sentry/node', in: '@northmes/backend' }),

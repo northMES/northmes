@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, matchesGlob } from 'node:path';
+import { dirname, join, matchesGlob, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { scan } from '../../scripts/lint/no-customer-data.mjs';
@@ -232,10 +232,10 @@ describe('no-customer-data', () => {
       expect(`${result.stdout}${result.stderr}`).not.toMatch(/acme/i);
     });
 
-    it('runs as the root script lint:customer-data', () => {
+    it('runs as the root script lint:customer-data, on the script this file tests', () => {
       const scripts = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).scripts;
 
-      expect(scripts['lint:customer-data']).toBe('node scripts/lint/no-customer-data.mjs');
+      expect(scripts['lint:customer-data']).toBe(`node ${relative(root, script)}`);
     });
 
     it('passes on this repository: no tracked file holds a 6-4 digit organisation number', () => {

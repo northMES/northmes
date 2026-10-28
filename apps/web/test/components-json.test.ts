@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { readFileSync } from 'node:fs';
+import { relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 interface ComponentsJson {
@@ -16,24 +18,17 @@ function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')) as T;
 }
 
-/** The folder under apps/web that an alias names, through the package.json imports of apps/web. */
-function folderOf(alias: string, imports: Record<string, string>): string | undefined {
-  for (const [key, target] of Object.entries(imports)) {
-    const prefix = key.replace(/\*$/, '');
-    if (key.endsWith('*') && alias.startsWith(prefix)) {
-      return target.replace(/^\.\//, '').replace(/\*$/, alias.slice(prefix.length));
-    }
-  }
-  return undefined;
+/** The folder of apps/web that Node resolves an alias to, through the package.json imports. */
+function folderOf(alias: string): string {
+  const web = fileURLToPath(new URL('..', import.meta.url));
+  return relative(web, fileURLToPath(import.meta.resolve(alias)));
 }
 
 describe('the shadcn CLI configuration', () => {
   it('E04-S01 the utils alias resolves to a module that exports cn, for a component that imports it', async () => {
     const { aliases = {} } = readJson<ComponentsJson>('components.json');
-    const { imports = {} } = readJson<{ imports?: Record<string, string> }>('package.json');
-    const folder = folderOf(aliases.utils ?? '', imports);
 
-    const utils = (await import(new URL(`../${folder}.ts`, import.meta.url).href)) as {
+    const utils = (await import(`${import.meta.resolve(aliases.utils ?? '')}.ts`)) as {
       cn?: (...classes: string[]) => string;
     };
 
@@ -61,9 +56,7 @@ describe('the shadcn CLI configuration', () => {
     // extension, as every other import in src does.
     expect(imports['#ui/*']).toBe('./src/ui/*');
     expect(
-      Object.fromEntries(
-        Object.entries(aliases).map(([name, alias]) => [name, folderOf(alias, imports)]),
-      ),
+      Object.fromEntries(Object.entries(aliases).map(([name, alias]) => [name, folderOf(alias)])),
     ).toEqual({
       components: 'src/ui/components',
       ui: 'src/ui/primitives',

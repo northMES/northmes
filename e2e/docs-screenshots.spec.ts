@@ -57,32 +57,46 @@ test.describe('the docs screenshots', () => {
     await docsImage(page, 'dashboard');
   });
 
-  test('ADR0048 the sign-in guide shows the plant switcher open', async ({ page, signIn }) => {
+  // No other spec opens the plant switcher, so its axe check (ADR 0021) runs here.
+  test('ADR0048 the sign-in guide shows the plant switcher open, which passes the WCAG 2.2 AA rules', async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
     await signIn(coreLinks.dashboard({ plant }).href);
     await page.getByRole('button', { name: 'Demo Works, Plant A, switch plant' }).click();
     const menu = page.getByRole('menu');
     await expect(menu.getByRole('menuitem', { name: 'Plant B' })).toBeVisible();
+    await expect(menu).toHaveCSS('opacity', '1');
+    await checkA11y('the plant switcher open');
     await docsImage(page, 'use/plant-switcher', menu);
   });
 
-  test('ADR0048 the users guide shows the users, a user, the roles and People', async ({
+  // No other spec reaches the company's users, a user's Access tab, the roles or People, so their
+  // axe checks (ADR 0021) run here.
+  test('ADR0048 the users guide shows the users, a user, the roles and People, each passing the WCAG 2.2 AA rules', async ({
     page,
     signIn,
+    checkA11y,
   }) => {
     await signIn(`${companySettings}/users`);
     await expect(page.getByRole('row', { name: /Alex Lund/ })).toBeVisible();
+    await checkA11y('the users of the company');
     await docsImage(page, 'use/users');
 
     await page.goto(`${companySettings}/users/${devUsers.planner.id}?tab=access`);
     await expect(page.getByRole('table', { name: 'Roles of Alex Lund' })).toBeVisible();
+    await checkA11y("a user's Access tab");
     await docsImage(page, 'use/user-access');
 
     await page.goto(`${companySettings}/roles`);
     await expect(page.getByRole('row', { name: /Plant admin/ })).toBeVisible();
+    await checkA11y('the roles of the company');
     await docsImage(page, 'use/roles');
 
     await page.goto(coreLinks.people({ plant }).href);
     await expect(page.getByRole('table', { name: 'People at Plant A' })).toBeVisible();
+    await checkA11y('People at a plant');
     await docsImage(page, 'use/people');
   });
 

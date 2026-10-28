@@ -7,6 +7,7 @@ The plan lives in `docs/plan/`, the architecture decisions in `docs/adr/` (index
 ## Working rules
 
 - Test-driven, one behaviour at a time: write its failing test, make it pass, then refactor.
+- A test can go red for the regression its name describes: `docs/agents/testing.md` holds the rules and their fixes.
 - Each integration and end-to-end test run starts its own Postgres with `@testcontainers/postgresql`.
 - Each page state that the end-to-end specs reach, loading and empty states included, runs `checkA11y` from `e2e/fixtures.ts` in at least one spec, so a WCAG 2.2 AA violation fails it (ADR 0021). An axe exclusion needs a linked issue and an expiry date.
 - Tests call the mocked AI provider. Tests against a real model live in `*.ai.test.ts` and run only through `pnpm test:ai` or `pnpm test:e2e:ai`.
@@ -29,6 +30,7 @@ NorthMES keeps itself ready for a third-party audit (IEC 62443-4-1, the ISO 2700
 - A client sees a masked error with a code and a correlation id, never a stack trace or an internal detail.
 - A change to a control starts with its security test: a refused permission, a hidden row, a refused input.
 - Every pull request description has a Security section. It names the controls the change touches and the threat each one meets, or says "none" with a reason.
+- Every pull request description has a Docs section. It names the pages under `apps/docs` the change updates, or says "none" with a reason that names the surface the change touches when `.github/docs-paths` maps it (ADR 0088).
 - A new surface, trust boundary or integration adds its row to the threat model. A change that adds a significant security or compliance risk says so and waits for the maintainer.
 
 ## Scope

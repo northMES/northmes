@@ -14,6 +14,7 @@ import {
   isBefore,
   linksIn,
   renderShellAt,
+  reports,
   settingsModule,
   setViewport,
   viewer,
@@ -215,13 +216,12 @@ describe('the Settings button', () => {
     expect(button.getAttribute('href')).toBe(`/settings/${companyId}`);
 
     cleanup();
-    const neither = api(['core.article:read'], ['core.article:read']);
-    renderShellAt('/plant-a/articles', shellModules, { fetch: neither.fetch });
-    await screen.findByRole('banner');
-    await waitFor(() =>
-      expect(neither.seen.map(({ operationName }) => operationName)).toContain('CoreViewer'),
-    );
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // The permissions draw the Reports entry, which needs one, and no settings target: once the
+    // entry shows, the viewer's answer has arrived and a Settings button would show by then too.
+    const neither = api(['core.article:read', 'reports.report:read'], ['core.article:read']);
+    renderShellAt('/plant-a/articles', [...shellModules, reports], { fetch: neither.fetch });
+    const sidebar = await screen.findByRole('navigation', { name: 'Main' });
+    expect(await within(sidebar).findByRole('link', { name: 'Reports' })).toBeDefined();
     expect(within(screen.getByRole('banner')).queryByRole('link', { name: 'Settings' })).toBeNull();
   });
 

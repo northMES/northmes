@@ -39,12 +39,23 @@ describe('the NorthMES image (ADR 0080)', () => {
       .map((command) => command.trim());
 
     expect(commands).toContain('pnpm build');
-    expect(commands.slice(commands.indexOf('pnpm build') + 1)).toEqual(
-      expect.arrayContaining([
-        'find . -name node_modules -prune -o -name .turbo -type d -prune -exec rm -rf {} +',
-        'rm -f node_modules/.modules.yaml node_modules/.pnpm-workspace-state-v1.json',
-      ]),
-    );
+    const afterBuild = commands.slice(commands.indexOf('pnpm build') + 1);
+    // A command that removes a file or folder: rm, or find with -delete or an rm under -exec.
+    const removes = (name: string) =>
+      afterBuild.some(
+        (command) =>
+          command.includes(name) &&
+          (/^rm\b/.test(command) ||
+            (/^find\b/.test(command) && /-delete|-exec rm\b/.test(command))),
+      );
+
+    for (const name of [
+      '.turbo',
+      'node_modules/.modules.yaml',
+      'node_modules/.pnpm-workspace-state-v1.json',
+    ]) {
+      expect(removes(name), `a command after pnpm build removes ${name}`).toBe(true);
+    }
   });
 
   it('pins the pnpm version that the root packageManager names, with the integrity of each package', () => {

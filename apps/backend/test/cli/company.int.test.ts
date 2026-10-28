@@ -58,18 +58,19 @@ describe('northmes company', () => {
     return `Bearer ${jwt}`;
   }
 
-  /** The role keys the user holds at the company node, sorted. */
-  async function companyRolesOf(userId: string, companyId: string) {
-    const rows = await queryAsCore<{ key: string }>(
-      db.ownerUrl,
-      `select r.key from core.role_assignment a join core.role r on r.id = a.role_id
-        where a.user_id = $1 and a.scope_id = $2 order by r.key`,
-      [userId, companyId],
-    );
-    return rows.map(({ key }) => key);
+  /** The usernames of the Company admins of the company, as `company list --json` answers them. */
+  async function adminsOf(companyId: string) {
+    const run = await runCli(['company', 'list', '--json'], env);
+    const companies = JSON.parse(run.out) as { id: string; admins: string[] }[];
+    const company = companies.find(({ id }) => id === companyId);
+    if (!company) throw new Error(`company list does not list ${companyId}`);
+    return company.admins;
   }
 
-  /** The Better Auth roles the user holds in the organization of the company. */
+  /**
+   * The Better Auth roles the user holds in the organization of the company. No command or query
+   * answers auth.member, so the test reads the row as core's owner.
+   */
   async function membershipsOf(userId: string, companyId: string) {
     const rows = await queryAsCore<{ role: string }>(
       db.ownerUrl,
@@ -143,7 +144,7 @@ describe('northmes company', () => {
     expect(run.out.split(password)).toHaveLength(2);
     expect(run.log.join('\n')).not.toContain(password);
     expect(user?.name).toBe('Ada Admin');
-    expect(await companyRolesOf(user?.id ?? '', companyId)).toEqual(['core-company-admin']);
+    expect(await adminsOf(companyId)).toEqual([username]);
     expect(await membershipsOf(user?.id ?? '', companyId)).toEqual(['owner']);
     expect(signedIn.status).toBe(200);
     expect(answer.errors?.[0]?.extensions).toMatchObject({
@@ -275,7 +276,7 @@ describe('northmes company', () => {
     expect(rerun.code).toBe(0);
     expect(answer).toMatchObject({ companyId: id, replayed: false });
     expect(answer).not.toHaveProperty('temporaryPassword');
-    expect(await companyRolesOf(answer.adminUserId, id)).toEqual(['core-company-admin']);
+    expect(await adminsOf(id)).toEqual([username]);
   });
 
   it('E05-S14 with the organization written and no core rows, a rerun naming another admin exits 3 and gives nobody the role', {
@@ -322,7 +323,7 @@ describe('northmes company', () => {
   }, async () => {
     const username = freshUsername();
     const email = `${username}@example.test`;
-    const { user } = await testApp.app
+    await testApp.app
       .get(AuthService)
       .createUser({ username, email, password: 'a password of the existing user' });
 
@@ -346,7 +347,7 @@ describe('northmes company', () => {
 
     expect(run.code).toBe(0);
     expect(answer).not.toHaveProperty('temporaryPassword');
-    expect(await companyRolesOf(user.id, answer.companyId)).toEqual(['core-company-admin']);
+    expect(await adminsOf(answer.companyId)).toEqual([username]);
     expect((await signInWith(email, 'a password of the existing user')).status).toBe(200);
   });
 
@@ -412,7 +413,7 @@ describe('northmes company', () => {
 
     expect(run.code).toBe(0);
     expect(answer).toMatchObject({ companyId: company, username, alreadyAdmin: false });
-    expect(await companyRolesOf(answer.userId, company)).toEqual(['core-company-admin']);
+    expect(await adminsOf(company)).toEqual([username]);
     expect(await membershipsOf(answer.userId, company)).toEqual(['member']);
     expect((await signInWith(email, answer.temporaryPassword)).status).toBe(200);
   });
@@ -446,9 +447,7 @@ describe('northmes company', () => {
       username: adminUsername,
       alreadyAdmin: true,
     });
-    expect(await companyRolesOf(adminUserId ?? '', companyId ?? '')).toEqual([
-      'core-company-admin',
-    ]);
+    expect(await adminsOf(companyId ?? '')).toEqual([adminUsername]);
   });
 
   it('E05-S14 add-admin of a member without the role, as a failed run leaves, gives the role on the rerun', {
@@ -475,7 +474,7 @@ describe('northmes company', () => {
     );
 
     expect(run.code).toBe(0);
-    expect(await companyRolesOf(user.id, company)).toEqual(['core-company-admin']);
+    expect(await adminsOf(company)).toEqual([username]);
     expect(await membershipsOf(user.id, company)).toEqual(['member']);
   });
 
@@ -496,7 +495,7 @@ describe('northmes company', () => {
     );
 
     expect(run.code).toBe(3);
-    expect(await companyRolesOf(user.id, company)).toEqual([]);
+    expect(await adminsOf(company)).toEqual([]);
   });
 
   it('E05-S14 add-admin at a company that does not exist exits 4', {

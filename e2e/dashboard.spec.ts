@@ -165,9 +165,7 @@ test.describe('the dashboard', () => {
     await page.keyboard.press('Enter');
     await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
-    await expect(page.locator('#announcer-polite')).toHaveText(
-      'Late orders dropped. Column 2, row 5.',
-    );
+    await expect(page.getByRole('status')).toHaveText('Late orders dropped. Column 2, row 5.');
 
     await page.getByRole('button', { name: 'Done' }).click();
     await expect(page.getByRole('button', { name: 'Edit layout' })).toBeFocused();

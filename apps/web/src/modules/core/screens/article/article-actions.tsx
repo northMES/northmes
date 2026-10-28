@@ -13,13 +13,18 @@ import type { Article } from '../../article.graphql.ts';
 import { editedAtPlant } from '../../article-plants.ts';
 import { commandFailure } from '../../components/article-form/index.ts';
 import { CoreRestoreArticle } from '../../restore-article.graphql.ts';
-import { useViewer } from '../../use-viewer.ts';
+import type { Viewer } from '../../use-viewer.ts';
 import { CoreArchiveArticle } from './archive-article.graphql.ts';
 
 interface ArticleActionProps {
   readonly article: Article;
   /** Reads the article from the API again, after a change was refused for a stale version. */
   readonly reload: () => Promise<Article | undefined>;
+}
+
+interface ArticleActionsProps extends ArticleActionProps {
+  /** The signed-in user's permissions, which the page reads with the article. */
+  readonly viewer: Viewer;
 }
 
 /** The page's only h1, which takes focus after a confirmed archive or restore. */
@@ -120,11 +125,11 @@ function RestoreArticleAction({ article, reload }: ArticleActionProps) {
  * The article page's actions: Archive and Edit for an active article (DE1), Restore alone for an
  * archived one, which cannot be changed until it is restored. Each shows to a user who holds its
  * permission where the article is changed (ADR 0073): at the plant for an article that only this
- * plant uses, at the company for any other. The API checks again.
+ * plant uses, at the company for any other. The API checks again. The page reads the viewer with
+ * the article, so the actions show with it rather than a moment later.
  */
-export function ArticleActions({ article, reload }: ArticleActionProps) {
+export function ArticleActions({ article, reload, viewer }: ArticleActionsProps) {
   const { plant } = useShell();
-  const viewer = useViewer();
   const atPlant = editedAtPlant(article, plant);
   const may = (permission: string) =>
     atPlant ? viewer.can(permission) : viewer.canAtCompany(permission);

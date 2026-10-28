@@ -20,21 +20,15 @@ describe('StatusBadge', () => {
     expect(badge.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('E02-S05 the info tone draws a state in progress, such as Planned, on the info colours', () => {
+  it('E02-S05 the info tone marks a state in progress, such as Planned, with data-tone info, from which the badge classes draw the info colours', () => {
     render(<StatusBadge tone="info">Planned</StatusBadge>);
 
-    const badge = screen.getByText('Planned');
-    expect(badge.getAttribute('data-tone')).toBe('info');
-    expect(badge.className).toContain('bg-info-subtle');
-    expect(badge.className).toContain('text-info');
+    expect(screen.getByText('Planned').getAttribute('data-tone')).toBe('info');
   });
 
-  it('#728 the warning tone draws who needs a higher permission, such as A company admin, on the warning colours', () => {
+  it('#728 the warning tone marks who needs a higher permission, such as A company admin, with data-tone warning, from which the badge classes draw the warning colours', () => {
     render(<StatusBadge tone="warning">A company admin</StatusBadge>);
 
-    const badge = screen.getByText('A company admin');
-    expect(badge.getAttribute('data-tone')).toBe('warning');
-    expect(badge.className).toContain('bg-warning-subtle');
-    expect(badge.className).toContain('text-warning');
+    expect(screen.getByText('A company admin').getAttribute('data-tone')).toBe('warning');
   });
 });

@@ -3,13 +3,14 @@
 import { linkEntry } from '@northmes/contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import type { PlantRoute } from '@northmes/web-sdk';
-import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router';
+import { createRoute, lazyRouteComponent, Outlet, redirect } from '@tanstack/react-router';
 import { boardFieldsSearch } from './board-fields-search.ts';
 import { customerOrderPageSearch } from './customer-order-page-search.ts';
 import { boardSearch, ganttSearch } from './gantt-search.ts';
 import { jobOrdersSearch } from './job-orders-search.ts';
 import { customerOrderListSearch, orderListSearch, urlSearchOf } from './order-list-search.ts';
 import { orderPageSearch } from './order-page-search.ts';
+import { createDraftStore, PlanningDraftProvider } from './planning-draft.tsx';
 
 /**
  * The planning module's routes under the shell's $plant route. Each route takes its path from its
@@ -17,12 +18,20 @@ import { orderPageSearch } from './order-page-search.ts';
  * route's path is the manifest's own, the module id. The screens load lazily from screens.ts. The
  * Gantt page keeps its view state in the URL: zoom, from, order and chain (plan 18); the board
  * route keeps the same keys and redirects the view=gantt links from before the Gantt had its own
- * page (Krister, 2026-10-17).
+ * page (Krister, 2026-10-17). The top route holds the planner's drafts for the pages under it.
  */
 export function planningRoutes(plantRoute: PlantRoute) {
+  // The planner's drafts live as long as the router, so a move made on one planning page shows on
+  // the others and stays while the planner visits a page of another module.
+  const drafts = createDraftStore();
   const planningRoute = createRoute({
     getParentRoute: () => plantRoute,
     path: linkEntry(planningLinks).path,
+    component: () => (
+      <PlanningDraftProvider store={drafts}>
+        <Outlet />
+      </PlanningDraftProvider>
+    ),
   });
   const boardRoute = createRoute({
     getParentRoute: () => planningRoute,
