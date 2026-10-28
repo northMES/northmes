@@ -344,8 +344,15 @@ function JobOrderDetails({
   readonly onToggleChain: () => void;
   readonly onMoveApplied: (jobOrderId: string) => void;
 }) {
-  const { snapshot, timeZone, machineName, chainRowIds, boardFields, materialShortages, inventory } =
-    useGanttView();
+  const {
+    snapshot,
+    timeZone,
+    machineName,
+    chainRowIds,
+    boardFields,
+    materialShortages,
+    inventory,
+  } = useGanttView();
   const { jobOrder, operation, order, analysis } = row;
   const shortages = materialShortages?.get(operation.displayNumber) ?? [];
   // Every hover field shows here too, in the plant's order (plan 07, Board accessibility; #762).

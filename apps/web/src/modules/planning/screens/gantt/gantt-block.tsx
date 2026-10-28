@@ -41,8 +41,16 @@ export function GanttBlock({
   readonly onChain: boolean;
   readonly onSelect: () => void;
 }) {
-  const { scale, snapshot, machineName, timeZone, draftRowIds, move, boardFields, materialShortages } =
-    useGanttView();
+  const {
+    scale,
+    snapshot,
+    machineName,
+    timeZone,
+    draftRowIds,
+    move,
+    boardFields,
+    materialShortages,
+  } = useGanttView();
   const { jobOrder, operation, order } = row;
   // The press in progress: where it started, and whether it has become a drag.
   const press = useRef<{ clientX: number; setupStartMs: number; dragging: boolean } | undefined>(
