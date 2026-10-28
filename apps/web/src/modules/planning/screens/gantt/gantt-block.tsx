@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cn } from 'cn';
-import { Clock, Lock, Pencil } from 'lucide-react';
+import { Clock, Lock, Pencil, TriangleAlert } from 'lucide-react';
 import { type KeyboardEvent, type PointerEvent, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import { blockLines } from '../../board-fields.ts';
@@ -12,7 +12,7 @@ import { tooltipText } from './gantt-move.ts';
 import type { JobOrderRow } from './gantt-rows.ts';
 
 /** The width from which a block shows its first line, its second line, and the setup hatch (D3). */
-const density = { compact: 48, full: 120, setup: 66 } as const;
+const density = { compact: 48, full: 120, setup: 66, cue: 16 } as const;
 
 /** Below this width a hollow segment is not drawn at Week and 4 weeks zoom (plan 18). */
 const hollowMinPx = 2;
@@ -41,7 +41,16 @@ export function GanttBlock({
   readonly onChain: boolean;
   readonly onSelect: () => void;
 }) {
-  const { scale, snapshot, machineName, timeZone, draftRowIds, move, boardFields } = useGanttView();
+  const {
+    scale,
+    snapshot,
+    machineName,
+    timeZone,
+    draftRowIds,
+    move,
+    boardFields,
+    materialShortages,
+  } = useGanttView();
   const { jobOrder, operation, order } = row;
   // The press in progress: where it started, and whether it has become a drag.
   const press = useRef<{ clientX: number; setupStartMs: number; dragging: boolean } | undefined>(
@@ -55,13 +64,16 @@ export function GanttBlock({
   const width = Math.max(2, scale.x(placement.endMs) - left);
   const machine = machineName(jobOrder.equipment);
   const inDraft = draftRowIds?.has(jobOrder.id) === true;
+  const material = materialShortages?.get(operation.displayNumber);
   const lines = blockLines(boardFields.block, row, snapshot, machineName);
   const name = blockName(row, snapshot, machine, {
     onChain,
     inDraft,
+    material,
     extraNames: lines.extraNames,
   });
-  const states = blockStates(row, snapshot, { onChain, inDraft });
+  const states = blockStates(row, snapshot, { onChain, inDraft, material });
+  const short = material !== undefined && material.length > 0;
   const locked = states.some((state) => state.kind === 'locked');
   const conflict = states.some((state) => state.kind === 'conflict');
   const late = states.some((state) => state.kind === 'late');
@@ -247,8 +259,22 @@ export function GanttBlock({
               }}
             />
           )}
+          {short && width >= density.cue && (
+            // The material warning at the block's trailing edge (D3 block states), on a block wide
+            // enough to hold it; the name, the tree badge and the hover card carry it on any block.
+            <TriangleAlert
+              aria-hidden
+              data-material-cue
+              className="absolute end-0.5 top-0.5 z-[3] size-3.5 rounded-sm bg-warning-subtle text-warning"
+            />
+          )}
           {width >= density.compact && (
-            <span className="relative z-[2] flex items-center gap-1 truncate font-mono font-bold">
+            <span
+              className={cn(
+                'relative z-[2] flex items-center gap-1 truncate font-mono font-bold',
+                short && width >= density.cue && 'pe-4',
+              )}
+            >
               {locked && <Lock aria-hidden className="size-3.5 shrink-0" />}
               {inDraft && <Pencil aria-hidden className="size-3.5 shrink-0" />}
               {late && <Clock aria-hidden className="size-3.5 shrink-0" />}
@@ -286,6 +312,7 @@ export function GanttBlock({
             snapshot={snapshot}
             machineName={machineName}
             hoverIds={boardFields.hover}
+            material={material ?? []}
           />
         </TooltipContent>
       </Tooltip>

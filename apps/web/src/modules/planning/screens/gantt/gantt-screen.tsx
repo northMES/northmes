@@ -42,6 +42,11 @@ import {
   withZoom,
 } from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
+import { inventoryOf } from '../../inventory-of.ts';
+import {
+  type MaterialShortage,
+  materialShortages as materialShortageList,
+} from '../../material-projection.ts';
 import { usePlanningDraft } from '../../planning-draft.tsx';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
@@ -95,6 +100,21 @@ const defaultZoom = 'week';
 
 /** The width the tree pane may take of the view, as the machine column on the board. */
 const treePaneShare = 0.4;
+
+/**
+ * "Material short: 1004.10. No longer material short: 1005.20.", or nothing when no warning
+ * changed.
+ */
+function shortageChangeText(
+  added: readonly string[],
+  cleared: readonly string[],
+): string | undefined {
+  const parts = [
+    ...(added.length > 0 ? [`Material short: ${added.join(', ')}.`] : []),
+    ...(cleared.length > 0 ? [`No longer material short: ${cleared.join(', ')}.`] : []),
+  ];
+  return parts.length === 0 ? undefined : parts.join(' ');
+}
 
 /**
  * The order Gantt (plan 18, The order Gantt), the board route's view=gantt: the tree of orders,
@@ -493,6 +513,39 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     );
   };
 
+  // The material warnings of the plan with the draft applied, so a move recomputes them before
+  // Save (plan 07, Material warnings).
+  const inventory = useMemo(
+    () => (snapshot === undefined ? undefined : inventoryOf(snapshot)),
+    [snapshot],
+  );
+  const { materialShortages, materialShortOrderIds } = useMemo(() => {
+    const byOperation = new Map<string, MaterialShortage[]>();
+    const orderIds = new Set<string>();
+    for (const shortage of inventory === undefined ? [] : materialShortageList(inventory)) {
+      const key = shortage.jobOrder.displayNumber;
+      byOperation.set(key, [...(byOperation.get(key) ?? []), shortage]);
+      orderIds.add(shortage.jobOrder.orderId);
+    }
+    return { materialShortages: byOperation, materialShortOrderIds: orderIds };
+  }, [inventory]);
+  // A draft change that makes an operation material short, or clears one, is said once after the
+  // move's own message. A load, a new range or a Save sets the warnings the Gantt shows, unsaid.
+  const spokenShortages = useRef<
+    { committed: GanttSnapshot; draft: typeof draft; operations: readonly string[] } | undefined
+  >(undefined);
+  useEffect(() => {
+    if (committed === undefined) return;
+    const operations = [...materialShortages.keys()];
+    const before = spokenShortages.current;
+    spokenShortages.current = { committed, draft, operations };
+    if (before === undefined || before.committed !== committed || before.draft === draft) return;
+    const message = shortageChangeText(
+      operations.filter((operation) => !before.operations.includes(operation)),
+      before.operations.filter((operation) => !operations.includes(operation)),
+    );
+    if (message !== undefined) announce(message);
+  }, [committed, draft, materialShortages]);
   const boardFields = useBoardFields(plant);
   const view = useMemo<GanttViewContext | undefined>(() => {
     if (snapshot === undefined) return undefined;
@@ -515,6 +568,9 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       machineName: (code) =>
         code === undefined ? 'no machine' : (equipment.get(code)?.name ?? code),
       draftRowIds: draftIds,
+      materialShortages,
+      materialShortOrderIds,
+      ...(inventory !== undefined && { inventory }),
       move: moveActions,
       runActions,
       toggleChain,
@@ -522,6 +578,9 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     };
   }, [
     snapshot,
+    inventory,
+    materialShortages,
+    materialShortOrderIds,
     scale,
     plantClosed,
     closedByCalendar,

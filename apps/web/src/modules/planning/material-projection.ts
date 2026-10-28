@@ -43,9 +43,14 @@ export function balancesOf(
   return snapshot.balances.filter((row) => row.article === article && picked.has(row.warehouse));
 }
 
-/** The order the projection takes movements in: instant, incoming first, then id. */
+/**
+ * The order the projection takes movements in: instant, then for movements counted at now their
+ * own date, then incoming first, then id.
+ */
 function compareMovements(a: PlannedMovement, b: PlannedMovement): number {
   if (a.atMs !== b.atMs) return a.atMs - b.atMs;
+  const due = (a.dueMs ?? a.atMs) - (b.dueMs ?? b.atMs);
+  if (due !== 0) return due;
   const incoming = Number(b.quantity > 0) - Number(a.quantity > 0);
   if (incoming !== 0) return incoming;
   return compareCodes(a.id, b.id);
