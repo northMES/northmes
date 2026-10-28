@@ -100,4 +100,18 @@ describe('coreLinks', () => {
       '/settings/acme/warehouses',
     );
   });
+
+  it('#729 coreLinks builds the hrefs of the routings, a routing and the edit form of an operation', () => {
+    expect(coreLinks.routings({ plant: 'plant-a' }).href).toBe('/plant-a/routings');
+    expect(coreLinks.routings.routing({ plant: 'plant-a', articleNumber: '20-1001' }).href).toBe(
+      '/plant-a/routings/20-1001',
+    );
+    expect(
+      coreLinks.routings.routing.editOperation({
+        plant: 'plant-a',
+        articleNumber: '20-1001',
+        sequence: '20',
+      }).href,
+    ).toBe('/plant-a/routings/20-1001/operations/20/edit');
+  });
 });
