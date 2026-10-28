@@ -10,6 +10,8 @@ export { ArticleGroupsScreen } from './screens/article-groups/index.ts';
 export { ArticlesScreen } from './screens/articles/index.ts';
 export { CalendarScreen } from './screens/calendar/index.ts';
 export { CalendarsScreen } from './screens/calendars/index.ts';
+export { CustomerScreen } from './screens/customer/index.ts';
+export { CustomersScreen } from './screens/customers/index.ts';
 export { DashboardScreen } from './screens/dashboard/index.ts';
 export { EditArticleScreen } from './screens/edit-article/index.ts';
 export { EditMachineScreen } from './screens/edit-machine/index.ts';

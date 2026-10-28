@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { Lock } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
-import { Badge } from '../../primitives/badge.tsx';
 import { Field, FieldDescription, FieldLabel } from '../../primitives/field.tsx';
 import { Input } from '../../primitives/input.tsx';
+import { OwnerTag } from '../owner-tag/index.ts';
 
 export interface ReadOnlyFieldProps {
   /** The visible label, which is also the accessible name. */
@@ -30,10 +29,7 @@ export function ReadOnlyField({ label, value, hint, tag }: ReadOnlyFieldProps) {
         <FieldLabel htmlFor={id} className="block text-xs font-semibold text-foreground">
           {label}
         </FieldLabel>
-        <Badge variant="outline" className="h-4.5 gap-1 px-1.5 text-tick">
-          <Lock aria-hidden className="size-3" />
-          {tag}
-        </Badge>
+        <OwnerTag>{tag}</OwnerTag>
       </div>
       <Input
         id={id}

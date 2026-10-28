@@ -4,7 +4,7 @@ import { formatDuration, formatPlantDateTime } from '@northmes/contracts/format'
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ChartNoAxesGantt, Clock, Ellipsis, Plus } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { ChoiceMenu } from '../../../../ui/components/choice-menu/index.ts';
 import {
   DataTable,
@@ -21,6 +21,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
+import { CustomerLink } from '../../components/customer-link/index.ts';
 import {
   type ListFilterField,
   OrderListToolbar,
@@ -120,6 +121,8 @@ function RowActions({ row, view }: { readonly row: OrderListRow; readonly view: 
 
 /** The columns (design #687, PL1), each reading the snapshot through the view it closes over. */
 function columnsOf(view: CellView): readonly DataTableColumn<OrderListRow>[] {
+  const customerName = (code: string) =>
+    view.snapshot.customers?.find((customer) => customer.code === code)?.name ?? code;
   const { timeZone } = view.snapshot.plant;
   return [
     {
@@ -196,10 +199,15 @@ function columnsOf(view: CellView): readonly DataTableColumn<OrderListRow>[] {
       id: 'customers',
       header: 'Customers',
       cell: (row) =>
-        row.customers.length === 0 ? (
+        row.customerCodes.length === 0 ? (
           <span className="text-muted-foreground">Stock order</span>
         ) : (
-          row.customers.join(', ')
+          row.customerCodes.map((code, index) => (
+            <Fragment key={code}>
+              {index > 0 && ', '}
+              <CustomerLink code={code} name={customerName(code)} />
+            </Fragment>
+          ))
         ),
     },
     {
