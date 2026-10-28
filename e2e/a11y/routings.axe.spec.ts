@@ -5,7 +5,7 @@ import { expect, plant, test } from '../fixtures.ts';
 
 // The axe check of ADR 0021 over the routing pages (design #729, RO1 to RO8): the routings list,
 // the routing of Bracket L with its planned duration panel, the edit form of operation 20, and the
-// routing's loading, no-routing, failed and no-access states. The pages read the fixture G1, so
+// loading, empty, failed and no-access states of each of the three. The pages read the fixture G1, so
 // every state is the same in every run; the preview key opens the states on mock data.
 
 /** An href with a search. */
@@ -73,5 +73,40 @@ test.describe('the routing pages', () => {
       }),
     ).toBeVisible();
     await checkA11y('a routing without access');
+
+    // The register and the edit form take the same preview key, each with its own titles.
+    const register = coreLinks.routings({ plant }).href;
+    const operation20 = coreLinks.routings.routing.editOperation({
+      plant,
+      articleNumber: '20-1001',
+      sequence: '20',
+    }).href;
+    const states = [
+      {
+        page: 'the routings list',
+        href: register,
+        empty: 'No routings yet',
+        error: 'Could not load routings',
+        forbidden: 'You need the permission to read routings at this plant',
+      },
+      {
+        page: 'the edit form of a routing operation',
+        href: operation20,
+        empty: 'This operation does not exist or you cannot see it',
+        error: 'Could not load the operation',
+        forbidden: 'You need the permission to change routings at this plant',
+      },
+    ];
+    for (const each of states) {
+      await page.goto(withSearch(each.href, { preview: 'loading' }));
+      await expect(page.locator('[aria-busy="true"]').first()).toBeVisible();
+      await checkA11y(`${each.page} loading`, { busy: true });
+
+      for (const preview of ['empty', 'error', 'forbidden'] as const) {
+        await page.goto(withSearch(each.href, { preview }));
+        await expect(page.getByRole('heading', { level: 2, name: each[preview] })).toBeVisible();
+        await checkA11y(`${each.page}, ${preview}`);
+      }
+    }
   });
 });

@@ -188,6 +188,26 @@ describe("an article's routing (design #729, RO1 to RO8)", () => {
   });
 });
 
+describe('the page states of the register and the edit form (design #729, RO5 to RO8)', () => {
+  const operation20 = coreLinks.routings.routing.editOperation({
+    plant,
+    articleNumber: '20-1001',
+    sequence: '20',
+  }).href;
+
+  it.each([
+    ['empty', routings, 'No routings yet'],
+    ['error', routings, 'Could not load routings'],
+    ['forbidden', routings, 'You need the permission to read routings at this plant'],
+    ['empty', operation20, 'This operation does not exist or you cannot see it'],
+    ['error', operation20, 'Could not load the operation'],
+    ['forbidden', operation20, 'You need the permission to change routings at this plant'],
+  ])('#729 preview %s at %s shows "%s"', async (preview, href, title) => {
+    renderCoreAt(withSearch(href, { preview }), []);
+    await screen.findByRole('heading', { level: 2, name: title });
+  });
+});
+
 describe('the edit form of a routing operation (design #729, RO4)', () => {
   it('#729 RO4 shows operation 20 with Keep NorthMES values on, the ERP lead time, its machines and the reason; Save waits for the API', async () => {
     renderCoreAt(
