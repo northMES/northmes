@@ -144,7 +144,7 @@ describe('the material warning on the order Gantt (plan 07, Material warnings; d
     );
   });
 
-  it('#729 MW1 clears the warning when a draft move takes 1004.10 past the incoming purchase', async () => {
+  it('#729 MW1 clears the warning when a draft move takes 1004.10 past the incoming purchase, and says so', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
     await userEvent.click(blockOf(gantt, 'jo-1004-10'));
@@ -164,5 +164,11 @@ describe('the material warning on the order Gantt (plan 07, Material warnings; d
       expect(blockOf(gantt, 'jo-1004-10').querySelector('[data-material-cue]')).toBeNull(),
     );
     expect(within(gantt).queryByText('Material short')).toBeNull();
+    // The move's own message comes first; the warning that cleared is said after it.
+    await waitFor(() =>
+      expect(document.getElementById('announcer-polite')?.textContent).toBe(
+        'No longer material short: 1004.10.',
+      ),
+    );
   });
 });

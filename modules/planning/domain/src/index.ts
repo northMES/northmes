@@ -86,7 +86,12 @@ export {
   g1MasterData,
   ganttMasterDataFixture,
 } from './fixtures/gantt-master-data.ts';
-export { type GanttPagesFixture, g1Pages, ganttPagesFixture } from './fixtures/gantt-pages.ts';
+export {
+  type GanttPagesFixture,
+  g1Pages,
+  ganttPagesFixture,
+  type PlanningRuleValues,
+} from './fixtures/gantt-pages.ts';
 export {
   type BindingConstraint,
   type BindingConstraintKind,
