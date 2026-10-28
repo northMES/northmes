@@ -30,6 +30,11 @@ async function findRule(name: string): Promise<HTMLElement> {
   return screen.findByRole('region', { name });
 }
 
+/** The saved message the form shows, apart from the announcer's copy of it. */
+function savedText(): HTMLElement {
+  return screen.getByText('Planning rules saved.', { selector: 'form p' });
+}
+
 function checked(rule: HTMLElement, name: string | RegExp): boolean {
   return within(rule).getByRole('radio', { name }).getAttribute('aria-checked') === 'true';
 }
@@ -90,7 +95,7 @@ describe('the planning rules page in plant settings (plan 07, Settings; #766, PS
     ).toBeTruthy();
   });
 
-  it('PS1 a saved frozen window of 48 h goes to the store, and the page says what it does on the Gantt', async () => {
+  it('PS1 a saved frozen window of 48 h goes to the store, the page says what it does on the Gantt, and the app announces the save', async () => {
     const rules = renderRules();
     const frozen = await findRule('Frozen window');
     const input = within(frozen).getByRole('textbox', { name: /Frozen window at Plant A/ });
@@ -105,7 +110,30 @@ describe('the planning rules page in plant settings (plan 07, Settings; #766, PS
     await userEvent.click(screen.getByRole('button', { name: 'Save planning rules' }));
 
     await waitFor(() => expect(rules.get().plants[plant]?.frozenHours).toBe(48));
-    expect(screen.getByText('Planning rules saved.')).toBeTruthy();
+    await waitFor(() =>
+      expect(document.getElementById('announcer-polite')?.textContent).toBe(
+        'Planning rules saved.',
+      ),
+    );
+    // The page shows the message too, as text: the announcer is the one live region (#766).
+    expect(savedText().getAttribute('role')).toBeNull();
+  });
+
+  it('PS4 a planning factor set for the plant stays stored while the plant divides run time by something else', async () => {
+    const rules = createPlanningRulesStore({
+      company: createG1PlanningRulesStore().get().company,
+      plants: { [plant]: { planningFactorSource: 'none', planningFactor: 1.2, frozenHours: 24 } },
+    });
+    renderRules(rules);
+    const factor = await findRule('Planning factor');
+    expect(
+      within(factor).getByText(/^Not used: Plant A divides run time by nothing\./),
+    ).toBeTruthy();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Save planning rules' }));
+
+    await waitFor(() => expect(savedText()).toBeTruthy());
+    expect(rules.get().plants[plant]?.planningFactor).toBe(1.2);
   });
 
   it("PS1 Use the company value for the deadline rule takes Plant A's own value away on Save", async () => {
@@ -197,7 +225,7 @@ describe('the planning rules page in plant settings (plan 07, Settings; #766, PS
     expect(within(deadline).getByText('No value', { selector: 'b' })).toBeTruthy();
 
     await userEvent.click(screen.getByRole('button', { name: 'Save planning rules' }));
-    await waitFor(() => expect(screen.getByText('Planning rules saved.')).toBeTruthy());
+    await waitFor(() => expect(savedText()).toBeTruthy());
     expect(rules.get().plants[plant]?.deadlineRule).toBeUndefined();
   });
 
@@ -223,7 +251,7 @@ describe('the planning rules page in plant settings (plan 07, Settings; #766, PS
     await userEvent.type(reason, 'Pilot week');
     expect(screen.getByText('Changes not saved')).toBeTruthy();
     await userEvent.click(screen.getByRole('button', { name: 'Save planning rules' }));
-    await waitFor(() => expect(screen.getByText('Planning rules saved.')).toBeTruthy());
+    await waitFor(() => expect(savedText()).toBeTruthy());
     expect(reason.value).toBe('');
   });
 
