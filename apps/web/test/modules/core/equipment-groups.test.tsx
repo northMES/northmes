@@ -166,7 +166,7 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
 });
 
 describe("an equipment group's page (design #729, EG4)", () => {
-  it('#729 EG4 shows MACH with its color from the ERP, its machines and the band it draws on the board', async () => {
+  it('#729 EG4 shows MACH with its color from the ERP, its machines, and the band of its plannable machines it draws on the board', async () => {
     renderCoreAt(mach, []);
     await screen.findByRole('heading', { level: 1, name: 'Equipment group MACH' });
 
@@ -191,8 +191,13 @@ describe("an equipment group's page (design #729, EG4)", () => {
       coreLinks.machines.machine({ plant, equipmentId: 'CNC1' }).href,
     );
     expect(screen.getByRole('figure', { name: 'Machining on the board' }).textContent).toBe(
-      'Machining5 machinesCNC 1CNC 2Lathe 1Lathe 2Mill 1',
+      'Machining3 machinesCNC 1CNC 2Mill 1',
     );
+    expect(
+      screen.getByText(
+        'Only plannable machines have a row on the board. The color and the name are always shown together.',
+      ),
+    ).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Edit equipment group' }).getAttribute('href')).toBe(
       editMach,
     );
@@ -297,6 +302,14 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
     );
     const preview = screen.getByRole('figure', { name: 'Machining on the board' });
     expect(preview.querySelector('[style*="palette-4"]')).not.toBeNull();
+  });
+
+  it('#729 EG5 previews the band with the plannable machines only, as the board draws it', async () => {
+    renderCoreAt(editMach, []);
+    await screen.findByRole('heading', { level: 1, name: 'Edit equipment group MACH' });
+    expect(screen.getByRole('figure', { name: 'Machining on the board' }).textContent).toBe(
+      'Machining3 machinesCNC 1CNC 2Mill 1',
+    );
   });
 
   it('#729 EG5 previews the name a plant admin types for a group created in NorthMES', async () => {
