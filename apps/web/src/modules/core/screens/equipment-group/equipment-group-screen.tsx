@@ -194,7 +194,10 @@ export function EquipmentGroupScreen() {
               </ScrollTable>
             )}
           </Section>
-          <Section title="On the board" lead="The color and the name are always shown together.">
+          <Section
+            title="On the board"
+            lead="Only plannable machines have a row on the board. The color and the name are always shown together."
+          >
             <GroupBand name={group.name} color={group.color} machines={machines} />
           </Section>
           {snapshot.fixture !== undefined && (
