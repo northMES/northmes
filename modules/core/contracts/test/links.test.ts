@@ -114,4 +114,13 @@ describe('coreLinks', () => {
       }).href,
     ).toBe('/plant-a/routings/20-1001/operations/20/edit');
   });
+
+  it("#729 coreLinks builds the hrefs of the tools and a tool's page", () => {
+    expect(coreLinks.tools({ plant: 'plant-a' }, { scope: 'plant' }).href).toBe(
+      '/plant-a/tools?scope=plant',
+    );
+    expect(coreLinks.tools.tool({ plant: 'plant-a', toolCode: 'T-311' }).href).toBe(
+      '/plant-a/tools/T-311',
+    );
+  });
 });
