@@ -265,7 +265,11 @@ function NewOrderForm({
             placeholder="Choose an article"
             error={errors.article}
             options={articles.map((article) => ({ value: article, label: article }))}
-            onChange={(event) => set({ article: event.target.value })}
+            onChange={(event) => {
+              set({ article: event.target.value });
+              // A line picked for the old article is no line of the new one.
+              setPicked('');
+            }}
             hint="Articles with an active routing."
           />
           <TextField
