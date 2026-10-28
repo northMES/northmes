@@ -62,6 +62,9 @@ interface Lockfile {
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
+// An exact pin, with no range operator, so Renovate moves it and nothing else does.
+const exactVersion = /^\d+\.\d+\.\d+$/;
+
 function readText(path: string): string {
   return readFileSync(`${root}${path}`, 'utf8');
 }
@@ -265,43 +268,40 @@ describe('tooling', () => {
     expect(sdk.dependencies?.dataloader).toBe('catalog:');
   });
 
-  it('E04-S01 the UI, form and table libraries are catalog entries that apps/web takes from the catalog', () => {
-    // ADR 0020 and the articles slice name these packages. Each pin is the newest release that was
-    // outside Renovate's 14-day window on 2026-10-09. The shadcn primitives and the rest of the web
-    // import cn, which replaces clsx and tailwind-merge, and the stylesheet imports tw-animate-css for their animations. culori and its types run the token
-    // contrast test, and shadcn is the CLI that writes the primitives, so they are dev dependencies.
-    const dependencies = {
-      '@base-ui/react': '1.8.0',
-      '@fontsource/ibm-plex-mono': '5.3.0',
-      '@fontsource/ibm-plex-sans': '5.3.0',
-      '@hookform/resolvers': '5.9.1',
-      '@tailwindcss/vite': '4.3.3',
-      '@tanstack/react-table': '9.2.4',
-      'class-variance-authority': '0.7.1',
-      cn: '0.4.0',
-      'lucide-react': '1.48.0',
-      'react-hook-form': '7.88.0',
-      tailwindcss: '4.3.3',
-      'tw-animate-css': '1.4.0',
-      uuid: '14.0.2',
-    };
-    const devDependencies = { '@types/culori': '4.0.1', culori: '4.0.2', shadcn: '4.21.0' };
+  it('E04-S01 the UI, form and table libraries are exact catalog entries that apps/web takes from the catalog, the build-time ones as dev dependencies', () => {
+    // ADR 0020 and the articles slice name these packages. The shadcn primitives and the rest of
+    // the web import cn, which replaces clsx and tailwind-merge, and the stylesheet imports
+    // tw-animate-css for their animations. culori and its types run the token contrast test, and
+    // shadcn is the CLI that writes the primitives, so they are dev dependencies.
+    const dependencies = [
+      '@base-ui/react',
+      '@fontsource/ibm-plex-mono',
+      '@fontsource/ibm-plex-sans',
+      '@hookform/resolvers',
+      '@tailwindcss/vite',
+      '@tanstack/react-table',
+      'class-variance-authority',
+      'cn',
+      'lucide-react',
+      'react-hook-form',
+      'tailwindcss',
+      'tw-animate-css',
+      'uuid',
+    ];
+    const devDependencies = ['@types/culori', 'culori', 'shadcn'];
     const catalog = readWorkspace().catalog ?? {};
     const web = readJson<PackageJson>('apps/web/package.json');
 
-    expect(
-      Object.fromEntries(
-        Object.keys({ ...dependencies, ...devDependencies }).map((name) => [name, catalog[name]]),
-      ),
-    ).toEqual({
-      ...dependencies,
-      ...devDependencies,
-    });
-    for (const name of Object.keys(dependencies)) {
-      expect(web.dependencies?.[name], `apps/web dependencies ${name}`).toBe('catalog:');
+    for (const name of [...dependencies, ...devDependencies]) {
+      expect(catalog[name], `catalog ${name}`).toMatch(exactVersion);
     }
-    for (const name of Object.keys(devDependencies)) {
+    for (const name of dependencies) {
+      expect(web.dependencies?.[name], `apps/web dependencies ${name}`).toBe('catalog:');
+      expect(web.devDependencies?.[name], `apps/web devDependencies ${name}`).toBeUndefined();
+    }
+    for (const name of devDependencies) {
       expect(web.devDependencies?.[name], `apps/web devDependencies ${name}`).toBe('catalog:');
+      expect(web.dependencies?.[name], `apps/web dependencies ${name}`).toBeUndefined();
     }
     for (const name of ['clsx', 'tailwind-merge']) {
       expect(catalog[name], `catalog ${name}`).toBeUndefined();
@@ -311,45 +311,45 @@ describe('tooling', () => {
     expect(catalog['@tanstack/react-table']).toMatch(/^9\.\d+\.\d+$/);
   });
 
-  it('GraphQL Code Generator and the typed document plugins are catalog entries that apps/web takes as dev dependencies', () => {
+  it('GraphQL Code Generator and the typed document plugins are exact catalog entries that apps/web takes as dev dependencies', () => {
     // Apollo Client 4 recommends typescript-operations with typed-document-node over the client
     // preset, which adds runtime code. typescript-operations 6 emits the input and enum types it
-    // uses, so the typescript plugin is not needed. Each pin is the newest release that was outside
-    // Renovate's 14-day window on 2026-10-09.
-    const devDependencies = {
-      '@graphql-codegen/cli': '7.4.3',
-      '@graphql-codegen/typed-document-node': '7.1.0',
-      '@graphql-codegen/typescript-operations': '6.1.7',
-    };
+    // uses, so the typescript plugin is not needed.
+    const devDependencies = [
+      '@graphql-codegen/cli',
+      '@graphql-codegen/typed-document-node',
+      '@graphql-codegen/typescript-operations',
+    ];
     const catalog = readWorkspace().catalog ?? {};
     const web = readJson<PackageJson>('apps/web/package.json');
 
-    expect(
-      Object.fromEntries(Object.keys(devDependencies).map((name) => [name, catalog[name]])),
-    ).toEqual(devDependencies);
-    for (const name of Object.keys(devDependencies)) {
+    for (const name of devDependencies) {
+      expect(catalog[name], `catalog ${name}`).toMatch(exactVersion);
       expect(web.devDependencies?.[name], `apps/web devDependencies ${name}`).toBe('catalog:');
       expect(web.dependencies?.[name], `apps/web dependencies ${name}`).toBeUndefined();
     }
+    expect(catalog['@graphql-codegen/typescript']).toBeUndefined();
+    expect(web.devDependencies?.['@graphql-codegen/typescript']).toBeUndefined();
   });
 
   it('E05-S05 better-auth and its api-key and oauth-provider plugins are pinned exactly at one 1.7 version that apps/backend takes from the catalog', () => {
-    // ADR 0010 pins Better Auth 1.7.x exactly. 1.7.7 (2026-09-30) was the newest 1.7 release
-    // outside Renovate's 14-day window on 2026-10-27 and the first that fixes GHSA-965c-763c-88jm
-    // and GHSA-r4xp-prcw-77qf, published that day, which turned the dependency audit red. The
-    // api-key plugin ships in its own package since 1.5, and the OAuth 2.1 provider since 1.7.0
-    // removed the in-core oidcProvider; each must match better-auth's version. Username,
-    // organization, admin, jwt and bearer ship inside it.
-    const packages = ['better-auth', '@better-auth/api-key', '@better-auth/oauth-provider'];
+    // ADR 0010 pins Better Auth 1.7.x exactly. GHSA-965c-763c-88jm and GHSA-r4xp-prcw-77qf
+    // (published 2026-10-27) are fixed from 1.7.7, so the pin is 1.7.7 or later. The api-key
+    // plugin ships in its own package since 1.5, and the OAuth 2.1 provider since 1.7.0 removed
+    // the in-core oidcProvider; each must match better-auth's version. Username, organization,
+    // admin, jwt and bearer ship inside it.
+    const plugins = ['@better-auth/api-key', '@better-auth/oauth-provider'];
     const catalog = readWorkspace().catalog ?? {};
     const backend = readJson<PackageJson>('apps/backend/package.json');
+    const version = catalog['better-auth'] ?? '';
+    const patch = Number(/^1\.7\.(\d+)$/.exec(version)?.[1]);
 
-    expect(Object.fromEntries(packages.map((name) => [name, catalog[name]]))).toEqual({
-      'better-auth': '1.7.7',
-      '@better-auth/api-key': '1.7.7',
-      '@better-auth/oauth-provider': '1.7.7',
-    });
-    for (const name of packages) {
+    expect(version).toMatch(/^1\.7\.\d+$/);
+    expect(patch, `${version} is 1.7.7 or later`).toBeGreaterThanOrEqual(7);
+    for (const name of plugins) {
+      expect(catalog[name], `catalog ${name}`).toBe(version);
+    }
+    for (const name of ['better-auth', ...plugins]) {
       expect(backend.dependencies?.[name], `apps/backend dependencies ${name}`).toBe('catalog:');
     }
   });
@@ -373,11 +373,11 @@ describe('tooling', () => {
 
   it('@nestjs/swagger 12 is pinned exactly and apps/backend takes it from the catalog', () => {
     // ADR 0064 builds the public API's OpenAPI 3.1 document with @nestjs/swagger 12 and its Standard
-    // Schema converter. 12.0.2 was the newest release outside Renovate's 14-day window on 2026-10-09.
+    // Schema converter.
     const catalog = readWorkspace().catalog ?? {};
     const backend = readJson<PackageJson>('apps/backend/package.json');
 
-    expect(catalog['@nestjs/swagger']).toBe('12.0.2');
+    expect(catalog['@nestjs/swagger']).toMatch(/^12\.\d+\.\d+$/);
     expect(backend.dependencies?.['@nestjs/swagger']).toBe('catalog:');
   });
 
@@ -394,12 +394,12 @@ describe('tooling', () => {
 
   it('zod-openapi 6 is pinned exactly and apps/backend takes it from the catalog', () => {
     // ADR 0064 passes a converter built on zod-openapi to the Standard Schema hook of
-    // @nestjs/swagger 12, because Nest's own converter emits OpenAPI 3.0. 6.0.2 was the newest
-    // release outside Renovate's 14-day window on 2026-10-09; it takes zod ^4 as a peer.
+    // @nestjs/swagger 12, because Nest's own converter emits OpenAPI 3.0. zod-openapi 6 takes zod
+    // ^4 as a peer.
     const catalog = readWorkspace().catalog ?? {};
     const backend = readJson<PackageJson>('apps/backend/package.json');
 
-    expect(catalog['zod-openapi']).toBe('6.0.2');
+    expect(catalog['zod-openapi']).toMatch(/^6\.\d+\.\d+$/);
     expect(backend.dependencies?.['zod-openapi']).toBe('catalog:');
   });
 
@@ -412,20 +412,22 @@ describe('tooling', () => {
     ]);
   });
 
-  it('E12-S04 @modelcontextprotocol/server and @modelcontextprotocol/client are pinned exactly at one 2.x version, the server a dependency and the client a dev dependency of apps/backend', () => {
-    // ADR 0034 builds /mcp on the official SDK v2 and tests it with its client. 2.3.1 is outside
-    // the ranges of GHSA-jm63-cq47-j5jp and GHSA-46jr-4wx8-v453 (both 2.0.0 to 2.2.0) and was
-    // outside Renovate's 14-day window on 2026-10-21. The GHSA-46jr limit is the McpServer option
-    // maxToolInputElements, off by default, so /mcp has to set it. Both packages pin the same
-    // @modelcontextprotocol/core, so they move together.
-    const packages = ['@modelcontextprotocol/server', '@modelcontextprotocol/client'];
+  it('E12-S04 @modelcontextprotocol/server and @modelcontextprotocol/client are pinned exactly at one 2.x version past the advised ranges, the server a dependency and the client a dev dependency of apps/backend', () => {
+    // ADR 0034 builds /mcp on the official SDK v2 and tests it with its client. GHSA-jm63-cq47-j5jp
+    // and GHSA-46jr-4wx8-v453 cover 2.0.0 to 2.2.0, so the pin is later than 2.2.0. The GHSA-46jr
+    // limit is the McpServer option maxToolInputElements, off by default, so /mcp has to set it.
+    // Both packages pin the same @modelcontextprotocol/core, so they move together.
     const catalog = readWorkspace().catalog ?? {};
     const backend = readJson<PackageJson>('apps/backend/package.json');
+    const version = catalog['@modelcontextprotocol/server'] ?? '';
+    const [major, minor, patch] = version.split('.').map(Number);
 
-    expect(Object.fromEntries(packages.map((name) => [name, catalog[name]]))).toEqual({
-      '@modelcontextprotocol/server': '2.3.1',
-      '@modelcontextprotocol/client': '2.3.1',
-    });
+    expect(version).toMatch(exactVersion);
+    expect(major).toBe(2);
+    expect((minor ?? 0) > 2 || (minor === 2 && (patch ?? 0) > 0), `${version} is past 2.2.0`).toBe(
+      true,
+    );
+    expect(catalog['@modelcontextprotocol/client']).toBe(version);
     expect(backend.dependencies?.['@modelcontextprotocol/server']).toBe('catalog:');
     expect(backend.devDependencies?.['@modelcontextprotocol/client']).toBe('catalog:');
     expect(backend.dependencies?.['@modelcontextprotocol/client']).toBeUndefined();

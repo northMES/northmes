@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { describe, expect, it } from 'vitest';
 import {
+  addWork,
   criticalChain,
   g1PlanContext,
   type PlanContext,
@@ -249,20 +250,9 @@ describe('criticalChain (plan 18, Float and the critical chain)', () => {
     let cursor = context.fenceMs;
     for (let index = 0; index < 30; index += 1) {
       const number = `2${String(index).padStart(3, '0')}`;
-      const startMs = cursor;
-      const endMs = (() => {
-        let remaining = 3_600_000;
-        let at = startMs;
-        for (const window of windows) {
-          if (window.toMs <= at) continue;
-          const from = Math.max(at, window.fromMs);
-          const take = Math.min(remaining, window.toMs - from);
-          remaining -= take;
-          at = from + take;
-          if (remaining === 0) break;
-        }
-        return at;
-      })();
+      const placed = addWork(windows, cursor, 3600);
+      if (placed === null) throw new Error(`the CNC1 windows run out before order ${number}`);
+      const { startMs, endMs } = placed;
       cursor = endMs;
       const row: PlanJobOrder = {
         id: `jo-${number}`,

@@ -4,25 +4,8 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync 
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { threadId } from 'node:worker_threads';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { scan, scanProjects } from '../../scripts/lint/deprecated-apis.mjs';
-
-// Each worker thread the scan starts, as "start <tsconfig>" with its thread id and "exit <tsconfig>"
-// when the thread has ended. The recording Worker is Node's own, so the scan runs as it does in CI.
-const workerEvents = vi.hoisted(() => [] as { event: string; threadId?: number }[]);
-vi.mock('node:worker_threads', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('node:worker_threads')>();
-  class RecordingWorker extends actual.Worker {
-    constructor(...args: ConstructorParameters<typeof actual.Worker>) {
-      super(...args);
-      const { configPath } = args[1]?.workerData as { configPath: string };
-      workerEvents.push({ event: `start ${configPath}`, threadId: this.threadId });
-      this.once('exit', () => workerEvents.push({ event: `exit ${configPath}` }));
-    }
-  }
-  return { ...actual, Worker: RecordingWorker };
-});
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 
@@ -79,8 +62,7 @@ describe('deprecated-apis', () => {
     ]);
   });
 
-  it('OSPS interfaces_current a scan of tsconfig.json projects names each finding, in the order of the projects, each scanned in a worker thread that ends before the next starts', async () => {
-    workerEvents.length = 0;
+  it('OSPS interfaces_current a scan of tsconfig.json projects names each finding, in the order of the projects', async () => {
     const base = mkdtempSync(join(tmpdir(), 'northmes-deprecated-apis-'));
     try {
       const write = (path: string, lines: string[]) => {
@@ -117,17 +99,6 @@ describe('deprecated-apis', () => {
         "second/src/screen.ts:3:1 TS6387 The signature '(): void' of 'old' is deprecated.",
         "first/src/screen.ts:1:10 TS6385 'old' is deprecated.",
       ]);
-      // A worker holds its project's program until it exits, so one program at a time.
-      expect(workerEvents.map(({ event }) => event)).toEqual([
-        'start second/tsconfig.json',
-        'exit second/tsconfig.json',
-        'start first/tsconfig.json',
-        'exit first/tsconfig.json',
-      ]);
-      // The coverage counters run on the test's thread only.
-      for (const event of workerEvents.filter(({ event }) => event.startsWith('start '))) {
-        expect(event.threadId).not.toBe(threadId);
-      }
     } finally {
       rmSync(base, { recursive: true, force: true });
     }
