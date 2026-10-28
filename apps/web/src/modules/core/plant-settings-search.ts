@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { z } from 'zod';
+import { commaList, type Scope } from './comma-list.ts';
 import type { PlantSettingsPreview } from './plant-settings-data.ts';
 
 /**
@@ -22,7 +23,7 @@ export interface MachineListSearch {
  * of company and plant, and the page state the mock source answers with (EG6 to EG9).
  */
 export interface EquipmentGroupListSearch {
-  readonly scope?: readonly ('company' | 'plant')[];
+  readonly scope?: readonly Scope[];
   readonly preview?: PlantSettingsPreview;
 }
 
@@ -38,8 +39,8 @@ export interface CalendarPageSearch {
   readonly preview?: PlantSettingsPreview;
 }
 
-/** A filter key's comma list of picked values, or a validated view's list, each value once. */
-function commaList() {
+/** A filter key's comma list of codes, or a validated view's list, each value once. */
+function codeList() {
   return z
     .unknown()
     .transform((raw): string[] | undefined => {
@@ -77,8 +78,8 @@ const machineListKeys = z.object({
     .pipe(z.string().trim().min(1).max(100))
     .optional()
     .catch(undefined),
-  group: commaList(),
-  calendar: commaList(),
+  group: codeList(),
+  calendar: codeList(),
   plannable: z
     .union([z.literal(1), z.literal('1'), z.literal(true)])
     .transform(() => 1 as const)
@@ -111,13 +112,7 @@ export function urlSearchOf(
 }
 
 const equipmentGroupListKeys = z.object({
-  scope: commaList()
-    .transform((values) =>
-      values?.filter(
-        (value): value is 'company' | 'plant' => value === 'company' || value === 'plant',
-      ),
-    )
-    .transform((values) => (values === undefined || values.length === 0 ? undefined : values)),
+  scope: commaList(['company', 'plant'] as const),
   preview,
 });
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { z } from 'zod';
+import { commaList, type Scope } from './comma-list.ts';
 import type { ToolsPreview } from './tools-data.ts';
 
 /**
@@ -9,7 +10,7 @@ import type { ToolsPreview } from './tools-data.ts';
  * state the mock source answers with (TO5 to TO8). Defaults stay out; a key that does not apply
  * falls back on its own.
  */
-export type ToolScope = 'company' | 'plant';
+export type ToolScope = Scope;
 export type ToolSource = 'erp' | 'import' | 'northmes';
 
 export interface ToolListSearch {
@@ -18,20 +19,6 @@ export interface ToolListSearch {
   readonly source?: readonly ToolSource[];
   readonly unused?: 1;
   readonly preview?: ToolsPreview;
-}
-
-/** A filter key's comma list of picked values, each value once; an unknown value drops out. */
-function commaList<Value extends string>(values: readonly Value[]) {
-  return z
-    .unknown()
-    .transform((raw): Value[] | undefined => {
-      const given = typeof raw === 'string' ? raw.split(',') : Array.isArray(raw) ? raw : [];
-      const picked = [...new Set(given.map(String))].filter((each): each is Value =>
-        (values as readonly string[]).includes(each),
-      );
-      return picked.length === 0 ? undefined : picked;
-    })
-    .catch(undefined);
 }
 
 const preview = z.enum(['loading', 'empty', 'error', 'forbidden']).optional().catch(undefined);

@@ -131,7 +131,12 @@ function GroupForm({
         </div>
       </FormSection>
       <FormSection title="Preview on the board">
-        <GroupBand name={name} color={color} machines={machines} />
+        {/* A blank Name while typing keeps the stored name beside the color. */}
+        <GroupBand
+          name={name.trim() === '' ? group.name : name}
+          color={color}
+          machines={machines}
+        />
       </FormSection>
       <FormSection title="Reason for the change">
         <TextareaField
