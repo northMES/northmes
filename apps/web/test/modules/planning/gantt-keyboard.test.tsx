@@ -115,6 +115,19 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
     expect(document.activeElement).toBe(rowOf(gantt, 'jo-1001-20'));
   });
 
+  it('ADR0021 Escape closes the hover card that focus opened and keeps focus on the block (D3, IN2)', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    rowOf(gantt, 'jo-1001-10').focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(await screen.findByRole('tooltip')).toBeTruthy();
+    await userEvent.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
+    expect(document.activeElement?.getAttribute('data-block')).toBe('jo-1001-10');
+  });
+
   it('ADR0021 Right on an unplaced job order row lands on its time cell, named "not placed"', async () => {
     renderGanttRoute(
       { view: 'gantt', zoom: 'week', from: '2026-11-02' },
