@@ -9,7 +9,9 @@ import { emptyTemplateDatabase, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { inRepoCatalog } from '../../../src/boot/boot.ts';
 import { migrate } from '../../../src/migrate/runner.ts';
-import { JWT_KEY_ROTATION_SECONDS } from '../../../src/modules/core/infrastructure/auth/auth-options.ts';
+
+/** The lifetime the migration gives a key: 30 days, the rotation period of ADR 0010. */
+const THIRTY_DAYS_SECONDS = 30 * 24 * 60 * 60;
 
 /** core's migrations folder. */
 const coreMigrations = fileURLToPath(
@@ -62,8 +64,8 @@ describe('the migration that gives older JWT keys an expiry', () => {
          from auth.jwks order by "createdAt"`,
     );
     expect(keys).toEqual([
-      { id: old?.id, lifetime: JWT_KEY_ROTATION_SECONDS, live: false },
-      { id: recent?.id, lifetime: JWT_KEY_ROTATION_SECONDS, live: true },
+      { id: old?.id, lifetime: THIRTY_DAYS_SECONDS, live: false },
+      { id: recent?.id, lifetime: THIRTY_DAYS_SECONDS, live: true },
     ]);
   });
 });

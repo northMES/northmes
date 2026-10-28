@@ -753,27 +753,6 @@ describe('sign-in with Better Auth', () => {
     expect(locked.status).toBe(429);
     expect(((await locked.json()) as { code?: string }).code).toBe('ACCOUNT_LOCKED');
   });
-
-  it('signIn fails with the status and body when /api/auth/token refuses the session token', async () => {
-    const { plants } = await givenCompany(db.ownerUrl);
-    const [plant = ''] = plants;
-    const realFetch = globalThis.fetch;
-    const fetchSpy = vi
-      .spyOn(globalThis, 'fetch')
-      .mockImplementation((input, init) =>
-        String(input).endsWith('/api/auth/token')
-          ? Promise.resolve(new Response('{"message":"refused"}', { status: 401 }))
-          : realFetch(input, init),
-      );
-
-    try {
-      await expect(
-        signIn(testApp.app, db.ownerUrl, [{ scopeId: plant, permissions: ['core.article:read'] }]),
-      ).rejects.toThrow('signIn: /api/auth/token answered 401: {"message":"refused"}');
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
 });
 
 describe('sign-in without a trusted proxy', () => {

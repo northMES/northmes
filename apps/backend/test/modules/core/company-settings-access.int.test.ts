@@ -116,13 +116,13 @@ const unblockMutation = `mutation ($input: CoreUnblockUserInput!) {
 }`;
 
 const plantAssignmentsQuery = `{
-  corePlantRoleAssignments { scope { kind name } user { username } role { name } }
+  corePlantRoleAssignments { scope { kind name } user { username name } role { name } }
 }`;
 
 interface PlantAssignmentsAnswer {
   corePlantRoleAssignments: {
     scope: { kind: string; name: string };
-    user: { username: string };
+    user: { username: string; name: string };
     role: { name: string } | null;
   }[];
 }
@@ -385,26 +385,62 @@ describe('access in company settings, without x-northmes-plant', () => {
     expect(errorCodes(created)).toEqual(['core.forbidden']);
   });
 
-  it('E04-S02 corePlantRoleAssignments lists the role assignments at the request plant only, by the holder name', async () => {
-    const { company, plantA, plantB, slugs } = await acme();
+  it("E04-S02 corePlantRoleAssignments lists the role assignments at the request plant only, by the holder's name, not the username", async () => {
+    const given = await givenCompany(db.ownerUrl, {
+      name: 'Acme AB',
+      plantNames: ['Plant A', 'Plant B'],
+    });
+    const [plantA = '', plantB = ''] = given.plants;
+    const admin = await signedIn([{ scopeId: given.company, permissions: companyAdmin }]);
+    const role = await admin.client.send<{ coreCreateRole: { id: string } }>(createRoleMutation, {
+      input: {
+        id: randomUUIDv7(),
+        companyId: given.company,
+        name: 'Article reader',
+        permissions: ['core.article:read'],
+      },
+    });
+    expect(role.errors).toBeUndefined();
+    // Two readers at Plant A, whose names and usernames sort the other way round, and one at Plant B.
+    for (const [username, name, scopeId] of [
+      ['lund.eva', 'Eva Lund', plantA],
+      ['alm.per', 'Per Alm', plantA],
+      ['berg.ida', 'Ida Berg', plantB],
+    ]) {
+      const created = await admin.client.send(createUserMutation, {
+        input: {
+          id: randomUUIDv7(),
+          companyId: given.company,
+          username,
+          name,
+          email: `${username}@example.test`,
+          roleId: role.data?.coreCreateRole.id,
+          scopeId,
+        },
+      });
+      expect(created.errors).toBeUndefined();
+    }
+    // A reader at the company, whose own assignment is not at the plant.
     const reader = await signedIn(
-      [{ scopeId: plantA, permissions: ['core.user:read', 'core.role:read'] }],
-      slugs[0],
+      [{ scopeId: given.company, permissions: ['core.user:read', 'core.role:read'] }],
+      given.slugs[0],
     );
-    const atB = await signedIn([{ scopeId: plantB, permissions: ['core.article:read'] }]);
-    await signedIn([{ scopeId: company, permissions: ['core.article:read'] }]);
 
     const answer = await reader.client.send<PlantAssignmentsAnswer>(plantAssignmentsQuery);
 
     expect(answer.errors).toBeUndefined();
-    const rows = answer.data?.corePlantRoleAssignments ?? [];
-    expect(rows.every(({ scope }) => scope.kind === 'PLANT' && scope.name === 'Plant A')).toBe(
-      true,
-    );
-    expect(rows.map(({ user }) => user.username)).not.toContain(atB.username);
-    expect(rows.map(({ user }) => user.username)).toContain(reader.username);
-    const names = rows.map(({ user }) => user.username);
-    expect(names).toEqual([...names].sort());
+    expect(answer.data?.corePlantRoleAssignments).toEqual([
+      {
+        scope: { kind: 'PLANT', name: 'Plant A' },
+        user: { username: 'lund.eva', name: 'Eva Lund' },
+        role: { name: 'Article reader' },
+      },
+      {
+        scope: { kind: 'PLANT', name: 'Plant A' },
+        user: { username: 'alm.per', name: 'Per Alm' },
+        role: { name: 'Article reader' },
+      },
+    ]);
   });
 
   it('E04-S02 corePlantRoleAssignments needs core.user:read at the plant', async () => {

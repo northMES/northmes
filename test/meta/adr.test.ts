@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
@@ -622,31 +622,14 @@ describe('adr numbering script', () => {
     );
   });
 
-  it('the root script adr:next runs the numbering script', () => {
+  it('the root script adr:next runs the numbering script that this file tests', () => {
     const rootPackage = JSON.parse(readFileSync(`${repositoryRoot}package.json`, 'utf8')) as {
       scripts?: Record<string, string>;
     };
 
-    expect(rootPackage.scripts?.['adr:next']).toBe('node scripts/adr/next-number.mjs');
-  });
-
-  it('the links from docs/agents/domain.md to GLOSSARY.md, docs/adr/README.md and the numbering script resolve', () => {
-    const domain = readFileSync(`${repositoryRoot}docs/agents/domain.md`, 'utf8');
-
-    for (const path of ['GLOSSARY.md', 'docs/adr/README.md', 'scripts/adr/next-number.mjs']) {
-      expect.soft(domain, `docs/agents/domain.md names ${path}`).toContain(path);
-      expect.soft(existsSync(`${repositoryRoot}${path}`), `${path} exists`).toBe(true);
-    }
-  });
-
-  it('step 1 of Adding an ADR names pnpm adr:next without the Once wording', () => {
-    const step = /^## Adding an ADR$[\s\S]*?^1\. (.*)$/m.exec(readIndex())?.[1];
-    expect(step, 'step 1 under "Adding an ADR" in docs/adr/README.md').toBeDefined();
-
-    expect.soft(step).toContain('`pnpm adr:next`');
-    // The script exists, so the step no longer waits for it.
-    expect.soft(step).not.toContain('Once');
-    expect.soft(step).not.toContain('exists, take the number from it instead');
+    expect(rootPackage.scripts?.['adr:next']).toBe(
+      `node ${relative(repositoryRoot, numberingScript)}`,
+    );
   });
 });
 

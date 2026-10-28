@@ -9,6 +9,9 @@ const week45 = {
   filter: {},
 };
 
+// The floats, chains, slack and workload of G1 are compared whole with g1.expected.json in
+// gantt-analysis.test.ts; this file pins what the source adds: the epoch conversion, a load of a
+// later week, the segments, the release and the constraint lines.
 describe('g1DataSource (plan 18, Data loading)', () => {
   it('GT1 answers the fixture G1 with every instant as epoch milliseconds', async () => {
     const snapshot = await g1DataSource.load(week45);
@@ -64,31 +67,6 @@ describe('g1DataSource (plan 18, Data loading)', () => {
     ]);
   });
 
-  it('GT1 GT2 fills the float of the rows of 1001 and 1003 from the expected values', async () => {
-    const { analysis } = await g1DataSource.load(week45);
-
-    expect(analysis.jobOrders['jo-1001-20']?.float).toMatchObject({
-      waitWorkingS: 0,
-      totalFloatWorkingS: 43_200,
-      freeFloatWorkingS: 900,
-      binding: { kind: 'release', boundBy: '1001.10' },
-      critical: false,
-      latestStartMs: Date.UTC(2026, 10, 5, 12, 15),
-    });
-    expect(analysis.jobOrders['jo-1003-10']?.float).toMatchObject({
-      totalFloatWorkingS: -900,
-      freeFloatWorkingS: 0,
-      binding: { kind: 'machine', boundBy: '1001.10', equipment: 'CNC1' },
-      critical: true,
-    });
-    // The locked 1002.10 ends at its deadline: a just-in-time row with zero float, bound by its lock.
-    expect(analysis.jobOrders['jo-1002-10']?.float).toMatchObject({
-      binding: { kind: 'hardLock' },
-      totalFloatWorkingS: 0,
-      critical: true,
-    });
-  });
-
   it('GT1 GT4 sets the release of a successor row: the predecessor end plus the lead time, or the send-ahead instant', async () => {
     const { analysis } = await g1DataSource.load(week45);
 
@@ -105,51 +83,6 @@ describe('g1DataSource (plan 18, Data loading)', () => {
       atMs: Date.UTC(2026, 10, 5, 8, 45),
     });
     expect(analysis.jobOrders['jo-1001-10']?.release).toBeUndefined();
-  });
-
-  it('GT1 GT2 fills each order with its slack or late-by and the chain of 1001 and 1003', async () => {
-    const { analysis } = await g1DataSource.load(week45);
-
-    expect(analysis.orders['po-1001']).toMatchObject({
-      late: false,
-      slackElapsedS: 101_700,
-      plannedStartMs: Date.UTC(2026, 10, 3, 10, 30),
-      plannedEndMs: Date.UTC(2026, 10, 5, 9, 45),
-    });
-    expect(analysis.orders['po-1001']?.chain?.rows.map((row) => row.row)).toEqual([
-      '1001.20',
-      '1001.10',
-    ]);
-    expect(analysis.orders['po-1003']).toMatchObject({
-      late: true,
-      slackElapsedS: -54_900,
-      lateByWorking: { seconds: 900, equipment: 'MILL1' },
-      plannedEndMs: Date.UTC(2026, 10, 5, 5, 15),
-    });
-    expect(analysis.orders['po-1003']?.chain?.rows).toEqual([
-      expect.objectContaining({ row: '1003.20', jobOrderId: 'jo-1003-20', critical: true }),
-      expect.objectContaining({ row: '1003.10', jobOrderId: 'jo-1003-10', critical: true }),
-      expect.objectContaining({
-        row: '1001.10',
-        orderId: 'po-1001',
-        root: true,
-        otherOrder: '1001',
-      }),
-    ]);
-    expect(analysis.orders['po-1002']).toMatchObject({ late: false, slackElapsedS: 0 });
-  });
-
-  it('GT5 carries the workload buckets of week 45', async () => {
-    const { analysis } = await g1DataSource.load(week45);
-
-    // The seven production days whose start lies in week 45, the closed weekend included.
-    expect(analysis.workload).toHaveLength(21);
-    expect(
-      analysis.workload.find((b) => b.equipment === 'CNC1' && b.label === '2026-11-05'),
-    ).toMatchObject({ loadedS: 29_700, utilizationPermille: 1000 });
-    expect(
-      analysis.workload.find((b) => b.equipment === 'CNC1' && b.label === '2026-11-07'),
-    ).toMatchObject({ availableS: 0, utilizationPermille: null });
   });
 
   it('GT4 lists the constraints of 1004.20 as release, last piece, allowed machines and calendar, each holding', async () => {

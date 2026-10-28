@@ -87,24 +87,47 @@ describe('keyboard move mode on the order Gantt (plan 18, Tree grid semantics)',
     await userEvent.keyboard('{Escape}');
   });
 
-  it('Left on a row at its release keeps the preview there instead of walking back through the horizon', async () => {
+  it('Left on a row at its release keeps the preview there and announces nothing, so the next announcement is the step Right makes', async () => {
     // 1003.20 starts at its release Wed 12:45: no earlier start exists with cascade on, so one
-    // Left leaves the preview where it is, at once.
+    // Left leaves the preview where it is. A step is announced 300 ms after the preview changes,
+    // so the proof of silence is positive: the announcements recorded from Left until Right's
+    // step has been spoken hold Right's step alone.
     renderGanttRoute({ zoom: 'hours', from: '2026-11-04' });
     const gantt = await findGantt();
     rowOf(gantt, 'jo-1003-20').focus();
     await userEvent.keyboard('{ArrowRight}');
     await userEvent.keyboard('m');
-    const started = Date.now();
+    const preview = () =>
+      gantt.querySelector('[data-move-preview="jo-1003-20"]')?.getAttribute('data-from-ms');
+    await waitFor(() => {
+      expect(preview()).toBe(String(Date.UTC(2026, 10, 4, 11, 45)));
+    });
+    await waitFor(() => {
+      expect(spoken()).toContain('Wed 4 Nov 12:45');
+    });
+    const region = document.getElementById('announcer-polite') as HTMLElement;
+    const announced: string[] = [];
+    const observer = new MutationObserver(() => {
+      if (region.textContent !== '' && region.textContent !== null) {
+        announced.push(region.textContent);
+      }
+    });
+    observer.observe(region, { childList: true, characterData: true, subtree: true });
 
     await userEvent.keyboard('{ArrowLeft}');
+    expect(preview()).toBe(String(Date.UTC(2026, 10, 4, 11, 45)));
+    await userEvent.keyboard('{ArrowRight}');
 
+    // The Hours step of 15 min from 12:45 is 13:00.
     await waitFor(() => {
-      expect(
-        gantt.querySelector('[data-move-preview="jo-1003-20"]')?.getAttribute('data-from-ms'),
-      ).toBe(String(Date.UTC(2026, 10, 4, 11, 45)));
+      expect(preview()).toBe(String(Date.UTC(2026, 10, 4, 12, 0)));
     });
-    expect(Date.now() - started).toBeLessThan(1500);
+    await waitFor(() => {
+      expect(spoken()).toContain('Wed 4 Nov 13:00');
+    });
+    observer.disconnect();
+    expect(announced).toHaveLength(1);
+    expect(announced[0]).toContain('Wed 4 Nov 13:00');
     await userEvent.keyboard('{Escape}');
   });
 

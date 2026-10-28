@@ -9,7 +9,7 @@ describe('plant slug', () => {
     expect(plantSlug.safeParse('plant-2')).toMatchObject({ success: true });
   });
 
-  it('E05-S03 slugs api, graphql, mcp, health, modules, assets, station, settings, admin and sign-in are refused', () => {
+  it('E05-S03 slugs api, graphql, mcp, health, modules, assets, shared, station, settings, admin and sign-in are refused, and reservedPlantSlugs lists exactly them', () => {
     const reserved = [
       'api',
       'graphql',

@@ -108,25 +108,8 @@ describe('the landing at /', () => {
     expect(within(main).queryByRole('link', { name: 'Nordic Steel settings' })).toBeNull();
   });
 
-  it('ADR0066 every plant and settings link on the plant list is a target at least --nm-target-min wide and high (WCAG 2.5.8)', async () => {
-    const { fetch } = api(() => companiesWith(['plant-a'], [nordic]), companyAdmin);
-    renderShellAt('/', shellModules, { fetch });
-
-    const main = await screen.findByRole('main');
-    await within(main).findByRole('link', { name: 'Acme AB settings' });
-    const links = within(main).getAllByRole('link');
-    expect(links.length).toBeGreaterThan(1);
-    for (const link of links) {
-      expect(link.className.split(' '), link.textContent ?? '').toEqual(
-        expect.arrayContaining([
-          'inline-flex',
-          'items-center',
-          'min-h-(--nm-target-min)',
-          'min-w-(--nm-target-min)',
-        ]),
-      );
-    }
-  });
+  // The target size of the plant and settings links (WCAG 2.5.8) is read from the boxes the browser
+  // lays out in e2e/design-rules.spec.ts.
 
   it('ADR0066 one plant and no company settings page redirects / to that plant', async () => {
     const { fetch } = api(() => companiesWith(['plant-a']));

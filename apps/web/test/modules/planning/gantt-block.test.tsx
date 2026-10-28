@@ -75,20 +75,14 @@ describe('the block of a job order row (plan 18, Blocks across closed time)', ()
     expect(blockOf(gantt, 'jo-1002-10').getAttribute('data-states')).toBe('locked');
   });
 
-  it('GT1 puts the 3 px selection bar on every block of the selected order', async () => {
+  // The 3 px bar the selected mark draws, and the D1 block text in pure black in both themes, are
+  // read from computed style in e2e/design-rules.spec.ts.
+  it('GT1 marks every block of the selected order as selected, which draws the 3 px selection bar', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02', order: 'po-1001' });
     const gantt = await findGantt();
 
-    expect(blockOf(gantt, 'jo-1001-10').className).toContain('border-t-3');
-    expect(blockOf(gantt, 'jo-1001-20').className).toContain('border-t-3');
-    expect(blockOf(gantt, 'jo-1003-10').className).not.toContain('border-t-3');
-  });
-
-  it('D1 draws block text in pure black on the order color, in both themes', async () => {
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
-    const gantt = await findGantt();
-
-    // The palette's text token, black in both themes; the palette of Tailwind is removed.
-    expect(blockOf(gantt, 'jo-1001-10').classList).toContain('text-palette-foreground');
+    expect(blockOf(gantt, 'jo-1001-10').getAttribute('data-selected')).toBe('true');
+    expect(blockOf(gantt, 'jo-1001-20').getAttribute('data-selected')).toBe('true');
+    expect(blockOf(gantt, 'jo-1003-10').getAttribute('data-selected')).toBeNull();
   });
 });

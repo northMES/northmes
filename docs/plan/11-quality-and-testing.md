@@ -46,6 +46,7 @@ Related plan documents: [04-data-and-platform.md](04-data-and-platform.md) (data
 11. Pure domain code imports no Nest, Kysely, `pg` or `process.env`. The scheduling domain is the package `@northmes/planning-domain` in `modules/planning/domain` ([ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md)), and a lint test enforces the import ban there.
 12. Test names, file names and fixtures use glossary terms. `batch_row` does not appear in event, error or test names.
 13. Every command runs as a root pnpm script or with `pnpm --filter` from the repository root, never after a `cd` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)).
+14. A test can go red for the regression its name describes ([docs/agents/testing.md](../agents/testing.md) holds the rules and their fixes).
 
 ## Test tiers
 
@@ -110,7 +111,7 @@ Root scripts:
 | `pnpm react-doctor:summary` | Copies the findings in `react-doctor-report.json` into the job summary and the log | `CI / react doctor` |
 | `pnpm db:types --verify` | kysely-codegen against a migrated database; fails on any generated `Date` type | `pnpm gen` |
 
-The pull request checks (`PR / linked issue`, `PR / pr title`, `PR / pr security`, `PR / pr tests` and `PR / openapi diff`) read the pull request and run in `pr.yml`, outside `CI / gate`. Every CI gate step except `CI / react doctor`, which runs in CI only ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)), runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report. A run of some of the Vitest projects that `pnpm check` runs, such as `pnpm test:tz`, counts as contained in it, and the `git worktree add` step of `CI / test` only adds the directory its later steps run in.
+The pull request checks (`PR / linked issue`, `PR / pr title`, `PR / pr security`, `PR / pr docs`, `PR / pr tests` and `PR / openapi diff`) read the pull request and run in `pr.yml`, outside `CI / gate`. Every CI gate step except `CI / react doctor`, which runs in CI only ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)), runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report. A run of some of the Vitest projects that `pnpm check` runs, such as `pnpm test:tz`, counts as contained in it, and the `git worktree add` step of `CI / test` only adds the directory its later steps run in.
 
 ## Testcontainers harness
 
@@ -455,7 +456,7 @@ flowchart LR
 
 ### Required checks
 
-The ruleset on `main` requires these checks by name, strict (the branch must be up to date). The checks from `lint` to `a11y` are jobs of `ci.yml`, which GitHub shows as `CI / <job name>`, for example `CI / lint`, except the pull request checks `pr title`, `linked issue`, `pr security`, `pr tests` and `pr gate`, which are jobs of `pr.yml`, shown as `PR / <job name>` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)):
+The ruleset on `main` requires these checks by name, strict (the branch must be up to date). The checks from `lint` to `a11y` are jobs of `ci.yml`, which GitHub shows as `CI / <job name>`, for example `CI / lint`, except the pull request checks `pr title`, `linked issue`, `pr security`, `pr docs`, `pr tests` and `pr gate`, which are jobs of `pr.yml`, shown as `PR / <job name>` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)):
 
 | Check | Runs |
 |---|---|
@@ -467,7 +468,8 @@ The ruleset on `main` requires these checks by name, strict (the branch must be 
 | `pr title` | The title is a Conventional Commit with an allowed type |
 | `linked issue` | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
 | `pr tests` | A `feat`, `fix` or `security` pull request that changes source changes a test, and a pull request that deletes a test says why under `## Removed tests` (`scripts/ci/pr-tests.mjs`) |
-| `pr gate` | Needs every other job in `pr.yml` (`pr title`, `linked issue`, `pr security`, `pr tests` and `openapi diff`), and fails when one of them failed, was cancelled or was skipped |
+| `pr docs` | The Docs section names the pages the pull request changes, or says none with a reason that names each surface of `.github/docs-paths` the change touches (`scripts/ci/pr-docs.mjs`, [ADR 0088](../adr/0088-developer-documentation-kept-current-with-a-docs-section-per-pull-request-generated-references-and-executable-examples.md)) |
+| `pr gate` | Needs every other job in `pr.yml` (`pr title`, `linked issue`, `pr security`, `pr docs`, `pr tests` and `openapi diff`), and fails when one of them failed, was cancelled or was skipped |
 | `gate` | Needs every other job in `ci.yml`, and fails when one of them failed, was cancelled or was skipped. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `docs` (once `apps/docs` exists) and `cla` (before the first outside pull request). |
 | `a11y` | The axe specs over the board states, from the first board pull request |
 | `license gate` | `pnpm sbom` and the license script ([12-operations-and-security.md](12-operations-and-security.md#license-gate)) |
