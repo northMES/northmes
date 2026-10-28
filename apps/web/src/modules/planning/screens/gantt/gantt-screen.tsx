@@ -25,9 +25,7 @@ import {
   draftConflicts,
   draftRowIds,
   emptyDraft,
-  type GanttDraft,
   moveBack,
-  moveInDraft,
   orderNumbersText,
   runPreview,
   runSummary,
@@ -43,6 +41,7 @@ import {
   withZoom,
 } from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
+import { usePlanningDraft } from '../../planning-draft.tsx';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
   type ClosedWindow,
@@ -53,28 +52,16 @@ import {
   rangeLabel,
   rangeOf,
   shiftedFrom,
-  zoomPresets,
 } from '../../timeline/time-scale.ts';
 import { remPx, useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
+import { useMoveActions } from '../../use-move-actions.ts';
 import { chainOf } from './gantt-chain.ts';
-import {
-  type GanttMoveActions,
-  type GanttRunActions,
-  type GanttViewContext,
-  GanttViewProvider,
-} from './gantt-context.ts';
+import { type GanttRunActions, type GanttViewContext, GanttViewProvider } from './gantt-context.ts';
 import { GanttDetailDrawer } from './gantt-detail-panel.tsx';
 import { GanttDraftDrawer } from './gantt-draft-drawer.tsx';
 import { GanttLinks, linksOf } from './gantt-links.tsx';
 import { GanttMarkerLayer, overlayMarkers } from './gantt-marker-layer.tsx';
-import {
-  type MoveState,
-  movedMessage,
-  moveRefusalOf,
-  previewOf,
-  refusalMessage,
-  stepMessage,
-} from './gantt-move.ts';
+import { refusalMessage } from './gantt-move.ts';
 import { GanttNotPlacedRow } from './gantt-not-placed-row.tsx';
 import { useGanttOptions } from './gantt-options.ts';
 import { GanttRowView } from './gantt-row.tsx';
@@ -131,8 +118,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   );
   const [committed, setSnapshot] = useState<GanttSnapshot | undefined>(undefined);
   // The planner's draft, in memory until the plan server exists, and the move in progress.
-  const [draft, setDraft] = useState<GanttDraft>(emptyDraft);
-  const [moveState, setMoveState] = useState<MoveState | undefined>(undefined);
+  const [draft, setDraft] = usePlanningDraft();
   const [draftOpen, setDraftOpen] = useState(false);
   // The orders Shift+click or Shift+Space added to the selection, after the one the URL names
   // (plan 18, Runs); a plain selection clears them.
@@ -361,21 +347,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     [snapshot, draft],
   );
   const draftIds = useMemo(() => draftRowIds(draft), [draft]);
-  const preview = useMemo(
-    () =>
-      snapshot === undefined || moveState === undefined
-        ? undefined
-        : previewOf(snapshot, moveState, options.cascade),
-    [snapshot, moveState, options.cascade],
-  );
-  // The step message of keyboard move mode, debounced to about 300 ms (plan 07, Moving without dragging).
-  useEffect(() => {
-    if (moveState?.source !== 'keyboard' || preview === undefined || snapshot === undefined) return;
-    const machine =
-      snapshot.equipment.find((each) => each.code === preview.equipment)?.name ?? preview.equipment;
-    const timer = setTimeout(() => announce(stepMessage(preview, machine, timeZone)), 300);
-    return () => clearTimeout(timer);
-  }, [moveState?.source, preview, snapshot, timeZone]);
   // A block takes focus and scrolls into view past the sticky tree pane and the time header, which
   // the grid's scroll padding keeps it clear of (WCAG 2.4.11).
   const focusBlock = (jobOrderId: string) => {
@@ -383,106 +354,17 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     block?.focus({ preventScroll: true });
     block?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   };
-  const moveActions = useMemo<GanttMoveActions | undefined>(() => {
-    if (snapshot === undefined || committed === undefined) return undefined;
-    const machineOf = (code: string | undefined) =>
-      snapshot.equipment.find((each) => each.code === code)?.name ?? code ?? 'no machine';
-    const rowOf = (jobOrderId: string) => {
-      const order = snapshot.productionOrders.find((each) =>
-        each.jobOrders.some((row) => row.id === jobOrderId),
-      );
-      const row = order?.jobOrders.find((each) => each.id === jobOrderId);
-      const operation = order?.operations.find((each) => each.id === row?.operationId);
-      return { order, row, operation };
-    };
-    return {
-      state: moveState,
-      preview,
-      begin: (jobOrderId, source) => {
-        const { row } = rowOf(jobOrderId);
-        if (row?.placement === undefined || row.equipment === undefined) return false;
-        const refused = moveRefusalOf(snapshot, jobOrderId);
-        if (refused !== undefined) {
-          announce(refusalMessage(row.displayNumber, refused));
-          return false;
-        }
-        setMoveState({
-          jobOrderId,
-          setupStartMs: row.placement.setupStartMs,
-          equipment: row.equipment,
-          source,
-        });
-        return true;
-      },
-      previewAt: (setupStartMs, equipment) =>
-        setMoveState((current) =>
-          current === undefined
-            ? current
-            : { ...current, setupStartMs, equipment: equipment ?? current.equipment },
-        ),
-      // A step moves one snap step; the preview then snaps forward to working time on the machine.
-      // A step moves one snap step from the snapped preview. Backwards, the forward snap of the
-      // calendar can land on the same instant again, so the step keeps going back until the
-      // preview is earlier, or the horizon ends (plan 18, Snapping and the calendar).
-      stepTime: (direction) =>
-        setMoveState((current) => {
-          if (current === undefined) return current;
-          const stepMs = zoomPresets[zoom].stepMs;
-          const from = preview?.span.setupStartMs ?? current.setupStartMs;
-          let setupStartMs = from + direction * stepMs;
-          if (direction < 0) {
-            const floor = range.fromMs - 28 * 86_400_000;
-            for (let count = 0; count < 500 && setupStartMs > floor; count += 1) {
-              const next = previewOf(snapshot, { ...current, setupStartMs }, options.cascade);
-              if (next === undefined || next.span.setupStartMs < from) break;
-              // The row cannot start before its release or its last-piece bound: it stays.
-              if (next.reason === 'snappedToRelease' || next.reason === 'snappedToLastPiece') {
-                return current;
-              }
-              setupStartMs -= stepMs;
-            }
-          }
-          return { ...current, setupStartMs };
-        }),
-      stepMachine: (direction) =>
-        setMoveState((current) => {
-          if (current === undefined) return current;
-          const { operation } = rowOf(current.jobOrderId);
-          const allowed = operation?.allowedEquipment ?? [];
-          const index = allowed.indexOf(current.equipment);
-          const next = allowed[Math.max(0, Math.min(allowed.length - 1, index + direction))];
-          return next === undefined ? current : { ...current, equipment: next };
-        }),
-      commit: () => {
-        if (moveState === undefined || preview === undefined) return;
-        const { draft: next, result } = moveInDraft(
-          committed,
-          draft,
-          {
-            jobOrderId: moveState.jobOrderId,
-            setupStartMs: moveState.setupStartMs,
-            equipment: moveState.equipment,
-          },
-          { cascade: options.cascade },
-        );
-        setMoveState(undefined);
-        if (result.refused !== undefined) {
-          announce(refusalMessage(preview.displayNumber, result.refused));
-          return;
-        }
-        setDraft(next);
-        announce(movedMessage(preview, machineOf(preview.equipment), timeZone));
-        // Focus returns to the block by id once it has drawn at its new place (plan 18).
-        requestAnimationFrame(() => focusBlock(moveState.jobOrderId));
-      },
-      cancel: () => {
-        if (moveState === undefined) return;
-        setMoveState(undefined);
-        announce('Move cancelled.');
-        requestAnimationFrame(() => focusBlock(moveState.jobOrderId));
-      },
-    };
-  }, [snapshot, committed, moveState, preview, draft, options.cascade, zoom, timeZone, range]);
+  const { actions: moveActions, state: moveState } = useMoveActions({
+    committed,
+    snapshot,
+    draft,
+    setDraft,
+    cascadeOn: options.cascade,
+    zoom,
+    range,
+    timeZone,
+    focusBlock,
+  });
   const rowById = useMemo(() => {
     const map = new Map<string, GanttRow>();
     const addOrder = (order: GanttRow) => {
@@ -590,7 +472,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         }
       },
     };
-  }, [snapshot, committed, draft, detailRowId, runCandidates]);
+  }, [snapshot, committed, draft, setDraft, detailRowId, runCandidates]);
   const runResult = useMemo(
     () =>
       committed === undefined || runReview === undefined

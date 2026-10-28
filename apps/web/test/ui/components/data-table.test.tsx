@@ -166,7 +166,8 @@ describe('DataTable', () => {
     expect(within(grid).getAllByRole('row', { hidden: true }).length).toBeGreaterThan(1);
   });
 
-  it('E02-S05 a numeric column aligns its header and cells to the end, and a hidden header still names its column', () => {
+  // The end alignment of a numeric column is read from computed style in e2e/design-rules.spec.ts.
+  it('E02-S05 a hidden header still names its column', () => {
     interface Line {
       readonly id: string;
       readonly quantity: string;
@@ -185,11 +186,8 @@ describe('DataTable', () => {
     );
 
     const grid = screen.getByRole('table', { name: 'Lines' });
-    const quantityHeader = within(grid).getByRole('columnheader', { name: 'Quantity' });
-    expect(quantityHeader.className).toContain('text-end');
-    expect(within(grid).getByRole('cell', { name: '1,200' }).className).toContain('text-end');
-    const actionsHeader = within(grid).getByRole('columnheader', { name: 'Actions' });
-    expect(actionsHeader.querySelector('.sr-only')?.textContent).toBe('Actions');
+    expect(within(grid).getByRole('columnheader', { name: 'Actions' })).toBeDefined();
+    expect(within(grid).getByRole('cell', { name: 'Release' })).toBeDefined();
   });
 
   it('E06-S06 a stale table keeps the rows and row range it shows and is busy, with focus on the header used, until the next rows arrive (ui-222, LI7)', async () => {

@@ -206,6 +206,34 @@ export function settingsModule(id: string, label: string, order: number): ShellM
   };
 }
 
+/**
+ * A module with one main sidebar entry, Reports, that needs reports.report:read, and no settings
+ * entry: a user who holds the permission draws an entry from the viewer's answer and no settings
+ * target.
+ */
+export const reports: ShellModule = {
+  label: 'Reports',
+  order: 30,
+  links: [
+    {
+      label: 'Reports',
+      icon: 'ClipboardList',
+      permission: 'reports.report:read',
+      link: ({ plant }) => ({ href: `/${plant}/reports` }),
+    },
+  ],
+  module: defineWebModule({
+    id: 'reports',
+    version: '0.1.0',
+    routes: (plantRoute) =>
+      createRoute({
+        getParentRoute: () => plantRoute,
+        path: 'reports',
+        component: page('Reports'),
+      }),
+  }),
+};
+
 /** Renders the shell's router for the modules at path, for a signed-in viewer. */
 export function renderShellAt(
   path: string,

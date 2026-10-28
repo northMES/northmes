@@ -12,6 +12,7 @@ import {
   PopoverTrigger,
 } from '../../../../ui/primitives/popover.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
+import { useGanttView } from '../gantt/gantt-context.ts';
 import type { JobOrderRow } from '../gantt/gantt-rows.ts';
 import { type BoardBlockState, boardBlockStates } from './board-block-states.ts';
 
@@ -38,10 +39,12 @@ export function clusterName(
   rows: readonly JobOrderRow[],
   snapshot: GanttSnapshot,
   span: { readonly fromMs: number; readonly toMs: number },
+  draftRowIds: ReadonlySet<string> = new Set(),
 ): string {
   const counts = new Map<BoardBlockState['kind'], number>();
   for (const row of rows) {
-    const kinds = new Set(boardBlockStates(row, snapshot).map((state) => state.kind));
+    const states = boardBlockStates(row, snapshot, { inDraft: draftRowIds.has(row.jobOrder.id) });
+    const kinds = new Set(states.map((state) => state.kind));
     for (const kind of kinds) counts.set(kind, (counts.get(kind) ?? 0) + 1);
   }
   const order = Object.keys(countWords) as BoardBlockState['kind'][];
@@ -87,6 +90,7 @@ export function BoardCluster({
   readonly onFocus: (event: FocusEvent<HTMLDivElement>) => void;
   readonly onSelectOrder: (orderId: string) => void;
 }) {
+  const { draftRowIds } = useGanttView();
   const [open, setOpen] = useState(false);
   const selected = rows.some((row) => row.order.id === selectedOrderId);
   const timeZone = snapshot.plant.timeZone;
@@ -102,7 +106,7 @@ export function BoardCluster({
             tabIndex={focusable ? 0 : -1}
             data-board-focus={focusKey}
             data-cluster={rows.map((row) => row.jobOrder.displayNumber).join(' ')}
-            aria-label={clusterName(rows, snapshot, span)}
+            aria-label={clusterName(rows, snapshot, span, draftRowIds)}
             aria-haspopup="dialog"
             aria-selected={selected}
             onFocus={onFocus}
@@ -150,7 +154,7 @@ export function BoardCluster({
                     row.jobOrder.placement.endMs,
                     timeZone,
                   )}
-                  {boardBlockStates(row, snapshot)
+                  {boardBlockStates(row, snapshot, { inDraft: draftRowIds?.has(row.jobOrder.id) })
                     .map((state) => `, ${state.text}`)
                     .join('')}
                 </span>

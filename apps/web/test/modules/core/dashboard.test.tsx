@@ -168,11 +168,21 @@ describe('the dashboard at the plant root (design shell-454, option A)', () => {
       ),
     ]);
 
+    // The demo data follows from each widget's id, so the same numbers show on every load.
     const value = await screen.findByRole('region', { name: 'Late orders' });
     expect(within(value).getByText('Demo')).toBeDefined();
-    expect(within(value).getByTestId('widget-value').textContent).toMatch(/^\d+$/);
+    expect(within(value).getByTestId('widget-value').textContent).toBe('13');
     const list = screen.getByRole('region', { name: 'Production orders, Milling' });
-    expect(within(list).getAllByRole('listitem').length).toBeGreaterThan(0);
+    expect(
+      within(list)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual([
+      'DEMO-8433Wall bracket',
+      'DEMO-1603Side panel',
+      'DEMO-1756Wall bracket',
+      'DEMO-6660Flange 80 mm',
+    ]);
     const table = screen.getByRole('region', { name: 'Stops this shift' });
     expect(within(table).getByRole('table', { name: 'Stops this shift' })).toBeDefined();
     const chart = screen.getByRole('region', { name: 'Output per hour' });

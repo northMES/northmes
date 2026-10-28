@@ -282,7 +282,9 @@ describe('upsert of an article by its article number', () => {
       [helSlug, stoSlug].sort(),
     );
     expect(kept.data?.coreUpsertArticle).toMatchObject({ id, version: 2 });
-    expect(kept.data?.coreUpsertArticle.plants).toHaveLength(2);
+    expect(kept.data?.coreUpsertArticle.plants.map(({ slug }) => slug).sort()).toEqual(
+      [helSlug, stoSlug].sort(),
+    );
   });
 
   it('ADR0073-W3 an upsert with a stale expectedVersion gets core.version_conflict', async () => {

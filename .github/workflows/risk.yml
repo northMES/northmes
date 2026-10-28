@@ -50,6 +50,9 @@ jobs:
           gh api -H 'Accept: application/vnd.github.raw+json' \
             "repos/$GITHUB_REPOSITORY/contents/scripts/ci/annotation.mjs?ref=$DEFAULT_BRANCH" \
             > "$RUNNER_TEMP/risk/scripts/ci/annotation.mjs"
+          gh api -H 'Accept: application/vnd.github.raw+json' \
+            "repos/$GITHUB_REPOSITORY/contents/scripts/ci/path-patterns.mjs?ref=$DEFAULT_BRANCH" \
+            > "$RUNNER_TEMP/risk/scripts/ci/path-patterns.mjs"
       - name: Sort the pull request into a tier
         id: risk
         run: node "$RUNNER_TEMP/risk/scripts/ci/risk-gate.mjs"

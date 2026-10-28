@@ -271,7 +271,7 @@ Deferred until after release 1 (Krister Johansson, 2026-10-16). Release 1 gives 
 
 #### OAuth 2.1 clients
 
-NorthMES runs one OAuth 2.1 authorization server on Better Auth's OAuth provider plugin, `@better-auth/oauth-provider` 1.7.6, with the jwt plugin that main already runs. In release 1 its one resource is the public REST API; `/mcp` becomes its second resource later (section 3). The issuer is `NORTHMES_PUBLIC_ORIGIN` plus Better Auth's base path.
+NorthMES runs one OAuth 2.1 authorization server on Better Auth's OAuth provider plugin, `@better-auth/oauth-provider` at the 1.7.x version the catalog pins, with the jwt plugin that main already runs. In release 1 its one resource is the public REST API; `/mcp` becomes its second resource later (section 3). The issuer is `NORTHMES_PUBLIC_ORIGIN` plus Better Auth's base path.
 
 * Registration. A Company admin registers clients under Settings, Integrations, with `core.registerOAuthClient`, `core.updateOAuthClient`, `core.rotateOAuthClientSecret` and `core.disableOAuthClient`, which call `auth.api.adminCreateOAuthClient` and its siblings on the server. A client belongs to the company that registered it. Dynamic client registration and client ID metadata documents stay off (section 3).
 * Confidential clients (`client_secret_basic` or `client_secret_post`) may use `client_credentials`. Such a client is bound, like an integration token, to the company or one plant with roles there, and acts as its own principal of type `integration`. Its secret is shown once.
