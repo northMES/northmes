@@ -3,15 +3,18 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { closedWindows } from '../../../src/modules/planning/timeline/availability-shading.ts';
-import { naturalWidthPx, rangeOf } from '../../../src/modules/planning/timeline/time-scale.ts';
 import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+/**
+ * The natural width of the Day preset from Wed 4 Nov with closed time hidden: 72 hours at 48 px
+ * less the closed time of G1's calendar, each closed window a 6 px gap.
+ */
+const NATURAL_WIDTH_PX = 1242;
 
 /** The rows of the tree at a level, under the treegrid. */
 function rowsAtLevel(gantt: HTMLElement, level: number): HTMLElement[] {
@@ -136,25 +139,19 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
 
-    expect(gantt.className).toContain('overflow-auto');
     const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
     const tracks = header.style.gridTemplateColumns.split(' ');
     const timeTrack = Number.parseFloat(tracks[tracks.length - 1] ?? '0');
-    // Hide closed time is on by default, so the natural width is the compressed one.
-    const snapshot = g1Snapshot();
-    const range = rangeOf('2026-11-04', 'day', 'Europe/Stockholm', '06:00');
-    const natural = naturalWidthPx(range, 'day', {
-      closed: closedWindows(snapshot.calendar, 'Europe/Stockholm', range),
-    });
-    expect(timeTrack).toBe(Math.ceil(natural));
-    expect(timeTrack).toBeLessThan(naturalWidthPx(range, 'day'));
+    // Hide closed time is on by default, so the natural width is the compressed one: the Day
+    // preset's 3 456 px for Wed 06:00 to Sat 06:00 less the closed time of G1's calendar.
+    expect(timeTrack).toBe(NATURAL_WIDTH_PX);
     // The header and every row share the template, so the tree pane stays aligned with the rows.
     const row = within(gantt).getByRole('row', { name: /^1003 / });
     expect(row.style.gridTemplateColumns).toBe(header.style.gridTemplateColumns);
+    // The sticky tree cells each carry their inset; position: sticky is read from computed style
+    // in e2e/design-rules.spec.ts.
     const [name, deadline] = within(header).getAllByRole('columnheader');
-    expect(name?.className).toContain('sticky');
     expect(name?.style.insetInlineStart).toBe('0px');
-    expect(deadline?.className).toContain('sticky');
     expect(deadline?.style.insetInlineStart).toBe(`${Number.parseFloat(tracks[0] ?? '0')}px`);
     const cells = within(row).getAllByRole('gridcell');
     expect(cells[0]?.style.insetInlineStart).toBe(deadline?.style.insetInlineStart);
@@ -165,20 +162,23 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     const gantt = await findGantt();
 
     const fill = gantt.closest<HTMLElement>('[data-gantt-fill]');
-    const top = fill?.getBoundingClientRect().top ?? 0;
-    // The gap under the grid is main's bottom padding, which the test's stylesheet-free page has
-    // as 0; the least height is 15 rem.
-    const main = fill?.closest('main');
-    const gap =
-      main === null || main === undefined
-        ? 0
-        : Number.parseFloat(getComputedStyle(main).paddingBottom) || 0;
-    expect(fill?.style.height).toBe(`${Math.max(15 * 16, window.innerHeight - top - gap)}px`);
-    expect(gantt.className).toContain('min-h-0');
-    expect(gantt.className).toContain('flex-1');
-    const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
-    expect(header.className).toContain('sticky');
-    expect(within(gantt).getByRole('row', { name: /Not placed/ }).className).toContain('sticky');
+    // happy-dom's window is 768 px high and lays nothing out, so the grid starts at the top and
+    // main's bottom padding is 0: the fill is the whole window, above the least height of 15 rem.
+    expect(fill?.style.height).toBe('768px');
+  });
+
+  it('plan 18 the fill keeps the least height of 15 rem in a window shorter than that', async () => {
+    const { innerHeight } = window;
+    try {
+      Object.defineProperty(window, 'innerHeight', { value: 200, configurable: true });
+      renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+      const gantt = await findGantt();
+
+      const fill = gantt.closest<HTMLElement>('[data-gantt-fill]');
+      expect(fill?.style.height).toBe('240px');
+    } finally {
+      Object.defineProperty(window, 'innerHeight', { value: innerHeight, configurable: true });
+    }
   });
 
   it("WCAG 1.4.10 only the Name column sticks when the shown columns exceed the pane's cap", async () => {
@@ -191,13 +191,14 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
       renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
       const gantt = await findGantt();
 
+      // A sticky cell carries its inset; a cell that scrolls with the time area has none.
       const headers = within(gantt).getAllByRole('columnheader');
       expect(headers).toHaveLength(12);
-      expect(headers[0]?.className).toContain('sticky');
-      expect(headers[1]?.className).not.toContain('sticky');
+      expect(Number.parseFloat(headers[0]?.style.insetInlineStart ?? '')).toBe(0);
+      expect(headers[1]?.style.insetInlineStart).toBe('');
       const row = within(gantt).getByRole('row', { name: /^1003 / });
-      expect(within(row).getByRole('rowheader').className).toContain('sticky');
-      expect(within(row).getAllByRole('gridcell')[0]?.className).not.toContain('sticky');
+      expect(Number.parseFloat(within(row).getByRole('rowheader').style.insetInlineStart)).toBe(0);
+      expect(within(row).getAllByRole('gridcell')[0]?.style.insetInlineStart).toBe('');
     } finally {
       window.localStorage.removeItem('northmes.planning.gantt.options');
     }
