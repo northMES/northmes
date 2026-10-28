@@ -49,6 +49,8 @@ export type PageState =
       readonly correlationId?: string;
       /** Sends the request again; Try again stays busy until the promise settles. */
       readonly onRetry: () => Promise<unknown>;
+      /** A way out beside Try again, such as a link to another page with the same data. */
+      readonly action?: ReactNode;
     };
 
 export interface PageFrameProps {
@@ -145,6 +147,7 @@ export function ErrorState({
   error,
   correlationId: own,
   onRetry,
+  action,
   retrying = false,
 }: ErrorStateProps) {
   const correlationId = correlationIdOf({ correlationId: own, error });
@@ -187,10 +190,13 @@ export function ErrorState({
         </p>
       )}
       {/* The D1 Button loading state: full opacity, the progress label, focus kept (D1 Q8). */}
-      <Button loading={retrying} onClick={() => onRetry()}>
-        {!retrying && <RotateCw aria-hidden />}
-        {retrying ? 'Trying again' : 'Try again'}
-      </Button>
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <Button loading={retrying} onClick={() => onRetry()}>
+          {!retrying && <RotateCw aria-hidden />}
+          {retrying ? 'Trying again' : 'Try again'}
+        </Button>
+        {action}
+      </div>
     </Empty>
   );
 }

@@ -23,12 +23,15 @@ const policyPages = [
 ];
 
 describe('security docs', () => {
-  it('ADR0076 the pull request template asks for a Security section and the validation impact', () => {
+  it('ADR0076 ADR0088 the pull request template asks for a Security section, a Docs section after it and the validation impact', () => {
     const headings = read('.github/PULL_REQUEST_TEMPLATE.md')
       .split('\n')
       .filter((line) => line.startsWith('## '));
 
-    expect(headings).toEqual(expect.arrayContaining(['## Security', '## Validation impact']));
+    expect(headings).toEqual(
+      expect.arrayContaining(['## Security', '## Docs', '## Validation impact']),
+    );
+    expect(headings.indexOf('## Docs')).toBe(headings.indexOf('## Security') + 1);
   });
 
   it('ADR0076 every control in the controls index has the status built, decided, gap or accepted', () => {

@@ -5,7 +5,7 @@
  * The lucide-react icon names a nav entry can carry (ADR 0067): the release 1 icons of core and
  * planning that the D2 build notes list, and those of the settings entries Users, Roles and People
  * (design shell-313), Tags for the article groups, LayoutDashboard for the dashboard (design
- * shell-454), and Building2 for the customers (design #728). ADR 0067 puts this list in @northmes/contracts once the nav contract carries icons;
+ * shell-454), Building2 for the customers (design #728), and Factory for the plant page (design #767). ADR 0067 puts this list in @northmes/contracts once the nav contract carries icons;
  * until then the web keeps it, and NavIcon maps each name to its icon.
  */
 export const navIconNames = [
@@ -29,6 +29,7 @@ export const navIconNames = [
   'Shield',
   'Tags',
   'Building2',
+  'Factory',
 ] as const;
 
 /** One of navIconNames, such as "Package". */

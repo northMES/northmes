@@ -18,21 +18,9 @@ import {
 
 afterEach(cleanup);
 
-/**
- * The classes that draw D2's menu item focus: --accent with a 2 px inset --focus-outline, and no
- * --focus-ring band outside the item. outline-solid is needed because shadcn's outline-hidden sets
- * the outline style to none. happy-dom applies no Tailwind, so the test reads the classes.
- */
-const insetFocusOutline = [
-  'focus-visible:outline-2',
-  'focus-visible:outline-solid',
-  'focus-visible:-outline-offset-2',
-  'focus-visible:outline-focus-outline',
-  'focus-visible:shadow-none',
-];
-
+// The inset focus outline on --accent of D2 is read from computed style in e2e/design-rules.spec.ts.
 describe('DropdownMenu', () => {
-  it('E04-S02 every kind of menu item shows keyboard focus with a 2 px inset --focus-outline on --accent', async () => {
+  it('E04-S02 Enter on the trigger opens the menu with focus on its first item, and each kind of item has its role and state', async () => {
     const user = userEvent.setup();
     render(
       <DropdownMenu>
@@ -55,17 +43,20 @@ describe('DropdownMenu', () => {
 
     screen.getByRole('button', { name: 'Account' }).focus();
     await user.keyboard('{Enter}');
-    const menu = await screen.findByRole('menu');
-    const items = [
-      within(menu).getByRole('menuitem', { name: 'Profile' }),
-      within(menu).getByRole('menuitemcheckbox', { name: 'Compact rows' }),
-      within(menu).getByRole('menuitemradio', { name: 'Light' }),
-      within(menu).getByRole('menuitem', { name: 'Language' }),
-    ];
 
-    for (const item of items) {
-      expect(item.className.split(' ')).toEqual(expect.arrayContaining(insetFocusOutline));
-      expect(item.className).toContain('focus:bg-accent');
-    }
+    const menu = await screen.findByRole('menu');
+    const profile = within(menu).getByRole('menuitem', { name: 'Profile' });
+    expect(document.activeElement).toBe(profile);
+    expect(
+      within(menu)
+        .getByRole('menuitemcheckbox', { name: 'Compact rows' })
+        .getAttribute('aria-checked'),
+    ).toBe('true');
+    expect(
+      within(menu).getByRole('menuitemradio', { name: 'Light' }).getAttribute('aria-checked'),
+    ).toBe('true');
+    expect(
+      within(menu).getByRole('menuitem', { name: 'Language' }).getAttribute('aria-haspopup'),
+    ).toBe('menu');
   });
 });

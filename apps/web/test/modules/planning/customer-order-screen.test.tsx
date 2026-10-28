@@ -194,6 +194,14 @@ describe("a customer order's page (design #728, KO1 to KO3)", () => {
     expect(
       within(dialog).getByText('At most 250 pcs, the open quantity of the line.'),
     ).toBeTruthy();
+    // The field's error is no live region: the app's announcer says the refusal once typing pauses.
+    await waitFor(
+      () =>
+        expect(document.getElementById(politeRegionId)?.textContent).toBe(
+          'Enter a whole number from 1 to 250.',
+        ),
+      { timeout: 3000 },
+    );
   });
 
   it('#728 KO3 announces the outcome that comes back once a refused quantity is fixed', async () => {

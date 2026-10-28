@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Database,
   Drill,
+  Factory,
   Hammer,
   Handshake,
   Layers,
@@ -47,6 +48,7 @@ const icons: Readonly<Record<NavIconName, LucideIcon>> = {
   Shield,
   Tags,
   Building2,
+  Factory,
 };
 
 /**

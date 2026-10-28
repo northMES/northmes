@@ -129,7 +129,11 @@ describe('the Gantt page (plan 18, URL state)', () => {
   it('the board route without view=gantt shows the planning board and no view control', async () => {
     renderGanttRoute({ zoom: 'week' }, undefined, 'board');
 
-    expect(await screen.findByRole('grid', { name: /^plant-a board, / })).toBeTruthy();
+    const board = await screen.findByRole('grid', { name: /^plant-a board, / });
+    // The skeleton has the same role and name; the loaded grid holds the job orders.
+    await waitFor(() =>
+      expect(board.ownerDocument.querySelector('[data-job-order]')).not.toBeNull(),
+    );
     expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
     expect(screen.queryByRole('treegrid')).toBeNull();
   });

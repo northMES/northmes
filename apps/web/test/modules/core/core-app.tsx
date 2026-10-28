@@ -18,7 +18,7 @@ import {
   useParams,
 } from '@tanstack/react-router';
 import { render, within } from '@testing-library/react';
-import { from, mergeMap } from 'rxjs';
+import { from, mergeMap, tap } from 'rxjs';
 import { CoreArticle } from '../../../src/modules/core/article.graphql.ts';
 import type { CustomersSource } from '../../../src/modules/core/customers-data.ts';
 import { g1CustomersSource } from '../../../src/modules/core/customers-data-g1.ts';
@@ -123,6 +123,25 @@ export function holdRequests(matches: (operation: ApolloLink.Operation) => boole
       : forward(operation),
   );
   return { link, release: () => resolve() };
+}
+
+/**
+ * Holds each request of the held operations until the first operation has answered, so the page
+ * renders with the viewer's permissions known. A test that says a control the permissions hide is
+ * absent, on a page where the viewer's answer renders nothing else to wait for, asserts the
+ * absence once the page shows: the page rendered after the answer that would have shown it.
+ */
+export function answeredAfter(first: string, ...held: readonly string[]): ApolloLink {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  return new ApolloLink((operation, forward) => {
+    if (operation.operationName === first) {
+      // An error releases the held requests too, so a missing mock fails on its own message.
+      return forward(operation).pipe(tap({ next: () => resolve(), error: () => resolve() }));
+    }
+    return operation.operationName !== undefined && held.includes(operation.operationName)
+      ? from(promise).pipe(mergeMap(() => forward(operation)))
+      : forward(operation);
+  });
 }
 
 /** A fictional article as the API returns it. */
