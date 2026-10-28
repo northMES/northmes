@@ -46,6 +46,7 @@ Related plan documents: [04-data-and-platform.md](04-data-and-platform.md) (data
 11. Pure domain code imports no Nest, Kysely, `pg` or `process.env`. The scheduling domain is the package `@northmes/planning-domain` in `modules/planning/domain` ([ADR 0057](../adr/0057-scheduling-domain-as-a-pure-package-in-the-planning-module.md)), and a lint test enforces the import ban there.
 12. Test names, file names and fixtures use glossary terms. `batch_row` does not appear in event, error or test names.
 13. Every command runs as a root pnpm script or with `pnpm --filter` from the repository root, never after a `cd` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)).
+14. A test can go red for the regression its name describes ([docs/agents/testing.md](../agents/testing.md) holds the rules and their fixes).
 
 ## Test tiers
 
@@ -100,9 +101,9 @@ Root scripts:
 |---|---|---|
 | `pnpm check` | turbo `lint` and `typecheck`, `pnpm gen --check`, then `vitest run` over `unit`, `integration`, `web` and `types` | The one gate: handoff's Tester, `ci / gate`, a developer before pushing |
 | `pnpm check:full` | `pnpm check`, the Europe/Stockholm leg and the end-to-end suite | Release 1's done conditions require it to pass on `main`; CI jobs call the parts it contains |
-| `pnpm test:unit`, `pnpm test:int` | One project | Local work; `pnpm test:int` also runs in `CI / fresh worktree` |
+| `pnpm test:unit`, `pnpm test:int` | One project | Local work |
 | `pnpm test:watch` | `vitest --project unit` | The TDD loop |
-| `pnpm test:coverage` | `vitest run --coverage` over `unit`, `integration`, `web` and `types` | The UTC leg of `CI / test` |
+| `pnpm test:coverage` | `vitest run --coverage` over `unit`, `integration`, `web` and `types` | The UTC leg of `CI / test`, in a fresh git worktree |
 | `pnpm test:tz` | Unit and integration with `TZ=Europe/Stockholm` and `NM_TEST_PG_TZ=Europe/Stockholm` | The Stockholm leg |
 | `pnpm e2e` | Build, then `playwright test` | Local end-to-end runs |
 | `pnpm test:ai`, `pnpm test:e2e:ai` | The live AI suites | A person, or the scheduled live workflow |
@@ -110,7 +111,7 @@ Root scripts:
 | `pnpm react-doctor:summary` | Copies the findings in `react-doctor-report.json` into the job summary and the log | `CI / react doctor` |
 | `pnpm db:types --verify` | kysely-codegen against a migrated database; fails on any generated `Date` type | `pnpm gen` |
 
-Every CI gate step except the pull request checks (`CI / linked issue`, `CI / pr title`, `CI / pr security`, `CI / pr tests` and `CI / openapi diff`) and `CI / react doctor`, which runs in CI only ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)), runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report. A run of some of the Vitest projects that `pnpm check` runs, such as `pnpm test:int` in `CI / fresh worktree`, counts as contained in it, and the `git worktree add` step of that job only adds the directory its later steps run in.
+The pull request checks (`PR / linked issue`, `PR / pr title`, `PR / pr security`, `PR / pr docs`, `PR / pr tests` and `PR / openapi diff`) read the pull request and run in `pr.yml`, outside `CI / gate`. Every CI gate step except `CI / react doctor`, which runs in CI only ([ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md)), runs a script that `pnpm check` or `pnpm check:full` contains, and `test/meta/gates.test.ts` checks that the Tester command in every committed handoff graph is `pnpm check` ([ADR 0058](../adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md)). A run with `--coverage` counts as the same run while `vitest.config.ts` sets no coverage threshold, and the coverage summary step of `CI / test` only copies a report. A run of some of the Vitest projects that `pnpm check` runs, such as `pnpm test:tz`, counts as contained in it, and the `git worktree add` step of `CI / test` only adds the directory its later steps run in.
 
 ## Testcontainers harness
 
@@ -455,20 +456,21 @@ flowchart LR
 
 ### Required checks
 
-The ruleset on `main` requires these checks by name, strict (the branch must be up to date). The checks from `lint` to `a11y` are jobs of `ci.yml`, which GitHub shows as `CI / <job name>`, for example `CI / lint` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)):
+The ruleset on `main` requires these checks by name, strict (the branch must be up to date). The checks from `lint` to `a11y` are jobs of `ci.yml`, which GitHub shows as `CI / <job name>`, for example `CI / lint`, except the pull request checks `pr title`, `linked issue`, `pr security`, `pr docs`, `pr tests` and `pr gate`, which are jobs of `pr.yml`, shown as `PR / <job name>` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)):
 
 | Check | Runs |
 |---|---|
 | `lint` | turbo `lint`, then `pnpm gen --check` |
 | `typecheck` | turbo `typecheck` |
 | `build` | turbo `build` |
-| `test` | The unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg, in one job. The Europe/Stockholm leg also runs after a failed UTC leg |
+| `test` | In a git worktree added in the runner's temporary directory, after one install there and with no build step: the unit, integration, web and types projects in the UTC leg, then the unit and integration projects in the Europe/Stockholm leg, in one job. The Europe/Stockholm leg also runs after a failed UTC leg |
 | `react doctor` | `pnpm react-doctor`: react-doctor with `--no-telemetry` over `apps/web`, every `modules/*/web` and `packages/web-sdk`; an error fails it, and the next step copies the findings into the job summary and the log. CI only, under the license exception of [ADR 0040](../adr/0040-dependency-license-policy-ci-gate-and-sbom.md) |
-| `fresh worktree` | On pull requests: `git worktree add`, then `pnpm install --frozen-lockfile` and `pnpm test:int` in the new worktree, with no build step |
 | `pr title` | The title is a Conventional Commit with an allowed type |
 | `linked issue` | A linked issue with `Closes #N`; Renovate and release pull requests exempt |
 | `pr tests` | A `feat`, `fix` or `security` pull request that changes source changes a test, and a pull request that deletes a test says why under `## Removed tests` (`scripts/ci/pr-tests.mjs`) |
-| `gate` | Needs every other job in `ci.yml`, and fails when one of them failed or was cancelled, or was skipped on a pull request. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Also `openapi diff`. Later also `docs` (once `apps/docs` exists) and `cla` (before the first outside pull request). |
+| `pr docs` | The Docs section names the pages the pull request changes, or says none with a reason that names each surface of `.github/docs-paths` the change touches (`scripts/ci/pr-docs.mjs`, [ADR 0088](../adr/0088-developer-documentation-kept-current-with-a-docs-section-per-pull-request-generated-references-and-executable-examples.md)) |
+| `pr gate` | Needs every other job in `pr.yml` (`pr title`, `linked issue`, `pr security`, `pr docs`, `pr tests` and `openapi diff`), and fails when one of them failed, was cancelled or was skipped |
+| `gate` | Needs every other job in `ci.yml`, and fails when one of them failed, was cancelled or was skipped. From M1 also `e2e/skeleton.spec.ts` and the resolve-hook test. Later also `docs` (once `apps/docs` exists) and `cla` (before the first outside pull request). |
 | `a11y` | The axe specs over the board states, from the first board pull request |
 | `license gate` | `pnpm sbom` and the license script ([12-operations-and-security.md](12-operations-and-security.md#license-gate)) |
 | `dependency audit` | `pnpm audit --prod --audit-level high` |
@@ -476,18 +478,18 @@ The ruleset on `main` requires these checks by name, strict (the branch must be 
 
 Each job in `ci.yml` is a required check of its own, so the merge box shows each kind of check as required ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)). A job that joins, leaves or changes its name in `ci.yml` needs a ruleset edit: an added name after the merge, a removed or old name just before it ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)), and `test/meta/workflows.test.ts` lists the job names. A required check matches by its name and the app alone, so no two workflows share a job name, which `test/meta/workflows.test.ts` checks. Required workflows have no `paths` filters, because a workflow skipped by a path filter leaves its required check waiting forever; a job that should run only for some paths decides in its first step.
 
-`openapi diff` is a job of `ci.yml` that `CI / gate` needs, which came with core's public article routes ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [ADR 0073](../adr/0073-one-module-contract-for-rest-webmcp-and-later-mcp-with-oauth-clients-and-tokens.md)):
+`openapi diff` came with core's public article routes ([ADR 0064](../adr/0064-rest-routes-under-api-v1-and-openapi-from-zod-contracts.md), [ADR 0073](../adr/0073-one-module-contract-for-rest-webmcp-and-later-mcp-with-oauth-clients-and-tokens.md)). It reads the title, so it is a job of `pr.yml` that `PR / pr gate` needs:
 
 - It runs `oasdiff breaking` on the base branch's `schema/openapi-v1.json` and the pull request's, so each pull request sees only its own changes, and passes when the base branch has no document.
 - oasdiff runs from the `tufin/oasdiff` image pinned by digest in the job's `OASDIFF_IMAGE`, with `--network none` and the workspace mounted read-only, and Renovate updates its tag and digest together ([ADR 0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md)). The official action is not used, because it uploads the documents for a review page and sends telemetry by default.
 - `scripts/ci/openapi-diff.mjs` decides from oasdiff's JSON. In 0.x an ERR-level break fails unless the pull request title carries `!`, the breaking-change marker of [ADR 0038](../adr/0038-versions-and-releases-lockstep-0-x-release-please-api-reports.md), which also bumps the minor and puts the break in the changelog. From 1.0 every ERR-level break in the public API fails, with or without `!`, and a break needs a new API major.
 - WARN-level findings are reported as warnings and do not block.
-- Like `CI / pr title`, it reads the pull request, so it is not part of `pnpm check`.
+- Like `PR / pr title`, it reads the pull request, so it is not part of `pnpm check`.
 - `scripts/ci/openapi-diff.test.ts` runs the job's script on oasdiff findings: a removed required response field under a title without `!` exits 1, the same change titled `feat(planning)!:` exits 0, an added optional response field exits 0, a WARN-level change exits 0 with a warning, and at version 1.0.0 a removed field fails even with `!`.
 
 ### Other checks on pull requests
 
-Only the checks above are required by the ruleset. The checks below run on pull requests and show their result there. One that lands as a job in `ci.yml` becomes a required check in that change, because `CI / gate` needs every job there and the ruleset names each of them; for a check in another workflow, the task that adds it decides. `e2e` and `plugin-outside` are planned as jobs in `ci.yml` ([13-delivery-and-github.md](13-delivery-and-github.md#workflows-and-jobs)), so each becomes a required check in the change that adds it, as `fresh worktree` did ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)).
+Only the checks above are required by the ruleset. The checks below run on pull requests and show their result there. One that lands as a job in `ci.yml` becomes a required check in that change, because `CI / gate` needs every job there and the ruleset names each of them; for a check in another workflow, the task that adds it decides. `e2e` and `plugin-outside` are planned as jobs in `ci.yml` ([13-delivery-and-github.md](13-delivery-and-github.md#workflows-and-jobs)), so each becomes a required check in the change that adds it, as `react doctor` did ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)).
 
 | Check | Runs | When |
 |---|---|---|
@@ -547,9 +549,9 @@ The maintainer builds tasks through handoff runs. handoff passes `disableAllHook
 2. The planner, coder, plan reviewer and code review node instructions require one behaviour at a time, the failing test first, and a named test per criterion. The plan reviewer blocks code before its test, a step with two behaviours, a criterion without a test, a test at the wrong seam and a database test outside `packages/testing` and Testcontainers.
 3. Krister approves the test list, the seam and the owned paths at the plan gate (guided and standard graphs).
 4. The Tester runs `pnpm check` after every coder attempt, starts its own Postgres container, has a 20-minute timeout and one retry for a flaky run, and sends failures back to the coder with the output tail.
-5. `CI / pr tests` (`scripts/ci/pr-tests.mjs`) runs on every pull request, from a run or not. It fails a `feat`, `fix` or `security` pull request that changes source and no test. Source is code (TypeScript, JavaScript, SQL, GraphQL) under `apps/`, `modules/`, `packages/`, `examples/` and `scripts/` that is neither a test nor a file `pnpm gen` writes. A test is a `*.test.*`, `*.test-d.*` or `*.spec.*` file outside `.claude/` that the pull request adds or changes; a deleted test or a pure rename does not count. It also fails any pull request except a revert that deletes such a test without a `## Removed tests` section in its body that gives a reason, where a bare "none" is no reason. Renovate's and release-please's pull requests are exempt, as for `CI / pr security`. Focused and skipped tests are Biome's `noFocusedTests` and `noSkippedTests` errors, so `CI / lint` refuses them.
+5. `PR / pr tests` (`scripts/ci/pr-tests.mjs`) runs on every pull request, from a run or not. It fails a `feat`, `fix` or `security` pull request that changes source and no test. Source is code (TypeScript, JavaScript, SQL, GraphQL) under `apps/`, `modules/`, `packages/`, `examples/` and `scripts/` that is neither a test nor a file `pnpm gen` writes. A test is a `*.test.*`, `*.test-d.*` or `*.spec.*` file outside `.claude/` that the pull request adds or changes; a deleted test or a pure rename does not count. It also fails any pull request except a revert that deletes such a test without a `## Removed tests` section in its body that gives a reason, where a bare "none" is no reason. Renovate's and release-please's pull requests are exempt, as for `PR / pr security`. Focused and skipped tests are Biome's `noFocusedTests` and `noSkippedTests` errors, so `CI / lint` refuses them.
 
-`CI / pr tests` checks that tests changed, not that they were written first. Commit order (`test:` before the code) is visible in the pull request and is checked by the plan reviewer and the code review, not by a script. Whether a stricter tool is worth a model call per edit (Probity, the successor of `tdd-guard`) is decided after a trial week on the scheduling domain.
+`PR / pr tests` checks that tests changed, not that they were written first. Commit order (`test:` before the code) is visible in the pull request and is checked by the plan reviewer and the code review, not by a script. Whether a stricter tool is worth a model call per edit (Probity, the successor of `tdd-guard`) is decided after a trial week on the scheduling domain.
 
 ## Open questions
 
@@ -565,6 +567,6 @@ The full list with owners and dates is in [16-open-questions.md](16-open-questio
 | Do the pilot's planner PCs and stations need Edge or Firefox projects in Playwright? | pilot IT | Chromium only |
 | Is the pilot host amd64, so the image smoke and bundle jobs match it? | pilot IT | amd64 |
 | Where does the Playwright package live (`apps/e2e` or a root `e2e` folder)? | not assigned | Specs use `e2e/...` paths as the ADRs name them |
-| Is a stricter test-first check (Probity, or a commit-order script) worth adopting? | maintainer | Hooks in interactive sessions; the Tester in runs; `CI / pr tests` on every pull request |
+| Is a stricter test-first check (Probity, or a commit-order script) worth adopting? | maintainer | Hooks in interactive sessions; the Tester in runs; `PR / pr tests` on every pull request |
 | When does `e2e` become a required check? | maintainer | In the change that adds it to `ci.yml` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)) |
 | Is "Pause live updates" wanted, which decides whether `pause.spec.ts` stays? | product owner | Built as designed |

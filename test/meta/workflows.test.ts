@@ -4,6 +4,7 @@ import { globSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
+import { workflowFiles as rulesetWorkflowFiles } from '../../scripts/repo/check-ruleset.mjs';
 import vitestConfig from '../../vitest.config.ts';
 
 interface Step {
@@ -57,14 +58,22 @@ function rootScript(name: string | undefined): string | undefined {
 
 // The pull request checks read the pull request instead of the code, so no root script runs them
 // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
-const pullRequestChecks = ['pr title', 'linked issue', 'pr security', 'pr tests', 'openapi diff'];
+// They run in the PR workflow, so an edit to the title or body re-runs them and not the tests.
+const pullRequestChecks = [
+  'pr title',
+  'linked issue',
+  'pr security',
+  'pr docs',
+  'pr tests',
+  'openapi diff',
+];
 
 // The steps that copy a report of an earlier step into the job summary. They check nothing, so no
 // root script runs them.
 const reportSteps = ['node scripts/ci/coverage-summary.mjs'];
 
 // The steps that prepare a job: installing the dependencies, which every pnpm script needs, and
-// adding the worktree that CI / fresh worktree installs and tests in. They check nothing, so no
+// adding the worktree that CI / test installs and tests in. They check nothing, so no
 // root script runs them. The worktree step names one directory, optionally quoted, made of path
 // characters and variables only, so no other command can run in it.
 function isSetupStep(run: string): boolean {
@@ -118,6 +127,15 @@ const pullRequestCheckSteps = {
       PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
     },
   },
+  'pr docs': {
+    run: 'node scripts/ci/pr-docs.mjs',
+    env: {
+      PR_BODY: expression('github.event.pull_request.body'),
+      PR_AUTHOR: expression('github.event.pull_request.user.login'),
+      PR_HEAD_REF: expression('github.event.pull_request.head.ref'),
+      PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
+    },
+  },
   'pr tests': {
     run: 'node scripts/ci/pr-tests.mjs',
     env: {
@@ -137,36 +155,39 @@ const pullRequestCheckSteps = {
   },
 };
 
-// The jobs of the CI workflow, which GitHub shows as CI / <job name>. The main ruleset requires
-// each of them as a status check by its job name
-// (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md), so a change to this list
-// needs a ruleset edit: an added name after the merge, a removed or old name just before it.
-const ciJobs = [
-  'lint',
-  'typecheck',
-  'build',
-  'test',
-  'react doctor',
-  'fresh worktree',
-  'e2e',
-  'pr title',
-  'linked issue',
-  'pr security',
-  'pr tests',
-  'openapi diff',
-  'gate',
-];
+// A script and the local modules it imports, transitively, as repository paths: the files a job
+// that runs the script without a checkout must download.
+function localImportsOf(script: string, seen = new Set<string>()): string[] {
+  if (seen.has(script)) return [];
+  seen.add(script);
+  const source = readFileSync(`${root}${script}`, 'utf8');
+  const folder = script.slice(0, script.lastIndexOf('/') + 1);
+  for (const [, specifier = ''] of source.matchAll(/^import\s[^;]*?from\s+'(\.\.?\/[^']+)';/gm)) {
+    localImportsOf(`${folder}${specifier.replace(/^\.\//, '')}`, seen);
+  }
+  return [...seen];
+}
 
 // The jobs of the CI workflow that CI / gate does not need yet, and that the main ruleset does not
 // require. CI / cla joins CI / gate before the first outside pull request
 // (docs/adr/0039-license-agpl-3-0-or-later-core-and-a-contributor-license-agreement.md).
 const ungatedCiJobs = ['cla'];
 
-// The checks the main ruleset requires from workflow files
-// (docs/adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md and
-// docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md). CodeQL runs as GitHub's default
-// setup, outside the workflow files.
-const requiredChecks = [...ciJobs, 'license gate', 'dependency audit'];
+// The main ruleset requires each job of the CI, PR, Risk and supply-chain workflows as a status
+// check by its job name (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md). The
+// ruleset is the source of truth, and `pnpm repo:check-ruleset` compares it with the jobs of the
+// workflow files that scripts/repo/check-ruleset.mjs names; nothing runs that check in CI, so this
+// file pins the job lists of the CI and PR workflows, and the tests that pin them say so in their
+// names: a renamed, added or removed job fails them, and the change that makes them pass names the
+// ruleset edit that goes with it (an added name after the merge, a removed or old name just before).
+const requiredWorkflowPaths = rulesetWorkflowFiles.map((file) => `.github/workflows/${file}`);
+
+// The jobs of the CI workflow, which GitHub shows as CI / <job name>.
+const ciJobs = ['lint', 'typecheck', 'build', 'test', 'react doctor', 'e2e', 'gate'];
+
+// The jobs of the PR workflow, which GitHub shows as PR / <job name>. They keep the names they had
+// in the CI workflow, since the ruleset requires each by its job name.
+const prJobs = [...pullRequestChecks, 'pr gate'];
 
 // write-all grants id-token: write with every other permission.
 function holdsIdTokenWrite(permissions: Permissions | undefined): boolean {
@@ -360,12 +381,12 @@ describe('workflows', () => {
 
   // A workflow that a paths filter skips never reports its check, and a required check that never
   // reports blocks the merge. A job that applies to some paths only decides in its first step.
-  it('required workflows have no paths filter', () => {
-    const required = workflows().filter(({ jobs }) =>
-      Object.values(jobs ?? {}).some((job) => requiredChecks.includes(job.name ?? '')),
-    );
+  it('the workflows whose jobs the ruleset requires have no paths filter', () => {
+    const required = workflows().filter(({ path }) => requiredWorkflowPaths.includes(path));
 
-    expect(required, 'workflows with a required check').not.toHaveLength(0);
+    expect(required.map(({ path }) => path).sort(), 'the workflows check-ruleset names').toEqual(
+      [...requiredWorkflowPaths].sort(),
+    );
     for (const { path, on } of required) {
       const events = on !== null && typeof on === 'object' ? Object.entries(on) : [];
       for (const [event, filters] of events) {
@@ -450,13 +471,13 @@ describe('workflows', () => {
   // which pull requests the commit heads; it reads no files.
   const riskRefreshPermissions = { actions: 'write', 'pull-requests': 'read' };
 
-  it('every job sets its own permissions: contents: read, none for CI / gate, which reads no files, what CI / cla reads, what Risk / risk gate reads, what Risk / risk label writes, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
+  it('every job sets its own permissions: contents: read, none for CI / gate and PR / pr gate, which read no files, what CI / cla reads, what Risk / risk gate reads, what Risk / risk label writes, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
     for (const { where, job } of jobs) {
       const expected =
-        job.name === 'gate'
+        job.name === 'gate' || job.name === 'pr gate'
           ? {}
           : job.name === 'cla'
             ? claPermissions
@@ -466,9 +487,9 @@ describe('workflows', () => {
                 ? riskLabelPermissions
                 : job.name === 'risk refresh'
                   ? riskRefreshPermissions
-                : job.name === 'Scorecard analysis'
-              ? scorecardPermissions
-              : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
+                  : job.name === 'Scorecard analysis'
+                    ? scorecardPermissions
+                    : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
       expect(job.permissions, where).toEqual(expected);
     }
   });
@@ -634,14 +655,18 @@ describe('workflows', () => {
     expect(on.push).toEqual({ branches: ['main'] });
     expect(workflow.permissions).toEqual({ contents: 'read' });
     expect(runsOnOf(job)).toMatch(/^ubuntu-[\w.]+$/);
-    expect(steps.map(({ uses, run }) => uses?.replace(/@.*$/, '') ?? run?.trim())).toEqual([
-      'actions/checkout',
-      'docker/setup-buildx-action',
-      commitTime,
-      'docker/build-push-action',
-      'docker/build-push-action',
-      compare?.run?.trim(),
-    ]);
+    // The checkout comes first, Buildx is set up before the two builds, and the compare step runs
+    // last, after both.
+    const buildx = steps.findIndex(({ uses }) => uses?.startsWith('docker/setup-buildx-action@'));
+    const firstAt = steps.findIndex((step) => step === first);
+    const secondAt = steps.findIndex((step) => step === second);
+    expect(steps[0]?.uses).toMatch(/^actions\/checkout@/);
+    expect(imageBuilds(steps)).toHaveLength(2);
+    expect(buildx).toBeGreaterThan(0);
+    expect(firstAt).toBeGreaterThan(buildx);
+    expect(secondAt).toBeGreaterThan(firstAt);
+    expect(steps.length - 1).toBeGreaterThan(secondAt);
+    expect(compare?.uses).toBeUndefined();
     expectReproducibleBuilds(steps, workflow.path);
     expect(exporterOf(first)).toContain('push=false');
     expect(second?.with).toEqual({ ...first?.with, 'no-cache': true });
@@ -744,8 +769,8 @@ describe('workflows', () => {
   });
 
   // GitHub skips a job when a job it needs failed, and a skipped required check counts as passed.
-  // On a pull request every job that CI / gate needs runs, so a skipped one means lint, build or
-  // tests did not run. A push to main skips the pull request checks and CI / fresh worktree.
+  // Every job that CI / gate needs runs on a pull request and on a push to main, so a skipped one
+  // means lint, build or tests did not run.
   it('CI / gate runs after a failed, cancelled or skipped job and then fails', () => {
     const { job: gate } = jobNamed('gate');
 
@@ -754,37 +779,97 @@ describe('workflows', () => {
       expect.objectContaining({
         if:
           "contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')" +
-          " || (github.event_name == 'pull_request' && contains(needs.*.result, 'skipped'))",
+          " || contains(needs.*.result, 'skipped')",
         run: 'exit 1',
       }),
     );
   });
 
-  // A push to main has no pull request to check. An event value interpolated into a run script
-  // could inject shell code, so the scripts read the pull request from environment variables.
-  it('CI / pr title, CI / linked issue, CI / pr security, CI / pr tests and CI / openapi diff run on pull requests only and read the pull request from environment variables', () => {
+  // The pull request checks run in the PR workflow, and they run on each of its events: a skipped
+  // check counts as passed. An event value interpolated into a run script could inject shell code,
+  // so the scripts read the pull request from environment variables.
+  it('PR / pr title, PR / linked issue, PR / pr security, PR / pr docs, PR / pr tests and PR / openapi diff run in the PR workflow and read the pull request from environment variables', () => {
     for (const [name, step] of Object.entries(pullRequestCheckSteps)) {
-      const { job } = jobNamed(name);
+      const { workflow, job } = jobNamed(name);
 
-      expect(job.if, name).toBe("github.event_name == 'pull_request'");
+      expect(workflow.path, name).toBe('.github/workflows/pr.yml');
+      expect(job.if, name).toBeUndefined();
       expect(job.steps, name).toContainEqual(expect.objectContaining(step));
     }
   });
 
-  // The opened, synchronize and reopened types are the default; edited re-runs both checks after a
-  // fix to the title or body.
-  it('ADR0076 CI / gate needs CI / pr title, CI / linked issue, CI / pr security and CI / pr tests, and an edited pull request re-runs them', () => {
-    const { workflow, id } = jobNamed('gate');
-    const needed = allNeedsOf(workflow.jobs, id).map((need) => workflow.jobs[need]?.name);
-    const on = workflow.on as { pull_request?: { types?: string[] } };
+  // The opened, synchronize and reopened types are the default; edited re-runs the pull request
+  // checks after a fix to the title or body.
+  it('ADR0076 the PR workflow runs on pull requests only, also when one is edited', () => {
+    const { workflow } = jobNamed('pr gate');
 
-    expect(needed).toEqual(expect.arrayContaining(pullRequestChecks));
-    expect(on.pull_request?.types).toEqual(
-      expect.arrayContaining(['opened', 'synchronize', 'reopened', 'edited']),
-    );
+    expect(workflow.name).toBe('PR');
+    expect(workflow.on).toEqual({
+      pull_request: { types: ['opened', 'synchronize', 'reopened', 'edited'] },
+    });
   });
 
-  // A newer commit or edit on a pull request cancels the pull request's older CI run, and the newer
+  // An edit changes the title or body and no code, so it re-runs only the PR workflow.
+  it('an edited pull request does not re-run CI', () => {
+    const { workflow } = jobNamed('gate');
+
+    expect(workflow.on).toEqual({
+      pull_request: { types: ['opened', 'synchronize', 'reopened'] },
+      push: { branches: ['main'] },
+    });
+  });
+
+  // GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
+  // so PR / pr gate always runs and fails itself instead. Every job it needs runs on every event of
+  // the workflow, so a skipped one fails it too.
+  it('ADR0076 PR / pr gate needs every other job of the PR workflow and fails after a failed, cancelled or skipped one', () => {
+    const { workflow, id, job } = jobNamed('pr gate');
+
+    expect(allNeedsOf(workflow.jobs, id).sort()).toEqual(
+      Object.keys(workflow.jobs)
+        .filter((need) => need !== id)
+        .sort(),
+    );
+    // Every pull request check runs in the PR workflow, so its gate fails on each of them.
+    expect(Object.values(workflow.jobs).map(({ name }) => name)).toEqual(
+      expect.arrayContaining(pullRequestChecks),
+    );
+    expect(job.if).toBe('always()');
+    expect(job.steps).toEqual([
+      expect.objectContaining({
+        if:
+          "contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')" +
+          " || contains(needs.*.result, 'skipped')",
+        run: 'exit 1',
+      }),
+    ]);
+  });
+
+  // A newer commit or edit on a pull request cancels the older PR run of that pull request only.
+  // The group starts with the workflow name, so it never cancels a CI run.
+  // ADR 0069: the ruleset names each PR job, so the list is pinned on purpose; a renamed, added or
+  // removed job needs a ruleset edit timed to its merge.
+  it('ADR0069 the job list of the PR workflow is pinned, because the main ruleset names each job: pr title, linked issue, pr security, pr docs, pr tests, openapi diff and pr gate', () => {
+    const { workflow } = jobNamed('pr gate');
+
+    expect(
+      Object.values(workflow.jobs)
+        .map(({ name }) => name)
+        .sort(),
+    ).toEqual([...prJobs].sort());
+  });
+
+  it('PR cancels its own older run of a pull request and no CI run', () => {
+    const { workflow } = jobNamed('pr gate');
+
+    expect(workflow.concurrency).toEqual({
+      group: `${expression('github.workflow')}-${expression('github.event.pull_request.number')}`,
+      'cancel-in-progress': true,
+    });
+    expect(workflow.name).not.toBe(jobNamed('gate').workflow.name);
+  });
+
+  // A newer commit on a pull request cancels the pull request's older CI run, and the newer
   // run reports every required check on the head commit. Each push to main runs in a group of its
   // own that nothing cancels, so every commit on main keeps a full run.
   it('CI cancels the older run of a pull request and never a run on a push to main', () => {
@@ -800,6 +885,19 @@ describe('workflows', () => {
 
   // GitHub counts a skipped required check as passed, so CI / gate needs every job to fail a pull
   // request on which one of them did not run.
+  // ADR 0069: the ruleset names each CI job, so the list is pinned on purpose; a renamed, added or
+  // removed job needs a ruleset edit timed to its merge.
+  it('ADR0069 the job list of the CI workflow is pinned, because the main ruleset names each job: lint, typecheck, build, test, react doctor, e2e, gate and cla', () => {
+    const ci = workflows().find(({ name }) => name === 'CI');
+
+    expect(ci, 'a workflow named CI').toBeDefined();
+    expect(
+      Object.values(ci?.jobs ?? {})
+        .map(({ name }) => name)
+        .sort(),
+    ).toEqual([...ciJobs, ...ungatedCiJobs].sort());
+  });
+
   it('CI / gate needs every other job in its workflow except CI / cla, which joins it before the first outside pull request', () => {
     const { workflow, id } = jobNamed('gate');
 
@@ -811,43 +909,33 @@ describe('workflows', () => {
     );
   });
 
-  // The main ruleset names each CI job, so a renamed, added or removed job needs a ruleset edit timed
-  // to its merge (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md).
-  it('the CI workflow has exactly the jobs lint, typecheck, build, test, react doctor, fresh worktree, e2e, pr title, linked issue, pr security, pr tests, openapi diff, gate and cla', () => {
-    const ci = workflows().find(({ name }) => name === 'CI');
+  // The PR workflow checks out the pull request's merge commit; its first parent is the base
+  // branch, so a depth of 2 holds both sides of the diff. The job reads code only, so it keeps no
+  // credentials.
+  it('PR / pr tests and PR / pr docs check out the merge commit with its first parent and without credentials', () => {
+    for (const name of ['pr tests', 'pr docs']) {
+      const { job } = jobNamed(name);
 
-    expect(ci, 'a workflow named CI').toBeDefined();
-    expect(
-      Object.values(ci?.jobs ?? {})
-        .map(({ name }) => name)
-        .sort(),
-    ).toEqual([...ciJobs, ...ungatedCiJobs].sort());
-  });
-
-  // CI checks out the pull request's merge commit; its first parent is the base branch, so a depth
-  // of 2 holds both sides of the diff. The job reads code only, so it keeps no credentials.
-  it("CI / pr tests checks out the merge commit with its first parent and without credentials", () => {
-    const { job } = jobNamed('pr tests');
-
-    expect(job.permissions).toEqual({ contents: 'read' });
-    expect(job.steps?.[0]).toEqual(
-      expect.objectContaining({
-        uses: expect.stringMatching(/^actions\/checkout@[0-9a-f]{40}$/),
-        with: { 'fetch-depth': 2, 'persist-credentials': false },
-      }),
-    );
+      expect(job.permissions, name).toEqual({ contents: 'read' });
+      expect(job.steps?.[0], name).toEqual(
+        expect.objectContaining({
+          uses: expect.stringMatching(/^actions\/checkout@[0-9a-f]{40}$/),
+          with: { 'fetch-depth': 2, 'persist-credentials': false },
+        }),
+      );
+    }
   });
 
   // oasdiff compares the base branch's schema/openapi-v1.json with the pull request's (ADR 0064).
   // It runs from its image pinned by digest, without network, so neither document leaves the runner
   // and the image cannot change under the job; Renovate updates the tag and digest together.
-  it('ADR0064 CI / openapi diff runs oasdiff from its image pinned by digest, without network, on the base branch document and the pull request one', () => {
+  it('ADR0064 PR / openapi diff runs oasdiff from its image pinned by digest, without network, on the base branch document and the pull request one', () => {
     const { workflow, job } = jobNamed('openapi diff');
     const steps = job.steps ?? [];
     const checkouts = steps.filter(({ uses }) => uses?.startsWith('actions/checkout@'));
     const compare = steps.find(({ run }) => run?.includes('oasdiff') || run?.includes('OASDIFF'));
 
-    expect(workflow.path).toBe('.github/workflows/ci.yml');
+    expect(workflow.path).toBe('.github/workflows/pr.yml');
     expect(job.permissions).toEqual({ contents: 'read' });
     expect(job.env?.OASDIFF_IMAGE).toMatch(/^tufin\/oasdiff:v\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$/);
     expect(checkouts.map(({ with: inputs }) => inputs?.ref)).toEqual([
@@ -875,11 +963,15 @@ describe('workflows', () => {
     expect(workflow.path).toBe('.github/workflows/ci.yml');
     expect(job.if).toBe("github.event_name == 'pull_request'");
     expect(runsOnOf(job)).toBe('ubuntu-24.04');
-    expect(steps.map(({ uses, run }) => uses?.replace(/@.*$/, '') ?? 'run')).toEqual([
-      'actions/setup-node',
-      'run',
-      'run',
-    ]);
+    // No step checks the pull request out; Node is set up before the download, which runs before
+    // the check.
+    const setupNode = steps.findIndex(({ uses }) => uses?.startsWith('actions/setup-node@'));
+    const downloadAt = steps.findIndex((step) => step === download);
+    expect(steps.some(({ uses }) => uses?.startsWith('actions/checkout@'))).toBe(false);
+    expect(steps.filter(({ uses }) => uses !== undefined)).toHaveLength(1);
+    expect(setupNode).toBeGreaterThanOrEqual(0);
+    expect(downloadAt).toBeGreaterThan(setupNode);
+    expect(steps.length - 1).toBeGreaterThan(downloadAt);
     expect(download?.env).toEqual({
       GH_TOKEN: expression('github.token'),
       DEFAULT_BRANCH: expression('github.event.repository.default_branch'),
@@ -912,8 +1004,11 @@ describe('workflows', () => {
       GH_TOKEN: expression('github.token'),
       DEFAULT_BRANCH: expression('github.event.repository.default_branch'),
     });
-    for (const file of ['scripts/ci/risk-gate.mjs', 'scripts/ci/pull-request.mjs', 'scripts/ci/annotation.mjs']) {
-      expect(download?.run).toContain(`contents/${file}?ref=$DEFAULT_BRANCH`);
+    // The job runs the gate without a checkout, so it downloads the gate and every local module the
+    // gate imports, transitively; a module moved out of risk-gate.mjs without its download would
+    // fail every pull request's risk gate once it merged.
+    for (const file of localImportsOf('scripts/ci/risk-gate.mjs')) {
+      expect(download?.run, file).toContain(`contents/${file}?ref=$DEFAULT_BRANCH`);
     }
     expect(check).toEqual({
       name: expect.any(String),
@@ -947,12 +1042,8 @@ describe('workflows', () => {
       HEAD_SHA: expression('github.event.workflow_run.head_sha'),
       STARTED_BY: expression('github.event.workflow_run.id'),
     });
-    expect(rerun?.run).toContain(
-      'actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA',
-    );
-    expect(rerun?.run).toContain(
-      'select(.conclusion == "failure" or .conclusion == "cancelled")',
-    );
+    expect(rerun?.run).toContain('actions/workflows/risk.yml/runs?head_sha=$HEAD_SHA');
+    expect(rerun?.run).toContain('select(.conclusion == "failure" or .conclusion == "cancelled")');
     expect(rerun?.run).toContain('[ "$id" = "$STARTED_BY" ] && continue');
     expect(rerun?.run).toContain('gh run watch');
     expect(rerun?.run).toContain('select(.state == "open")');
@@ -1102,7 +1193,7 @@ describe('workflows', () => {
   it('every run step in CI / gate calls a script that pnpm check or check:full contains', () => {
     const { workflow, id } = jobNamed('gate');
     const gated = allNeedsOf(workflow.jobs, id).filter(
-      (need) => ![...pullRequestChecks, ...ciOnlyChecks].includes(workflow.jobs[need]?.name ?? ''),
+      (need) => !ciOnlyChecks.includes(workflow.jobs[need]?.name ?? ''),
     );
     const contained = new Set(
       ['pnpm check', 'pnpm check:full']
@@ -1209,33 +1300,50 @@ describe('workflows', () => {
     ]);
   });
 
-  // A handoff run starts in a fresh git worktree and runs tests right after one install, so the job
-  // adds a worktree, installs in it and runs the integration project there, with no build step.
-  // Tests that boot the built server build it through bootBuilt
+  // A handoff run starts in a fresh git worktree and runs tests right after one install, with no
+  // build step, so CI / test adds a worktree in the runner's temporary directory, installs in it and
+  // runs its tests and its coverage summary there. actions/upload-artifact refuses a path with a .
+  // or .. segment, so the worktree has an absolute path and the upload names it. Tests that boot the built server build it through bootBuilt
   // (docs/adr/0058-developer-environment-source-exports-one-stack-script-and-one-gate-command.md).
-  // The job runs on pull requests only; on main, CI / test runs the same integration tests.
-  it('E02-S08 the fresh-worktree job runs git worktree add, pnpm install --frozen-lockfile and pnpm test:int and no build', () => {
-    const { id, job } = jobNamed('fresh worktree');
+  it('E02-S08 CI / test adds a git worktree in the runner temp directory, installs in it and runs its tests there, with no build', () => {
+    const { job } = jobNamed('test');
     const steps = job.steps ?? [];
     const runs = steps.flatMap(({ run }) => (run === undefined ? [] : [run.trim()]));
-    const worktree = /^git worktree add --detach (\S+)$/.exec(runs[0] ?? '')?.[1];
+    const indexOf = (test: (step: Step) => boolean) => steps.findIndex(test);
+    const commandsOfStep = ({ run }: Step) => (run === undefined ? [] : commandsOf(run.trim()));
+    const worktreeAdd = indexOf(({ run }) => /^git worktree add --detach /.test(run?.trim() ?? ''));
+    const install = indexOf(({ run }) => run?.trim() === 'pnpm install --frozen-lockfile');
+    const coverage = indexOf((step) => commandsOfStep(step).some((c) => coverageFlag.test(c)));
+    const summary = indexOf(({ run }) => reportSteps.includes(run?.trim() ?? ''));
+    const uploadAt = indexOf(({ uses }) => uses?.startsWith('actions/upload-artifact@') ?? false);
+    const testRuns = steps.filter((step) => commandsOfStep(step).some((c) => /\bvitest\b/.test(c)));
+    const paths = String(steps[uploadAt]?.with?.path).trim().split('\n');
 
-    expect(id).toBe('fresh-worktree');
-    expect(job.if).toBe("github.event_name == 'pull_request'");
-    expect(worktree, 'the directory that git worktree add creates').toBeDefined();
-    expect(
-      steps.map(({ uses, run, 'working-directory': directory }) => ({
-        step: uses?.replace(/@.*$/, '') ?? run?.trim(),
-        directory,
-      })),
-    ).toEqual([
-      { step: 'actions/checkout', directory: undefined },
-      { step: 'pnpm/action-setup', directory: undefined },
-      { step: 'actions/setup-node', directory: undefined },
-      { step: `git worktree add --detach ${worktree}`, directory: undefined },
-      { step: 'pnpm install --frozen-lockfile', directory: worktree },
-      { step: 'pnpm test:int', directory: worktree },
-    ]);
+    // The first run step adds the worktree under $RUNNER_TEMP; the install and every test run then
+    // run in that directory, named through the runner.temp expression.
+    const name = /^git worktree add --detach "?\$RUNNER_TEMP\/([\w.-]+)"?$/.exec(
+      runs[0] ?? '',
+    )?.[1];
+    expect(name, 'the first run step adds a worktree under $RUNNER_TEMP').toBeDefined();
+    const worktree = `${expression('runner.temp')}/${name}`;
+    expect(install).toBeGreaterThan(worktreeAdd);
+    expect(steps[install]?.['working-directory']).toBe(worktree);
+    expect(testRuns, 'test runs').not.toHaveLength(0);
+    for (const step of testRuns) {
+      expect(steps.indexOf(step), step.run).toBeGreaterThan(install);
+      expect(step['working-directory'], step.run).toBe(worktree);
+    }
+    // The coverage summary follows the coverage run, in the worktree, and the upload follows it.
+    expect(coverage).toBeGreaterThan(install);
+    expect(summary).toBeGreaterThan(coverage);
+    expect(steps[summary]?.['working-directory']).toBe(worktree);
+    expect(uploadAt).toBeGreaterThan(summary);
+    // An action's path input is relative to the checkout, not to a step's working directory.
+    expect(paths).toEqual([`${worktree}/coverage/lcov.info`, `${worktree}/coverage/lcov-report/`]);
+    for (const path of paths) {
+      expect(path.split('/'), path).not.toContain('..');
+      expect(path.split('/'), path).not.toContain('.');
+    }
     expect(runs.flatMap(commandsOf).filter((command) => /\b(?:build|tsc)\b/.test(command))).toEqual(
       [],
     );
@@ -1250,14 +1358,12 @@ describe('workflows', () => {
     const steps = job.steps ?? [];
 
     expect(id).toBe('e2e');
-    expect(steps.map(({ uses, run }) => uses?.replace(/@.*$/, '') ?? run?.trim())).toEqual([
-      'actions/checkout',
-      'pnpm/action-setup',
-      'actions/setup-node',
-      'pnpm install --frozen-lockfile',
-      'pnpm e2e',
-      'actions/upload-artifact',
-    ]);
+    const install = steps.findIndex(({ run }) => run?.trim() === 'pnpm install --frozen-lockfile');
+    const e2e = steps.findIndex(({ run }) => run?.trim() === 'pnpm e2e');
+    expect(install).toBeGreaterThanOrEqual(0);
+    expect(e2e).toBeGreaterThan(install);
+    expect(steps.length - 1).toBeGreaterThan(e2e);
+    expect(steps.at(-1)?.uses).toMatch(/^actions\/upload-artifact@/);
     expect(steps.at(-1)?.if).toBe('failure()');
     expect(steps.at(-1)?.with?.path).toBe('playwright-report/');
   });
@@ -1273,14 +1379,12 @@ describe('workflows', () => {
     expect(workflow.path).toBe('.github/workflows/docs-screenshots.yml');
     expect(workflow.on).toEqual({ workflow_dispatch: null });
     expect(workflow.permissions).toEqual({});
-    expect(steps.map(({ uses, run }) => uses?.replace(/@.*$/, '') ?? run?.trim())).toEqual([
-      'actions/checkout',
-      'pnpm/action-setup',
-      'actions/setup-node',
-      'pnpm install --frozen-lockfile',
-      'pnpm docs:screenshots',
-      'actions/upload-artifact',
-    ]);
+    const install = steps.findIndex(({ run }) => run?.trim() === 'pnpm install --frozen-lockfile');
+    const screenshots = steps.findIndex(({ run }) => run?.trim() === 'pnpm docs:screenshots');
+    expect(install).toBeGreaterThanOrEqual(0);
+    expect(screenshots).toBeGreaterThan(install);
+    expect(steps.length - 1).toBeGreaterThan(screenshots);
+    expect(steps.at(-1)?.uses).toMatch(/^actions\/upload-artifact@/);
     expect(steps.at(-1)?.with?.path).toBe('apps/docs/images/');
     expect(steps.at(-1)?.with?.['if-no-files-found']).toBe('error');
   });

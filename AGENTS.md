@@ -7,6 +7,7 @@ The plan lives in `docs/plan/`, the architecture decisions in `docs/adr/` (index
 ## Working rules
 
 - Test-driven, one behaviour at a time: write its failing test, make it pass, then refactor.
+- A test can go red for the regression its name describes: `docs/agents/testing.md` holds the rules and their fixes.
 - Each integration and end-to-end test run starts its own Postgres with `@testcontainers/postgresql`.
 - Each page state that the end-to-end specs reach, loading and empty states included, runs `checkA11y` from `e2e/fixtures.ts` in at least one spec, so a WCAG 2.2 AA violation fails it (ADR 0021). An axe exclusion needs a linked issue and an expiry date.
 - Tests call the mocked AI provider. Tests against a real model live in `*.ai.test.ts` and run only through `pnpm test:ai` or `pnpm test:e2e:ai`.
@@ -15,6 +16,7 @@ The plan lives in `docs/plan/`, the architecture decisions in `docs/adr/` (index
 - Start the subject of a commit that adds a failing test with `test:`.
 - Name and place web components and screens by the "Naming and folders" section of `.claude/skills/web-module/SKILL.md`.
 - Bring a new dependency in its own pull request, at a version older than Renovate's `minimumReleaseAge` window.
+- Open every pull request against `main`, cut small enough to merge on its own, behind a flag or without its screen if need be. Open no pull request on top of another. Work that needs an open pull request may start on a local branch from it, but push it and open its pull request only after the base merged, once the branch is rebuilt on `main` with `git rebase --onto origin/main <the base's last commit>`; a branch that was never pushed needs no force push. A change asked for on the base by a check or a review goes on the base as usual.
 - Do not run react-doctor, through `pnpm react-doctor` or any other command: it runs in CI only (`CI / react doctor`) until its vendor confirms that agents may run it (ADR 0040).
 - Packages published under MIT (`packages/sdk`, `packages/web-sdk`, `packages/ui`, `packages/contracts`, `packages/testing`, every `modules/*/contracts` package and the generator package) import only MIT or other permissive code, never the AGPL modules.
 
@@ -28,6 +30,7 @@ NorthMES keeps itself ready for a third-party audit (IEC 62443-4-1, the ISO 2700
 - A client sees a masked error with a code and a correlation id, never a stack trace or an internal detail.
 - A change to a control starts with its security test: a refused permission, a hidden row, a refused input.
 - Every pull request description has a Security section. It names the controls the change touches and the threat each one meets, or says "none" with a reason.
+- Every pull request description has a Docs section. It names the pages under `apps/docs` the change updates, or says "none" with a reason that names the surface the change touches when `.github/docs-paths` maps it (ADR 0088).
 - A new surface, trust boundary or integration adds its row to the threat model. A change that adds a significant security or compliance risk says so and waits for the maintainer.
 
 ## Scope

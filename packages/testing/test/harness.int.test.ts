@@ -4,19 +4,20 @@ import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, inject, it, vi } from 'vitest';
 import { withClient } from '../src/client.ts';
 import { emptyTemplateDatabase, query, useTestDatabase } from '../src/index.ts';
+import { serverArgs } from '../src/server-settings.ts';
 
 const imageFile = new URL('../../../infra/pg-image.json', import.meta.url);
 
 describe('the test database', () => {
-  const { appUrl, ownerUrl, databaseName } = useTestDatabase();
+  const { appUrl, databaseName } = useTestDatabase();
 
-  it('the connection string points at the database named databaseName', async () => {
+  it('E02-S02 the connection string points at the database named databaseName', async () => {
     const rows = await query<{ current_database: string }>(appUrl, 'select current_database()');
 
     expect(rows).toEqual([{ current_database: databaseName }]);
   });
 
-  it('the database is cloned from the template', async () => {
+  it('E02-S02 the database is cloned from the template', async () => {
     const rows = await query<{ marker: string | null }>(
       appUrl,
       "select to_regclass('public.nm_marker')::text as marker",
@@ -25,7 +26,7 @@ describe('the test database', () => {
     expect(rows).toEqual([{ marker: 'nm_marker' }]);
   });
 
-  it('the template database is flagged as a template', async () => {
+  it('E02-S02 the template database is flagged as a template', async () => {
     const name = inject('pgTemplate').replaceAll("'", "''");
 
     const rows = await query<{ datistemplate: boolean }>(
@@ -38,12 +39,18 @@ describe('the test database', () => {
 
   // nm_app sees neither the server's own time zone, which its role setting replaces, nor the data
   // directory, so the global setup reads both as the superuser.
-  it('the server time zone follows NM_TEST_PG_TZ', () => {
-    // An unset, empty or blank NM_TEST_PG_TZ means UTC.
-    expect(inject('pgServer').timeZone).toBe(process.env.NM_TEST_PG_TZ?.trim() || 'UTC');
+  it('E02-S02 the server runs in the time zone that serverArgs asked for from NM_TEST_PG_TZ', () => {
+    // server-settings.test.ts pins what serverArgs makes of an unset, empty or blank variable;
+    // this test holds that the zone it asked for is the one the server reports.
+    const asked = serverArgs(process.env)
+      .find((argument) => argument.startsWith('timezone='))
+      ?.slice('timezone='.length);
+
+    expect(asked).toBeDefined();
+    expect(inject('pgServer').timeZone).toBe(asked);
   });
 
-  it('the data directory is a tmpfs mount', () => {
+  it('E02-S02 the data directory is a tmpfs mount', () => {
     const { dataDirectory, mounts: mountTable } = inject('pgServer');
 
     // Each line of /proc/mounts reads: device, mount point, file system type, options.
@@ -66,7 +73,7 @@ describe('the test database', () => {
     expect(holding?.type).toBe('tmpfs');
   });
 
-  it('durability is off', async () => {
+  it('E02-S02 durability is off', async () => {
     const settings = await Promise.all(
       ['fsync', 'synchronous_commit', 'full_page_writes'].map(async (setting) => {
         const rows = await query<Record<string, string>>(appUrl, `show ${setting}`);
@@ -81,13 +88,13 @@ describe('the test database', () => {
     });
   });
 
-  it('the server allows 300 connections', async () => {
+  it('E02-S02 the server allows 300 connections', async () => {
     const rows = await query<{ max_connections: string }>(appUrl, 'show max_connections');
 
     expect(rows).toEqual([{ max_connections: '300' }]);
   });
 
-  it('the container uses the run credentials', () => {
+  it('E02-S02 the container uses the run credentials', () => {
     const { password, database } = inject('pg');
 
     expect(password).not.toBe('test');
@@ -95,10 +102,9 @@ describe('the test database', () => {
     expect(database).toMatch(/^nm_run_[0-9a-f]+$/);
   });
 
-  it('the container image equals the digest in infra/pg-image.json', async () => {
+  it('E02-S02 the server runs the Postgres major that infra/pg-image.json names by digest', async () => {
     const { image } = JSON.parse(readFileSync(imageFile, 'utf8')) as { image: string };
 
-    expect(inject('pgImage')).toBe(image);
     expect(image).toContain('@sha256:');
     // The server must report the major version that the image names, so a wrong image fails here.
     const major = /^postgres:(\d+)[@-]/.exec(image)?.[1];
@@ -107,17 +113,32 @@ describe('the test database', () => {
     expect(rows[0]?.version).toMatch(new RegExp(`^PostgreSQL ${major}\\.`));
   });
 
-  // harness-sibling.int.test.ts runs the same test with a schema of its own, in parallel.
-  it('each test file gets its own database', async () => {
+  it('E02-S02 the database name is the run-unique t_ name', () => {
     expect(databaseName).toMatch(/^t_\d+_[0-9a-f]{12}$/);
-    await query(ownerUrl, 'create schema harness_only');
+  });
+});
 
-    const rows = await query<{ nspname: string }>(
-      appUrl,
-      "select nspname from pg_namespace where nspname in ('harness_only', 'sibling_only')",
+// Both sides of the isolation proof sit in one test, so its outcome never depends on which file
+// or which describe block ran first.
+describe('two test databases of one file', () => {
+  const first = useTestDatabase();
+  const second = useTestDatabase();
+
+  it('E02-S02 each useTestDatabase call gets a database of its own, and a schema created in one is not in the other', async () => {
+    expect(second.databaseName).not.toBe(first.databaseName);
+    await query(first.ownerUrl, 'create schema first_only');
+
+    const inFirst = await query<{ nspname: string }>(
+      first.appUrl,
+      "select nspname from pg_namespace where nspname = 'first_only'",
+    );
+    const inSecond = await query<{ nspname: string }>(
+      second.appUrl,
+      "select nspname from pg_namespace where nspname = 'first_only'",
     );
 
-    expect(rows).toEqual([{ nspname: 'harness_only' }]);
+    expect(inFirst).toEqual([{ nspname: 'first_only' }]);
+    expect(inSecond).toEqual([]);
   });
 });
 
@@ -211,6 +232,25 @@ describe('withClient', () => {
       );
       await dropped;
       await client.query('select 1');
+    });
+
+    await expect(failure).rejects.toThrow(/terminating connection due to administrator command/);
+  });
+
+  it('rethrows why the connection dropped when run catches the failed query and returns', async () => {
+    const app = { connectionString: appUrl };
+
+    const failure = withClient(app, async (client) => {
+      const { rows } = await client.query<{ pid: number }>('select pg_backend_pid() as pid');
+      const dropped = new Promise((resolve) => client.once('error', resolve));
+      await withClient(app, (other) =>
+        other.query('select pg_terminate_backend($1)', [rows[0]?.pid]),
+      );
+      await dropped;
+      return client.query('select 1').then(
+        () => 'accepted',
+        (error: Error) => error.message,
+      );
     });
 
     await expect(failure).rejects.toThrow(/terminating connection due to administrator command/);

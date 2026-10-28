@@ -7,7 +7,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { stages } from '../gen.mjs';
-import { checkPrTests, generatedFiles, parseNameStatus } from './pr-tests.mjs';
+import { checkPrTests, generatedFiles } from './pr-tests.mjs';
+import { parseNameStatus } from './pull-request.mjs';
 
 const script = fileURLToPath(new URL('./pr-tests.mjs', import.meta.url));
 
@@ -42,7 +43,7 @@ function repositoryWith(base: Record<string, string>, change: (repository: strin
   return repository;
 }
 
-// Runs the script as the CI / pr tests job does, with the pull request in the environment.
+// Runs the script as the PR / pr tests job does, with the pull request in the environment.
 function run(repository: string, title: string, body = '') {
   return spawnSync(process.execPath, [script], {
     cwd: repository,
@@ -63,7 +64,7 @@ function pullRequest(title: string, changes: { status: string; path: string }[],
   return { title, body, author: 'a-contributor', headRef: 'feat/orders', fromFork: false, changes };
 }
 
-describe('CI / pr tests', () => {
+describe('PR / pr tests', () => {
   it('a feat pull request that changes source and no test fails', () => {
     const result = checkPrTests(
       pullRequest('feat(planning): split a run', [
@@ -147,7 +148,7 @@ describe('CI / pr tests', () => {
     );
   });
 
-  // As CI / pr security exempts them: neither app writes a body section, and their changes are
+  // As PR / pr security exempts them: neither app writes a body section, and their changes are
   // dependency and release files that the license, supply-chain and release checks cover.
   it("Renovate's and release-please's pull requests pass", () => {
     const changes = [
@@ -194,7 +195,7 @@ describe('CI / pr tests', () => {
 
     expect(parseNameStatus(output)).toEqual([
       { status: 'M', path: 'modules/a.ts' },
-      { status: 'R087', path: 'modules/new.test.ts' },
+      { status: 'R087', path: 'modules/new.test.ts', from: 'modules/old.test.ts' },
       { status: 'D', path: 'modules/planning/core/k\u00f6rning.test.ts' },
     ]);
   });
@@ -218,7 +219,7 @@ describe('CI / pr tests', () => {
     expect(checkPrTests(pullRequest('fix(ci): read the section', changes)).ok).toBe(false);
   });
 
-  // "None" gives no reason, as CI / pr security also refuses it.
+  // "None" gives no reason, as PR / pr security also refuses it.
   it('a Removed tests section that says none without a reason fails', () => {
     const changes = [{ status: 'D', path: 'modules/planning/core/run.test.ts' }];
 
@@ -253,7 +254,7 @@ describe('CI / pr tests', () => {
   });
 });
 
-describe('CI / pr tests script', () => {
+describe('PR / pr tests script', () => {
   it('reads the changes from git and fails a feat pull request without a test change with an error annotation', () => {
     const repository = repositoryWith({ 'modules/planning/core/run.ts': 'export {};\n' }, (dir) =>
       write(dir, 'modules/planning/core/run.ts', 'export const run = 1;\n'),
