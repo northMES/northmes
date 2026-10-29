@@ -56,6 +56,9 @@ export function ShellSettingsLanding() {
   );
 }
 
+/** The href of /, where the user's plants are listed. */
+const rootHref = '/';
+
 export interface OldSettingsRouteOptions {
   /** The client without a plant, which reads the user's companies and their plants. */
   readonly client: ApolloClient;
@@ -82,7 +85,7 @@ export function createOldSettingsRoute(
       const { data } = await client.query({ query: CoreCompanies });
       const company = data?.coreCompanies.find(({ id }) => id === params.companyId);
       const [plant] = company?.plants ?? [];
-      if (plant === undefined) throw redirect({ href: '/', replace: true });
+      if (plant === undefined) throw redirect({ href: rootHref, replace: true });
       const rest = (params._splat ?? '')
         .split('/')
         .filter((segment, index) => segment !== '' && !(index === 0 && segment === coreModuleId));
