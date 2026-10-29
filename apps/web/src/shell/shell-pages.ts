@@ -49,9 +49,11 @@ function isPlantRoot(href: string): boolean {
  * under its root, so the entry there, the dashboard, is current on its own page alone (#873).
  */
 export function currentOf(href: string, pathname: string): 'page' | 'true' | undefined {
-  if (href === pathname) return 'page';
+  // The router keeps a trailing slash the user typed, as in /plant-a/, which names the same page.
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  if (href === path) return 'page';
   if (isPlantRoot(href)) return undefined;
-  return pathname.startsWith(`${href}/`) ? 'true' : undefined;
+  return path.startsWith(`${href}/`) ? 'true' : undefined;
 }
 
 /** Whether an entry shows to a user with these permissions: one without a permission always does. */
@@ -206,8 +208,9 @@ function entriesAt(modules: readonly ShellModule[], { plant, companyId }: PagePl
 
 /**
  * The entry of the page on screen: the one whose page it is, or the nearest one above it, as
- * Articles for an article. Its label stands in for the route title where the route itself cannot
- * give one, such as on its error panel.
+ * Articles for an article. The entry at the plant root is above no page (currentOf), so a page
+ * under the root with no entry of its own, such as All pages, has none. Its label stands in for the
+ * route title where the route itself cannot give one, such as on its error panel.
  */
 export function entryAt(
   modules: readonly ShellModule[],
