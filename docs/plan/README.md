@@ -30,6 +30,7 @@ Read the glossary first and the documents in this order. Each document links the
 | 18 | [17-risks.md](17-risks.md) | The risk register for release 1 and the pilot: likelihood, impact, mitigations, warning signals, owners and ADRs. |
 | 19 | [18-gantt-timeline.md](18-gantt-timeline.md) | The Gantt timeline: the order Gantt as a second view on the timeline core, calendars on the timeline, constraints and deadlines, cascade and plan this order, float and the critical chain, workload, and the work breakdown. |
 | 20 | [19-replay-eval-suite.md](19-replay-eval-suite.md) | The tasks that build the replay eval suite of ADR 0085, which compares agent setups on eval tasks taken from merged pull requests. |
+| 21 | [20-simulated-users.md](20-simulated-users.md) | Simulated users: role agents that use NorthMES through the web, with a deterministic verifier as the judge, the first scenarios, the phases and the decisions of 2026-10-29. |
 
 Where each reader starts:
 
