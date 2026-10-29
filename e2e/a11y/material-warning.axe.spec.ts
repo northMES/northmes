@@ -26,7 +26,7 @@ test.describe('the material warning on the order Gantt', () => {
     await expect(card).toHaveCSS('opacity', '1');
     await checkA11y('the hover card of a job order material short');
 
-    await block.click();
+    await block.dblclick();
     const drawer = page.locator('[role="dialog"][data-details-drawer]');
     await expect(drawer).toBeVisible();
     await expect(drawer).toHaveCSS('opacity', '1');

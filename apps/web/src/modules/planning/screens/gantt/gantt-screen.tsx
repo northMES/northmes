@@ -154,7 +154,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const [expanded, setExpanded] = useState<ExpandedState>(true);
   const [sort, setSort] = useState<GanttSort | undefined>(undefined);
   const [focusedRowId, setFocusedRowId] = useState<string | undefined>(undefined);
-  // The row the docked panel shows, opened by a click or by Enter, and whether the panel is open.
+  // The row the docked panel shows, opened by a double click or by Enter, and whether the panel is open.
   const [detailRowId, setDetailRowId] = useState<string | undefined>(undefined);
   /** The row that takes focus when the drawer closes: the opened row, or the row a chain link named. */
   const returnRowId = useRef<string | undefined>(undefined);
@@ -701,8 +701,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
           if (parent !== undefined) focusRow(parent.id);
         }
         break;
+      // Enter on the row or on its block opens Details: the keyboard path of the double click
+      // (#884, ADR 0021). The block stops Enter itself while it is in move mode.
       case 'Enter':
-        if (onRow) openDetails(row);
+        if (onRow || (event.target as HTMLElement).dataset.block !== undefined) openDetails(row);
         else handled = false;
         break;
       // Space selects the row's order, Shift+Space adds it to the selection (plan 18, Runs); on a
@@ -862,8 +864,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                           return;
                         }
                         selectUnlessSelected(row.original.order.id);
-                        setDetailRowId(row.id);
                       }}
+                      onOpen={() => openDetails(row)}
                       onToggle={() => row.toggleExpanded()}
                     />
                   );

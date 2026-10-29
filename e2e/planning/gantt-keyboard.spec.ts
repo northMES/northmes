@@ -89,7 +89,7 @@ test.describe('keyboard move mode on the order Gantt', () => {
     await expect(drawer).toBeHidden();
 
     // Moving without dragging (WCAG 2.5.7): Move in Details, Later, Apply.
-    await gantt.locator('[data-block="jo-1003-10"]').click();
+    await gantt.locator('[data-block="jo-1003-10"]').dblclick();
     const details = page.locator('[role="dialog"][data-details-drawer]');
     await expect(details).toBeVisible();
     await expect(details).toHaveCSS('opacity', '1');
