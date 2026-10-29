@@ -31,6 +31,8 @@ export interface GanttRowProps {
   readonly onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => void;
   /** A click selects the row's order; with Shift it adds the order to the selection (plan 18, Runs). */
   readonly onSelect: (extend?: boolean) => void;
+  /** A double click opens the row's Details; a single click only selects, so the Gantt stays workable (#884). */
+  readonly onOpen: () => void;
   readonly onToggle: () => void;
 }
 
@@ -53,6 +55,7 @@ export function GanttRowView({
   onFocus,
   onKeyDown,
   onSelect,
+  onOpen,
   onToggle,
 }: GanttRowProps) {
   const view = useGanttView();
@@ -104,6 +107,7 @@ export function GanttRowView({
       }}
       onKeyDown={onKeyDown}
       onClick={(event) => onSelect(event.shiftKey)}
+      onDoubleClick={() => onOpen()}
       className={cn(
         'grid border-b border-border outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
         (original.kind === 'order' || original.kind === 'run') && 'bg-muted',

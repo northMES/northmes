@@ -862,8 +862,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                           return;
                         }
                         selectUnlessSelected(row.original.order.id);
-                        setDetailRowId(row.id);
                       }}
+                      onOpen={() => openDetails(row)}
                       onToggle={() => row.toggleExpanded()}
                     />
                   );
