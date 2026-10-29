@@ -153,5 +153,8 @@ overrides:
   'undici@>=7.0.0 <7.30.1': 7.30.1
   # GHSA-xjj6-f33q-929c: testcontainers pulls in undici 8.
   'undici@>=8.0.0 <8.12.2': 8.12.2
+  # GHSA-97r2-qh9m-474h, GHSA-wp97-x4hv-qvhp and GHSA-7rv5-mrxv-xcr9:
+  # @tanstack/router-core pulls in seroval.
+  'seroval@>=1.0.0 <1.6.8': 1.6.8
   # GHSA-22jm-h49p-29qw and GHSA-46jr-4wx8-v453: shadcn pulls in the 1.x SDK; the advisories start at 1.3.0.
   '@modelcontextprotocol/sdk@>=1.3.0 <1.32.0': 1.32.0
