@@ -38,12 +38,19 @@ export function useFocusPageHeading() {
   return main;
 }
 
+/** Whether an href is a plant's root, one segment: the dashboard's page (ADR 0078). */
+function isPlantRoot(href: string): boolean {
+  return /^\/[^/]+$/.test(href);
+}
+
 /**
  * How an entry relates to the page on screen: its own page ("page"), a page under it ("true", as
- * an article under Articles or a user's page under Users), or neither.
+ * an article under Articles or a user's page under Users), or neither. Every page of a plant lies
+ * under its root, so the entry there, the dashboard, is current on its own page alone (#873).
  */
 export function currentOf(href: string, pathname: string): 'page' | 'true' | undefined {
   if (href === pathname) return 'page';
+  if (isPlantRoot(href)) return undefined;
   return pathname.startsWith(`${href}/`) ? 'true' : undefined;
 }
 
