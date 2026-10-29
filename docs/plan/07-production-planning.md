@@ -813,10 +813,10 @@ The full rules are in [08-pyramid-connector.md](08-pyramid-connector.md) and [AD
 ### In release 1
 
 - Machine rows grouped by equipment group with group colors and collapse; row virtualization; sticky time header and machine column.
-- A linear axis with four zoom presets from hours to weeks, in plant time with a zone label.
+- A linear axis with four zoom presets from hours to weeks, in plant time with a zone label. [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) replaces the presets with a ladder of zoom levels that keeps the four.
 - Non-working shading per machine from the availability query.
 - Blocks with settings-driven fields and a hover card that includes ERP free fields; the fill is the order color.
-- Move in time and between allowed machines with snapping: first to the zoom preset's step, then forward to the next working instant on the target machine. Snap steps per preset are set in the board design task.
+- Move in time and between allowed machines with snapping: first to the zoom preset's step, then forward to the next working instant on the target machine. Snap steps per preset are set in the board design task, and per zoom level in [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md).
 - The block states listed below.
 - Break lock with a confirmation dialog that requires a reason.
 - Realtime updates and "Pause live updates".
@@ -824,7 +824,7 @@ The full rules are in [08-pyramid-connector.md](08-pyramid-connector.md) and [AD
 - Dark mode.
 - The board field slot `planning/board/block-fields/v1` that core, the connector and plugins fill, and the header slot `planning/board/header/v1` (both ids proposed in [ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)). Both are slots of the `field` kind ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)), which takes the place of `BoardFieldSlot`: a contribution's synchronous, cheap `render` returns text, an optional icon and `accessibleText`, and its hover renderer may fetch.
 - `BoardBlock` carries explicit fields for draft (`none`, `mine`, `proposal`), late, conflict, material shortage and progress.
-- The board URL keeps the view a planner shares: `view=table` for the job order table view, `zoom=<preset id>`, `from=<plant-local date>` for the start of the visible range, and `order=<production order id>` for the selected order, which opens its detail panel. Collapsed machine groups, move mode and paused live updates stay local. The defaults (board view, the default preset, the current production day) are stripped. Design task D3 names the preset ids.
+- The board URL keeps the view a planner shares: `view=table` for the job order table view, `zoom=<preset id>`, `from=<plant-local date>` for the start of the visible range, and `order=<production order id>` for the selected order, which opens its detail panel. Collapsed machine groups, move mode and paused live updates stay local. The defaults (board view, the default preset, the current production day) are stripped. Design task D3 names the preset ids. Under [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) `zoom` holds a zoom level id and `from` the visible start as a plant-local date-time.
 
 ### Cut from release 1
 
@@ -852,7 +852,7 @@ At bar density icons do not fit; the state then lives in the cluster popover row
 
 ### Data loading
 
-- The board loads the visible range plus a margin. The range resolver limits days and rows and fails with `planning.board.range_too_large` above the limits; the limits are set from the board spike's measured volumes.
+- The board loads the visible range plus a margin. The range resolver limits days and rows and fails with `planning.board.range_too_large` above the limits; the limits are set from the board spike's measured volumes. [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) replaces the range with an endless axis that loads job orders by time chunk; how the limit applies to a chunk is open question M-104 in [16-open-questions.md](16-open-questions.md).
 - Blocks come through Apollo's normalized cache, with `@unmask` where the board needs raw speed. Instants stay ISO strings in the cache and become epoch milliseconds once at the data edge.
 - Availability for shading comes from core's availability query for the visible range, memoized per calendar version in the browser.
 - The board header shows "Pyramid data as of <time>".
@@ -879,7 +879,7 @@ Board settings choose which fields show on a block and which on hover, including
 - The detail panel has a machine select limited to allowed machines, a start field in the plant zone labelled with the zone, Earlier and Later buttons that step one snap slot, and Apply. Apply goes through the same draft move as a drag.
 - The block menu (click, context-menu key, Shift+F10) lists Move, Lock or unlock, Break lock and Open order. Its Move dialog lists every allowed machine.
 - Keyboard move mode: M on a focused block enters move mode; Left and Right step one snap slot; Up and Down step through allowed machines and skip collapsed groups; Enter commits to the draft; Escape cancels. Focus stays on the moving block, with polite step messages ("CNC2, Tue 3 Nov 07:30 to 11:45. Not saved."), debounced to about 300 ms.
-- Range extension follows the move preview, not focus. After a commit, focus returns to the block by id, because the block remounts under another row.
+- Range extension follows the move preview, not focus; under [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) the buffer moves instead of the range growing. After a commit, focus returns to the block by id, because the block remounts under another row.
 - Drag-to-pan has alternatives: visible scrollbars, toolbar buttons Earlier, Later, Now and Go to date, and zoom buttons beside Ctrl+wheel.
 
 ### Grid semantics and focus

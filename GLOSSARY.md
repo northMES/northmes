@@ -110,8 +110,8 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | planning board (Board) | The screen with one row per machine and job orders as blocks along a time axis. | Gantt (a project Gantt has one task per row) |
 | block | A job order as drawn on the planning board. | bar, card |
 | job order table view | The table of job orders with the same filters and actions as the board. | list view |
-| zoom level (Zoom) | One step of the timeline's zoom ladder: its header tiers, its width per hour, its snap step and its workload bucket. | zoom preset, scale |
-| time chunk | A fixed span of plant time, aligned to days, weeks or months, for which the timeline loads job orders at once. | page, window |
+| zoom level (Zoom) | One step of the timeline's zoom ladder: its header tiers, its width per hour, its snap step and its workload bucket. | zoom preset (the four presets are levels now), scale (that is the time scale) |
+| time chunk | A fixed span of plant time, aligned to plant dates (a week, a month or a quarter), for which the timeline loads job orders at once. | page (that is a page of a connection), window (that is a closed or frozen window) |
 
 ## ERP integration
 

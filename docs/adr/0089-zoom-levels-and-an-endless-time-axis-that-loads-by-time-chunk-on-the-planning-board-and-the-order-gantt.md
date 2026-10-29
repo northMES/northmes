@@ -1,11 +1,11 @@
 ---
 status: "proposed"
 date: 2026-10-29
-decision-makers: Krister Johansson
-consulted: the trial of the order Gantt on 2026-10-29 (findings F6 and F8), public documentation of DHTMLX Gantt, DayPilot Scheduler, Bryntum Scheduler and Gantt, and Syncfusion Gantt
+decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
+consulted: Krister Johansson (the zoom ladder with Ctrl+wheel and Zoom to fit on both views, the endless axis, loading by time chunk, the greyed past, the timeline built in house, 2026-10-29); the trial of the order Gantt on 2026-10-29 (findings F6, #883, and F8, #882); public documentation of DHTMLX Gantt, DayPilot Scheduler, Bryntum Scheduler and Gantt, and Syncfusion Gantt
 informed: contributors and coding agents
 release: "1"
-needs-confirmation: "maintainer (the zoom ladder on the board in release 1, recorded in the ledger of ADR 0055; the working default levels and their chunk spans; open orders as the Gantt's default rows; the refusal code PAST)"
+needs-confirmation: "maintainer (the zoom ladder on the board in release 1, recorded in the ledger of ADR 0055; the working default levels and their chunk spans; open orders as the Gantt's default rows; the refusal code PAST; the row list at pilot scale; the job order table's Range at the new levels; PAST at Save and in proposals; the board's range limit under chunk loading)"
 ---
 
 # Zoom levels and an endless time axis that loads by time chunk, on the planning board and the order Gantt
@@ -43,7 +43,7 @@ Chosen option: "A ladder of zoom levels, an endless axis over a fixed buffer, an
 ### Zoom levels
 
 * A zoom level is the timeline's unit of zoom. It sets the top and bottom header tiers (unit, count, a long and a short label format), the natural width in pixels per hour, the snap step and the workload bucket. The levels form one ordered list, the ladder, in the timeline core.
-* The working default ladder keeps D3's four presets as levels, under their ids, so existing links still open:
+* The working default ladder keeps D3's four presets as levels, under the ids the code uses (`hours`, `day`, `week`, `4weeks`), so existing links still open:
 
   | Level id | Top tier | Bottom tier | Snap step | Workload bucket |
   |---|---|---|---|---|
@@ -58,58 +58,59 @@ Chosen option: "A ladder of zoom levels, an endless axis over a fixed buffer, an
   The design round sets the natural widths and may change the list. A new bucket kind (month) joins the extensible list of plan 18.
 * Ctrl+wheel or Cmd+wheel over the time area, and a trackpad pinch where the browser reports it as a Ctrl+wheel event, steps one level per gesture. The instant under the pointer stays at the same x. The page does not zoom while the pointer is over the time area. A plain wheel scrolls as before.
 * The toolbar has Zoom out, Zoom in, a menu of the levels, and Zoom to fit. Each zooms around the centre of the view. With focus inside the grid, the minus and plus keys step a level too; the browser's own zoom keys stay untouched.
-* Zoom to fit picks the finest level whose natural width fits a span into the time area, and centres that span. The span is the selected order or run with one snap step on each side, which replaces "Zoom to order" and "Zoom to run". With nothing selected, it is every loaded row.
-* Rules that plan 18 ties to "Hours and Day zoom" (the deadline's time label, the wait and free float lines, buckets per shift) apply at `day` and every finer level.
+* Zoom to fit picks the finest level whose natural width fits a span, with one snap step of that level on each side, into the time area, and centres that span. The span is the selected order or run, which replaces "Zoom to order" and "Zoom to run". With nothing selected, it is every loaded row on the Gantt and every loaded job order on the board. When no level fits, it picks the coarsest level and centres the span's start.
+* Rules that plan 18 ties to "Hours and Day zoom" (the deadline's time label, the wait and free float lines, buckets per shift) apply at `day` and every finer level. Rules it ties to "Week and 4 weeks zoom" (the shift strip's working days, the 2 px rule for hollow segments) apply at `week` and every coarser level.
 * The URL key `zoom` holds the level id.
 
 ### Header tiers
 
 * Each tier uses its long label format where the label fits its cell, then the short format, and draws no label where neither fits.
 * With Hide closed time on, each tier's cells are clipped to the open segments of the axis. A label starts at its cell's first open segment, a cell wholly inside a gap has no label, and gaps are drawn behind the labels. DHTMLX hides non-working cells "for all the scales" in the same way, so no tier keeps a label inside hidden time.
-* A gap narrower than one pixel at the current level is not drawn.
+* A gap narrower than one pixel at the current level is not drawn, and a closed window is compressed only where its natural width is wider than the gap, so Hide closed time never widens the axis at a coarse level.
 
 ### The endless axis
 
-* The axis has no start or end. The view draws a buffer of three viewport widths of time at the current level, centred on the view, and culls ticks, blocks, links and shading to it.
-* When the view comes within one viewport width of a buffer edge, the buffer moves by one viewport width in that direction, and `scrollLeft` is corrected by the moved pixels in the same frame. The buffer is always wider than the viewport plus both trigger margins, so one move cannot trigger another. This is the pattern of DayPilot's infinite scrolling, which rejects settings where the timeline is not wider than the viewport plus both edge margins.
-* A change of level, Now, Go to date, Earlier and Later rebuild the buffer around their anchor instant. Earlier and Later scroll by one viewport width.
-* The toolbar's range text names the visible span and follows the scroll. `from` in the URL is the visible start, written with replace when scrolling stops, so a reload or a shared link opens the same view.
+* The axis has no start or end. The view draws a buffer of three viewport widths of drawn axis (pixels at the current level, gaps included), centred on the view, and culls ticks, blocks, links and shading to it.
+* When the view comes within a quarter of a viewport width of a buffer edge, the buffer moves by one viewport width in that direction, and `scrollLeft` is corrected by the moved pixels in the same frame. The buffer is at least the viewport plus both trigger margins plus one move (three widths against two and a half), so one move cannot trigger another. This is the pattern of DayPilot's infinite scrolling, which rejects settings where the timeline is not wider than the viewport plus both edge margins.
+* A change of level, Now, Go to date, Earlier and Later rebuild the buffer around their anchor instant. Earlier and Later scroll by one viewport width. A resize of the time area rebuilds the buffer around the visible start, and a hidden time area (width 0) keeps no buffer until it shows.
+* The toolbar's range text names the visible span and follows the scroll. `from` in the URL is the visible start as a plant-local date-time (`2026-11-03T13:20`), written with replace when scrolling stops, so a reload or a shared link opens the same view. A plain date still opens at the start of that day.
 
 ### Loading by time chunk
 
-* Job orders load per time chunk: a fixed span of plant time, aligned to plant days, weeks or months, whose length follows the level (working default: one ISO week up to `week`, one month at `4weeks` and `quarter`, one quarter at `year`). Chunks do not move with the scroll, so a cached chunk stays valid.
-* The view loads the chunks the buffer touches, the chunks in view first, and the next chunk on each side ahead of time. It drops chunks more than two buffer widths away. A chunk that is still loading shows a loading band in its rows' time cells, with a polite status message.
-* The order Gantt loads its rows apart from its blocks. The row list holds each production order with its operations, its span (first setup start to last end), its deadline and its status, but no placements. Its default set is every open order (not finished) plus every late order. Finished orders join through the "Include finished" filter, for the chunks loaded. So rows never appear or move while the planner scrolls, and an order far in the future already shows its summary span before its job orders load.
+* Job orders load per time chunk: a fixed span of plant time, aligned to plant dates (midnight, ISO weeks from Monday, calendar months and quarters), whose length follows the level (working default: one ISO week up to `week`, one month at `4weeks` and `quarter`, one quarter at `year`). A chunk holds every job order whose span from setup start to end overlaps the chunk's half-open span, and a job order in two chunks is merged by id. Chunks do not move with the scroll, so a cached chunk stays valid within its chunk length; a level change that changes the chunk length loads the buffer's chunks again.
+* The view loads the chunks the buffer touches, the chunks in view first, and the next chunk on each side ahead of time. It drops chunks more than two buffer widths away, except a chunk that holds the focused job order or a job order of the selected order. A chunk that is still loading shows a loading band in its rows' time cells, with a polite status message. A chunk that fails to load shows an error band with Try again in its rows' time cells and a status message, so a failed load never looks like empty rows. A workload bucket that touches a chunk not yet loaded shows as loading, never as a partial sum.
+* The order Gantt loads its rows apart from its blocks. The row list holds each production order with its operations, its job orders without their placements (id, number, machine, status, quantity), its span (first setup start to last end), its deadline and its status. Its default set is every order that is neither finished nor cancelled, which includes every late order. Finished orders join through the "Include finished" filter, for the chunks loaded. So with the default set rows never appear or move while the planner scrolls, and an order far in the future already shows its summary span before its job orders load.
+* A job order without a placement has no time, so no chunk holds it: on the Gantt it comes with the row list, and on the board the Not placed row loads apart from the chunks.
 * The board's rows are machines, so only its blocks load per chunk.
 * `ganttMaxOrders` limits the row list. Rows virtualize as ADR 0030 decides.
 * The `GanttDataSource` seam gets `loadRows(filter)` and `loadChunk(from, to, filter)` in place of one `load` per range, and the mock source answers both from fixture G1. On the server, the planned `planningGantt` query splits into a row query (a Relay connection, [ADR 0016](0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)) and a chunk query that returns job orders of the same GraphQL type as the board's.
-* Computations that need rows outside the loaded chunks fetch them by order id, as plan 18 says. Realtime refetches changed ids that fall in loaded chunks only.
+* Computations that need rows outside the loaded chunks fetch them by order id, as plan 18 says. Realtime refetches changed ids that fall in loaded chunks, refetches the chunks in view when the changed ids are null ([ADR 0018](0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md)), and refetches the row list when a production order is created, finished or cancelled.
 
 ### Time before now
 
 * The time area before the now line has a flat past tone, drawn behind blocks and shading. The frozen window band stays from now to the fence.
-* A move whose setup start would fall before now is refused with the refusal code `PAST`, next to `STARTED`, in the drag preview, in keyboard move mode and in the Move dialog. Started and finished job orders stay fixed, as today.
-* Finished job orders are drawn muted. An overdue job order (planned, with its planned start passed) keeps its own state cue and is never muted, because it is the work the planner most needs to see. It may move to now or later.
+* A move whose setup start would fall before now is refused with the refusal code `PAST`, next to `STARTED`, in the drag preview, in keyboard move mode and in the Move dialog. A drop before now lands on the first snap step at or after now, then snaps forward to working time as every drop does. Started and finished job orders stay fixed, as today.
+* Finished job orders are drawn muted, with a finished cue besides colour and "finished" in their accessible name, as every block state has ([07](../plan/07-production-planning.md#block-states)). An overdue job order (planned, with its planned start passed) keeps its own state cue and is never muted, because it is the work the planner most needs to see. It may move to now or later.
 
 ### Consequences
 
 * Good, because the axis cannot run away: the buffer has a fixed size, and one edge crossing moves it once.
 * Good, because the far future costs one row list and nothing more until the planner scrolls there.
 * Good, because rows stand still while the planner scrolls, which also keeps virtualizer offsets and link positions stable.
-* Good, because D3's preset ids stay valid levels, so links, tests and the board keep working while the ladder grows.
+* Good, because the four preset ids stay valid levels, so links, tests and the board keep working while the ladder grows.
 * Bad, because the coarse levels (`quarter`, `year`) put many job orders into a few pixels, which needs the culling and virtualization of ADR 0030 before they ship, and may need the coarse levels to draw summary spans only.
 * Bad, because a split row query and chunk query are two server queries where plan 18 has one.
 * Bad, because the D3 board design and the D5 Gantt frames show four preset buttons, so the toolbar needs a design round.
-* Neutral, because the row list's open orders are bounded by `ganttMaxOrders`, as the range-filtered rows were.
+* Bad, because the row list has no time bound: at pilot scale (500 orders, [07](../plan/07-production-planning.md)) the open orders pass `ganttMaxOrders` (working default 300), where the time range kept the old set small. Whether the row list pages through its connection into the virtualized rows or the limit changes is open (M-101 in [16-open-questions.md](../plan/16-open-questions.md)).
 
 ### Confirmation
 
 * `time-scale.test.ts`: stepping a level with an anchor x keeps the anchor instant within 1 px of that x, at every pair of adjacent levels, across the DST days 2026-10-25 and 2027-03-28.
-* A fast-check property over random scroll sequences in both directions: the buffer moves at most once per edge crossing, the buffer stays wider than the viewport plus both margins, and the range text always equals the visible span.
-* `e2e/planning/gantt-scroller.spec.ts` scrolls repeatedly to both edges at every level. The Name cell's left edge stays at the grid's left edge, the toolbar's week matches the header, and no two labels of a tier overlap or sit inside a gap (bounding boxes).
-* A web test with a counting mock source: scrolling across four chunks loads each chunk once, and scrolling back within two buffer widths loads nothing.
-* A move test: a drag or a keyboard step to before now is refused with `PAST`, and an overdue row moves to now.
-* `gantt-search.test.tsx`: `zoom=week` and the other D3 ids open their levels, and an unknown id falls back to `week`.
+* `timeline/time-buffer.test.ts`, a fast-check property over random scroll sequences in both directions: the buffer moves at most once per edge crossing, the buffer stays at least the viewport plus both margins plus one move, and the range text equals the span the test computes from the scroll position and the level's width per hour.
+* `e2e/planning/gantt-scroller.spec.ts` scrolls repeatedly to both edges at every level. The Name cell's left edge stays at the grid's left edge, the toolbar's range text matches the header, and no two labels of a tier overlap or sit inside a gap (bounding boxes).
+* `gantt-chunks.test.tsx`, with a counting mock source: scrolling across four chunks loads each chunk once, scrolling back within two buffer widths loads nothing, and a chunk whose load fails shows the error band with Try again.
+* `gantt-move.test.ts`: a drag or a keyboard step to before now is refused with `PAST`, and an overdue row dropped on the now line at `week` with now at 09:40 lands at 12:00.
+* `gantt-search.test.tsx`: `zoom=week` and `hours`, `day` and `4weeks` open their levels, and an unknown id falls back to `week`.
 
 ## Pros and cons of the options
 
@@ -138,6 +139,7 @@ Chosen option: "A ladder of zoom levels, an endless axis over a fixed buffer, an
 ## More information
 
 * Related ADRs: [0016](0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md) list conventions, [0021](0021-accessibility-target-wcag-2-2-aa.md) accessibility, [0024](0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) time, [0030](0030-a-planning-board-built-in-house.md) the board built in house, [0055](0055-release-1-scope-under-option-b-and-the-scope-rule.md) the scope rule, [0062](0062-web-form-contracts-url-view-state-and-module-link-manifests.md) URL view state.
-* Plan: [18-gantt-timeline.md](../plan/18-gantt-timeline.md), sections "Timeline core", "Data loading" and "URL state"; the approved board design D3 in `docs/design/planning/planning-221-board.md`.
+* Plan: [18-gantt-timeline.md](../plan/18-gantt-timeline.md), sections "Timeline core", "Data loading" and "URL state"; [07-production-planning.md](../plan/07-production-planning.md), sections "Planning board in release 1" and "Data loading", which this ADR amends for the board; the approved board design D3 in `docs/design/planning/planning-221-board.md`.
+* Open questions M-100 to M-104 in [16-open-questions.md](../plan/16-open-questions.md) hold the parts that wait for the maintainer.
 * Sources, read 2026-10-29: DHTMLX Gantt [skip_off_time](https://docs.dhtmlx.com/gantt/api/config/skip_off_time/) and [custom scale](https://docs.dhtmlx.com/gantt/guides/custom-scale/); DayPilot Scheduler [infinite scrolling](https://doc.daypilot.org/scheduler/infinite-scrolling); Bryntum forum threads on [zoom levels](https://forum.bryntum.com/viewtopic.php?p=63353) and [wheel zoom](https://forum.bryntum.com/viewtopic.php?p=81634); Syncfusion Blazor Gantt [zooming](https://help.syncfusion.com/gantt-sdk/blazor/gantt-chart/zooming).
 * Revisit when the coarse levels are measured against the SP3 budgets, and when the design round sets the toolbar.

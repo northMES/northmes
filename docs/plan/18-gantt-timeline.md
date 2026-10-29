@@ -30,6 +30,7 @@ The document adds to 07 and never repeats it. Where the board's rules apply to t
 | [0077](../adr/0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md) | proposed | Visual snapshots from the Playwright specs |
 | [0079](../adr/0079-design-pages-as-artifacts-on-the-northmes-design-system-with-the-approved-source-in-the-repository.md) | proposed | Design pages as artifacts; the board page D3 is approved and the order Gantt gets its own page |
 | [0083](../adr/0083-runs-of-production-orders-of-one-article.md) | proposed | Runs: orders of one article combined and planned together, the saved retools as the run's rule, the earliest deadline, the split |
+| [0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) | proposed | Zoom levels, the endless axis, loading by time chunk, the greyed past and the refusal code `PAST` |
 
 When this document and an ADR disagree, the ADR holds and this document gets fixed. Where this document and 07 disagree, 07 holds for the board and this document holds for the order Gantt and the scheduling views.
 
@@ -101,7 +102,7 @@ When the loaded range does not hold what a computation needs (an order whose row
 ### Shared pieces
 
 - The time scale: `createTimeScale({ range, zoom, timeZone, widthPx })` with `x(instant)`, `instant(x)` and `ticks()`. Proposed ([ADR 0030](../adr/0030-a-planning-board-built-in-house.md)). Hour ticks come from exact instants; day ticks from `startOfDay()` plus one day; snapping uses offset-preserving `ZonedDateTime.round` ([ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md)). Proposed. Both views share one scale instance per screen, so switching the view keeps the range and the zoom.
-- The zoom levels of [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md): a ladder that keeps the four presets of the approved board design D3 (`docs/design/planning/planning-221-board.md`, Hours, Day, Week and 4 weeks) as levels under their ids, adds finer and coarser levels, and steps with Ctrl+wheel, the toolbar and Zoom to fit. Each level sets its header tiers, snap step and workload bucket. Proposed.
+- The zoom levels of [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md): a ladder that keeps the four presets of the approved board design D3 (`docs/design/planning/planning-221-board.md`: Hours, Day, Week and 4 weeks) as levels under their ids, adds finer and coarser levels, and steps with Ctrl+wheel, the toolbar and Zoom to fit. Each level sets its header tiers, snap step and workload bucket. Proposed.
 - Culling by binary search over blocks sorted by start per row, and hit testing through the scale and the virtualizer offsets. Proposed.
 - Rows virtualized with TanStack Virtual; `aria-rowcount` and `aria-rowindex` set; the focused row and the preview row kept mounted ([07](07-production-planning.md#grid-semantics-and-focus)). TanStack Virtual is not in the workspace catalog yet and comes in its own pull request ([AGENTS.md](../../AGENTS.md)).
 - Blocks as DOM elements positioned with `transform`, the drag preview in `requestAnimationFrame` with its state outside React, pointer events with `setPointerCapture`. Proposed.
@@ -141,7 +142,7 @@ A view gives the core a row model and a drop model. Everything else is shared.
 - Level 3: job order. Row header: machine code, quantity, status. One row per job order, so a split operation shows its halves on separate rows and two halves on different machines never overlap visually. A job order without a machine or without a setup start sits in the pinned Not placed row of the view, under the time header, as on the board; the operation row then shows the count ("1 not placed").
 - Sorting: orders by the autoplan order (deadline instant, priority with null last, order number by code units, id) by default; the tree columns sort on their own columns as [Tree columns](#tree-columns) says. Operations by sequence. Job orders by planned start, unplaced last.
 - A hand-linked child order ([07](07-production-planning.md#child-orders)) appears under its parent as a level 1 row with an indent marker and a "child of 1001" text in its header, and also in its own place when the sort puts it there. It is drawn once; the second place is a reference row that scrolls to the first. Working default.
-- The order Gantt loads orders, not machines. The default rows are every open order plus every order late at `now`, loaded apart from their job orders, so rows stay put while the planner scrolls and a late order whose rows lie in the past still shows; finished orders join through the "Include finished" filter ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md), proposed). The filters of the job order table view apply (late only, equipment, status, article, customer order, search by number). Decided for the filter conventions ([ADR 0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)).
+- The order Gantt loads orders, not machines. The default rows are every order that is neither finished nor cancelled, which includes every order late at `now`, loaded apart from their job orders' placements, so rows stay put while the planner scrolls and a late order whose rows lie in the past still shows; finished orders join through the "Include finished" filter ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md), proposed). The filters of the job order table view apply (late only, equipment, status, article, customer order, search by number). Decided for the filter conventions ([ADR 0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)).
 - Row heights: order and operation rows 36 px, job order rows 52 px as on the board, the workload lane 40 px. All in `rem` so 200 percent text zoom grows them ([07](07-production-planning.md#reflow-zoom-and-color)).
 
 ### Tree columns
@@ -173,10 +174,10 @@ Sorting on a column sorts level 1 rows and keeps the tree under each. The width 
 
 ### Moves on the order Gantt
 
-- A drag moves a job order in time on its machine. Snapping as the board: first to the preset's step, then forward to the next working instant on the machine ([ADR 0030](../adr/0030-a-planning-board-built-in-house.md)). The preview shows the new span, the frozen window feedback and, with cascade on, the ghost spans of the rows the cascade would move ([Auto-scheduling in a draft](#auto-scheduling-in-a-draft)).
+- A drag moves a job order in time on its machine. Snapping as the board: first to the zoom level's step, then forward to the next working instant on the machine ([ADR 0030](../adr/0030-a-planning-board-built-in-house.md)). The preview shows the new span, the frozen window feedback and, with cascade on, the ghost spans of the rows the cascade would move ([Auto-scheduling in a draft](#auto-scheduling-in-a-draft)).
 - The machine changes through the detail panel's machine select or the Move dialog, both limited to the operation's allowed machines. Keyboard move mode steps time with Left and Right; Up and Down step through the allowed machines as on the board, so the keyboard path can change the machine without the dialog.
 - Every move goes through `judgeMove` and lands in the draft as `moveJobOrderInDraft`, as the board. Refusals and confirmable conflicts are the board's ([07](07-production-planning.md#fixed-frozen-held-and-locked-rows)).
-- Summary rows cannot be dragged. Dragging an order or operation row does nothing and the row's menu offers "Zoom to order" (sets the range to the order's span plus one snap step on each side and picks the finest preset that fits the time area), "Show critical chain", "Plan this order" and "Move all later by" ([Auto-scheduling in a draft](#auto-scheduling-in-a-draft)), and "Combine into a run" when two or more orders of one article are selected ([Runs](#runs)).
+- Summary rows cannot be dragged. Dragging an order or operation row does nothing and the row's menu offers "Zoom to fit" (the order's span, as [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) says), "Show critical chain", "Plan this order" and "Move all later by" ([Auto-scheduling in a draft](#auto-scheduling-in-a-draft)), and "Combine into a run" when two or more orders of one article are selected ([Runs](#runs)).
 
 ### Other row rules
 
@@ -211,7 +212,7 @@ Combine writes the run into the draft; Cancel writes nothing. The dialog takes f
 - The run is a row above its orders (frame PR2): a level 1 row "Run of Bracket L" with the summed quantity, the orders' numbers, the run's deadline and late-by, and its own summary bar from the earliest setup start to the latest end over its orders, in the first order's color at reduced opacity with the run cue, a doubled left edge. Its orders are indented under it as its children and keep their operation and job order rows; `aria-level` grows by one under a run. Collapsed, the run row shows the summary bar only.
 - A job order whose retool the run saves draws no retool hatch (a fixed time keeps its part of the hatch). Its accessible name, its hover card and Details show the setup that remains, the fixed time, and name the saved retool: "setup 0 min, retool saved by the run (30 min)" for `1005.10`, which has no fixed time, or "setup 10 min, retool saved by the run (30 min)" for a row with 10 min of fixed time (ADR 0083 rule 4).
 - An order flagged early shows "early by 7 days" in its row header beside the deadline, in the warning token with a glyph, as late-by shows.
-- The run row's menu offers "Split run" and "Zoom to run". Plan this order and Move all later by apply to the run as a whole once `plan()` exists.
+- The run row's menu offers "Split run" and "Zoom to fit". Plan this order and Move all later by apply to the run as a whole once `plan()` exists.
 - The My draft list shows the run as one change ("Run of Bracket L: 1001 and 1005, 2 rows moved, 1 retool saved") with Split run as its action, and the breaks it creates as their own lines with the usual actions.
 - Split run removes the run. In the draft it discards the run and its moves; on a committed run it writes the moves of `splitRun` into the draft: every row the combine moved back to the placement the run record holds, every saved retool back.
 - Sorting places a run by its deadline among the orders; a filter that matches any of its orders shows the run with that order.
@@ -237,13 +238,13 @@ Calendars, versions, shift patterns, breaks, deviations and the availability fun
 ### Shading and the shift strip
 
 - Every job order row (both views) shades the closed time of its machine: the complement of the machine's availability windows in the visible range, in the `off-time` token. A machine row on the board does the same. Summary rows on the order Gantt shade the plant calendar (the plant's default calendar with plant-wide deviations only), so an order whose operations run on machines with different calendars still has a readable background.
-- The time header gets a shift strip, one tier under the ticks, that draws the plant calendar's shifts as labelled bands ("Day" 06:00 to 15:00) and breaks as gaps, at Hours and Day zoom. At Week and 4 weeks zoom the strip shows working days as bands and plant-wide non-working deviations with their reason as the label. The strip is off by default and switched on in Board options; the choice stays local.
+- The time header gets a shift strip, one tier under the ticks, that draws the plant calendar's shifts as labelled bands ("Day" 06:00 to 15:00) and breaks as gaps, at `day` and every finer zoom level. At `week` and every coarser level the strip shows working days as bands and plant-wide non-working deviations with their reason as the label. The strip is off by default and switched on in Board options; the choice stays local.
 - A deviation is visible as a change of shading on the rows it applies to. An overtime deviation on one machine shows as open time on that row only; a plant-wide holiday shows on every row and in the strip. The hover card of shaded time names the reason when a deviation causes it ("Non-working: Maintenance, Mon 9 Nov"), and the detail panel of a block that touches a deviation links to it ("Open deviation"), which opens the calendar page on that record for a plant admin and read-only for a planner. The hover card is the board's, so it opens on focus too.
 - `core.calendar.availability_changed` refetches availability for the overlapping visible range in both views, as the board ([07](07-production-planning.md#realtime)). Accepted through [ADR 0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md).
 
 ### Blocks across closed time
 
-- A job order is one contiguous block on its machine: setup, then run time, interrupted only by calendar closures ([ADR 0027](../adr/0027-planned-duration-formula-and-override-precedence.md)). Proposed. The block is drawn from setup start to end as one target with one accessible name, and the closed segments inside it are drawn hollow (the lane color inside the block's border), so a block across a weekend reads as one job that pauses. At Week and 4 weeks zoom, hollow segments narrower than 2 px are not drawn.
+- A job order is one contiguous block on its machine: setup, then run time, interrupted only by calendar closures ([ADR 0027](../adr/0027-planned-duration-formula-and-override-precedence.md)). Proposed. The block is drawn from setup start to end as one target with one accessible name, and the closed segments inside it are drawn hollow (the lane color inside the block's border), so a block across a weekend reads as one job that pauses. At `week` and every coarser zoom level, hollow segments narrower than 2 px are not drawn.
 - The block's hover card and detail panel show both durations: working time ("3 h working") and elapsed time ("2 days 18 h elapsed"), each with its unit, never the sum without a word. One field names one unit ([ADR 0061](../adr/0061-presentation-settings-for-dates-clocks-and-numbers-with-one-pinned-locale.md)). Accepted.
 - The setup part of a block (retool plus fixed time) is drawn as a hatched leading segment when the block is at least 66 px wide, and named in the accessible text ("setup 30 min, run 5 h").
 
@@ -251,7 +252,7 @@ Case G1 `1006.10` (`GT7`): Mill 1, 600 pieces at 18 s, 10 800 s of work from Fri
 
 ### Snapping and the calendar
 
-- A dropped block snaps first to the preset's step, then forward to the next working instant on the target machine, never backward ([ADR 0030](../adr/0030-a-planning-board-built-in-house.md)). Proposed. The order Gantt uses the same rule.
+- A dropped block snaps first to the zoom level's step, then forward to the next working instant on the target machine, never backward ([ADR 0030](../adr/0030-a-planning-board-built-in-house.md)). Proposed. The order Gantt uses the same rule.
 - A keyboard step (Left or Right in move mode, Earlier or Later in the detail panel) moves one snap step and then applies the same forward snap, so a step that lands in a break lands at the break's end. The step message names the landing instant ([07](07-production-planning.md#moving-without-dragging)).
 - Durations in the move preview come from the domain package's duration function over the target machine's availability, so a move onto a machine with a longer night changes the block length in the preview ([ADR 0027](../adr/0027-planned-duration-formula-and-override-precedence.md)). Proposed.
 
@@ -436,7 +437,7 @@ For a machine `m` and a bucket `[a, b)`:
 - `freeS = max(0, availableS - loadedS)`: the working time still open in the bucket, which is what a planner looks for when placing work.
 - `overloadS = max(0, loadedS - availableS) + closedS`, where `closedS` is work laid in closed time (only after a calendar change on committed rows).
 - `utilization = loadedS / availableS` as a permille integer; undefined when `availableS = 0` (shown as "closed").
-- Buckets follow the zoom preset: Hours and Day zoom bucket by shift (from the plant calendar's shifts, plus one bucket per overtime deviation outside a shift), Week zoom by production day, 4 weeks zoom by ISO week. The production day boundary is the plant's `production_day_start` ([ADR 0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md)). The fixture buckets by production day with day start 06:00 on a calendar whose shifts lie inside one date, so the buckets equal plant dates there.
+- Buckets follow the zoom level ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md)): `day` and every finer level bucket by shift (from the plant calendar's shifts, plus one bucket per overtime deviation outside a shift), `week` by production day, `4weeks` and `quarter` by ISO week, `year` by month. The production day boundary is the plant's `production_day_start` ([ADR 0025](../adr/0025-plant-calendars-shift-patterns-and-the-production-day.md)). The fixture buckets by production day with day start 06:00 on a calendar whose shifts lie inside one date, so the buckets equal plant dates there.
 
 ### The workload lane
 
@@ -450,7 +451,7 @@ For a machine `m` and a bucket `[a, b)`:
 
 ### The workload query
 
-`planningWorkload(plantId, from, to, bucket: shift | productionDay | isoWeek, equipmentIds?)` returns the rows of the table above for the committed plan, computed on the server with the same domain function over the same availability. It serves the plant-wide week table in the job order table view ("Workload" tab) and a later report; the lanes in the browser compute from the loaded range so the draft is included. A test asserts that the browser and the server agree on the committed plan for the G1 week.
+`planningWorkload(plantId, from, to, bucket: shift | productionDay | isoWeek | month, equipmentIds?)` returns the rows of the table above for the committed plan, computed on the server with the same domain function over the same availability. It serves the plant-wide week table in the job order table view ("Workload" tab) and a later report; the lanes in the browser compute from the loaded range so the draft is included. A test asserts that the browser and the server agree on the committed plan for the G1 week.
 
 Case G1 `GT5`, production days in week 45:
 
@@ -468,12 +469,12 @@ Case `GT6`: adding a row `1007.10` of 3 600 s on CNC2 at Thu 12:00, over the loc
 
 Plan proposal, following the board's rules in [07](07-production-planning.md#data-loading).
 
-- `planningGantt(plantId, from, to, filter, first, after)` returns production orders with their operations and job orders for the visible range plus a margin, in deadline order, as a Relay connection ([ADR 0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)). Decided for the list conventions. Job orders come as the same GraphQL type the board query returns, so Apollo's normalized cache holds one entry per job order for both views and a draft move shows in both without a refetch.
+- `planningGantt` splits into two queries ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md), proposed). The row query returns production orders with their operations and their job orders without placements, in deadline order, as a Relay connection ([ADR 0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)); decided for the list conventions. The chunk query returns the job orders whose span overlaps one time chunk. Job orders come as the same GraphQL type the board query returns, so Apollo's normalized cache holds one entry per job order for both views and a draft move shows in both without a refetch.
 - The axis is endless and loads by time chunk ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md)): the view draws a fixed buffer of three viewport widths, moves it by one viewport width near an edge with the scroll position corrected in the same frame, and loads job orders per chunk of plant time while the row list loads apart. `from` in the URL is the visible start. Proposed. The time scroller contains its overscroll (`overscroll-behavior: contain`), so a sideways swipe at an edge never navigates the browser (plan proposal, from the test of 2026-10-17).
-- The range resolver that limits the board limits the Gantt too, and a load with more than `ganttMaxOrders` (working default 300) orders fails with `planning.gantt.too_many_orders` and the toolbar says "Narrow the filter". The limit is set from the spike measurement.
+- The row list has no range. A row list with more than `ganttMaxOrders` (working default 300) orders fails with `planning.gantt.too_many_orders` and the toolbar says "Narrow the filter". The limit is set from the spike measurement, and whether the row list pages or the limit changes at pilot scale is open question M-101 in [16](16-open-questions.md).
 - Rows a computation needs outside the loaded set (a chain root in another order, a plan-this-order horizon) are fetched by production order id through `planningProductionOrder` and the board query for the extra range, and merged into the same cache.
 - Availability comes from core's availability query for every machine the loaded rows use, memoized per calendar version. Instants stay ISO strings in the cache and become epoch milliseconds once at the data edge ([ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md)). Proposed.
-- Realtime: the Gantt subscribes to `planningBoardChanged(plantId)` like the board, debounces 250 ms, and refetches by ids when the changed ids intersect its loaded orders; `core.calendar.availability_changed` refetches availability ([ADR 0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md)). Accepted. Pause live updates works as on the board.
+- Realtime: the Gantt subscribes to `planningBoardChanged(plantId)` like the board, debounces 250 ms, and refetches by ids when the changed ids fall in its loaded chunks, the chunks in view when the ids are null, and the row list when a production order is created, finished or cancelled; `core.calendar.availability_changed` refetches availability ([ADR 0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md)). Accepted. Pause live updates works as on the board.
 - `planningWorkload` is the one new server computation ([Workload](#the-workload-query)); it runs the domain function over the committed plan.
 
 ## Settings, options and permissions
@@ -502,6 +503,7 @@ No new permission. Moves, cascade, plan this order and Move all later by need `p
 - The board, the Gantt and the job order table are separate routes under `/$plant/planning/`, each an entry under Planning in the sidebar (Krister, 2026-10-17). `zoom`, `from` and `order` keep their meaning on every page, and a link from one page to another, such as "Show on board" in Details, carries them, so the range and the selected order survive the switch. `?view=gantt` on the board route, the first round's key, redirects to the Gantt page with the other keys carried over.
 - `chain=1` with `order=<id>` opens the view with that order's critical chain highlighted, so "look at why 1003 is late" is one link. Without `order` the key is dropped with the polite status message the ADR prescribes.
 - The table view's filter keys apply to the Gantt unchanged.
+- `zoom` holds a zoom level id, and `from` holds the visible start as a plant-local date-time (`2026-11-03T13:20`); a plain date opens at the start of that day ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md), proposed).
 - Collapsed rows, the cascade switch, the workload and shift strip options, the tree columns and the link mode stay local. Earlier and Later replace the history entry.
 - No path literal in code; link builders only.
 
@@ -549,7 +551,7 @@ The SP3 criteria of [ADR 0030](../adr/0030-a-planning-board-built-in-house.md) a
 | `cascade` preview per drag frame | at most 8 ms, so the frame stays under 33 ms with rendering |
 | Workload buckets for 60 machines over 8 weeks by production day | under 30 ms in the browser under the polyfill, as the availability budget of [ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) |
 | Links drawn | at most 200 before the view falls back to the selected order |
-| `planningGantt` for 300 orders | at most 500 ms server time at pilot scale |
+| The Gantt's row query for 300 orders | at most 500 ms server time at pilot scale |
 | `planningWorkload` for the plant over 8 weeks by production day | at most 300 ms |
 | Writing an identical Gantt result twice | zero extra block layer renders |
 
@@ -590,7 +592,7 @@ Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-project
 
 ### Integration tests (`apps/backend`, Testcontainers)
 
-- `gantt-query.int.test.ts`: `planningGantt` returns G1 in deadline order with nested rows; 301 orders fail with `planning.gantt.too_many_orders`; a viewer reads, a planner reads, a user of another plant gets no rows.
+- `gantt-query.int.test.ts`: the row query returns G1 in deadline order with nested rows and no placements; the chunk query returns every job order whose span overlaps the chunk, `1006.10` in both ISO weeks it touches; 301 orders fail with `planning.gantt.too_many_orders`; a viewer reads, a planner reads, a user of another plant gets no rows.
 - `workload.int.test.ts`: `planningWorkload` for G1 by production day equals the browser's GT5 table; a calendar deviation changes the available seconds of its buckets only.
 - `cascade-save.int.test.ts`: a cascade of two moves writes two draft changes under one soft lock; Save commits both or neither; the server's `validate()` finds no `LEAD_TIME` after GT3 with cascade on and one with cascade off.
 
