@@ -11,11 +11,17 @@ export interface ShellState {
    * out of a page they may not open. Undefined when no entry shows.
    */
   readonly home?: { readonly label: string; readonly href: string };
+  /**
+   * The id of the plant's company on a page of the company's settings, such as Users under
+   * /<plant>/settings/users, whose requests carry no plant and name the company instead (ADR 0066,
+   * #876). Undefined on every other page.
+   */
+  readonly companyId?: string;
 }
 
 const ShellContext = createContext<ShellState | null>(null);
 
-/** Rendered only by the shell, once per $plant route. */
+/** Rendered only by the shell: once per $plant route, and around a page of the company's settings. */
 export function ShellProvider({ value, children }: { value: ShellState; children: ReactNode }) {
   return <ShellContext.Provider value={value}>{children}</ShellContext.Provider>;
 }

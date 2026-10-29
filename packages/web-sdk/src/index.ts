@@ -17,7 +17,6 @@ export {
   isHostProvidedWeb,
 } from './host-provided-web.ts';
 export {
-  companySettingsHref,
   coreModuleId,
   createShellRoutes,
   type PlantBeforeLoad,
@@ -25,6 +24,7 @@ export {
   type RootRoute,
   type SettingsRoute,
   type ShellRoutesOptions,
+  settingsHref,
   settingsPath,
 } from './routes.ts';
 export { ShellProvider, type ShellState, useShell } from './shell-context.tsx';

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
 import { coreLinks } from '@northmes/core-contracts';
+import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useRouterState, useSearch } from '@tanstack/react-router';
 import { CircleCheck, Copy, Info, Pencil, Users } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
@@ -99,14 +101,14 @@ function holdersLine(count: number, role: string, place: string): string {
 type Holder = Role['holders'][number];
 
 /** The person, a link to the Access tab of the person's page, and the username (RO21). */
-function holderColumns(companyId: string): readonly DataTableColumn<Holder>[] {
+function holderColumns(plant: string): readonly DataTableColumn<Holder>[] {
   return [
     {
       id: 'person',
       header: 'Person',
       cell: ({ user }) => (
         <Link
-          to={coreLinks.settings.users.user({ companyId, userId: user.id }, { tab: 'access' }).href}
+          to={coreLinks.settings.users.user({ plant, userId: user.id }, { tab: 'access' }).href}
           className="text-link underline underline-offset-2 hover:no-underline"
         >
           {user.name}
@@ -138,7 +140,7 @@ function HoldersAt({
   readonly applies: string;
   readonly holders: readonly Holder[];
 }) {
-  const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   if (holders.length === 0) {
     return (
       <Card title={title} description={applies}>
@@ -155,7 +157,7 @@ function HoldersAt({
     <Card title={title} description={holdersLine(holders.length, role.name, name)}>
       <DataTable
         label={`Holders of ${role.name} at ${name}`}
-        columns={holderColumns(companyId)}
+        columns={holderColumns(plant)}
         rows={holders}
         getRowId={(holder) => holder.id}
       />
@@ -207,7 +209,7 @@ function HoldersTab({ role, places }: { readonly role: Role; readonly places: Pl
  * Holders, the open one in the URL's tab. History comes with the audit trail.
  */
 export function RoleScreen() {
-  const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   const navigate = useNavigate();
   const search = rolePageSearch(useSearch({ strict: false }));
   const { role, state, forbidden } = useRole();
@@ -232,7 +234,7 @@ export function RoleScreen() {
   return (
     <PageFrame
       title={forbidden ? 'No access to Roles' : (role?.name ?? 'Role')}
-      crumbs={[{ label: 'Roles', href: coreLinks.settings.roles({ companyId }).href }]}
+      crumbs={[{ label: 'Roles', href: coreLinks.settings.roles({ plant }).href }]}
       meta={
         role === undefined ? undefined : (
           <span>{role.moduleId === null ? `Custom role, ${companyName}` : roleKind(role)}</span>
@@ -244,7 +246,7 @@ export function RoleScreen() {
             {/* Question 34 of the design asks whether New role may start from Company admin. */}
             {!companyAdmin && (
               <Link
-                to={coreLinks.settings.roles.new({ companyId }, { from: role.id }).href}
+                to={coreLinks.settings.roles.new({ plant }, { from: role.id }).href}
                 className={buttonVariants({ variant: 'outline' })}
               >
                 <Copy aria-hidden />
@@ -253,7 +255,7 @@ export function RoleScreen() {
             )}
             {role.origin === 'CUSTOM' && (
               <Link
-                to={coreLinks.settings.roles.role.edit({ companyId, roleId: role.id }).href}
+                to={coreLinks.settings.roles.role.edit({ plant, roleId: role.id }).href}
                 className={buttonVariants()}
               >
                 <Pencil aria-hidden />

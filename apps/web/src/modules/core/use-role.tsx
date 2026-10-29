@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
+import { useShell } from '@northmes/web-sdk';
 import { Link, useParams } from '@tanstack/react-router';
 import type { PageState } from '../../ui/components/page-frame/index.ts';
 import { isForbidden } from '../../ui/lib/graphql-errors.ts';
 import { buttonVariants } from '../../ui/primitives/button.tsx';
 import { noAccessState } from './no-access.tsx';
 import { CoreRole, type CoreRoleQuery } from './role.graphql.ts';
-import { usePlaces } from './use-places.ts';
+import { useCompanyId, usePlaces } from './use-places.ts';
 
 /** A role of the company with who holds it at the company and at its plants. */
 export type Role = NonNullable<CoreRoleQuery['coreRole']>;
@@ -25,10 +26,12 @@ export interface RoleOfPage {
   readonly reload: () => Promise<Role | undefined>;
 }
 
-/** Reads the role that the $roleId segment of the URL names, in company settings (ADR 0066). */
+/** Reads the role that the $roleId segment of the URL names, in the company (ADR 0066). */
 export function useRole(): RoleOfPage {
   const places = usePlaces();
-  const { roleId, companyId = '' } = useParams({ strict: false });
+  const { plant } = useShell();
+  const { roleId } = useParams({ strict: false });
+  const companyId = useCompanyId() ?? '';
   const { data, error, refetch } = useQuery(CoreRole, {
     variables: { id: roleId ?? '', companyId },
   });
@@ -55,7 +58,7 @@ export function useRole(): RoleOfPage {
       description: 'The link may be out of date, or the role belongs to another company.',
       action: (
         <Link
-          to={coreLinks.settings.roles({ companyId }).href}
+          to={coreLinks.settings.roles({ plant }).href}
           className={buttonVariants({ variant: 'outline' })}
         >
           Back to Roles

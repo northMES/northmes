@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { coreLinks } from '@northmes/core-contracts';
 import { planningLinks } from '@northmes/planning-contracts';
-import { seedCompany } from '../../scripts/stack/seed.mjs';
 import { expect, plant, test } from '../fixtures.ts';
 
 // The axe check of ADR 0021 over the states of the inventory pages (design #729): the warehouses
-// in company settings with their loading, empty, failed and no-access states; the Stock page with
-// a filter menu open, at 320 px and in its loading, empty, failed and no-access states; and the
-// stock of one article with its chart and movements, and not found. The pages read the fixture
-// G1, so every state is the same in every run; the preview key opens the states on mock data.
+// among the company's settings with their loading, empty, failed and no-access states; the Stock
+// page with a filter menu open, at 320 px and in its loading, empty, failed and no-access states;
+// and the stock of one article with its chart and movements, and not found. The pages read the
+// fixture G1, so every state is the same in every run; the preview key opens the states on mock
+// data.
 
 /** An href with a search. */
 function withSearch(href: string, search: Record<string, string>): string {
@@ -22,7 +22,7 @@ test.describe('the inventory pages', () => {
     signIn,
     checkA11y,
   }) => {
-    const warehouses = coreLinks.settings.warehouses({ companyId: seedCompany.id }).href;
+    const warehouses = coreLinks.settings.warehouses({ plant }).href;
     await signIn(warehouses);
     await expect(page.getByRole('table', { name: 'Warehouses' })).toBeVisible();
     await expect(page.getByText('Showing fixture G1.')).toBeVisible();

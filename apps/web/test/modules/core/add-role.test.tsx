@@ -44,7 +44,10 @@ const operator = role('Operator', ['planning.productionOrder:read']);
 
 const annaOfPage = user(anna, [assignment(operator, plantA)]);
 
-const addRoleHref = coreLinks.settings.users.user.addRole({ companyId, userId: anna.id }).href;
+const addRoleHref = coreLinks.settings.users.user.addRole({
+  plant: 'plant-a',
+  userId: anna.id,
+}).href;
 
 /** A uuidv7: version 7 in the third group, variant 10 in the fourth. */
 const uuidv7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -237,7 +240,7 @@ describe('Add role', () => {
     expect(await screen.findByRole('link', { name: 'Viewer' })).toBeDefined();
 
     // The roles list read before the assignment counts the new holder.
-    await router.navigate({ to: coreLinks.settings.roles({ companyId }).href });
+    await router.navigate({ to: coreLinks.settings.roles({ plant: 'plant-a' }).href });
     const table = await screen.findByRole('table', { name: 'Roles' });
     await waitFor(() =>
       expect(groupedRows(table)[1]?.[1].map((row) => row.slice(0, 4))).toEqual([

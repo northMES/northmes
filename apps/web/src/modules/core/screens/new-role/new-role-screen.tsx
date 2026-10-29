@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
 import { useMutation, useQuery } from '@apollo/client/react';
 import { coreLinks, updateRole } from '@northmes/core-contracts';
+import { useShell } from '@northmes/web-sdk';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useState } from 'react';
 import { v7 as uuidv7 } from 'uuid';
@@ -132,6 +134,7 @@ function NewRoleForm({
   readonly from?: string;
 }) {
   const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   const navigate = useNavigate();
   const places = usePlaces();
   const [id] = useState(() => uuidv7());
@@ -176,7 +179,7 @@ function NewRoleForm({
       if (!data) return;
       announce(`${data.coreCreateRole.name} created.`);
       await navigate({
-        to: coreLinks.settings.roles.role({ companyId, roleId: data.coreCreateRole.id }).href,
+        to: coreLinks.settings.roles.role({ plant, roleId: data.coreCreateRole.id }).href,
         replace: true,
       });
     } catch (error) {
@@ -195,7 +198,7 @@ function NewRoleForm({
     <RoleForm
       form={form}
       onSave={save}
-      cancelHref={coreLinks.settings.roles({ companyId }).href}
+      cancelHref={coreLinks.settings.roles({ plant }).href}
       saveLabel="Create role"
       failedHeading="The role was not created"
       companyName={companyName}
@@ -230,6 +233,7 @@ function NewRoleForm({
  */
 export function NewRoleScreen() {
   const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   const places = usePlaces();
   const viewer = useViewer();
   const search = newRoleSearch(useSearch({ strict: false }));
@@ -259,7 +263,7 @@ export function NewRoleScreen() {
   return (
     <PageFrame
       title={forbidden ? 'No access to New role' : 'New role'}
-      crumbs={[{ label: 'Roles', href: coreLinks.settings.roles({ companyId }).href }]}
+      crumbs={[{ label: 'Roles', href: coreLinks.settings.roles({ plant }).href }]}
       state={state}
     >
       {roles !== undefined && viewer.loaded && !forbidden && (

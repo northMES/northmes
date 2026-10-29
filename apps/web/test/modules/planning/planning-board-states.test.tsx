@@ -39,7 +39,7 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
       ),
     ).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Open Machines' }).getAttribute('href')).toBe(
-      coreLinks.machines({ plant }).href,
+      coreLinks.settings.machines({ plant }).href,
     );
     expect(screen.queryByRole('grid')).toBeNull();
     expect(screen.queryByRole('toolbar', { name: 'Board' })).toBeNull();

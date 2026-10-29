@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { shellModules } from '../src/modules.ts';
 import {
   companies,
-  companyId,
   crumbs,
   equipment,
   fakeApi,
@@ -37,14 +36,14 @@ function api(plantPermissions: readonly string[], companyPermissions: readonly s
 describe('plant settings', () => {
   it('E04-S02 a plant route whose nav entry is in the settings area renders the plant settings navigation in main and leaves the entry out of the main sidebar', async () => {
     const { fetch } = api(['equipment.calendar:read']);
-    renderShellAt('/plant-a/equipment/machines', [equipment], { fetch });
+    renderShellAt('/plant-a/settings/equipment/machines', [equipment], { fetch });
 
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     expect(screen.getByRole('main').contains(settings)).toBe(true);
     await waitFor(() =>
       expect(linksIn(settings)).toEqual([
-        ['Machines', '/plant-a/equipment/machines'],
-        ['Calendars', '/plant-a/equipment/calendars'],
+        ['Machines', '/plant-a/settings/equipment/machines'],
+        ['Calendars', '/plant-a/settings/equipment/calendars'],
       ]),
     );
     expect(
@@ -58,7 +57,7 @@ describe('plant settings', () => {
 
   it('E04-S02 a plant settings page keeps the plant title and adds a Settings crumb after the plant', async () => {
     const { fetch } = api([]);
-    renderShellAt('/plant-a/equipment/machines', [equipment], { fetch });
+    renderShellAt('/plant-a/settings/equipment/machines', [equipment], { fetch });
     await screen.findByRole('navigation', { name: 'Plant A settings' });
 
     await waitFor(() => expect(crumbs()).toEqual(['Plant A', 'Settings', 'Machines']));
@@ -73,26 +72,26 @@ describe('plant settings', () => {
       settingsModule('quality', 'Quality', 30),
       settingsModule('maintenance', 'Maintenance', 40),
     ];
-    renderShellAt('/plant-a/equipment/machines', modules, { fetch });
+    renderShellAt('/plant-a/settings/equipment/machines', modules, { fetch });
 
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     await waitFor(() => expect(within(settings).getAllByText('Modules')).toHaveLength(1));
     expect(linksIn(within(settings).getByRole('list', { name: 'Modules' }))).toEqual([
-      ['Machines', '/plant-a/equipment/machines'],
-      ['Quality plans', '/plant-a/quality/plans'],
-      ['Maintenance plans', '/plant-a/maintenance/plans'],
+      ['Machines', '/plant-a/settings/equipment/machines'],
+      ['Quality plans', '/plant-a/settings/quality/plans'],
+      ['Maintenance plans', '/plant-a/settings/maintenance/plans'],
     ]);
   });
 
   it('#762 #766 the plant settings navigation lists Planning rules, then Board fields, in the Modules group for a user who administers the plant', async () => {
     const { fetch } = api(['core.roleAssignment:manage']);
-    renderShellAt('/plant-a/planning/settings/board-fields', shellModules, { fetch });
+    renderShellAt('/plant-a/settings/planning/board-fields', shellModules, { fetch });
 
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     await waitFor(() =>
       expect(linksIn(within(settings).getByRole('list', { name: 'Modules' }))).toEqual([
-        ['Planning rules', '/plant-a/planning/settings'],
-        ['Board fields', '/plant-a/planning/settings/board-fields'],
+        ['Planning rules', '/plant-a/settings/planning'],
+        ['Board fields', '/plant-a/settings/planning/board-fields'],
       ]),
     );
     expect(
@@ -105,13 +104,13 @@ describe('plant settings', () => {
 
   it("E04-S02 the plant settings navigation ends with the company's settings as a group of its entries, Users and Roles under Acme AB settings, for a user who may open them, and has no such group for a user who may not (#876)", async () => {
     const { fetch } = api([], ['core.user:read', 'core.role:read']);
-    renderShellAt('/plant-a/equipment/machines', [...shellModules, equipment], { fetch });
+    renderShellAt('/plant-a/settings/equipment/machines', [...shellModules, equipment], { fetch });
 
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     const company = await within(settings).findByRole('list', { name: 'Acme AB settings' });
     expect(linksIn(company)).toEqual([
-      ['Users', `/settings/${companyId}/users`],
-      ['Roles', `/settings/${companyId}/roles`],
+      ['Users', '/plant-a/settings/users'],
+      ['Roles', '/plant-a/settings/roles'],
     ]);
     expect(within(settings).queryByRole('link', { name: 'Acme AB settings' })).toBeNull();
     // The group comes last, after the plant's own entries.
@@ -122,7 +121,7 @@ describe('plant settings', () => {
     // Calendars needs a permission, so once it shows the viewer's answer has arrived, and a
     // company group would show by then too.
     const without = api(['equipment.calendar:read']);
-    renderShellAt('/plant-a/equipment/machines', [...shellModules, equipment], {
+    renderShellAt('/plant-a/settings/equipment/machines', [...shellModules, equipment], {
       fetch: without.fetch,
     });
     const plantOnly = await screen.findByRole('navigation', { name: 'Plant A settings' });
@@ -180,7 +179,7 @@ describe('plant settings', () => {
   it('E04-S02 the skip link lands after the settings navigation', async () => {
     const user = userEvent.setup();
     const { fetch } = api([]);
-    renderShellAt('/plant-a/equipment/machines', [equipment], { fetch });
+    renderShellAt('/plant-a/settings/equipment/machines', [equipment], { fetch });
     await screen.findByRole('navigation', { name: 'Plant A settings' });
     await screen.findByRole('heading', { level: 1, name: 'Machines' });
 
@@ -197,7 +196,7 @@ describe('plant settings below 768 px', () => {
   it('E04-S02 at 320 px the plant settings navigation sits above the page in main', async () => {
     setViewport(320, 640);
     const { fetch } = api(['equipment.calendar:read']);
-    renderShellAt('/plant-a/equipment/machines', [equipment], { fetch });
+    renderShellAt('/plant-a/settings/equipment/machines', [equipment], { fetch });
 
     const heading = await screen.findByRole('heading', { level: 1, name: 'Machines' });
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
@@ -216,7 +215,7 @@ describe('the Settings button', () => {
     const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
-    expect(button.getAttribute('href')).toBe('/plant-a/equipment/machines');
+    expect(button.getAttribute('href')).toBe('/plant-a/settings/equipment/machines');
     expect(button.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
   });
 
@@ -227,7 +226,7 @@ describe('the Settings button', () => {
     const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
-    expect(button.getAttribute('href')).toBe(`/settings/${companyId}/roles`);
+    expect(button.getAttribute('href')).toBe('/plant-a/settings/roles');
 
     cleanup();
     // The permissions draw the Reports entry, which needs one, and no settings target: once the
@@ -246,7 +245,7 @@ describe('the Settings button', () => {
     const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
-    expect(button.getAttribute('href')).toBe('/plant-a/people');
+    expect(button.getAttribute('href')).toBe('/plant-a/settings/people');
     const sidebar = screen.getByRole('navigation', { name: 'Main' });
     expect(within(sidebar).queryByText('Administration')).toBeNull();
     expect(linksIn(sidebar).map(([label]) => label)).not.toContain('People');
@@ -260,23 +259,23 @@ describe('the Settings button', () => {
     const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
-    await waitFor(() => expect(button.getAttribute('href')).toBe('/plant-a/people'));
+    await waitFor(() => expect(button.getAttribute('href')).toBe('/plant-a/settings/people'));
     await userEvent.click(button);
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     await waitFor(() =>
       expect(linksIn(settings).slice(0, 5)).toEqual([
-        ['People', '/plant-a/people'],
-        ['Plant', '/plant-a/plant'],
-        ['Machines', '/plant-a/machines'],
-        ['Equipment groups', '/plant-a/equipment-groups'],
-        ['Calendars', '/plant-a/calendars'],
+        ['People', '/plant-a/settings/people'],
+        ['Plant', '/plant-a/settings/plant'],
+        ['Machines', '/plant-a/settings/machines'],
+        ['Equipment groups', '/plant-a/settings/equipment-groups'],
+        ['Calendars', '/plant-a/settings/calendars'],
       ]),
     );
   });
 
   it('E06 a planner, who manages no roles, sees neither Machines, Equipment groups nor Calendars', async () => {
     const { fetch } = api(['core.user:read', 'planning.productionOrder:read']);
-    renderShellAt('/plant-a/people', shellModules, { fetch });
+    renderShellAt('/plant-a/settings/people', shellModules, { fetch });
 
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     await waitFor(() => expect(linksIn(settings).length).toBeGreaterThan(0));
@@ -285,18 +284,18 @@ describe('the Settings button', () => {
     expect(linksIn(settings).map(([label]) => label)).not.toContain('Equipment groups');
   });
 
-  it('#729 a company admin, who manages the integrations, finds Warehouses in company settings, and one who only reads roles does not', async () => {
+  it("#729 a company admin, who manages the integrations, finds Warehouses among the company's settings, and one who only reads roles does not", async () => {
     const admin = api([], ['core.role:read', 'core.integration:manage']);
-    renderShellAt(`/settings/${companyId}/roles`, shellModules, { fetch: admin.fetch });
-    const settings = await screen.findByRole('navigation', { name: 'Company settings' });
+    renderShellAt('/plant-a/settings/roles', shellModules, { fetch: admin.fetch });
+    const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     await waitFor(() =>
-      expect(linksIn(settings)).toContainEqual(['Warehouses', `/settings/${companyId}/warehouses`]),
+      expect(linksIn(settings)).toContainEqual(['Warehouses', '/plant-a/settings/warehouses']),
     );
 
     cleanup();
     const reader = api([], ['core.role:read']);
-    renderShellAt(`/settings/${companyId}/roles`, shellModules, { fetch: reader.fetch });
-    const readerSettings = await screen.findByRole('navigation', { name: 'Company settings' });
+    renderShellAt('/plant-a/settings/roles', shellModules, { fetch: reader.fetch });
+    const readerSettings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     await waitFor(() => expect(linksIn(readerSettings).length).toBeGreaterThan(0));
     expect(linksIn(readerSettings).map(([label]) => label)).not.toContain('Warehouses');
   });

@@ -5,7 +5,7 @@ description: Create users with a temporary password, give and remove roles at th
 
 What a user may do in NorthMES comes from their roles. A role is a named set of permissions, and a user holds a role at a place: at the company, where it applies at every plant of the company, or at one plant. A role at one plant grants nothing at the company or at other plants.
 
-Users and roles live in company settings, at `/settings/<company id>/users` and `/settings/<company id>/roles`. A plant's own people live in plant settings, under **People**. See [Companies and plants](/use/companies-and-plants#settings) for the way there.
+Users and roles are the company's settings, which open under any of its plants, such as `/plant-a/settings/users` and `/plant-a/settings/roles`, in the group **<Company> settings** at the end of the settings navigation. A plant's own people live in the plant's settings, under **People**, at `/plant-a/settings/people`. See [Companies and plants](/use/companies-and-plants#settings) for the way there.
 
 ## Default roles
 
@@ -20,7 +20,7 @@ Each company has the default roles of its modules. A default role cannot be edit
 
 ## Permissions
 
-Each permission has an id, such as `core.article:read`, which the role pages show beside its plain name. At a plant, a permission counts through a role at that plant or at the company. Company settings check permissions at the company, so only roles at the company count there. The company-level permissions count only through a role at the company.
+Each permission has an id, such as `core.article:read`, which the role pages show beside its plain name. At a plant, a permission counts through a role at that plant or at the company. The company's settings pages check permissions at the company, so only roles at the company count there. The company-level permissions count only through a role at the company.
 
 | Permission | What it allows | Where it counts |
 |---|---|---|
@@ -55,7 +55,7 @@ When a role is out of your reach, the role list still shows it, disabled, with t
 
 ## Users
 
-![The users of the company in company settings, with their roles as chips and their status](/images/use/users.png)
+![The users of the company in the company's settings, with their roles as chips and their status](/images/use/users.png)
 
 The **Users** list shows each user's name, username, roles with their places, and status, 25 to a page. **Search users** finds a user by name or username, and the **Role** and **Status** filters narrow the list. **Name** and **Username** sort it. The search, filters, sort and page are part of the address, so a copied link shows the same rows.
 
@@ -139,9 +139,9 @@ A role's page has two tabs: **Permissions**, by module with each permission's id
 
 - **Add role** gives a user of the company a role at this plant. **Person** searches the company's users by name or username.
 - **Remove** takes a role at this plant away, after the same dialog as on a user's page.
-- A person's page shows their roles at the plant and at the company, and what they can do at the plant. Roles at the company are given and removed in company settings.
+- A person's page shows their roles at the plant and at the company, and what they can do at the plant. Roles at the company are given and removed on the user's page under **Users**.
 
-Blocking users and resetting passwords stay in company settings.
+Blocking users and resetting passwords stay under **Users**.
 
 ## Limits in release 0.1.0
 

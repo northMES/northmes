@@ -26,7 +26,7 @@ function field(name: string, role: 'textbox' | 'combobox' = 'textbox') {
 
 describe("the plant's own page in plant settings (design #767, PP1 to PP7)", () => {
   it("PP1 shows the name editable, the slug read-only, and the zone and the day start fixed since the plant's first calendar version", async () => {
-    renderCoreAt(coreLinks.plant({ plant }).href, []);
+    renderCoreAt(coreLinks.settings.plant({ plant }).href, []);
     await screen.findByRole('heading', { level: 1, name: 'Plant' });
 
     expect(screen.getByText('Plant A, plant-a')).toBeTruthy();
@@ -50,7 +50,7 @@ describe("the plant's own page in plant settings (design #767, PP1 to PP7)", () 
   });
 
   it('PP4 a plant without a calendar version takes a zone and a day start, and refuses 02:30 in Europe/Stockholm (ADR 0025, CAL8)', async () => {
-    renderCoreAt(coreLinks.plant({ plant }, { preview: 'noCalendar' }).href, []);
+    renderCoreAt(coreLinks.settings.plant({ plant }, { preview: 'noCalendar' }).href, []);
     await screen.findByRole('heading', { level: 1, name: 'Plant' });
 
     expect(field('Time zone', 'combobox').value).toBe('Europe/Stockholm');
@@ -84,7 +84,7 @@ describe("the plant's own page in plant settings (design #767, PP1 to PP7)", () 
   });
 
   it('PP1 at another plant than the fixture names the fixture instead of showing Plant A as this plant', async () => {
-    renderCoreAt(coreLinks.plant({ plant: 'plant-b' }).href, []);
+    renderCoreAt(coreLinks.settings.plant({ plant: 'plant-b' }).href, []);
     await screen.findByRole('heading', { level: 1, name: 'Plant' });
 
     expect(await screen.findByText(/^The mock data holds Plant A only, at plant-a\./)).toBeTruthy();
@@ -93,8 +93,10 @@ describe("the plant's own page in plant settings (design #767, PP1 to PP7)", () 
 
   it('PP4 the other plant settings pages ignore the noCalendar preview', async () => {
     renderCoreAt(
-      coreLinks.machines.machine.edit({ plant, equipmentId: 'CNC1' }, { preview: 'noCalendar' })
-        .href,
+      coreLinks.settings.machines.machine.edit(
+        { plant, equipmentId: 'CNC1' },
+        { preview: 'noCalendar' },
+      ).href,
       [],
     );
     await screen.findByRole('heading', { level: 1, name: 'Edit machine CNC1' });
@@ -103,16 +105,16 @@ describe("the plant's own page in plant settings (design #767, PP1 to PP7)", () 
   });
 
   it('PP5 to PP7 the preview key opens the loading, failed and no-access states on mock data', async () => {
-    renderCoreAt(coreLinks.plant({ plant }, { preview: 'loading' }).href, []);
+    renderCoreAt(coreLinks.settings.plant({ plant }, { preview: 'loading' }).href, []);
     expect(await screen.findByText('Loading the plant.')).toBeTruthy();
     cleanup();
 
-    renderCoreAt(coreLinks.plant({ plant }, { preview: 'error' }).href, []);
+    renderCoreAt(coreLinks.settings.plant({ plant }, { preview: 'error' }).href, []);
     expect(await screen.findByText('Could not load the plant')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
     cleanup();
 
-    renderCoreAt(coreLinks.plant({ plant }, { preview: 'forbidden' }).href, []);
+    renderCoreAt(coreLinks.settings.plant({ plant }, { preview: 'forbidden' }).href, []);
     expect(await screen.findByText('You need the permission to change this plant')).toBeTruthy();
     expect(screen.queryByRole('textbox', { name: 'Name' })).toBeNull();
   });

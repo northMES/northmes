@@ -9,7 +9,6 @@ import {
   catalogQuery,
   companiesQuery,
   companyAdminRole,
-  companyId,
   forbiddenError,
   groupedRows,
   inCompany,
@@ -36,7 +35,7 @@ const kanbanReader = role('Kanban reader', ['kanban.board:read']);
 
 describe('roles', () => {
   it('E05-S06 the roles list is one table with the custom roles of the company, then the default roles from modules, each group with its count, who defines each role, how many of the installed permissions it holds and how many people hold it, a footer, and New role for a user who may manage roles', async () => {
-    renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.roles({ plant: 'plant-a' }).href, [
       managerQuery(),
       companiesQuery(),
       rolesQuery([kanbanReader, shiftLead, planner, viewerRole]),
@@ -79,15 +78,15 @@ describe('roles', () => {
     expect(screen.getByText('2 groups, 4 roles')).toBeDefined();
     expect(await screen.findByText('4 roles at Acme AB')).toBeDefined();
     expect((await screen.findByRole('link', { name: 'New role' })).getAttribute('href')).toBe(
-      coreLinks.settings.roles.new({ companyId }).href,
+      coreLinks.settings.roles.new({ plant: 'plant-a' }).href,
     );
     expect(screen.getByRole('link', { name: 'Shift lead' }).getAttribute('href')).toBe(
-      coreLinks.settings.roles.role({ companyId, roleId: shiftLead.id }).href,
+      coreLinks.settings.roles.role({ plant: 'plant-a', roleId: shiftLead.id }).href,
     );
   });
 
   it("E05-S06 the roles list shows core's Company admin and Plant admin like the other default roles", async () => {
-    renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.roles({ plant: 'plant-a' }).href, [
       managerQuery(),
       companiesQuery(),
       rolesQuery([companyAdminRole, plantAdminRole, planner, viewerRole]),
@@ -117,13 +116,13 @@ describe('roles', () => {
       ]),
     );
     expect(screen.getByRole('link', { name: 'Plant admin' }).getAttribute('href')).toBe(
-      coreLinks.settings.roles.role({ companyId, roleId: plantAdminRole.id }).href,
+      coreLinks.settings.roles.role({ plant: 'plant-a', roleId: plantAdminRole.id }).href,
     );
   });
 
   it('E05-S06 Search roles, Defined by and the sort on Role filter and order the groups, and live in the URL, which opens the same view again', async () => {
     const user = userEvent.setup();
-    const router = renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+    const router = renderCoreAt(coreLinks.settings.roles({ plant: 'plant-a' }).href, [
       managerQuery(),
       companiesQuery(),
       rolesQuery([kanbanReader, shiftLead, planner, viewerRole]),
@@ -167,7 +166,7 @@ describe('roles', () => {
 
     cleanup();
     renderCoreAt(
-      `${coreLinks.settings.roles({ companyId }).href}?q=lead&definedBy=custom&sort=-name`,
+      `${coreLinks.settings.roles({ plant: 'plant-a' }).href}?q=lead&definedBy=custom&sort=-name`,
       [
         managerQuery(),
         companiesQuery(),
@@ -192,7 +191,7 @@ describe('roles', () => {
       moduleId: 'quality-control',
     });
     const router = renderCoreAt(
-      `${coreLinks.settings.roles({ companyId }).href}?definedBy=quality-control`,
+      `${coreLinks.settings.roles({ plant: 'plant-a' }).href}?definedBy=quality-control`,
       [
         managerQuery(),
         companiesQuery(),
@@ -212,7 +211,7 @@ describe('roles', () => {
 
   it('E05-S06 the row menu of a custom role offers Edit role and New role from it: Enter opens it with focus on the first item, the arrows move, and Escape returns focus to its button (RO35)', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.roles({ plant: 'plant-a' }).href, [
       managerQuery(),
       companiesQuery(),
       rolesQuery([shiftLead, planner]),
@@ -246,7 +245,7 @@ describe('roles', () => {
 
   it('E05-S06 the row menu of a default role offers New role from it, which opens New role starting from it; Company admin and a reader without core.role:manage get no menu (RO37)', async () => {
     const user = userEvent.setup();
-    const router = renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+    const router = renderCoreAt(coreLinks.settings.roles({ plant: 'plant-a' }).href, [
       managerQuery(),
       companiesQuery(),
       rolesQuery([companyAdminRole, planner]),
@@ -266,12 +265,12 @@ describe('roles', () => {
     await user.click(within(menu).getByRole('menuitem', { name: 'New role from Planner' }));
     await waitFor(() =>
       expect(router.state.location.href).toBe(
-        coreLinks.settings.roles.new({ companyId }, { from: planner.id }).href,
+        coreLinks.settings.roles.new({ plant: 'plant-a' }, { from: planner.id }).href,
       ),
     );
 
     cleanup();
-    renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.roles({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.role:read']),
       companiesQuery(),
       rolesQuery([shiftLead, planner]),
@@ -283,7 +282,7 @@ describe('roles', () => {
 
   it('E05-S06 a search that matches no role says so and Clear filters shows every role again', async () => {
     const user = userEvent.setup();
-    renderCoreAt(`${coreLinks.settings.roles({ companyId }).href}?q=zz`, [
+    renderCoreAt(`${coreLinks.settings.roles({ plant: 'plant-a' }).href}?q=zz`, [
       managerQuery(),
       companiesQuery(),
       rolesQuery([shiftLead, planner]),
@@ -305,7 +304,7 @@ describe('roles', () => {
     const user = userEvent.setup();
     setViewport(320, 640);
     try {
-      const router = renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+      const router = renderCoreAt(coreLinks.settings.roles({ plant: 'plant-a' }).href, [
         managerQuery(),
         companiesQuery(),
         rolesQuery([shiftLead, planner, viewerRole]),
@@ -327,7 +326,7 @@ describe('roles', () => {
   });
 
   it('E05-S06 a reader without core.role:manage at Acme AB gets no New role, and a line says what it needs', async () => {
-    renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.roles({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.role:read']),
       companiesQuery(),
       rolesQuery([shiftLead]),
@@ -341,8 +340,8 @@ describe('roles', () => {
     expect(screen.queryByRole('link', { name: 'New role' })).toBeNull();
   });
 
-  it('E05-S06 a reader without core.role:read gets the page No access to Roles: the h1, the permission it needs at the company, no data and a way out to company settings', async () => {
-    renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+  it('E05-S06 a reader without core.role:read gets the page No access to Roles: the h1, the permission it needs at the company, no data and a way out to the settings landing', async () => {
+    renderCoreAt(coreLinks.settings.roles({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read']),
       companiesQuery(),
       {
@@ -362,16 +361,16 @@ describe('roles', () => {
     ).toBeDefined();
     expect(screen.queryByRole('table')).toBeNull();
     // A page opened by URL may have no page before it, so the way out is a link, not a step back.
-    // The landing goes on to the first page the user may open (#876).
-    expect(screen.getByRole('link', { name: 'Go to Company settings' }).getAttribute('href')).toBe(
-      `/settings/${companyId}`,
+    // The settings landing goes on to the first settings page the user may open (#876).
+    expect(screen.getByRole('link', { name: 'Go to Settings' }).getAttribute('href')).toBe(
+      '/plant-a/settings',
     );
   });
 
   it("E05-S06 a role's page lists its permissions by module, and Holders, read only, who holds it at the company and at each plant; the open tab lives in the URL", async () => {
     const user = userEvent.setup();
     const router = renderCoreAt(
-      coreLinks.settings.roles.role({ companyId, roleId: shiftLead.id }).href,
+      coreLinks.settings.roles.role({ plant: 'plant-a', roleId: shiftLead.id }).href,
       [managerQuery(), companiesQuery(), roleQuery(shiftLead)],
     );
 
@@ -381,7 +380,7 @@ describe('roles', () => {
     expect(within(permissions).getByRole('heading', { level: 3, name: 'Planning' })).toBeDefined();
     expect(within(permissions).getByText('Release production orders to the floor')).toBeDefined();
     expect((await screen.findByRole('link', { name: 'Edit role' })).getAttribute('href')).toBe(
-      coreLinks.settings.roles.role.edit({ companyId, roleId: shiftLead.id }).href,
+      coreLinks.settings.roles.role.edit({ plant: 'plant-a', roleId: shiftLead.id }).href,
     );
 
     const tab = screen.getByRole('tab', { name: 'Permissions' });
@@ -416,7 +415,7 @@ describe('roles', () => {
       ['Anna Berg', 'a.berg'],
     ]);
     expect(within(table).getByRole('link', { name: 'Sara Nyberg' }).getAttribute('href')).toBe(
-      coreLinks.settings.users.user({ companyId, userId: sara.id }, { tab: 'access' }).href,
+      coreLinks.settings.users.user({ plant: 'plant-a', userId: sara.id }, { tab: 'access' }).href,
     );
     expect(within(holders).queryByRole('button')).toBeNull();
     // Every place of the company has its card here, so the note says only where roles change.
@@ -426,7 +425,7 @@ describe('roles', () => {
   });
 
   it('E05-S06 a default role cannot be edited: its page offers New role from it and says why', async () => {
-    renderCoreAt(coreLinks.settings.roles.role({ companyId, roleId: planner.id }).href, [
+    renderCoreAt(coreLinks.settings.roles.role({ plant: 'plant-a', roleId: planner.id }).href, [
       managerQuery(),
       companiesQuery(),
       roleQuery(planner),
@@ -436,7 +435,7 @@ describe('roles', () => {
     expect(screen.getByText('Planning, default role')).toBeDefined();
     expect(
       (await screen.findByRole('link', { name: 'New role from Planner' })).getAttribute('href'),
-    ).toBe(coreLinks.settings.roles.new({ companyId }, { from: planner.id }).href);
+    ).toBe(coreLinks.settings.roles.new({ plant: 'plant-a' }, { from: planner.id }).href);
     // New role from Planner shows once the reader's permissions arrived, so Edit role would too.
     expect(screen.queryByRole('link', { name: 'Edit role' })).toBeNull();
     expect(
@@ -448,7 +447,8 @@ describe('roles', () => {
 
   it('E05-S06 nobody holds a role: each place keeps its card with one empty line and no table (RO25)', async () => {
     renderCoreAt(
-      coreLinks.settings.roles.role({ companyId, roleId: planner.id }, { tab: 'holders' }).href,
+      coreLinks.settings.roles.role({ plant: 'plant-a', roleId: planner.id }, { tab: 'holders' })
+        .href,
       [managerQuery(), companiesQuery(), roleQuery(planner)],
     );
 
@@ -466,11 +466,10 @@ describe('roles', () => {
   });
 
   it('E05-S06 Company admin offers no New role from it while question 34 is open, and says why it cannot be changed', async () => {
-    renderCoreAt(coreLinks.settings.roles.role({ companyId, roleId: companyAdminRole.id }).href, [
-      managerQuery(),
-      companiesQuery(),
-      roleQuery(companyAdminRole),
-    ]);
+    renderCoreAt(
+      coreLinks.settings.roles.role({ plant: 'plant-a', roleId: companyAdminRole.id }).href,
+      [managerQuery(), companiesQuery(), roleQuery(companyAdminRole)],
+    );
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Company admin' })).toBeDefined();
     expect(screen.getByText('Core, default role')).toBeDefined();
@@ -484,7 +483,7 @@ describe('roles', () => {
   });
 
   it('E05-S06 Start from on New role does not offer Company admin while question 34 is open', async () => {
-    renderCoreAt(coreLinks.settings.roles.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.roles.new({ plant: 'plant-a' }).href, [
       managerQuery(),
       companiesQuery(),
       rolesQuery([shiftLead, companyAdminRole, planner]),

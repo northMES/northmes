@@ -185,7 +185,7 @@ describe('checkCatalog', () => {
     ]);
   });
 
-  it('E04-S02 module ids that are top-level web path segments of core or the shell are refused as reserved, and the message names the id (ADR 0074)', () => {
+  it('#876 module ids that are top-level web path segments of core or the shell, at the plant root or the settings root, are refused as reserved, and the message names the id (ADR 0074)', () => {
     const error = refusal([
       core,
       inRepoModule('articles', ['core']),
@@ -198,11 +198,11 @@ describe('checkCatalog', () => {
 
     expect(error.problems).toEqual([
       'Module id "articles" is reserved: /$plant/articles is a core web path segment',
-      'Module id "people" is reserved: /$plant/people is a core web path segment',
-      'Module id "users" is reserved: /settings/$companyId/users is a core web path segment',
-      'Module id "roles" is reserved: /settings/$companyId/roles is a core web path segment',
+      'Module id "people" is reserved: /$plant/settings/people is a core web path segment',
+      'Module id "users" is reserved: /$plant/settings/users is a core web path segment',
+      'Module id "roles" is reserved: /$plant/settings/roles is a core web path segment',
       'Module id "all-pages" is reserved: /$plant/all-pages is a shell web path segment',
-      'Module id "settings" is reserved: /settings is a shell web path segment',
+      'Module id "settings" is reserved: /$plant/settings is a shell web path segment',
     ]);
   });
 

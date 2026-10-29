@@ -15,7 +15,7 @@ afterEach(cleanup);
 
 /** Renders the planning rules page of Plant A, with a page state the URL previews. */
 function renderRules(rules: PlanningRulesStore = createG1PlanningRulesStore(), preview?: string) {
-  const href = planningLinks.settings({ plant }).href;
+  const href = planningLinks.settings.rules({ plant }).href;
   renderPlanningAt(
     preview === undefined ? href : `${href}?preview=${preview}`,
     undefined,

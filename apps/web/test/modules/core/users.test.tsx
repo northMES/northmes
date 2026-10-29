@@ -5,7 +5,6 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { CoreCompanies } from '../../../src/modules/core/companies.graphql.ts';
 import { CoreCreateUser } from '../../../src/modules/core/screens/new-user/create-user.graphql.ts';
 import { CoreUserPermissions } from '../../../src/modules/core/screens/user/user-permissions.graphql.ts';
 import { CoreUsers } from '../../../src/modules/core/screens/users/users.graphql.ts';
@@ -87,7 +86,7 @@ function field(name: string): HTMLInputElement {
 
 describe('users', () => {
   it('E04-S02 the users list in company settings shows each user with their username, their roles per place and their status, and New user for a user who may create users', async () => {
-    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
       usersQuery([
@@ -112,16 +111,16 @@ describe('users', () => {
       ).toEqual(['Name', 'Username', 'Roles', 'Status']),
     );
     expect(screen.getByRole('link', { name: 'Sara Nyberg' }).getAttribute('href')).toBe(
-      coreLinks.settings.users.user({ companyId, userId: sara.id }).href,
+      coreLinks.settings.users.user({ plant: 'plant-a', userId: sara.id }).href,
     );
     expect((await screen.findByRole('link', { name: 'New user' })).getAttribute('href')).toBe(
-      coreLinks.settings.users.new({ companyId }).href,
+      coreLinks.settings.users.new({ plant: 'plant-a' }).href,
     );
   });
 
   it('E06-S06 while a search of users loads, the list keeps the users it shows and is busy, with focus in the field (ui-222, LI7)', async () => {
     const events = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read']),
       companiesQuery(),
       usersQuery([user(anna, []), user(sara, [])]),
@@ -144,7 +143,7 @@ describe('users', () => {
 
   it('E06-S06 a new search from No users match this search keeps that state, busy, until its users arrive, with no skeleton rows in between', async () => {
     const events = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read']),
       companiesQuery(),
       usersQuery([user(anna, []), user(sara, [])]),
@@ -170,7 +169,7 @@ describe('users', () => {
   });
 
   it('E05-S08 a reader without core.user:read at the company gets the page No access to Users', async () => {
-    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users({ plant: 'plant-a' }).href, [
       settingsViewerQuery([]),
       companiesQuery(),
       {
@@ -191,7 +190,7 @@ describe('users', () => {
   });
 
   it('E05-S08 New user needs core.user:create at the company: a reader of users without it gets the page No access to New user, and the list shows no New user', async () => {
-    const router = renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    const router = renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read']),
       companiesQuery(),
       usersQuery([user(sara, [])]),
@@ -207,14 +206,14 @@ describe('users', () => {
     ).toBeDefined();
     expect(screen.queryByRole('textbox', { name: 'Name' })).toBeNull();
 
-    await router.navigate({ to: coreLinks.settings.users({ companyId }).href });
+    await router.navigate({ to: coreLinks.settings.users({ plant: 'plant-a' }).href });
     expect(await screen.findByRole('link', { name: 'Sara Nyberg' })).toBeDefined();
     expect(screen.queryByRole('link', { name: 'New user' })).toBeNull();
   });
 
   it('E05-S08 Create user with empty fields shows each message in the summary, which takes focus, and sends nothing', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
     ]);
@@ -230,7 +229,7 @@ describe('users', () => {
   });
 
   it('E05-S08 New user requires Email, the address the user signs in with, and offers no way to leave it empty', async () => {
-    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
     ]);
@@ -249,7 +248,7 @@ describe('users', () => {
 
   it('E05-S08 a username that is taken or was used before lands on Username with the typed values kept', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
       {
@@ -302,7 +301,7 @@ describe('users', () => {
   it("E05-S08 a retry whose first run created the user says the user was created without a password to show and opens the user's page", async () => {
     const user = userEvent.setup();
     const tove = idOf('tove');
-    const router = renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    const router = renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
       {
@@ -346,7 +345,7 @@ describe('users', () => {
 
     await waitFor(() =>
       expect(router.state.location.pathname).toBe(
-        coreLinks.settings.users.user({ companyId, userId: tove }).href,
+        coreLinks.settings.users.user({ plant: 'plant-a', userId: tove }).href,
       ),
     );
     expect(screen.queryByRole('alertdialog')).toBeNull();
@@ -360,7 +359,7 @@ describe('users', () => {
       name: 'Tove Lindqvist',
       username: 't.lindqvist',
     } as const;
-    const router = renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    const router = renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
       {
@@ -400,7 +399,7 @@ describe('users', () => {
       name: 'Temporary password for Tove Lindqvist',
     });
     expect(router.state.location.pathname).toBe(
-      coreLinks.settings.users.user({ companyId, userId: tove.id }).href,
+      coreLinks.settings.users.user({ plant: 'plant-a', userId: tove.id }).href,
     );
     expect(
       (within(dialog).getByRole('textbox', { name: 'Temporary password' }) as HTMLInputElement)
@@ -450,7 +449,7 @@ describe('users', () => {
 
   it("E05-S08 each user's row has an Actions menu that opens with focus on its first item and closes with Escape back on its button, and your own row has none", async () => {
     const events = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users({ plant: 'plant-a' }).href, [
       settingsViewerQuery(userAdmin),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
@@ -481,7 +480,7 @@ describe('users', () => {
 
   it('E05-S08 the row menu shows each item by permission, and a reader who may do neither gets no menu', async () => {
     const events = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:block']),
       companiesQuery(),
       usersQuery(listed),
@@ -494,7 +493,7 @@ describe('users', () => {
     // A reader's answer renders nothing else on the list, so the users wait for it: the rows show
     // with the permissions known.
     renderCoreAt(
-      coreLinks.settings.users({ companyId }).href,
+      coreLinks.settings.users({ plant: 'plant-a' }).href,
       [settingsViewerQuery(['core.user:read']), companiesQuery(), usersQuery(listed)],
       { hold: answeredAfter('CoreViewer', 'CoreUsers') },
     );
@@ -504,7 +503,7 @@ describe('users', () => {
 
   it("E05-S08 Reset password from a row's menu opens the same dialogs as the user's page, and Done returns focus to the row's Actions button", async () => {
     const events = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users({ plant: 'plant-a' }).href, [
       settingsViewerQuery(userAdmin),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
@@ -546,7 +545,7 @@ describe('users', () => {
 
   it("E05-S08 a dialog of a row's menu opens without the reason and the error of its last opening", async () => {
     const events = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users({ plant: 'plant-a' }).href, [
       settingsViewerQuery(userAdmin),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
@@ -585,7 +584,7 @@ describe('users', () => {
 
   it('E05-S08 the Role and Status filters narrow the list and live in the URL', async () => {
     const events = userEvent.setup();
-    const router = renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+    const router = renderCoreAt(coreLinks.settings.users({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read', 'core.role:read']),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
@@ -616,7 +615,7 @@ describe('users', () => {
 
   it('E05-S08 Name sorts ascending by default, and Username sorts the list either way, kept in the URL', async () => {
     const events = userEvent.setup();
-    const router = renderCoreAt(coreLinks.settings.users({ companyId }).href, [
+    const router = renderCoreAt(coreLinks.settings.users({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read']),
       companiesQuery(),
       usersQuery([user(anna, []), user(sara, [])]),
@@ -649,7 +648,7 @@ describe('users', () => {
 
   it('E05-S08 a URL with a role, a status and a sort opens the list filtered and sorted that way', async () => {
     renderCoreAt(
-      `${coreLinks.settings.users({ companyId }).href}?role=${shiftLead.id}&status=active&sort=-name`,
+      `${coreLinks.settings.users({ plant: 'plant-a' }).href}?role=${shiftLead.id}&status=active&sort=-name`,
       [
         settingsViewerQuery(['core.user:read', 'core.role:read']),
         companiesQuery(),
@@ -679,7 +678,7 @@ describe('users', () => {
       name: 'Tove Lindqvist',
       username: 't.lindqvist',
     } as const;
-    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
       {
@@ -731,7 +730,7 @@ describe('users', () => {
 
   it('E05-S08 Create user with an empty username says Enter a username', async () => {
     const events = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
     ]);
@@ -785,7 +784,7 @@ describe('users', () => {
       name: 'Tove Lindqvist',
       username: 't.lindqvist',
     } as const;
-    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(creator),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
@@ -836,7 +835,7 @@ describe('users', () => {
       name: 'Tove Lindqvist',
       username: 't.lindqvist',
     } as const;
-    const router = renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    const router = renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(creator),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
@@ -874,7 +873,7 @@ describe('users', () => {
       await screen.findByRole('dialog', { name: 'Temporary password for Tove Lindqvist' }),
     ).toBeDefined();
 
-    await router.navigate({ to: coreLinks.settings.roles({ companyId }).href });
+    await router.navigate({ to: coreLinks.settings.roles({ plant: 'plant-a' }).href });
     const table = await screen.findByRole('table', { name: 'Roles' });
     await waitFor(() =>
       expect(groupedRows(table)[1]?.[1].map((row) => row.slice(0, 4))).toEqual([
@@ -885,7 +884,7 @@ describe('users', () => {
 
   it('E05-S08 a role the server refuses at the place lands on Role with every value kept', async () => {
     const events = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(creator),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
@@ -930,7 +929,7 @@ describe('users', () => {
 
   it('E05-S08 a role chosen with Where left empty lands on Where with the role kept, and New user sends nothing', async () => {
     const events = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(creator),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
@@ -951,7 +950,7 @@ describe('users', () => {
 
   it("E05-S08 Where's message describes each choice of Where while it shows", async () => {
     const events = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(creator),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
@@ -983,62 +982,6 @@ describe('users', () => {
     ]);
   });
 
-  it('E05-S08 with the company as the only place, Role locks the roles the creator cannot give there, and a refusal names the company', async () => {
-    const events = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
-      settingsViewerQuery(creator),
-      {
-        request: { query: CoreCompanies },
-        result: {
-          data: {
-            coreCompanies: [{ __typename: 'Company', id: acme.id, name: 'Acme AB', plants: [] }],
-          },
-        },
-      },
-      rolesQuery([shiftLead, viewerRole]),
-      catalogQuery(),
-      {
-        request: {
-          query: CoreCreateUser,
-          variables: ({ input }: { input: Record<string, string> }) =>
-            input.roleId === viewerRole.id && input.scopeId === acme.id,
-        },
-        result: {
-          data: null,
-          errors: [
-            {
-              message: 'You do not hold it.',
-              path: ['coreCreateUser'],
-              extensions: {
-                code: 'FORBIDDEN',
-                errorCode: 'core.role_not_held',
-                details: { missingPermissions: ['planning.productionOrder:read'] },
-              },
-            },
-          ],
-        },
-      },
-    ]);
-
-    const section = await screen.findByRole('region', { name: 'Role and place' });
-    expect(within(section).getByText('The role applies at Acme AB.')).toBeDefined();
-    expect(
-      within(section).getByText(
-        'Checked when you add it: you need every permission of the role at Acme AB.',
-      ),
-    ).toBeDefined();
-    await typeTove(events);
-    const roles = await openRoles(events, section);
-    expect(roleOption(roles, 'Shift lead').getAttribute('aria-disabled')).toBe('true');
-    await events.click(roleOption(roles, 'Viewer'));
-    await events.click(screen.getByRole('button', { name: 'Create user' }));
-
-    const summary = await screen.findByRole('group', { name: 'Fix 1 field to create the user' });
-    expect(within(summary).getByRole('link').textContent).toMatch(
-      /^You cannot assign Viewer at Acme AB\. It includes 1 permission you do not hold at Acme AB/,
-    );
-  });
-
   it('E05-S08 a Role typed into and cleared again counts as no role, and New user creates the user without one', async () => {
     const events = userEvent.setup();
     const tove = {
@@ -1047,7 +990,7 @@ describe('users', () => {
       name: 'Tove Lindqvist',
       username: 't.lindqvist',
     } as const;
-    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(creator),
       companiesQuery(),
       rolesQuery([shiftLead, viewerRole]),
@@ -1086,7 +1029,7 @@ describe('users', () => {
   });
 
   it('E05-S08 New user shows no Role and place to a creator who may not assign roles', async () => {
-    renderCoreAt(coreLinks.settings.users.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:create']),
       companiesQuery(),
     ]);

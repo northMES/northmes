@@ -1,6 +1,6 @@
 ---
 title: Companies and plants
-description: How a NorthMES company and its plants relate, where company settings and plant settings live, and the host commands that create a company and recover its admin.
+description: How a NorthMES company and its plants relate, where the plant's and the company's settings live, and the host commands that create a company and recover its admin.
 ---
 
 A company is the business that uses NorthMES. It owns its plants, its articles and article groups, its users and its roles. A plant is one production site of the company. One installation can hold several companies, and each user sees only the companies where they hold a role.
@@ -13,12 +13,12 @@ Each plant has a short name in its address, its slug, such as `plant-a` in `http
 
 ## Settings
 
-The **Settings** button (the gear in the top bar) leads to the settings you may open:
+The **Settings** button (the gear in the top bar) opens the settings of the plant you are at, on the first settings page you may open. Every settings page sits under the plant's settings, such as `/plant-a/settings/people`, and `/plant-a/settings` itself opens the first page you may open. On a settings page the sidebar collapses to its icons, and the settings navigation sits beside the page:
 
-- **Plant settings** hold **People**, who holds a role at the plant. They open from the gear at a plant, for a user who may read users there. Their navigation ends with the company's settings as a group, with the company's pages you may open as its entries.
-- **Company settings** hold **Users** and **Roles**, and **Warehouses** for a user who manages the integrations. Their addresses start with `/settings/<company id>`, and that address itself opens the first page you may open. They have no plant, so the sidebar is replaced by the company settings navigation, with **Back to** the plant you came from above it.
+- The plant's settings come first, such as **People**, who holds a role at the plant.
+- The navigation ends with the group **<Company> settings**, named after your company, with the company's pages you may open: **Users** and **Roles**, and **Warehouses** for a user who manages the integrations, such as `/plant-a/settings/users`. These pages show the whole company, whichever of its plants you opened them from.
 
-The navigations list only the pages you may open. A page you may not open says so and names the permission it needs.
+On **Your plants**, each company also has a **<Company> settings** link to the first of its pages you may open. The navigation lists only the pages you may open. A page you may not open says so and names the permission it needs.
 
 ## Create a company
 
@@ -37,7 +37,7 @@ To see the companies of the installation, with their ids, their number of plants
 docker compose run --rm app company list
 ```
 
-The id is the one in the company settings address.
+Older addresses that start with `/settings/<company id>` lead to the same page under the settings of the company's first plant.
 
 ## When a company has no admin left
 
@@ -60,6 +60,5 @@ Every command that changes data requires `--reason`. `company list` only reads a
 
 ## Limits in release 0.1.0
 
-- Neither the web app nor the host commands can add a plant, so a company created with `company create` has no plants. Its admin can manage users and roles in company settings, but cannot open a plant's pages.
-- Company settings have no page to rename the company or to list its plants.
-- The company settings address uses the company id, which `company list` prints.
+- Neither the web app nor the host commands can add a plant, so a company created with `company create` has no plants. The company's settings pages sit under its plants, so its admin can open neither a plant's pages nor the company's users and roles in the web app.
+- The company's settings have no page to rename the company or to list its plants.

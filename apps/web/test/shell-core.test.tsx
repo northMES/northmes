@@ -7,7 +7,6 @@ import { shellModules } from '../src/modules.ts';
 import { wayOutOf } from '../src/shell/shell-pages.ts';
 import {
   companies,
-  companyId,
   crumbs,
   equipment,
   fakeApi,
@@ -83,7 +82,7 @@ describe("core's pages at the plant root (ADR 0074)", () => {
   });
 
   it('E04-S02 the breadcrumb of a core plant settings page reads Plant A, Settings, then the page', async () => {
-    renderShellAt('/plant-a/people', shellModules, { fetch: api().fetch });
+    renderShellAt('/plant-a/settings/people', shellModules, { fetch: api().fetch });
     await screen.findByRole('navigation', { name: 'Plant A settings' });
 
     await waitFor(() => expect(crumbs()).toEqual(['Plant A', 'Settings', 'People']));
@@ -115,20 +114,15 @@ describe("core's pages at the plant root (ADR 0074)", () => {
     expect(document.title).toBe('Page not found · Plant A · NorthMES');
   });
 
-  it('E04-S02 the way out of a company settings page that failed is the first company settings entry other than the page, and the landing without one (#876)', () => {
-    expect(wayOutOf(shellModules, { companyId }, `/settings/${companyId}/users`)).toEqual({
-      label: 'Go to Roles',
-      href: `/settings/${companyId}/roles`,
+  it("#876 the way out of a page of the company's settings that failed is core's first entry, as on every core page", () => {
+    expect(wayOutOf(shellModules, { plant: 'plant-a' }, '/plant-a/settings/users')).toEqual({
+      label: 'Go to Dashboard',
+      href: '/plant-a',
     });
-    expect(wayOutOf(shellModules, { companyId }, `/settings/${companyId}/roles`)).toEqual({
-      label: 'Go to Users',
-      href: `/settings/${companyId}/users`,
+    expect(wayOutOf(shellModules, { plant: 'plant-a' }, '/plant-a/settings/roles/new')).toEqual({
+      label: 'Go to Dashboard',
+      href: '/plant-a',
     });
-    expect(wayOutOf([], { companyId }, `/settings/${companyId}/reports`)).toEqual({
-      label: 'Go to Company settings',
-      href: `/settings/${companyId}`,
-    });
-    expect(wayOutOf([], { companyId }, `/settings/${companyId}`)).toBeUndefined();
   });
 
   it("E04-S02 the way out of a core page that failed is core's first entry, or See all pages on that entry itself", () => {
@@ -157,10 +151,10 @@ describe("core's pages at the plant root (ADR 0074)", () => {
     expect(plantB.getAttribute('href')).toBe('/plant-b/articles');
   });
 
-  it('E04-S02 company settings of core sit at the company settings root', async () => {
-    renderShellAt(`/settings/${companyId}/users`, shellModules, { fetch: api().fetch });
+  it("#876 core's settings pages sit at the settings root under the plant, the company's pages included", async () => {
+    renderShellAt('/plant-a/settings/users', shellModules, { fetch: api().fetch });
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Users' })).toBeDefined();
-    await waitFor(() => expect(crumbs()).toEqual(['Settings', 'Acme AB', 'Users']));
+    await waitFor(() => expect(crumbs()).toEqual(['Plant A', 'Settings', 'Users']));
   });
 });

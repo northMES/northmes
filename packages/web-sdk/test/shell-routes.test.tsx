@@ -25,8 +25,8 @@ const quality = defineWebModule({
 });
 
 /**
- * A core module as ADR 0074 places it: its routes and its company settings routes are pathless
- * routes, so its pages sit at /$plant/articles and /settings/$companyId/users.
+ * A core module as ADR 0074 places it: its routes and its settings routes are pathless routes, so
+ * its pages sit at /$plant/articles and /$plant/settings/users.
  */
 const core = defineWebModule({
   id: 'core',
@@ -65,15 +65,6 @@ function moduleWithId(id: string) {
 function Shell() {
   return (
     <section aria-label="Shell">
-      <Outlet />
-    </section>
-  );
-}
-
-function CompanySettings() {
-  const { companyId } = useParams({ strict: false });
-  return (
-    <section aria-label={`Settings of ${companyId}`}>
       <Outlet />
     </section>
   );
@@ -155,7 +146,7 @@ describe('createShellRoutes', () => {
     expect(seen).toEqual(['/plant-a/quality?tab=open']);
   });
 
-  it("E04-S02 a module's settingsRoutes mount under /settings/$companyId/<id> inside the settings component, beside the shell's landing", async () => {
+  it("#876 a module's settingsRoutes mount under /$plant/settings/<id> inside the plant component, beside the shell's settings landing", async () => {
     const seen: string[] = [];
     const withSettings = defineWebModule({
       ...quality,
@@ -171,33 +162,31 @@ describe('createShellRoutes', () => {
         modules: [withSettings],
         rootComponent: Shell,
         plantComponent: Plant,
-        settingsComponent: CompanySettings,
-        settingsIndexComponent: () => <h1>Company settings</h1>,
-        settingsBeforeLoad: ({ location }) => {
+        plantBeforeLoad: ({ location }) => {
           seen.push(location.href);
         },
+        settingsIndexComponent: () => <h1>Settings</h1>,
       });
-    const companyId = '01920000-0000-7000-8000-0000000ac3e0';
 
     const router = createRouter({
       routeTree: routeTree(),
-      history: createMemoryHistory({ initialEntries: [`/settings/${companyId}/quality`] }),
+      history: createMemoryHistory({ initialEntries: ['/plant-a/settings/quality'] }),
     });
     render(<RouterProvider router={router} />);
 
-    const settings = await screen.findByRole('region', { name: `Settings of ${companyId}` });
-    expect(within(settings).getByRole('heading', { name: 'Quality settings' })).toBeDefined();
-    expect(screen.queryByRole('region', { name: /^Plant/ })).toBeNull();
+    const plant = await screen.findByRole('region', { name: 'Plant plant-a' });
+    expect(within(plant).getByRole('heading', { name: 'Quality settings' })).toBeDefined();
 
     cleanup();
     const landing = createRouter({
       routeTree: routeTree(),
-      history: createMemoryHistory({ initialEntries: [`/settings/${companyId}`] }),
+      history: createMemoryHistory({ initialEntries: ['/plant-a/settings'] }),
     });
     render(<RouterProvider router={landing} />);
 
-    expect(await screen.findByRole('heading', { name: 'Company settings' })).toBeDefined();
-    expect(seen).toEqual([`/settings/${companyId}/quality`, `/settings/${companyId}`]);
+    const landingPlant = await screen.findByRole('region', { name: 'Plant plant-a' });
+    expect(within(landingPlant).getByRole('heading', { name: 'Settings' })).toBeDefined();
+    expect(seen).toEqual(['/plant-a/settings/quality', '/plant-a/settings']);
   });
 
   it('E04-S02 a module whose settings route path differs from its id is rejected', () => {
@@ -212,13 +201,11 @@ describe('createShellRoutes', () => {
     );
   });
 
-  it("E04-S02 core's routes mount at the plant root and its settings routes at the company settings root, without its id (ADR 0074)", async () => {
-    const companyId = '01920000-0000-7000-8000-0000000ac3e0';
+  it("#876 core's routes mount at the plant root and its settings routes at the settings root, without its id (ADR 0074)", async () => {
     const routeTree = () =>
       createShellRoutes({
         modules: [core, quality],
         plantComponent: Plant,
-        settingsComponent: CompanySettings,
       });
 
     const router = createRouter({
@@ -233,12 +220,12 @@ describe('createShellRoutes', () => {
     cleanup();
     const settings = createRouter({
       routeTree: routeTree(),
-      history: createMemoryHistory({ initialEntries: [`/settings/${companyId}/users`] }),
+      history: createMemoryHistory({ initialEntries: ['/plant-a/settings/users'] }),
     });
     render(<RouterProvider router={settings} />);
 
-    const company = await screen.findByRole('region', { name: `Settings of ${companyId}` });
-    expect(within(company).getByRole('heading', { name: 'Users' })).toBeDefined();
+    const settingsPlant = await screen.findByRole('region', { name: 'Plant plant-a' });
+    expect(within(settingsPlant).getByRole('heading', { name: 'Users' })).toBeDefined();
   });
 
   it('E04-S02 a module other than core whose routes sit at another path than its id is rejected, and so is core with a path', () => {
@@ -261,15 +248,12 @@ describe('createShellRoutes', () => {
 
   it.each([
     ['articles', 'Module id "articles" is reserved: /$plant/articles is a core web path segment'],
-    [
-      'users',
-      'Module id "users" is reserved: /settings/$companyId/users is a core web path segment',
-    ],
+    ['users', 'Module id "users" is reserved: /$plant/settings/users is a core web path segment'],
     [
       'all-pages',
       'Module id "all-pages" is reserved: /$plant/all-pages is a shell web path segment',
     ],
-    ['settings', 'Module id "settings" is reserved: /settings is a shell web path segment'],
+    ['settings', 'Module id "settings" is reserved: /$plant/settings is a shell web path segment'],
   ])(
     "E04-S02 a module whose id is a top-level path segment of core's or the shell's routes, such as %s, is rejected (ADR 0074)",
     (id, message) => {

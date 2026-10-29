@@ -178,7 +178,7 @@ function MachineForm({
           Save machine
         </Button>
         <Link
-          to={coreLinks.machines.machine({ plant, equipmentId: machine.code }).href}
+          to={coreLinks.settings.machines.machine({ plant, equipmentId: machine.code }).href}
           className={buttonVariants({ variant: 'outline' })}
         >
           Cancel
@@ -235,7 +235,7 @@ export function EditMachineScreen() {
   const failed = search.preview === 'error';
   const { snapshot, error, retry } = usePlantSettings(failed ? undefined : search.preview);
   const machine = snapshot?.equipment.find((each) => each.code === equipmentId);
-  const machinePage = coreLinks.machines.machine({ plant, equipmentId }).href;
+  const machinePage = coreLinks.settings.machines.machine({ plant, equipmentId }).href;
   let state: PageState = { status: 'ready' };
   if (snapshot === undefined && error instanceof PlantSettingsForbidden) {
     state = {
@@ -259,7 +259,7 @@ export function EditMachineScreen() {
         'The link may be out of date, or the machine belongs to a plant you have no role in.',
       action: (
         <Link
-          to={coreLinks.machines({ plant }).href}
+          to={coreLinks.settings.machines({ plant }).href}
           className={buttonVariants({ variant: 'outline' })}
         >
           Back to Machines
@@ -273,7 +273,7 @@ export function EditMachineScreen() {
     <PageFrame
       title={machine === undefined ? 'Edit machine' : `Edit machine ${machine.code}`}
       crumbs={[
-        { label: 'Machines', href: coreLinks.machines({ plant }).href },
+        { label: 'Machines', href: coreLinks.settings.machines({ plant }).href },
         ...(machine === undefined ? [] : [{ label: `Machine ${machine.code}`, href: machinePage }]),
       ]}
       currentCrumb="Edit"

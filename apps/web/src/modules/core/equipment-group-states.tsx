@@ -60,7 +60,7 @@ export function equipmentGroupPageState({
       description: 'The link may be out of date, or the group belongs to another plant.',
       action: (
         <Link
-          to={coreLinks.equipmentGroups({ plant }).href}
+          to={coreLinks.settings.equipmentGroups({ plant }).href}
           className={buttonVariants({ variant: 'outline' })}
         >
           Back to Equipment groups

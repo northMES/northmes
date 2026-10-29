@@ -90,7 +90,7 @@ const saraGrants = {
 };
 
 const accessHref = coreLinks.settings.users.user(
-  { companyId, userId: sara.id },
+  { plant: 'plant-a', userId: sara.id },
   { tab: 'access' },
 ).href;
 
@@ -118,7 +118,7 @@ describe("a user's access", () => {
     expect(screen.getByRole('button', { name: 'Remove Viewer at Acme AB' })).toBeDefined();
     expect(screen.queryByRole('button', { name: 'Remove Shift lead at Plant A' })).toBeNull();
     expect(screen.getByRole('link', { name: 'Add role' }).getAttribute('href')).toBe(
-      coreLinks.settings.users.user.addRole({ companyId, userId: sara.id }).href,
+      coreLinks.settings.users.user.addRole({ plant: 'plant-a', userId: sara.id }).href,
     );
 
     const can = await screen.findByRole('region', { name: 'What Sara Nyberg can do at Acme AB' });
@@ -380,7 +380,7 @@ describe("a user's access", () => {
         holder.user.id === sara.id ? { ...holder, id: assignment(shiftLead, plantA).id } : holder,
       ),
     };
-    const router = renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+    const router = renderCoreAt(coreLinks.settings.roles({ plant: 'plant-a' }).href, [
       settingsViewerQuery(assigner),
       companiesQuery(),
       rolesQuery([shiftLeadHeld, viewerRole]),
@@ -418,7 +418,7 @@ describe("a user's access", () => {
     );
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
 
-    await router.navigate({ to: coreLinks.settings.roles({ companyId }).href });
+    await router.navigate({ to: coreLinks.settings.roles({ plant: 'plant-a' }).href });
 
     await waitFor(() =>
       expect(
@@ -439,14 +439,14 @@ describe("a user's access", () => {
     ]);
 
     expect((await screen.findByRole('link', { name: 'Plant A' })).getAttribute('href')).toBe(
-      coreLinks.people.person({ plant: 'plant-a', userId: sara.id }).href,
+      coreLinks.settings.people.person({ plant: 'plant-a', userId: sara.id }).href,
     );
   });
 
   it('E05-S06 a user without a role: the Roles card says so and keeps Add role, and the permissions come from roles', async () => {
     const lena = { ...anna, name: 'Lena Ek' };
     renderCoreAt(
-      coreLinks.settings.users.user({ companyId, userId: lena.id }, { tab: 'access' }).href,
+      coreLinks.settings.users.user({ plant: 'plant-a', userId: lena.id }, { tab: 'access' }).href,
       [
         settingsViewerQuery(assigner),
         companiesQuery(),
@@ -613,7 +613,7 @@ describe("a user's access", () => {
 
   it('E05-S08 Block user asks with an optional reason that has focus, then Unblock user takes its place and focus, and the polite region says what changed', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.settings.users.user({ companyId, userId: sara.id }).href, [
+    renderCoreAt(coreLinks.settings.users.user({ plant: 'plant-a', userId: sara.id }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:block']),
       companiesQuery(),
       userQuery(saraOfPage),

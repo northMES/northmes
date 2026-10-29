@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
-import { Link, useParams } from '@tanstack/react-router';
+import { useShell } from '@northmes/web-sdk';
+import { Link } from '@tanstack/react-router';
 import { Building2, Factory, Lock, Plus, Shield } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
 import { useIsMobile } from '../../../../ui/lib/use-mobile.ts';
@@ -74,15 +76,15 @@ function RoleCell({
   assignment,
   companyName,
   kindOf,
-  companyId,
+  plant,
   linked,
 }: {
   readonly assignment: UserAssignment;
   readonly companyName: string;
   /** The kind of a role by its id, once the company's roles loaded. */
   readonly kindOf: (roleId: string) => string | undefined;
-  /** The company whose settings hold the role's page. */
-  readonly companyId: string;
+  /** The plant whose settings hold the role's page (#876). */
+  readonly plant: string;
   /** The reader may open the role's page in company settings. */
   readonly linked: boolean;
 }) {
@@ -103,7 +105,7 @@ function RoleCell({
       {linked ? (
         <Link
           id={roleLinkId(assignment)}
-          to={coreLinks.settings.roles.role({ companyId, roleId: role.id }).href}
+          to={coreLinks.settings.roles.role({ plant, roleId: role.id }).href}
           className="text-link underline underline-offset-2 hover:no-underline"
         >
           {role.name}
@@ -142,7 +144,7 @@ function WhereCell({
         whereOf(assignment, places)
       ) : (
         <Link
-          to={coreLinks.people.person({ plant: plant.slug, userId }).href}
+          to={coreLinks.settings.people.person({ plant: plant.slug, userId }).href}
           className="text-link underline underline-offset-2 hover:no-underline"
         >
           {whereOf(assignment, places)}
@@ -161,8 +163,10 @@ function WhereCell({
  * each Role cell, and Remove is named by the place only.
  */
 export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesProps) {
-  const companyId = useCompanyId() ?? places.company?.id ?? '';
-  const { plant: plantSlug } = useParams({ strict: false });
+  const { plant } = useShell();
+  // On a person's page of People the roles belong to the plant; on a user's page of the company's
+  // settings they belong to the company (#876).
+  const plantSlug = useCompanyId() === undefined ? plant : undefined;
   const headingId = useId();
   const isMobile = useIsMobile();
   // A role's kind comes from the company's roles, which the roles pages read too.
@@ -241,7 +245,7 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
               assignment={assignment}
               companyName={companyName}
               kindOf={kindOf}
-              companyId={companyId}
+              plant={plant}
               linked={linked}
             />
             <WhereCell assignment={assignment} places={places} userId={user.id} />
@@ -271,7 +275,7 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
                   assignment={assignment}
                   companyName={companyName}
                   kindOf={kindOf}
-                  companyId={companyId}
+                  plant={plant}
                   linked={linked}
                 />
               </TableCell>
@@ -308,8 +312,9 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
             id={addRoleId}
             to={
               plantSlug === undefined
-                ? coreLinks.settings.users.user.addRole({ companyId, userId: user.id }).href
-                : coreLinks.people.person.addRole({ plant: plantSlug, userId: user.id }).href
+                ? coreLinks.settings.users.user.addRole({ plant, userId: user.id }).href
+                : coreLinks.settings.people.person.addRole({ plant: plantSlug, userId: user.id })
+                    .href
             }
             className={buttonVariants({ variant: 'outline' })}
           >

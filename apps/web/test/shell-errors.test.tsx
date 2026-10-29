@@ -10,7 +10,6 @@ import type { ShellModule } from '../src/modules.ts';
 import { PageFrame } from '../src/ui/components/page-frame/index.ts';
 import {
   companies,
-  companyId,
   crumbs,
   equipment,
   fakeApi,
@@ -173,23 +172,23 @@ describe('an unknown path', () => {
     await waitFor(() => expect(document.activeElement).toBe(heading));
   });
 
-  it('E04-S02 an unknown path in company settings renders Page not found in the settings layout, with Go to Company settings when no module has a company settings entry (NF3)', async () => {
-    renderAt(`/settings/${companyId}/reports`);
+  it("#876 an unknown path under the plant's settings renders Page not found in the settings layout, with Go to Plant A (NF3)", async () => {
+    renderAt('/plant-a/settings/reports');
 
     const main = await screen.findByRole('main');
     expect(
       await within(main).findByRole('heading', { level: 1, name: 'Page not found' }),
     ).toBeDefined();
-    expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
+    expect(within(main).getByRole('navigation', { name: 'Plant A settings' })).toBeDefined();
     await waitFor(() =>
       expect(main.textContent).toContain(
-        `Acme AB has no page at /settings/${companyId}/reports. The link may be out of date.`,
+        'Plant A has no page at /plant-a/settings/reports. The link may be out of date.',
       ),
     );
-    expect(
-      within(main).getByRole('link', { name: 'Go to Company settings' }).getAttribute('href'),
-    ).toBe(`/settings/${companyId}`);
-    expect(document.title).toBe('Page not found · Acme AB · NorthMES');
+    expect(within(main).getByRole('link', { name: 'Go to Plant A' }).getAttribute('href')).toBe(
+      '/plant-a/equipment/tools',
+    );
+    expect(document.title).toBe('Page not found · Plant A · NorthMES');
   });
 });
 

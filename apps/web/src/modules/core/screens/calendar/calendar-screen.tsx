@@ -797,7 +797,7 @@ export function CalendarScreen() {
   const navigate = useNavigate();
   const { snapshot, error, retry } = usePlantSettings(search.preview);
   const calendar = snapshot?.calendars.find((each) => each.name === calendarId);
-  const back = coreLinks.calendars({ plant }).href;
+  const back = coreLinks.settings.calendars({ plant }).href;
   let state: PageState = { status: 'ready' };
   if (snapshot === undefined && error instanceof PlantSettingsForbidden) {
     state = plantSettingsForbiddenState('calendars');

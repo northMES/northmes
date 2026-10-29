@@ -434,7 +434,7 @@ test.describe('the design rules from computed style', () => {
 
     // Calendar B3 has three shifts; each block and its legend key take the shift's edge and fill.
     await page.goto(
-      `${coreLinks.calendars.calendar({ plant, calendarId: 'B3' }).href}?week=2026-11-09`,
+      `${coreLinks.settings.calendars.calendar({ plant, calendarId: 'B3' }).href}?week=2026-11-09`,
     );
     const legend = page.getByRole('list', { name: 'Legend' });
     const week = page.getByRole('img', { name: /^Week 46:/ });

@@ -39,7 +39,7 @@ function columnsOf(
       header: 'Name',
       cell: (calendar) => (
         <Link
-          to={coreLinks.calendars.calendar({ plant, calendarId: calendar.name }).href}
+          to={coreLinks.settings.calendars.calendar({ plant, calendarId: calendar.name }).href}
           className="font-mono text-link underline underline-offset-2 hover:no-underline"
         >
           {calendar.name}

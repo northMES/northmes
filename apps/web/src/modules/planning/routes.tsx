@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { linkEntry } from '@northmes/contracts';
 import { planningLinks } from '@northmes/planning-contracts';
-import type { PlantRoute } from '@northmes/web-sdk';
+import type { PlantRoute, SettingsRoute } from '@northmes/web-sdk';
 import { createRoute, lazyRouteComponent, Outlet, redirect } from '@tanstack/react-router';
 import { boardFieldsSearch } from './board-fields-search.ts';
 import { customerOrderPageSearch } from './customer-order-page-search.ts';
@@ -153,27 +153,20 @@ export function planningRoutes(plantRoute: PlantRoute) {
     validateSearch: stockArticleSearch,
     component: lazyRouteComponent(() => import('./screens.ts'), 'StockArticleScreen'),
   });
-  // Plant settings (ADR 0066; #762, #766): the planning rules and the board fields, on the fixture
-  // G1 and the in-memory stores until planning settings have their API. Each page takes the state
-  // the URL previews.
-  const settingsRoute = createRoute({
+  // The settings pages' URLs from before #876, /plant-a/planning/settings/..., lead with their
+  // search and hash to the same page under the plant's settings, /plant-a/settings/planning/....
+  const oldSettingsRoute = createRoute({
     getParentRoute: () => planningRoute,
-    path: linkEntry(planningLinks.settings).path,
-  });
-  // The planning rules page is the settings index, /plant-a/planning/settings (plan 06; #766).
-  const planningRulesRoute = createRoute({
-    getParentRoute: () => settingsRoute,
-    path: '/',
-    validateSearch: planningRulesSearch,
-    component: lazyRouteComponent(() => import('./screens.ts'), 'PlanningRulesScreen'),
-  });
-  const boardFieldsRoute = createRoute({
-    getParentRoute: () => settingsRoute,
-    path: linkEntry(planningLinks.settings.boardFields).path,
-    validateSearch: boardFieldsSearch,
-    component: lazyRouteComponent(() => import('./screens.ts'), 'BoardFieldsScreen'),
+    path: 'settings/$',
+    beforeLoad: ({ params, location }) => {
+      const rest = params._splat === undefined || params._splat === '' ? '' : `/${params._splat}`;
+      const { href } = planningLinks.settings.rules({ plant: params.plant });
+      const hash = location.hash === '' ? '' : `#${location.hash}`;
+      throw redirect({ href: `${href}${rest}${location.searchStr}${hash}`, replace: true });
+    },
   });
   return planningRoute.addChildren([
+    oldSettingsRoute,
     boardRoute,
     releaseRoute,
     ganttRoute,
@@ -189,6 +182,31 @@ export function planningRoutes(plantRoute: PlantRoute) {
       customerOrderRoute,
     ]),
     stockRoute.addChildren([stockListRoute, stockArticleRoute]),
-    settingsRoute.addChildren([planningRulesRoute, boardFieldsRoute]),
   ]);
+}
+
+/**
+ * The planning module's settings routes under the shell's /$plant/settings route (ADR 0066, #876):
+ * the planning rules at /plant-a/settings/planning (plan 06; #766) and the board fields (#762), on
+ * the fixture G1 and the in-memory stores until planning settings have their API. Each page takes
+ * the state the URL previews. The top route's path is the settings section's own, the module id.
+ */
+export function planningSettingsRoutes(settingsRoute: SettingsRoute) {
+  const planningRoute = createRoute({
+    getParentRoute: () => settingsRoute,
+    path: linkEntry(planningLinks.settings).path,
+  });
+  const planningRulesRoute = createRoute({
+    getParentRoute: () => planningRoute,
+    path: '/',
+    validateSearch: planningRulesSearch,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'PlanningRulesScreen'),
+  });
+  const boardFieldsRoute = createRoute({
+    getParentRoute: () => planningRoute,
+    path: linkEntry(planningLinks.settings.boardFields).path,
+    validateSearch: boardFieldsSearch,
+    component: lazyRouteComponent(() => import('./screens.ts'), 'BoardFieldsScreen'),
+  });
+  return planningRoute.addChildren([planningRulesRoute, boardFieldsRoute]);
 }
