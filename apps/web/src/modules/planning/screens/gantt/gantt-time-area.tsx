@@ -10,8 +10,9 @@ export const timeHeaderHeightRem = 3;
 
 /**
  * The time header (plan 18, Shared pieces): the top tier with a tick per day or week, the bottom
- * tier with the preset's finer ticks, and the now time on the top tier when now is in range: the
- * clock alone, since the day row names the day and the marker's accessible text has both (#885).
+ * tier with the preset's finer ticks, and the now label on the bottom tier when now is in range.
+ * The label is the clock alone, since the top tier names the day and the now marker's accessible
+ * text carries the date and the time (#885).
  */
 export function GanttTimeHeader({
   scale,
