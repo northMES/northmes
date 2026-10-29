@@ -20,7 +20,7 @@ import { CoreViewer } from './viewer.graphql.ts';
 /** The h1 and the title part of the landing (D2 ST38, copy list). */
 const yourPlants = 'Your plants';
 
-/** Where `/` leads a signed-in user: on to a page, or the plant list of these companies. */
+/** Where `/` leads a signed-in user: on to a page, or the plant picker of these companies. */
 export type Landing =
   | { readonly href: string }
   | { readonly companies: readonly PlantListCompany[] };
@@ -50,11 +50,11 @@ async function settingsOf(
 
 /**
  * Where `/` leads a signed-in user (ADR 0066, Where a signed-in user starts): a user with exactly
- * one plant goes to that plant, whatever company settings pages they have (#872), and a user with
- * no plant and a company settings page in one company goes to its landing. Every other user gets
- * the plant picker: each company with a plant or a company settings page, which may be none. The
- * shell never picks a default plant (ADR 0007). The onboarding cases wait for the onboarding
- * wizard (E06-S14).
+ * one plant goes to that plant, also with a company settings page at the plant's company (#872),
+ * and a user with no plant and a company settings page in one company goes to its landing. Every
+ * other user gets the plant picker: each company with a plant or a company settings page, which
+ * may be none. The shell never picks a default plant (ADR 0007). The onboarding cases wait for the
+ * onboarding wizard (E06-S14).
  */
 export async function landingOf(
   modules: readonly ShellModule[],
@@ -67,11 +67,18 @@ export async function landingOf(
       settings: await settingsOf(modules, client, company.id),
     })),
   );
-  const plants = companies.flatMap(({ company }) => company.plants);
+  const plants = companies.flatMap(({ company }) =>
+    company.plants.map((plant) => ({ plant, company })),
+  );
   const settings = companies.flatMap(({ settings: href }) => (href === undefined ? [] : [href]));
-  const [plant] = plants;
-  if (plants.length === 1 && plant !== undefined) {
-    return { href: plantLinkHref(modules, plant.slug) };
+  const [one] = plants;
+  // The plant's own company settings are reachable from the plant; another company's are not.
+  if (
+    plants.length === 1 &&
+    one !== undefined &&
+    settings.every((href) => href === companySettingsHref(one.company.id))
+  ) {
+    return { href: plantLinkHref(modules, one.plant.slug) };
   }
   const [landing] = settings;
   if (plants.length === 0 && settings.length === 1 && landing !== undefined) {
@@ -98,8 +105,8 @@ export interface LandingRouteOptions {
 
 /**
  * The route at `/`, where sign-in leads when the URL names no return path: it sends the user on,
- * or renders the plant list. A failed read renders the shell's error panel in the page without a
- * plant.
+ * or renders the plant picker. A failed read renders the shell's error panel in the page without
+ * a plant.
  */
 export function createLandingRoute(
   rootRoute: RootRoute,
@@ -206,11 +213,13 @@ function ShellPlantPicker({
               <span className="flex min-w-0 flex-col">
                 <Link
                   to={plantLinkHref(modules, each.slug)}
-                  className="inline-flex min-h-(--nm-target-min) items-center font-semibold after:absolute after:inset-0 after:rounded-xl"
+                  className="inline-flex min-h-(--nm-target-min) min-w-(--nm-target-min) items-center font-semibold after:absolute after:inset-0 after:rounded-xl"
                 >
                   {each.name}
                 </Link>
-                <span className="font-mono text-xs text-muted-foreground">/{each.slug}</span>
+                <span className="font-mono text-xs break-all text-muted-foreground">
+                  /{each.slug}
+                </span>
               </span>
             </li>
           ))}
@@ -222,20 +231,21 @@ function ShellPlantPicker({
 
 /**
  * The plant picker at `/` (D2 ST38, ST39; #872): the h1 Your plants, the line that asks the user
- * to pick a plant, and each company's plants as tiles. A user with no plant and no company
- * settings page reads "No plant is assigned to you yet." (ADR 0066).
+ * to pick a plant where there is one to pick, and each company's plants as tiles. A user with no
+ * plant and no company settings page reads "No plant is assigned to you yet." (ADR 0066).
  */
 function ShellLanding({ modules, companies, user, onSignOut }: ShellLandingProps) {
   useEffect(() => {
     document.title = `${yourPlants} · NorthMES`;
   }, []);
+  const anyPlant = companies.some(({ company }) => company.plants.length > 0);
   return (
     <PlantFreeFrame modules={modules} user={user} onSignOut={onSignOut}>
       <div className="grid gap-1">
         <h1 tabIndex={-1} className="text-title font-semibold">
           {yourPlants}
         </h1>
-        {companies.length > 0 && <p className="text-base text-muted-foreground">{pickLead}</p>}
+        {anyPlant && <p className="text-base text-muted-foreground">{pickLead}</p>}
       </div>
       {companies.length === 0 ? (
         <Card className="grid max-w-160 gap-3 px-6 py-6 ring-border">

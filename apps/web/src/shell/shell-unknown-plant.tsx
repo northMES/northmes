@@ -62,7 +62,6 @@ export function ShellUnknownPlant({
             <ShellPlantList
               modules={modules}
               companies={withPlants.map((company) => ({ company }))}
-              level={3}
             />
           </section>
         )}

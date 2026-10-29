@@ -1,19 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { coreLinks } from '@northmes/core-contracts';
-import type { Page } from '@playwright/test';
+import type { Page, TestInfo } from '@playwright/test';
 import { signInPath } from '../apps/web/src/auth/sign-in-link.ts';
 import { allPagesHref } from '../apps/web/src/shell/shell-pages.ts';
 import { devAdmin, devUsers, seedPlants } from '../scripts/stack/seed.mjs';
 import { expect, plant, test } from './fixtures.ts';
 
-/** Signs a seed user in on the sign-in page, from a client address of its own (#476). */
+/**
+ * Signs a seed user in on the sign-in page, so the landing decides where they go. The server
+ * throttles sign-ins per client address (#476), so each sign-in, retry and repeat comes from an
+ * address of its own.
+ */
 async function signInAs(
   page: Page,
+  testInfo: TestInfo,
   user: { readonly email: string; readonly password: string },
-  address: string,
+  n: number,
   href = signInPath,
 ) {
+  const address = `10.${1 + testInfo.repeatEachIndex}.${testInfo.retry}.${n}`;
   await page.setExtraHTTPHeaders({ 'x-forwarded-for': address });
   await page.goto(href);
   await page.getByLabel('Email').fill(user.email);
@@ -25,9 +31,9 @@ test.describe('the landing at /', () => {
   test('#648 #872 signing in with the seed plants lands on Your plants, which asks the user to pick a plant and opens one', async ({
     page,
     checkA11y,
-  }) => {
+  }, testInfo) => {
     // The dev admin holds a role at the company, so both seed plants are open to them.
-    await signInAs(page, devAdmin, '10.1.0.1');
+    await signInAs(page, testInfo, devAdmin, 1);
 
     await expect(page.getByRole('heading', { level: 1, name: 'Your plants' })).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/');
@@ -47,18 +53,21 @@ test.describe('the landing at /', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
   });
 
-  test('#872 signing in with one plant lands on that plant, the dashboard', async ({ page }) => {
-    // The seed's viewer holds a role at plant A alone.
-    await signInAs(page, devUsers.viewer, '10.1.0.2');
+  // The seed's viewer holds a role at plant A alone and no company settings page, so this held
+  // before #872 too; the case of one plant with a company settings page is in the unit tests.
+  test('ADR0066 signing in with one plant lands on that plant, the dashboard', async ({
+    page,
+  }, testInfo) => {
+    await signInAs(page, testInfo, devUsers.viewer, 2);
     await page.waitForURL((url) => url.pathname === coreLinks.dashboard({ plant }).href);
     await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
   });
 
   test('#872 the redirect key of sign-in still leads a user with one plant to the page it names', async ({
     page,
-  }) => {
+  }, testInfo) => {
     const allPages = allPagesHref(plant);
-    await signInAs(page, devUsers.viewer, '10.1.0.3', `${signInPath}?redirect=${allPages}`);
+    await signInAs(page, testInfo, devUsers.viewer, 3, `${signInPath}?redirect=${allPages}`);
     await page.waitForURL((url) => url.pathname === allPages);
     await expect(page.getByRole('heading', { level: 1, name: 'All pages' })).toBeVisible();
   });
