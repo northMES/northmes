@@ -174,11 +174,26 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
     });
   });
 
+  it('#884 a single click on a block selects its order and leaves Details closed; a double click opens Details', async () => {
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    await userEvent.click(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ order: 'po-1003' });
+    });
+    expect(detailsOpen()).toBe(false);
+
+    await userEvent.dblClick(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
+    const drawer = await findDetails();
+    expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('1003.20 Mill');
+  });
+
   it('ADR0021 the close button of the Details drawer closes it and returns focus to the row', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
-    await userEvent.click(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
+    await userEvent.dblClick(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
     const drawer = await findDetails();
     await userEvent.click(within(drawer).getByRole('button', { name: 'Close' }));
 

@@ -58,7 +58,7 @@ test.describe('the order Gantt', () => {
     await expect(gantt).toBeVisible();
     await expect(gantt.locator('[data-row-id="po-1003"]')).toBeFocused();
 
-    await gantt.locator('[data-block="jo-1001-20"]').click();
+    await gantt.locator('[data-block="jo-1001-20"]').dblclick();
     await expect(drawer).toBeVisible();
     await expect(drawer).toHaveCSS('opacity', '1');
     await expect(drawer.getByRole('heading', { level: 2 })).toHaveText('1001.20 Mill');

@@ -134,7 +134,7 @@ describe('keyboard move mode on the order Gantt (plan 18, Tree grid semantics)',
   it('Move in Details starts a move without dragging: Later, Next machine and Apply write the draft and focus the block', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
-    await userEvent.click(gantt.querySelector('[data-block="jo-1001-10"]') as HTMLElement);
+    await userEvent.dblClick(gantt.querySelector('[data-block="jo-1001-10"]') as HTMLElement);
     const panel = await findDetails();
 
     await userEvent.click(within(panel).getByRole('button', { name: 'Move' }));
@@ -166,7 +166,7 @@ describe('keyboard move mode on the order Gantt (plan 18, Tree grid semantics)',
   it('Move in Details of a locked row is drawn disabled with the reason', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
-    await userEvent.click(gantt.querySelector('[data-block="jo-1002-10"]') as HTMLElement);
+    await userEvent.dblClick(gantt.querySelector('[data-block="jo-1002-10"]') as HTMLElement);
     const panel = await findDetails();
 
     const move = within(panel).getByRole('button', { name: 'Move' });
