@@ -112,6 +112,11 @@ export interface DataTableProps<TRow> {
    * sideways" at 320 px (design core-304, NO11): a Tab stop, so the keyboard scrolls it too.
    */
   readonly scrollLabel?: string;
+  /**
+   * The table's menus at the end of the header row, such as Group by and Columns as icons (#875):
+   * the last header cell holds them, and every row gets an empty cell under it.
+   */
+  readonly headerMenu?: ReactNode;
 }
 
 const features = tableFeatures({ rowSortingFeature });
@@ -124,6 +129,25 @@ const ariaSort = { asc: 'ascending', desc: 'descending' } as const;
 /** A sticky column's header and cells: they keep their place and cover what scrolls under them. */
 const stickyHead = 'sticky start-0 z-10 w-37 min-w-37 bg-muted';
 const stickyCell = 'sticky start-0 z-10 w-37 min-w-37 bg-card';
+
+/**
+ * The last header cell of a table whose header row holds its menus (#875), such as Columns and
+ * Group by: named Table menus for assistive technology, and sticky at the end, so the menus stay
+ * in view while the table scrolls sideways.
+ */
+export function DataTableMenuHead({ children }: { readonly children: ReactNode }) {
+  return (
+    <TableHead scope="col" className="sticky end-0 z-10 h-auto w-0 bg-muted px-2 py-1 text-end">
+      <span className="sr-only">Table menus</span>
+      <div className="flex items-center justify-end gap-1">{children}</div>
+    </TableHead>
+  );
+}
+
+/** The empty cell under the menu header in a row: nothing to announce, so assistive technology skips it. */
+export function DataTableMenuCell() {
+  return <TableCell aria-hidden className="w-0 p-0" />;
+}
 
 /**
  * A list on TanStack Table v9 with sorting and paging on the server (plan 06, Lists; design
@@ -147,6 +171,7 @@ export function DataTable<TRow extends RowData>({
   footer,
   scrollLabel,
   hiddenColumns,
+  headerMenu,
 }: DataTableProps<TRow>) {
   const shownColumns = useMemo(
     () =>
@@ -197,6 +222,10 @@ export function DataTable<TRow extends RowData>({
   });
 
   const bodyClass = cn(stale && 'opacity-60 transition-opacity delay-200 duration-150');
+  // The cells of a row: the shown columns, and the empty cell under the header menu.
+  const menu = headerMenu == null || headerMenu === false ? undefined : headerMenu;
+  const cellCount = shownColumns.length + (menu === undefined ? 0 : 1);
+  const menuCell = menu === undefined ? null : <DataTableMenuCell />;
   const renderRow = (row: ReturnType<typeof table.getRowModel>['rows'][number]) => (
     <TableRow key={row.id} className="border-border hover:bg-accent">
       {row.getAllCells().map((cell) => (
@@ -211,6 +240,7 @@ export function DataTable<TRow extends RowData>({
           <table.FlexRender cell={cell} />
         </TableCell>
       ))}
+      {menuCell}
     </TableRow>
   );
 
@@ -271,6 +301,7 @@ export function DataTable<TRow extends RowData>({
                 </TableHead>
               );
             })}
+            {menu !== undefined && <DataTableMenuHead>{menu}</DataTableMenuHead>}
           </TableRow>
         ))}
       </TableHeader>
@@ -287,6 +318,7 @@ export function DataTable<TRow extends RowData>({
                   />
                 </TableCell>
               ))}
+              {menuCell}
             </TableRow>
           ))}
         </TableBody>
@@ -317,7 +349,7 @@ export function DataTable<TRow extends RowData>({
               <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
                 <th
                   scope="rowgroup"
-                  colSpan={shownColumns.length}
+                  colSpan={cellCount}
                   className={cn('px-3 text-start text-sm font-semibold', opens ? 'py-1' : 'py-2.5')}
                 >
                   {opens ? (
@@ -344,10 +376,7 @@ export function DataTable<TRow extends RowData>({
               {group.expanded === false ? null : groupRows.length === 0 &&
                 group.empty !== undefined ? (
                 <TableRow className="border-border hover:bg-transparent">
-                  <TableCell
-                    colSpan={shownColumns.length}
-                    className="px-3 py-2.5 whitespace-normal"
-                  >
+                  <TableCell colSpan={cellCount} className="px-3 py-2.5 whitespace-normal">
                     {group.empty}
                   </TableCell>
                 </TableRow>

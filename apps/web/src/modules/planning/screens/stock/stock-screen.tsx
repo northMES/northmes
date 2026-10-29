@@ -497,11 +497,6 @@ export function StockScreen() {
                   </span>
                 )}
               </div>
-              <ColumnsMenu
-                columns={columnChoices}
-                hidden={hiddenColumns}
-                onChange={setHiddenColumns}
-              />
             </div>
             {filtered && (
               <div className="flex flex-wrap items-center gap-2">
@@ -555,6 +550,14 @@ export function StockScreen() {
           rows={rows}
           getRowId={(row) => row.article.number}
           hiddenColumns={hiddenColumns}
+          headerMenu={
+            <ColumnsMenu
+              compact
+              columns={columnChoices}
+              hidden={hiddenColumns}
+              onChange={setHiddenColumns}
+            />
+          }
           loading={snapshot === undefined}
           {...(sort !== undefined && { sort })}
           onSortChange={(next) => {

@@ -120,6 +120,51 @@ describe('the landing at /', () => {
     );
   });
 
+  it('ADR0066 one plant and a company settings page redirects / to that plant too (#872)', async () => {
+    const { fetch } = api(() => companiesWith(['plant-a']), companyAdmin);
+    const router = renderShellAt('/', shellModules, { fetch });
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(coreLinks.dashboard({ plant: 'plant-a' }).href),
+    );
+  });
+
+  it('ADR0066 one plant at Acme AB and a company settings page at Nordic Steel show the picker, so the page stays reachable (#872)', async () => {
+    const { fetch } = fakeApi({
+      CoreCompanies: () => companiesWith(['plant-a'], [{ ...nordic, plants: [] }]),
+      CoreViewer: ({ companyId: asked }) => viewer([], asked === nordicId ? companyAdmin : []),
+    });
+    renderShellAt('/', shellModules, { fetch });
+
+    const main = await screen.findByRole('main');
+    await within(main).findByRole('heading', { level: 1, name: 'Your plants' });
+    expect(await within(main).findByRole('link', { name: 'Nordic Steel settings' })).toBeDefined();
+    expect(within(main).getByRole('link', { name: 'Plant A' })).toBeDefined();
+  });
+
+  it('ADR0066 no plant and company settings pages at two companies show their settings links without the line that asks for a plant (#872)', async () => {
+    const { fetch } = fakeApi({
+      CoreCompanies: () => companiesWith([], [{ ...nordic, plants: [] }]),
+      CoreViewer: () => viewer([], companyAdmin),
+    });
+    renderShellAt('/', shellModules, { fetch });
+
+    const main = await screen.findByRole('main');
+    await within(main).findByRole('link', { name: 'Acme AB settings' });
+    await within(main).findByRole('link', { name: 'Nordic Steel settings' });
+    expect(within(main).queryByText('Pick the plant to work in.')).toBeNull();
+    expect(within(main).queryByRole('list')).toBeNull();
+  });
+
+  it('ADR0066 with several plants the landing asks the user to pick the plant to work in (#872)', async () => {
+    const { fetch } = api(() => companiesWith(['plant-a', 'plant-b']));
+    renderShellAt('/', shellModules, { fetch });
+
+    const main = await screen.findByRole('main');
+    await within(main).findByRole('heading', { level: 1, name: 'Your plants' });
+    expect(within(main).getByText('Pick the plant to work in.')).toBeDefined();
+  });
+
   it('ADR0066 no plant and a company settings page in one company redirects / to the first page of /settings/<company id>', async () => {
     const { fetch } = api(() => companiesWith([]), companyAdmin);
     const router = renderShellAt('/', shellModules, { fetch });

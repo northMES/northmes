@@ -42,7 +42,11 @@ import { usePlaces } from '../../use-places.ts';
 import { CoreArticleFacets } from './article-facets.graphql.ts';
 import { CoreArticles, type CoreArticlesQuery } from './articles.graphql.ts';
 import { useHiddenColumns } from './articles-columns.ts';
-import { ArticlesFilterChips, ArticlesFilterMenus } from './articles-filters.tsx';
+import {
+  ArticlesFilterChips,
+  ArticlesFilterMenus,
+  ArticlesGroupMenu,
+} from './articles-filters.tsx';
 import { ArticlesGrouped } from './articles-grouped.tsx';
 
 /** One page of the list, as CoreArticles answers it. */
@@ -271,6 +275,22 @@ export function ArticlesScreen() {
     retry: () => refetch(),
     show,
   });
+  // Group by and Columns sit in the table's header row (#875), on both the flat and the grouped table.
+  const headerMenu = (
+    <>
+      <ArticlesGroupMenu view={view} show={show} />
+      <ColumnsMenu
+        compact
+        columns={columns.map(({ id, header }) => ({
+          id,
+          label: header,
+          alwaysShown: id === 'code',
+        }))}
+        hidden={hiddenColumns}
+        onChange={setHiddenColumns}
+      />
+    </>
+  );
   return (
     <PageFrame
       title="Articles"
@@ -298,15 +318,6 @@ export function ArticlesScreen() {
                   />
                   <FieldLabel htmlFor={showArchivedId}>Show archived</FieldLabel>
                 </Field>
-                <ColumnsMenu
-                  columns={columns.map(({ id, header }) => ({
-                    id,
-                    label: header,
-                    alwaysShown: id === 'code',
-                  }))}
-                  hidden={hiddenColumns}
-                  onChange={setHiddenColumns}
-                />
               </div>
             </div>
             <ArticlesFilterChips view={view} facets={facets} show={show} />
@@ -322,6 +333,7 @@ export function ArticlesScreen() {
           columns={columns}
           rows={shownPage?.edges.map(({ node }) => node) ?? []}
           hiddenColumns={hiddenColumns}
+          headerMenu={headerMenu}
           getRowId={(article) => article.id}
           loading={shownPage === undefined}
           stale={stale}
@@ -350,6 +362,7 @@ export function ArticlesScreen() {
           facets={facets}
           columns={columns}
           hiddenColumns={hiddenColumns}
+          headerMenu={headerMenu}
           sort={sortOf(view)}
           onSortChange={(sort) => show(sortedBy(view, sort))}
         />

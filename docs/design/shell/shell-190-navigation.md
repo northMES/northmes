@@ -25,6 +25,10 @@ After the approval, on 2026-10-06, the header frame got a text fix and a new sta
 
 Part 1 of the header PNG was captured again after the fix. Part 2 is unchanged.
 
+## The plant list at / is a picker
+
+After his trial of the built pages on 2026-10-29, Krister Johansson asked that a user with one plant land on that plant whatever admin page they have at its company, and that a user with several plants get a page that asks them to pick one ([#872](https://github.com/northMES/northmes/issues/872)). The built page keeps the h1 Your plants, the h2 per company with its settings link and the list of plants named by that heading, adds the line "Pick the plant to work in." under the h1, and draws each plant as a tile that follows its link. ST38 and ST39 still draw the card with a link list and the earlier rule, so those frames do not apply to the built landing; the unknown plant page (ST29, ST30) keeps the list.
+
 ## The sidebar draws no rules
 
 The sidebar, the rail and the 320 px sheet draw no rules, as shadcn's sidebar-07 block draws none: the groups' own padding spaces them (Krister Johansson, 2026-10-10). The page and its PNGs still draw them, so these frames do not apply to the built sidebar:

@@ -262,11 +262,6 @@ export function WarehousesScreen() {
                   <FieldLabel htmlFor={unmappedId}>Not mapped only</FieldLabel>
                 </Field>
               </div>
-              <ColumnsMenu
-                columns={columnChoices}
-                hidden={hiddenColumns}
-                onChange={setHiddenColumns}
-              />
             </div>
             {view.plant !== undefined && (
               <div className="flex flex-wrap items-center gap-2">
@@ -304,6 +299,14 @@ export function WarehousesScreen() {
         rows={rows}
         getRowId={(row) => row.code}
         hiddenColumns={hiddenColumns}
+        headerMenu={
+          <ColumnsMenu
+            compact
+            columns={columnChoices}
+            hidden={hiddenColumns}
+            onChange={setHiddenColumns}
+          />
+        }
         loading={snapshot === undefined}
         paging={{
           page: 1,

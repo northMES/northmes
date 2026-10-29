@@ -25,6 +25,10 @@ import {
 } from 'lucide-react';
 import { type ReactNode, useMemo } from 'react';
 import type { ColumnChoice } from '../../../../ui/components/columns-menu/index.ts';
+import {
+  DataTableMenuCell,
+  DataTableMenuHead,
+} from '../../../../ui/components/data-table/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import {
@@ -275,6 +279,11 @@ export interface JobOrdersTableProps {
   readonly loading: boolean;
   /** The rows are those of the range before, kept dimmed while the next range loads (LI7). */
   readonly stale?: boolean;
+  /**
+   * The table's menus at the end of the header row, such as Columns as an icon (#875): the last
+   * header cell holds them, and every row gets an empty cell under it.
+   */
+  readonly headerMenu?: ReactNode;
 }
 
 /**
@@ -297,6 +306,7 @@ export function JobOrdersTable({
   onToggleFacts,
   loading,
   stale = false,
+  headerMenu,
 }: JobOrdersTableProps) {
   const { plant } = useShell();
   const columns = useMemo(
@@ -335,6 +345,10 @@ export function JobOrdersTable({
     },
   });
   const shown = jobOrdersColumns.filter((column) => !hiddenColumns.includes(column.id));
+  // The cells of a row: the shown columns, and the empty cell under the header menu.
+  const menu = headerMenu == null || headerMenu === false ? undefined : headerMenu;
+  const cellCount = shown.length + (menu === undefined ? 0 : 1);
+  const menuCell = menu === undefined ? null : <DataTableMenuCell />;
   const view: CellView | undefined =
     snapshot === undefined ? undefined : { snapshot, zoom, from, plant, expanded, onToggleFacts };
   return (
@@ -384,6 +398,7 @@ export function JobOrdersTable({
                   </TableHead>
                 );
               })}
+              {menu !== undefined && <DataTableMenuHead>{menu}</DataTableMenuHead>}
             </TableRow>
           ))}
         </TableHeader>
@@ -399,6 +414,7 @@ export function JobOrdersTable({
                       />
                     </TableCell>
                   ))}
+                  {menuCell}
                 </TableRow>
               ))
             : table.getRowModel().rows.flatMap((row) => {
@@ -425,6 +441,7 @@ export function JobOrdersTable({
                         </TableCell>
                       );
                     })}
+                    {menuCell}
                   </TableRow>
                 );
                 if (!expanded.has(row.id) || original.analysis?.late !== true) return [cells];
@@ -434,7 +451,7 @@ export function JobOrdersTable({
                     key={`${row.id}-facts`}
                     className="border-border bg-muted hover:bg-muted"
                   >
-                    <TableCell colSpan={shown.length} className="px-3 py-3 whitespace-normal">
+                    <TableCell colSpan={cellCount} className="px-3 py-3 whitespace-normal">
                       <section aria-label={`Late facts for ${original.jobOrder.displayNumber}`}>
                         <JobOrderLateFacts
                           snapshot={view.snapshot}

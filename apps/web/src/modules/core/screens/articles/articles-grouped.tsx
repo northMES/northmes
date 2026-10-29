@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useApolloClient } from '@apollo/client/react';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import {
   DataTable,
   type DataTableColumn,
@@ -28,6 +28,8 @@ interface ArticlesGroupedProps {
   readonly hiddenColumns: readonly string[];
   readonly sort: DataTableSort;
   readonly onSortChange: (sort: DataTableSort) => void;
+  /** The table's menus at the end of its header row, Group by and Columns (#875). */
+  readonly headerMenu?: ReactNode;
 }
 
 /**
@@ -45,6 +47,7 @@ export function ArticlesGrouped({
   hiddenColumns,
   sort,
   onSortChange,
+  headerMenu,
 }: ArticlesGroupedProps) {
   const client = useApolloClient();
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -92,6 +95,7 @@ export function ArticlesGrouped({
       sort={sort}
       onSortChange={onSortChange}
       hiddenColumns={hiddenColumns}
+      headerMenu={headerMenu}
       groups={values.map(({ value, label, count }) => ({
         id: value,
         label,

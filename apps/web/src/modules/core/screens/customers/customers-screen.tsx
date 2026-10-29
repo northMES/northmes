@@ -376,11 +376,6 @@ export function CustomersScreen() {
                   <FieldLabel htmlFor={unsuppliedId}>With lines not supplied</FieldLabel>
                 </Field>
               </div>
-              <ColumnsMenu
-                columns={columnChoices}
-                hidden={hiddenColumns}
-                onChange={setHiddenColumns}
-              />
             </div>
             {view.source !== undefined && (
               <div className="flex flex-wrap items-center gap-2">
@@ -413,6 +408,14 @@ export function CustomersScreen() {
         rows={rows}
         getRowId={(row) => row.customer.code}
         hiddenColumns={hiddenColumns}
+        headerMenu={
+          <ColumnsMenu
+            compact
+            columns={columnChoices}
+            hidden={hiddenColumns}
+            onChange={setHiddenColumns}
+          />
+        }
         loading={snapshot === undefined}
         sort={sort}
         onSortChange={(next) => show(sortedBy(view, next))}

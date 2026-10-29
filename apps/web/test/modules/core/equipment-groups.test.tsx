@@ -13,7 +13,9 @@ afterEach(cleanup);
 /** The text of each cell of a table's own body rows. */
 function bodyRows(table: HTMLElement): string[][] {
   return Array.from(table.querySelectorAll(':scope > tbody > tr')).map((row) =>
-    Array.from(row.querySelectorAll(':scope > td')).map((cell) => cell.textContent ?? ''),
+    Array.from(row.querySelectorAll(':scope > td:not([aria-hidden])')).map(
+      (cell) => cell.textContent ?? '',
+    ),
   );
 }
 

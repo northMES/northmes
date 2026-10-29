@@ -266,6 +266,9 @@ test.describe('the design rules from computed style', () => {
     await expect(quantityHeader).toHaveCSS('text-align', 'end');
     await expect(quantityCell).toHaveCSS('text-align', 'end');
 
+    // The Group by and Columns icons in the header row are 24 px targets (WCAG 2.5.8, #875).
+    await expectTargets(table.getByRole('button', { name: /^(Columns|Group by)/ }));
+
     const focused = page.locator(':focus');
     // The Article filter's menu holds checkbox items; the filter button, apart from the sort header.
     await page.locator('button[aria-haspopup="menu"]', { hasText: /^Article$/ }).focus();

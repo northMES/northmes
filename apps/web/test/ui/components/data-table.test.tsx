@@ -318,4 +318,46 @@ describe('DataTable', () => {
       ['flanges', false],
     ]);
   });
+
+  it('E06-S03 a header menu sits in the last header cell, and every row has an empty cell under it that assistive technology skips (#875)', () => {
+    render(table({ headerMenu: <button type="button">Columns</button> }));
+    const grid = screen.getByRole('table', { name: 'Articles' });
+    const headers = within(grid).getAllByRole('columnheader');
+    expect(headers).toHaveLength(columns.length + 1);
+    const last = headers[headers.length - 1] as HTMLElement;
+    expect(within(last).getByRole('button', { name: 'Columns' })).toBeDefined();
+    for (const row of bodyRows()) expect(row).toHaveLength(columns.length);
+    const [, ...rows] = within(grid).getAllByRole('row');
+    for (const row of rows) {
+      const cells = row.querySelectorAll('td');
+      expect(cells).toHaveLength(columns.length + 1);
+      expect(cells[cells.length - 1]?.getAttribute('aria-hidden')).toBe('true');
+    }
+  });
+
+  it('E06-S03 a loading table with a header menu gives its skeleton rows the empty cell too (#875)', () => {
+    render(table({ headerMenu: <button type="button">Columns</button>, loading: true }));
+    const grid = screen.getByRole('table', { name: 'Articles' });
+    const [, ...rows] = within(grid).getAllByRole('row');
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.querySelectorAll('td')).toHaveLength(columns.length + 1);
+      expect(row.lastElementChild?.getAttribute('aria-hidden')).toBe('true');
+    }
+  });
+
+  it("E06-S03 a grouped table's group row spans the header menu's column (#875)", () => {
+    render(
+      table({
+        headerMenu: <button type="button">Columns</button>,
+        groups: [
+          { id: 'flanges', label: 'Flanges', count: '2 articles', rows: articles.slice(0, 2) },
+        ],
+      }),
+    );
+    const groupRow = screen
+      .getByRole('table', { name: 'Articles' })
+      .querySelector('th[scope="rowgroup"]');
+    expect(groupRow?.getAttribute('colspan')).toBe(String(columns.length + 1));
+  });
 });

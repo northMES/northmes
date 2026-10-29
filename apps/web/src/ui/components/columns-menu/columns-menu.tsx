@@ -10,6 +10,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '../../primitives/dropdown-menu.tsx';
+import { IconButton } from '../icon-button/index.ts';
 
 /** A column the Columns menu offers: its id, its header and whether it can be hidden. */
 export interface ColumnChoice {
@@ -25,22 +26,41 @@ export interface ColumnsMenuProps {
   readonly hidden: readonly string[];
   /** Hands back the hidden columns after one was shown or hidden. */
   readonly onChange: (hidden: readonly string[]) => void;
+  /**
+   * The icon alone as the button, for a table's header row (#875): the name Columns stays, as the
+   * tooltip and for assistive technology, on a 24 px target.
+   */
+  readonly compact?: boolean;
 }
 
+/** The menu's name, the button's text or its tooltip. */
+const name = 'Columns';
+
 /**
- * Columns in a list's toolbar (design ui-222, LI11 to LI14): a menu with a checkbox per column,
- * checked while the column shows. The column that names a row stays checked and cannot be
- * turned, and says "Always shown". The menu stays open while columns are turned.
+ * Columns (design ui-222, LI11 to LI14): a menu with a checkbox per column, checked while the
+ * column shows. The column that names a row stays checked and cannot be turned, and says "Always
+ * shown". The menu stays open while columns are turned. In a list's toolbar the button carries its
+ * text; in a table's header row it is the icon alone.
  */
-export function ColumnsMenu({ columns, hidden, onChange }: ColumnsMenuProps) {
+export function ColumnsMenu({ columns, hidden, onChange, compact = false }: ColumnsMenuProps) {
   const hiddenSet = new Set(hidden);
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" />}>
-        <Columns3 aria-hidden />
-        Columns
-        <ChevronDown aria-hidden />
-      </DropdownMenuTrigger>
+      {compact ? (
+        <DropdownMenuTrigger
+          render={
+            <IconButton label={name} variant="ghost" size="icon-sm">
+              <Columns3 aria-hidden />
+            </IconButton>
+          }
+        />
+      ) : (
+        <DropdownMenuTrigger render={<Button variant="outline" />}>
+          <Columns3 aria-hidden />
+          {name}
+          <ChevronDown aria-hidden />
+        </DropdownMenuTrigger>
+      )}
       <DropdownMenuContent align="end" className="min-w-56">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Show these columns</DropdownMenuLabel>

@@ -248,11 +248,6 @@ export function JobOrdersScreen() {
               <FieldLabel htmlFor={lateOnlyId}>Late only</FieldLabel>
             </Field>
             <span className="grow" />
-            <ColumnsMenu
-              columns={jobOrdersColumnChoices}
-              hidden={hiddenColumns}
-              onChange={setHiddenColumns}
-            />
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={<Button variant="outline" size="icon-sm" aria-label="Table options" />}
@@ -290,6 +285,14 @@ export function JobOrdersScreen() {
         sort={sort}
         onSortChange={(next) => void setSearch(sortedBy(search, next))}
         hiddenColumns={hiddenColumns}
+        headerMenu={
+          <ColumnsMenu
+            compact
+            columns={jobOrdersColumnChoices}
+            hidden={hiddenColumns}
+            onChange={setHiddenColumns}
+          />
+        }
         expanded={expanded}
         onToggleFacts={(id) =>
           setExpanded((current) => {
