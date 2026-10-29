@@ -74,7 +74,7 @@ describe('board fields on the order Gantt (plan 07, Board settings; #762)', () =
     renderGanttRoute({ zoom: 'day', from: '2026-11-03' }, undefined, 'gantt', store);
     const gantt = await findGantt();
 
-    await userEvent.click(blockOf(gantt, 'jo-1001-10'));
+    await userEvent.dblClick(blockOf(gantt, 'jo-1001-10'));
 
     const panel = await findDetails();
     const fields = within(panel).getByRole('region', { name: 'Hover fields' });

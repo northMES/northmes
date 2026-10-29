@@ -35,7 +35,6 @@ type User = ReturnType<typeof userEvent.setup>;
 /** Selects 1001 and 1005 with a click and a Shift+click. */
 async function selectBoth(user: User, gantt: HTMLElement): Promise<void> {
   await user.click(within(rowOf(gantt, 'po-1001')).getByRole('rowheader'));
-  await user.keyboard('{Escape}');
   await user.keyboard('{Shift>}');
   await user.click(within(rowOf(gantt, 'po-1005')).getByRole('rowheader'));
   await user.keyboard('{/Shift}');

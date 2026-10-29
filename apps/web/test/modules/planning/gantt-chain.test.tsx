@@ -56,7 +56,7 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
-    await userEvent.click(
+    await userEvent.dblClick(
       within(within(gantt).getByRole('row', { name: /^1003 / })).getByRole('rowheader'),
     );
     const panel = await findDetails();

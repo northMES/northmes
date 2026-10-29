@@ -61,7 +61,7 @@ describe('the material warning on the order Gantt (plan 07, Material warnings; d
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
-    await userEvent.click(blockOf(gantt, 'jo-1004-10'));
+    await userEvent.dblClick(blockOf(gantt, 'jo-1004-10'));
     const panel = await findDetails();
     const material = within(panel).getByRole('region', { name: 'Material: Round bar 36 C45' });
 
@@ -89,7 +89,7 @@ describe('the material warning on the order Gantt (plan 07, Material warnings; d
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
-    await userEvent.click(blockOf(gantt, 'jo-1003-10'));
+    await userEvent.dblClick(blockOf(gantt, 'jo-1003-10'));
     const panel = await findDetails();
     expect(within(panel).queryByRole('region', { name: /^Material/ })).toBeNull();
   });
@@ -129,7 +129,7 @@ describe('the material warning on the order Gantt (plan 07, Material warnings; d
     expect(blockOf(gantt, 'jo-1004-10').getAttribute('aria-label')).toMatch(
       /material short: Round bar 36 C45, 26 m short at setup start, material short: Steel tube 52x6, 50 m short at setup start$/,
     );
-    await userEvent.click(blockOf(gantt, 'jo-1004-10'));
+    await userEvent.dblClick(blockOf(gantt, 'jo-1004-10'));
     const panel = await findDetails();
     expect(within(panel).getAllByRole('region', { name: /^Material: / })).toHaveLength(2);
   });
@@ -147,7 +147,7 @@ describe('the material warning on the order Gantt (plan 07, Material warnings; d
   it('#729 MW1 clears the warning when a draft move takes 1004.10 past the incoming purchase, and says so', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
-    await userEvent.click(blockOf(gantt, 'jo-1004-10'));
+    await userEvent.dblClick(blockOf(gantt, 'jo-1004-10'));
     const panel = await findDetails();
 
     await userEvent.click(within(panel).getByRole('button', { name: 'Move' }));

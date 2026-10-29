@@ -48,7 +48,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
-    await userEvent.click(gantt.querySelector('[data-block="jo-1004-20"]') as HTMLElement);
+    await userEvent.dblClick(gantt.querySelector('[data-block="jo-1004-20"]') as HTMLElement);
 
     const panel = await findDetails();
     expect(within(panel).getByRole('heading', { level: 2 }).textContent).toBe('1004.20 Mill');
@@ -74,7 +74,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
-    await userEvent.click(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
+    await userEvent.dblClick(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
 
     const panel = await findDetails();
     const float = within(panel).getByRole('region', { name: 'Float' });
@@ -89,7 +89,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
-    await userEvent.click(gantt.querySelector('[data-block="jo-1003-10"]') as HTMLElement);
+    await userEvent.dblClick(gantt.querySelector('[data-block="jo-1003-10"]') as HTMLElement);
 
     const panel = await findDetails();
     const float = within(panel).getByRole('region', { name: 'Float' });
@@ -100,7 +100,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
-    await userEvent.click(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
+    await userEvent.dblClick(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
 
     const panel = await findDetails();
     const machine = within(panel).getByLabelText('Machine') as HTMLSelectElement;
@@ -128,7 +128,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
-    await userEvent.click(
+    await userEvent.dblClick(
       within(within(gantt).getByRole('row', { name: /^1003 / })).getByRole('rowheader'),
     );
 
@@ -157,13 +157,13 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     };
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, source);
     const gantt = await findGantt();
-    await userEvent.click(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
+    await userEvent.dblClick(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
     await findDetails();
     await userEvent.keyboard('{Escape}');
     await waitFor(() => {
       expect(detailsOpen()).toBe(false);
     });
-    await userEvent.click(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
+    await userEvent.dblClick(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
     await findDetails();
 
     // A reload while Details is open, as a realtime refetch gives: the next week drops 1003.
@@ -178,7 +178,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     await waitFor(() => {
       expect(detailsOpen()).toBe(false);
     });
-    await userEvent.click(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
+    await userEvent.dblClick(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
     const panel = await findDetails();
     expect(within(panel).getByRole('heading', { level: 2 }).textContent).toBe('1001.20 Mill');
   });
