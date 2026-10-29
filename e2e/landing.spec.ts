@@ -1,29 +1,48 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { coreLinks } from '@northmes/core-contracts';
+import type { Page, TestInfo } from '@playwright/test';
 import { signInPath } from '../apps/web/src/auth/sign-in-link.ts';
-import { devAdmin, seedPlants } from '../scripts/stack/seed.mjs';
+import { allPagesHref } from '../apps/web/src/shell/shell-pages.ts';
+import { devAdmin, devUsers, seedPlants } from '../scripts/stack/seed.mjs';
 import { expect, plant, test } from './fixtures.ts';
 
+/**
+ * Signs a seed user in on the sign-in page, so the landing decides where they go. The server
+ * throttles sign-ins per client address (#476), so each sign-in, retry and repeat comes from an
+ * address of its own.
+ */
+async function signInAs(
+  page: Page,
+  testInfo: TestInfo,
+  user: { readonly email: string; readonly password: string },
+  n: number,
+  href = signInPath,
+) {
+  const address = `10.${1 + testInfo.repeatEachIndex}.${testInfo.retry}.${n}`;
+  await page.setExtraHTTPHeaders({ 'x-forwarded-for': address });
+  await page.goto(href);
+  await page.getByLabel('Email').fill(user.email);
+  await page.getByLabel('Password', { exact: true }).fill(user.password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+}
+
 test.describe('the landing at /', () => {
-  test('#648 signing in at /sign-in lands on Your plants, which lists the seed plants and opens one', async ({
+  test('#648 #872 signing in with the seed plants lands on Your plants, which asks the user to pick a plant and opens one', async ({
     page,
     checkA11y,
-  }) => {
-    // A client address of its own, as the signIn fixture gives each sign-in (#476).
-    await page.setExtraHTTPHeaders({ 'x-forwarded-for': '10.1.0.1' });
-    await page.goto(signInPath);
-    await page.getByLabel('Email').fill(devAdmin.email);
-    await page.getByLabel('Password', { exact: true }).fill(devAdmin.password);
-    await page.getByRole('button', { name: 'Sign in' }).click();
+  }, testInfo) => {
+    // The dev admin holds a role at the company, so both seed plants are open to them.
+    await signInAs(page, testInfo, devAdmin, 1);
 
     await expect(page.getByRole('heading', { level: 1, name: 'Your plants' })).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/');
     await expect(page).toHaveTitle('Your plants · NorthMES');
+    await expect(page.getByText('Pick the plant to work in.')).toBeVisible();
     for (const { name } of seedPlants) {
       await expect(page.getByRole('main').getByRole('link', { name })).toBeVisible();
     }
-    await checkA11y('landing plant list');
+    await checkA11y('landing plant picker');
 
     const plantA = seedPlants.find(({ slug }) => slug === plant);
     await page
@@ -32,5 +51,24 @@ test.describe('the landing at /', () => {
       .click();
     await page.waitForURL((url) => url.pathname === coreLinks.dashboard({ plant }).href);
     await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+  });
+
+  // The seed's viewer holds a role at plant A alone and no company settings page, so this held
+  // before #872 too; the case of one plant with a company settings page is in the unit tests.
+  test('ADR0066 signing in with one plant lands on that plant, the dashboard', async ({
+    page,
+  }, testInfo) => {
+    await signInAs(page, testInfo, devUsers.viewer, 2);
+    await page.waitForURL((url) => url.pathname === coreLinks.dashboard({ plant }).href);
+    await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+  });
+
+  test('#872 the redirect key of sign-in still leads a user with one plant to the page it names', async ({
+    page,
+  }, testInfo) => {
+    const allPages = allPagesHref(plant);
+    await signInAs(page, testInfo, devUsers.viewer, 3, `${signInPath}?redirect=${allPages}`);
+    await page.waitForURL((url) => url.pathname === allPages);
+    await expect(page.getByRole('heading', { level: 1, name: 'All pages' })).toBeVisible();
   });
 });
