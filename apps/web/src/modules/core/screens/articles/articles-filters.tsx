@@ -109,8 +109,8 @@ function useGroupNames(view: ArticleListSearch, facets: ArticleFacets | undefine
 }
 
 /**
- * The filter menus and Group by of the articles toolbar (design ui-222, LI3 and LI29): Article
- * group, Stock unit and Source, each listing its values with how many articles have each.
+ * The filter menus of the articles toolbar (design ui-222, LI3): Article group, Stock unit and
+ * Source, each listing its values with how many articles have each.
  */
 export function ArticlesFilterMenus({ view, facets, show }: FiltersProps) {
   const nameOf = useGroupNames(view, facets);
@@ -126,13 +126,23 @@ export function ArticlesFilterMenus({ view, facets, show }: FiltersProps) {
           onChange={(picked) => show(filteredBy(view, key, picked as never))}
         />
       ))}
-      <ChoiceMenu
-        label="Group by"
-        choices={groupChoices}
-        value={view.group}
-        onChange={(group) => show(groupedBy(view, group))}
-      />
     </>
+  );
+}
+
+/**
+ * Group by in the articles table's header row (design ui-222, LI29; #875): the icon alone, named
+ * "Group by" and by its choice once one is made.
+ */
+export function ArticlesGroupMenu({ view, show }: Pick<FiltersProps, 'view' | 'show'>) {
+  return (
+    <ChoiceMenu
+      compact
+      label="Group by"
+      choices={groupChoices}
+      value={view.group}
+      onChange={(group) => show(groupedBy(view, group))}
+    />
   );
 }
 

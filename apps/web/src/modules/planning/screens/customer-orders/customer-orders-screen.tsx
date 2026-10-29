@@ -6,6 +6,7 @@ import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ChartNoAxesGantt, Clock, Ellipsis, Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
@@ -351,9 +352,6 @@ export function CustomerOrdersScreen() {
             fields={fields}
             onFilterChange={(key, values) => show(filteredBy(view, key, values))}
             onClearFilters={() => show(unfiltered(view))}
-            columns={columnChoices}
-            hiddenColumns={hiddenColumns}
-            onHiddenColumnsChange={setHiddenColumns}
           />
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <p data-list-status>{statusLine}</p>
@@ -372,6 +370,14 @@ export function CustomerOrdersScreen() {
         rows={rows}
         getRowId={(row) => row.id}
         hiddenColumns={hiddenColumns}
+        headerMenu={
+          <ColumnsMenu
+            compact
+            columns={columnChoices}
+            hidden={hiddenColumns}
+            onChange={setHiddenColumns}
+          />
+        }
         loading={snapshot === undefined}
         sort={sort}
         onSortChange={(next) =>

@@ -437,11 +437,6 @@ export function MachinesScreen() {
                   <FieldLabel htmlFor={plannableId}>Plannable only</FieldLabel>
                 </Field>
               </div>
-              <ColumnsMenu
-                columns={columnChoices}
-                hidden={hiddenColumns}
-                onChange={setHiddenColumns}
-              />
             </div>
             {filtered && (
               <div className="flex flex-wrap items-center gap-2">
@@ -490,6 +485,14 @@ export function MachinesScreen() {
         rows={rows}
         getRowId={(row) => row.machine.code}
         hiddenColumns={hiddenColumns}
+        headerMenu={
+          <ColumnsMenu
+            compact
+            columns={columnChoices}
+            hidden={hiddenColumns}
+            onChange={setHiddenColumns}
+          />
+        }
         loading={snapshot === undefined}
         paging={{
           page: 1,

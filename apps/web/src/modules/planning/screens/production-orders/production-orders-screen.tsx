@@ -7,6 +7,7 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ChartNoAxesGantt, Clock, Ellipsis, Plus } from 'lucide-react';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { ChoiceMenu } from '../../../../ui/components/choice-menu/index.ts';
+import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
 import {
   DataTable,
   type DataTableColumn,
@@ -392,17 +393,6 @@ export function ProductionOrdersScreen() {
             fields={fields}
             onFilterChange={(key, values) => show(filteredBy(view, key, values))}
             onClearFilters={() => show(unfiltered(view))}
-            groupMenu={
-              <ChoiceMenu
-                label="Group by"
-                choices={groupChoices}
-                value={view.group}
-                onChange={(group) => show(groupedBy(view, group))}
-              />
-            }
-            columns={columnChoices}
-            hiddenColumns={hiddenColumns}
-            onHiddenColumnsChange={setHiddenColumns}
           />
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
             <p data-list-status>{statusLine}</p>
@@ -422,6 +412,23 @@ export function ProductionOrdersScreen() {
         groups={tableGroups}
         getRowId={(row) => row.id}
         hiddenColumns={hiddenColumns}
+        headerMenu={
+          <>
+            <ChoiceMenu
+              compact
+              label="Group by"
+              choices={groupChoices}
+              value={view.group}
+              onChange={(group) => show(groupedBy(view, group))}
+            />
+            <ColumnsMenu
+              compact
+              columns={columnChoices}
+              hidden={hiddenColumns}
+              onChange={setHiddenColumns}
+            />
+          </>
+        }
         loading={snapshot === undefined}
         sort={sort}
         onSortChange={(next) =>

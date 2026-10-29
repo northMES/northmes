@@ -213,7 +213,11 @@ describe('the articles list filters', () => {
 
     await waitFor(() => expect(router.state.location.search).toEqual({ group: 'articleGroup' }));
     const table = await screen.findByRole('table', { name: 'Articles' });
-    const toggles = await within(table).findAllByRole('button', { expanded: false });
+    // The group toggles, apart from the Group by and Columns menu buttons in the header row.
+    const toggles = await within(table).findAllByRole('button', {
+      expanded: false,
+      name: /\d+ articles?$/,
+    });
     expect(toggles.map((button) => button.textContent)).toEqual([
       'Hoses 2 articles',
       'Shafts 1 article',
