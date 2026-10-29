@@ -118,6 +118,8 @@ test.describe('articles', () => {
     await checkA11y('an archived article');
     await page.getByRole('button', { name: 'Restore' }).click();
     await expect(page.getByRole('alertdialog')).toBeVisible();
+    // The dialog fades in; axe reads its text against the page until it has (#867).
+    await expect(page.getByRole('alertdialog')).toHaveCSS('opacity', '1');
     await checkA11y('the restore dialog');
     await page.getByRole('alertdialog').getByRole('button', { name: 'Restore article' }).click();
     await page.goto(coreLinks.articles({ plant }).href);
@@ -158,6 +160,8 @@ test.describe('articles', () => {
     await page.goto(article.href);
     await page.getByRole('button', { name: 'Archive' }).click();
     await expect(page.getByRole('alertdialog')).toBeVisible();
+    // The dialog fades in; axe reads its text against the page until it has (#867).
+    await expect(page.getByRole('alertdialog')).toHaveCSS('opacity', '1');
     await checkA11y('the archive dialog');
 
     const articles = await routeArticles(page);
