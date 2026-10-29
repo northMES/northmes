@@ -335,6 +335,41 @@ test.describe('the design rules from computed style', () => {
     await setTheme(gantt, 'dark');
     expect((await styleOf(block('jo-1001-10'), ['color'])).color).toMatch(black);
     await checkA11y('the Gantt in the dark theme');
+    // #882: a block's text lines carry the order color behind them, as wide as the text, so they
+    // read over a hollow segment in the dark theme and the hollow shows beside them; the locked
+    // outline stays above the text; the deadline label sits on a plain background over the late
+    // band's hatch, in the dark theme too.
+    const text = gantt.locator('[data-block="jo-1001-10"] [data-block-text]').first();
+    const blockBackground = (await styleOf(block('jo-1001-10'), ['background-color']))[
+      'background-color'
+    ];
+    expect((await styleOf(text, ['background-color']))['background-color']).toBe(blockBackground);
+    expect(blockBackground).not.toBe(transparent);
+    const hollowed = block('jo-1006-10');
+    const textBox = await hollowed.locator('[data-block-text]').first().boundingBox();
+    const hollowedBox = await hollowed.boundingBox();
+    expect(textBox?.width ?? 0).toBeLessThan(hollowedBox?.width ?? 0);
+    await block('jo-1002-10').scrollIntoViewIfNeeded();
+    const lockedOnTop = await block('jo-1002-10').evaluate((element) => {
+      const outline = element.querySelector<HTMLElement>('[data-locked-outline]');
+      if (outline === null) return false;
+      // The outline lets the pointer through, which elementFromPoint honours, so it takes the
+      // pointer for this one reading; 4 px below the top edge is the 1 px border, then the
+      // outline's 2 px band from inset 2 px.
+      outline.style.pointerEvents = 'auto';
+      const box = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + 4);
+      outline.style.pointerEvents = '';
+      return hit === outline;
+    });
+    expect(lockedOnTop).toBe(true);
+    await setTheme(gantt, 'light');
+    await page.goto(planningHref('gantt', { zoom: 'day', from: '2026-11-04' }));
+    await setTheme(gantt, 'dark');
+    const deadlineLabel = gantt.locator('[data-marker="deadline"] [data-marker-label]').first();
+    expect((await styleOf(deadlineLabel, ['background-color']))['background-color']).not.toBe(
+      transparent,
+    );
     await setTheme(gantt, 'light');
 
     // WCAG 1.4.1: the chain outline is dashed and sits further in than the locked outline, so the

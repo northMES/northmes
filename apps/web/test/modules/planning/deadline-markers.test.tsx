@@ -37,7 +37,8 @@ describe('deadline markers (plan 18, Deadlines on the timeline)', () => {
     const gantt = await findGantt();
 
     const row = within(gantt).getByRole('row', { name: /^1003 / });
-    expect(row.querySelector('[data-marker="deadline"]')?.textContent).toBe('15:00');
+    const label = row.querySelector<HTMLElement>('[data-marker="deadline"] [data-marker-label]');
+    expect(label?.textContent).toBe('15:00');
   });
 
   it('GT8 draws the frozen band from now to the fence and the now line over every row', async () => {
