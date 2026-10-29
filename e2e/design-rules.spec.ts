@@ -198,6 +198,8 @@ test.describe('the design rules from computed style', () => {
     await page.getByRole('button', { name: 'Open navigation' }).click();
     const sheet = page.getByRole('dialog', { name: 'Navigation' });
     await expect(sheet).toBeVisible();
+    // The sheet fades in; axe reads its text against the scrim until it has (#867).
+    await expect(sheet).toHaveCSS('opacity', '1');
     await expectNoRules(sheet.getByRole('navigation', { name: 'Main' }));
     await checkA11y('the navigation sheet at 320 px');
   });

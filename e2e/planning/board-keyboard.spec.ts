@@ -104,6 +104,8 @@ test.describe('the planning board keyboard', () => {
     await page.keyboard.press('Shift+F10');
     const menu = page.getByRole('menu', { name: 'Actions for 1003.10' });
     await expect(menu).toBeVisible();
+    // The menu fades in; axe reads its text against the board until it has (#867).
+    await expect(menu).toHaveCSS('opacity', '1');
     await checkA11y('the block menu');
     await page.getByRole('menuitem', { name: 'Move' }).click();
     const dialog = page.getByRole('dialog', { name: /^Move 1003\.10/ });
