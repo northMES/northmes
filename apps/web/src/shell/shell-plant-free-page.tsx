@@ -66,27 +66,25 @@ export interface PlantListCompany {
 export interface ShellPlantListProps {
   readonly modules: readonly ShellModule[];
   readonly companies: readonly PlantListCompany[];
-  /** The level of each company's heading, under the heading of the list. */
-  readonly level: 2 | 3;
 }
 
 /**
- * The user's plants by company (D2 ST29, ST38): a heading per company and a list of its plants
- * named by that heading, each with the switcher's Factory mark, the plant link, which opens the
- * plant's first page or its root, and the plant's path. A company with a settings landing gets the link
- * "{company} settings" beside its heading (ADR 0066).
+ * The user's plants by company on the unknown plant page (D2 ST29), under its h2 Your plants: an
+ * h3 per company and a list of its plants named by that heading, each with the switcher's Factory
+ * mark, the plant link, which opens the plant's first page or its root, and the plant's path. A
+ * company with a settings landing gets the link "{company} settings" beside its heading (ADR
+ * 0066). The landing at `/` draws the same companies as a picker of tiles (shell-landing.tsx).
  */
-export function ShellPlantList({ modules, companies, level }: ShellPlantListProps) {
-  const Heading = level === 2 ? 'h2' : 'h3';
+export function ShellPlantList({ modules, companies }: ShellPlantListProps) {
   return companies.map(({ company, settings }) => (
     <div key={company.id} className="grid gap-1">
       <div className="flex flex-wrap items-baseline gap-x-3">
-        <Heading
+        <h3
           id={`your-plants-${company.id}`}
           className="text-xs font-semibold text-muted-foreground"
         >
           {company.name}
-        </Heading>
+        </h3>
         {settings !== undefined && (
           <Link
             to={settings}
