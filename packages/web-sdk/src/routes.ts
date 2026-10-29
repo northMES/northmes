@@ -33,7 +33,7 @@ interface MountComponents {
   readonly plantBeforeLoad?: PlantBeforeLoad;
   /** The layout of company settings, a page without a plant (ADR 0066). */
   readonly settingsComponent?: RouteComponent;
-  /** The company landing at /settings/$companyId, which lists the settings of the company. */
+  /** The company landing at /settings/$companyId, which leads on to the company's settings pages. */
   readonly settingsIndexComponent?: RouteComponent;
   readonly settingsBeforeLoad?: PlantBeforeLoad;
 }

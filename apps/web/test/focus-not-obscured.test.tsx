@@ -73,6 +73,7 @@ describe('focus not obscured', () => {
   });
 
   it('E04-S02 company settings measure their top bar too', async () => {
+    // Without a permission the landing keeps a page of its own, which says so (#876).
     renderAt(`/settings/${companyId}`);
     await screen.findByRole('heading', { level: 1, name: 'Company settings' });
 

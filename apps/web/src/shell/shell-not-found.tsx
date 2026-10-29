@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { companySettingsHref } from '@northmes/web-sdk';
 import { Link, useParams, useRouterState } from '@tanstack/react-router';
 import { SearchX } from 'lucide-react';
 import type { ShellModule } from '../modules.ts';
@@ -14,6 +13,7 @@ import {
   moduleOfPath,
   plantHome,
   sidebarLinks,
+  wayOutOf,
 } from './shell-pages.ts';
 
 /** The h1 and the title part of every not-found page (shell-306, doc copy). */
@@ -47,7 +47,7 @@ function moduleAt(modules: readonly ShellModule[], plant: string, pathname: stri
  * is D2's module page not found (ST5): "Equipment has no page at /plant-a/equipment/gauges",
  * Go to the module's first entry, See all pages, and the module in the document title. In company
  * settings, which replaced the admin frame of NF3 (ADR 0066), it renders in the settings layout with
- * Go to Company settings, the landing that lists every settings page. The path shows in Plex Mono.
+ * Go to the first company settings entry, such as Users (#876). The path shows in Plex Mono.
  * The shell moves focus to the h1 as on any path change.
  */
 export function ShellNotFound({ modules }: { readonly modules: readonly ShellModule[] }) {
@@ -59,7 +59,7 @@ export function ShellNotFound({ modules }: { readonly modules: readonly ShellMod
   const home = plant === undefined ? undefined : plantHome(modules, plant);
   const wayOn: WayOn | undefined =
     companyId !== undefined
-      ? { label: 'Go to Company settings', href: companySettingsHref(companyId) }
+      ? wayOutOf(modules, { companyId }, pathname)
       : module !== undefined
         ? { label: `Go to ${module.first.label}`, href: module.first.href }
         : home !== undefined

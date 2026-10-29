@@ -362,6 +362,7 @@ describe('roles', () => {
     ).toBeDefined();
     expect(screen.queryByRole('table')).toBeNull();
     // A page opened by URL may have no page before it, so the way out is a link, not a step back.
+    // The landing goes on to the first page the user may open (#876).
     expect(screen.getByRole('link', { name: 'Go to Company settings' }).getAttribute('href')).toBe(
       `/settings/${companyId}`,
     );

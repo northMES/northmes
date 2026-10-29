@@ -2,12 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Link } from '@tanstack/react-router';
 import { cn } from 'cn';
-import { ArrowLeft, Building2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
 import { NavIcon } from '../ui/components/nav-icon/index.ts';
 import type { NavIconName } from '../ui/lib/nav-icon-names.ts';
 import { useIsMobile } from '../ui/lib/use-mobile.ts';
-import { Separator } from '../ui/primitives/separator.tsx';
 import { currentOf } from './shell-pages.ts';
 
 /** One entry of a settings navigation: its label, its icon and its page. */
@@ -24,13 +23,13 @@ export interface SettingsGroup {
   readonly entries: readonly SettingsEntry[];
 }
 
-/** A link that leads out of a settings area or back to its landing, with an arrow before it. */
+/** A link that leads out of a settings area, with an arrow before it. */
 export interface WayLink {
   readonly label: string;
   readonly href: string;
 }
 
-/** "← Back to Plant A" or "← Company settings": a way out with an arrow, as C1 and C6 draw it. */
+/** "← Back to Plant A": a way out with an arrow, as C1 draws it. */
 export function BackLink({ label, href, className }: WayLink & { readonly className?: string }) {
   return (
     <Link
@@ -52,24 +51,16 @@ interface ShellSettingsNavProps {
   /** The area's name, "Company settings" or "Plant A settings", which names the landmark. */
   readonly title: string;
   readonly groups: readonly SettingsGroup[];
-  /** The link at the foot, such as "Acme AB settings" from plant settings. */
-  readonly foot?: WayLink;
   readonly pathname: string;
 }
 
 /**
  * A settings navigation (design shell-313, C1 and C2, ADR 0066): a nav landmark named after its
  * area, apart from Main, with the company above the area's name, the entries in one fixed order
- * (WCAG 3.2.3), each with its icon, and the current entry marked with aria-current. Its foot holds
- * the way to the other area.
+ * (WCAG 3.2.3), each with its icon, and the current entry marked with aria-current. In plant
+ * settings the last group holds the company's settings pages (#876).
  */
-export function ShellSettingsNav({
-  company,
-  title,
-  groups,
-  foot,
-  pathname,
-}: ShellSettingsNavProps) {
+export function ShellSettingsNav({ company, title, groups, pathname }: ShellSettingsNavProps) {
   const titleId = useId();
   // One entry is current: the one whose page holds the page on screen most closely, so Board
   // fields under Planning rules' path marks Board fields alone (#766).
@@ -127,18 +118,6 @@ export function ShellSettingsNav({
           </div>
         );
       })}
-      {foot !== undefined && (
-        <>
-          <Separator />
-          <Link
-            to={foot.href}
-            className="flex min-h-9 items-center gap-2 rounded-md px-2 text-sm hover:bg-accent"
-          >
-            <Building2 aria-hidden className="size-4" />
-            {foot.label}
-          </Link>
-        </>
-      )}
     </nav>
   );
 }
@@ -149,22 +128,16 @@ export const settingsContentId = 'settings-content';
 interface ShellSettingsLayoutProps {
   /** The column beside the page: the settings navigation, with Back to the plant above it. */
   readonly column: ReactNode;
-  /**
-   * The way back below 768 px, in place of the column: Back to the plant on the company landing,
-   * the landing on a page drilled into from it (C5, C6). Without one, as in plant settings, the
-   * column sits above the page there.
-   */
-  readonly narrowBack?: WayLink;
   readonly children: ReactNode;
 }
 
 /**
- * The settings layout inside main (design shell-313, C1, C2, C5 and C6): the settings navigation
- * beside the page content from 768 px; below, the page with its way back above the h1, or with the
- * navigation above it. The content takes focus from the skip link, which so passes the settings
+ * The settings layout inside main (design shell-313, C1 and C2): the settings navigation beside
+ * the page content from 768 px; below, the column above the page, in plant and company settings
+ * alike (#876). The content takes focus from the skip link, which so passes the settings
  * navigation (WCAG 2.4.1).
  */
-export function ShellSettingsLayout({ column, narrowBack, children }: ShellSettingsLayoutProps) {
+export function ShellSettingsLayout({ column, children }: ShellSettingsLayoutProps) {
   const isMobile = useIsMobile();
   const content = (
     <div
@@ -172,14 +145,13 @@ export function ShellSettingsLayout({ column, narrowBack, children }: ShellSetti
       tabIndex={-1}
       className="flex min-w-0 flex-1 flex-col gap-2 focus-visible:outline-offset-4"
     >
-      {isMobile && narrowBack !== undefined && <BackLink {...narrowBack} />}
       {children}
     </div>
   );
   if (isMobile) {
     return (
       <div className="flex flex-col gap-6">
-        {narrowBack === undefined && column}
+        {column}
         {content}
       </div>
     );

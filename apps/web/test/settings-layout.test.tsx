@@ -103,22 +103,32 @@ describe('plant settings', () => {
     ).toBeNull();
   });
 
-  it('E04-S02 the plant settings navigation ends with the company settings link for a user with a company settings entry', async () => {
-    const { fetch } = api([], ['core.user:read']);
+  it("E04-S02 the plant settings navigation ends with the company's settings as a group of its entries, Users and Roles under Acme AB settings, for a user who may open them, and has no such group for a user who may not (#876)", async () => {
+    const { fetch } = api([], ['core.user:read', 'core.role:read']);
     renderShellAt('/plant-a/equipment/machines', [...shellModules, equipment], { fetch });
 
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
-    const company = await within(settings).findByRole('link', { name: 'Acme AB settings' });
-    expect(company.getAttribute('href')).toBe(`/settings/${companyId}`);
+    const company = await within(settings).findByRole('list', { name: 'Acme AB settings' });
+    expect(linksIn(company)).toEqual([
+      ['Users', `/settings/${companyId}/users`],
+      ['Roles', `/settings/${companyId}/roles`],
+    ]);
+    expect(within(settings).queryByRole('link', { name: 'Acme AB settings' })).toBeNull();
+    // The group comes last, after the plant's own entries.
+    const lists = within(settings).getAllByRole('list');
+    expect(lists[lists.length - 1]).toBe(company);
 
     cleanup();
-    const without = api([]);
+    // Calendars needs a permission, so once it shows the viewer's answer has arrived, and a
+    // company group would show by then too.
+    const without = api(['equipment.calendar:read']);
     renderShellAt('/plant-a/equipment/machines', [...shellModules, equipment], {
       fetch: without.fetch,
     });
     const plantOnly = await screen.findByRole('navigation', { name: 'Plant A settings' });
-    await waitFor(() => expect(linksIn(plantOnly).length).toBeGreaterThan(0));
-    expect(within(plantOnly).queryByRole('link', { name: 'Acme AB settings' })).toBeNull();
+    await within(plantOnly).findByRole('link', { name: 'Calendars' });
+    expect(within(plantOnly).queryByRole('list', { name: 'Acme AB settings' })).toBeNull();
+    expect(within(plantOnly).queryByRole('link', { name: 'Users' })).toBeNull();
   });
 
   it('E04-S02 opening a settings page collapses the main sidebar to the rail and focus goes to the page h1, as on any route change', async () => {
@@ -210,14 +220,14 @@ describe('the Settings button', () => {
     expect(button.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
   });
 
-  it('E04-S02 a user with only company settings goes to company settings, and a user with neither sees no Settings button', async () => {
+  it('E04-S02 a user with only company settings goes to the first company settings page they may open, and a user with neither sees no Settings button', async () => {
     const companyOnly = api(['core.article:read'], ['core.role:read']);
     renderShellAt('/plant-a/articles', shellModules, { fetch: companyOnly.fetch });
 
     const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
-    expect(button.getAttribute('href')).toBe(`/settings/${companyId}`);
+    expect(button.getAttribute('href')).toBe(`/settings/${companyId}/roles`);
 
     cleanup();
     // The permissions draw the Reports entry, which needs one, and no settings target: once the

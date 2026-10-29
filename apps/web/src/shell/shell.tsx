@@ -4,7 +4,6 @@ import type { ApolloClient } from '@apollo/client';
 import { ApolloProvider, useQuery } from '@apollo/client/react';
 import {
   ContributionsProvider,
-  companySettingsHref,
   createNorthmesClient,
   createShellRoutes,
   ShellProvider,
@@ -425,14 +424,20 @@ function PlantLayout({
   const settingsHome = settingsGroups[0]?.entries[0]?.href;
   const isMobile = useIsMobile();
   const companyId = found?.company.id;
-  const companySettings =
-    companyId !== undefined &&
-    companySettingsEntries(modules, companyPermissions, companyId).some(
-      ({ entries }) => entries.length > 0,
-    )
-      ? companySettingsHref(companyId)
-      : undefined;
-  const settingsTarget = settingsHome ?? companySettings;
+  // The company's settings pages the user may open, which end the plant settings navigation as
+  // a group of their own (#876), and which the Settings button leads to for a user without a
+  // plant settings page.
+  const companyEntries =
+    companyId === undefined
+      ? []
+      : companySettingsEntries(modules, companyPermissions, companyId).flatMap(
+          ({ entries }) => entries,
+        );
+  const settingsNavGroups: SettingsGroup[] =
+    companyEntries.length === 0 || found === undefined
+      ? settingsGroups
+      : [...settingsGroups, { label: `${found.company.name} settings`, entries: companyEntries }];
+  const settingsTarget = settingsHome ?? companyEntries[0]?.href;
   const settingsButton: SettingsButtonTarget | undefined =
     settingsTarget === undefined ? undefined : { href: settingsTarget, current: inSettings };
   const sidebar = useSidebarOpen(inSettings, sidebarChoice);
@@ -451,6 +456,10 @@ function PlantLayout({
       label: `${plantName} settings`,
       entries: settingsGroups.flatMap(({ entries }) => entries),
     },
+    // The company's settings pages, as the plant settings navigation lists them (#876).
+    ...(found === undefined
+      ? []
+      : [{ label: `${found.company.name} settings`, entries: companyEntries }]),
   ].filter(({ entries }) => entries.length > 0);
   const help = <ShellHelpMenu modules={modules} allPagesHref={allPagesHref(plant)} />;
   const topBar = useMemo<PageFrameTopBarValue>(
@@ -486,12 +495,7 @@ function PlantLayout({
         <ShellSettingsNav
           company={found?.company.name ?? ''}
           title={`${plantName} settings`}
-          groups={settingsGroups}
-          foot={
-            companySettings === undefined || found === undefined
-              ? undefined
-              : { label: `${found.company.name} settings`, href: companySettings }
-          }
+          groups={settingsNavGroups}
           pathname={pathname}
         />
       }
