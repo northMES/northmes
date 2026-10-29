@@ -162,12 +162,16 @@ test.describe('the design rules from computed style', () => {
     const articles = nav.getByRole('link', { name: 'Articles' });
     const articleGroups = nav.getByRole('link', { name: 'Article groups' });
 
-    // The current entry alone is filled, in --sidebar-primary.
+    // The current entry alone is filled, in --sidebar-primary. Dashboard, the entry at the plant
+    // root, is neither current nor filled on a page under the root (#873).
     await expect(articles).toHaveAttribute('aria-current', 'page');
     const current = await styleOf(articles, ['background-color']);
     const other = await styleOf(articleGroups, ['background-color']);
     expect(other['background-color']).toBe(transparent);
     expect(current['background-color']).not.toBe(transparent);
+    const dashboard = nav.getByRole('link', { name: 'Dashboard' });
+    await expect(dashboard).not.toHaveAttribute('aria-current');
+    expect((await styleOf(dashboard, ['background-color']))['background-color']).toBe(transparent);
 
     // Keyboard focus on a nested entry draws the ring of app.css.
     await masterData.focus();
