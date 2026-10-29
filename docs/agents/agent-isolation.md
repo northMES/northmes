@@ -109,7 +109,7 @@ In the main checkout's local settings file, .claude/settings.local.json, which `
 }
 ```
 
-Create the empty folder that `GH_CONFIG_DIR` names. Claude Code takes `defaultMode` and a working `allowRead` only from user settings, and the token belongs to this machine, so none of this goes into the repository.
+Create the empty folder that `GH_CONFIG_DIR` names. Claude Code takes `defaultMode` only from user settings, and the token belongs to this machine, so none of this goes into the repository. The `allowRead` entries date from the read block of ADR 0084 rule 2, which ignored a repository's `allowRead`; without the block they open nothing that is not already open, and they stay. Do not set `permissions.blockReadsOutsideWorkingDirectories` here: Claude Code honors `true` from any settings file, and the block prompts sessions several times an hour in every permission mode.
 
 ## 5. Docker Desktop file sharing
 
@@ -131,7 +131,8 @@ Use real paths: `/tmp` is a symlink, and pnpm refuses it for the hoist folder. `
 
 Start a session in a worktree and ask it to run these commands and report each outcome:
 
-- `ls ~/.ssh`, `ls ~/.config/gh` and `ls ~/Project` are refused with "Operation not permitted".
+- `ls ~/.ssh` and `ls ~/.config/gh` are refused with "Operation not permitted".
+- `ls ~/Project` lists the folder without a prompt: the read block of ADR 0084 rule 2 is off. A prompt or a refusal means a settings file on this machine sets `permissions.blockReadsOutsideWorkingDirectories`.
 - `security find-generic-password -s gh:github.com` and `security find-internet-password -s github.com` find nothing.
 - `curl -sS -o /dev/null -w '%{http_code}' https://example.com/` is refused by the proxy, also when the session names `example.com` as a host for the command.
 - `gh api user --jq .login` prints `northmes-agent`.
@@ -139,4 +140,4 @@ Start a session in a worktree and ask it to run these commands and report each o
 - `docker run --rm -v "$HOME:/h:ro" alpine ls /h`, from your own terminal, fails with a file sharing error, because Docker Desktop does not share the folder.
 - `pnpm exec vitest run --project integration apps/backend/test/migrate.int.test.ts` passes.
 - In a new worktree, `echo "$pnpm_config_virtual_store_dir"` names its folder under `/private/tmp/claude-501/pnpm-vstore`, `pnpm install --frozen-lockfile` finishes, `readlink node_modules/typescript` points into that folder, and `pnpm check` passes.
-- `gh run view <id> --log-failed` prints a failed run's log, and `ls ~/.ssh` is refused, because `sandbox.filesystem.denyRead` names the credential paths (ADR 0084 rule 2).
+- `gh run view <id> --log-failed` prints a failed run's log.
