@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { z } from 'zod';
+import { commaList, type Scope } from './comma-list.ts';
 import type { PlantSettingsPreview } from './plant-settings-data.ts';
 
 /**
@@ -17,6 +18,15 @@ export interface MachineListSearch {
   readonly preview?: PlantSettingsPreview;
 }
 
+/**
+ * The URL keys of the equipment groups list (design #729, EG1): the Scope filter as a comma list
+ * of company and plant, and the page state the mock source answers with (EG6 to EG9).
+ */
+export interface EquipmentGroupListSearch {
+  readonly scope?: readonly Scope[];
+  readonly preview?: PlantSettingsPreview;
+}
+
 /** The URL keys of a machine's edit page: the page state the mock source answers with (MF1 to MF4). */
 export interface MachinePageSearch {
   readonly preview?: PlantSettingsPreview;
@@ -29,8 +39,8 @@ export interface CalendarPageSearch {
   readonly preview?: PlantSettingsPreview;
 }
 
-/** A filter key's comma list of picked values, or a validated view's list, each value once. */
-function commaList() {
+/** A filter key's comma list of codes, or a validated view's list, each value once. */
+function codeList() {
   return z
     .unknown()
     .transform((raw): string[] | undefined => {
@@ -68,8 +78,8 @@ const machineListKeys = z.object({
     .pipe(z.string().trim().min(1).max(100))
     .optional()
     .catch(undefined),
-  group: commaList(),
-  calendar: commaList(),
+  group: codeList(),
+  calendar: codeList(),
   plannable: z
     .union([z.literal(1), z.literal('1'), z.literal(true)])
     .transform(() => 1 as const)
@@ -89,8 +99,10 @@ export function machineListSearch(raw: Record<string, unknown>): MachineListSear
   return defined(machineListKeys.parse(raw));
 }
 
-/** A machines list view as the URL holds it: each filter's picked values as a comma list. */
-export function urlSearchOf(view: MachineListSearch): Record<string, unknown> {
+/** A list view as the URL holds it: each filter's picked values as a comma list. */
+export function urlSearchOf(
+  view: MachineListSearch | EquipmentGroupListSearch,
+): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(view).map(([key, value]) => [
       key,
@@ -98,6 +110,19 @@ export function urlSearchOf(view: MachineListSearch): Record<string, unknown> {
     ]),
   );
 }
+
+const equipmentGroupListKeys = z.object({
+  scope: commaList(['company', 'plant'] as const),
+  preview,
+});
+
+export function equipmentGroupListSearch(raw: Record<string, unknown>): EquipmentGroupListSearch {
+  return defined(equipmentGroupListKeys.parse(raw));
+}
+
+/** The URL keys of an equipment group's page and its edit form: the preview, as a machine's. */
+export const equipmentGroupPageSearch = (raw: Record<string, unknown>): MachinePageSearch =>
+  machinePageSearch(raw);
 
 export function machinePageSearch(raw: Record<string, unknown>): MachinePageSearch {
   const parsed = preview.parse(raw.preview);

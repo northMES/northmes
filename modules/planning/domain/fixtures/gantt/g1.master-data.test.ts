@@ -89,4 +89,40 @@ describe('the master data fixture beside G1 (design #729)', () => {
       }
     }
   });
+
+  it('#729 details every equipment group of G1 and the pages fixture, naming and coloring only the ones they lack', () => {
+    const known = new Set(
+      [...g1.equipmentGroups, ...g1Pages.equipmentGroups].map((group) => group.code),
+    );
+    for (const code of known) {
+      expect(
+        g1MasterData.equipmentGroups.some((group) => group.code === code),
+        code,
+      ).toBe(true);
+    }
+    for (const group of g1MasterData.equipmentGroups) {
+      const own = group.name !== undefined && group.color !== undefined;
+      expect(own, group.code).toBe(!known.has(group.code));
+    }
+  });
+
+  it('#729 gives a group that took its color from the palette the first color no other group used', () => {
+    // Each palette group in turn takes the first color no group before it used: G1's and the pages
+    // fixture's groups, the own groups with a color from the ERP or set in NorthMES, and the
+    // palette groups before it.
+    const colors = [...g1.equipmentGroups, ...g1Pages.equipmentGroups].map((group) => group.color);
+    for (const group of g1MasterData.equipmentGroups) {
+      if (group.colorFrom !== 'palette' && group.color !== undefined) colors.push(group.color);
+    }
+    for (const group of g1MasterData.equipmentGroups.filter(
+      (each) => each.colorFrom === 'palette',
+    )) {
+      const first = Array.from({ length: 20 }, (_, index) => `palette-${index + 1}`).find(
+        (color) => !colors.includes(color),
+      );
+      expect(group.color, group.code).toBeDefined();
+      expect(group.color, group.code).toBe(first);
+      colors.push(group.color as string);
+    }
+  });
 });
