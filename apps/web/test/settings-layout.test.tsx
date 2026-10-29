@@ -103,7 +103,7 @@ describe('plant settings', () => {
     ).toBeNull();
   });
 
-  it("E04-S02 the plant settings navigation ends with the company's settings as a group of its entries, Users and Roles under Acme AB settings, for a user who may open them (#876)", async () => {
+  it("E04-S02 the plant settings navigation ends with the company's settings as a group of its entries, Users and Roles under Acme AB settings, for a user who may open them, and has no such group for a user who may not (#876)", async () => {
     const { fetch } = api([], ['core.user:read', 'core.role:read']);
     renderShellAt('/plant-a/equipment/machines', [...shellModules, equipment], { fetch });
 
@@ -119,12 +119,14 @@ describe('plant settings', () => {
     expect(lists[lists.length - 1]).toBe(company);
 
     cleanup();
-    const without = api([]);
+    // Calendars needs a permission, so once it shows the viewer's answer has arrived, and a
+    // company group would show by then too.
+    const without = api(['equipment.calendar:read']);
     renderShellAt('/plant-a/equipment/machines', [...shellModules, equipment], {
       fetch: without.fetch,
     });
     const plantOnly = await screen.findByRole('navigation', { name: 'Plant A settings' });
-    await waitFor(() => expect(linksIn(plantOnly).length).toBeGreaterThan(0));
+    await within(plantOnly).findByRole('link', { name: 'Calendars' });
     expect(within(plantOnly).queryByRole('list', { name: 'Acme AB settings' })).toBeNull();
     expect(within(plantOnly).queryByRole('link', { name: 'Users' })).toBeNull();
   });

@@ -89,9 +89,20 @@ describe('company settings', () => {
     const breadcrumb = within(screen.getByRole('banner')).getByRole('navigation', {
       name: 'Breadcrumb',
     });
+    // The company crumb leads to the first page the user may open (#876).
     expect(within(breadcrumb).getByRole('link', { name: 'Acme AB' }).getAttribute('href')).toBe(
-      `/settings/${companyId}`,
+      `/settings/${companyId}/users`,
     );
+
+    cleanup();
+    renderShellAt(`/settings/${companyId}/users`, shellModules, { fetch: companyAdmin().fetch });
+    await screen.findByRole('heading', { level: 1, name: 'Users' });
+    await waitFor(() => expect(crumbs()).toEqual(['Settings', 'Acme AB', 'Users']));
+    expect(
+      within(
+        within(screen.getByRole('banner')).getByRole('navigation', { name: 'Breadcrumb' }),
+      ).queryByRole('link', { name: 'Acme AB' }),
+    ).toBeNull();
   });
 
   it('E04-S02 every company settings route has a title with the company name in place of the plant', async () => {
@@ -251,7 +262,7 @@ describe('company settings', () => {
 });
 
 describe('company settings below 768 px', () => {
-  it('E04-S02 at 320 px a company settings page reached from a plant shows Back to the plant above its h1 and no settings navigation (C5, #876)', async () => {
+  it('E04-S02 at 320 px a company settings page reached from a plant shows Back to the plant and the company settings navigation above its h1, as plant settings do (#876)', async () => {
     setViewport(320, 640);
     const user = userEvent.setup();
     const { fetch } = companyAdmin();
@@ -262,26 +273,28 @@ describe('company settings below 768 px', () => {
     );
 
     const heading = await screen.findByRole('heading', { level: 1, name: 'Users' });
-    const back = await within(screen.getByRole('main')).findByRole('link', {
-      name: 'Back to Plant B',
-    });
+    const main = screen.getByRole('main');
+    const back = await within(main).findByRole('link', { name: 'Back to Plant B' });
     expect(back.getAttribute('href')).toBe('/plant-b');
-    expect(isBefore(back, heading)).toBe(true);
-    expect(screen.queryByRole('navigation', { name: 'Company settings' })).toBeNull();
+    const settings = within(main).getByRole('navigation', { name: 'Company settings' });
+    expect(isBefore(back, settings)).toBe(true);
+    expect(isBefore(settings, heading)).toBe(true);
+    expect(within(settings).getByRole('link', { name: 'Roles' })).toBeDefined();
     expect(screen.queryByRole('link', { name: 'Company settings' })).toBeNull();
   });
 
-  it('E04-S02 at 320 px a company settings page opened by its address shows Back to your plants above its h1 (#876)', async () => {
+  it('E04-S02 at 320 px a company settings page opened by its address shows Back to your plants above the navigation and its h1 (#876)', async () => {
     setViewport(320, 640);
     const { fetch } = companyAdmin();
     renderShellAt(`/settings/${companyId}/users`, shellModules, { fetch });
 
     const heading = await screen.findByRole('heading', { level: 1, name: 'Users' });
-    const back = await within(screen.getByRole('main')).findByRole('link', {
-      name: 'Back to your plants',
-    });
+    const main = screen.getByRole('main');
+    const back = await within(main).findByRole('link', { name: 'Back to your plants' });
     expect(back.getAttribute('href')).toBe('/');
     expect(isBefore(back, heading)).toBe(true);
-    expect(screen.queryByRole('navigation', { name: 'Company settings' })).toBeNull();
+    expect(
+      isBefore(within(main).getByRole('navigation', { name: 'Company settings' }), heading),
+    ).toBe(true);
   });
 });

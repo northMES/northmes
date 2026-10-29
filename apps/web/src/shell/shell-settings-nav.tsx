@@ -23,13 +23,13 @@ export interface SettingsGroup {
   readonly entries: readonly SettingsEntry[];
 }
 
-/** A link that leads out of a settings area or back to its landing, with an arrow before it. */
+/** A link that leads out of a settings area, with an arrow before it. */
 export interface WayLink {
   readonly label: string;
   readonly href: string;
 }
 
-/** "← Back to Plant A" or "← Company settings": a way out with an arrow, as C1 and C6 draw it. */
+/** "← Back to Plant A": a way out with an arrow, as C1 draws it. */
 export function BackLink({ label, href, className }: WayLink & { readonly className?: string }) {
   return (
     <Link
@@ -128,22 +128,16 @@ export const settingsContentId = 'settings-content';
 interface ShellSettingsLayoutProps {
   /** The column beside the page: the settings navigation, with Back to the plant above it. */
   readonly column: ReactNode;
-  /**
-   * The way back below 768 px, in place of the column: Back to the plant on the company landing,
-   * the landing on a page drilled into from it (C5, C6). Without one, as in plant settings, the
-   * column sits above the page there.
-   */
-  readonly narrowBack?: WayLink;
   readonly children: ReactNode;
 }
 
 /**
- * The settings layout inside main (design shell-313, C1, C2, C5 and C6): the settings navigation
- * beside the page content from 768 px; below, the page with its way back above the h1, or with the
- * navigation above it. The content takes focus from the skip link, which so passes the settings
+ * The settings layout inside main (design shell-313, C1 and C2): the settings navigation beside
+ * the page content from 768 px; below, the column above the page, in plant and company settings
+ * alike (#876). The content takes focus from the skip link, which so passes the settings
  * navigation (WCAG 2.4.1).
  */
-export function ShellSettingsLayout({ column, narrowBack, children }: ShellSettingsLayoutProps) {
+export function ShellSettingsLayout({ column, children }: ShellSettingsLayoutProps) {
   const isMobile = useIsMobile();
   const content = (
     <div
@@ -151,14 +145,13 @@ export function ShellSettingsLayout({ column, narrowBack, children }: ShellSetti
       tabIndex={-1}
       className="flex min-w-0 flex-1 flex-col gap-2 focus-visible:outline-offset-4"
     >
-      {isMobile && narrowBack !== undefined && <BackLink {...narrowBack} />}
       {children}
     </div>
   );
   if (isMobile) {
     return (
       <div className="flex flex-col gap-6">
-        {narrowBack === undefined && column}
+        {column}
         {content}
       </div>
     );

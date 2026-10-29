@@ -173,7 +173,7 @@ describe('an unknown path', () => {
     await waitFor(() => expect(document.activeElement).toBe(heading));
   });
 
-  it('E04-S02 an unknown path in company settings renders Page not found in the settings layout, with Go to Company settings (NF3)', async () => {
+  it('E04-S02 an unknown path in company settings renders Page not found in the settings layout, with Go to Company settings when no module has a company settings entry (NF3)', async () => {
     renderAt(`/settings/${companyId}/reports`);
 
     const main = await screen.findByRole('main');

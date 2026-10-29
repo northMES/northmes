@@ -4,10 +4,8 @@ import type { ApolloClient } from '@apollo/client';
 import { ApolloProvider, useQuery } from '@apollo/client/react';
 import { companySettingsHref } from '@northmes/web-sdk';
 import { Link, Navigate, Outlet, useParams, useRouterState } from '@tanstack/react-router';
-import { ChevronRight } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ShellModule } from '../modules.ts';
-import { NavIcon } from '../ui/components/nav-icon/index.ts';
 import {
   PageFrame,
   PageFrameTopBar,
@@ -70,14 +68,14 @@ interface CompanySettingsLayoutProps {
 }
 
 /**
- * The company settings layout at /settings/$companyId (design shell-313, C1, C5 and C6, ADR 0066):
- * a page without a plant and without the main sidebar. The top bar holds the trail "Settings >
- * Acme AB > Users", the page actions, the Settings button, which shows that the user is in
- * settings, and the account button. Main holds Back to the plant above the company settings
- * navigation, beside the page; below 768 px the page alone, with its way back above the h1. Its
- * requests carry no x-northmes-plant, so its pages read only core's plant-free fields, with the
- * company in companyId. Titles put the company's name where the plant goes. The skip link lands
- * after the settings navigation.
+ * The company settings layout at /settings/$companyId (design shell-313, C1, ADR 0066): a page
+ * without a plant and without the main sidebar. The top bar holds the trail "Settings > Acme AB >
+ * Users", the page actions, the Settings button, which shows that the user is in settings, and
+ * the account button. Main holds Back to the plant above the company settings navigation, beside
+ * the page; below 768 px both sit above the page, as in plant settings (#876). Its requests carry
+ * no x-northmes-plant, so its pages read only core's plant-free fields, with the company in
+ * companyId. Titles put the company's name where the plant goes. The skip link lands after the
+ * settings navigation.
  */
 export function CompanySettingsLayout({
   modules,
@@ -124,6 +122,9 @@ export function CompanySettingsLayout({
   );
   const landing = companySettingsHref(companyId);
   const isLanding = pathname === landing || pathname === `${landing}/`;
+  // The first page the user may open, where the landing leads (#876): the company crumb and the
+  // Settings button point there, and the crumb is text on that page itself (ADR 0067).
+  const first = groups?.[0]?.entries[0]?.href ?? landing;
   const from = lastPlant === undefined ? undefined : plantOf(companies, lastPlant);
   const back: WayLink =
     lastPlant !== undefined && from !== undefined
@@ -134,12 +135,15 @@ export function CompanySettingsLayout({
   const name = company ?? 'Company';
   const topBar = useMemo<PageFrameTopBarValue>(
     () => ({
-      trail: [{ label: 'Settings' }, ...(isLanding ? [] : [{ label: name, href: landing }])],
+      trail: [
+        { label: 'Settings' },
+        ...(isLanding ? [] : [pathname === first ? { label: name } : { label: name, href: first }]),
+      ],
       titleContext: name,
       breadcrumb,
       actions,
     }),
-    [isLanding, name, landing, breadcrumb, actions],
+    [isLanding, name, first, pathname, breadcrumb, actions],
   );
   const state = useMemo(
     () => ({ company, groups, back, refused, retry }),
@@ -153,7 +157,7 @@ export function CompanySettingsLayout({
           <ShellTopBar
             breadcrumbRef={setBreadcrumb}
             actionsRef={setActions}
-            settings={{ href: landing, current: true }}
+            settings={{ href: first, current: true }}
             help={<ShellHelpMenu modules={modules} />}
             account={<ShellAccountMenu user={user} onSignOut={onSignOut} />}
           />
@@ -176,7 +180,6 @@ export function CompanySettingsLayout({
                     />
                   </>
                 }
-                narrowBack={back}
               >
                 <Outlet />
               </ShellSettingsLayout>
@@ -225,7 +228,8 @@ function landingState(state: CompanySettingsState | null): PageState {
         'You hold no permission that opens a company settings page here. Ask a company admin for a role that includes one.',
     };
   }
-  return { status: 'ready' };
+  // With an entry the landing forwards, so the state is on screen for a frame at most.
+  return { status: 'loading' };
 }
 
 /**
@@ -247,34 +251,8 @@ export function CompanySettingsLanding() {
       currentCrumb={state?.company ?? 'Company'}
       state={landingState(state)}
     >
-      <div className="flex max-w-xl flex-col gap-4">
-        {(groups ?? []).map(({ label, entries }, index) => (
-          <section key={label ?? 'entries'} className="flex flex-col gap-2">
-            {label !== undefined && (
-              <h2 id={`landing-group-${index}`} className="text-sm font-semibold">
-                {label}
-              </h2>
-            )}
-            <ul
-              aria-label={label ?? 'Company settings entries'}
-              className="divide-y overflow-hidden rounded-xl border bg-card"
-            >
-              {entries.map(({ label: entry, icon, href }) => (
-                <li key={href}>
-                  <Link
-                    to={href}
-                    className="flex min-h-12 items-center gap-3 px-4 text-sm hover:bg-accent"
-                  >
-                    <NavIcon name={icon} />
-                    <span className="flex-1">{entry}</span>
-                    <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
+      {/* With an entry the landing forwards before it renders content. */}
+      <></>
     </PageFrame>
   );
 }

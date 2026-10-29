@@ -239,7 +239,8 @@ function goTo(entry: MenuLink | undefined, plant: string, pathname: string): Way
  * The way out of a page that failed (D2 ST6, shell-306 SE): Go to the first sidebar entry of its
  * module, or See all pages when the page is that entry or the module has none (shell-306 LS3). A
  * page at the plant root is core's (ADR 0074). Outside a module, Go to the plant's first page; in
- * company settings, Go to Company settings. Never the page itself.
+ * company settings, Go to the first company settings entry other than the page. Never the page
+ * itself.
  */
 export function wayOutOf(
   modules: readonly ShellModule[],
@@ -247,8 +248,13 @@ export function wayOutOf(
   pathname: string,
 ): WayOut | undefined {
   if (companyId !== undefined) {
-    const href = companySettingsHref(companyId);
-    return href === pathname ? undefined : { label: 'Go to Company settings', href };
+    // The company landing goes on to the first page the user may open (#876), so the way out is
+    // the first company settings entry other than the page itself; a page the user may not open
+    // says so there. Without such an entry, the landing, which says what the user may open.
+    const entry = entriesAt(modules, { companyId }).find(({ href }) => href !== pathname);
+    if (entry !== undefined) return { label: `Go to ${entry.label}`, href: entry.href };
+    const landing = companySettingsHref(companyId);
+    return landing === pathname ? undefined : { label: 'Go to Company settings', href: landing };
   }
   if (plant === undefined) return undefined;
   const module = moduleOfPath(modules, pathname);

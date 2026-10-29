@@ -456,6 +456,10 @@ function PlantLayout({
       label: `${plantName} settings`,
       entries: settingsGroups.flatMap(({ entries }) => entries),
     },
+    // The company's settings pages, as the plant settings navigation lists them (#876).
+    ...(found === undefined
+      ? []
+      : [{ label: `${found.company.name} settings`, entries: companyEntries }]),
   ].filter(({ entries }) => entries.length > 0);
   const help = <ShellHelpMenu modules={modules} allPagesHref={allPagesHref(plant)} />;
   const topBar = useMemo<PageFrameTopBarValue>(
