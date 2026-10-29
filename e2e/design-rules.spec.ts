@@ -335,7 +335,21 @@ test.describe('the design rules from computed style', () => {
     await setTheme(gantt, 'dark');
     expect((await styleOf(block('jo-1001-10'), ['color'])).color).toMatch(black);
     await checkA11y('the Gantt in the dark theme');
+    // #882: a block's text lines carry the order color behind them, so they read over a hollow
+    // segment in the dark theme too, and the deadline label sits on a plain background over the
+    // late band's hatch.
+    const text = gantt.locator('[data-block="jo-1001-10"] [data-block-text]').first();
+    const blockBackground = (await styleOf(block('jo-1001-10'), ['background-color']))[
+      'background-color'
+    ];
+    expect((await styleOf(text, ['background-color']))['background-color']).toBe(blockBackground);
+    expect(blockBackground).not.toBe(transparent);
+    const deadlineLabel = gantt.locator('[data-marker="deadline"] [data-marker-label]').first();
     await setTheme(gantt, 'light');
+    await page.goto(planningHref('gantt', { zoom: 'day', from: '2026-11-04' }));
+    expect((await styleOf(deadlineLabel, ['background-color']))['background-color']).not.toBe(
+      transparent,
+    );
 
     // WCAG 1.4.1: the chain outline is dashed and sits further in than the locked outline, so the
     // two differ in shape. The chain of 1003 holds 1003.10; 1002.10 is locked.
