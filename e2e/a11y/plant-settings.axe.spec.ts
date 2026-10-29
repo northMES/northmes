@@ -25,7 +25,11 @@ test.describe('the plant settings pages', () => {
     const table = page.getByRole('table', { name: 'Machines' });
     await expect(table).toBeVisible();
     await expect(page.getByText('Showing fixture G1.')).toBeVisible();
-    await expect(page.getByRole('navigation', { name: /settings$/ })).toBeVisible();
+    const settingsNav = page.getByRole('navigation', { name: /settings$/ });
+    await expect(settingsNav).toBeVisible();
+    // The company's settings end the navigation as a group of their pages (#876); the dev admin
+    // administers the company, so Users is among them.
+    await expect(settingsNav.getByRole('link', { name: 'Users' })).toBeVisible();
     await checkA11y('the machines list');
 
     await page.locator('button[aria-haspopup="menu"]', { hasText: /^Group$/ }).click();

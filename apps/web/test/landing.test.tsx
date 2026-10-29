@@ -120,12 +120,13 @@ describe('the landing at /', () => {
     );
   });
 
-  it('ADR0066 no plant and a company settings page in one company redirects / to /settings/<company id>', async () => {
+  it('ADR0066 no plant and a company settings page in one company redirects / to the first page of /settings/<company id>', async () => {
     const { fetch } = api(() => companiesWith([]), companyAdmin);
     const router = renderShellAt('/', shellModules, { fetch });
 
+    // The company landing goes on to the first entry the user may open (#876).
     await waitFor(() =>
-      expect(router.state.location.pathname).toBe(companySettingsHref(companyId)),
+      expect(router.state.location.pathname).toBe(`${companySettingsHref(companyId)}/users`),
     );
   });
 

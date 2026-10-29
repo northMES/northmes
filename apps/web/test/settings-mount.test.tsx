@@ -123,34 +123,28 @@ describe('company settings', () => {
     }
   });
 
-  it('E04-S02 the company landing lists the company settings entries the user may open, under the h1 Company settings', async () => {
+  it('E04-S02 the company landing goes on to the first company settings page the user may open, with no page of its own (#876)', async () => {
     const { fetch } = companyAdmin(['core.user:read']);
-    renderShellAt(`/settings/${companyId}`, shellModules, { fetch });
+    const router = renderShellAt(`/settings/${companyId}`, shellModules, { fetch });
 
-    const heading = await screen.findByRole('heading', { level: 1, name: 'Company settings' });
-    await waitFor(() => expect(document.title).toBe('Company settings · Acme AB · NorthMES'));
-    const main = screen.getByRole('main');
-    const list = within(main).getByRole('list', { name: 'Company settings entries' });
-    await waitFor(() => expect(linksIn(list)).toEqual([['Users', `/settings/${companyId}/users`]]));
-    expect(main.contains(heading)).toBe(true);
-    expect(crumbs()).toEqual(['Settings', 'Acme AB']);
+    await screen.findByRole('heading', { level: 1, name: 'Users' });
+    expect(router.state.location.pathname).toBe(`/settings/${companyId}/users`);
+    await waitFor(() => expect(document.title).toBe('Users · Acme AB · NorthMES'));
+    expect(crumbs()).toEqual(['Settings', 'Acme AB', 'Users']);
   });
 
-  it('E04-S02 the company landing puts the entries of every module other than core under one Modules heading, in module order', async () => {
+  it('E04-S02 the company settings navigation puts the entries of every module other than core under one Modules group, in module order', async () => {
     const { fetch } = companyAdmin(['core.user:read']);
     const modules = [
       ...shellModules,
       settingsModule('quality', 'Quality', 30),
       settingsModule('maintenance', 'Maintenance', 40),
     ];
-    renderShellAt(`/settings/${companyId}`, modules, { fetch });
+    renderShellAt(`/settings/${companyId}/users`, modules, { fetch });
 
-    const main = await screen.findByRole('main');
-    await waitFor(() =>
-      expect(within(main).getAllByRole('heading', { level: 2, name: 'Modules' })).toHaveLength(1),
-    );
-    const section = within(main).getByRole('heading', { level: 2, name: 'Modules' }).parentElement;
-    expect(linksIn(within(section ?? main).getByRole('list', { name: 'Modules' }))).toEqual([
+    const settings = await screen.findByRole('navigation', { name: 'Company settings' });
+    const group = await within(settings).findByRole('list', { name: 'Modules' });
+    expect(linksIn(group)).toEqual([
       ['Quality rules', `/settings/${companyId}/quality/rules`],
       ['Maintenance rules', `/settings/${companyId}/maintenance/rules`],
     ]);
@@ -166,7 +160,7 @@ describe('company settings', () => {
       await within(screen.getByRole('banner')).findByRole('link', { name: 'Settings' }),
     );
 
-    await screen.findByRole('heading', { level: 1, name: 'Company settings' });
+    await screen.findByRole('heading', { level: 1, name: 'Users' });
     const back = await screen.findByRole('link', { name: 'Back to Plant B' });
     expect(back.getAttribute('href')).toBe('/plant-b');
     expect(screen.queryByRole('navigation', { name: 'Main' })).toBeNull();
@@ -175,21 +169,19 @@ describe('company settings', () => {
   it('E04-S02 the skip link lands after the company settings navigation', async () => {
     const user = userEvent.setup();
     const { fetch } = companyAdmin(['core.user:read']);
-    renderShellAt(`/settings/${companyId}`, shellModules, { fetch });
-    await screen.findByRole('heading', { level: 1, name: 'Company settings' });
-    await screen.findByRole('list', { name: 'Company settings entries' });
+    renderShellAt(`/settings/${companyId}/users`, shellModules, { fetch });
+    await screen.findByRole('heading', { level: 1, name: 'Users' });
+    await screen.findByRole('navigation', { name: 'Company settings' });
 
     await user.tab();
     expect(focusedName()).toBe('Skip to main content');
     await user.keyboard('{Enter}');
-    await user.tab();
 
-    expect(focusedName()).toBe('Users');
+    const content = document.getElementById('settings-content');
+    expect(content?.contains(document.activeElement)).toBe(true);
     expect(
-      within(screen.getByRole('list', { name: 'Company settings entries' })).getByRole('link', {
-        name: 'Users',
-      }),
-    ).toBe(document.activeElement);
+      screen.getByRole('navigation', { name: 'Company settings' }).contains(document.activeElement),
+    ).toBe(false);
   });
 
   it("E04-S02 leaving company settings returns the main sidebar to the user's own state", async () => {
@@ -202,7 +194,7 @@ describe('company settings', () => {
     await user.click(
       await within(screen.getByRole('banner')).findByRole('link', { name: 'Settings' }),
     );
-    await screen.findByRole('heading', { level: 1, name: 'Company settings' });
+    await screen.findByRole('heading', { level: 1, name: 'Users' });
     await user.click(await screen.findByRole('link', { name: 'Back to Plant B' }));
 
     await screen.findByRole('heading', { level: 1, name: 'Dashboard' });
@@ -254,13 +246,12 @@ describe('company settings', () => {
 
     await user.click(screen.getByRole('button', { name: 'Try again' }));
 
-    const list = await screen.findByRole('list', { name: 'Company settings entries' });
-    expect(linksIn(list)).toEqual([['Users', `/settings/${companyId}/users`]]);
+    await screen.findByRole('heading', { level: 1, name: 'Users' });
   });
 });
 
 describe('company settings below 768 px', () => {
-  it('E04-S02 at 320 px the company landing shows Back to the plant above the h1 and no settings navigation (C5)', async () => {
+  it('E04-S02 at 320 px a company settings page reached from a plant shows Back to the plant above its h1 and no settings navigation (C5, #876)', async () => {
     setViewport(320, 640);
     const user = userEvent.setup();
     const { fetch } = companyAdmin();
@@ -270,27 +261,27 @@ describe('company settings below 768 px', () => {
       await within(screen.getByRole('banner')).findByRole('link', { name: 'Settings' }),
     );
 
-    const heading = await screen.findByRole('heading', { level: 1, name: 'Company settings' });
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Users' });
     const back = await within(screen.getByRole('main')).findByRole('link', {
       name: 'Back to Plant B',
     });
+    expect(back.getAttribute('href')).toBe('/plant-b');
     expect(isBefore(back, heading)).toBe(true);
-    await screen.findByRole('list', { name: 'Company settings entries' });
     expect(screen.queryByRole('navigation', { name: 'Company settings' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Company settings' })).toBeNull();
   });
 
-  it('E04-S02 at 320 px a company settings page shows the link Company settings above its h1 and no settings navigation (C6)', async () => {
+  it('E04-S02 at 320 px a company settings page opened by its address shows Back to your plants above its h1 (#876)', async () => {
     setViewport(320, 640);
     const { fetch } = companyAdmin();
     renderShellAt(`/settings/${companyId}/users`, shellModules, { fetch });
 
     const heading = await screen.findByRole('heading', { level: 1, name: 'Users' });
-    const landing = await within(screen.getByRole('main')).findByRole('link', {
-      name: 'Company settings',
+    const back = await within(screen.getByRole('main')).findByRole('link', {
+      name: 'Back to your plants',
     });
-    expect(landing.getAttribute('href')).toBe(`/settings/${companyId}`);
-    expect(isBefore(landing, heading)).toBe(true);
+    expect(back.getAttribute('href')).toBe('/');
+    expect(isBefore(back, heading)).toBe(true);
     expect(screen.queryByRole('navigation', { name: 'Company settings' })).toBeNull();
-    expect(screen.queryByRole('link', { name: /^Back to/ })).toBeNull();
   });
 });

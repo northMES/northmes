@@ -73,8 +73,8 @@ describe('focus not obscured', () => {
   });
 
   it('E04-S02 company settings measure their top bar too', async () => {
-    renderAt(`/settings/${companyId}`);
-    await screen.findByRole('heading', { level: 1, name: 'Company settings' });
+    renderAt(`/settings/${companyId}/users`);
+    await screen.findByRole('heading', { level: 1, name: 'Users' });
 
     resize(screen.getByRole('banner'), 56);
 
