@@ -36,4 +36,25 @@ describe('ChoiceMenu', () => {
 
     expect(screen.getByRole('button', { name: 'Group by' })).toBeDefined();
   });
+
+  it('E06-S03 as an icon in a table header the button keeps its name with the choice and opens the same radio items (#875)', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <ChoiceMenu compact label="Group by" choices={keys} value="stockUnit" onChange={onChange} />,
+    );
+
+    const button = screen.getByRole('button', { name: 'Group by: Stock unit' });
+    expect(button.textContent).toBe('');
+    await user.click(button);
+    const items = await screen.findAllByRole('menuitemradio');
+    expect(items.map((item) => item.textContent)).toEqual([
+      'No grouping',
+      'Article group',
+      'Stock unit',
+    ]);
+    await user.click(screen.getByRole('menuitemradio', { name: 'No grouping' }));
+
+    expect(onChange).toHaveBeenCalledWith(undefined);
+  });
 });
