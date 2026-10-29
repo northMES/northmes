@@ -93,7 +93,8 @@ export function GanttBlock({
     })
     .filter((hollow) => hollow.w > 0 && !(coarse && hollow.w < hollowMinPx));
   // The text lines sit on the order color: a hollow segment shows the lane color, which is dark
-  // in the dark theme while the text is pure black, so text over a hollow read nothing (#882).
+  // in the dark theme while the text is pure black, so text over a hollow could not be read (#882).
+  // The setup hatch, the outlines and the conflict edge sit above the text at z-[3].
   const color = `var(--${order.color})`;
   const moving = move?.state?.jobOrderId === jobOrder.id;
   const inMoveMode = moving && move?.state?.source === 'keyboard';
@@ -220,7 +221,7 @@ export function GanttBlock({
             <span
               aria-hidden
               data-setup-hatch
-              className="gantt-setup-hatch absolute inset-y-0 left-0"
+              className="gantt-setup-hatch absolute inset-y-0 left-0 z-[3]"
               style={{ width: `${setupWidth}px` }}
             />
           )}
@@ -239,7 +240,7 @@ export function GanttBlock({
             <span
               aria-hidden
               data-locked-outline
-              className="pointer-events-none absolute inset-0.5 z-[2] border-2 border-current"
+              className="pointer-events-none absolute inset-0.5 z-[3] border-2 border-current"
             />
           )}
           {/* The chain outline differs in shape from the locked one, dashed and further in, so the
@@ -248,14 +249,14 @@ export function GanttBlock({
             <span
               aria-hidden
               data-chain-outline
-              className="pointer-events-none absolute inset-1.5 z-[2] border-2 border-dashed border-late-foreground"
+              className="pointer-events-none absolute inset-1.5 z-[3] border-2 border-dashed border-late-foreground"
             />
           )}
           {conflict && (
             <span
               aria-hidden
               data-conflict-edge
-              className="pointer-events-none absolute inset-y-0 right-0 z-[2] w-1.75"
+              className="pointer-events-none absolute inset-y-0 right-0 z-[3] w-1.75"
               style={{
                 background:
                   'repeating-linear-gradient(135deg, var(--late-foreground) 0 3px, transparent 3px 6px)',
@@ -371,7 +372,7 @@ export function GanttBlock({
           style={{
             left: `${scale.x(ghost.setupStartMs)}px`,
             width: `${Math.max(2, scale.x(ghost.endMs) - scale.x(ghost.setupStartMs))}px`,
-            background: `var(--${order.color})`,
+            background: color,
           }}
         />
       )}
