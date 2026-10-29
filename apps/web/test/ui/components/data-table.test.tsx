@@ -319,7 +319,7 @@ describe('DataTable', () => {
     ]);
   });
 
-  it('E06-S03 a header menu sits in the last header cell, every row has an empty cell under it that assistive technology skips, and a group row spans it (#875)', () => {
+  it('E06-S03 a header menu sits in the last header cell, and every row has an empty cell under it that assistive technology skips (#875)', () => {
     render(table({ headerMenu: <button type="button">Columns</button> }));
     const grid = screen.getByRole('table', { name: 'Articles' });
     const headers = within(grid).getAllByRole('columnheader');
@@ -333,8 +333,20 @@ describe('DataTable', () => {
       expect(cells).toHaveLength(columns.length + 1);
       expect(cells[cells.length - 1]?.getAttribute('aria-hidden')).toBe('true');
     }
+  });
 
-    cleanup();
+  it('E06-S03 a loading table with a header menu gives its skeleton rows the empty cell too (#875)', () => {
+    render(table({ headerMenu: <button type="button">Columns</button>, loading: true }));
+    const grid = screen.getByRole('table', { name: 'Articles' });
+    const [, ...rows] = within(grid).getAllByRole('row');
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      expect(row.querySelectorAll('td')).toHaveLength(columns.length + 1);
+      expect(row.lastElementChild?.getAttribute('aria-hidden')).toBe('true');
+    }
+  });
+
+  it("E06-S03 a grouped table's group row spans the header menu's column (#875)", () => {
     render(
       table({
         headerMenu: <button type="button">Columns</button>,

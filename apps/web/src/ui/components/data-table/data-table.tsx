@@ -131,6 +131,25 @@ const stickyHead = 'sticky start-0 z-10 w-37 min-w-37 bg-muted';
 const stickyCell = 'sticky start-0 z-10 w-37 min-w-37 bg-card';
 
 /**
+ * The last header cell of a table whose header row holds its menus (#875), such as Columns and
+ * Group by: named Table menus for assistive technology, and sticky at the end, so the menus stay
+ * in view while the table scrolls sideways.
+ */
+export function DataTableMenuHead({ children }: { readonly children: ReactNode }) {
+  return (
+    <TableHead scope="col" className="sticky end-0 z-10 h-auto w-0 bg-muted px-2 py-1 text-end">
+      <span className="sr-only">Table menus</span>
+      <div className="flex items-center justify-end gap-1">{children}</div>
+    </TableHead>
+  );
+}
+
+/** The empty cell under the menu header in a row: nothing to announce, so assistive technology skips it. */
+export function DataTableMenuCell() {
+  return <TableCell aria-hidden className="w-0 p-0" />;
+}
+
+/**
  * A list on TanStack Table v9 with sorting and paging on the server (plan 06, Lists; design
  * ui-222): the header of a sortable column is a button that sorts ascending first and then flips
  * the direction, its aria-sort shows the sort, and the pager has Previous and Next with the row
@@ -204,9 +223,9 @@ export function DataTable<TRow extends RowData>({
 
   const bodyClass = cn(stale && 'opacity-60 transition-opacity delay-200 duration-150');
   // The cells of a row: the shown columns, and the empty cell under the header menu.
-  const cellCount = shownColumns.length + (headerMenu === undefined ? 0 : 1);
-  // The empty cell has nothing to announce, so assistive technology skips it.
-  const menuCell = headerMenu === undefined ? null : <TableCell aria-hidden className="w-0 p-0" />;
+  const menu = headerMenu == null || headerMenu === false ? undefined : headerMenu;
+  const cellCount = shownColumns.length + (menu === undefined ? 0 : 1);
+  const menuCell = menu === undefined ? null : <DataTableMenuCell />;
   const renderRow = (row: ReturnType<typeof table.getRowModel>['rows'][number]) => (
     <TableRow key={row.id} className="border-border hover:bg-accent">
       {row.getAllCells().map((cell) => (
@@ -282,12 +301,7 @@ export function DataTable<TRow extends RowData>({
                 </TableHead>
               );
             })}
-            {headerMenu !== undefined && (
-              <TableHead scope="col" className="h-auto w-0 px-2 py-1 text-end">
-                <span className="sr-only">Table options</span>
-                <div className="flex items-center justify-end gap-1">{headerMenu}</div>
-              </TableHead>
-            )}
+            {menu !== undefined && <DataTableMenuHead>{menu}</DataTableMenuHead>}
           </TableRow>
         ))}
       </TableHeader>

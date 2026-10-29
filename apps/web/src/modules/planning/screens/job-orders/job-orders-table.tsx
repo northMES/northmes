@@ -25,6 +25,10 @@ import {
 } from 'lucide-react';
 import { type ReactNode, useMemo } from 'react';
 import type { ColumnChoice } from '../../../../ui/components/columns-menu/index.ts';
+import {
+  DataTableMenuCell,
+  DataTableMenuHead,
+} from '../../../../ui/components/data-table/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import {
@@ -342,9 +346,9 @@ export function JobOrdersTable({
   });
   const shown = jobOrdersColumns.filter((column) => !hiddenColumns.includes(column.id));
   // The cells of a row: the shown columns, and the empty cell under the header menu.
-  const cellCount = shown.length + (headerMenu === undefined ? 0 : 1);
-  // The empty cell has nothing to announce, so assistive technology skips it.
-  const menuCell = headerMenu === undefined ? null : <TableCell aria-hidden className="w-0 p-0" />;
+  const menu = headerMenu == null || headerMenu === false ? undefined : headerMenu;
+  const cellCount = shown.length + (menu === undefined ? 0 : 1);
+  const menuCell = menu === undefined ? null : <DataTableMenuCell />;
   const view: CellView | undefined =
     snapshot === undefined ? undefined : { snapshot, zoom, from, plant, expanded, onToggleFacts };
   return (
@@ -394,12 +398,7 @@ export function JobOrdersTable({
                   </TableHead>
                 );
               })}
-              {headerMenu !== undefined && (
-                <TableHead scope="col" className="h-auto w-0 px-2 py-1 text-end">
-                  <span className="sr-only">Table options</span>
-                  <div className="flex items-center justify-end gap-1">{headerMenu}</div>
-                </TableHead>
-              )}
+              {menu !== undefined && <DataTableMenuHead>{menu}</DataTableMenuHead>}
             </TableRow>
           ))}
         </TableHeader>
