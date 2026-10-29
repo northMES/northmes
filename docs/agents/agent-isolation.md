@@ -139,4 +139,4 @@ Start a session in a worktree and ask it to run these commands and report each o
 - `docker run --rm -v "$HOME:/h:ro" alpine ls /h`, from your own terminal, fails with a file sharing error, because Docker Desktop does not share the folder.
 - `pnpm exec vitest run --project integration apps/backend/test/migrate.int.test.ts` passes.
 - In a new worktree, `echo "$pnpm_config_virtual_store_dir"` names its folder under `/private/tmp/claude-501/pnpm-vstore`, `pnpm install --frozen-lockfile` finishes, `readlink node_modules/typescript` points into that folder, and `pnpm check` passes.
-- `gh run view <id> --log-failed` prints a failed run's log, and `ls ~/.cache/gh` is refused, because the project blocks reads outside the working directory (ADR 0084 rule 2).
+- `gh run view <id> --log-failed` prints a failed run's log, and `ls ~/.ssh` is refused, because `sandbox.filesystem.denyRead` names the credential paths (ADR 0084 rule 2).

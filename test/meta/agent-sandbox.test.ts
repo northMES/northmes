@@ -35,8 +35,11 @@ describe('ADR0084 agent sessions run in the Claude Code sandbox', () => {
     expect(settings().permissions?.disableBypassPermissionsMode).toBeUndefined();
   });
 
-  it('ADR0084 the file tools and sandboxed commands read nothing outside the working directories', () => {
-    expect(settings().permissions?.blockReadsOutsideWorkingDirectories).toBe(true);
+  // The read block asks a person before every command whose reads it cannot check statically, in
+  // bypass mode too, and Claude Code honors `true` for it from any settings file, so a local or user
+  // `false` never turns it off. The credential paths stay closed through denyRead and the deny rules.
+  it('ADR0084 the read block is off, because it prompts in every mode and no local setting can lift it', () => {
+    expect(settings().permissions?.blockReadsOutsideWorkingDirectories).toBeUndefined();
   });
 
   // gh verifies TLS through macOS's trust service, which the sandbox blocks unless
