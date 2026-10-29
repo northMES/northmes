@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { Pencil } from 'lucide-react';
-import { type ReactNode, useId } from 'react';
+import type { ReactNode } from 'react';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
+import { PageSection } from '../../../../ui/components/page-section/index.ts';
 import { buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
   Table,
@@ -28,33 +30,6 @@ import { usePlantSettings } from '../../plant-settings-source-context.ts';
 const head = 'h-auto px-3 py-2 text-xs font-semibold text-muted-foreground';
 const cell = 'px-3 py-2 whitespace-normal';
 const link = 'text-link underline underline-offset-2 hover:no-underline';
-
-/** A section of the page: a card named by its h2, with a line under the heading. */
-function Section({
-  title,
-  lead,
-  children,
-}: {
-  readonly title: string;
-  readonly lead?: ReactNode;
-  readonly children: ReactNode;
-}) {
-  const id = useId();
-  return (
-    <section
-      aria-labelledby={id}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-6 text-card-foreground"
-    >
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 id={id} className="text-base font-semibold">
-          {title}
-        </h2>
-        {lead !== undefined && <p className="text-sm text-muted-foreground">{lead}</p>}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 /** One term of the group's description list, with an optional note under its value. */
 function Term({
@@ -124,7 +99,7 @@ export function EquipmentGroupScreen() {
     >
       {snapshot !== undefined && group !== undefined && (
         <>
-          <Section
+          <PageSection
             title="Equipment group"
             lead={
               group.owner === 'northmes'
@@ -151,8 +126,8 @@ export function EquipmentGroupScreen() {
                 {colorText(group.color)}
               </Term>
             </dl>
-          </Section>
-          <Section
+          </PageSection>
+          <PageSection
             title="Machines"
             lead={`${machineCountText(machines.length)} at ${plantName}. A machine's group is set on the machine's page.`}
           >
@@ -193,13 +168,13 @@ export function EquipmentGroupScreen() {
                 </Table>
               </ScrollTable>
             )}
-          </Section>
-          <Section
+          </PageSection>
+          <PageSection
             title="On the board"
             lead="Only plannable machines have a row on the board. The color and the name are always shown together."
           >
             <GroupBand name={group.name} color={group.color} machines={machines} />
-          </Section>
+          </PageSection>
           {snapshot.fixture !== undefined && (
             <p className="text-xs text-muted-foreground">Showing fixture {snapshot.fixture}.</p>
           )}

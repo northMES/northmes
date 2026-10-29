@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
 import { formatPlantDay } from '@northmes/contracts/format';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { ChevronLeft, ChevronRight, Pencil, Plus } from 'lucide-react';
-import { type ReactNode, useId, useState } from 'react';
+import { useState } from 'react';
 import { IconButton } from '../../../../ui/components/icon-button/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { PageSection } from '../../../../ui/components/page-section/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
@@ -93,41 +95,6 @@ function ShiftKey({ order }: { readonly order: number }) {
   );
 }
 
-/** A section of the page: a card named by its h2, with a line under the heading. */
-function Section({
-  title,
-  lead,
-  action,
-  className,
-  children,
-}: {
-  readonly title: string;
-  readonly lead?: ReactNode;
-  readonly action?: ReactNode;
-  readonly className?: string;
-  readonly children: ReactNode;
-}) {
-  const id = useId();
-  return (
-    <section
-      aria-labelledby={id}
-      className={cn(
-        'flex flex-col gap-3 rounded-xl border border-border bg-card p-6 text-card-foreground',
-        className,
-      )}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <h2 id={id} className="text-base font-semibold">
-          {title}
-        </h2>
-        {action}
-      </div>
-      {lead !== undefined && <p className="text-sm text-muted-foreground">{lead}</p>}
-      {children}
-    </section>
-  );
-}
-
 /** "06:00" as hours since midnight, 6. */
 function hoursOf(clock: string): number {
   const [hours = 0, minutes = 0] = clock.split(':').map(Number);
@@ -152,7 +119,7 @@ function wholeDay(deviation: PlantCalendarDeviation): boolean {
 /** The Shift pattern section (CA1): one row per weekday with its shifts, and the working time per week. */
 function PatternSection({ calendar }: { readonly calendar: PlantCalendar }) {
   return (
-    <Section
+    <PageSection
       title="Shift pattern"
       lead={`Version in effect since ${formatPlantDay(calendar.effectiveFrom)}, ${
         calendar.cycleWeeks === 1 ? 'one-week' : `${calendar.cycleWeeks}-week`
@@ -161,7 +128,7 @@ function PatternSection({ calendar }: { readonly calendar: PlantCalendar }) {
           ? ` ${countWord(calendar.shifts.length, true)} shifts: ${listText(calendar.shifts.map((shift) => shift.name))}.`
           : ''
       } A version in effect cannot change; a correction is a new version with an effective date.`}
-      action={
+      actions={
         <Button variant="outline" className="h-8 px-3" disabled>
           New version
         </Button>
@@ -237,7 +204,7 @@ function PatternSection({ calendar }: { readonly calendar: PlantCalendar }) {
           </TableRow>
         </TableBody>
       </Table>
-    </Section>
+    </PageSection>
   );
 }
 
@@ -251,10 +218,10 @@ function DeviationsSection({
 }) {
   const machineName = machineNamer(snapshot);
   return (
-    <Section
+    <PageSection
       title="Deviations"
       lead="Dated exceptions to the pattern. A machine's deviation wins over a plant-wide one; within one scope non-working wins over overtime (ADR 0025)."
-      action={
+      actions={
         <Button variant="outline" className="h-8 px-3" disabled>
           <Plus aria-hidden />
           New deviation
@@ -317,7 +284,7 @@ function DeviationsSection({
           </TableBody>
         </Table>
       )}
-    </Section>
+    </PageSection>
   );
 }
 
@@ -620,7 +587,7 @@ function WeekSection({
   const y = (hour: number) => (hour - startHour) * hourPx;
   const height = y(endHour);
   return (
-    <Section title="Week" className="lg:col-span-2">
+    <PageSection title="Week" className="lg:col-span-2">
       <div className="flex flex-wrap items-center gap-2">
         <fieldset aria-label="Machine" className="flex rounded-lg bg-muted p-0.5">
           {[undefined, ...calendar.machines].map((code) => (
@@ -812,7 +779,7 @@ function WeekSection({
           })}
         </div>
       </section>
-    </Section>
+    </PageSection>
   );
 }
 

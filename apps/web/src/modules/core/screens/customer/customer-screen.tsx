@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
 import { formatDuration, formatPlantDateTime, formatPlantDay } from '@northmes/contracts/format';
 import { coreLinks } from '@northmes/core-contracts';
 import { planningLinks } from '@northmes/planning-contracts';
@@ -7,12 +8,13 @@ import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { ChartNoAxesGantt, Clock } from 'lucide-react';
-import { type ReactNode, useEffect, useId, useMemo, useRef } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef } from 'react';
 import { Temporal } from 'temporal-polyfill';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { DetailTabs } from '../../../../ui/components/detail-tabs/index.ts';
 import { OwnerTag } from '../../../../ui/components/owner-tag/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { PageSection } from '../../../../ui/components/page-section/index.ts';
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
@@ -43,38 +45,6 @@ const historyReason =
   "A customer's history waits for the customers API; this page reads the fixture G1.";
 
 const link = 'text-link underline underline-offset-2 hover:no-underline';
-
-/** A section of the page: a card named by its h2, with a line that says what it holds. */
-function Section({
-  title,
-  lead,
-  action,
-  children,
-}: {
-  readonly title: string;
-  readonly lead: string;
-  readonly action?: ReactNode;
-  readonly children: ReactNode;
-}) {
-  const id = useId();
-  return (
-    <section
-      aria-labelledby={id}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-6 text-card-foreground"
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 id={id} className="text-base font-semibold">
-            {title}
-          </h2>
-          <p className="text-sm text-muted-foreground">{lead}</p>
-        </div>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 /** A term, its value and the note under the value that names its source (CC1). */
 function Definition({
@@ -113,7 +83,7 @@ function CustomerSection({
   const imported = customer.owner === 'erp';
   const erp = snapshot.erp;
   return (
-    <Section
+    <PageSection
       title="Customer"
       lead="The ERP sends the customer number and name only. Addresses and contacts stay in the ERP."
     >
@@ -146,7 +116,7 @@ function CustomerSection({
           {summary.nextWanted === undefined ? 'None' : formatPlantDay(summary.nextWanted)}
         </Definition>
       </dl>
-    </Section>
+    </PageSection>
   );
 }
 
@@ -386,10 +356,10 @@ function LinesSection({
     show(on ? { ...rest, [key]: 1 } : rest);
   };
   return (
-    <Section
+    <PageSection
       title="Customer order lines"
       lead="Every open line of this customer and the production order that supplies it. Wanted dates are the customer's; deadlines are the production orders'."
-      action={
+      actions={
         <Link
           to={planningLinks.customerOrders({ plant }, { customer: customer.code }).href}
           className={`${buttonVariants({ variant: 'outline' })} h-8 px-3`}
@@ -456,7 +426,7 @@ function LinesSection({
           </span>
         </p>
       )}
-    </Section>
+    </PageSection>
   );
 }
 

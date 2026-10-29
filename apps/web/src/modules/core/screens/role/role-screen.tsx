@@ -266,7 +266,7 @@ export function RoleScreen() {
       state={state}
     >
       {role !== undefined && saved !== undefined && (
-        <Alert role="note" className="mb-4 border-success bg-success-subtle text-foreground">
+        <Alert role="note" className="border-success bg-success-subtle text-foreground">
           <CircleCheck aria-hidden className="text-success" />
           <AlertDescription className="text-foreground">{saved}</AlertDescription>
         </Alert>
