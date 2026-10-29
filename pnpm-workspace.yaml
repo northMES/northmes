@@ -148,3 +148,6 @@ overrides:
   'multer@>=2.0.0 <2.5.0': 2.5.0
   # GHSA-xjj6-f33q-929c: testcontainers pulls in undici 8.
   'undici@>=8.0.0 <8.12.2': 8.12.2
+  # GHSA-97r2-qh9m-474h, GHSA-wp97-x4hv-qvhp and GHSA-7rv5-mrxv-xcr9:
+  # @tanstack/router-core pulls in seroval.
+  'seroval@>=1.0.0 <1.6.8': 1.6.8
