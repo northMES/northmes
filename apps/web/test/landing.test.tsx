@@ -119,6 +119,18 @@ describe('the landing at /', () => {
     );
   });
 
+  it("#876 one plant redirects / to that plant without reading the company's permissions, so a failed read of them cannot hold the user back", async () => {
+    const { fetch } = fakeApi({
+      CoreCompanies: () => companiesWith(['plant-a']),
+      CoreViewer: () => unreachable,
+    });
+    const router = renderShellAt('/', shellModules, { fetch });
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(coreLinks.dashboard({ plant: 'plant-a' }).href),
+    );
+  });
+
   it('ADR0066 one plant and a company settings page redirects / to that plant too (#872)', async () => {
     const { fetch } = api(() => companiesWith(['plant-a']), companyAdmin);
     const router = renderShellAt('/', shellModules, { fetch });

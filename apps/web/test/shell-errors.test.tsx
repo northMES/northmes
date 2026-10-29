@@ -172,7 +172,7 @@ describe('an unknown path', () => {
     await waitFor(() => expect(document.activeElement).toBe(heading));
   });
 
-  it("#876 an unknown path under the plant's settings renders Page not found in the settings layout, with Go to Plant A (NF3)", async () => {
+  it("#876 an unknown path under the plant's settings renders Page not found in the settings layout, with Go to Settings (NF3)", async () => {
     renderAt('/plant-a/settings/reports');
 
     const main = await screen.findByRole('main');
@@ -185,10 +185,20 @@ describe('an unknown path', () => {
         'Plant A has no page at /plant-a/settings/reports. The link may be out of date.',
       ),
     );
-    expect(within(main).getByRole('link', { name: 'Go to Plant A' }).getAttribute('href')).toBe(
-      '/plant-a/equipment/tools',
+    expect(within(main).getByRole('link', { name: 'Go to Settings' }).getAttribute('href')).toBe(
+      '/plant-a/settings',
     );
     expect(document.title).toBe('Page not found · Plant A · NorthMES');
+  });
+
+  it("#876 an unknown path under a module's settings leads back to Settings, not to the module's sidebar entry", async () => {
+    renderAt('/plant-a/settings/equipment/gauges');
+
+    const main = await screen.findByRole('main');
+    await within(main).findByRole('heading', { level: 1, name: 'Page not found' });
+    expect(
+      within(main).getByRole('link', { name: 'Go to Settings' }).getAttribute('href'),
+    ).toBe('/plant-a/settings');
   });
 });
 

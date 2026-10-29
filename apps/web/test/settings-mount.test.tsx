@@ -67,6 +67,54 @@ describe("the company's settings pages under a plant", () => {
     expect(users?.variables).toMatchObject({ companyId });
   });
 
+  it("#876 while the user's companies load, a page of the company shows its loading state under its h1", async () => {
+    const { fetch } = fakeApi({
+      CoreViewer: () => viewer(['core.article:read'], ['core.user:read']),
+    });
+    renderShellAt('/plant-a/settings/users', shellModules, { fetch });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Users' })).toBeDefined();
+    const content = document.getElementById('settings-content');
+    expect(content?.querySelector('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  it("#876 when the user's companies could not be read, a page of the company shows the error with Try again, which reads them again", async () => {
+    const user = userEvent.setup();
+    let reads = 0;
+    const { fetch } = fakeApi({
+      CoreCompanies: () => {
+        reads += 1;
+        return reads === 1 ? unreachable : companies();
+      },
+      CoreViewer: ({ companyId: asked }) =>
+        asked === companyId ? viewer([], ['core.user:read']) : viewer([], ['core.user:read']),
+    });
+    renderShellAt('/plant-a/settings/users', shellModules, { fetch });
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByRole('heading', { name: 'Could not load settings' })).toBeDefined();
+
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+    expect(screen.getByRole('heading', { level: 1, name: 'Users' })).toBeDefined();
+  });
+
+  it('#876 for a user with only company pages, the Settings crumb on a page of the company leads to the settings landing', async () => {
+    const { fetch } = companyAdmin(['core.role:read'], []);
+    renderShellAt('/plant-a/settings/roles', shellModules, { fetch });
+    await screen.findByRole('heading', { level: 1, name: 'Roles' });
+
+    const breadcrumb = within(screen.getByRole('banner')).getByRole('navigation', {
+      name: 'Breadcrumb',
+    });
+    await waitFor(() =>
+      expect(
+        within(breadcrumb).getByRole('link', { name: 'Settings' }).getAttribute('href'),
+      ).toBe('/plant-a/settings'),
+    );
+  });
+
   it("#766 a user's page under Users marks Users as the entry it lies under, and Roles not at all", async () => {
     const { fetch } = companyAdmin();
     renderShellAt('/plant-a/settings/users/u-1', shellModules, { fetch });
@@ -195,6 +243,18 @@ describe('the settings landing', () => {
         'You hold no permission that opens a settings page here. Ask a plant admin for a role that includes one.',
       ),
     ).toBeDefined();
+    expect(crumbs()).toEqual(['Plant A', 'Settings']);
+    expect(document.title).toBe('Settings · Plant A · NorthMES');
+  });
+
+  it("#876 while the user's companies load, the landing shows its loading state, not that the user may open nothing", async () => {
+    const { fetch } = fakeApi({ CoreViewer: () => viewer([], ['core.role:read']) });
+    renderShellAt('/plant-a/settings', shellModules, { fetch });
+
+    await screen.findByRole('heading', { level: 1, name: 'Settings' });
+    const content = document.getElementById('settings-content');
+    await waitFor(() => expect(content?.querySelector('[aria-busy="true"]')).not.toBeNull());
+    expect(screen.queryByText(/You hold no permission/)).toBeNull();
   });
 });
 
@@ -219,6 +279,29 @@ describe('the company settings URLs from before #876', () => {
 
     await screen.findByRole('heading', { level: 1, name: 'Users' });
     expect(router.state.location.pathname).toBe('/plant-a/settings/users');
+  });
+
+  it('#876 an old URL whose companies could not be read leads to /', async () => {
+    let reads = 0;
+    const { fetch } = fakeApi({
+      CoreCompanies: () => {
+        reads += 1;
+        return reads === 1 ? unreachable : companies();
+      },
+      CoreViewer: () => viewer([], []),
+    });
+    const router = renderShellAt(`/settings/${companyId}/users`, shellModules, { fetch });
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+  });
+
+  it('#876 an old URL keeps an encoded segment encoded on the way to the new one', async () => {
+    const { fetch } = companyAdmin();
+    const router = renderShellAt(`/settings/${companyId}/users/a%2Fb`, shellModules, { fetch });
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/plant-a/settings/users/a%2Fb'),
+    );
   });
 
   it("#876 an old URL of a company that is not one of the user's leads to /", async () => {

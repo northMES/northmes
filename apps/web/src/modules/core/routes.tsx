@@ -97,10 +97,10 @@ const movedToSettings = [
  * (ADR 0078), the articles, the article groups, the customers, the routings and the tools. The top
  * route is pathless, so core's pages sit at the plant root, as /plant-a/articles, and the old URLs
  * with core in them lead there (ADR 0074), as the old URLs of the plant settings pages lead under
- * the plant's settings (#876). Each route
- * takes its path from its entry in coreLinks, so a path is written once, in the link manifest (ADR
- * 0062); a list and a record's page are the index routes of their entries. Each search definition
- * sits on its route, never in the lazy screens.ts, from which the screens load.
+ * the plant's settings (#876). Each route takes its path from its entry in coreLinks, so a path is
+ * written once, in the link manifest (ADR 0062); a list and a record's page are the index routes
+ * of their entries. Each search definition sits on its route, never in the lazy screens.ts, from
+ * which the screens load.
  */
 export function coreRoutes(plantRoute: PlantRoute) {
   const coreRoute = createRoute({ getParentRoute: () => plantRoute, id: coreModuleId });
@@ -288,10 +288,10 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
     path: linkEntry(coreLinks.settings.people.person.addRole).path,
     component: lazyScreen('PersonAddRoleScreen'),
   });
-  // The machines with each machine's page and its
-  // edit page, the equipment groups with each group's page and its edit page, and the calendars
-  // with each calendar's page. The list and the forms take the page state
-  // the mock source previews from the URL; a calendar's page keeps the week its week view shows.
+  // The machines with each machine's page and its edit page, the equipment groups with each
+  // group's page and its edit page, and the calendars with each calendar's page (designs #688 and
+  // #729). The list and the forms take the page state the mock source previews from the URL; a
+  // calendar's page keeps the week its week view shows.
   const machinesRoute = createRoute({
     getParentRoute: () => coreRoute,
     path: linkEntry(coreLinks.settings.machines).path,

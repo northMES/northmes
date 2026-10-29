@@ -114,15 +114,14 @@ describe("core's pages at the plant root (ADR 0074)", () => {
     expect(document.title).toBe('Page not found · Plant A · NorthMES');
   });
 
-  it("#876 the way out of a page of the company's settings that failed is core's first entry, as on every core page", () => {
-    expect(wayOutOf(shellModules, { plant: 'plant-a' }, '/plant-a/settings/users')).toEqual({
-      label: 'Go to Dashboard',
-      href: '/plant-a',
-    });
-    expect(wayOutOf(shellModules, { plant: 'plant-a' }, '/plant-a/settings/roles/new')).toEqual({
-      label: 'Go to Dashboard',
-      href: '/plant-a',
-    });
+  it("#876 the way out of a settings page that failed is the settings landing, and the landing has none", () => {
+    for (const path of ['/plant-a/settings/users', '/plant-a/settings/people/u-1']) {
+      expect(wayOutOf(shellModules, { plant: 'plant-a' }, path)).toEqual({
+        label: 'Go to Settings',
+        href: '/plant-a/settings',
+      });
+    }
+    expect(wayOutOf(shellModules, { plant: 'plant-a' }, '/plant-a/settings')).toBeUndefined();
   });
 
   it("E04-S02 the way out of a core page that failed is core's first entry, or See all pages on that entry itself", () => {

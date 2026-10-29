@@ -65,17 +65,18 @@ export async function landingOf(
   client: ApolloClient,
 ): Promise<Landing> {
   const { data } = await client.query({ query: CoreCompanies });
+  const plants = (data?.coreCompanies ?? []).flatMap((company) => company.plants);
+  const [one] = plants;
+  if (plants.length === 1 && one !== undefined) {
+    return { href: plantLinkHref(modules, one.slug) };
+  }
+  // The permissions decide only the settings links of the picker, so they are read after.
   const companies = await Promise.all(
     (data?.coreCompanies ?? []).map(async (company) => ({
       company,
       settings: await settingsOf(modules, client, company),
     })),
   );
-  const plants = companies.flatMap(({ company }) => company.plants);
-  const [one] = plants;
-  if (plants.length === 1 && one !== undefined) {
-    return { href: plantLinkHref(modules, one.slug) };
-  }
   return {
     companies: companies
       .filter(({ company }) => company.plants.length > 0)

@@ -7,6 +7,7 @@ import {
   createNorthmesClient,
   createShellRoutes,
   ShellProvider,
+  settingsHref,
 } from '@northmes/web-sdk';
 import {
   createRoute,
@@ -27,6 +28,7 @@ import { SignInScreen } from '../auth/sign-in-screen/index.ts';
 import type { ShellModule } from '../modules.ts';
 import {
   type Crumb,
+  PageFrame,
   PageFrameTopBar,
   type PageFrameTopBarValue,
 } from '../ui/components/page-frame/index.ts';
@@ -43,10 +45,12 @@ import {
   allPagesHref,
   allPagesPath,
   companySettingsEntries,
+  entryAt,
   firstHref,
   groupAt,
   isCompanySettingsPage,
   isCore,
+  isSettingsLanding,
   isSettingsPage,
   mainId,
   menuLinks,
@@ -279,17 +283,18 @@ function firstOpenPage(
  * The crumbs the shell puts before a page's own (ADR 0067): the company, as text, when the user's
  * plants span two or more companies; the plant by its name, or its slug until the plants load,
  * linked to the plant's first page; then the module of the page, linked to its first entry, or on
- * a plant settings page the Settings crumb, linked to the first plant settings entry (ADR 0066).
- * Core's pages sit at the plant root and have no module crumb (ADR 0074). A page in a nested group,
- * as Articles in Master data, adds the group's crumb, as text, since the group has no page. A crumb
- * whose page is the one on screen is plain text.
+ * a settings page the Settings crumb, linked to the settings landing, which leads on to the first
+ * settings page the user may open (ADR 0066, #876); the landing itself adds none, since its own
+ * crumb is Settings. Core's pages sit at the plant root and have no module crumb (ADR 0074). A
+ * page in a nested group, as Articles in Master data, adds the group's crumb, as text, since the
+ * group has no page. A crumb whose page is the one on screen is plain text.
  */
 function shellTrail(
   modules: readonly ShellModule[],
   plant: string,
   companies: readonly ShellCompany[],
   pathname: string,
-  settingsHome: string | undefined,
+  inSettings: boolean,
 ): readonly Crumb[] {
   const crumb = (label: string, href: string | undefined): Crumb =>
     href === undefined || href === pathname ? { label } : { label, href };
@@ -299,7 +304,11 @@ function shellTrail(
     ...(found !== undefined && spansCompanies ? [{ label: found.company.name }] : []),
     crumb(found?.plant.name ?? plant, plantHome(modules, plant)),
   ];
-  if (settingsHome !== undefined) return [...head, crumb('Settings', settingsHome)];
+  if (inSettings) {
+    return isSettingsLanding(plant, pathname)
+      ? head
+      : [...head, crumb('Settings', settingsHref(plant))];
+  }
   const current = moduleOfPath(modules, pathname);
   const group = groupAt(current, plant, pathname);
   return [
@@ -375,7 +384,11 @@ function PlantLayout({
   const { plant } = useParams({ strict: false });
   const main = useFocusPageHeading();
   useEffect(applyStoredTheme, []);
-  const { data } = useQuery(CoreCompanies, { client: companiesClient });
+  const {
+    data,
+    error: companiesError,
+    refetch: refetchCompanies,
+  } = useQuery(CoreCompanies, { client: companiesClient });
   // The permissions at the plant and its company, read only when an entry needs one.
   const gated = modules.some(
     (module) =>
@@ -441,15 +454,19 @@ function PlantLayout({
   const settingsTarget = settingsHome ?? companyEntries[0]?.href;
   const settingsButton: SettingsButtonTarget | undefined =
     settingsTarget === undefined ? undefined : { href: settingsTarget, current: inSettings };
-  // What the settings landing at /<plant>/settings leads to, once the permissions say.
+  // What the settings landing at /<plant>/settings leads to, once the permissions and the user's
+  // companies say: the company's pages need both.
+  const viewerFailed = viewer === undefined ? viewerError : undefined;
+  const companiesFailed = loaded === undefined ? companiesError : undefined;
+  const failed = viewerFailed ?? companiesFailed;
   const landing = useMemo<SettingsLandingState>(
     () => ({
       href: settingsTarget,
-      loading: gated && viewer === undefined && viewerError === undefined,
-      failed: viewer === undefined ? viewerError : undefined,
-      retry: refetchViewer,
+      loading: failed === undefined && ((gated && viewer === undefined) || loaded === undefined),
+      failed,
+      retry: () => Promise.allSettled([refetchViewer(), refetchCompanies()]),
     }),
-    [settingsTarget, gated, viewer, viewerError, refetchViewer],
+    [settingsTarget, failed, gated, viewer, loaded, refetchViewer, refetchCompanies],
   );
   // The shell state of a page of the company's settings: the plant's, with its company.
   const companyShell = useMemo(
@@ -480,18 +497,12 @@ function PlantLayout({
   const help = <ShellHelpMenu modules={modules} allPagesHref={allPagesHref(plant)} />;
   const topBar = useMemo<PageFrameTopBarValue>(
     () => ({
-      trail: shellTrail(
-        modules,
-        plant,
-        companies,
-        pathname,
-        inSettings ? (settingsHome ?? pathname) : undefined,
-      ),
+      trail: shellTrail(modules, plant, companies, pathname, inSettings),
       titleContext: plantName,
       breadcrumb,
       actions,
     }),
-    [modules, plant, companies, pathname, inSettings, settingsHome, plantName, breadcrumb, actions],
+    [modules, plant, companies, pathname, inSettings, plantName, breadcrumb, actions],
   );
   if (loaded !== undefined && found === undefined) {
     return (
@@ -507,9 +518,27 @@ function PlantLayout({
   }
   // A page of the company's settings reads through the client without a plant, with the company
   // in the shell state, once the user's companies say which company the plant is in (ADR 0066).
+  // Until then it shows its loading state under its entry's name, or the failed read with Try
+  // again.
   const settingsPage = !companyPage ? (
     <Outlet />
-  ) : companyShell === undefined ? null : (
+  ) : companyShell === undefined ? (
+    <PageFrame
+      title={entryAt(modules, { plant }, pathname)?.label ?? 'Settings'}
+      state={
+        companiesFailed === undefined
+          ? { status: 'loading' }
+          : {
+              status: 'error',
+              title: 'Could not load settings',
+              error: companiesFailed,
+              onRetry: () => refetchCompanies(),
+            }
+      }
+    >
+      {null}
+    </PageFrame>
+  ) : (
     <ApolloProvider client={companiesClient}>
       <ShellProvider value={companyShell}>
         <Outlet />

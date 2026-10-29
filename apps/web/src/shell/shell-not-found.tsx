@@ -9,9 +9,11 @@ import { buttonVariants } from '../ui/primitives/button.tsx';
 import {
   allPagesHref,
   isCore,
+  isSettingsPage,
   mainId,
   moduleOfPath,
   plantHome,
+  settingsWayOut,
   sidebarLinks,
 } from './shell-pages.ts';
 
@@ -46,18 +48,21 @@ function moduleAt(modules: readonly ShellModule[], plant: string, pathname: stri
  * is D2's module page not found (ST5): "Equipment has no page at /plant-a/equipment/gauges",
  * Go to the module's first entry, See all pages, and the module in the document title. Under the
  * plant's settings, which replaced the admin frame of NF3 (ADR 0066), it renders in the settings
- * layout. The path shows in Plex Mono.
+ * layout with Go to Settings, the settings landing (#876). The path shows in Plex Mono.
  * The shell moves focus to the h1 as on any path change.
  */
 export function ShellNotFound({ modules }: { readonly modules: readonly ShellModule[] }) {
   const { plant } = useParams({ strict: false });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const shellPlace = usePageFrameTopBar()?.titleContext ?? plant ?? 'NorthMES';
-  const module = plant === undefined ? undefined : moduleAt(modules, plant, pathname);
+  // Under the plant's settings the page belongs to Settings, whose landing is the way on (#876).
+  const inSettings = plant !== undefined && isSettingsPage(plant, pathname);
+  const module = plant === undefined || inSettings ? undefined : moduleAt(modules, plant, pathname);
   const place = module?.label ?? shellPlace;
   const home = plant === undefined ? undefined : plantHome(modules, plant);
-  const wayOn: WayOn | undefined =
-    module !== undefined
+  const wayOn: WayOn | undefined = inSettings
+    ? settingsWayOut(plant, pathname)
+    : module !== undefined
       ? { label: `Go to ${module.first.label}`, href: module.first.href }
       : home !== undefined
         ? { label: `Go to ${place}`, href: home }

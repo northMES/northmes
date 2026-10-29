@@ -188,6 +188,18 @@ export function isSettingsPage(plant: string, pathname: string): boolean {
   return currentOf(settingsHref(plant), pathname) !== undefined;
 }
 
+/** Whether a page is the settings landing itself, /<plant>/settings. */
+export function isSettingsLanding(plant: string, pathname: string): boolean {
+  return currentOf(settingsHref(plant), pathname) === 'page';
+}
+
+/** Go to Settings, the settings landing, from a page under it, or nothing on the landing itself. */
+export function settingsWayOut(plant: string, pathname: string): WayOut | undefined {
+  return isSettingsLanding(plant, pathname)
+    ? undefined
+    : { label: 'Go to Settings', href: settingsHref(plant) };
+}
+
 /**
  * Whether a page is one of the company's settings pages under a plant, such as Users: its entry
  * is a company settings entry, or the nearest one above it is (#876).
@@ -260,8 +272,9 @@ function goTo(entry: MenuLink | undefined, plant: string, pathname: string): Way
 /**
  * The way out of a page that failed (D2 ST6, shell-306 SE): Go to the first sidebar entry of its
  * module, or See all pages when the page is that entry or the module has none (shell-306 LS3). A
- * page at the plant root or under the settings root is core's (ADR 0074). Outside a module, Go to
- * the plant's first page. Never the page itself.
+ * page at the plant root is core's (ADR 0074). Outside a module, Go to the plant's first page.
+ * Under the plant's settings, Go to Settings, the landing that leads on to the first settings page
+ * the user may open (#876). Never the page itself.
  */
 export function wayOutOf(
   modules: readonly ShellModule[],
@@ -269,6 +282,7 @@ export function wayOutOf(
   pathname: string,
 ): WayOut | undefined {
   if (plant === undefined) return undefined;
+  if (isSettingsPage(plant, pathname)) return settingsWayOut(plant, pathname);
   const module = moduleOfPath(modules, pathname);
   if (module === undefined) return goTo(modules.flatMap(sidebarLinks)[0], plant, pathname);
   return (

@@ -69,10 +69,24 @@ export interface OldSettingsRouteOptions {
 /**
  * The company settings URLs from before #876, /settings/<company id>/... with or without core in
  * them (ADR 0074): each leads, with its search and hash, to the same page under the settings of
- * the company's first plant, as /settings/<id>/users/<user> leads to /plant-a/settings/users/<user>.
- * A company that is not one of the user's, or that has no plant, leads to /, where the user's
- * plants are.
+ * the company's first plant, as /settings/<id>/users/<user> leads to
+ * /plant-a/settings/users/<user>. A company that is not one of the user's, or that has no plant,
+ * leads to /, where the user's plants are, and so does an old URL whose companies could not be
+ * read.
  */
+/**
+ * The user's company with this id, or undefined for a company that is not one of the user's and
+ * when the user's companies could not be read, so the old URL leads to / instead of an error.
+ */
+async function companyOf(client: ApolloClient, companyId: string) {
+  try {
+    const { data } = await client.query({ query: CoreCompanies });
+    return data?.coreCompanies.find(({ id }) => id === companyId);
+  } catch {
+    return undefined;
+  }
+}
+
 export function createOldSettingsRoute(
   rootRoute: RootRoute,
   { client, beforeLoad }: OldSettingsRouteOptions,
@@ -82,12 +96,14 @@ export function createOldSettingsRoute(
     path: 'settings/$companyId/$',
     beforeLoad,
     loader: async ({ params, location }) => {
-      const { data } = await client.query({ query: CoreCompanies });
-      const company = data?.coreCompanies.find(({ id }) => id === params.companyId);
+      const company = await companyOf(client, params.companyId);
       const [plant] = company?.plants ?? [];
       if (plant === undefined) throw redirect({ href: rootHref, replace: true });
-      const rest = (params._splat ?? '')
+      // The rest of the path as the URL spells it, so an encoded segment stays encoded; a core
+      // segment from before ADR 0074 drops out.
+      const rest = location.pathname
         .split('/')
+        .slice(3)
         .filter((segment, index) => segment !== '' && !(index === 0 && segment === coreModuleId));
       const pathname = [settingsHref(plant.slug), ...rest].join('/');
       const hash = location.hash === '' ? '' : `#${location.hash}`;

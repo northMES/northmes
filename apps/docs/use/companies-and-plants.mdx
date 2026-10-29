@@ -16,9 +16,11 @@ Each plant has a short name in its address, its slug, such as `plant-a` in `http
 The **Settings** button (the gear in the top bar) opens the settings of the plant you are at, on the first settings page you may open. Every settings page sits under the plant's settings, such as `/plant-a/settings/people`, and `/plant-a/settings` itself opens the first page you may open. On a settings page the sidebar collapses to its icons, and the settings navigation sits beside the page:
 
 - The plant's settings come first, such as **People**, who holds a role at the plant.
-- The navigation ends with the group **<Company> settings**, named after your company, with the company's pages you may open: **Users** and **Roles**, and **Warehouses** for a user who manages the integrations, such as `/plant-a/settings/users`. These pages show the whole company, whichever of its plants you opened them from.
+- The navigation ends with a group named after your company, such as **Acme AB settings**, with the company's pages you may open: **Users** and **Roles**, and **Warehouses** for a user who manages the integrations, such as `/plant-a/settings/users`. These pages show the whole company, whichever of its plants you opened them from.
 
-On **Your plants**, each company also has a **<Company> settings** link to the first of its pages you may open. The navigation lists only the pages you may open. A page you may not open says so and names the permission it needs.
+On **Your plants**, each company also has a settings link named after it, such as **Acme AB settings**, to the first of its pages you may open. The navigation lists only the pages you may open. A page you may not open says so and names the permission it needs.
+
+Older addresses that start with `/settings/<company id>` lead to the same page under the settings of the company's first plant.
 
 ## Create a company
 
@@ -36,8 +38,6 @@ To see the companies of the installation, with their ids, their number of plants
 ```sh
 docker compose run --rm app company list
 ```
-
-Older addresses that start with `/settings/<company id>` lead to the same page under the settings of the company's first plant.
 
 ## When a company has no admin left
 

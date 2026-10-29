@@ -982,6 +982,55 @@ describe('users', () => {
     ]);
   });
 
+  it('E05-S08 with the company chosen under Where, Role locks the roles the creator cannot give there, and a refusal names the company', async () => {
+    const events = userEvent.setup();
+    renderCoreAt(coreLinks.settings.users.new({ plant: 'plant-a' }).href, [
+      settingsViewerQuery(creator),
+      companiesQuery(),
+      rolesQuery([shiftLead, viewerRole]),
+      catalogQuery(),
+      {
+        request: {
+          query: CoreCreateUser,
+          variables: ({ input }: { input: Record<string, string> }) =>
+            input.roleId === viewerRole.id && input.scopeId === acme.id,
+        },
+        result: {
+          data: null,
+          errors: [
+            {
+              message: 'You do not hold it.',
+              path: ['coreCreateUser'],
+              extensions: {
+                code: 'FORBIDDEN',
+                errorCode: 'core.role_not_held',
+                details: { missingPermissions: ['planning.productionOrder:read'] },
+              },
+            },
+          ],
+        },
+      },
+    ]);
+
+    const section = await screen.findByRole('region', { name: 'Role and place' });
+    await typeTove(events);
+    await events.click(within(section).getByRole('radio', { name: 'Acme AB, all plants' }));
+    expect(
+      within(section).getByText(
+        'Checked when you add it: you need every permission of the role at Acme AB.',
+      ),
+    ).toBeDefined();
+    const roles = await openRoles(events, section);
+    expect(roleOption(roles, 'Shift lead').getAttribute('aria-disabled')).toBe('true');
+    await events.click(roleOption(roles, 'Viewer'));
+    await events.click(screen.getByRole('button', { name: 'Create user' }));
+
+    const summary = await screen.findByRole('group', { name: 'Fix 1 field to create the user' });
+    expect(within(summary).getByRole('link').textContent).toMatch(
+      /^You cannot assign Viewer at Acme AB\. It includes 1 permission you do not hold at Acme AB/,
+    );
+  });
+
   it('E05-S08 a Role typed into and cleared again counts as no role, and New user creates the user without one', async () => {
     const events = userEvent.setup();
     const tove = {
