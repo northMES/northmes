@@ -189,8 +189,9 @@ describe('the Help menu', () => {
     expect(within(menu).queryByRole('menuitem', { name: 'All pages' })).toBeNull();
 
     cleanup();
-    renderAt(`/settings/${companyId}/users`);
-    await screen.findByRole('heading', { level: 1, name: 'Users' });
+    // Without a permission the landing keeps a page of its own, which says so (#876).
+    renderAt(`/settings/${companyId}`);
+    await screen.findByRole('heading', { level: 1, name: 'Company settings' });
     expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Help' })).toBeDefined();
   });
 });

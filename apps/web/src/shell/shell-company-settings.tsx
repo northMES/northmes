@@ -3,7 +3,7 @@
 import type { ApolloClient } from '@apollo/client';
 import { ApolloProvider, useQuery } from '@apollo/client/react';
 import { companySettingsHref } from '@northmes/web-sdk';
-import { Link, Outlet, useParams, useRouterState } from '@tanstack/react-router';
+import { Link, Navigate, Outlet, useParams, useRouterState } from '@tanstack/react-router';
 import { ChevronRight } from 'lucide-react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ShellModule } from '../modules.ts';
@@ -176,7 +176,7 @@ export function CompanySettingsLayout({
                     />
                   </>
                 }
-                narrowBack={isLanding ? back : { label: 'Company settings', href: landing }}
+                narrowBack={back}
               >
                 <Outlet />
               </ShellSettingsLayout>
@@ -229,14 +229,18 @@ function landingState(state: CompanySettingsState | null): PageState {
 }
 
 /**
- * The company landing at /settings/$companyId (design shell-313, C5): the h1 Company settings and
- * the entries of the company settings navigation the user may open, each a row that leads to its
- * page. Its trail ends with the company, and its title reads "Company settings · Acme AB ·
- * NorthMES".
+ * The company landing at /settings/$companyId (design shell-313, C5; #876): it goes on to the
+ * first company settings page the user may open, since the plant settings navigation and the
+ * company settings navigation list those pages themselves. It has a page of its own only while
+ * the permissions load, for a company that is not one of the user's, after a failed read, and for
+ * a user who may open none of the pages. Its trail ends with the company, and its title reads
+ * "Company settings · Acme AB · NorthMES".
  */
 export function CompanySettingsLanding() {
   const state = useContext(CompanySettingsContext);
   const groups = state?.groups;
+  const first = groups?.[0]?.entries[0];
+  if (first !== undefined) return <Navigate to={first.href} replace />;
   return (
     <PageFrame
       title="Company settings"
