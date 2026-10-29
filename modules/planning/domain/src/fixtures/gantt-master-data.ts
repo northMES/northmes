@@ -72,6 +72,20 @@ export const tool = z.object({
   importedAt: timePoint,
 });
 
+/**
+ * An equipment group's scope, where its color came from (ADR 0026: the ERP's, set in NorthMES, or
+ * the first palette color no other group used) and its source. A group G1 and the pages fixture
+ * lack carries its name and color here.
+ */
+export const equipmentGroupDetail = z.object({
+  code: z.string(),
+  name: z.string().optional(),
+  color: z.string().optional(),
+  scope: z.enum(['company', 'plant']),
+  colorFrom: z.enum(['erp', 'set', 'palette']),
+  source: z.enum(['erp', 'northmes']),
+});
+
 export const ganttMasterDataFixture = z.object({
   id: z.literal('G1-master-data'),
   description: z.string(),
@@ -79,6 +93,7 @@ export const ganttMasterDataFixture = z.object({
   company: z.object({ name: z.string() }),
   routings: z.array(routingDetail).nonempty(),
   tools: z.array(tool).nonempty(),
+  equipmentGroups: z.array(equipmentGroupDetail).nonempty(),
 });
 
 export type GanttMasterDataFixture = z.infer<typeof ganttMasterDataFixture>;
