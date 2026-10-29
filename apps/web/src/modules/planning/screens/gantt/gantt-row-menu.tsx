@@ -50,8 +50,8 @@ export function GanttRowMenu({ row }: { readonly row: RunRow | OrderRow }) {
       >
         <Ellipsis aria-hidden className="size-4" />
       </DropdownMenuTrigger>
-      {/* The popup is portaled, and React bubbles its clicks to the row, which would select it
-          and open Details; the menu's own clicks stay in the menu. */}
+      {/* The popup is portaled, and React bubbles its clicks to the row, which would select it;
+          the menu's own clicks stay in the menu. */}
       <DropdownMenuContent
         aria-label={label}
         align="start"
