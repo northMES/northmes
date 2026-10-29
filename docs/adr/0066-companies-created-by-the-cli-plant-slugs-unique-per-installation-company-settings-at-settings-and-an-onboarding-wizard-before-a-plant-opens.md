@@ -206,10 +206,10 @@ Krister Johansson decided on 2026-10-06 to wait with the onboarding wizard until
 `/` decides where a signed-in user goes, from the fields below. The shell never picks a default plant ([ADR 0007][adr-0007]).
 
 * A user who holds `core.onboarding:manage` at a company in onboarding goes to that company's wizard at `/settings/$companyId/core/onboarding`. With several such companies, the user stays on `/`, which lists them with their state and links to each company's settings (proposed; question 4 of the #313 variations round). After `company create`, this is the first admin's path: sign in, change the temporary password ([ADR 0010][adr-0010]), land in the company wizard.
-* A user with exactly one open plant and `admin` false goes to that plant.
+* A user with exactly one open plant goes to that plant, whatever `admin` is. Until 2026-10-29 this held for `admin` false alone, and an admin with one plant got the list at `/`; Krister Johansson's trial asked for the plant ([#872](https://github.com/northMES/northmes/issues/872)). The company's settings stay reachable from the plant through the Settings button.
 * A user with no open plant and `admin` true goes to the company landing `/settings/$companyId` when one company holds an admin page for the user, and stays on `/` when several do (proposed, as above).
 * A user with no open plant and `admin` false sees the page "Your company is not open yet" ("Its onboarding is not complete. You can open its plants once an admin completes onboarding.") when every plant where the user holds a role is in onboarding, or reads that no plant is assigned yet.
-* Every other user sees a page at `/` that lists their plants grouped by company, with a link to each company's settings where the user holds an admin permission.
+* Every other user sees a page at `/` that asks them to pick a plant, with their plants grouped by company and a link to each company's settings where the user holds an admin permission.
 * A direct link to a plant that is not open shows the page with the plant's name, for example "Plant D is not open yet" ("Its onboarding is not complete. You can open it once an admin completes onboarding."), to anyone who holds a role there without `core.onboarding:manage`.
 
 ### The user's companies and plants in the module list
