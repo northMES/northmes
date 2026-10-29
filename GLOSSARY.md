@@ -26,6 +26,7 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | `operationTool` (Tools for operation) | A tool that may be used for a routing operation, optionally with its own pieces per cycle. Pyramid can send the tool in a `CustomData` free field that the connector's field mapping names. | |
 | `operationMaterial` (Material) | An article that an operation consumes, with its quantity. Pyramid lists these under `BillOfMaterials` on each order operation. | BOM line, component |
 | `equipmentGroup` (Equipment group) | A named, colored group of equipment, shown as a group of rows on the board. Pyramid calls it an equipment category (`EquipmentCategory`); ISA-95 calls it an equipment class. | work center, category |
+| equipment group scope (Company group, Plant group) | Whether an equipment group, or a tool, belongs to the company, so every plant may use it, or to one plant only. The equipment groups and tools registers filter by it. | company-wide group, site group |
 | `equipment` (Machine) | Something that runs operations or is measured: usually a machine, sometimes a building, a lift or a truck. Pyramid identifies it by `EquipmentCode`. | work center, resource, lane |
 | plannable equipment | Equipment marked plannable or OEE-measured, which therefore appears on the planning board. Pyramid has the flags `IsPlannable` and `IsOee`. | active machine |
 | `tool` (Tool) | A tool or mould an operation may use, which can change how many pieces one cycle makes. | fixture |
