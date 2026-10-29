@@ -224,7 +224,7 @@ test.describe('the design rules from computed style', () => {
     await signIn(coreLinks.tools.tool({ plant, toolCode: 'T-311' }).href);
     await expect(page.getByRole('heading', { level: 1, name: 'Tool T-311' })).toBeVisible();
     const main = page.getByRole('main');
-    const tool = main.getByRole('region', { name: 'Tool' });
+    const tool = main.getByRole('region', { name: 'Tool', exact: true });
     const jobOrders = main.getByRole('region', { name: 'Job orders with this tool' });
     const footnote = main.getByText(/^Showing fixture/);
     await expect(footnote).toBeVisible();

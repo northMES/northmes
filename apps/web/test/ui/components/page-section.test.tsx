@@ -10,7 +10,7 @@ afterEach(cleanup);
 // under the last section are read from the boxes the browser lays out in e2e/design-rules.spec.ts.
 
 describe('PageSection', () => {
-  it('E04-S07 a page section is a region named by its h2, with its lead beside the heading and its content under it (#874)', () => {
+  it('E04-S07 a page section is a region named by its h2 that holds its lead and its content (#874)', () => {
     render(
       <PageSection title="Tool" lead="Created by the import.">
         <p>Code T-118</p>

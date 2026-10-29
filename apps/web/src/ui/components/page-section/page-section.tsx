@@ -4,9 +4,9 @@ import { cn } from 'cn';
 import { type ReactNode, useId } from 'react';
 
 export interface PageSectionProps {
-  /** The id of the h2, when the page links to the section; left out, the section makes one. */
+  /** The id of the h2, when the page links to the section; left out or empty, the section makes one. */
   readonly id?: string;
-  /** The h2 that names the section, such as Tool. */
+  /** The h2 that names the section, such as Tool; never empty, since it names the region. */
   readonly title: string;
   /** A line beside the heading that says what the section holds or where its content comes from. */
   readonly lead?: ReactNode;
@@ -20,10 +20,11 @@ export interface PageSectionProps {
  * A section of a record page (design ui-222, DE1): a Card that is a section named by its h2, with
  * the lead beside the heading, the actions at the end of the heading row, and its blocks 16 px
  * apart under the heading row. Stacked sections sit 16 px apart in the page frame's data region.
+ * A long lead wraps inside the row and leaves the actions at its end.
  */
 export function PageSection({ id, title, lead, actions, className, children }: PageSectionProps) {
   const made = useId();
-  const headingId = id ?? made;
+  const headingId = id === undefined || id === '' ? made : id;
   return (
     <section
       aria-labelledby={headingId}
@@ -33,7 +34,7 @@ export function PageSection({ id, title, lead, actions, className, children }: P
       )}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-1">
           <h2 id={headingId} className="text-base font-semibold">
             {title}
           </h2>
