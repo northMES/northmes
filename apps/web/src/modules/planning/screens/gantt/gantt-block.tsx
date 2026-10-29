@@ -92,6 +92,10 @@ export function GanttBlock({
       return { fromMs, toMs: segment.fromMs, x, w };
     })
     .filter((hollow) => hollow.w > 0 && !(coarse && hollow.w < hollowMinPx));
+  // The text lines sit on the order color: a hollow segment shows the lane color, which is dark
+  // in the dark theme while the text is pure black, so text over a hollow could not be read (#882).
+  // The setup hatch, the outlines and the conflict edge sit above the text at z-[3].
+  const color = `var(--${order.color})`;
   const moving = move?.state?.jobOrderId === jobOrder.id;
   const inMoveMode = moving && move?.state?.source === 'keyboard';
   const preview = moving ? move?.preview : undefined;
@@ -208,7 +212,7 @@ export function GanttBlock({
               style={{
                 left: `${left}px`,
                 width: `${width}px`,
-                background: `var(--${order.color})`,
+                background: color,
               }}
             />
           }
@@ -217,7 +221,7 @@ export function GanttBlock({
             <span
               aria-hidden
               data-setup-hatch
-              className="gantt-setup-hatch absolute inset-y-0 left-0"
+              className="gantt-setup-hatch absolute inset-y-0 left-0 z-[3]"
               style={{ width: `${setupWidth}px` }}
             />
           )}
@@ -236,7 +240,7 @@ export function GanttBlock({
             <span
               aria-hidden
               data-locked-outline
-              className="pointer-events-none absolute inset-0.5 z-[2] border-2 border-current"
+              className="pointer-events-none absolute inset-0.5 z-[3] border-2 border-current"
             />
           )}
           {/* The chain outline differs in shape from the locked one, dashed and further in, so the
@@ -245,14 +249,14 @@ export function GanttBlock({
             <span
               aria-hidden
               data-chain-outline
-              className="pointer-events-none absolute inset-1.5 z-[2] border-2 border-dashed border-late-foreground"
+              className="pointer-events-none absolute inset-1.5 z-[3] border-2 border-dashed border-late-foreground"
             />
           )}
           {conflict && (
             <span
               aria-hidden
               data-conflict-edge
-              className="pointer-events-none absolute inset-y-0 right-0 z-[2] w-1.75"
+              className="pointer-events-none absolute inset-y-0 right-0 z-[3] w-1.75"
               style={{
                 background:
                   'repeating-linear-gradient(135deg, var(--late-foreground) 0 3px, transparent 3px 6px)',
@@ -270,10 +274,12 @@ export function GanttBlock({
           )}
           {width >= density.compact && (
             <span
+              data-block-text
               className={cn(
-                'relative z-[2] flex items-center gap-1 truncate font-mono font-bold',
+                'relative z-[2] flex w-fit max-w-full items-center gap-1 truncate font-mono font-bold',
                 short && width >= density.cue && 'pe-4',
               )}
+              style={{ background: color }}
             >
               {locked && <Lock aria-hidden className="size-3.5 shrink-0" />}
               {inDraft && <Pencil aria-hidden className="size-3.5 shrink-0" />}
@@ -288,15 +294,28 @@ export function GanttBlock({
           {/* The block fields after the first (plan 07, Board settings; #762): the second line at
               full density, with the module fields at its trailing edge (D3 IN29). */}
           {width >= density.full && (lines.second !== '' || lines.trailing.length > 0) && (
-            <span className="relative z-[2] flex items-center gap-1.5">
-              <span data-block-line="2" className="min-w-0 flex-1 truncate">
+            <span className="relative z-[2] flex items-center justify-between gap-1.5">
+              <span
+                data-block-line="2"
+                data-block-text
+                className="min-w-0 truncate"
+                style={{ background: color }}
+              >
                 {lines.second}
               </span>
-              {lines.trailing.map((field) => (
-                <span key={field.id} data-block-trailing className="shrink-0 font-semibold">
-                  {field.text}
+              {lines.trailing.length > 0 && (
+                <span
+                  data-block-text
+                  className="flex shrink-0 gap-1.5"
+                  style={{ background: color }}
+                >
+                  {lines.trailing.map((field) => (
+                    <span key={field.id} data-block-trailing className="font-semibold">
+                      {field.text}
+                    </span>
+                  ))}
                 </span>
-              ))}
+              )}
             </span>
           )}
         </TooltipTrigger>
@@ -353,7 +372,7 @@ export function GanttBlock({
           style={{
             left: `${scale.x(ghost.setupStartMs)}px`,
             width: `${Math.max(2, scale.x(ghost.endMs) - scale.x(ghost.setupStartMs))}px`,
-            background: `var(--${order.color})`,
+            background: color,
           }}
         />
       )}

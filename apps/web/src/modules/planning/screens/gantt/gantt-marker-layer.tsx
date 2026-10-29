@@ -169,7 +169,11 @@ export function GanttMarkerLayer({
                 <span className="absolute inset-y-0 left-0 w-0.5 bg-foreground" />
                 <Flag className="absolute top-px left-0.75 size-3 fill-current text-foreground" />
                 {marker.label !== undefined && (
-                  <span className="absolute top-px left-4 font-mono text-tick whitespace-nowrap text-foreground">
+                  // On a plain background, so the label reads over the late band's hatch (#882).
+                  <span
+                    data-marker-label
+                    className="absolute top-px left-4 rounded-sm bg-background/85 px-0.5 font-mono text-tick whitespace-nowrap text-foreground"
+                  >
                     {marker.label}
                   </span>
                 )}
