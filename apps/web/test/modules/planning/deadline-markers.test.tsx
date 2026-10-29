@@ -44,9 +44,10 @@ describe('deadline markers (plan 18, Deadlines on the timeline)', () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
+    // The ticks of the Week preset read "06:00", "12:00" and "18:00", so the one element of the
+    // header whose text holds 09:40 is the now label; its whole text is the clock.
     const header = within(gantt).getByRole('columnheader', { name: 'Time' });
-    expect(header.textContent).toContain('09:40');
-    expect(header.textContent).not.toContain('Mon 2 Nov 09:40');
+    expect(within(header).getByText(/09:40/).textContent).toBe('09:40');
   });
 
   it('GT8 draws the frozen band from now to the fence and the now line over every row', async () => {
