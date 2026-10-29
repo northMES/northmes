@@ -58,7 +58,7 @@ describe("core's pages at the plant root (ADR 0074)", () => {
     expect(masterData.closest('li')?.contains(articles)).toBe(true);
   });
 
-  it('#873 Dashboard, the entry at the plant root, is current on the dashboard alone, not on the articles list under the root', async () => {
+  it('E04-S02 Dashboard, the entry at the plant root, is not current and not marked on the articles list under the root (#873)', async () => {
     renderShellAt('/plant-a/articles', shellModules, { fetch: api().fetch });
     const sidebar = await screen.findByRole('navigation', { name: 'Main' });
     const core = within(sidebar).getByRole('list', { name: 'Core' });
@@ -68,14 +68,18 @@ describe("core's pages at the plant root (ADR 0074)", () => {
     );
     const dashboard = within(core).getByRole('link', { name: 'Dashboard' });
     expect(dashboard.getAttribute('aria-current')).toBeNull();
-    expect(dashboard.getAttribute('data-active')).not.toBe('true');
+    expect(dashboard.hasAttribute('data-active')).toBe(false);
+  });
 
-    cleanup();
-    renderShellAt('/plant-a', shellModules, { fetch: api().fetch });
-    const home = await screen.findByRole('navigation', { name: 'Main' });
-    expect(within(home).getByRole('link', { name: 'Dashboard' }).getAttribute('aria-current')).toBe(
-      'page',
-    );
+  it('E04-S02 Dashboard is current and marked on the dashboard, also at the root with a trailing slash (#873)', async () => {
+    for (const path of ['/plant-a', '/plant-a/']) {
+      cleanup();
+      renderShellAt(path, shellModules, { fetch: api().fetch });
+      const sidebar = await screen.findByRole('navigation', { name: 'Main' });
+      const dashboard = within(sidebar).getByRole('link', { name: 'Dashboard' });
+      expect(dashboard.getAttribute('aria-current'), path).toBe('page');
+      expect(dashboard.hasAttribute('data-active'), path).toBe(true);
+    }
   });
 
   it('E04-S02 the breadcrumb of a core plant settings page reads Plant A, Settings, then the page', async () => {
