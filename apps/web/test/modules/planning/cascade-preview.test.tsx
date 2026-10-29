@@ -69,12 +69,13 @@ describe('the cascade preview of a pointer move (plan 18, Cascade rule 8)', () =
       pointerId: 1,
       button: 0,
     });
-    // The click a browser fires after the drop is not a selection: Details stays closed.
+    // The click a browser fires after the drop is not a selection: the block gets no selection bar.
     fireEvent.click(blockOf(gantt, 'jo-1003-10'));
 
     await waitFor(() => {
       expect(blockOf(gantt, 'jo-1003-10').getAttribute('data-states')).toContain('draft');
     });
+    expect(blockOf(gantt, 'jo-1003-10').getAttribute('data-selected')).toBeNull();
     expect(detailsOpen()).toBe(false);
     expect(blockOf(gantt, 'jo-1003-20').getAttribute('data-states')).toContain('draft');
     expect(blockOf(gantt, 'jo-1003-10').getAttribute('aria-label')).toContain(

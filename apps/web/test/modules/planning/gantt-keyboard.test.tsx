@@ -174,19 +174,90 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
     });
   });
 
-  it('#884 a single click on a block selects its order and leaves Details closed; a double click opens Details', async () => {
+  it('#884 a single click on a block selects its order and leaves Details closed', async () => {
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     await userEvent.click(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
+
     await waitFor(() => {
       expect(router.state.location.search).toMatchObject({ order: 'po-1003' });
     });
     expect(detailsOpen()).toBe(false);
+  });
 
-    await userEvent.dblClick(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
+  it('#884 Enter on the focused block opens Details of its row, as the keyboard path of the double click', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    rowOf(gantt, 'jo-1001-20').focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(document.activeElement?.getAttribute('data-block')).toBe('jo-1001-20');
+    await userEvent.keyboard('{Enter}');
+
     const drawer = await findDetails();
-    expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('1003.20 Mill');
+    expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('1001.20 Mill');
+  });
+
+  it('#884 a Shift+double click on a second order row keeps the selection and leaves Details closed', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    await user.click(within(rowOf(gantt, 'po-1001')).getByRole('rowheader'));
+    await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ order: 'po-1001' });
+    });
+
+    await user.keyboard('{Shift>}');
+    await user.dblClick(within(rowOf(gantt, 'po-1005')).getByRole('rowheader'));
+    await user.keyboard('{/Shift}');
+
+    await waitFor(() => {
+      expect(rowOf(gantt, 'po-1005').getAttribute('aria-selected')).toBe('false');
+    });
+    expect(router.state.location.search).toMatchObject({ order: 'po-1001' });
+    expect(detailsOpen()).toBe(false);
+  });
+
+  it('#884 a double click on the expand toggle of an order leaves it expanded and Details closed', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    await userEvent.dblClick(within(gantt).getByRole('button', { name: 'Collapse order 1001' }));
+
+    const order = within(gantt).getByRole('row', { name: /^1001 / });
+    expect(order.getAttribute('aria-expanded')).toBe('true');
+    expect(detailsOpen()).toBe(false);
+  });
+
+  it('#884 a double click on the row menu button leaves Details closed', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const trigger = within(gantt).getByRole('button', { name: 'Actions for order 1001' });
+    await userEvent.click(trigger);
+    await waitFor(() => {
+      expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    // Each click toggles the menu: the two of the double click close and reopen it.
+    await userEvent.dblClick(trigger);
+
+    await waitFor(() => {
+      expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    });
+    expect(detailsOpen()).toBe(false);
+  });
+
+  it('#884 a double click inside the hover card of a block leaves Details closed', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    await userEvent.hover(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
+    const card = await screen.findByRole('tooltip');
+
+    await userEvent.dblClick(card);
+
+    expect(screen.getByRole('tooltip')).toBe(card);
+    expect(detailsOpen()).toBe(false);
   });
 
   it('ADR0021 the close button of the Details drawer closes it and returns focus to the row', async () => {
