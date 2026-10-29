@@ -109,9 +109,9 @@ describe("the company's settings pages under a plant", () => {
       name: 'Breadcrumb',
     });
     await waitFor(() =>
-      expect(
-        within(breadcrumb).getByRole('link', { name: 'Settings' }).getAttribute('href'),
-      ).toBe('/plant-a/settings'),
+      expect(within(breadcrumb).getByRole('link', { name: 'Settings' }).getAttribute('href')).toBe(
+        '/plant-a/settings',
+      ),
     );
   });
 

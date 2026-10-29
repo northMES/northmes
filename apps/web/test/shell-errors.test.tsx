@@ -196,9 +196,9 @@ describe('an unknown path', () => {
 
     const main = await screen.findByRole('main');
     await within(main).findByRole('heading', { level: 1, name: 'Page not found' });
-    expect(
-      within(main).getByRole('link', { name: 'Go to Settings' }).getAttribute('href'),
-    ).toBe('/plant-a/settings');
+    expect(within(main).getByRole('link', { name: 'Go to Settings' }).getAttribute('href')).toBe(
+      '/plant-a/settings',
+    );
   });
 });
 
