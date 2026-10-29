@@ -351,10 +351,16 @@ test.describe('the design rules from computed style', () => {
     expect(textBox?.width ?? 0).toBeLessThan(hollowedBox?.width ?? 0);
     await block('jo-1002-10').scrollIntoViewIfNeeded();
     const lockedOnTop = await block('jo-1002-10').evaluate((element) => {
+      const outline = element.querySelector<HTMLElement>('[data-locked-outline]');
+      if (outline === null) return false;
+      // The outline lets the pointer through, which elementFromPoint honours, so it takes the
+      // pointer for this one reading; 4 px below the top edge is the 1 px border, then the
+      // outline's 2 px band from inset 2 px.
+      outline.style.pointerEvents = 'auto';
       const box = element.getBoundingClientRect();
-      // 4 px below the top edge: the 1 px border, then the outline's 2 px band from inset 2 px.
       const hit = document.elementFromPoint(box.left + box.width / 2, box.top + 4);
-      return hit?.hasAttribute('data-locked-outline') ?? false;
+      outline.style.pointerEvents = '';
+      return hit === outline;
     });
     expect(lockedOnTop).toBe(true);
     await setTheme(gantt, 'light');
