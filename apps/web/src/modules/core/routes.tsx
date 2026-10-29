@@ -19,13 +19,20 @@ import {
 } from './customer-list-search.ts';
 import {
   calendarPageSearch,
+  equipmentGroupListSearch,
+  equipmentGroupPageSearch,
   machineListSearch,
   machinePageSearch,
   plantPageSearch,
-  urlSearchOf as urlSearchOfMachineList,
+  urlSearchOf as urlSearchOfPlantSettingsList,
 } from './plant-settings-search.ts';
 import { roleListSearch } from './role-list-search.ts';
 import { routingPageSearch } from './routing-search.ts';
+import {
+  toolListSearch,
+  toolPageSearch,
+  urlSearchOf as urlSearchOfToolList,
+} from './tool-list-search.ts';
 import { userListSearch } from './user-list-search.ts';
 import {
   urlSearchOf as urlSearchOfWarehouseList,
@@ -156,8 +163,9 @@ export function coreRoutes(plantRoute: PlantRoute) {
     path: linkEntry(coreLinks.people.person.addRole).path,
     component: lazyScreen('PersonAddRoleScreen'),
   });
-  // Plant settings (ADR 0066; design #688): the machines with each machine's page and its edit
-  // page, and the calendars with each calendar's page. The list and the forms take the page state
+  // Plant settings (ADR 0066; designs #688 and #729): the machines with each machine's page and its
+  // edit page, the equipment groups with each group's page and its edit page, and the calendars
+  // with each calendar's page. The list and the forms take the page state
   // the mock source previews from the URL; a calendar's page keeps the week its week view shows.
   const machinesRoute = createRoute({
     getParentRoute: () => coreRoute,
@@ -167,7 +175,7 @@ export function coreRoutes(plantRoute: PlantRoute) {
     getParentRoute: () => machinesRoute,
     path: '/',
     validateSearch: (raw: Record<string, unknown>) =>
-      urlSearchOfMachineList(machineListSearch(raw)),
+      urlSearchOfPlantSettingsList(machineListSearch(raw)),
     component: lazyScreen('MachinesScreen'),
   });
   const machineRoute = createRoute({
@@ -185,6 +193,33 @@ export function coreRoutes(plantRoute: PlantRoute) {
     path: linkEntry(coreLinks.machines.machine.edit).path,
     validateSearch: machinePageSearch,
     component: lazyScreen('EditMachineScreen'),
+  });
+  const equipmentGroupsRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.equipmentGroups).path,
+  });
+  const equipmentGroupListRoute = createRoute({
+    getParentRoute: () => equipmentGroupsRoute,
+    path: '/',
+    validateSearch: (raw: Record<string, unknown>) =>
+      urlSearchOfPlantSettingsList(equipmentGroupListSearch(raw)),
+    component: lazyScreen('EquipmentGroupsScreen'),
+  });
+  const equipmentGroupRoute = createRoute({
+    getParentRoute: () => equipmentGroupsRoute,
+    path: linkEntry(coreLinks.equipmentGroups.group).path,
+  });
+  const equipmentGroupDetailRoute = createRoute({
+    getParentRoute: () => equipmentGroupRoute,
+    path: '/',
+    validateSearch: equipmentGroupPageSearch,
+    component: lazyScreen('EquipmentGroupScreen'),
+  });
+  const editEquipmentGroupRoute = createRoute({
+    getParentRoute: () => equipmentGroupRoute,
+    path: linkEntry(coreLinks.equipmentGroups.group.edit).path,
+    validateSearch: equipmentGroupPageSearch,
+    component: lazyScreen('EditEquipmentGroupScreen'),
   });
   // The plant's own page in plant settings (design #767), on the fixture G1 until the plant API.
   const plantPageRoute = createRoute({
@@ -256,6 +291,23 @@ export function coreRoutes(plantRoute: PlantRoute) {
     validateSearch: routingPageSearch,
     component: lazyScreen('EditRoutingOperationScreen'),
   });
+  // The tools register under Master data (design #729), on the fixture G1 until core's tool API.
+  const toolsRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.tools).path,
+  });
+  const toolListRoute = createRoute({
+    getParentRoute: () => toolsRoute,
+    path: '/',
+    validateSearch: (raw: Record<string, unknown>) => urlSearchOfToolList(toolListSearch(raw)),
+    component: lazyScreen('ToolsScreen'),
+  });
+  const toolRoute = createRoute({
+    getParentRoute: () => toolsRoute,
+    path: linkEntry(coreLinks.tools.tool).path,
+    validateSearch: toolPageSearch,
+    component: lazyScreen('ToolScreen'),
+  });
   return coreRoute.addChildren([
     withoutCoreSegment(coreRoute, 2),
     dashboardRoute,
@@ -279,8 +331,13 @@ export function coreRoutes(plantRoute: PlantRoute) {
       machineListRoute,
       machineRoute.addChildren([machineDetailRoute, editMachineRoute]),
     ]),
+    equipmentGroupsRoute.addChildren([
+      equipmentGroupListRoute,
+      equipmentGroupRoute.addChildren([equipmentGroupDetailRoute, editEquipmentGroupRoute]),
+    ]),
     calendarsRoute.addChildren([calendarListRoute, calendarRoute]),
     customersRoute.addChildren([customerListRoute, customerRoute]),
+    toolsRoute.addChildren([toolListRoute, toolRoute]),
     routingsRoute.addChildren([
       routingListRoute,
       routingRoute.addChildren([routingDetailRoute, editRoutingOperationRoute]),

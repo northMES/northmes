@@ -1,6 +1,7 @@
 {
   "id": "G1-master-data",
-  "description": "What the routing, tools and equipment group pages show beside the fixture G1 (design #729): for each routing operation of G1's articles, how its cycle time was entered, its OEE target, the machines it allows with their overrides, the tools it may use and whether a planner keeps NorthMES values; and the tools of the company and the plant. The rates, lead times and allowed machines themselves stay G1's and the pages fixture's. Every name, number and time is fictional.",
+  "description": "What the routing, tools and equipment group pages show beside the fixture G1 (design #729): for each routing operation of G1's articles, how its cycle time was entered, its OEE target, the machines it allows with their overrides, the tools it may use and whether a planner keeps NorthMES values; the tools of the company and the plant; and each equipment group's scope, where its color came from and its source, with the company group HEAT that has no machine at the plant. The rates, lead times and allowed machines themselves stay G1's and the pages fixture's. Every name, number and time is fictional.",
+  "company": { "name": "Acme AB" },
   "routings": [
     {
       "article": "Bracket L",
@@ -155,5 +156,17 @@
       "source": "import",
       "importedAt": { "instant": "2026-11-02T05:40:00Z", "plantLocal": "2026-11-02T06:40:00" }
     }
+  ],
+  "equipmentGroups": [
+    { "code": "ASM", "scope": "plant", "colorFrom": "set", "source": "northmes" },
+    {
+      "code": "HEAT",
+      "name": "Heat treatment",
+      "color": "palette-1",
+      "scope": "company",
+      "colorFrom": "palette",
+      "source": "erp"
+    },
+    { "code": "MACH", "scope": "plant", "colorFrom": "erp", "source": "erp" }
   ]
 }

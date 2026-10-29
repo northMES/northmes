@@ -1,6 +1,5 @@
 {
   "permissions": {
-    "blockReadsOutsideWorkingDirectories": true,
     "deny": [
       "Bash(npm *)",
       "Bash(npx *)",

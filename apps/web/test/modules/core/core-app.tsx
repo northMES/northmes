@@ -31,6 +31,9 @@ import type { RoutingsSource } from '../../../src/modules/core/routings-data.ts'
 import { g1RoutingsSource } from '../../../src/modules/core/routings-data-g1.ts';
 import { RoutingsSourceProvider } from '../../../src/modules/core/routings-source-context.ts';
 import { CoreArticles } from '../../../src/modules/core/screens/articles/articles.graphql.ts';
+import type { ToolsSource } from '../../../src/modules/core/tools-data.ts';
+import { g1ToolsSource } from '../../../src/modules/core/tools-data-g1.ts';
+import { ToolsSourceProvider } from '../../../src/modules/core/tools-source-context.ts';
 import type { WarehousesSource } from '../../../src/modules/core/warehouses-data.ts';
 import { g1WarehousesSource } from '../../../src/modules/core/warehouses-data-g1.ts';
 import { WarehousesSourceProvider } from '../../../src/modules/core/warehouses-source-context.ts';
@@ -70,7 +73,7 @@ function SettingsStub() {
  * slots, and returns the router, whose state.location shows the URL. A hold from holdRequests
  * keeps its requests from the mocks until the test releases them. The plant settings pages read
  * plantSettingsSource, the customers pages customersSource, the warehouses warehousesSource and
- * the routings routingsSource, the fixture G1 when the test gives none.
+ * the routings routingsSource and the tools toolsSource, the fixture G1 when the test gives none.
  */
 export function renderCoreAt(
   href: string,
@@ -82,6 +85,7 @@ export function renderCoreAt(
     customersSource = g1CustomersSource,
     warehousesSource = g1WarehousesSource,
     routingsSource = g1RoutingsSource,
+    toolsSource = g1ToolsSource,
   }: {
     readonly contributions?: readonly SlotContribution[];
     readonly hold?: ApolloLink;
@@ -89,6 +93,7 @@ export function renderCoreAt(
     readonly customersSource?: CustomersSource;
     readonly warehousesSource?: WarehousesSource;
     readonly routingsSource?: RoutingsSource;
+    readonly toolsSource?: ToolsSource;
   } = {},
 ) {
   const router = createRouter({
@@ -106,7 +111,9 @@ export function renderCoreAt(
           <CustomersSourceProvider value={customersSource}>
             <WarehousesSourceProvider value={warehousesSource}>
               <RoutingsSourceProvider value={routingsSource}>
-                <RouterProvider router={router} />
+                <ToolsSourceProvider value={toolsSource}>
+                  <RouterProvider router={router} />
+                </ToolsSourceProvider>
               </RoutingsSourceProvider>
             </WarehousesSourceProvider>
           </CustomersSourceProvider>

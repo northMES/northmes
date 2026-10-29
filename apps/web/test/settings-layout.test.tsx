@@ -243,7 +243,7 @@ describe('the Settings button', () => {
     expect(linksIn(sidebar).map(([label]) => label)).not.toContain('Users');
   });
 
-  it("E06 a plant admin, who manages the plant's roles, finds Plant, Machines and Calendars after People in plant settings (#767)", async () => {
+  it("E06 a plant admin, who manages the plant's roles, finds Plant, Machines, Equipment groups and Calendars after People in plant settings (#767)", async () => {
     const { fetch } = api(['core.user:read', 'core.roleAssignment:manage']);
     renderShellAt('/plant-a/articles', shellModules, { fetch });
 
@@ -254,16 +254,17 @@ describe('the Settings button', () => {
     await userEvent.click(button);
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     await waitFor(() =>
-      expect(linksIn(settings).slice(0, 4)).toEqual([
+      expect(linksIn(settings).slice(0, 5)).toEqual([
         ['People', '/plant-a/people'],
         ['Plant', '/plant-a/plant'],
         ['Machines', '/plant-a/machines'],
+        ['Equipment groups', '/plant-a/equipment-groups'],
         ['Calendars', '/plant-a/calendars'],
       ]),
     );
   });
 
-  it('E06 a planner, who manages no roles, sees neither Machines nor Calendars', async () => {
+  it('E06 a planner, who manages no roles, sees neither Machines, Equipment groups nor Calendars', async () => {
     const { fetch } = api(['core.user:read', 'planning.productionOrder:read']);
     renderShellAt('/plant-a/people', shellModules, { fetch });
 
@@ -271,6 +272,7 @@ describe('the Settings button', () => {
     await waitFor(() => expect(linksIn(settings).length).toBeGreaterThan(0));
     expect(linksIn(settings).map(([label]) => label)).not.toContain('Machines');
     expect(linksIn(settings).map(([label]) => label)).not.toContain('Calendars');
+    expect(linksIn(settings).map(([label]) => label)).not.toContain('Equipment groups');
   });
 
   it('#729 a company admin, who manages the integrations, finds Warehouses in company settings, and one who only reads roles does not', async () => {
