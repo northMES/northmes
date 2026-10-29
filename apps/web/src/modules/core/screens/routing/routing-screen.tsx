@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
 import { formatPlantDateTime } from '@northmes/contracts/format';
 import { coreLinks } from '@northmes/core-contracts';
 import { planningLinks } from '@northmes/planning-contracts';
@@ -7,8 +8,9 @@ import { useShell } from '@northmes/web-sdk';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { Lock, Pencil, Route } from 'lucide-react';
-import { type ReactNode, useId } from 'react';
+import type { ReactNode } from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { PageSection } from '../../../../ui/components/page-section/index.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
   Table,
@@ -174,7 +176,6 @@ function OperationSection({
   readonly snapshot: RoutingsSnapshot;
 }) {
   const { plant } = useShell();
-  const id = useId();
   const kept = operation.kept;
   const value = (own: number | undefined, base: number, text: (n: number) => string) =>
     own === undefined ? (
@@ -183,14 +184,9 @@ function OperationSection({
       <span className={override}>{text(own)}</span>
     );
   return (
-    <section
-      aria-labelledby={id}
-      className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6 text-card-foreground"
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id={id} className="text-base font-semibold">
-          Operation {operation.sequence} {operation.name}
-        </h2>
+    <PageSection
+      title={`Operation ${operation.sequence} ${operation.name}`}
+      actions={
         <Link
           to={
             coreLinks.routings.routing.editOperation({
@@ -204,7 +200,8 @@ function OperationSection({
           <Pencil aria-hidden />
           Edit operation {operation.sequence}
         </Link>
-      </div>
+      }
+    >
       {kept === undefined ? (
         <p className="text-sm text-muted-foreground">
           Every value from the ERP, routing version {routing.erpVersion}.
@@ -383,7 +380,7 @@ function OperationSection({
         Rates freeze on a job order when it is placed.
       </p>
       <p className="text-xs text-muted-foreground">{routingActionReason}</p>
-    </section>
+    </PageSection>
   );
 }
 

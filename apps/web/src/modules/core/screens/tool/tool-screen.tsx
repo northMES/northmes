@@ -6,8 +6,8 @@ import { useShell } from '@northmes/web-sdk';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { Lock, Pencil } from 'lucide-react';
-import { type ReactNode, useId } from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { PageSection } from '../../../../ui/components/page-section/index.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
   Table,
@@ -29,33 +29,6 @@ import { useTools } from '../../tools-source-context.ts';
 const head = 'h-auto px-3 py-2 text-xs font-semibold text-muted-foreground';
 const cell = 'px-3 py-2 whitespace-normal';
 const link = 'text-link underline underline-offset-2 hover:no-underline';
-
-/** A section of the page: a card named by its h2, with a line under the heading. */
-function Section({
-  title,
-  lead,
-  children,
-}: {
-  readonly title: string;
-  readonly lead?: ReactNode;
-  readonly children: ReactNode;
-}) {
-  const id = useId();
-  return (
-    <section
-      aria-labelledby={id}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-6 text-card-foreground"
-    >
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 id={id} className="text-base font-semibold">
-          {title}
-        </h2>
-        {lead !== undefined && <p className="text-sm text-muted-foreground">{lead}</p>}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 /** Where a tool came from, in words: the import that brought it, or its creation. */
 function originText(tool: Tool, snapshot: ToolsSnapshot): string {
@@ -142,7 +115,7 @@ export function ToolScreen() {
     >
       {snapshot !== undefined && tool !== undefined && week !== undefined && (
         <>
-          <Section title="Tool" lead={originText(tool, snapshot)}>
+          <PageSection title="Tool" lead={originText(tool, snapshot)}>
             <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex flex-col gap-0.5">
                 <dt className="text-xs font-semibold text-muted-foreground">Code</dt>
@@ -240,8 +213,8 @@ export function ToolScreen() {
                 </Table>
               </ScrollTable>
             )}
-          </Section>
-          <Section title="Job orders with this tool" lead={week.label}>
+          </PageSection>
+          <PageSection title="Job orders with this tool" lead={week.label}>
             <p className="text-sm">
               {tool.jobOrders.length === 0
                 ? `No job order uses ${tool.code} in W${week.week}.`
@@ -254,7 +227,7 @@ export function ToolScreen() {
               A planner picks the tool of a job order in Details; a job order without a tool uses
               the values of its machine and operation. The tool is never sent to the ERP.
             </p>
-          </Section>
+          </PageSection>
           {snapshot.fixture !== undefined && (
             <p className="text-xs text-muted-foreground">
               Showing fixture {snapshot.fixture}. Changes to tools wait for the tool API.

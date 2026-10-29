@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
 import { formatDuration, formatPlantDay } from '@northmes/contracts/format';
 import { useShell } from '@northmes/web-sdk';
 import { Link } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { Lock } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
+import { PageSection } from '../../../../ui/components/page-section/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
@@ -32,39 +34,6 @@ import {
 } from '../../order-facts.ts';
 import { quantityText, statusLabel } from '../gantt/gantt-rows.ts';
 import { deadlineRuleText } from '../job-orders/job-orders-late-facts.tsx';
-
-/** A section of the page: a card named by its h2, with a line that says where its content comes from. */
-function Section({
-  id,
-  title,
-  lead,
-  action,
-  children,
-}: {
-  readonly id: string;
-  readonly title: string;
-  readonly lead?: ReactNode;
-  readonly action?: ReactNode;
-  readonly children: ReactNode;
-}) {
-  return (
-    <section
-      aria-labelledby={id}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-6 text-card-foreground"
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 id={id} className="text-base font-semibold">
-            {title}
-          </h2>
-          {lead !== undefined && <p className="text-sm text-muted-foreground">{lead}</p>}
-        </div>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 /** A term, its value and the note under the value that names its source or rule (PO1). */
 function Definition({
@@ -121,7 +90,7 @@ function OrderSection({
   const imported = order.owner !== 'northmes';
   const erpName = snapshot.erp?.name;
   return (
-    <Section id="order-facts" title="Order" lead={sourceLine(snapshot, order)}>
+    <PageSection id="order-facts" title="Order" lead={sourceLine(snapshot, order)}>
       <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Definition term="Article" value={order.article} />
         <Definition term="Quantity" value={quantityText(order.quantity)} mono />
@@ -195,7 +164,7 @@ function OrderSection({
           }
         />
       </dl>
-    </Section>
+    </PageSection>
   );
 }
 
@@ -217,11 +186,11 @@ function DemandSection({
         ? 'One customer order line is supplied by this order.'
         : `${lines.length} customer order lines for ${order.article} are gathered into this one order.`;
   return (
-    <Section
+    <PageSection
       id="order-demand"
       title="Demand"
       lead={lead}
-      action={
+      actions={
         <Button variant="outline" className="h-8 px-3" disabled>
           Edit demand
         </Button>
@@ -293,7 +262,7 @@ function DemandSection({
           </TableBody>
         </Table>
       )}
-    </Section>
+    </PageSection>
   );
 }
 
@@ -309,7 +278,7 @@ function OperationsSection({
   const version = order.origin?.routingVersion;
   const operations = [...order.operations].sort((a, b) => a.sequence - b.sequence);
   return (
-    <Section
+    <PageSection
       id="order-operations"
       title="Operations"
       lead={`Copied from the routing of ${order.article}${version === undefined ? '' : `, version ${version}`}, when the order was released. Allowed machines come from the routing; the default is the machine autoplan prefers.`}
@@ -370,7 +339,7 @@ function OperationsSection({
           })}
         </TableBody>
       </Table>
-    </Section>
+    </PageSection>
   );
 }
 
@@ -393,7 +362,7 @@ function JobOrdersSection({
   const operationName = (operationId: string) =>
     order.operations.find((operation) => operation.id === operationId)?.name ?? '';
   return (
-    <Section id="order-job-orders" title="Job orders" lead={lead}>
+    <PageSection id="order-job-orders" title="Job orders" lead={lead}>
       <Table>
         <TableCaption className="sr-only">Job orders and their placements</TableCaption>
         <TableHeader className="bg-muted">
@@ -469,7 +438,7 @@ function JobOrdersSection({
         </TableBody>
       </Table>
       <p className="text-xs text-muted-foreground">{phase1Reason}</p>
-    </Section>
+    </PageSection>
   );
 }
 

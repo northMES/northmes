@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
 import { coreLinks } from '@northmes/core-contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { Archive, ChartGantt, CircleCheck, Lock, Pencil } from 'lucide-react';
-import { type ReactNode, useId } from 'react';
+import type { ReactNode } from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { PageSection } from '../../../../ui/components/page-section/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
@@ -41,38 +43,6 @@ import { usePlantSettings } from '../../plant-settings-source-context.ts';
 
 const head = 'h-auto px-3 py-2 text-xs font-semibold text-muted-foreground';
 const cell = 'px-3 py-2 whitespace-normal';
-
-/** A section of the page: a card named by its h2, with a line that says where its content comes from. */
-function Section({
-  title,
-  lead,
-  action,
-  children,
-}: {
-  readonly title: string;
-  readonly lead?: ReactNode;
-  readonly action?: ReactNode;
-  readonly children: ReactNode;
-}) {
-  const id = useId();
-  return (
-    <section
-      aria-labelledby={id}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-6 text-card-foreground"
-    >
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 id={id} className="text-base font-semibold">
-            {title}
-          </h2>
-          {lead !== undefined && <p className="text-sm text-muted-foreground">{lead}</p>}
-        </div>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 /** A term, its value and the note under the value that names its rule (MA3). */
 function Definition({
@@ -117,7 +87,7 @@ function MachineSection({
         }. The plannable flag came with it.`
       : 'Created in NorthMES.';
   return (
-    <Section title="Machine" lead={lead}>
+    <PageSection title="Machine" lead={lead}>
       <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Definition term="Code" value={machine.code} mono />
         <Definition term="Name" value={machine.name} />
@@ -179,7 +149,7 @@ function MachineSection({
           note="The 6 px stripe before the machine name on the board."
         />
       </dl>
-    </Section>
+    </PageSection>
   );
 }
 
@@ -194,7 +164,7 @@ function AllowedSection({
   const machineName = machineNamer(snapshot);
   const allowed = allowedIn(snapshot, machine.code);
   return (
-    <Section
+    <PageSection
       title="Allowed in"
       lead={
         allowed.length === 0
@@ -238,7 +208,7 @@ function AllowedSection({
           </TableBody>
         </Table>
       )}
-    </Section>
+    </PageSection>
   );
 }
 
@@ -259,10 +229,10 @@ function WeekSection({
     )
     .sort((a, b) => a.setupStartMs - b.setupStartMs);
   return (
-    <Section
+    <PageSection
       title={`This week on ${machine.name}`}
       lead={`${week.label}, committed plan.`}
-      action={
+      actions={
         <Link
           to={planningLinks.board({ plant }, { zoom: 'week', from: week.monday }).href}
           className={`${buttonVariants({ variant: 'outline' })} h-8 px-3`}
@@ -319,7 +289,7 @@ function WeekSection({
           </TableBody>
         </Table>
       )}
-    </Section>
+    </PageSection>
   );
 }
 
