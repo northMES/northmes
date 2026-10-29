@@ -40,6 +40,15 @@ describe('deadline markers (plan 18, Deadlines on the timeline)', () => {
     expect(row.querySelector('[data-marker="deadline"]')?.textContent).toBe('15:00');
   });
 
+  it('#885 labels the now line on the time header with the plant time alone, not the date', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    const header = within(gantt).getByRole('columnheader', { name: 'Time' });
+    expect(header.textContent).toContain('09:40');
+    expect(header.textContent).not.toContain('Mon 2 Nov 09:40');
+  });
+
   it('GT8 draws the frozen band from now to the fence and the now line over every row', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
