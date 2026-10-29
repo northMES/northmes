@@ -36,4 +36,19 @@ describe('ColumnsMenu', () => {
 
     expect(onChange).toHaveBeenCalledWith(['source']);
   });
+
+  it('E06-S03 as an icon in a table header the button keeps the name Columns and opens the same menu (#875)', async () => {
+    const user = userEvent.setup();
+    render(<ColumnsMenu compact columns={columns} hidden={['source']} onChange={vi.fn()} />);
+
+    const button = screen.getByRole('button', { name: 'Columns' });
+    expect(button.textContent).toBe('');
+    await user.click(button);
+    const items = await screen.findAllByRole('menuitemcheckbox');
+    expect(items.map((item) => [item.textContent, item.getAttribute('aria-checked')])).toEqual([
+      ['Article number Always shown', 'true'],
+      ['Name', 'true'],
+      ['Source', 'false'],
+    ]);
+  });
 });

@@ -4,6 +4,8 @@ export {
   DataTable,
   type DataTableColumn,
   type DataTableGroup,
+  DataTableMenuCell,
+  DataTableMenuHead,
   type DataTablePaging,
   type DataTableProps,
   type DataTableSort,

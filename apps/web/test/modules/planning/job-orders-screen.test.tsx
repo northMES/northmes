@@ -144,6 +144,26 @@ describe('the job orders page (plan 18, the job order table; design #660, T1)', 
     ).toBe('true');
   });
 
+  it('T1 the Columns icon sits in the last header cell, every row has an empty cell under it that assistive technology skips, and the late facts span it (#875)', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'jobOrders');
+    const table = await findTable();
+    const headers = within(table).getAllByRole('columnheader');
+    const last = headers[headers.length - 1] as HTMLElement;
+    expect(within(last).getByRole('button', { name: 'Columns' })).toBeTruthy();
+    const rows = table.querySelectorAll('tr[data-job-order]');
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) {
+      const cells = row.querySelectorAll(':scope > td');
+      expect(cells).toHaveLength(headers.length);
+      expect(cells[cells.length - 1]?.getAttribute('aria-hidden')).toBe('true');
+    }
+
+    const row = within(table).getByRole('row', { name: /^1003\.20 / });
+    await userEvent.click(within(row).getByRole('button', { name: 'Late facts for 1003.20' }));
+    const facts = screen.getByRole('region', { name: 'Late facts for 1003.20' });
+    expect(facts.closest('td')?.getAttribute('colspan')).toBe(String(headers.length));
+  });
+
   it('T1 Move is drawn but disabled with its reason, and the row menu leads to the Gantt and the board', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'jobOrders');
     const table = await findTable();

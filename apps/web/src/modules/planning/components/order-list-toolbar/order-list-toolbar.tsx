@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import type { ReactNode } from 'react';
-import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
 import { FilterChip } from '../../../../ui/components/filter-chip/index.ts';
 import { FilterMenu } from '../../../../ui/components/filter-menu/index.ts';
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
@@ -36,22 +34,13 @@ export interface OrderListToolbarProps {
   readonly fields: readonly ListFilterField[];
   readonly onFilterChange: (key: ListFilterKey, values: readonly string[]) => void;
   readonly onClearFilters: () => void;
-  /** Group by, on the list that groups. */
-  readonly groupMenu?: ReactNode;
-  readonly columns: readonly {
-    readonly id: string;
-    readonly label: string;
-    readonly alwaysShown?: boolean;
-  }[];
-  readonly hiddenColumns: readonly string[];
-  readonly onHiddenColumnsChange: (hidden: readonly string[]) => void;
 }
 
 /**
  * The toolbar the order lists share (design ui-222, LI1 and LI3; #687): the search, Late only, a
- * filter menu per field with the counts of its values, Group by where the list groups, Columns,
- * and under them the chips of the filters that apply with Clear filters, which keeps the search,
- * Late only and the grouping.
+ * filter menu per field with the counts of its values, and under them the chips of the filters
+ * that apply with Clear filters, which keeps the search, Late only and the grouping. Group by and
+ * Columns sit in the table's header row (#875).
  */
 export function OrderListToolbar({
   searchId,
@@ -63,47 +52,37 @@ export function OrderListToolbar({
   fields,
   onFilterChange,
   onClearFilters,
-  groupMenu,
-  columns,
-  hiddenColumns,
-  onHiddenColumnsChange,
 }: OrderListToolbarProps) {
   const lateOnlyId = `${searchId}-late-only`;
   const filtered = fields.some((field) => field.picked.length > 0);
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <SearchField
-            id={searchId}
-            label={searchLabel}
-            value={q}
-            onSearch={onSearch}
-            className="w-full max-w-sm"
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchField
+          id={searchId}
+          label={searchLabel}
+          value={q}
+          onSearch={onSearch}
+          className="w-full max-w-sm"
+        />
+        <Field orientation="horizontal" className="w-auto">
+          <Checkbox
+            id={lateOnlyId}
+            checked={lateOnly}
+            onCheckedChange={(checked) => onLateOnlyChange(checked)}
           />
-          <Field orientation="horizontal" className="w-auto">
-            <Checkbox
-              id={lateOnlyId}
-              checked={lateOnly}
-              onCheckedChange={(checked) => onLateOnlyChange(checked)}
-            />
-            <FieldLabel htmlFor={lateOnlyId}>Late only</FieldLabel>
-          </Field>
-          {fields.map((field) => (
-            <FilterMenu
-              key={field.key}
-              label={field.label}
-              heading={field.heading}
-              options={field.values}
-              selected={field.picked}
-              onChange={(values) => onFilterChange(field.key, values)}
-            />
-          ))}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {groupMenu}
-          <ColumnsMenu columns={columns} hidden={hiddenColumns} onChange={onHiddenColumnsChange} />
-        </div>
+          <FieldLabel htmlFor={lateOnlyId}>Late only</FieldLabel>
+        </Field>
+        {fields.map((field) => (
+          <FilterMenu
+            key={field.key}
+            label={field.label}
+            heading={field.heading}
+            options={field.values}
+            selected={field.picked}
+            onChange={(values) => onFilterChange(field.key, values)}
+          />
+        ))}
       </div>
       {filtered && (
         <div className="flex flex-wrap items-center gap-2">
