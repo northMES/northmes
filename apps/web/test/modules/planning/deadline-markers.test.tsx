@@ -41,6 +41,16 @@ describe('deadline markers (plan 18, Deadlines on the timeline)', () => {
     expect(label?.textContent).toBe('15:00');
   });
 
+  it('#885 labels the now line on the time header with the plant time alone, not the date', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    // The ticks of the Week preset read "06:00", "12:00" and "18:00", so the one element of the
+    // header whose text holds 09:40 is the now label; its whole text is the clock.
+    const header = within(gantt).getByRole('columnheader', { name: 'Time' });
+    expect(within(header).getByText(/09:40/).textContent).toBe('09:40');
+  });
+
   it('GT8 draws the frozen band from now to the fence and the now line over every row', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();

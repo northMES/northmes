@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { formatPlantDateTime } from '@northmes/contracts/format';
+import { formatPlantTime } from '@northmes/contracts/format';
 import { cn } from 'cn';
 import type { ClosedWindow, TimeScale } from '../../timeline/time-scale.ts';
 import { useGanttView } from './gantt-context.ts';
@@ -10,7 +10,9 @@ export const timeHeaderHeightRem = 3;
 
 /**
  * The time header (plan 18, Shared pieces): the top tier with a tick per day or week, the bottom
- * tier with the preset's finer ticks, and the now label on the top tier when now is in range.
+ * tier with the preset's finer ticks, and the now label on the bottom tier when now is in range.
+ * The label is the clock alone, since the top tier names the day and the now marker's accessible
+ * text carries the date and the time (#885).
  */
 export function GanttTimeHeader({
   scale,
@@ -67,7 +69,7 @@ export function GanttTimeHeader({
           className="absolute top-6.5 -translate-x-1/2 rounded-full bg-now px-1.5 font-mono text-tick whitespace-nowrap text-now-foreground"
           style={{ left: `${scale.x(nowMs)}px` }}
         >
-          {formatPlantDateTime(nowMs, timeZone)}
+          {formatPlantTime(nowMs, timeZone)}
         </div>
       )}
     </div>
