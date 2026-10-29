@@ -32,12 +32,14 @@ describe('deadline markers (plan 18, Deadlines on the timeline)', () => {
     expect(markerTexts(row, 'lateBand')).toEqual([]);
   });
 
-  it('GT9 labels the deadline marker with the plant time at Day zoom only', async () => {
+  it('GT9 labels the deadline marker with the plant time at Day zoom only, on a plain background over the late band', async () => {
     renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
 
     const row = within(gantt).getByRole('row', { name: /^1003 / });
-    expect(row.querySelector('[data-marker="deadline"]')?.textContent).toBe('15:00');
+    const label = row.querySelector<HTMLElement>('[data-marker="deadline"] [data-marker-label]');
+    expect(label?.textContent).toBe('15:00');
+    expect(label?.className).toContain('bg-background');
   });
 
   it('GT8 draws the frozen band from now to the fence and the now line over every row', async () => {

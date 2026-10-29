@@ -30,6 +30,20 @@ describe('the block of a job order row (plan 18, Blocks across closed time)', ()
     expect(blockOf(gantt, 'jo-1002-10').querySelectorAll('[data-hollow]')).toHaveLength(0);
   });
 
+  it('#882 keeps the block text readable over a hollow segment: each text line sits on the order color, and the hollow shows beside it', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    const block = blockOf(gantt, 'jo-1006-10');
+    expect(block.querySelectorAll('[data-hollow]')).toHaveLength(1);
+    const texts = block.querySelectorAll<HTMLElement>('[data-block-text]');
+    expect(texts.length).toBeGreaterThan(0);
+    for (const text of texts) {
+      expect(text.style.background, text.textContent ?? '').toBe(block.style.background);
+    }
+    expect(block.querySelector('[data-block-text]')?.textContent).toBe('1006.10 Shaft 8');
+  });
+
   it('GT1 hatches the setup part of a block that is at least 66 px wide and names setup and run', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
