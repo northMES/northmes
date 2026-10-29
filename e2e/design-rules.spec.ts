@@ -221,6 +221,31 @@ test.describe('the design rules from computed style', () => {
     await expectTwoToneRing(checkbox);
   });
 
+  test("ui-222 DE1 the sections of a record page stack 16 px apart, a section's first block sits 16 px under its heading row, and the footnote sits 16 px under the last section", async ({
+    page,
+    signIn,
+  }) => {
+    await signIn(coreLinks.tools.tool({ plant, toolCode: 'T-311' }).href);
+    await expect(page.getByRole('heading', { level: 1, name: 'Tool T-311' })).toBeVisible();
+    const main = page.getByRole('main');
+    const tool = main.getByRole('region', { name: 'Tool', exact: true });
+    const jobOrders = main.getByRole('region', { name: 'Job orders with this tool' });
+    const footnote = main.getByText(/^Showing fixture/);
+    await expect(footnote).toBeVisible();
+
+    // The gap under a box: the next box's top minus the box's bottom.
+    const gapUnder = async (above: Locator, below: Locator) => {
+      const [top, bottom] = await Promise.all([above.boundingBox(), below.boundingBox()]);
+      if (top === null || bottom === null) throw new Error('A box is not laid out');
+      return Math.round(bottom.y - (top.y + top.height));
+    };
+    expect(await gapUnder(tool, jobOrders), 'between the sections').toBe(16);
+    expect(await gapUnder(jobOrders, footnote), 'under the last section').toBe(16);
+    const headingRow = tool.locator(':scope > div').first();
+    const firstBlock = tool.locator(':scope > dl');
+    expect(await gapUnder(headingRow, firstBlock), 'under the heading row').toBe(16);
+  });
+
   test('D2 a checkbox, radio and plain menu item show the inset focus outline on --accent, and a numeric column aligns its header and cells to the end', async ({
     page,
     signIn,

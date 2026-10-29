@@ -6,9 +6,9 @@ import { useShell } from '@northmes/web-sdk';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { Clock, Lock, TriangleAlert } from 'lucide-react';
-import { type ReactNode, useId } from 'react';
 import { OwnerTag } from '../../../../ui/components/owner-tag/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { PageSection } from '../../../../ui/components/page-section/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
@@ -52,33 +52,6 @@ import { StockArticleChart } from './stock-article-chart.tsx';
 const head = 'h-auto px-3 py-2 text-xs font-semibold text-muted-foreground';
 const cell = 'px-3 py-2 whitespace-normal';
 const link = 'text-link underline underline-offset-2 hover:no-underline';
-
-/** A section of the page: a card named by its h2, with a line that says what it holds. */
-function Section({
-  title,
-  lead,
-  children,
-}: {
-  readonly title: string;
-  readonly lead?: ReactNode;
-  readonly children: ReactNode;
-}) {
-  const id = useId();
-  return (
-    <section
-      aria-labelledby={id}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-6 text-card-foreground"
-    >
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 id={id} className="text-base font-semibold">
-          {title}
-        </h2>
-        {lead !== undefined && <p className="text-sm text-muted-foreground">{lead}</p>}
-      </div>
-      {children}
-    </section>
-  );
-}
 
 /** What a movement consumes or brings, as the caption names it: "1004.10 consumes 102 m". */
 function causeText(movement: PlannedMovement, unit: string): string {
@@ -218,7 +191,7 @@ function BalanceSection({
   const total = rows.reduce((sum, row) => sum + row.quantity, 0);
   const plantName = snapshot.plant.name;
   return (
-    <Section title="Balance per warehouse">
+    <PageSection title="Balance per warehouse">
       <Table>
         <TableCaption className="sr-only">Balance per warehouse</TableCaption>
         <TableHeader className="bg-muted">
@@ -259,7 +232,7 @@ function BalanceSection({
       <p className="text-xs text-muted-foreground">
         Every warehouse mapped to {plantName} counts. Warehouses of other plants are not shown.
       </p>
-    </Section>
+    </PageSection>
   );
 }
 
@@ -275,7 +248,7 @@ function MovementsSection({
   const timeZone = snapshot.plant.timeZone;
   const warehouses = balancesOf(snapshot, article.number).length;
   return (
-    <Section
+    <PageSection
       title="Planned movements"
       lead="Sorted by date, incoming before outgoing at the same time. A consumption is dated at the setup start of its job order, an output at the end of the order's last operation, an unplaced order's movement at its ERP date, and an overdue movement at now."
     >
@@ -359,7 +332,7 @@ function MovementsSection({
           ))}
         </TableBody>
       </Table>
-    </Section>
+    </PageSection>
   );
 }
 
@@ -457,7 +430,7 @@ export function StockArticleScreen() {
           </p>
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
             <BalanceSection snapshot={snapshot} article={row.article} />
-            <Section
+            <PageSection
               title="Projected balance"
               lead={`${formatPlantDate(snapshot.stockAsOfMs, timeZone)} to ${formatPlantDate(snapshot.projectedToMs - 1, timeZone)}, plant time. Purchase requisitions ${snapshot.countPurchaseRequisitions ? 'counted' : 'not counted'} (${snapshot.plant.name} setting).`}
             >
@@ -466,7 +439,7 @@ export function StockArticleScreen() {
                 projection={row.projection}
                 caption={projectionCaption(snapshot, row.article, row.projection)}
               />
-            </Section>
+            </PageSection>
           </div>
           <MovementsSection snapshot={snapshot} row={row} />
         </>

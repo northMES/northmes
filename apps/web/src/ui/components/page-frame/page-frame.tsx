@@ -304,7 +304,11 @@ export function PageFrame({
         )}
       </div>
       {toolbar}
-      <div aria-busy={shown.status === 'loading' || busy || undefined}>
+      {/* The region stacks its blocks, such as a record page's sections and footnote, 16 px apart. */}
+      <div
+        aria-busy={shown.status === 'loading' || busy || undefined}
+        className="flex flex-col gap-4"
+      >
         {shown.status === 'empty' ? (
           <EmptyState
             icon={shown.icon}

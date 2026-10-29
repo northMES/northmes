@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
 import { formatDuration, formatPlantDay } from '@northmes/contracts/format';
 import { planningLinks } from '@northmes/planning-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { cn } from 'cn';
 import { ChartNoAxesGantt, Clock, Info } from 'lucide-react';
-import { Fragment, type ReactNode, useEffect, useId, useRef } from 'react';
+import { Fragment, type ReactNode, useEffect, useRef } from 'react';
 import { DetailTabs } from '../../../../ui/components/detail-tabs/index.ts';
 import { OwnerTag } from '../../../../ui/components/owner-tag/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { PageSection } from '../../../../ui/components/page-section/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { Alert, AlertDescription, AlertTitle } from '../../../../ui/primitives/alert.tsx';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
@@ -42,33 +44,6 @@ const historyReason =
 const head = 'h-auto px-3 py-2 text-xs font-semibold text-muted-foreground';
 const cell = 'px-3 py-2 whitespace-normal';
 const link = 'text-link underline underline-offset-2 hover:no-underline';
-
-/** A section of the page: a card named by its h2, with a line that says what it holds. */
-function Section({
-  title,
-  lead,
-  children,
-}: {
-  readonly title: string;
-  readonly lead: string;
-  readonly children: ReactNode;
-}) {
-  const id = useId();
-  return (
-    <section
-      aria-labelledby={id}
-      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-6 text-card-foreground"
-    >
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 id={id} className="text-base font-semibold">
-          {title}
-        </h2>
-        <p className="text-sm text-muted-foreground">{lead}</p>
-      </div>
-      {children}
-    </section>
-  );
-}
 
 /** A term, its value and the note under the value that names its source or rule (KO1). */
 function Definition({
@@ -117,7 +92,7 @@ function CustomerOrderSection({
   const supplied = lines.filter((line) => line.productionOrderId !== undefined).length;
   const erp = snapshot.erp;
   return (
-    <Section
+    <PageSection
       title="Customer order"
       lead={
         erp === undefined
@@ -154,7 +129,7 @@ function CustomerOrderSection({
           {deliveringText(snapshot, lines)}
         </Definition>
       </dl>
-    </Section>
+    </PageSection>
   );
 }
 
@@ -172,7 +147,7 @@ function LinesSection({
 }) {
   const { plant } = useShell();
   return (
-    <Section
+    <PageSection
       title="Lines and supply"
       lead="Demand is the quantity of a line that a production order supplies. One production order can supply lines of several customer orders of one article."
     >
@@ -326,7 +301,7 @@ function LinesSection({
         </TableBody>
       </Table>
       <p className="text-xs text-muted-foreground">{phase1Reason}</p>
-    </Section>
+    </PageSection>
   );
 }
 
@@ -368,7 +343,7 @@ const whoTones = { erp: 'neutral', planner: 'info', admin: 'warning' } as const;
 
 function WhoChangesWhat() {
   return (
-    <Section
+    <PageSection
       title="Who changes what"
       lead="Customer orders come from the ERP; NorthMES does not create them."
     >
@@ -397,7 +372,7 @@ function WhoChangesWhat() {
           ))}
         </TableBody>
       </Table>
-    </Section>
+    </PageSection>
   );
 }
 

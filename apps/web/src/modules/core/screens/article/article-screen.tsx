@@ -3,10 +3,10 @@
 import { unitOf } from '@northmes/contracts';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
-import { cn } from 'cn';
 import { Archive } from 'lucide-react';
 import { Fragment, type ReactNode } from 'react';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
+import { PageSection } from '../../../../ui/components/page-section/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { formatDateTime } from '../../../../ui/lib/date-time.ts';
 import { languageName } from '../../../../ui/lib/languages.ts';
@@ -54,31 +54,6 @@ function ArticleName({ article }: { readonly article: Article | undefined }) {
   );
 }
 
-/** A section of the article's page: a card named by its h2 (design ui-222, DE1). */
-function Section({
-  id,
-  title,
-  className,
-  children,
-}: {
-  readonly id: string;
-  readonly title: string;
-  readonly className?: string;
-  readonly children: ReactNode;
-}) {
-  return (
-    <section
-      aria-labelledby={id}
-      className={cn('rounded-xl border border-border bg-card p-6 text-card-foreground', className)}
-    >
-      <h2 id={id} className="text-base font-semibold">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
 /** A section's terms and their values, each a pair of a term and a value. */
 function Definitions({
   rows,
@@ -86,7 +61,7 @@ function Definitions({
   readonly rows: readonly (readonly [term: string, value: ReactNode])[];
 }) {
   return (
-    <dl className="mt-4 grid grid-cols-[minmax(8rem,auto)_1fr] gap-x-6 gap-y-3 text-sm">
+    <dl className="grid grid-cols-[minmax(8rem,auto)_1fr] gap-x-6 gap-y-3 text-sm">
       {rows.map(([term, value]) => (
         <Fragment key={term}>
           <dt className="text-muted-foreground">{term}</dt>
@@ -108,15 +83,15 @@ function ArticleSections({ article }: { readonly article: Article | undefined })
     article === undefined ? undefined : read(article);
   return (
     <div className="grid max-w-285 gap-4 lg:grid-cols-2">
-      <Section id="article-identity" title="Identity">
+      <PageSection id="article-identity" title="Identity">
         <Definitions
           rows={[
             ['Article number', <Value key="code" text={article?.code} className="font-mono" />],
             ['Name', <ArticleName key="name" article={article} />],
           ]}
         />
-      </Section>
-      <Section id="article-classification" title="Classification">
+      </PageSection>
+      <PageSection id="article-classification" title="Classification">
         <Definitions
           rows={[
             [
@@ -132,19 +107,19 @@ function ArticleSections({ article }: { readonly article: Article | undefined })
             ],
           ]}
         />
-      </Section>
-      <Section id="article-note" title="Note" className="lg:col-span-2">
+      </PageSection>
+      <PageSection id="article-note" title="Note" className="lg:col-span-2">
         {article === undefined ? (
-          <p className="mt-4">
+          <p>
             <Value text={undefined} />
           </p>
         ) : (
-          <p className="mt-4 text-sm whitespace-pre-line">
+          <p className="text-sm whitespace-pre-line">
             {article.note ?? <span className="text-muted-foreground">No note.</span>}
           </p>
         )}
-      </Section>
-      <Section id="article-origin" title="Origin" className="lg:col-span-2">
+      </PageSection>
+      <PageSection id="article-origin" title="Origin" className="lg:col-span-2">
         <Definitions
           rows={[
             ['Plants', <Value key="plants" text={loaded(plantsLabel)} />],
@@ -167,7 +142,7 @@ function ArticleSections({ article }: { readonly article: Article | undefined })
             ],
           ]}
         />
-      </Section>
+      </PageSection>
     </div>
   );
 }
