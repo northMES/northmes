@@ -212,7 +212,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
     expect(within(table).getByRole('rowheader', { name: 'W45, Mon 2 Nov' })).toBeTruthy();
   });
 
-  it('#901 during a drag the buckets of the machines it touches show the preview, and an overbooked bucket draws thicker', async () => {
+  it('#901 during a drag the buckets of the machines it touches show the preview, an overloaded bucket draws thicker, and Escape restores them', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
     const lane = () =>
@@ -222,7 +222,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
     expect(thursday()?.getAttribute('data-overloaded')).toBeNull();
     const fullWednesday = Number.parseFloat(wednesday()?.style.height ?? '0');
     // 1003.10 starts Wed 08:00 and 1004.10 Thu 06:00, both on CNC1: dragging the first to where
-    // the second starts books CNC1 over its Thursday.
+    // the second starts loads CNC1 above its Thursday's availability.
     const block = (id: string) => gantt.querySelector<HTMLElement>(`[data-block="${id}"]`);
     const leftOf = (id: string) => Number.parseFloat(block(id)?.style.left ?? '0');
     const dx = leftOf('jo-1004-10') - leftOf('jo-1003-10');
@@ -235,7 +235,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
 
     await waitFor(() => expect(thursday()?.getAttribute('data-overloaded')).toBe('true'));
     expect(Number.parseFloat(wednesday()?.style.height ?? '0')).toBeLessThan(fullWednesday);
-    // Overbooked, the bar takes the bucket's whole width; a bar within its availability, on a
+    // Overloaded, the bar takes the bucket's whole width; a bar within its availability, on a
     // bucket of the same width, is narrower.
     expect(Number.parseFloat(thursday()?.style.width ?? '0')).toBeGreaterThan(
       Number.parseFloat(wednesday()?.style.width ?? '0'),
@@ -245,7 +245,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
     await waitFor(() => expect(thursday()?.getAttribute('data-overloaded')).toBeNull());
   });
 
-  it('#901 the table says an overbooked bucket is over capacity in words', async () => {
+  it('#901 the table says an overloaded bucket is over capacity in words', async () => {
     const snapshot = g1Snapshot();
     const overloaded = {
       ...snapshot,

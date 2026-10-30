@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { previewOf } from '../../../src/modules/planning/screens/gantt/gantt-move.ts';
+import { utilizationText } from '../../../src/modules/planning/screens/gantt/gantt-workload-panel.tsx';
 import {
   bucketKindOf,
   withMovePreview,
@@ -43,6 +44,30 @@ describe('the buckets of the workload lanes follow the zoom level (ADR 0089; #90
     expect(bucketOf(buckets, 'CNC1', '2026-W45')?.loadedS).toBe(72_000);
   });
 
+  it('by shift, a range before the plan keeps its shifts open', () => {
+    // Fri 30 Oct, before now and every placement of G1.
+    const friday = { fromMs: Date.UTC(2026, 9, 30, 5), toMs: Date.UTC(2026, 9, 31, 5) };
+
+    const buckets = workloadOf(g1Snapshot(), 'day', friday);
+
+    expect(bucketOf(buckets, 'CNC1', '2026-10-30 06:00 to 15:00')?.availableS).toBe(29_700);
+  });
+
+  it('by shift, a shift the range edge cuts keeps its whole span and values', () => {
+    // Thu 5 Nov 10:00 to 12:00 in the plant's zone.
+    const hours = { fromMs: Date.UTC(2026, 10, 5, 9), toMs: Date.UTC(2026, 10, 5, 11) };
+
+    const thursday = bucketOf(
+      workloadOf(g1Snapshot(), 'hours', hours),
+      'CNC1',
+      '2026-11-05 06:00 to 15:00',
+    );
+
+    expect(thursday?.fromMs).toBe(Date.UTC(2026, 10, 5, 5));
+    expect(thursday?.availableS).toBe(29_700);
+    expect(thursday?.loadedS).toBe(29_700);
+  });
+
   it('by production day, it is the analysis of the snapshot', () => {
     const snapshot = g1Snapshot();
 
@@ -78,12 +103,66 @@ describe('the workload follows a move preview (plan 18, The workload lane; #901)
   it('recomputes the machines the move and its cascade touch, and keeps the others as they are', () => {
     const after = withMovePreview(snapshot, before, preview);
 
-    expect(bucketOf(after, 'MILL1', '2026-11-05')).not.toBe(
-      bucketOf(before, 'MILL1', '2026-11-05'),
+    // 1003.20 on Mill 1 leaves Wednesday with the cascade.
+    expect(bucketOf(after, 'MILL1', '2026-11-04')?.loadedS).toBeLessThan(
+      bucketOf(before, 'MILL1', '2026-11-04')?.loadedS ?? 0,
     );
     expect(bucketOf(after, 'CNC2', '2026-11-05')).toBe(bucketOf(before, 'CNC2', '2026-11-05'));
     expect(after.map((bucket) => `${bucket.equipment} ${bucket.label}`)).toEqual(
       before.map((bucket) => `${bucket.equipment} ${bucket.label}`),
+    );
+  });
+});
+
+describe('the workload of a move to another machine, and of a move that does not happen (#901)', () => {
+  const snapshot = g1Snapshot();
+  const before = workloadOf(snapshot, 'week', week);
+
+  it('moves the load from the machine the row leaves to the machine it enters', () => {
+    // 1001.10 runs on CNC1 from Tue 11:30 and may run on CNC2: the same start on CNC2.
+    const preview = previewOf(
+      snapshot,
+      {
+        jobOrderId: 'jo-1001-10',
+        setupStartMs: Date.UTC(2026, 10, 3, 10, 30),
+        equipment: 'CNC2',
+        source: 'keyboard',
+      },
+      true,
+    );
+    if (preview === undefined) throw new Error('No preview of 1001.10');
+
+    const after = withMovePreview(snapshot, before, preview);
+
+    expect(bucketOf(before, 'CNC1', '2026-11-03')?.loadedS).toBe(12_600);
+    expect(bucketOf(after, 'CNC1', '2026-11-03')?.loadedS).toBe(0);
+    expect(bucketOf(after, 'CNC2', '2026-11-03')?.loadedS).toBe(12_600);
+  });
+
+  it('leaves the workload as it is for a move the cascade refuses', () => {
+    // 1002.10 is locked.
+    const preview = previewOf(
+      snapshot,
+      {
+        jobOrderId: 'jo-1002-10',
+        setupStartMs: Date.UTC(2026, 10, 4, 5),
+        equipment: 'CNC2',
+        source: 'keyboard',
+      },
+      true,
+    );
+    if (preview === undefined) throw new Error('No preview of 1002.10');
+
+    expect(withMovePreview(snapshot, before, preview)).toBe(before);
+  });
+
+  it('says a closed bucket that holds work in closed time is over capacity', () => {
+    const saturday = bucketOf(before, 'CNC1', '2026-11-07');
+    if (saturday === undefined) throw new Error('No Saturday bucket');
+
+    expect(utilizationText(saturday)).toBe('closed');
+    expect(utilizationText({ ...saturday, loadedS: 3_600, overloadS: 3_600 })).toBe(
+      'closed, over capacity',
     );
   });
 });
