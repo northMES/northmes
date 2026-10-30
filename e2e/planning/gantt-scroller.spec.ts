@@ -142,4 +142,85 @@ test.describe('the time scroller of the order Gantt', () => {
     expect(hit.listLeft).toBeCloseTo(hit.nameEnd, 0);
     expect(hit.onList).toBe(true);
   });
+
+  // The workload lanes had the treegrid rows' defect: a lane as wide as its scroller took its
+  // sticky label with it once the scroll passed the lane's width (#910).
+  test('#910 the workload labels stay in view after the range grows and the panel scrolls to the far right', async ({
+    page,
+    signIn,
+  }) => {
+    await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+    await expect(gantt).toBeVisible();
+    await page.getByRole('button', { name: 'Board options' }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Workload' }).click();
+    await page.keyboard.press('Escape');
+    const label = page.getByRole('button', { name: 'Workload on CNC 1' });
+    await expect(label).toBeVisible();
+
+    // Grow the range as the #890 test does, so the lanes are several views wide.
+    await expect
+      .poll(() =>
+        gantt.evaluate((grid) => {
+          grid.scrollLeft = grid.scrollWidth;
+          grid.dispatchEvent(new Event('scroll'));
+          return grid.scrollWidth / grid.clientWidth;
+        }),
+      )
+      .toBeGreaterThan(4);
+
+    const edges = await label.evaluate((button) => {
+      const cell = button.parentElement as HTMLElement;
+      const panel = cell.closest('.overflow-auto') as HTMLElement;
+      panel.scrollLeft = panel.scrollWidth;
+      return {
+        scrolled: panel.scrollLeft,
+        client: panel.clientWidth,
+        panel: panel.getBoundingClientRect().left + panel.clientLeft,
+        label: cell.getBoundingClientRect().left,
+      };
+    });
+    // The position passed a lane as wide as the panel, where the bug showed.
+    expect(edges.scrolled).toBeGreaterThan(edges.client);
+    expect(edges.label).toBeCloseTo(edges.panel, 0);
+  });
+
+  // On a narrow grid only the treegrid's Name column sticks (WCAG 1.4.10); the workload label
+  // follows the same rule, so it never covers more of the lane than the Name column does (#910).
+  test('#910 on a narrow grid the workload label sticks only the Name column wide', async ({
+    page,
+    signIn,
+  }) => {
+    await page.setViewportSize({ width: 400, height: 800 });
+    await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+    await expect(gantt).toBeVisible();
+    await page.getByRole('button', { name: 'Board options' }).click();
+    await page.getByRole('menuitemcheckbox', { name: 'Workload' }).click();
+    await page.keyboard.press('Escape');
+    const label = page.getByRole('button', { name: 'Workload on CNC 1' });
+    await expect(label).toBeVisible();
+
+    const name = await gantt.evaluate(
+      (grid) =>
+        (
+          grid.querySelector('[aria-rowindex="1"] > [role="columnheader"]') as HTMLElement
+        ).getBoundingClientRect().width,
+    );
+    const edges = await label.evaluate((button) => {
+      const cell = button.parentElement as HTMLElement;
+      const panel = cell.closest('.overflow-auto') as HTMLElement;
+      panel.scrollLeft = panel.scrollWidth;
+      return {
+        scrolled: panel.scrollLeft,
+        client: panel.clientWidth,
+        panel: panel.getBoundingClientRect().left + panel.clientLeft,
+        label: cell.getBoundingClientRect().left,
+        width: cell.getBoundingClientRect().width,
+      };
+    });
+    expect(edges.width).toBeCloseTo(name, 0);
+    expect(edges.scrolled).toBeGreaterThan(edges.client);
+    expect(edges.label).toBeCloseTo(edges.panel, 0);
+  });
 });
