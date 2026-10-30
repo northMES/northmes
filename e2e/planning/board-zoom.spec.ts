@@ -80,7 +80,7 @@ test.describe('the zoom of the planning board', () => {
 
     await zoom.getByRole('button', { name: 'Zoom level, Week' }).click();
     await checkA11y('the zoom level menu on the board');
-    await page.getByRole('menuitemradio', { name: 'Quarter' }).click();
+    await page.getByRole('menuitemradio', { name: 'Quarter', exact: true }).click();
     await expect(page).toHaveURL(/zoom=quarter(&|$)/);
     await checkA11y('the board at Quarter');
 

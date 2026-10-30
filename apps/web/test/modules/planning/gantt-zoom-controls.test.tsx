@@ -14,11 +14,24 @@ function widen(gantt: HTMLElement, clientWidth: number) {
   Object.defineProperty(gantt, 'clientWidth', { value: clientWidth, configurable: true });
 }
 
-/** A Ctrl+wheel event over the grid at a viewport x, and whether its default was prevented. */
-function ctrlWheel(gantt: HTMLElement, deltaY: number, clientX: number, ctrlKey = true): boolean {
+/**
+ * A Ctrl+wheel event over the grid at a viewport x, and whether its default was prevented. The
+ * time stamp, in milliseconds, says which events belong to one gesture.
+ */
+function ctrlWheel(
+  gantt: HTMLElement,
+  deltaY: number,
+  clientX: number,
+  ctrlKey = true,
+  timeStamp = performance.now(),
+): boolean {
   const event = new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true });
   // The test browser's WheelEvent keeps neither the modifier nor the pointer's position.
-  Object.defineProperties(event, { ctrlKey: { value: ctrlKey }, clientX: { value: clientX } });
+  Object.defineProperties(event, {
+    ctrlKey: { value: ctrlKey },
+    clientX: { value: clientX },
+    timeStamp: { value: timeStamp },
+  });
   gantt.dispatchEvent(event);
   return event.defaultPrevented;
 }
@@ -103,17 +116,16 @@ describe('the zoom of the order Gantt (ADR 0089, Zoom levels)', () => {
     expect(ctrlWheel(gantt, -40, 50)).toBe(false);
     expect(router.state.location.search.zoom).toBe('week');
 
-    expect(ctrlWheel(gantt, -40, 1200)).toBe(true);
+    const start = performance.now();
+    expect(ctrlWheel(gantt, -40, 1200, true, start)).toBe(true);
     await waitFor(() => expect(router.state.location.search.zoom).toBe('day'));
-    // The rest of the same pinch, within 200 ms of the last event, steps no further.
-    expect(ctrlWheel(gantt, -40, 1200)).toBe(true);
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(ctrlWheel(gantt, -40, 1200)).toBe(true);
+    // The rest of the same pinch, each event within 200 ms of the one before, steps no further.
+    expect(ctrlWheel(gantt, -40, 1200, true, start + 100)).toBe(true);
+    expect(ctrlWheel(gantt, -40, 1200, true, start + 250)).toBe(true);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(router.state.location.search.zoom).toBe('day');
-    // After a pause the next gesture steps again.
-    await new Promise((resolve) => setTimeout(resolve, 250));
-    ctrlWheel(gantt, -40, 1200);
+    // After a pause of more than 200 ms the next gesture steps again.
+    ctrlWheel(gantt, -40, 1200, true, start + 600);
     await waitFor(() => expect(router.state.location.search.zoom).toBe('hours'));
   });
 

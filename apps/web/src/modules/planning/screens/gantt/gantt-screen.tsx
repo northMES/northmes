@@ -188,7 +188,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const { extension, setExtension } = rangeExtension;
   const range = useMemo(
     () => extendedRange(from, zoom, timeZone, productionDayStart, extension),
-    [from, zoom, timeZone, productionDayStart, extension.before, extension.after],
+    [from, zoom, timeZone, productionDayStart, extension],
   );
   // Everything the view draws reads the plan with the draft applied, analysed over the loaded
   // range (plan 18, Resolving a break in the draft).

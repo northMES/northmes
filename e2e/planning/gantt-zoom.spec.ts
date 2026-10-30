@@ -107,14 +107,15 @@ test.describe('the zoom of the order Gantt', () => {
       'Year',
     ]);
     await checkA11y('the zoom level menu');
-    await menu.getByRole('menuitemradio', { name: 'Year' }).click();
+    await menu.getByRole('menuitemradio', { name: 'Year', exact: true }).click();
     await expect(page).toHaveURL(/zoom=year/);
     await expect(zoom.getByRole('button', { name: 'Zoom out' })).toBeDisabled();
     await checkA11y('the Gantt at Year');
 
     // Zoom to fit with order 1003 selected fits its job orders, Wed 4 Nov 08:00 to Thu 5 Nov
     // 06:15, at a level finer than Year with both blocks in view.
-    await gantt.getByRole('row', { name: /^Order 1003/ }).click();
+    // The tree cell of the row, left of the time area, so the click selects the order.
+    await gantt.locator('[data-row-id="po-1003"]').click({ position: { x: 24, y: 12 } });
     await zoom.getByRole('button', { name: 'Zoom to fit' }).click();
     await expect(page).not.toHaveURL(/zoom=year/);
     await expect(gantt.locator('[data-block="jo-1003-10"]')).toBeInViewport();
@@ -122,7 +123,7 @@ test.describe('the zoom of the order Gantt', () => {
 
     // Minus and plus with focus in the grid step a level around the centre of the view.
     const level = page.url().match(/zoom=([a-z0-9-]+)/)?.[1];
-    await gantt.getByRole('row', { name: /^Order 1003/ }).focus();
+    await gantt.locator('[data-row-id="po-1003"]').focus();
     await page.keyboard.press('-');
     await expect(page).not.toHaveURL(new RegExp(`zoom=${level}\\b`));
     await page.keyboard.press('+');

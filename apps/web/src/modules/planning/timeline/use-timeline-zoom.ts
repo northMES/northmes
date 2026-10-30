@@ -227,24 +227,20 @@ export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
   useLayoutEffect(() => {
     latest.current = { stepAt, scale, layoutOf };
   });
-  const listeners = useRef<GestureListener[] | undefined>(undefined);
-  listeners.current ??= gestureListeners(latest);
-  const attached = useRef<HTMLElement | null>(null);
+  // Built once, so a gesture keeps its state across the renders its own step causes.
+  const [listeners] = useState(() => gestureListeners(latest));
+  // Attached to the grid in view, again when the grid changes (the page's states draw it anew),
+  // and removed on unmount.
   useEffect(() => {
     const element = grid.current;
-    if (element === attached.current) return;
-    for (const [type, listener, passive] of listeners.current ?? []) {
-      attached.current?.removeEventListener(type, listener);
-      element?.addEventListener(type, listener, { passive });
+    if (element === null) return;
+    for (const [type, listener, passive] of listeners) {
+      element.addEventListener(type, listener, { passive });
     }
-    attached.current = element;
-  });
-  useEffect(() => {
-    const all = listeners.current ?? [];
     return () => {
-      for (const [type, listener] of all) attached.current?.removeEventListener(type, listener);
+      for (const [type, listener] of listeners) element.removeEventListener(type, listener);
     };
-  }, []);
+  });
 
   return {
     setLevel: (level) => {
