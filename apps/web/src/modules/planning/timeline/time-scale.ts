@@ -275,13 +275,13 @@ function clippedWindows(closed: readonly ClosedWindow[], range: TimeRange): Clos
 
 /**
  * The width a label takes in its tier, from the header's type: the top tier is 12 px IBM Plex Sans
- * with 6 px padding each side, the bottom tier 11 px IBM Plex Mono (6.6 px a character) with 4 px.
- * Each character counts a little wider than the font draws it, so a label that fits never spills
- * into the next cell, also in a fallback font.
+ * with 6 px padding each side, the bottom tier 11 px IBM Plex Mono (6.6 px a character) with 4 px,
+ * and each has a 1 px start border. Each character counts a little wider than the font draws it,
+ * so a label that fits never spills into the next cell, also in a fallback font.
  */
 const labelType = {
-  top: { charPx: 7.5, paddingPx: 12 },
-  bottom: { charPx: 7, paddingPx: 8 },
+  top: { charPx: 7.5, paddingPx: 13 },
+  bottom: { charPx: 7, paddingPx: 9 },
 } as const;
 
 /** The first of a cell's label formats, longest first, that fits its width, or none. */

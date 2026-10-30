@@ -46,12 +46,13 @@ export function GanttTimeHeader({
           key={`${tick.tier}-${tick.ms}`}
           aria-hidden
           data-tier={tick.tier}
-          className={cn(
-            'absolute border-s border-border whitespace-nowrap',
+          // A plain join: the class merge of cn reads text-tick as a text color and would drop it
+          // for text-muted-foreground, and the time scale fits each label at the tick size.
+          className={`absolute border-s border-border whitespace-nowrap ${
             tick.tier === 'top'
               ? 'top-0 h-6 px-1.5 py-0.5 text-xs font-medium'
-              : 'top-6 h-6 px-1 py-1 font-mono text-tick text-muted-foreground',
-          )}
+              : 'top-6 h-6 px-1 py-1 font-mono text-tick text-muted-foreground'
+          }`}
           style={{ left: `${tick.x}px` }}
         >
           {tick.label}
