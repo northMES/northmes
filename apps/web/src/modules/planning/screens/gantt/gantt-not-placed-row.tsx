@@ -21,7 +21,7 @@ export function GanttNotPlacedRow({
     <div
       role="row"
       aria-rowindex={2}
-      className="sticky top-12 z-10 grid h-8 border-b border-border bg-lane-alt"
+      className="sticky top-12 z-10 grid h-8 w-max min-w-full border-b border-border bg-lane-alt"
       style={{ gridTemplateColumns }}
     >
       <div

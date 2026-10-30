@@ -823,7 +823,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               <div
                 role="row"
                 aria-rowindex={1}
-                className="sticky top-0 z-20 grid border-b border-border bg-muted"
+                className="sticky top-0 z-20 grid w-max min-w-full border-b border-border bg-muted"
                 style={{ gridTemplateColumns, height: `${timeHeaderHeightRem}rem` }}
               >
                 <GanttTreeHeaderCells
