@@ -101,3 +101,20 @@ describe('the block of a job order row (plan 18, Blocks across closed time)', ()
     expect(blockOf(gantt, 'jo-1003-10').getAttribute('data-selected')).toBeNull();
   });
 });
+
+describe("plan 18's zoom rules on the ladder (ADR 0089, Zoom levels)", () => {
+  it('drops a hollow segment under 2 px at Year, as at Week and 4 weeks, and keeps it at Day', async () => {
+    // 1001.20 waits through the lunch break, 11:00 to 11:30 on Wed 4 Nov: 0.075 px at Year.
+    const lunch = String(Date.UTC(2026, 10, 4, 10, 0));
+    renderGanttRoute({ zoom: 'year', from: '2026-11-01' });
+    const year = await findGantt();
+    const atYear = [...blockOf(year, 'jo-1001-20').querySelectorAll('[data-hollow]')];
+    expect(atYear.map((hollow) => hollow.getAttribute('data-from-ms'))).not.toContain(lunch);
+    cleanup();
+
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
+    const day = await findGantt();
+    const atDay = [...blockOf(day, 'jo-1001-20').querySelectorAll('[data-hollow]')];
+    expect(atDay.map((hollow) => hollow.getAttribute('data-from-ms'))).toContain(lunch);
+  });
+});

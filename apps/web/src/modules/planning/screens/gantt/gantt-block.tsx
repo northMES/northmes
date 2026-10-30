@@ -22,7 +22,7 @@ import {
   type VisibleArea,
   visibleAreaOf,
 } from '../../timeline/autoscroll.ts';
-import type { TimeScale } from '../../timeline/time-scale.ts';
+import { isCoarseLevel, type TimeScale } from '../../timeline/time-scale.ts';
 import { blockName, blockStates } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
 import { GanttHoverCard, GanttHoverFields, hoverFields } from './gantt-hover-card.tsx';
@@ -145,7 +145,7 @@ export function GanttBlock({
     jobOrder.plannedSetupS > 0 && width >= density.setup
       ? Math.max(0, scale.x(placement.runStartMs) - left)
       : 0;
-  const coarse = scale.zoom === 'week' || scale.zoom === '4weeks';
+  const coarse = isCoarseLevel(scale.zoom);
   const hollows = placement.segments
     .slice(1)
     .map((segment, index) => {

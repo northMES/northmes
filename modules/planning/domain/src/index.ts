@@ -132,6 +132,7 @@ export {
 export {
   type Bucket,
   isoWeekBuckets,
+  monthBuckets,
   productionDayBuckets,
   shiftBuckets,
   type WorkloadBucket,

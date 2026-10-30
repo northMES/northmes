@@ -47,7 +47,7 @@ import {
   rangeLabel,
   rangeOf,
   shiftedFrom,
-  zoomPresets,
+  zoomLevels,
 } from '../../timeline/time-scale.ts';
 import { useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { useMoveActions } from '../../use-move-actions.ts';
@@ -696,8 +696,8 @@ export function BoardScreen() {
             row={moveDialogRow}
             snapshot={snapshot}
             machineName={view.machineName}
-            stepMs={zoomPresets[zoom].stepMs}
-            presetLabel={zoomPresets[zoom].label}
+            stepMs={zoomLevels[zoom].stepMs}
+            presetLabel={zoomLevels[zoom].label}
             onMove={(equipment, setupStartMs) => {
               if (moveDialogFor === undefined) return;
               setMoveDialogOpen(false);

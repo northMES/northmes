@@ -15,11 +15,16 @@ function ganttHref(search: Record<string, string>): string {
   return `${planningLinks.gantt({ plant }).href}?${new URLSearchParams(search).toString()}`;
 }
 
+// Every level of the ladder (ADR 0089, Zoom levels). Each range holds closed time wider than a
+// gap at its level: the breaks at Quarter hours, the nights at Quarter, the weekends at Year.
 const levels = [
+  { zoom: 'quarter-hours', from: '2026-11-04' },
   { zoom: 'hours', from: '2026-11-04' },
   { zoom: 'day', from: '2026-11-04' },
   { zoom: 'week', from: '2026-11-02' },
   { zoom: '4weeks', from: '2026-11-02' },
+  { zoom: 'quarter', from: '2026-11-01' },
+  { zoom: 'year', from: '2026-11-01' },
 ] as const;
 
 test.use({ viewport: { width: 1440, height: 900 } });

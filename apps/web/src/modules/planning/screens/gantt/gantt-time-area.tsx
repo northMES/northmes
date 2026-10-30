@@ -9,8 +9,9 @@ import { useGanttView } from './gantt-context.ts';
 export const timeHeaderHeightRem = 3;
 
 /**
- * The time header (plan 18, Shared pieces): the top tier with a cell per day or week, the bottom
- * tier with the preset's finer cells, and the now label on the bottom tier when now is in range.
+ * The time header (plan 18, Shared pieces): the top tier with the coarser cells of the zoom level,
+ * the bottom tier with its finer cells (ADR 0089, Zoom levels), and the now label on the bottom
+ * tier when now is in range.
  * Each cell starts at its first open segment and holds the longest label that fits it (ADR 0089,
  * Header tiers); the gaps are drawn first, so no gap covers a label. Each cell reads as its full
  * date to a screen reader, whichever label it shows (#902). The now label is the clock
@@ -90,12 +91,14 @@ export function TimeCellShading({
   return (
     <>
       {windows.map((window) => {
-        const left = scale.x(Math.max(window.fromMs, scale.range.fromMs));
-        const right = scale.x(Math.min(window.toMs, scale.range.toMs));
-        if (right <= left) return null;
-        const gap = scale.gaps.some(
-          (each) => each.fromMs <= window.fromMs && each.toMs >= window.toMs,
-        );
+        const fromMs = Math.max(window.fromMs, scale.range.fromMs);
+        const toMs = Math.min(window.toMs, scale.range.toMs);
+        const left = scale.x(fromMs);
+        const right = scale.x(toMs);
+        // A window under a pixel at the level, a break at Quarter, is not drawn (ADR 0089).
+        if (right - left < 1) return null;
+        // The gaps are clipped to the range, so the window is compared as the range cuts it.
+        const gap = scale.gaps.some((each) => each.fromMs <= fromMs && each.toMs >= toMs);
         return (
           <div
             key={window.fromMs}
