@@ -68,7 +68,7 @@ import { GanttDraftDrawer } from './gantt-draft-drawer.tsx';
 import { GanttLinks, linksOf } from './gantt-links.tsx';
 import { GanttMarkerLayer, overlayMarkers } from './gantt-marker-layer.tsx';
 import { refusalMessage } from './gantt-move.ts';
-import { GanttNotPlacedRow } from './gantt-not-placed-row.tsx';
+import { GanttNotPlacedRow, notPlacedHeightRem } from './gantt-not-placed-row.tsx';
 import { useGanttOptions } from './gantt-options.ts';
 import { GanttRowView } from './gantt-row.tsx';
 import {
@@ -375,8 +375,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     [snapshot, draft],
   );
   const draftIds = useMemo(() => draftRowIds(draft), [draft]);
-  // A block takes focus and scrolls into view past the sticky tree pane and the time header, which
-  // the grid's scroll padding keeps it clear of (WCAG 2.4.11).
+  // A block takes focus and scrolls into view past the sticky tree pane, the time header and the
+  // Not placed row, which the grid's scroll padding keeps it clear of (WCAG 2.4.11).
   const focusBlock = (jobOrderId: string) => {
     const block = document.querySelector<HTMLElement>(`[data-block="${jobOrderId}"]`);
     block?.focus({ preventScroll: true });
@@ -837,7 +837,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               onScroll={(event) => onGridScroll(event.currentTarget)}
               className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
               style={{
-                scrollPaddingTop: `${timeHeaderHeightRem}rem`,
+                scrollPaddingTop: `${timeHeaderHeightRem + notPlacedHeightRem}rem`,
                 scrollPaddingInlineStart: `${stickyWidth}px`,
               }}
             >

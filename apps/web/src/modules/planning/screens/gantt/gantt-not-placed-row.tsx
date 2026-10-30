@@ -2,6 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import type { JobOrderRow } from './gantt-rows.ts';
+import { timeHeaderHeightRem } from './gantt-time-area.tsx';
+
+/** The height of the Not placed row, which the grid's scroll padding keeps focus clear of. */
+export const notPlacedHeightRem = 2;
 
 /**
  * The pinned Not placed row under the time header (plan 18, Rows and the tree): every job order
@@ -29,9 +33,14 @@ export function GanttNotPlacedRow({
     <div
       role="row"
       aria-rowindex={2}
-      // As wide as its tracks, as GanttRowView's rows are (#890).
-      className="sticky top-12 z-10 grid h-8 w-max min-w-full border-b border-border bg-lane-alt"
-      style={{ gridTemplateColumns }}
+      // As wide as its tracks, as GanttRowView's rows are (#890). Above the data rows' sticky tree
+      // cells (z-10), which scroll up under it, and below the time header (z-20) (#911).
+      className="sticky z-15 grid w-max min-w-full border-b border-border bg-lane-alt"
+      style={{
+        gridTemplateColumns,
+        top: `${timeHeaderHeightRem}rem`,
+        height: `${notPlacedHeightRem}rem`,
+      }}
     >
       <div
         role="rowheader"
