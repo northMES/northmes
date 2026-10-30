@@ -746,6 +746,7 @@ A conflict is a broken planning rule that NorthMES reports and never repairs on 
 | `FROZEN_WINDOW` | `judgeMove`, `validate()` | Save, proposals | confirmable on Save; a proposal item inside the window is blocked |
 | `LOCKED_IN_PAST` | `plan()` | autoplan | listed in the run result and on the board |
 | `PINNED`, `LOCKED`, `STARTED` | `judgeMove` | move, Save, proposals | refusal, not confirmable |
+| `PAST` | the move preview, keyboard move mode and the Move dialog; `validate()` | move; Save | refusal at the move; at Save a setup start that passed while the move waited in the draft is listed, and Save needs confirmation with a reason ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md)) |
 | `STALE`, `LOCK_LOST`, `ROW_GONE`, `PENDING_ERP_CHANGE` | draft row status | Save | refusal for that row; discard or rebase |
 | Import conflict | connector import recomputes an untouched order | each poll | marked on the board and in the import log |
 | Report conflict | production-start | a report on another machine or on a finished or cancelled job order | Conflict state on the block |
@@ -824,7 +825,7 @@ The full rules are in [08-pyramid-connector.md](08-pyramid-connector.md) and [AD
 - Dark mode.
 - The board field slot `planning/board/block-fields/v1` that core, the connector and plugins fill, and the header slot `planning/board/header/v1` (both ids proposed in [ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)). Both are slots of the `field` kind ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)), which takes the place of `BoardFieldSlot`: a contribution's synchronous, cheap `render` returns text, an optional icon and `accessibleText`, and its hover renderer may fetch.
 - `BoardBlock` carries explicit fields for draft (`none`, `mine`, `proposal`), late, conflict, material shortage and progress.
-- The board URL keeps the view a planner shares: `view=table` for the job order table view, `zoom=<preset id>`, `from=<plant-local date>` for the start of the visible range, and `order=<production order id>` for the selected order, which opens its detail panel. Collapsed machine groups, move mode and paused live updates stay local. The defaults (board view, the default preset, the current production day) are stripped. Design task D3 names the preset ids. Under [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) `zoom` holds a zoom level id and `from` the visible start as a plant-local date-time.
+- The board URL keeps the view a planner shares: `view=table` for the job order table view, `zoom=<preset id>`, `from=<plant-local date>` for the start of the visible range, and `order=<production order id>` for the selected order, which opens its detail panel. Collapsed machine groups, move mode and paused live updates stay local. The defaults (board view, the default preset, the current production day) are stripped. Design task D3 names the preset ids. Under [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) `zoom` holds a zoom level id and `from` the visible start as a plant-local date-time. The job order table view keeps the four presets as its Range, and a link at another level opens it at the nearest preset.
 
 ### Cut from release 1
 
@@ -852,7 +853,7 @@ At bar density icons do not fit; the state then lives in the cluster popover row
 
 ### Data loading
 
-- The board loads the visible range plus a margin. The range resolver limits days and rows and fails with `planning.board.range_too_large` above the limits; the limits are set from the board spike's measured volumes. [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) replaces the range with an endless axis that loads job orders by time chunk; how the limit applies to a chunk is open question M-104 in [16-open-questions.md](16-open-questions.md).
+- The board loads the visible range plus a margin. The range resolver limits days and rows and fails with `planning.board.range_too_large` above the limits; the limits are set from the board spike's measured volumes. [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) replaces the range with an endless axis that loads job orders by time chunk; the limit applies per time chunk, and a refused chunk shows a band in its rows' time cells that says to narrow the filter or zoom in, with a polite status message.
 - Blocks come through Apollo's normalized cache, with `@unmask` where the board needs raw speed. Instants stay ISO strings in the cache and become epoch milliseconds once at the data edge.
 - Availability for shading comes from core's availability query for the visible range, memoized per calendar version in the browser.
 - The board header shows "Pyramid data as of <time>".

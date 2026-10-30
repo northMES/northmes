@@ -77,6 +77,12 @@ The ledger counts the platform estimate (35 to 51 days, internal research note 2
 
 Most other stress-test fixes have no estimate and sit in the foundation.
 
+Additions the maintainer decided later:
+
+| Addition | Estimate (raw days) |
+|---|---|
+| The zoom ladder, the endless axis and loading by time chunk on the planning board ([ADR 0089](0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md), Krister, 2026-10-30) | not estimated |
+
 Cut order if velocity is low. Items 3 to 7 change scope Krister Johansson decided, so each needs Krister Johansson's decision at a checkpoint. A cut moves the item to a 0.x release during the pilot; it does not leave the product.
 
 1. Generator work: `objectFromZod`, the module generator, the command generator, the settings cascade below company and plant.
