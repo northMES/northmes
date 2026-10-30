@@ -41,8 +41,11 @@ async function scrollSteps(
         new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       const cells = () => [...element.querySelectorAll<HTMLElement>('[data-tier="bottom"]')];
       const nameOf = (cell: HTMLElement) => cell.querySelector('.sr-only')?.textContent ?? '';
+      // The time header moves with the time column, on the board and on the Gantt.
       const overlayStart = () =>
-        (element.querySelector('[data-overlay]') as HTMLElement).getBoundingClientRect().left;
+        (
+          element.querySelector('[role="columnheader"][aria-label="Time"]') as HTMLElement
+        ).getBoundingClientRect().left;
       const box = element.getBoundingClientRect();
       const x = box.left + box.width * 0.75;
       // A fifth of the visible time area, less than the quarter-width margin, so no step reaches past

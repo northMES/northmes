@@ -49,7 +49,8 @@ test.describe('the planning board', () => {
     );
     await page.keyboard.press('ArrowRight');
     await expect(board.locator('[data-job-order="1004.20"]')).toBeFocused();
-    const card = page.getByRole('tooltip');
+    // The card of 1003.20 may still be fading out, so the card is named.
+    const card = page.getByRole('tooltip', { name: /^1004\.20 / });
     await expect(card).toBeVisible();
     await expect(card).toHaveCSS('opacity', '1');
     await checkA11y('a selected order with the hover card of its job order');
