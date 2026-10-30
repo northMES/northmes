@@ -4,7 +4,15 @@
 import type { JobOrderSpan } from '@northmes/planning-domain';
 import { cn } from 'cn';
 import { Clock, Lock, Pencil, TriangleAlert } from 'lucide-react';
-import { type KeyboardEvent, type PointerEvent, useEffect, useLayoutEffect, useRef } from 'react';
+import {
+  type KeyboardEvent,
+  type PointerEvent,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import { blockLines } from '../../board-fields.ts';
 import { useMoveOf } from '../../move-store.ts';
@@ -17,7 +25,7 @@ import {
 import type { TimeScale } from '../../timeline/time-scale.ts';
 import { blockName, blockStates } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
-import { GanttHoverCard } from './gantt-hover-card.tsx';
+import { GanttHoverCard, GanttHoverFields, hoverFields } from './gantt-hover-card.tsx';
 import { tooltipText } from './gantt-move.ts';
 import type { JobOrderRow } from './gantt-rows.ts';
 
@@ -104,6 +112,11 @@ export function GanttBlock({
   });
   // The click the browser fires after a drop is not a selection.
   const dropped = useRef(false);
+  // The focused block is described by the hover card's fields (#902), so a screen reader reads
+  // what the card shows, also after a click or Escape closed the card. Only the focused block
+  // holds the hidden list, since the Gantt draws every row.
+  const [focused, setFocused] = useState(false);
+  const descriptionId = useId();
   // Only how this row moves, if it does: the position of a move draws in its preview layer (#898).
   const movedBy = useMoveOf(move?.store, (each) =>
     each?.state.jobOrderId === jobOrder.id ? each.state.source : undefined,
@@ -291,6 +304,7 @@ export function GanttBlock({
               type="button"
               tabIndex={-1}
               aria-label={name}
+              aria-describedby={focused ? descriptionId : undefined}
               data-block={jobOrder.id}
               data-cell-focus
               data-states={states.map((state) => state.kind).join(' ') || undefined}
@@ -312,6 +326,8 @@ export function GanttBlock({
               // A capture lost without a pointerup, as when the window loses focus, ends the drag.
               onLostPointerCapture={() => endPress(false)}
               onKeyDown={onKeyDown}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               className={cn(
                 'absolute top-1 h-11 touch-none overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-palette-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                 selected && 'border-t-3 border-t-black',
@@ -444,6 +460,13 @@ export function GanttBlock({
           />
         </TooltipContent>
       </Tooltip>
+      {focused && (
+        <GanttHoverFields
+          id={descriptionId}
+          hidden
+          fields={hoverFields(row, snapshot, machineName, boardFields.hover, material ?? [])}
+        />
+      )}
       <GanttMovePreview jobOrderId={jobOrder.id} color={color} />
     </>
   );

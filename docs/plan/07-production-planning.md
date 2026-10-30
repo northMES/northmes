@@ -895,7 +895,7 @@ Board settings choose which fields show on a block and which on hover, including
 - Virtualized rows set `aria-rowcount` and `aria-rowindex`. The range extractor keeps the focused row and the move preview's row mounted.
 - Each block's accessible name is built through `aria-labelledby` from visible spans that carry `lang` plus visually hidden spans for times and states, so an article name in another language keeps its language.
 - Blocks hold no interactive elements; plugin block fields render text and icons only.
-- Selection is separate from focus (`aria-selected`); selecting a block outlines the other blocks of the same order.
+- Selection is separate from focus (`aria-selected`); selecting a block outlines the other blocks of the same order. A single click on a block or a Not placed chip only selects; a double click opens Details, and Enter is its keyboard path, as on the order Gantt (#886).
 - One Escape stack: hover card, popover, move mode, the Details drawer; each press closes one layer, and modal dialogs sit on top.
 - `scroll-padding` on the scroller and `scrollPaddingStart` on the virtualizers keep a focused block from hiding under the sticky header or column (2.4.11). Details covers the board as a modal Sheet, so no focused block sits under it.
 
