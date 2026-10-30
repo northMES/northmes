@@ -1,7 +1,7 @@
 ---
-status: "proposed"
+status: "accepted"
 date: 2026-10-30
-decision-makers: proposed by the planning session, to be confirmed by Krister Johansson
+decision-makers: Krister Johansson
 consulted: Krister Johansson (the zoom ladder with Ctrl+wheel and Zoom to fit on both views, the endless axis, loading by time chunk, the greyed past, the timeline built in house, 2026-10-29; the answers to M-100 to M-104, 2026-10-30); the trial of the order Gantt on 2026-10-29 (findings F6, #883, and F8, #882); public documentation of DHTMLX Gantt, DayPilot Scheduler, Bryntum Scheduler and Gantt, and Syncfusion Gantt
 informed: contributors and coding agents
 release: "1"
@@ -97,7 +97,7 @@ Chosen option: "A ladder of zoom levels, an endless axis over a fixed buffer, an
 
 ### Parts of accepted ADRs this decision changes
 
-The files below keep their text. Once this ADR is accepted, it holds over the parts listed here, and the rest of each ADR stands.
+The files below keep their text. This ADR holds over the parts listed here, and the rest of each ADR stands.
 
 #### Changes to ADR 0055
 
