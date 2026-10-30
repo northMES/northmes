@@ -893,6 +893,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 snapshot={snapshot}
                 scale={scale}
                 treeWidth={treeWidth}
+                stickyWidth={stickyTree ? treeWidth : nameWidth}
                 timeWidth={timeWidth}
               />
             )}

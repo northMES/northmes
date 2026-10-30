@@ -124,6 +124,7 @@ function WorkloadLane({
   buckets,
   scale,
   treeWidth,
+  stickyWidth,
   timeWidth,
   open,
   buttonId,
@@ -134,6 +135,7 @@ function WorkloadLane({
   readonly buckets: readonly PlacedBucket[];
   readonly scale: TimeScale;
   readonly treeWidth: number;
+  readonly stickyWidth: number;
   readonly timeWidth: number;
   readonly open: boolean;
   readonly buttonId: string;
@@ -141,10 +143,14 @@ function WorkloadLane({
   readonly onOpenChange: (open: boolean) => void;
 }) {
   return (
-    <div className="relative flex border-b border-border" style={{ height: `${laneHeightRem}rem` }}>
+    <div
+      // As wide as its tracks, as GanttRowView's rows are (#890, #910).
+      className="relative flex w-max min-w-full border-b border-border"
+      style={{ height: `${laneHeightRem}rem` }}
+    >
       <div
         className="sticky start-0 z-10 flex shrink-0 items-center border-e border-border bg-card px-2"
-        style={{ width: `${treeWidth}px` }}
+        style={{ width: `${stickyWidth}px` }}
       >
         <Button
           id={buttonId}
@@ -158,6 +164,13 @@ function WorkloadLane({
           Workload on {machine.name}
         </Button>
       </div>
+      {stickyWidth < treeWidth && (
+        <div
+          aria-hidden
+          className="shrink-0 border-e border-border"
+          style={{ width: `${treeWidth - stickyWidth}px` }}
+        />
+      )}
       <div
         aria-hidden
         data-lane={machine.code}
@@ -331,11 +344,18 @@ export function GanttWorkloadPanel({
   snapshot,
   scale,
   treeWidth,
+  stickyWidth,
   timeWidth,
 }: {
   readonly snapshot: GanttSnapshot;
   readonly scale: TimeScale;
   readonly treeWidth: number;
+  /**
+   * The width of the tree columns that stick in the treegrid: all of them, or the Name column
+   * alone on a narrow grid (see GanttRowView). The lane's label sticks as wide, and the rest of the
+   * tree width scrolls away with the time.
+   */
+  readonly stickyWidth: number;
   readonly timeWidth: number;
 }) {
   const [openLane, setOpenLane] = useState<string | undefined>(undefined);
@@ -358,6 +378,7 @@ export function GanttWorkloadPanel({
             buckets={laneBuckets(snapshot, machine.code, scale)}
             scale={scale}
             treeWidth={treeWidth}
+            stickyWidth={stickyWidth}
             timeWidth={timeWidth}
             open={openLane === machine.code}
             buttonId={`${idBase}-${machine.code}-button`}
