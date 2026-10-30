@@ -12,7 +12,8 @@ export const timeHeaderHeightRem = 3;
  * The time header (plan 18, Shared pieces): the top tier with a cell per day or week, the bottom
  * tier with the preset's finer cells, and the now label on the bottom tier when now is in range.
  * Each cell starts at its first open segment and holds the longest label that fits it (ADR 0089,
- * Header tiers); the gaps are drawn first, so no gap covers a label. The now label is the clock
+ * Header tiers); the gaps are drawn first, so no gap covers a label. Each cell reads as its full
+ * date to a screen reader, whichever label it shows (#902). The now label is the clock
  * alone, since the top tier names the day and the now marker's accessible text carries the date
  * and the time (#885).
  */
@@ -44,7 +45,6 @@ export function GanttTimeHeader({
       {scale.ticks().map((tick) => (
         <div
           key={`${tick.tier}-${tick.ms}`}
-          aria-hidden
           data-tier={tick.tier}
           // A plain join: the class merge of cn reads text-tick as a text color and would drop it
           // for text-muted-foreground, and the time scale fits each label at the tick size.
@@ -55,7 +55,11 @@ export function GanttTimeHeader({
           }`}
           style={{ left: `${tick.x}px` }}
         >
-          {tick.label}
+          {/* The label that fits is for sight; a screen reader reads the full date (#902). */}
+          <span aria-hidden data-tick-label>
+            {tick.label}
+          </span>
+          <span className="sr-only">{tick.name}</span>
         </div>
       ))}
       {nowVisible && (

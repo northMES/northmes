@@ -47,7 +47,7 @@ describe('Details on the planning board (Krister, 2026-10-21: the Gantt drawer)'
     expect(router.state.location.search).toMatchObject({ order: 'po-1001' });
   });
 
-  it('a click on a job order opens its Details, as on the Gantt; Space only selects', async () => {
+  it('Space on a job order only selects its order', async () => {
     const user = userEvent.setup();
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
@@ -56,10 +56,33 @@ describe('Details on the planning board (Krister, 2026-10-21: the Gantt drawer)'
     await user.keyboard(' ');
     expect(router.state.location.search).toMatchObject({ order: 'po-1003' });
     expect(detailsOpen()).toBe(false);
+  });
+
+  it('#886 a single click on a job order selects its order and leaves Details closed, as on the Gantt', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
 
     await user.click(block(board, '1004.10'));
+
+    expect(router.state.location.search).toMatchObject({ order: 'po-1004' });
+    expect(block(board, '1004.10').getAttribute('aria-selected')).toBe('true');
+    expect(detailsOpen()).toBe(false);
+  });
+
+  it('#886 a double click on a job order opens its Details, as on the Gantt, and Escape returns focus to the block', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+
+    await user.dblClick(block(board, '1004.10'));
+
     const drawer = await findDetails();
     expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('1004.10 Turn');
+    expect(router.state.location.search).toMatchObject({ order: 'po-1004' });
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(detailsOpen()).toBe(false));
+    await waitFor(() => expect(document.activeElement).toBe(block(board, '1004.10')));
   });
 
   it('IN31 a link that names an order opens the Details of its first job order in the range', async () => {
@@ -102,6 +125,39 @@ describe('Details on the planning board (Krister, 2026-10-21: the Gantt drawer)'
     await user.click(within(drawer).getByRole('button', { name: 'Show critical chain' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/plant-a/planning/gantt'));
     expect(router.state.location.search).toMatchObject({ order: 'po-1003', chain: 1 });
+  });
+
+  it('#886 a Not placed chip selects its order on a click and opens its Details on a double click', async () => {
+    const user = userEvent.setup();
+    const g1 = g1Snapshot();
+    const snapshot = {
+      ...g1,
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) => {
+          if (row.displayNumber !== '1005.20') return row;
+          const { placement: _, equipment: __, ...unplaced } = row;
+          return unplaced;
+        }),
+      })),
+    };
+    const router = renderGanttRoute(
+      { zoom: 'week', from: '2026-11-02' },
+      sourceOf(snapshot),
+      'board',
+    );
+    const board = await findBoard();
+    const chip = board.querySelector<HTMLElement>(
+      '[aria-rowindex="2"] [data-job-order="1005.20"]',
+    ) as HTMLElement;
+
+    await user.click(chip);
+    expect(router.state.location.search).toMatchObject({ order: 'po-1005' });
+    expect(detailsOpen()).toBe(false);
+
+    await user.dblClick(chip);
+    const drawer = await findDetails();
+    expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('1005.20 Mill');
   });
 
   it('a Not placed chip opens its Details by Enter, and Space only selects', async () => {

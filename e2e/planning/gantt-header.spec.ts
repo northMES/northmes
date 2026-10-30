@@ -48,15 +48,18 @@ test.describe('the time header of the order Gantt', () => {
             return { left: rect.left, right: rect.right };
           };
           const gaps = [...element.querySelectorAll('[data-header-gap]')];
+          // The drawn label of a cell; its full date for a screen reader is not drawn (#902).
+          const shown = (each: Element) =>
+            each.querySelector('[data-tick-label]')?.textContent ?? '';
           const labels = [...element.querySelectorAll('[data-tier]')].filter(
-            (each) => (each.textContent ?? '') !== '',
+            (each) => shown(each) !== '',
           );
           return {
             gaps: gaps.map(box),
             labels: labels.map((each) => ({
               ...box(each),
               tier: each.getAttribute('data-tier') ?? '',
-              text: each.textContent ?? '',
+              text: shown(each),
               fontSize: getComputedStyle(each).fontSize,
             })),
             gapsBehindLabels: gaps.every((gap) =>

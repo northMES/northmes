@@ -395,3 +395,59 @@ describe('a clock cell clipped at its start (#892)', () => {
     ]);
   });
 });
+
+describe('the names of the header cells (#902)', () => {
+  const local = (date: number, hours: number) => Date.UTC(2026, 10, date, hours - 1);
+
+  it('#902 names each cell by its full date and clock, also where only the short label or none fits', () => {
+    // Monday open 06:00 to 10:00 (64 px), Tuesday 06:00 to 07:00 (16 px), Wednesday 06:00 to 08:00.
+    const short = {
+      closed: [
+        { fromMs: local(2, 0), toMs: local(2, 6) },
+        { fromMs: local(2, 10), toMs: local(3, 6) },
+        { fromMs: local(3, 7), toMs: local(4, 6) },
+        { fromMs: local(4, 8), toMs: local(9, 0) },
+      ],
+    };
+    const ticks = createTimeScale({
+      range: week45,
+      zoom: 'week',
+      timeZone: stockholm,
+      widthPx: naturalWidthPx(week45, 'week', short),
+      hideClosed: short,
+    }).ticks();
+
+    expect(
+      ticks.filter((tick) => tick.tier === 'top').map((tick) => [tick.label, tick.name]),
+    ).toEqual([
+      ['2', 'Mon 2 Nov'],
+      ['', 'Tue 3 Nov'],
+      ['4', 'Wed 4 Nov'],
+    ]);
+    expect(
+      ticks.filter((tick) => tick.tier === 'bottom').map((tick) => [tick.label, tick.name]),
+    ).toEqual([
+      ['06:00', 'Mon 2 Nov 06:00'],
+      ['', 'Tue 3 Nov 06:00'],
+      ['06', 'Wed 4 Nov 06:00'],
+    ]);
+  });
+
+  it('#902 names each week cell of 4 weeks by its week number and the date it starts, and a day cell by its date', () => {
+    const range = rangeOf('2026-11-02', '4weeks', stockholm, '06:00');
+    const ticks = createTimeScale({
+      range,
+      zoom: '4weeks',
+      timeZone: stockholm,
+      widthPx: 400,
+    }).ticks();
+
+    expect(ticks.filter((tick) => tick.tier === 'top').map((tick) => tick.name)).toEqual([
+      'Week 45, Mon 2 Nov',
+      'Week 46, Mon 9 Nov',
+      'Week 47, Mon 16 Nov',
+      'Week 48, Mon 23 Nov',
+    ]);
+    expect(ticks.find((tick) => tick.tier === 'bottom')?.name).toBe('Tue 3 Nov');
+  });
+});

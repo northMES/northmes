@@ -4,7 +4,13 @@ import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/re
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { findGantt, planningHref, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
+import {
+  detailsOpen,
+  findGantt,
+  planningHref,
+  renderGanttRoute,
+  sourceOf,
+} from './gantt-fixtures.tsx';
 
 afterEach(() => {
   cleanup();
@@ -468,6 +474,24 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     fireEvent.pointerUp(cell, { clientX: 164, clientY: 10, pointerId: 1, button: 0 });
     fireEvent.click(cell);
     expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
+  });
+
+  it('#886 a drag on the second press of a double click moves the block and leaves Details closed', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const cell = block(board, '1001.10');
+    fireEvent.click(cell, { detail: 1 });
+
+    // The browser counts the drag's press as the second click and fires dblclick after its click.
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 164, clientY: 10, pointerId: 1 });
+    await waitFor(() => expect(board.querySelector('[data-move-preview]')).not.toBeNull());
+    fireEvent.pointerUp(cell, { clientX: 164, clientY: 10, pointerId: 1, button: 0 });
+    fireEvent.click(cell, { detail: 2 });
+    fireEvent.dblClick(cell, { detail: 2 });
+
+    await waitFor(() => expect(spoken()).toContain('1001.10 moved to'));
+    expect(detailsOpen()).toBe(false);
   });
 
   it('IN8 the step buttons step from the snapped start and write it', async () => {
