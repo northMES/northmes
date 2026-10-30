@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cn } from 'cn';
 import { Clock, Lock, Pencil, TriangleAlert } from 'lucide-react';
-import { type KeyboardEvent, type PointerEvent, useRef } from 'react';
+import { type KeyboardEvent, type PointerEvent, useId, useRef, useState } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import { blockLines } from '../../board-fields.ts';
 import { blockName, blockStates } from './gantt-block-states.ts';
@@ -58,6 +58,10 @@ export function GanttBlock({
   );
   // The click the browser fires after a drop is not a selection.
   const dropped = useRef(false);
+  // While the hover card is open, its fields describe the block (#902), so a screen reader reads
+  // what the card shows. A closed card is not in the DOM, so nothing points at it.
+  const [cardOpen, setCardOpen] = useState(false);
+  const descriptionId = useId();
   if (jobOrder.placement === undefined) return null;
   const { placement } = jobOrder;
   const left = scale.x(placement.setupStartMs);
@@ -177,13 +181,14 @@ export function GanttBlock({
   };
   return (
     <>
-      <Tooltip>
+      <Tooltip open={cardOpen} onOpenChange={setCardOpen}>
         <TooltipTrigger
           render={
             <button
               type="button"
               tabIndex={-1}
               aria-label={name}
+              aria-describedby={cardOpen ? descriptionId : undefined}
               data-block={jobOrder.id}
               data-cell-focus
               data-states={states.map((state) => state.kind).join(' ') || undefined}
@@ -332,6 +337,7 @@ export function GanttBlock({
             machineName={machineName}
             hoverIds={boardFields.hover}
             material={material ?? []}
+            descriptionId={descriptionId}
           />
         </TooltipContent>
       </Tooltip>

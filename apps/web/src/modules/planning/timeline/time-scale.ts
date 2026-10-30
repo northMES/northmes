@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { formatPlantDate, formatPlantTime } from '@northmes/contracts/format';
+import { formatPlantDate, formatPlantDateTime, formatPlantTime } from '@northmes/contracts/format';
 import { Temporal } from 'temporal-polyfill';
 import type { ZoomPreset } from '../gantt-data.ts';
 
@@ -205,6 +205,8 @@ export interface TimeTick {
   /** The width from x to the end of the cell's last open segment. */
   readonly widthPx: number;
   readonly label: string;
+  /** The cell's full date, and its clock on an hour cell, whichever label fits (#902). */
+  readonly name: string;
   readonly tier: 'top' | 'bottom';
 }
 
@@ -441,6 +443,10 @@ export function createTimeScale({
           x: cell.x,
           widthPx: cell.widthPx,
           label: fittingLabel(formats, cell.widthPx, 'top'),
+          name:
+            preset.topTier === 'week'
+              ? `Week ${at.weekOfYear ?? ''}, ${formatPlantDate(ms, timeZone)}`
+              : formatPlantDate(ms, timeZone),
           tier: 'top',
         });
       }
@@ -452,6 +458,7 @@ export function createTimeScale({
       ms: number,
       toMs: number,
       formats: (openFromMs: number) => readonly string[],
+      name: (openFromMs: number) => string,
     ) => {
       const cell = topMs.has(ms) ? undefined : openCell(ms, toMs);
       if (cell === undefined) return;
@@ -460,6 +467,7 @@ export function createTimeScale({
         x: cell.x,
         widthPx: cell.widthPx,
         label: fittingLabel(formats(cell.openFromMs), cell.widthPx, 'bottom'),
+        name: name(cell.openFromMs),
         tier: 'bottom',
       });
     };
@@ -468,21 +476,28 @@ export function createTimeScale({
       for (let at = start; at.epochMilliseconds < range.toMs; at = at.add({ days: 1 })) {
         const ms = at.epochMilliseconds;
         const date = at.day;
-        pushBottom(ms, at.add({ days: 1 }).epochMilliseconds, () => [
-          formatPlantDate(ms, timeZone),
-          String(date),
-        ]);
+        pushBottom(
+          ms,
+          at.add({ days: 1 }).epochMilliseconds,
+          () => [formatPlantDate(ms, timeZone), String(date)],
+          () => formatPlantDate(ms, timeZone),
+        );
       }
     } else {
       // Hour ticks come from exact instants, so a clock change gives 23 or 25 of them. A cell
       // clipped at its start is named by the clock where its open time starts, as its x is.
       const stepMs = preset.bottomTier.hours * hour;
       for (let ms = range.fromMs; ms < range.toMs; ms += stepMs) {
-        pushBottom(ms, ms + stepMs, (openFromMs) => {
-          // "06:00" shortens to "06" on the hour only; "06:30" has no short form.
-          const clock = formatPlantTime(openFromMs, timeZone);
-          return clock.endsWith(':00') ? [clock, clock.slice(0, -3)] : [clock];
-        });
+        pushBottom(
+          ms,
+          ms + stepMs,
+          (openFromMs) => {
+            // "06:00" shortens to "06" on the hour only; "06:30" has no short form.
+            const clock = formatPlantTime(openFromMs, timeZone);
+            return clock.endsWith(':00') ? [clock, clock.slice(0, -3)] : [clock];
+          },
+          (openFromMs) => formatPlantDateTime(openFromMs, timeZone),
+        );
       }
     }
     return [...top, ...bottom];

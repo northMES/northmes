@@ -91,19 +91,24 @@ export function hoverFields(
   return fields;
 }
 
-/** The hover card's content: the row's title, its order line and the fields. */
+/**
+ * The hover card's content: the row's title, its order line and the fields. The fields carry the
+ * description id, since the block's name already holds the title and the order line (#902).
+ */
 export function GanttHoverCard({
   row,
   snapshot,
   machineName,
   hoverIds,
   material,
+  descriptionId,
 }: {
   readonly row: JobOrderRow;
   readonly snapshot: GanttSnapshot;
   readonly machineName: (code: string | undefined) => string;
   readonly hoverIds: readonly string[];
   readonly material?: readonly MaterialShortage[];
+  readonly descriptionId?: string;
 }) {
   return (
     <div className="grid w-72 gap-1 text-data">
@@ -113,7 +118,7 @@ export function GanttHoverCard({
       <p className="text-xs opacity-80">
         {row.order.article}, {quantityText(row.jobOrder.quantity)}, order {row.order.number}
       </p>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+      <dl id={descriptionId} className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
         {hoverFields(row, snapshot, machineName, hoverIds, material).map((field) =>
           field.warning ? (
             <div
