@@ -20,6 +20,25 @@ afterEach(() => {
 });
 
 describe('the workload lane (plan 18, The workload lane)', () => {
+  it('ADR0089 the lanes scroll with the time area, both ways, so a lane stays under its time', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const lanes = screen.getByRole('region', { name: 'Workload' }).querySelector('[data-lane]')
+      ?.parentElement?.parentElement as HTMLElement;
+
+    // The view opens one viewport width into the time buffer.
+    expect(gantt.scrollLeft).toBeGreaterThan(0);
+    expect(lanes.scrollLeft).toBe(gantt.scrollLeft);
+
+    gantt.scrollLeft += 120;
+    fireEvent.scroll(gantt);
+    expect(lanes.scrollLeft).toBe(gantt.scrollLeft);
+
+    lanes.scrollLeft -= 50;
+    fireEvent.scroll(lanes);
+    expect(gantt.scrollLeft).toBe(lanes.scrollLeft);
+  });
+
   it('GT5 shows a lane per machine, aria-hidden, under the time area when the option is on', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     await findGantt();

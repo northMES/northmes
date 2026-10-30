@@ -3,7 +3,15 @@
 import { useShell } from '@northmes/web-sdk';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import type { ExpandedState } from '@tanstack/react-table';
-import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type KeyboardEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { useBoardFields } from '../../board-fields-store.ts';
@@ -307,6 +315,23 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     plant: zoomPlant,
     dragging: () => moveStore.get()?.state.source === 'pointer',
   });
+
+  // The workload lanes keep the time area's scroll position, also after a buffer move, which
+  // corrects the grid's position in a layout effect before this one runs.
+  const workloadLanes = useRef<HTMLDivElement | null>(null);
+  const followGrid = useCallback(() => {
+    const lanes = workloadLanes.current;
+    const left = gridElement.current?.scrollLeft;
+    if (lanes !== null && left !== undefined && lanes.scrollLeft !== left) lanes.scrollLeft = left;
+  }, []);
+  const workloadRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      workloadLanes.current = node;
+      followGrid();
+    },
+    [followGrid],
+  );
+  useLayoutEffect(followGrid);
 
   const table = useGanttTable({
     rows,
@@ -827,7 +852,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                   void setSearch(withChain(search, false));
                 }
               }}
-              onScroll={buffer.onScroll}
+              onScroll={() => {
+                buffer.onScroll();
+                followGrid();
+              }}
               className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
               style={{
                 scrollPaddingTop: `${timeHeaderHeightRem + notPlacedHeightRem}rem`,
@@ -912,6 +940,13 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 timeWidth={timeWidth}
                 moveStore={moveStore}
                 {...(buffer.settled !== undefined && { visible: buffer.settled })}
+                scrollerRef={workloadRef}
+                onScroll={(left) => {
+                  const grid = gridElement.current;
+                  if (grid === null || grid.scrollLeft === left) return;
+                  grid.scrollLeft = left;
+                  buffer.onScroll();
+                }}
               />
             )}
           </div>

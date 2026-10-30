@@ -42,11 +42,14 @@ async function scrollSteps(
       let moves = 0;
       let worst = 0;
       for (let index = 0; index < steps; index += 1) {
-        const cell = cells().find((each) => {
-          const rect = each.getBoundingClientRect();
-          return rect.left <= x && x < rect.right;
-        });
-        if (cell === undefined) throw new Error('No header cell under the point');
+        // The cell nearest the point: with closed time hidden the point may lie in a gap.
+        const cell = cells()
+          .map((each) => {
+            const rect = each.getBoundingClientRect();
+            return { each, distance: Math.abs((rect.left + rect.right) / 2 - x) };
+          })
+          .sort((a, b) => a.distance - b.distance)[0]?.each;
+        if (cell === undefined) throw new Error('No header cell');
         const name = nameOf(cell);
         const left = cell.getBoundingClientRect().left;
         const start = overlayStart();
