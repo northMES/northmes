@@ -193,10 +193,17 @@ export function plantDateOf(epochMs: number, timeZone: string): string {
     .toString();
 }
 
-/** One tick of the time header. */
+/**
+ * One cell of a time header tier. With closed time hidden the cell is clipped to the open time it
+ * holds (ADR 0089, Header tiers): it starts at its first open segment and ends at its last.
+ */
 export interface TimeTick {
+  /** The instant the cell starts at on the plant clock, before clipping. */
   readonly ms: number;
+  /** The x of the cell's first open segment, where its label starts. */
   readonly x: number;
+  /** The width from x to the end of the cell's last open segment. */
+  readonly widthPx: number;
   readonly label: string;
   readonly tier: 'top' | 'bottom';
 }
@@ -206,6 +213,11 @@ export interface TimeScaleInput {
   readonly zoom: ZoomPreset;
   readonly timeZone: string;
   readonly widthPx: number;
+  /**
+   * The plant's production day start, "06:00", where the day cells of Hours and Day begin. Without
+   * it they begin at the range start's clock, which an Hours range extended by 12 h spans moves.
+   */
+  readonly productionDayStart?: string;
   /**
    * Hide closed time: every closed window of the calendar inside the range is drawn as a gap of a
    * few pixels, so the open time takes the width. A local option; ADR 0030 cut the compressed axis
@@ -266,6 +278,23 @@ function clippedWindows(closed: readonly ClosedWindow[], range: TimeRange): Clos
   return merged;
 }
 
+/**
+ * The width a label takes in its tier, from the header's type: the top tier is 12 px IBM Plex Sans
+ * with 6 px padding each side, the bottom tier 11 px IBM Plex Mono (6.6 px a character) with 4 px,
+ * and each has a 1 px start border. Each character counts a little wider than the font draws it,
+ * so a label that fits never spills into the next cell, also in a fallback font.
+ */
+const labelType = {
+  top: { charPx: 7.5, paddingPx: 13 },
+  bottom: { charPx: 7, paddingPx: 9 },
+} as const;
+
+/** The first of a cell's label formats, longest first, that fits its width, or none. */
+function fittingLabel(formats: readonly string[], widthPx: number, tier: 'top' | 'bottom'): string {
+  const { charPx, paddingPx } = labelType[tier];
+  return formats.find((format) => format.length * charPx + paddingPx <= widthPx) ?? '';
+}
+
 /** An anchor of the piecewise linear axis: an instant and its x. */
 interface Anchor {
   readonly ms: number;
@@ -290,6 +319,7 @@ export function createTimeScale({
   zoom,
   timeZone,
   widthPx,
+  productionDayStart,
   hideClosed,
 }: TimeScaleInput): TimeScale {
   const preset = zoomPresets[zoom];
@@ -358,36 +388,101 @@ export function createTimeScale({
     }).epochMilliseconds;
   };
 
-  const ticks = (): TimeTick[] => {
+  /**
+   * A cell of [fromMs, toMs) clipped to the range and to its open time: from the end of a gap it
+   * starts in to the start of a gap it ends in. The windows are merged, so one gap at most covers
+   * either edge. A cell wholly inside a gap has no open time and gives none.
+   */
+  const openCell = (fromMs: number, toMs: number) => {
+    const startMs = Math.max(fromMs, range.fromMs);
+    const endMs = Math.min(toMs, range.toMs);
+    const openFrom =
+      gaps.find((gap) => gap.fromMs <= startMs && startMs < gap.toMs)?.toMs ?? startMs;
+    const openTo = gaps.find((gap) => gap.fromMs < endMs && endMs <= gap.toMs)?.fromMs ?? endMs;
+    if (openTo <= openFrom) return undefined;
+    return { openFromMs: openFrom, x: x(openFrom), widthPx: x(openTo) - x(openFrom) };
+  };
+
+  /**
+   * The start of the top cell that holds the range start: the Monday of its ISO week, or its plant
+   * day from midnight or from the production day start, so a day cell names its own open time.
+   */
+  const firstTopStart = (): Temporal.ZonedDateTime => {
     const start = Temporal.Instant.fromEpochMilliseconds(range.fromMs).toZonedDateTimeISO(timeZone);
+    if (preset.topTier === 'week')
+      return start.subtract({ days: start.dayOfWeek - 1 }).startOfDay();
+    const clock =
+      preset.startsAt === 'midnight'
+        ? '00:00'
+        : (productionDayStart ?? start.toPlainTime().toString().slice(0, 5));
+    const dayStart = start
+      .toPlainDate()
+      .toZonedDateTime({ timeZone, plainTime: Temporal.PlainTime.from(clock) });
+    return dayStart.epochMilliseconds > range.fromMs ? dayStart.subtract({ days: 1 }) : dayStart;
+  };
+
+  const ticks = (): TimeTick[] => {
     const top: TimeTick[] = [];
-    // The top tier steps wall-clock days or weeks from the range start (ADR 0024).
-    for (
-      let at = start;
-      at.epochMilliseconds < range.toMs;
-      at = at.add(preset.topTier === 'week' ? { weeks: 1 } : { days: 1 })
-    ) {
+    // The top tier steps wall-clock days or weeks (ADR 0024).
+    const topStep = preset.topTier === 'week' ? { weeks: 1 } : { days: 1 };
+    for (let at = firstTopStart(); at.epochMilliseconds < range.toMs; ) {
+      const next = at.add(topStep);
       const ms = at.epochMilliseconds;
-      const label =
-        preset.topTier === 'week'
-          ? `W${at.weekOfYear ?? ''}, ${formatPlantDate(ms, timeZone)}`
-          : formatPlantDate(ms, timeZone);
-      top.push({ ms, x: x(ms), label, tier: 'top' });
+      const cell = openCell(ms, next.epochMilliseconds);
+      if (cell !== undefined) {
+        // A week reads "W45, Mon 2 Nov" or "W45", a day "Mon 2 Nov" or its day of the month.
+        const week = `W${at.weekOfYear ?? ''}`;
+        const formats =
+          preset.topTier === 'week'
+            ? [`${week}, ${formatPlantDate(ms, timeZone)}`, week]
+            : [formatPlantDate(ms, timeZone), String(at.day)];
+        top.push({
+          ms,
+          x: cell.x,
+          widthPx: cell.widthPx,
+          label: fittingLabel(formats, cell.widthPx, 'top'),
+          tier: 'top',
+        });
+      }
+      at = next;
     }
     const topMs = new Set(top.map((tick) => tick.ms));
     const bottom: TimeTick[] = [];
+    const pushBottom = (
+      ms: number,
+      toMs: number,
+      formats: (openFromMs: number) => readonly string[],
+    ) => {
+      const cell = topMs.has(ms) ? undefined : openCell(ms, toMs);
+      if (cell === undefined) return;
+      bottom.push({
+        ms,
+        x: cell.x,
+        widthPx: cell.widthPx,
+        label: fittingLabel(formats(cell.openFromMs), cell.widthPx, 'bottom'),
+        tier: 'bottom',
+      });
+    };
+    const start = Temporal.Instant.fromEpochMilliseconds(range.fromMs).toZonedDateTimeISO(timeZone);
     if (preset.bottomTier === 'day') {
       for (let at = start; at.epochMilliseconds < range.toMs; at = at.add({ days: 1 })) {
         const ms = at.epochMilliseconds;
-        if (topMs.has(ms)) continue;
-        bottom.push({ ms, x: x(ms), label: formatPlantDate(ms, timeZone), tier: 'bottom' });
+        const date = at.day;
+        pushBottom(ms, at.add({ days: 1 }).epochMilliseconds, () => [
+          formatPlantDate(ms, timeZone),
+          String(date),
+        ]);
       }
     } else {
-      // Hour ticks come from exact instants, so a clock change gives 23 or 25 of them.
+      // Hour ticks come from exact instants, so a clock change gives 23 or 25 of them. A cell
+      // clipped at its start is named by the clock where its open time starts, as its x is.
       const stepMs = preset.bottomTier.hours * hour;
       for (let ms = range.fromMs; ms < range.toMs; ms += stepMs) {
-        if (topMs.has(ms) || inGap(ms)) continue;
-        bottom.push({ ms, x: x(ms), label: formatPlantTime(ms, timeZone), tier: 'bottom' });
+        pushBottom(ms, ms + stepMs, (openFromMs) => {
+          // "06:00" shortens to "06" on the hour only; "06:30" has no short form.
+          const clock = formatPlantTime(openFromMs, timeZone);
+          return clock.endsWith(':00') ? [clock, clock.slice(0, -3)] : [clock];
+        });
       }
     }
     return [...top, ...bottom];

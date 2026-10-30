@@ -39,13 +39,15 @@ test.describe('the time scroller of the order Gantt', () => {
     await expect(gantt).toBeVisible();
     const header = gantt.getByRole('columnheader', { name: 'Time' });
     await expect(header).toContainText('Fri 6 Nov');
-    await expect(header).not.toContainText('Sun 8 Nov');
+    // Closed time is hidden by default, so the closed weekend has no label (#892): the next span
+    // shows from its first open weekday.
+    await expect(header).not.toContainText('Mon 9 Nov');
 
     await gantt.evaluate((grid) => {
       grid.scrollLeft = grid.scrollWidth;
     });
 
-    await expect(header).toContainText('Sun 8 Nov');
+    await expect(header).toContainText('Mon 9 Nov');
     expect(new URL(page.url()).searchParams.get('from')).toBe('2026-11-04');
     await expect(page.getByText('Wed 4 Nov to Fri 6 Nov')).toBeVisible();
     // The grid keeps scrolling: the content is wider than before and the rows kept their height.

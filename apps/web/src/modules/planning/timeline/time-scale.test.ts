@@ -98,7 +98,8 @@ describe('createTimeScale (plan 18, Shared pieces)', () => {
     ]);
     expect(top.map((tick) => tick.x)).toEqual([0, 120, 240, 360, 480, 600, 720]);
     expect(bottom).toHaveLength(21);
-    expect(bottom.slice(0, 3).map((tick) => tick.label)).toEqual(['06:00', '12:00', '18:00']);
+    // A 6 h cell is 30 px at 840 px, too narrow for "06:00", so the hour stands alone.
+    expect(bottom.slice(0, 3).map((tick) => tick.label)).toEqual(['06', '12', '18']);
     expect(bottom[0]?.x).toBe(30);
   });
 
@@ -189,12 +190,13 @@ describe('createTimeScale (plan 18, Shared pieces)', () => {
       Date.UTC(2026, 10, 3, 7, 0),
     );
     expect(compressed.inGap(Date.UTC(2026, 10, 2, 20, 0))).toBe(true);
+    // The 15:00 cell lies wholly in the night, so it has no label (#892).
     expect(
       compressed
         .ticks()
         .filter((tick) => tick.tier === 'bottom')
         .map((tick) => tick.label),
-    ).toEqual(['09:00', '12:00', '15:00', '09:00', '12:00']);
+    ).toEqual(['09:00', '12:00', '09:00', '12:00']);
   });
 
   it('names the range for the toolbar', () => {
@@ -221,5 +223,175 @@ describe('createTimeScale (plan 18, Shared pieces)', () => {
     // Week 45 with the A1 calendar hidden: 41.25 open hours at 16 px plus 16 gaps of 6 px.
     const night = { fromMs: Date.UTC(2026, 10, 2, 14, 0), toMs: Date.UTC(2026, 10, 3, 5, 0) };
     expect(naturalWidthPx(week45, 'week', { closed: [night] })).toBe((168 - 15) * 16 + 6);
+  });
+});
+
+describe('the header tiers with closed time hidden (ADR 0089, Header tiers)', () => {
+  /** A plant clock time of November 2026 in Stockholm, UTC+1. */
+  const local = (date: number, hours: number, minutes = 0) =>
+    Date.UTC(2026, 10, date, hours - 1, minutes);
+  /** Week 45 open 06:00 to 22:00 Monday to Friday: the nights and the weekend are closed. */
+  const closed = [
+    { fromMs: local(2, 0), toMs: local(2, 6) },
+    { fromMs: local(2, 22), toMs: local(3, 6) },
+    { fromMs: local(3, 22), toMs: local(4, 6) },
+    { fromMs: local(4, 22), toMs: local(5, 6) },
+    { fromMs: local(5, 22), toMs: local(6, 6) },
+    { fromMs: local(6, 22), toMs: local(9, 0) },
+  ];
+  const hideClosed = { closed };
+  const compressed = createTimeScale({
+    range: week45,
+    zoom: 'week',
+    timeZone: stockholm,
+    widthPx: naturalWidthPx(week45, 'week', hideClosed),
+    hideClosed,
+  });
+  const top = compressed.ticks().filter((tick) => tick.tier === 'top');
+
+  it("#892 starts a day's cell at its first open segment and ends it at its last", () => {
+    const monday = top[0];
+
+    expect(monday?.label).toBe('Mon 2 Nov');
+    // Monday opens after the 6 px gap of the night before; Tuesday after 16 open hours at 16 px
+    // and the next gap.
+    expect(monday?.x).toBe(6);
+    expect(monday?.widthPx).toBe(16 * 16);
+    expect(top[1]?.x).toBe(268);
+  });
+
+  it('#892 gives a cell wholly inside a gap no tick, so the weekend holds no label and no tick of either tier starts in a gap', () => {
+    expect(top.map((tick) => tick.label)).toEqual([
+      'Mon 2 Nov',
+      'Tue 3 Nov',
+      'Wed 4 Nov',
+      'Thu 5 Nov',
+      'Fri 6 Nov',
+    ]);
+    for (const tick of compressed.ticks()) {
+      for (const gap of compressed.gaps) {
+        expect(tick.x >= gap.x && tick.x < gap.x + gap.widthPx).toBe(false);
+      }
+    }
+  });
+
+  it('#892 uses the long label where it fits its cell, then the short one, then none', () => {
+    // Monday open 06:00 to 10:00 (64 px), Tuesday 06:00 to 07:00 (16 px), Wednesday 06:00 to 08:00.
+    const short = {
+      closed: [
+        { fromMs: local(2, 0), toMs: local(2, 6) },
+        { fromMs: local(2, 10), toMs: local(3, 6) },
+        { fromMs: local(3, 7), toMs: local(4, 6) },
+        { fromMs: local(4, 8), toMs: local(9, 0) },
+      ],
+    };
+    const ticks = createTimeScale({
+      range: week45,
+      zoom: 'week',
+      timeZone: stockholm,
+      widthPx: naturalWidthPx(week45, 'week', short),
+      hideClosed: short,
+    }).ticks();
+
+    expect(ticks.filter((tick) => tick.tier === 'top').map((tick) => tick.label)).toEqual([
+      '2',
+      '',
+      '4',
+    ]);
+    expect(ticks.filter((tick) => tick.tier === 'bottom').map((tick) => tick.label)).toEqual([
+      '06:00',
+      '',
+      '06',
+    ]);
+  });
+
+  it('#892 shortens a week cell of 4 weeks to its week number', () => {
+    const range = rangeOf('2026-11-02', '4weeks', stockholm, '06:00');
+    // Only Mondays are open, 06:00 to 22:00: 48 px a week.
+    const mondays = {
+      closed: [
+        { fromMs: local(2, 0), toMs: local(2, 6) },
+        ...[0, 1, 2, 3].map((week) => ({
+          fromMs: local(2 + 7 * week, 22),
+          toMs: local(9 + 7 * week, 6),
+        })),
+      ],
+    };
+    const ticks = createTimeScale({
+      range,
+      zoom: '4weeks',
+      timeZone: stockholm,
+      widthPx: naturalWidthPx(range, '4weeks', mondays),
+      hideClosed: mondays,
+    }).ticks();
+
+    expect(ticks.filter((tick) => tick.tier === 'top').map((tick) => tick.label)).toEqual([
+      'W45',
+      'W46',
+      'W47',
+      'W48',
+    ]);
+  });
+});
+
+describe('the header tiers of an extended Hours range (#892)', () => {
+  const local = (date: number, hours: number, minutes = 0) =>
+    Date.UTC(2026, 10, date, hours - 1, minutes);
+  // One 12 h span before Wed 4 Nov 06:00: the range starts Tue 3 Nov 18:00.
+  const range = extendedRange('2026-11-04', 'hours', stockholm, '06:00', { before: 1, after: 0 });
+
+  it('#892 aligns the day cells to the production day, so a day is named over its own open time', () => {
+    const night = { closed: [{ fromMs: local(3, 15), toMs: local(4, 6) }] };
+    const hidden = createTimeScale({
+      range,
+      zoom: 'hours',
+      timeZone: stockholm,
+      productionDayStart: '06:00',
+      widthPx: naturalWidthPx(range, 'hours', night),
+      hideClosed: night,
+    })
+      .ticks()
+      .filter((tick) => tick.tier === 'top');
+    const plain = createTimeScale({
+      range,
+      zoom: 'hours',
+      timeZone: stockholm,
+      productionDayStart: '06:00',
+      widthPx: naturalWidthPx(range, 'hours'),
+    })
+      .ticks()
+      .filter((tick) => tick.tier === 'top');
+
+    expect(hidden.map((tick) => [tick.label, tick.x])).toEqual([['Wed 4 Nov', 6]]);
+    expect(plain.map((tick) => [tick.label, tick.x])).toEqual([
+      ['Tue 3 Nov', 0],
+      ['Wed 4 Nov', 1200],
+    ]);
+  });
+});
+
+describe('a clock cell clipped at its start (#892)', () => {
+  const local = (date: number, hours: number, minutes = 0) =>
+    Date.UTC(2026, 10, date, hours - 1, minutes);
+
+  it('#892 names an hour cell that starts in a break by the clock where its open time starts', () => {
+    const range = rangeOf('2026-11-04', 'hours', stockholm, '06:00');
+    const lunch = { closed: [{ fromMs: local(4, 11), toMs: local(4, 11, 30) }] };
+    const bottom = createTimeScale({
+      range,
+      zoom: 'hours',
+      timeZone: stockholm,
+      widthPx: naturalWidthPx(range, 'hours', lunch),
+      hideClosed: lunch,
+    })
+      .ticks()
+      .filter((tick) => tick.tier === 'bottom');
+
+    // 07:00 to 10:00 at 100 px an hour, the break's 6 px gap at 500, then 11:30 to 12:00.
+    expect(bottom.slice(3, 6).map((tick) => [tick.label, tick.x])).toEqual([
+      ['10:00', 400],
+      ['11:30', 506],
+      ['12:00', 556],
+    ]);
   });
 });

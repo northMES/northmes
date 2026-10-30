@@ -311,9 +311,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         zoom,
         timeZone,
         widthPx: timeWidth,
+        productionDayStart,
         ...(options.hideClosed && { hideClosed: { closed: plantClosed } }),
       }),
-    [range, zoom, timeZone, timeWidth, options.hideClosed, plantClosed],
+    [range, zoom, timeZone, timeWidth, productionDayStart, options.hideClosed, plantClosed],
   );
 
   const table = useGanttTable({

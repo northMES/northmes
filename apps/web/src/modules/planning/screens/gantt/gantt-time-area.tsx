@@ -9,10 +9,12 @@ import { useGanttView } from './gantt-context.ts';
 export const timeHeaderHeightRem = 3;
 
 /**
- * The time header (plan 18, Shared pieces): the top tier with a tick per day or week, the bottom
- * tier with the preset's finer ticks, and the now label on the bottom tier when now is in range.
- * The label is the clock alone, since the top tier names the day and the now marker's accessible
- * text carries the date and the time (#885).
+ * The time header (plan 18, Shared pieces): the top tier with a cell per day or week, the bottom
+ * tier with the preset's finer cells, and the now label on the bottom tier when now is in range.
+ * Each cell starts at its first open segment and holds the longest label that fits it (ADR 0089,
+ * Header tiers); the gaps are drawn first, so no gap covers a label. The now label is the clock
+ * alone, since the top tier names the day and the now marker's accessible text carries the date
+ * and the time (#885).
  */
 export function GanttTimeHeader({
   scale,
@@ -22,17 +24,7 @@ export function GanttTimeHeader({
   readonly nowMs: number;
 }) {
   const { timeZone } = useGanttView();
-  const ticks = scale.ticks();
   const nowVisible = nowMs >= scale.range.fromMs && nowMs < scale.range.toMs;
-  // Hour labels keep their minutes while the ticks are at least 48 px apart; closer, they show the
-  // hour alone, as the Week preset of D3 does.
-  const bottom = ticks.filter((tick) => tick.tier === 'bottom');
-  const spacing =
-    bottom.length > 1 ? (bottom[1]?.x ?? 0) - (bottom[0]?.x ?? 0) : Number.POSITIVE_INFINITY;
-  const label = (tick: (typeof ticks)[number]) =>
-    tick.tier === 'bottom' && spacing < 48 && /^\d{2}:00$/.test(tick.label)
-      ? tick.label.slice(0, 2)
-      : tick.label;
   return (
     <div
       role="columnheader"
@@ -40,28 +32,31 @@ export function GanttTimeHeader({
       className="relative overflow-hidden"
       style={{ height: `${timeHeaderHeightRem}rem` }}
     >
-      {ticks.map((tick) => (
-        <div
-          key={`${tick.tier}-${tick.ms}`}
-          aria-hidden
-          className={cn(
-            'absolute border-s border-border whitespace-nowrap',
-            tick.tier === 'top'
-              ? 'top-0 h-6 px-1.5 py-0.5 text-xs font-medium'
-              : 'top-6 h-6 px-1 py-1 font-mono text-tick text-muted-foreground',
-          )}
-          style={{ left: `${tick.x}px` }}
-        >
-          {label(tick)}
-        </div>
-      ))}
       {scale.gaps.map((gap) => (
         <div
           key={gap.fromMs}
           aria-hidden
+          data-header-gap
           className="absolute top-0 bottom-0 bg-off-time"
           style={{ left: `${gap.x}px`, width: `${gap.widthPx}px` }}
         />
+      ))}
+      {scale.ticks().map((tick) => (
+        <div
+          key={`${tick.tier}-${tick.ms}`}
+          aria-hidden
+          data-tier={tick.tier}
+          // A plain join: the class merge of cn reads text-tick as a text color and would drop it
+          // for text-muted-foreground, and the time scale fits each label at the tick size.
+          className={`absolute border-s border-border whitespace-nowrap ${
+            tick.tier === 'top'
+              ? 'top-0 h-6 px-1.5 py-0.5 text-xs font-medium'
+              : 'top-6 h-6 px-1 py-1 font-mono text-tick text-muted-foreground'
+          }`}
+          style={{ left: `${tick.x}px` }}
+        >
+          {tick.label}
+        </div>
       ))}
       {nowVisible && (
         <div
