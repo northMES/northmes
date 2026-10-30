@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
@@ -172,5 +172,104 @@ describe('the workload lane (plan 18, The workload lane)', () => {
 
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.activeElement).toBe(button);
+  });
+
+  it('#901 the heading names the bucket and the plan the panel shows', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    await findGantt();
+
+    expect(
+      within(screen.getByRole('region', { name: 'Workload' })).getByRole('heading').textContent,
+    ).toBe('Workload by production day, the plan with my draft');
+  });
+
+  it('#901 at Day zoom the lanes and the table hold one bucket per shift', async () => {
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
+    await findGantt();
+    const panel = screen.getByRole('region', { name: 'Workload' });
+    expect(within(panel).getByRole('heading').textContent).toBe(
+      'Workload by shift, the plan with my draft',
+    );
+    expect(
+      panel.querySelector('[data-lane="CNC1"] [data-bucket="2026-11-05 06:00 to 15:00"]'),
+    ).not.toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 1' }));
+
+    const table = within(screen.getByRole('dialog')).getByRole('table');
+    expect(within(table).getAllByRole('columnheader')[0]?.textContent).toBe('Shift');
+    expect(within(table).getByRole('rowheader', { name: 'Thu 5 Nov 06:00 to 15:00' })).toBeTruthy();
+  });
+
+  it('#901 at 4 weeks zoom the table holds one bucket per ISO week', async () => {
+    renderGanttRoute({ zoom: '4weeks', from: '2026-11-02' });
+    await findGantt();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 1' }));
+
+    const table = within(screen.getByRole('dialog')).getByRole('table');
+    expect(within(table).getAllByRole('columnheader')[0]?.textContent).toBe('ISO week');
+    expect(within(table).getByRole('rowheader', { name: 'W45, Mon 2 Nov' })).toBeTruthy();
+  });
+
+  it('#901 during a drag the buckets of the machines it touches show the preview, and an overbooked bucket draws thicker', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const lane = () =>
+      screen.getByRole('region', { name: 'Workload' }).querySelector('[data-lane="CNC1"]');
+    const thursday = () => lane()?.querySelector<HTMLElement>('[data-bucket="2026-11-05"]');
+    const wednesday = () => lane()?.querySelector<HTMLElement>('[data-bucket="2026-11-04"]');
+    expect(thursday()?.getAttribute('data-overloaded')).toBeNull();
+    const fullWednesday = Number.parseFloat(wednesday()?.style.height ?? '0');
+    // 1003.10 starts Wed 08:00 and 1004.10 Thu 06:00, both on CNC1: dragging the first to where
+    // the second starts books CNC1 over its Thursday.
+    const block = (id: string) => gantt.querySelector<HTMLElement>(`[data-block="${id}"]`);
+    const leftOf = (id: string) => Number.parseFloat(block(id)?.style.left ?? '0');
+    const dx = leftOf('jo-1004-10') - leftOf('jo-1003-10');
+    const dragged = block('jo-1003-10');
+    if (dragged === null) throw new Error('No block 1003.10');
+    const pointer = { pointerId: 1, button: 0, isPrimary: true, clientY: 10 };
+    fireEvent.pointerDown(dragged, { ...pointer, clientX: 100 });
+    fireEvent.pointerMove(dragged, { ...pointer, clientX: 100 + dx / 2 });
+    fireEvent.pointerMove(dragged, { ...pointer, clientX: 100 + dx });
+
+    await waitFor(() => expect(thursday()?.getAttribute('data-overloaded')).toBe('true'));
+    expect(Number.parseFloat(wednesday()?.style.height ?? '0')).toBeLessThan(fullWednesday);
+    // Overbooked, the bar takes the bucket's whole width; a bar within its availability is narrower.
+    expect(thursday()?.style.width).toBe(thursday()?.parentElement?.style.width);
+    expect(wednesday()?.style.width).not.toBe(wednesday()?.parentElement?.style.width);
+
+    fireEvent.keyDown(dragged, { key: 'Escape' });
+    await waitFor(() => expect(thursday()?.getAttribute('data-overloaded')).toBeNull());
+  });
+
+  it('#901 the table says an overbooked bucket is over capacity in words', async () => {
+    const snapshot = g1Snapshot();
+    const overloaded = {
+      ...snapshot,
+      analysis: {
+        ...snapshot.analysis,
+        workload: snapshot.analysis.workload.map((bucket) =>
+          bucket.equipment === 'CNC2' && bucket.label === '2026-11-05'
+            ? {
+                ...bucket,
+                loadedS: 32_400,
+                runS: 32_400,
+                utilizationPermille: 1091,
+                overloadS: 2_700,
+              }
+            : bucket,
+        ),
+      },
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(overloaded));
+    await findGantt();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 2' }));
+
+    const row = within(screen.getByRole('dialog'))
+      .getByRole('rowheader', { name: 'Thu 5 Nov' })
+      .closest('tr');
+    expect(row?.textContent).toContain('109 %, over capacity');
   });
 });
