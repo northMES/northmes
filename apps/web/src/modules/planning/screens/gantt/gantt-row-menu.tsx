@@ -11,9 +11,8 @@ import {
 } from '../../../../ui/primitives/dropdown-menu.tsx';
 import { useGanttView } from './gantt-context.ts';
 import type { OrderRow, RunRow } from './gantt-rows.ts';
-import { runTitle } from './gantt-rows.ts';
 
-/** Why Zoom, Plan this order and Move all later by are drawn but disabled (plan 18, phase 2). */
+/** Why Plan this order and Move all later by are drawn but disabled (plan 18, phase 2). */
 const laterReason = 'With the live data and plan()';
 
 /** The accessible name of a row's menu: "Actions for order 1001", "Actions for the run of Bracket L". */
@@ -74,7 +73,6 @@ export function GanttRowMenu({ row }: { readonly row: RunRow | OrderRow }) {
             <DropdownMenuItem onClick={() => toggleChain?.(row.order.id)}>
               Show critical chain
             </DropdownMenuItem>
-            <DropdownMenuItem disabled>Zoom to order</DropdownMenuItem>
             <DropdownMenuItem disabled>Plan this order</DropdownMenuItem>
             <DropdownMenuItem disabled>Move all later by</DropdownMenuItem>
             <DropdownMenuLabel className="pt-0 text-xs font-normal text-muted-foreground">
@@ -86,10 +84,6 @@ export function GanttRowMenu({ row }: { readonly row: RunRow | OrderRow }) {
             <DropdownMenuItem onClick={() => runActions?.split(row.run.id)}>
               Split run
             </DropdownMenuItem>
-            <DropdownMenuItem disabled>Zoom to run</DropdownMenuItem>
-            <DropdownMenuLabel className="pt-0 text-xs font-normal text-muted-foreground">
-              {`${laterReason}: ${runTitle(row.run)}`}
-            </DropdownMenuLabel>
           </DropdownMenuGroup>
         )}
       </DropdownMenuContent>

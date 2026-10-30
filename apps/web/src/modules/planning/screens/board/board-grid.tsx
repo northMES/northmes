@@ -380,6 +380,8 @@ export function BoardGrid({
         ...(height !== undefined && { height: `${height}px` }),
         scrollPaddingTop: `calc(${headerRem + boardRowRem.notPlaced}rem + 8px)`,
         scrollPaddingInlineStart: `${machineWidth + 8}px`,
+        // One finger scrolls; a pinch zooms the timeline, not the page (ADR 0089).
+        touchAction: 'pan-x pan-y',
       }}
     >
       <Row index={1} heightRem={headerRem} columns={columns} className="sticky top-0 z-40 bg-muted">

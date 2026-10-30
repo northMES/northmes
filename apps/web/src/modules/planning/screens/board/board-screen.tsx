@@ -11,7 +11,7 @@ import { announce } from '../../../../ui/lib/announce.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { useBoardFields } from '../../board-fields-store.ts';
 import { MoveDialog } from '../../components/move-dialog/index.ts';
-import { RangeControls } from '../../components/range-controls/index.ts';
+import { RangeControls, ZoomControls } from '../../components/range-controls/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import {
   applyDraft,
@@ -42,13 +42,14 @@ import { PlanningForbidden } from '../../planning-preview.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
   createTimeScale,
+  extendedRange,
   naturalWidthPx,
   plantDateOf,
   rangeLabel,
-  rangeOf,
   shiftedFrom,
   zoomLevels,
 } from '../../timeline/time-scale.ts';
+import { useRangeExtension, useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
 import { useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { useMoveActions } from '../../use-move-actions.ts';
 import { type GanttViewContext, GanttViewProvider } from '../gantt/gantt-context.ts';
@@ -59,7 +60,7 @@ import { BlockMenu } from './board-block-menu.tsx';
 import { type BoardCellItem, cellsOf } from './board-cells.ts';
 import { BoardGrid, focusKeys } from './board-grid.tsx';
 import { type BoardLine, boardEntry, boardFocusAfter } from './board-navigation.ts';
-import { type BoardModel, boardModelOf } from './board-rows.ts';
+import { type BoardModel, boardFitTargetOf, boardModelOf } from './board-rows.ts';
 import { BoardSkeleton } from './board-skeleton.tsx';
 
 /** The board opens at Week, as the Gantt and the job order table do (D5; D3 open question 1). */
@@ -183,9 +184,21 @@ export function BoardScreen() {
     (committed === undefined
       ? plantDateOf(Date.now(), timeZone)
       : plantDateOf(committed.nowMs, timeZone));
+  // A level change extends the range by the spans that hold its anchor where it was (ADR 0089).
+  const rangeExtension = useRangeExtension(from, zoom);
+  const { extension } = rangeExtension;
   const range = useMemo(
-    () => rangeOf(from, zoom, timeZone, productionDayStart),
-    [from, zoom, timeZone, productionDayStart],
+    () => extendedRange(from, zoom, timeZone, productionDayStart, extension),
+    [from, zoom, timeZone, productionDayStart, extension],
+  );
+  const gridElement = useRef<HTMLDivElement | null>(null);
+  // One ref for the grid, kept across renders, so the width is not measured again on each one.
+  const boardGridRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      gridElement.current = node;
+      measureRef(node);
+    },
+    [measureRef],
   );
 
   useEffect(() => {
@@ -236,6 +249,16 @@ export function BoardScreen() {
     () => createTimeScale({ range, zoom, timeZone, widthPx: timeWidth }),
     [range, zoom, timeZone, timeWidth],
   );
+  const timelineZoom = useTimelineZoom({
+    zoom,
+    range: rangeExtension,
+    scale,
+    grid: gridElement,
+    columns: { treeWidth: machineWidth, stickyWidth: machineWidth },
+    plant: { timeZone, productionDayStart },
+    onNavigate: (level, start) => void setSearch(withFrom(withZoom(search, level), start)),
+    dragging: () => moveStore.get()?.state.source === 'pointer',
+  });
   const cells = useMemo(() => {
     const byMachine = new Map<string, readonly BoardCellItem[]>();
     for (const group of model?.groups ?? []) {
@@ -488,6 +511,11 @@ export function BoardScreen() {
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const key = (event.target as HTMLElement).getAttribute('data-board-focus');
     if (key === null) return;
+    // Minus and plus step a level around the centre of the view (ADR 0089); plus may need Shift.
+    if (timelineZoom.onKeyDown(event)) {
+      event.preventDefault();
+      return;
+    }
     // A key with a modifier belongs to the browser and to the commands of later stories.
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     // The Escape stack (plan 07): a move still in progress ends first, the selection last.
@@ -601,17 +629,21 @@ export function BoardScreen() {
         forbidden || noMachines ? undefined : (
           <div role="toolbar" aria-label="Board" className="flex flex-wrap items-center gap-2">
             <RangeControls
-              presetLabel="Zoom"
-              zoom={zoom}
-              onZoomChange={(next) => void setSearch(withZoom(search, next))}
+              zoomControls={
+                <ZoomControls
+                  zoom={zoom}
+                  onZoomChange={timelineZoom.setLevel}
+                  onZoomToFit={() => {
+                    if (snapshot === undefined) return;
+                    const target = boardFitTargetOf(snapshot, search.order);
+                    timelineZoom.fit(target.span, target.name);
+                  }}
+                />
+              }
               from={from}
               onFromChange={(next) => void setSearch(withFrom(search, next))}
               onEarlier={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'earlier')))}
-              onNow={() =>
-                void setSearch(
-                  withFrom(search, plantDateOf(snapshot?.nowMs ?? Date.now(), timeZone)),
-                )
-              }
+              onNow={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
               onLater={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'later')))}
               rangeLabel={label}
             />
@@ -673,7 +705,7 @@ export function BoardScreen() {
               }}
               onFocusTarget={setFocused}
               onKeyDown={onKeyDown}
-              gridRef={measureRef}
+              gridRef={boardGridRef}
               height={fillHeight}
               busy={loadedRange !== `${range.fromMs}/${range.toMs}`}
             />
