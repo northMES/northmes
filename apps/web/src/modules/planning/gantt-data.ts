@@ -461,21 +461,30 @@ export const ganttPageSize = 100;
  */
 export const ganttMaxOrders = 1_250;
 
-/** A page of the row list as a Relay connection asks for it: the first n after a cursor. */
-export interface GanttPageRequest {
-  readonly first: number;
-  readonly after?: string;
-}
+/**
+ * A page of the row list as a Relay connection asks for it (ADR 0016): the first n after a cursor,
+ * or the last n before one, n from 1 to `ganttPageSize`.
+ */
+export type GanttPageRequest =
+  | { readonly first: number; readonly after?: string }
+  | { readonly last: number; readonly before?: string };
 
 /**
- * A page of the order Gantt's row list (ADR 0089): production orders in deadline order, each with
- * its operations, its span and its job orders without their placements, which load per time
- * chunk. `totalCount` counts every order the filter matches.
+ * A page of the order Gantt's row list (ADR 0089): production orders in the autoplan order, each
+ * with its operations, its span and its job orders without their placements, which load per time
+ * chunk. A job order with a machine is placed and takes its placement from the chunks it overlaps;
+ * one without a machine sits in the Not placed row. `totalCount` counts every order the filter
+ * matches.
  */
 export interface GanttRowsPage {
   readonly frame: GanttFrame;
   readonly orders: readonly GanttOrder[];
-  readonly pageInfo: { readonly hasNextPage: boolean; readonly endCursor?: string };
+  readonly pageInfo: {
+    readonly hasNextPage: boolean;
+    readonly hasPreviousPage: boolean;
+    readonly startCursor?: string;
+    readonly endCursor?: string;
+  };
   readonly totalCount: number;
 }
 
@@ -494,7 +503,7 @@ export type GanttLoadOptions = Pick<GanttLoadInput, 'rules' | 'entered' | 'previ
  */
 export interface GanttDataSource {
   readonly load: (input: GanttLoadInput) => Promise<GanttSnapshot>;
-  /** A page of the row list; the first page fails above `ganttMaxOrders`. */
+  /** A page of the row list; a page without a cursor fails above `ganttMaxOrders`. */
   readonly loadRows: (
     filter: GanttFilter,
     page: GanttPageRequest,

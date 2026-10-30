@@ -28,6 +28,7 @@ import {
   type GanttLoadOptions,
   type GanttOperation,
   type GanttOrder,
+  type GanttPageRequest,
   type GanttSettings,
   type GanttSnapshot,
   type GanttStock,
@@ -38,6 +39,7 @@ import {
 } from './gantt-data.ts';
 import { PlanningForbidden, PlanningRefusal } from './planning-preview.ts';
 import { type EffectivePlanningRules, ganttSettingsWith } from './planning-rules.ts';
+import { compareOrders } from './screens/gantt/gantt-rows.ts';
 
 /** An ISO instant as epoch milliseconds: the one place a snapshot's instants are parsed. */
 function ms(instant: string): number {
@@ -450,14 +452,39 @@ async function previewedSnapshot(
   };
 }
 
-/** The orders of a snapshot a filter matches: Late only and the search by order number. */
+/**
+ * The orders of a snapshot a filter matches: Late only, and the search by order number as a
+ * trimmed, case-insensitive substring (ADR 0016).
+ */
 function filtered(snapshot: GanttSnapshot, filter: GanttFilter): GanttOrder[] {
-  const search = filter.search?.trim() ?? '';
+  const search = filter.search?.trim().toLowerCase() ?? '';
   return snapshot.productionOrders.filter(
     (order) =>
       (filter.lateOnly !== true || snapshot.analysis.orders[order.id]?.late === true) &&
-      order.number.includes(search),
+      order.number.toLowerCase().includes(search),
   );
+}
+
+/**
+ * The slice of a list of `count` rows a page asks for, by the index cursors this source gives: a
+ * size outside 1 to `ganttPageSize` and a cursor it never gave are refused, as ADR 0016's
+ * connections refuse them.
+ */
+function pageSlice(count: number, page: GanttPageRequest): { start: number; end: number } {
+  const size = 'first' in page ? page.first : page.last;
+  if (!Number.isInteger(size) || size < 1 || size > ganttPageSize) {
+    throw new PlanningRefusal('core.list.bad_argument');
+  }
+  const cursor = 'first' in page ? page.after : page.before;
+  if (cursor !== undefined && (!/^\d+$/.test(cursor) || Number(cursor) >= count)) {
+    throw new PlanningRefusal('core.list.invalid_cursor');
+  }
+  if ('first' in page) {
+    const start = cursor === undefined ? 0 : Number(cursor) + 1;
+    return { start, end: Math.min(count, start + size) };
+  }
+  const end = cursor === undefined ? count : Number(cursor);
+  return { start: Math.max(0, end - size), end };
 }
 
 /** An order as the row list holds it: its span, and its job orders without their placements. */
@@ -479,8 +506,9 @@ function rowOf(order: GanttOrder): GanttOrder {
 
 /**
  * A data source that answers every read from the snapshots a function gives for a range: one
- * snapshot for `load`, its orders for the row list and its placements for a chunk (ADR 0089). The
- * mock source and the tests with changed data are built on it.
+ * snapshot for `load`, the orders of the snapshot of week 45, the week G1 is written for, for the
+ * row list, and the placements of the snapshot of a chunk for that chunk (ADR 0089). The mock
+ * source and the tests with changed data are built on it.
  */
 export function snapshotSource(
   snapshotOf: (
@@ -493,23 +521,22 @@ export function snapshotSource(
       snapshotOf({ fromMs: Date.parse(from), toMs: Date.parse(to) }, options),
     loadRows: async (filter, page, options = {}) => {
       const snapshot = await snapshotOf(g1Week, options);
-      // The open orders in deadline order, then by number; G1 has no finished or cancelled order.
-      const orders = filtered(snapshot, filter).sort(
-        (a, b) => a.deadlineMs - b.deadlineMs || a.number.localeCompare(b.number),
-      );
-      if (page.after === undefined && orders.length > ganttMaxOrders) {
+      // G1 has no finished or cancelled order, so every order it has is open.
+      const orders = filtered(snapshot, filter).sort(compareOrders);
+      const cursor = 'first' in page ? page.after : page.before;
+      if (cursor === undefined && orders.length > ganttMaxOrders) {
         throw new PlanningRefusal('planning.gantt.too_many_orders');
       }
-      // The cursor is the index of the page's last order, opaque to the view as a Relay cursor is.
-      const start = page.after === undefined ? 0 : Number(page.after) + 1;
-      const end = Math.min(orders.length, start + Math.min(page.first, ganttPageSize));
+      // A cursor is the index of an order, opaque to the view as a Relay cursor is.
+      const { start, end } = pageSlice(orders.length, page);
       const { productionOrders: __, analysis: ___, ...frame } = snapshot;
       return {
         frame,
         orders: orders.slice(start, end).map(rowOf),
         pageInfo: {
           hasNextPage: end < orders.length,
-          ...(end > start && { endCursor: String(end - 1) }),
+          hasPreviousPage: start > 0,
+          ...(end > start && { startCursor: String(start), endCursor: String(end - 1) }),
         },
         totalCount: orders.length,
       };
@@ -517,13 +544,14 @@ export function snapshotSource(
     loadChunk: async (from, to, filter, options = {}) => {
       const chunk = { fromMs: Date.parse(from), toMs: Date.parse(to) };
       const snapshot = await snapshotOf(chunk, options);
+      // A span overlaps the half-open chunk; a span of no length belongs to the chunk it starts in.
       return {
         jobOrders: filtered(snapshot, filter).flatMap((order) =>
           order.jobOrders.filter(
             ({ placement }) =>
               placement !== undefined &&
               placement.setupStartMs < chunk.toMs &&
-              placement.endMs > chunk.fromMs,
+              (placement.endMs > chunk.fromMs || placement.setupStartMs >= chunk.fromMs),
           ),
         ),
       };

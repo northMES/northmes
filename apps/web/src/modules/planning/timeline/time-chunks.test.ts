@@ -6,7 +6,7 @@ import { chunksCovering, chunkUnitOf, isFarChunk, wantedChunks } from './time-ch
 const zone = 'Europe/Stockholm';
 const at = (iso: string) => Date.parse(iso);
 
-describe('time chunks (ADR 0089, Loading by time chunk)', () => {
+describe('ADR0089 time chunks (Loading by time chunk)', () => {
   it('loads an ISO week up to week, a month at 4weeks and quarter, and a quarter at year', () => {
     expect(chunkUnitOf('quarter-hours')).toBe('isoWeek');
     expect(chunkUnitOf('hours')).toBe('isoWeek');
@@ -18,7 +18,8 @@ describe('time chunks (ADR 0089, Loading by time chunk)', () => {
   });
 
   it('aligns ISO weeks to Monday midnight in plant time, across the clock change of 25 October', () => {
-    // Wed 21 Oct to Tue 3 Nov 2026 touches W43, W44 and W45; W44 holds the autumn clock change.
+    // Wed 21 Oct to Tue 3 Nov 2026 touches W43, W44 and W45; W43 ends on Sun 25 Oct, the autumn
+    // clock change, so it lasts 7 days and 1 hour.
     const chunks = chunksCovering(
       { fromMs: at('2026-10-21T10:00:00Z'), toMs: at('2026-11-03T10:00:00Z') },
       'week',
@@ -72,6 +73,35 @@ describe('time chunks (ADR 0089, Loading by time chunk)', () => {
       '2026-W43',
       '2026-W47',
     ]);
+  });
+
+  it('keys an ISO week by its week-year, so the week of Mon 28 Dec 2026 is 2026-W53 and that of Mon 29 Dec 2025 is 2026-W01', () => {
+    const keys = (fromIso: string, toIso: string) =>
+      chunksCovering({ fromMs: at(fromIso), toMs: at(toIso) }, 'day', zone).map(
+        (chunk) => chunk.key,
+      );
+
+    expect(keys('2025-12-30T10:00:00Z', '2025-12-30T11:00:00Z')).toEqual(['2026-W01']);
+    expect(keys('2026-12-30T10:00:00Z', '2027-01-05T10:00:00Z')).toEqual(['2026-W53', '2027-W01']);
+  });
+
+  it('covers no chunk for an empty range or one that is not a span of time', () => {
+    const mid = at('2026-11-04T10:00:00Z');
+
+    expect(chunksCovering({ fromMs: mid, toMs: mid }, 'week', zone)).toEqual([]);
+    expect(chunksCovering({ fromMs: mid, toMs: Number.NaN }, 'week', zone)).toEqual([]);
+    expect(chunksCovering({ fromMs: mid, toMs: Number.POSITIVE_INFINITY }, 'week', zone)).toEqual(
+      [],
+    );
+    expect(chunksCovering({ fromMs: Number.NaN, toMs: mid }, 'week', zone)).toEqual([]);
+    expect(
+      wantedChunks({
+        view: { fromMs: mid, toMs: mid },
+        buffer: { fromMs: mid, toMs: mid },
+        zoom: 'week',
+        timeZone: zone,
+      }),
+    ).toEqual([]);
   });
 
   it('drops a chunk only when it lies more than two buffer widths from the buffer', () => {

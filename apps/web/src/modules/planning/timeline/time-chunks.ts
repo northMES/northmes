@@ -56,6 +56,9 @@ function chunkAt(start: Temporal.PlainDate, unit: ChunkUnit, timeZone: string): 
 
 /** The chunks of a level that a half-open range touches, in time order. */
 export function chunksCovering(range: TimeRange, zoom: ZoomLevel, timeZone: string): TimeChunk[] {
+  // An empty range, or one that is not a span of time, covers nothing, so the loop below ends.
+  if (!Number.isFinite(range.fromMs) || !Number.isFinite(range.toMs)) return [];
+  if (range.toMs <= range.fromMs) return [];
   const unit = chunkUnitOf(zoom);
   const first = Temporal.Instant.fromEpochMilliseconds(range.fromMs)
     .toZonedDateTimeISO(timeZone)

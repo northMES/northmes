@@ -19,10 +19,14 @@ export class PlanningForbidden extends Error {
   }
 }
 
-/** The codes with which the planning reads refuse a load that would be too large (ADR 0089). */
+/**
+ * The codes with which the planning reads refuse a load: a row list above `ganttMaxOrders` (ADR
+ * 0089), and a page size or a cursor the list conventions refuse (ADR 0016).
+ */
 export type PlanningRefusalCode =
   | 'planning.gantt.too_many_orders'
-  | 'planning.board.range_too_large';
+  | 'core.list.bad_argument'
+  | 'core.list.invalid_cursor';
 
 /** A refusal a mock source answers with, as the API's errorCode would arrive. */
 export class PlanningRefusal extends Error {
