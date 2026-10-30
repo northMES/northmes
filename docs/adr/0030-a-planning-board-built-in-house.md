@@ -59,6 +59,8 @@ The order Gantt offers Hide closed time, a local option that is on by default an
 
 [ADR 0089](0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) replaces the four zoom presets with a ladder of zoom levels, keeps the four as levels, and replaces the loaded range with an endless axis that loads job orders by time chunk, on both views. So the snap step above is the zoom level's step, and the field slot's `useValues` loads the values for the blocks of the loaded chunks.
 
+[ADR 0090](0090-a-smooth-zoom-and-a-slim-bar-above-the-timeline-on-the-planning-board-and-the-order-gantt.md) (proposed) brings continuous zoom into release 1: the zoom is a width per hour, and the levels of ADR 0089 are its bands, which keep the snap steps above.
+
 ### The job order table view
 
 The table view is the main screen-reader path and a second view for every planner. It is a semantic TanStack Table with order and operation, article, machine, start, end, quantity, status, lock holder, order deadline, planned end and late-by columns, and sortable headers set `aria-sort`. Each row has Move (the shared Move dialog), Lock and Open order. It pages on the server through the Relay connection ([ADR 0016](0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)), because NVDA browse mode stops at the last rendered row of a virtualized table.
