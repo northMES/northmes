@@ -103,7 +103,7 @@ describe('the pointer start of a drop near now (ADR 0089, Time before now)', () 
 });
 
 describe('the machines a moving job order may not go to (#944)', () => {
-  it('#944 are the machines outside its operation\'s allowed machines: Mill 1 for 1001.10, Turn', () => {
+  it("#944 are the machines outside its operation's allowed machines: Mill 1 for 1001.10, Turn", () => {
     expect(notAllowedOf(committed, 'jo-1001-10')).toEqual({
       operation: 'Turn',
       machines: new Set(['MILL1']),

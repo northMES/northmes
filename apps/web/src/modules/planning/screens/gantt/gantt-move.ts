@@ -53,14 +53,20 @@ export interface MovePreview {
   readonly refused?: GanttMoveRefusal;
 }
 
+/** A job order of the plan and its operation, by the job order's id. */
+function rowAndOperationOf(snapshot: GanttSnapshot, jobOrderId: string) {
+  const order = orderOfRow(snapshot.productionOrders, jobOrderId);
+  const row = order?.jobOrders.find((each) => each.id === jobOrderId);
+  const operation = order?.operations.find((each) => each.id === row?.operationId);
+  return { row, operation };
+}
+
 /** Why a row cannot enter a move (plan 07, judgeMove): its lock, its status or another planner's lock. */
 export function moveRefusalOf(
   snapshot: GanttSnapshot,
   jobOrderId: string,
 ): MoveRefusal | undefined {
-  const order = orderOfRow(snapshot.productionOrders, jobOrderId);
-  const row = order?.jobOrders.find((each) => each.id === jobOrderId);
-  const operation = order?.operations.find((each) => each.id === row?.operationId);
+  const { row, operation } = rowAndOperationOf(snapshot, jobOrderId);
   if (row === undefined) return undefined;
   if (operation?.isLocked) return 'PINNED';
   if (row.status !== 'planned') return 'STARTED';
@@ -78,20 +84,20 @@ export interface NotAllowed {
 
 /**
  * The machines of the plan that a job order's operation does not allow (#944): every timeline
- * greys them out while the job order moves. Undefined without a move or an operation.
+ * greys them out while the job order moves. The machine the job order is on keeps its look, also
+ * when its operation no longer allows it. Undefined without a move or an operation.
  */
 export function notAllowedOf(
   snapshot: GanttSnapshot | undefined,
   jobOrderId: string | undefined,
 ): NotAllowed | undefined {
   if (snapshot === undefined || jobOrderId === undefined) return undefined;
-  const order = orderOfRow(snapshot.productionOrders, jobOrderId);
-  const row = order?.jobOrders.find((each) => each.id === jobOrderId);
-  const operation = order?.operations.find((each) => each.id === row?.operationId);
+  const { row, operation } = rowAndOperationOf(snapshot, jobOrderId);
   if (operation === undefined) return undefined;
+  const allowed = new Set(operation.allowedEquipment);
   const machines = snapshot.equipment
     .map((machine) => machine.code)
-    .filter((code) => !operation.allowedEquipment.includes(code));
+    .filter((code) => !allowed.has(code) && code !== row?.equipment);
   return { operation: operation.name, machines: new Set(machines) };
 }
 

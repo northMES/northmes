@@ -451,7 +451,7 @@ For a machine `m` and a bucket `[a, b)`:
 - Hovering a bar shows the same values for that bucket in the hover card, on focus too.
 - A bar's color is the lane's foreground token; utilization is read from height and from the number, never from a hue, so no state maps to a color ([07](07-production-planning.md#block-states)).
 - The lane follows the draft: dragging a row updates the two affected buckets in the drag preview's frame.
-- During a move on the order Gantt, the lanes of the machines the job order's operation does not allow are greyed out as the board's rows are: a veil with a hatch, and "not allowed for Turn" in the lane button's accessible name, until the move ends (#944).
+- During a move on the order Gantt, the lanes of the machines the job order's operation does not allow are greyed out: the lane's time part takes the board's veil and hatch under its bars, and the lane button's accessible name says "not allowed for Turn", until the move ends (#944).
 
 ### The workload query
 

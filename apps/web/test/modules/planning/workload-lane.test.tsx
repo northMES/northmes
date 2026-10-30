@@ -348,7 +348,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
     await waitFor(() => expect(thursday()?.getAttribute('data-overloaded')).toBeNull());
   });
 
-  it('#944 during a drag the lanes of the machines the operation may not use are greyed out, until Escape', async () => {
+  it('#944 during a drag the lanes of the machines the operation may not use are greyed out and their buttons say so, until Escape', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
     const panel = screen.getByRole('region', { name: 'Workload' });

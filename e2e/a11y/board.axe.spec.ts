@@ -36,8 +36,15 @@ test.describe('the planning board', () => {
     await page.mouse.move(box.x + 10, box.y + box.height / 2);
     await page.mouse.down();
     await page.mouse.move(box.x + 40, box.y + box.height / 2, { steps: 4 });
-    await expect(board.getByRole('rowheader', { name: 'Mill 1, not allowed for Turn' })).toBeVisible();
-    await expect(board.locator('[role="row"][data-not-allowed]')).toHaveCount(1);
+    await expect(
+      board.getByRole('rowheader', { name: 'Mill 1, not allowed for Turn' }),
+    ).toBeVisible();
+    // The hatch draws: a pattern, so the cue does not rest on colour alone.
+    const hatch = board.locator('[role="row"][data-not-allowed] [data-not-allowed-hatch]');
+    await expect(hatch).toHaveCount(1);
+    expect(await hatch.evaluate((node) => getComputedStyle(node).backgroundImage)).toContain(
+      'repeating-linear-gradient',
+    );
     await checkA11y('a drag with the machines its operation may not use greyed out');
     await page.keyboard.press('Escape');
     await page.mouse.up();

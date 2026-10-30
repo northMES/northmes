@@ -14,7 +14,7 @@ import { cn } from 'cn';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import type { GanttSnapshot, WorkloadBucket } from '../../gantt-data.ts';
-import { type MoveStore, useMoveOf } from '../../move-store.ts';
+import { type MoveStore, useMoveOf, useNotAllowed } from '../../move-store.ts';
 import { visibleItems } from '../../timeline/culling.ts';
 import { formatMonth, type TimeRange, type TimeScale } from '../../timeline/time-scale.ts';
 import {
@@ -23,7 +23,6 @@ import {
   withMovePreview,
   workloadOf,
 } from '../../workload-lanes.ts';
-import { notAllowedOf } from './gantt-move.ts';
 import { laneHeightRem } from './gantt-rows.ts';
 
 /** A bucket placed on the axis: its shift, production day or ISO week as a span, and its bar. */
@@ -299,7 +298,7 @@ function WorkloadLane({
         {notAllowedFor !== undefined && (
           <span
             data-not-allowed-hatch
-            className="planning-not-allowed pointer-events-none absolute inset-0 z-[1]"
+            className="planning-not-allowed pointer-events-none absolute inset-0"
           />
         )}
         {buckets.map(({ bucket, fromMs, toMs, pending }) => {
@@ -536,9 +535,7 @@ export function GanttWorkloadPanel({
   const [openLane, setOpenLane] = useState<string | undefined>(undefined);
   const idBase = useId();
   const preview = useMoveOf(moveStore, (move) => move?.preview);
-  // The machines the moving job order may not go to, greyed out until the move ends (#944).
-  const movingId = useMoveOf(moveStore, (move) => move?.state.jobOrderId);
-  const notAllowed = useMemo(() => notAllowedOf(snapshot, movingId), [snapshot, movingId]);
+  const notAllowed = useNotAllowed(moveStore, snapshot);
   const machines = laneMachines(snapshot, preview?.equipment);
   const open = machines.find((machine) => machine.code === openLane);
   const kind = bucketKindOf(scale.zoom);

@@ -504,10 +504,10 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
   });
 
-  it('#944 a drag greys out the machines the operation may not use, refuses the drop there, and the greying ends on release', async () => {
+  it('#944 IN5 a drag greys out the rows of the machines the operation may not use, with a hatch and "not allowed for Turn" in the row header\'s name', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
-    rowsUnderPointer(board, (y) => (y < 50 ? 'CNC 1' : y < 80 ? 'CNC 2' : 'Mill 1'));
+    rowsUnderPointer(board, () => 'CNC 1');
     const cell = block(board, '1001.10');
     expect(greyedRows(board)).toEqual([]);
 
@@ -519,16 +519,33 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     expect(mill.closest('[role="row"]')?.querySelector('[data-not-allowed-hatch]')).not.toBeNull();
     expect(within(board).getByRole('rowheader', { name: 'CNC 1' })).toBeTruthy();
     expect(within(board).getByRole('rowheader', { name: 'CNC 2' })).toBeTruthy();
+  });
 
-    // Over Mill 1 the preview stays on the current machine and the cursor says not allowed.
+  it("#944 IN5 over a greyed row the preview stays on the current machine and the block's cursor says not allowed, until the pointer leaves it", async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    rowsUnderPointer(board, (y) => (y < 50 ? 'CNC 1' : 'Mill 1'));
+    const cell = block(board, '1001.10');
+
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
     fireEvent.pointerMove(cell, { clientX: 100, clientY: 90, pointerId: 1 });
     await waitFor(() => expect(cell.style.cursor).toBe('not-allowed'));
     const preview = board.querySelector<HTMLElement>('[data-move-preview="jo-1001-10"]');
     expect(preview === null ? '' : machineOf(preview)).toBe('CNC 1');
+
     fireEvent.pointerMove(cell, { clientX: 100, clientY: 40, pointerId: 1 });
     expect(cell.style.cursor).toBe('');
-    fireEvent.pointerMove(cell, { clientX: 100, clientY: 90, pointerId: 1 });
+  });
 
+  it('#944 IN5 a release over a greyed row is refused and says why, and the greying and the cursor end with it', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    rowsUnderPointer(board, () => 'Mill 1');
+    const cell = block(board, '1001.10');
+
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 100, clientY: 90, pointerId: 1 });
+    await waitFor(() => expect(greyedRows(board)).toEqual(['Mill 1']));
     fireEvent.pointerUp(cell, { clientX: 100, clientY: 90, pointerId: 1, button: 0 });
     await waitFor(() =>
       expect(spoken()).toBe(
@@ -569,7 +586,7 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     expect(cell.style.cursor).toBe('');
   });
 
-  it('#944 keyboard move mode greys out the machines the operation may not use until it ends', async () => {
+  it('#944 IN6 keyboard move mode greys out the machines the operation may not use until Escape or Enter ends it', async () => {
     const user = userEvent.setup();
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();

@@ -181,11 +181,7 @@ function Row({
       data-not-allowed={notAllowed || undefined}
       // As wide as its tracks: a sticky cell cannot leave its row, so a row only as wide as the
       // grid would take the machine cells with it once the scroll passes the row's width (#910).
-      className={cn(
-        'grid w-max min-w-full border-b border-border',
-        notAllowed && 'cursor-not-allowed',
-        className,
-      )}
+      className={cn('grid w-max min-w-full border-b border-border', className)}
       style={{
         gridTemplateColumns: columns,
         height: `${heightRem}rem`,
@@ -332,9 +328,10 @@ export function BoardGrid({
             }}
           >
             {greyed && (
+              // From the group colour's 6 px edge on, so the edge keeps its tint.
               <span
                 aria-hidden
-                className="planning-not-allowed pointer-events-none absolute inset-0"
+                className="planning-not-allowed pointer-events-none absolute inset-y-0 start-1.5 end-0"
               />
             )}
             <span data-machine-name className="relative">
@@ -371,7 +368,11 @@ export function BoardGrid({
                 data-board-focus={focusKeys.empty(code)}
                 data-sticky-column
                 onFocus={() => onFocusTarget(focusKeys.empty(code))}
-                className="sticky start-0 inline-flex h-full items-center px-3 text-xs text-muted-foreground"
+                className={cn(
+                  'sticky start-0 inline-flex h-full items-center px-3 text-xs text-muted-foreground',
+                  // Its text keeps its contrast over a greyed row's hatch (WCAG 1.4.3).
+                  greyed && 'bg-lane',
+                )}
                 style={{ insetInlineStart: `${machineWidth}px` }}
               >
                 {emptyText}

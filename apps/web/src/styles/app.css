@@ -106,6 +106,13 @@
     );
   }
 
+  /* Forced colors drop the veil and the hatch, so a dashed system-colour edge marks the row. */
+  @media (forced-colors: active) {
+    .planning-not-allowed {
+      border: 2px dashed GrayText;
+    }
+  }
+
   .gantt-late-band {
     background: repeating-linear-gradient(135deg, var(--late) 0 6px, transparent 6px 12px);
     border-top: 1px solid var(--late-foreground);
