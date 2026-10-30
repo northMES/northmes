@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { GanttDataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
+import { detailsOpen, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -350,13 +350,11 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(block('1003.10').getAttribute('aria-selected')).toBe('false');
     expect(block('1003.10').querySelector('[data-selection-bar]')).toBeNull();
 
-    // A click opens Details too. One Escape closes one layer (plan 07): Details, then the hover
-    // card that focus on the block opens again, then the selection.
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(document.activeElement).toBe(block('1001.10')));
-    await screen.findByRole('tooltip');
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
+    // A click only selects (#886): Details stays closed, the press closes the hover card, and
+    // the one layer left for Escape is the selection (plan 07).
+    expect(detailsOpen()).toBe(false);
+    expect(screen.queryByRole('tooltip')).toBeNull();
+    expect(document.activeElement).toBe(block('1001.10'));
     await user.keyboard('{Escape}');
     expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
     expect(block('1001.10').getAttribute('aria-selected')).toBe('false');
