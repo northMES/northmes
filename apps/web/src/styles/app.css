@@ -77,12 +77,12 @@
  * The order Gantt's patterns (plan 18): a compressed closed window as a hatched gap, the setup part
  * of a block as a hatch in the block's text color, and the late band hatched in the late token. A
  * pattern besides a token, so no state maps to a hue alone (ADR 0021). The time before now is a
- * flat tone between the lane and the off-time token (ADR 0089), darker than the frozen window band
- * and lighter than closed time in both themes, so the closed time still reads over it.
+ * flat grey veil of the muted text token (ADR 0089): over any row background it reads as greyed in
+ * both themes, apart from the frozen window band, and the closed time still draws over it.
  */
 @layer components {
   .gantt-past {
-    background: color-mix(in oklab, var(--off-time) 70%, var(--lane));
+    background: color-mix(in oklab, var(--muted-foreground) 10%, transparent);
   }
 
   .gantt-gap {
