@@ -433,20 +433,16 @@ export function createTimeScale({
       const cell = openCell(ms, next.epochMilliseconds);
       if (cell !== undefined) {
         // A week reads "W45, Mon 2 Nov" or "W45", a day "Mon 2 Nov" or its day of the month.
+        const date = formatPlantDate(ms, timeZone);
         const week = `W${at.weekOfYear ?? ''}`;
         const formats =
-          preset.topTier === 'week'
-            ? [`${week}, ${formatPlantDate(ms, timeZone)}`, week]
-            : [formatPlantDate(ms, timeZone), String(at.day)];
+          preset.topTier === 'week' ? [`${week}, ${date}`, week] : [date, String(at.day)];
         top.push({
           ms,
           x: cell.x,
           widthPx: cell.widthPx,
           label: fittingLabel(formats, cell.widthPx, 'top'),
-          name:
-            preset.topTier === 'week'
-              ? `Week ${at.weekOfYear ?? ''}, ${formatPlantDate(ms, timeZone)}`
-              : formatPlantDate(ms, timeZone),
+          name: preset.topTier === 'week' ? `Week ${at.weekOfYear ?? ''}, ${date}` : date,
           tier: 'top',
         });
       }
@@ -475,12 +471,13 @@ export function createTimeScale({
     if (preset.bottomTier === 'day') {
       for (let at = start; at.epochMilliseconds < range.toMs; at = at.add({ days: 1 })) {
         const ms = at.epochMilliseconds;
-        const date = at.day;
+        const date = formatPlantDate(ms, timeZone);
+        const day = String(at.day);
         pushBottom(
           ms,
           at.add({ days: 1 }).epochMilliseconds,
-          () => [formatPlantDate(ms, timeZone), String(date)],
-          () => formatPlantDate(ms, timeZone),
+          () => [date, day],
+          () => date,
         );
       }
     } else {

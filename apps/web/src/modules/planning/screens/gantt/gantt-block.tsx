@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitiv
 import { blockLines } from '../../board-fields.ts';
 import { blockName, blockStates } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
-import { GanttHoverCard } from './gantt-hover-card.tsx';
+import { GanttHoverCard, GanttHoverFields, hoverFields } from './gantt-hover-card.tsx';
 import { tooltipText } from './gantt-move.ts';
 import type { JobOrderRow } from './gantt-rows.ts';
 
@@ -58,9 +58,10 @@ export function GanttBlock({
   );
   // The click the browser fires after a drop is not a selection.
   const dropped = useRef(false);
-  // While the hover card is open, its fields describe the block (#902), so a screen reader reads
-  // what the card shows. A closed card is not in the DOM, so nothing points at it.
-  const [cardOpen, setCardOpen] = useState(false);
+  // The focused block is described by the hover card's fields (#902), so a screen reader reads
+  // what the card shows, also after a click or Escape closed the card. Only the focused block
+  // holds the hidden list, since the Gantt draws every row.
+  const [focused, setFocused] = useState(false);
   const descriptionId = useId();
   if (jobOrder.placement === undefined) return null;
   const { placement } = jobOrder;
@@ -181,14 +182,14 @@ export function GanttBlock({
   };
   return (
     <>
-      <Tooltip open={cardOpen} onOpenChange={setCardOpen}>
+      <Tooltip>
         <TooltipTrigger
           render={
             <button
               type="button"
               tabIndex={-1}
               aria-label={name}
-              aria-describedby={cardOpen ? descriptionId : undefined}
+              aria-describedby={focused ? descriptionId : undefined}
               data-block={jobOrder.id}
               data-cell-focus
               data-states={states.map((state) => state.kind).join(' ') || undefined}
@@ -208,6 +209,8 @@ export function GanttBlock({
               onPointerUp={() => endPress(true)}
               onPointerCancel={() => endPress(false)}
               onKeyDown={onKeyDown}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               className={cn(
                 'absolute top-1 h-11 touch-none overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-palette-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                 selected && 'border-t-3 border-t-black',
@@ -337,10 +340,16 @@ export function GanttBlock({
             machineName={machineName}
             hoverIds={boardFields.hover}
             material={material ?? []}
-            descriptionId={descriptionId}
           />
         </TooltipContent>
       </Tooltip>
+      {focused && (
+        <GanttHoverFields
+          id={descriptionId}
+          hidden
+          fields={hoverFields(row, snapshot, machineName, boardFields.hover, material ?? [])}
+        />
+      )}
       {/* The move preview: the snapped span as an outline in the draft style, with the tooltip
           that names the landing span, the release snap and the cascade count. Decorative: the
           step message and the block's name carry the words. */}
