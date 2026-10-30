@@ -441,14 +441,15 @@ export function BoardGrid({
                 data-job-order={row.jobOrder.displayNumber}
                 aria-selected={row.order.id === selectedOrderId}
                 onFocus={() => onFocusTarget(focusKeys.block(row.jobOrder.id))}
-                onClick={() => onOpenDetails(row.jobOrder.id)}
+                onClick={() => onSelectOrder(row.order.id)}
+                onDoubleClick={() => onOpenDetails(row.jobOrder.id)}
                 onKeyDown={(event) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
                   if (event.key === 'Enter') onOpenDetails(row.jobOrder.id);
                   else onSelectOrder(row.order.id);
                 }}
-                className="relative flex h-7 items-center gap-1.5 overflow-hidden rounded-sm border border-foreground bg-card px-2 text-xs"
+                className="relative flex h-7 items-center gap-1.5 overflow-hidden rounded-sm border border-foreground bg-card px-2 text-xs select-none"
               >
                 {row.order.id === selectedOrderId && (
                   <span
