@@ -6,7 +6,13 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { findDetails, findGantt, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
+import {
+  chooseDetailsAction,
+  findDetails,
+  findGantt,
+  renderGanttRoute,
+  sourceOf,
+} from './gantt-fixtures.tsx';
 
 afterEach(() => {
   cleanup();
@@ -292,7 +298,7 @@ describe('runs of orders of one article on the order Gantt (ADR 0083, plan 18 Ru
     rowOf(gantt, 'po-1005').focus();
     await user.keyboard('{Enter}');
     const details = await findDetails();
-    await user.click(within(details).getByRole('button', { name: 'Combine into a run' }));
+    await chooseDetailsAction(details, 'Combine into a run');
     expect(await findReview()).toBeTruthy();
     await user.click(within(await findReview()).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => {
@@ -324,7 +330,7 @@ describe('runs of orders of one article on the order Gantt (ADR 0083, plan 18 Ru
     expect(details.textContent).toContain(
       '1005.10 follows 1001.10 on CNC 1, saves 30 min of retool',
     );
-    await user.click(within(details).getByRole('button', { name: 'Split run' }));
+    await chooseDetailsAction(details, 'Split run');
     await waitFor(() => {
       expect(gantt.querySelector('[data-row-id="run:po-1001+po-1005"]')).toBeNull();
     });

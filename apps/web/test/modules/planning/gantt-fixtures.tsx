@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { planningLinks } from '@northmes/planning-contracts';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
 import {
   type BoardFieldsStore,
   BoardFieldsStoreProvider,
@@ -126,4 +127,21 @@ export async function findDetails(): Promise<HTMLElement> {
 /** Whether the Details drawer is open. */
 export function detailsOpen(): boolean {
   return document.querySelector('[role="dialog"][data-details-drawer]') !== null;
+}
+
+/**
+ * Picks an action from the actions menu in the Details drawer's heading (#917); the menu is named
+ * "Actions for" the row.
+ */
+export async function chooseDetailsAction(panel: HTMLElement, action: string): Promise<void> {
+  await userEvent.click(within(panel).getByRole('button', { name: /^Actions for / }));
+  const menu = await screen.findByRole('menu', { name: /^Actions for / });
+  await userEvent.click(within(menu).getByRole('menuitem', { name: action }));
+}
+
+/** Opens a closed section of the Details drawer by its title and returns its toggle (#917). */
+export async function openDetailsSection(panel: HTMLElement, title: string): Promise<HTMLElement> {
+  const toggle = within(panel).getByRole('button', { name: new RegExp(`^${title}, `) });
+  if (toggle.getAttribute('aria-expanded') !== 'true') await userEvent.click(toggle);
+  return toggle;
 }

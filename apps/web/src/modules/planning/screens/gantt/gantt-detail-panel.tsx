@@ -5,10 +5,21 @@ import { planningLinks } from '@northmes/planning-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link } from '@tanstack/react-router';
 import { cn } from 'cn';
-import { CalendarClock, CircleCheck, Clock, Layers, Link2, Lock } from 'lucide-react';
+import { ChevronRight, CircleCheck, Ellipsis, Layers } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '../../../../ui/primitives/collapsible.tsx';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../../../ui/primitives/dropdown-menu.tsx';
 import {
   Sheet,
   SheetContent,
@@ -18,7 +29,7 @@ import {
 } from '../../../../ui/primitives/sheet.tsx';
 import { shownFields } from '../../board-fields.ts';
 import { bindingSentence } from '../../gantt-analysis.ts';
-import type { ConstraintLine } from '../../gantt-data.ts';
+import type { ConstraintLine, GanttSnapshot } from '../../gantt-data.ts';
 import { orderNumbersText } from '../../gantt-draft.ts';
 import type { InventorySnapshot, PlannedMovement } from '../../inventory-data.ts';
 import { type MaterialShortage, roundQuantity } from '../../material-projection.ts';
@@ -28,6 +39,14 @@ import { amountText, quantityWithUnit, signedQuantity, whenText } from '../../st
 import { durationsOf, releaseText } from './gantt-block-states.ts';
 import type { ChainView } from './gantt-chain.ts';
 import { useGanttView } from './gantt-context.ts';
+import {
+  brokenFirst,
+  type DetailsException,
+  exceptionOf,
+  linkedJobOrdersOf,
+  openSectionsOf,
+  otherHoverFields,
+} from './gantt-details.ts';
 import { moveRefusalOf, refusalMessage, stepMessage } from './gantt-move.ts';
 import {
   earlyText,
@@ -41,6 +60,7 @@ import {
   type RunRow,
   runLatenessText,
   runTitle,
+  savedSetupOf,
   statusLabel,
   summarySpan,
 } from './gantt-rows.ts';
@@ -67,80 +87,228 @@ function Section({ title, children }: { readonly title: string; readonly childre
   );
 }
 
-/** The constraint list of a row (plan 18, The constraint list of a row). */
-function ConstraintList({ lines }: { readonly lines: readonly ConstraintLine[] }) {
-  const holding = lines.filter((line) => line.holds).length;
-  return (
-    <Section title={`Constraints, ${holding} of ${lines.length} hold`}>
-      <ul className="grid gap-1 text-[0.8125rem] leading-[1.125rem]">
-        {lines.map((line) => (
-          <li
-            key={`${line.kind}-${line.text}`}
-            data-constraint={line.kind}
-            data-holds={line.holds}
-            className={cn('flex items-start gap-2', !line.holds && 'text-late-foreground')}
-          >
-            {line.holds ? (
-              <CircleCheck aria-hidden className="mt-0.5 size-3.5 shrink-0 text-success" />
-            ) : (
-              <span
-                aria-hidden
-                className="mt-0.5 size-3.5 shrink-0 rounded-full bg-late-foreground"
-              />
-            )}
-            <span>
-              {line.text}
-              {!line.holds && line.code !== undefined && ` (${line.code})`}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </Section>
-  );
-}
-
-/** Open order: the link to the order's page, among a row's actions. */
-function OpenOrder({ orderId }: { readonly orderId: string }) {
-  const { plant } = useShell();
-  return (
-    <Link
-      to={planningLinks.orders.order({ plant, orderId }).href}
-      className={cn(buttonVariants({ variant: 'outline' }), 'h-7.5 px-2.5 text-[0.8125rem]')}
-    >
-      Open order
-    </Link>
-  );
-}
-
-/** The disabled actions with the one reason under them. */
-function Actions({
-  actions,
-  reason = phase1Reason,
+/**
+ * A section that starts closed (#917): a button named by its title and summary, with
+ * aria-expanded, over the content; the content leaves the page while the section is closed. A
+ * region names the content when it has no region of its own.
+ */
+function FoldSection({
+  title,
+  summary,
+  defaultOpen = false,
+  region,
   children,
 }: {
-  readonly actions: readonly string[];
-  readonly reason?: string;
-  readonly children?: ReactNode;
+  readonly title: string;
+  readonly summary: string;
+  readonly defaultOpen?: boolean;
+  readonly region?: string;
+  readonly children: ReactNode;
 }) {
   return (
-    <Section title="Actions">
-      <div className="flex flex-wrap gap-1.5">
-        {children}
-        {actions.map((label) => (
-          <Button key={label} variant="outline" className="h-7.5 px-2.5 text-[0.8125rem]" disabled>
-            {label}
-          </Button>
+    <Collapsible defaultOpen={defaultOpen} className="grid gap-1.5">
+      <h3 className="text-xs font-semibold">
+        <CollapsibleTrigger
+          data-section-toggle
+          aria-label={`${title}, ${summary}`}
+          className="group/fold flex min-h-(--nm-target-min) w-full items-center gap-1.5 rounded-md text-start outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <ChevronRight
+            aria-hidden
+            className="size-3.5 shrink-0 text-muted-foreground transition-transform group-data-[panel-open]/fold:rotate-90 motion-reduce:transition-none"
+          />
+          <span>
+            {title}
+            <span className="font-normal text-muted-foreground">, {summary}</span>
+          </span>
+        </CollapsibleTrigger>
+      </h3>
+      <CollapsibleContent className="ps-5">
+        {region === undefined ? (
+          children
+        ) : (
+          <section aria-label={region} className="grid gap-1.5">
+            {children}
+          </section>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+/** The constraint list of a row (plan 18, The constraint list of a row), the broken lines first. */
+function ConstraintList({ lines }: { readonly lines: readonly ConstraintLine[] }) {
+  return (
+    <ul className="grid gap-1 text-data">
+      {brokenFirst(lines).map((line) => (
+        <li
+          key={`${line.kind}-${line.text}`}
+          data-constraint={line.kind}
+          data-holds={line.holds}
+          className={cn('flex items-start gap-2', !line.holds && 'text-late-foreground')}
+        >
+          {line.holds ? (
+            <CircleCheck aria-hidden className="mt-0.5 size-3.5 shrink-0 text-success" />
+          ) : (
+            <span
+              aria-hidden
+              className="mt-0.5 size-3.5 shrink-0 rounded-full bg-late-foreground"
+            />
+          )}
+          <span>
+            {line.text}
+            {!line.holds && line.code !== undefined && ` (${line.code})`}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** An action of the actions menu: one that runs, or one drawn disabled with the reason it waits. */
+interface DetailsAction {
+  readonly label: string;
+  readonly onSelect?: () => void;
+  /** A page the action opens, drawn as a link. */
+  readonly href?: string;
+  /** Why the action cannot run; it is drawn disabled and described by the reason. */
+  readonly reason?: string;
+}
+
+/**
+ * The actions menu in the heading (design D3, IN7; #917): the actions that run, and the ones that
+ * wait drawn disabled, each described by its reason, which the menu shows under them once.
+ */
+function ActionsMenu({
+  name,
+  actions,
+}: {
+  readonly name: string;
+  readonly actions: readonly DetailsAction[];
+}) {
+  const reasonId = useId();
+  const reasons = [
+    ...new Set(actions.flatMap((action) => (action.reason === undefined ? [] : [action.reason]))),
+  ];
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button variant="ghost" size="icon-sm" aria-label={name} className="shrink-0" />}
+      >
+        <Ellipsis aria-hidden />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent aria-label={name} align="end" className="w-64">
+        {actions.map((action) => (
+          <DropdownMenuItem
+            key={action.label}
+            disabled={action.reason !== undefined}
+            {...(action.href !== undefined && { render: <Link to={action.href} /> })}
+            aria-describedby={
+              action.reason === undefined
+                ? undefined
+                : `${reasonId}-${reasons.indexOf(action.reason)}`
+            }
+            onClick={() => {
+              if (action.reason === undefined) action.onSelect?.();
+            }}
+          >
+            {action.label}
+          </DropdownMenuItem>
         ))}
-      </div>
-      <p className="text-xs text-muted-foreground">{reason}</p>
-    </Section>
+        {reasons.map((reason, index) => (
+          <p
+            key={reason}
+            id={`${reasonId}-${index}`}
+            className="px-1.5 py-1 text-xs text-muted-foreground"
+          >
+            {reason}
+          </p>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
 /**
- * Moving without dragging (plan 07, Moving without dragging; WCAG 2.5.7): Move starts a move of
- * the row as keyboard move mode does, and the controls step the start and the machine, Apply
- * writes the draft and Cancel ends it; the status line carries the step message.
+ * The header exception line, styled by its kind: a conflict or lateness, a warning (a material
+ * shortage, an early order), or a note (held, locked). Its text starts with a capital.
+ */
+function ExceptionLine({ exception }: { readonly exception: DetailsException }) {
+  const { kind, text } = exception;
+  return (
+    <p
+      data-exception={kind}
+      className={cn(
+        'rounded-md border px-2 py-1 text-data',
+        kind === 'constraint' || kind === 'late'
+          ? 'border-late-foreground bg-late text-late-foreground'
+          : kind === 'material' || kind === 'early'
+            ? 'border-warning bg-warning-subtle text-warning-foreground'
+            : 'border-border text-foreground',
+      )}
+    >
+      {text.charAt(0).toUpperCase() + text.slice(1)}
+    </p>
+  );
+}
+
+/**
+ * The header every Details drawer shares (#917): the title with the order link and the actions
+ * menu, the subline with the status, and at most one exception line.
+ */
+function DetailsHeader({
+  title,
+  orderId,
+  orderNumber,
+  subline,
+  badge,
+  exception,
+  menu,
+}: {
+  readonly title: string;
+  readonly orderId?: string;
+  readonly orderNumber?: string;
+  readonly subline: string;
+  readonly badge?: ReactNode;
+  readonly exception?: DetailsException | undefined;
+  readonly menu: ReactNode;
+}) {
+  const { plant } = useShell();
+  return (
+    <SheetHeader className="gap-1.5 p-0 pe-9">
+      <div className="flex items-start gap-2">
+        <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2">
+          <SheetTitle className="font-mono text-base font-semibold">{title}</SheetTitle>
+          {orderId !== undefined && orderNumber !== undefined && (
+            <Link
+              to={planningLinks.orders.order({ plant, orderId }).href}
+              className="inline-flex min-h-(--nm-target-min) items-center text-data text-link underline-offset-2 hover:underline"
+            >
+              Order {orderNumber}
+            </Link>
+          )}
+        </div>
+        {menu}
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <SheetDescription className="text-data">{subline}</SheetDescription>
+        {badge}
+      </div>
+      {exception !== undefined && <ExceptionLine exception={exception} />}
+    </SheetHeader>
+  );
+}
+
+/** Open order as a menu action: a link to the order's page, as the job order table's menu has. */
+function useOpenOrder(orderId: string): DetailsAction {
+  const { plant } = useShell();
+  return { label: 'Open order', href: planningLinks.orders.order({ plant, orderId }).href };
+}
+
+/**
+ * Moving without dragging (plan 07, Moving without dragging; WCAG 2.5.7): Move in the actions menu
+ * starts a move of the row as keyboard move mode does, and these controls step the start and the
+ * machine, Apply writes the draft and Cancel ends it; the status line carries the step message.
  */
 function MoveControls({
   row,
@@ -149,36 +317,12 @@ function MoveControls({
   readonly row: JobOrderRow;
   readonly onApplied: (jobOrderId: string) => void;
 }) {
-  const { snapshot, timeZone, machineName, move } = useGanttView();
-  const reasonId = useId();
-  const refused = moveRefusalOf(snapshot, row.id);
+  const { timeZone, machineName, move } = useGanttView();
   const moving = useMoveOf(move?.store, (each) => each?.state.jobOrderId === row.id);
   const preview = useMoveOf(move?.store, (each) =>
     each?.state.jobOrderId === row.id ? each.preview : undefined,
   );
-  if (move === undefined) return null;
-  if (!moving) {
-    return (
-      <>
-        <Button
-          variant="outline"
-          className="h-7.5 px-2.5 text-[0.8125rem]"
-          aria-disabled={refused !== undefined || undefined}
-          aria-describedby={refused === undefined ? undefined : reasonId}
-          onClick={() => {
-            if (refused === undefined) move.begin(row.id, 'keyboard');
-          }}
-        >
-          Move
-        </Button>
-        {refused !== undefined && (
-          <p id={reasonId} className="basis-full text-xs text-muted-foreground">
-            {refusalMessage(row.jobOrder.displayNumber, refused)}
-          </p>
-        )}
-      </>
-    );
-  }
+  if (move === undefined || !moving) return null;
   const status =
     preview === undefined
       ? 'Computing the move.'
@@ -188,9 +332,8 @@ function MoveControls({
       aria-label={`Move ${row.jobOrder.displayNumber}`}
       className="grid basis-full gap-1.5 rounded-md border border-border p-2"
     >
-      <p className="text-[0.8125rem]" aria-live="polite">
-        {status}
-      </p>
+      {/* Keyboard move mode speaks each step through announce(); this line only shows it. */}
+      <p className="text-data">{status}</p>
       <div className="flex flex-wrap gap-1.5">
         <Button variant="outline" className="h-7 px-2.5 text-xs" onClick={() => move.stepTime(-1)}>
           Earlier
@@ -283,7 +426,6 @@ function MaterialSection({
       aria-label={`Material: ${material.name}`}
       className="grid gap-1.5 rounded-md border border-warning bg-warning-subtle p-2.5 text-[0.8125rem] leading-[1.125rem]"
     >
-      <h3 className="text-xs font-semibold">Material</h3>
       <p>
         <b className="font-semibold">{material.name}</b>{' '}
         <span className="font-mono">{material.number}</span>
@@ -347,149 +489,239 @@ function JobOrderDetails({
   readonly onToggleChain: () => void;
   readonly onMoveApplied: (jobOrderId: string) => void;
 }) {
-  const {
-    snapshot,
-    timeZone,
-    machineName,
-    chainRowIds,
-    boardFields,
-    materialShortages,
-    inventory,
-  } = useGanttView();
+  const { snapshot, timeZone, machineName, boardFields, materialShortages, inventory, move } =
+    useGanttView();
   const { jobOrder, operation, order, analysis } = row;
-  const shortages = materialShortages?.get(operation.displayNumber) ?? [];
-  // Every hover field shows here too, in the plant's order (plan 07, Board accessibility; #762).
-  const hoverFields = shownFields(boardFields.hover, row, snapshot, machineName);
+  const shortages =
+    inventory === undefined ? [] : (materialShortages?.get(operation.displayNumber) ?? []);
+  const exception = exceptionOf(row, shortages, snapshot.analysis.orders[order.id]);
+  const opens = openSectionsOf(exception);
   const durations = durationsOf(row, snapshot);
   const float = analysis?.float;
   const release = releaseText(row, timeZone, snapshot.settings.retoolOverlapsLeadTime);
-  const onChain = chainRowIds.has(row.id);
+  const customer = shownFields(['customer'], row, snapshot, machineName)[0];
+  const freeFloat = shownFields(['freeFloat'], row, snapshot, machineName)[0];
+  // Every hover field shows in Details too (plan 07, Board accessibility; #762): those with no
+  // place above join At a glance, in the plant's order.
+  const others = otherHoverFields(boardFields.hover, row, snapshot, machineName);
+  const linked = linkedJobOrdersOf(row, machineName, timeZone);
+  const saved = savedSetupOf(snapshot, jobOrder.id);
+  const setupAndRun = shownFields(['setupAndRun'], row, snapshot, machineName)[0]?.value ?? '';
+  const refused = moveRefusalOf(snapshot, row.id);
+  const moving = useMoveOf(move?.store, (each) => each?.state.jobOrderId === row.id);
+  const placed = jobOrder.placement !== undefined && jobOrder.equipment !== undefined;
+  // Why Move cannot start: a move of the row already runs, the row has no place, or the plan
+  // refuses it (locked, started, held).
+  const moveReason = moving
+    ? `${jobOrder.displayNumber} is moving: use the controls in Details.`
+    : !placed
+      ? `Cannot move ${jobOrder.displayNumber}: not placed.`
+      : refused === undefined
+        ? undefined
+        : refusalMessage(jobOrder.displayNumber, refused);
+  const openOrder = useOpenOrder(order.id);
   const predecessorSendAhead =
     order.operations.find((each) => each.displayNumber === analysis?.release?.fromRow)
       ?.sendAheadQuantity ?? 0;
-  const floatLines =
-    float === undefined
-      ? ['Float unknown.']
+  const holding = analysis?.constraints.filter((line) => line.holds).length ?? 0;
+  const actions: DetailsAction[] = [
+    ...(move === undefined
+      ? []
       : [
-          `Wait ${float.waitWorkingS === 0 ? '0 min' : formatDuration(float.waitWorkingS)}. Free float ${float.freeFloatWorkingS === 0 ? '0' : formatDuration(float.freeFloatWorkingS)}. Total float ${formatDuration(float.totalFloatWorkingS)}.`,
-          `${bindingSentence(float, analysis?.release, operation.leadTimeS, predecessorSendAhead, {
-            timeZone,
-            machineName,
-            calendarName: snapshot.calendar.name,
-          })}.`,
-          `Earliest start ${formatPlantDateTime(float.earliestStartMs, timeZone)}. Latest start ${formatPlantDateTime(float.latestStartMs, timeZone)}, latest end ${formatPlantDateTime(float.latestEndMs, timeZone)}.`,
-        ];
+          {
+            label: 'Move',
+            onSelect: () => move.begin(row.id, 'keyboard'),
+            ...(moveReason !== undefined && { reason: moveReason }),
+          },
+        ]),
+    openOrder,
+    {
+      label:
+        chain !== undefined && chain.order.id === order.id ? 'Hide chain' : 'Show critical chain',
+      onSelect: onToggleChain,
+    },
+    { label: 'Lock', reason: phase1Reason },
+    { label: 'Split', reason: phase1Reason },
+  ];
   return (
     <>
-      <SheetHeader className="p-0">
-        <SheetTitle className="font-mono text-base font-semibold">
-          {operation.displayNumber} {operation.name}
-        </SheetTitle>
-        <SheetDescription className="text-data">
-          {order.article}, {quantityText(jobOrder.quantity)}, order {order.number}, deadline{' '}
-          {formatPlantDateTime(order.deadlineMs, timeZone)}
-        </SheetDescription>
-      </SheetHeader>
-      <div className="flex flex-wrap gap-1.5">
-        <Badge variant="outline">{statusLabel(jobOrder.status)}</Badge>
-        {operation.isLocked && (
-          <Badge variant="outline">
-            <Lock aria-hidden />
-            Locked
-          </Badge>
-        )}
-        {analysis?.release !== undefined && (
-          <Badge variant="outline">Released from {analysis.release.fromRow}</Badge>
-        )}
-        {onChain && (
-          <Badge variant="outline" className="border-late-foreground text-late-foreground">
-            <Link2 aria-hidden />
-            On the critical chain
-          </Badge>
-        )}
-      </div>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[0.8125rem]">
-        <dt className="text-muted-foreground">
-          <label htmlFor="gantt-detail-machine">Machine</label>
-        </dt>
-        <dd>
-          <select
-            id="gantt-detail-machine"
-            disabled
-            aria-describedby="gantt-detail-reason"
-            value={jobOrder.equipment ?? ''}
-            onChange={() => {}}
-            className="h-7 w-full rounded-md border border-input bg-background px-1.5 font-mono text-xs"
-          >
-            {operation.allowedEquipment.map((code) => (
-              <option key={code} value={code}>
-                {machineName(code)}
-              </option>
-            ))}
-          </select>
-        </dd>
-        {jobOrder.placement !== undefined && (
-          <>
-            <Field label="Start">
-              {formatPlantDateTime(jobOrder.placement.setupStartMs, timeZone)}
+      <DetailsHeader
+        title={`${operation.displayNumber} ${operation.name}`}
+        orderId={order.id}
+        orderNumber={order.number}
+        subline={`${order.article}, ${quantityText(jobOrder.quantity)}`}
+        badge={<Badge variant="outline">{statusLabel(jobOrder.status)}</Badge>}
+        exception={exception}
+        menu={<ActionsMenu name={`Actions for ${jobOrder.displayNumber}`} actions={actions} />}
+      />
+      <MoveControls row={row} onApplied={onMoveApplied} />
+      <section aria-label="At a glance">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[0.8125rem]">
+          <dt className="text-muted-foreground">
+            <label htmlFor="gantt-detail-machine">Machine</label>
+          </dt>
+          <dd>
+            <select
+              id="gantt-detail-machine"
+              disabled
+              aria-describedby="gantt-detail-reason"
+              value={jobOrder.equipment ?? ''}
+              onChange={() => {}}
+              className="h-7 w-full rounded-md border border-input bg-background px-1.5 font-mono text-xs"
+            >
+              {jobOrder.equipment === undefined && <option value="">Not placed</option>}
+              {operation.allowedEquipment.map((code) => (
+                <option key={code} value={code}>
+                  {machineName(code)}
+                </option>
+              ))}
+            </select>
+          </dd>
+          <Field label="Time">
+            {jobOrder.placement === undefined ? (
+              'Not placed'
+            ) : (
+              <>
+                {formatPlantDateTime(jobOrder.placement.setupStartMs, timeZone)} to{' '}
+                {formatPlantDateTime(jobOrder.placement.endMs, timeZone)}
+                {durations !== undefined && (
+                  <span className="block text-muted-foreground">
+                    <span>{durations.working}</span>, <span>{durations.elapsed}</span>
+                  </span>
+                )}
+              </>
+            )}
+          </Field>
+          <Field label="Deadline">
+            {formatPlantDateTime(order.deadlineMs, timeZone)}
+            {freeFloat !== undefined && `, free float ${freeFloat.value}`}
+          </Field>
+          {customer !== undefined && <Field label="Customer">{customer.value}</Field>}
+          {others.map((field) => (
+            <Field key={field.id} label={field.label}>
+              {field.value}
             </Field>
-            <Field label="End">{formatPlantDateTime(jobOrder.placement.endMs, timeZone)}</Field>
-          </>
-        )}
-        {durations !== undefined && (
-          <>
-            <Field label="Working time">{durations.working}</Field>
-            <Field label="Elapsed time">{durations.elapsed}</Field>
-          </>
-        )}
-        <Field label="Setup, run">
-          {formatDuration(jobOrder.plannedSetupS)}, {formatDuration(jobOrder.plannedRunS)}
-        </Field>
-        <Field label="Quantity">{quantityText(jobOrder.quantity)}</Field>
-      </dl>
+          ))}
+          {linked.map((each) => (
+            <Field key={each.label} label={each.label}>
+              {each.text}
+            </Field>
+          ))}
+        </dl>
+      </section>
       <p id="gantt-detail-reason" className="sr-only">
         {phase1Reason}
       </p>
-      {inventory !== undefined &&
-        shortages.map((shortage) => (
-          <MaterialSection
-            key={shortage.material.number}
-            row={row}
-            shortage={shortage}
-            inventory={inventory}
-          />
-        ))}
-      {hoverFields.length > 0 && (
-        <Section title="Hover fields">
+      <div className="grid gap-1">
+        {analysis !== undefined && (
+          <FoldSection
+            title="Constraints"
+            summary={`${holding} of ${analysis.constraints.length} hold`}
+            region={`Constraints, ${holding} of ${analysis.constraints.length} hold`}
+            defaultOpen={opens.constraints}
+          >
+            <ConstraintList lines={analysis.constraints} />
+          </FoldSection>
+        )}
+        <FoldSection
+          title="Float and timing"
+          summary={
+            float === undefined
+              ? 'float unknown'
+              : `total float ${formatDuration(float.totalFloatWorkingS)}`
+          }
+          region="Float and timing"
+        >
+          <ul className="grid gap-1 text-data">
+            {float === undefined ? (
+              <li>Float unknown.</li>
+            ) : (
+              <>
+                <li>{`Wait ${float.waitWorkingS === 0 ? '0 min' : formatDuration(float.waitWorkingS)}.`}</li>
+                <li>
+                  {`${bindingSentence(
+                    float,
+                    analysis?.release,
+                    operation.leadTimeS,
+                    predecessorSendAhead,
+                    {
+                      timeZone,
+                      machineName,
+                      calendarName: snapshot.calendar.name,
+                    },
+                  )}.`}
+                </li>
+                <li>
+                  {`Earliest start ${formatPlantDateTime(float.earliestStartMs, timeZone)}. Latest start ${formatPlantDateTime(float.latestStartMs, timeZone)}, latest end ${formatPlantDateTime(float.latestEndMs, timeZone)}.`}
+                </li>
+              </>
+            )}
+            {release !== undefined && (
+              <li>{release.charAt(0).toUpperCase() + release.slice(1)}.</li>
+            )}
+          </ul>
+        </FoldSection>
+        {inventory !== undefined && shortages.length > 0 && (
+          <FoldSection
+            title="Material"
+            summary={`${shortages.length} short`}
+            defaultOpen={opens.material}
+          >
+            <div className="grid gap-1.5">
+              {shortages.map((shortage) => (
+                <MaterialSection
+                  key={shortage.material.number}
+                  row={row}
+                  shortage={shortage}
+                  inventory={inventory}
+                />
+              ))}
+            </div>
+          </FoldSection>
+        )}
+        <FoldSection title="Setup and run" summary={setupAndRun} region="Setup and run">
           <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[0.8125rem]">
-            {hoverFields.map((field) => (
-              <Field key={field.id} label={field.label}>
-                {field.value}
+            <Field label="Setup">{formatDuration(jobOrder.plannedSetupS)}</Field>
+            <Field label="Run">{formatDuration(jobOrder.plannedRunS)}</Field>
+            {jobOrder.placement !== undefined && (
+              <Field label="Run start">
+                {formatPlantDateTime(jobOrder.placement.runStartMs, timeZone)}
               </Field>
-            ))}
+            )}
           </dl>
-        </Section>
-      )}
-      {analysis !== undefined && <ConstraintList lines={analysis.constraints} />}
-      <Section title="Float">
-        <ul className="grid gap-1 text-[0.8125rem] leading-[1.125rem]">
-          {floatLines.map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-          {release !== undefined && <li>{release.charAt(0).toUpperCase() + release.slice(1)}.</li>}
-        </ul>
-      </Section>
-      <Actions actions={['Lock', 'Split']}>
-        <MoveControls row={row} onApplied={onMoveApplied} />
-        <OpenOrder orderId={order.id} />
-        <Button variant="outline" className="h-7.5 px-2.5 text-[0.8125rem]" onClick={onToggleChain}>
-          {chain !== undefined && chain.order.id === order.id
-            ? 'Hide chain'
-            : 'Show critical chain'}
-        </Button>
-      </Actions>
+          {saved !== undefined && (
+            <p className="text-data">
+              {`${saved.displayNumber} follows ${saved.afterDisplayNumber} on ${machineName(saved.equipment)}, so the run saves ${formatDuration(saved.setupS)} of retool.`}
+            </p>
+          )}
+        </FoldSection>
+      </div>
     </>
   );
+}
+
+/** The cause of a late order: the root of its critical chain, with its machine. */
+function lateCause(
+  snapshot: GanttSnapshot,
+  orderId: string,
+  machineName: (code: string | undefined) => string,
+): string {
+  const chain = snapshot.analysis.orders[orderId]?.chain;
+  // A chain cut at its row limit has not reached its start, so it names none.
+  const root =
+    chain === undefined || chain.continues
+      ? undefined
+      : (chain.rows.find((each) => each.root) ?? chain.rows[chain.rows.length - 1]);
+  const rootRow =
+    root === undefined
+      ? undefined
+      : snapshot.productionOrders
+          .flatMap((each) => each.jobOrders)
+          .find((each) => each.id === root.jobOrderId);
+  const pointer = 'Show critical chain names the rows that bind it.';
+  return root === undefined
+    ? pointer
+    : `The critical chain starts at ${root.row} on ${machineName(rootRow?.equipment)}. ${pointer}`;
 }
 
 function OrderDetails({
@@ -504,11 +736,11 @@ function OrderDetails({
   readonly onFocusRow: (jobOrderId: string) => void;
 }) {
   const { snapshot, timeZone, machineName, runActions } = useGanttView();
-  const combineReasonId = useId();
   const { order, analysis } = row;
   const span = summarySpan(jobOrderRowsOf(row));
   const shown = chain !== undefined && chain.order.id === order.id;
   const combine = runActions?.canCombine(order.id);
+  const openOrder = useOpenOrder(order.id);
   const operations = order.operations
     .map((operation) => {
       const machine = order.jobOrders.find(
@@ -517,33 +749,36 @@ function OrderDetails({
       return `${operation.name} on ${machineName(machine)}`;
     })
     .join(', ');
+  const exception: DetailsException | undefined = analysis?.late
+    ? { kind: 'late', text: `Late by ${formatDuration(-analysis.slackElapsedS)} elapsed` }
+    : row.early === undefined
+      ? undefined
+      : { kind: 'early', text: earlyText(row.early) };
+  const actions: DetailsAction[] = [
+    ...(runActions !== undefined && combine !== undefined
+      ? [
+          {
+            label: 'Combine into a run',
+            onSelect: () => runActions.combine(order.id),
+            ...(!combine.ok && { reason: combine.reason }),
+          },
+        ]
+      : []),
+    { label: shown ? 'Hide chain' : 'Show critical chain', onSelect: onToggleChain },
+    openOrder,
+    { label: 'Plan this order', reason: planReason },
+    { label: 'Move all later by', reason: planReason },
+    { label: 'Zoom to order', reason: planReason },
+  ];
   return (
     <>
-      <SheetHeader className="p-0">
-        <SheetTitle className="font-mono text-base font-semibold">Order {order.number}</SheetTitle>
-        <SheetDescription className="text-data">
-          {order.article}, {quantityText(order.quantity)}
-          {order.priority !== null && `, priority ${order.priority}`}
-        </SheetDescription>
-      </SheetHeader>
-      <div className="flex flex-wrap gap-1.5">
-        <Badge variant="outline">{statusLabel(order.status)}</Badge>
-        {row.early !== undefined && (
-          <Badge
-            variant="outline"
-            className="border-warning bg-warning-subtle text-warning-foreground"
-          >
-            <CalendarClock aria-hidden />
-            {earlyText(row.early)}
-          </Badge>
-        )}
-        {analysis?.late && (
-          <Badge variant="outline" className="border-late-foreground bg-late text-late-foreground">
-            <Clock aria-hidden />
-            Late by {formatDuration(-analysis.slackElapsedS)}
-          </Badge>
-        )}
-      </div>
+      <DetailsHeader
+        title={`Order ${order.number}`}
+        subline={`${order.article}, ${quantityText(order.quantity)}${order.priority === null ? '' : `, priority ${order.priority}`}`}
+        badge={<Badge variant="outline">{statusLabel(order.status)}</Badge>}
+        exception={exception}
+        menu={<ActionsMenu name={`Actions for order ${order.number}`} actions={actions} />}
+      />
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[0.8125rem]">
         <Field label="Deadline">
           {formatPlantDateTime(order.deadlineMs, timeZone)},{' '}
@@ -557,15 +792,12 @@ function OrderDetails({
         )}
         {analysis !== undefined &&
           (analysis.late ? (
-            <>
-              <Field label="Late by">{formatDuration(-analysis.slackElapsedS)} elapsed</Field>
-              {analysis.lateByWorking !== undefined && (
-                <Field label="Late by, working">
-                  {formatDuration(analysis.lateByWorking.seconds)} on{' '}
-                  {machineName(analysis.lateByWorking.equipment)}
-                </Field>
-              )}
-            </>
+            analysis.lateByWorking !== undefined && (
+              <Field label="Late by, working">
+                {formatDuration(analysis.lateByWorking.seconds)} on{' '}
+                {machineName(analysis.lateByWorking.equipment)}
+              </Field>
+            )
           ) : (
             <Field label="Slack">{formatDuration(analysis.slackElapsedS)}</Field>
           ))}
@@ -598,43 +830,12 @@ function OrderDetails({
           </ul>
         </Section>
       ) : (
-        <Section title={analysis?.late ? 'Why late' : 'On time'}>
-          <p className="text-[0.8125rem] leading-[1.125rem]">
-            {analysis?.late
-              ? `${order.number} ends ${span === undefined ? '' : formatPlantDateTime(span.toMs, timeZone)} against the deadline ${formatPlantDateTime(order.deadlineMs, timeZone)}. Show critical chain names the rows that bind it.`
-              : `On time, slack ${formatDuration(analysis?.slackElapsedS ?? 0)}.`}
-          </p>
-        </Section>
+        analysis?.late && (
+          <Section title="Why late">
+            <p className="text-data">{lateCause(snapshot, order.id, machineName)}</p>
+          </Section>
+        )
       )}
-      <Actions
-        actions={['Plan this order', 'Move all later by', 'Zoom to order']}
-        reason={planReason}
-      >
-        {runActions !== undefined && combine !== undefined && (
-          <>
-            <Button
-              variant="outline"
-              className="h-7.5 px-2.5 text-[0.8125rem]"
-              aria-disabled={combine.ok ? undefined : true}
-              aria-describedby={combine.ok ? undefined : combineReasonId}
-              onClick={() => {
-                if (combine.ok) runActions.combine(order.id);
-              }}
-            >
-              Combine into a run
-            </Button>
-            {!combine.ok && (
-              <p id={combineReasonId} className="basis-full text-xs text-muted-foreground">
-                {combine.reason}
-              </p>
-            )}
-          </>
-        )}
-        <Button variant="outline" className="h-7.5 px-2.5 text-[0.8125rem]" onClick={onToggleChain}>
-          {shown ? 'Hide chain' : 'Show critical chain'}
-        </Button>
-        <OpenOrder orderId={order.id} />
-      </Actions>
     </>
   );
 }
@@ -644,26 +845,26 @@ function RunDetails({ row }: { readonly row: RunRow }) {
   const { snapshot, timeZone, machineName, runActions } = useGanttView();
   const { run, analysis } = row;
   const quantity = row.orders.reduce((sum, order) => sum + order.quantity, 0);
+  const actions: DetailsAction[] = [
+    ...(runActions === undefined
+      ? []
+      : [{ label: 'Split run', onSelect: () => runActions.split(run.id) }]),
+    { label: 'Zoom to run', reason: planReason },
+  ];
   return (
     <>
-      <SheetHeader className="p-0">
-        <SheetTitle className="font-mono text-base font-semibold">{runTitle(run)}</SheetTitle>
-        <SheetDescription className="text-data">
-          {quantityText(quantity)}, orders {orderNumbersText(run.orderNumbers)}
-        </SheetDescription>
-      </SheetHeader>
-      <div className="flex flex-wrap gap-1.5">
-        <Badge variant="outline">
-          <Layers aria-hidden />
-          Run
-        </Badge>
-        {analysis.late && (
-          <Badge variant="outline" className="border-late-foreground bg-late text-late-foreground">
-            <Clock aria-hidden />
-            {runLatenessText(analysis)}
+      <DetailsHeader
+        title={runTitle(run)}
+        subline={`${quantityText(quantity)}, orders ${orderNumbersText(run.orderNumbers)}`}
+        badge={
+          <Badge variant="outline">
+            <Layers aria-hidden />
+            Run
           </Badge>
-        )}
-      </div>
+        }
+        exception={analysis.late ? { kind: 'late', text: runLatenessText(analysis) } : undefined}
+        menu={<ActionsMenu name={`Actions for ${runTitle(run)}`} actions={actions} />}
+      />
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[0.8125rem]">
         <Field label="Deadline">
           {formatPlantDateTime(run.deadlineMs, timeZone)},{' '}
@@ -679,7 +880,6 @@ function RunDetails({ row }: { readonly row: RunRow }) {
             </Field>
           </>
         )}
-        {analysis.late && <Field label="Late by">{formatDuration(analysis.lateByS)} elapsed</Field>}
       </dl>
       <Section title="Orders">
         <ul className="grid gap-1 text-[0.8125rem] leading-[1.125rem]">
@@ -704,17 +904,6 @@ function RunDetails({ row }: { readonly row: RunRow }) {
           </ul>
         )}
       </Section>
-      <Actions actions={['Zoom to run']} reason={planReason}>
-        {runActions !== undefined && (
-          <Button
-            variant="outline"
-            className="h-7.5 px-2.5 text-[0.8125rem]"
-            onClick={() => runActions.split(run.id)}
-          >
-            Split run
-          </Button>
-        )}
-      </Actions>
     </>
   );
 }
@@ -722,16 +911,21 @@ function RunDetails({ row }: { readonly row: RunRow }) {
 function OperationDetails({ row }: { readonly row: OperationRow }) {
   const { machineName } = useGanttView();
   const { operation, order } = row;
+  const openOrder = useOpenOrder(order.id);
   return (
     <>
-      <SheetHeader className="p-0">
-        <SheetTitle className="font-mono text-base font-semibold">
-          {operation.displayNumber} {operation.name}
-        </SheetTitle>
-        <SheetDescription className="text-data">
-          {order.article}, {quantityText(operation.quantity)}, order {order.number}
-        </SheetDescription>
-      </SheetHeader>
+      <DetailsHeader
+        title={`${operation.displayNumber} ${operation.name}`}
+        orderId={order.id}
+        orderNumber={order.number}
+        subline={`${order.article}, ${quantityText(operation.quantity)}`}
+        menu={
+          <ActionsMenu
+            name={`Actions for ${operation.displayNumber}`}
+            actions={[openOrder, { label: 'Lock', reason: phase1Reason }]}
+          />
+        }
+      />
       <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[0.8125rem]">
         <Field label="Machines">{machinesText(operation, machineName)}</Field>
         <Field label="Lead time">{formatDuration(operation.leadTimeS)}</Field>
@@ -741,9 +935,6 @@ function OperationDetails({ row }: { readonly row: OperationRow }) {
         <Field label="Hard lock">{operation.isLocked ? 'yes' : 'no'}</Field>
         {row.notPlaced > 0 && <Field label="Not placed">{row.notPlaced}</Field>}
       </dl>
-      <Actions actions={['Lock']}>
-        <OpenOrder orderId={order.id} />
-      </Actions>
     </>
   );
 }
@@ -764,11 +955,13 @@ export interface GanttDetailDrawerProps {
 }
 
 /**
- * The Details drawer (plan 18, phase 1 findings; Krister, 2026-10-17): a Sheet from the right
- * that opens from a row or a block with the board's fields, the Constraints and Float sections of
- * plan 18 and, for an order, the critical chain explanation with a link per row. Its close
- * button and Escape close it, and focus returns to the row. The grid keeps the full width. In
- * phase 1 the fields and the actions are drawn but disabled, with the reason under them.
+ * The Details drawer (plan 18, Details; Krister, 2026-10-17): a Sheet from the right that opens
+ * from a row or a block, on the Gantt and on the board. Each kind of row has the same header with
+ * its actions menu (#917); a job order leads with At a glance and folds its Constraints, Float and
+ * timing, Material and Setup and run sections, and an order shows its critical chain explanation
+ * with a link per row. Its close button and Escape close it, and focus returns to the row. In
+ * phase 1 the machine select and the actions that wait for the plan server are disabled and
+ * described by the reason.
  */
 export function GanttDetailDrawer({
   row,
@@ -795,6 +988,7 @@ export function GanttDetailDrawer({
         <div className="grid content-start gap-3" data-detail-panel>
           {row?.kind === 'jobOrder' && (
             <JobOrderDetails
+              key={row.id}
               row={row}
               chain={chain}
               onToggleChain={() => onToggleChain(row.order.id)}
