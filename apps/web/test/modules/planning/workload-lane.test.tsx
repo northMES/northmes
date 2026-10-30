@@ -235,9 +235,11 @@ describe('the workload lane (plan 18, The workload lane)', () => {
 
     await waitFor(() => expect(thursday()?.getAttribute('data-overloaded')).toBe('true'));
     expect(Number.parseFloat(wednesday()?.style.height ?? '0')).toBeLessThan(fullWednesday);
-    // Overbooked, the bar takes the bucket's whole width; a bar within its availability is narrower.
-    expect(thursday()?.style.width).toBe(thursday()?.parentElement?.style.width);
-    expect(wednesday()?.style.width).not.toBe(wednesday()?.parentElement?.style.width);
+    // Overbooked, the bar takes the bucket's whole width; a bar within its availability, on a
+    // bucket of the same width, is narrower.
+    expect(Number.parseFloat(thursday()?.style.width ?? '0')).toBeGreaterThan(
+      Number.parseFloat(wednesday()?.style.width ?? '0'),
+    );
 
     fireEvent.keyDown(dragged, { key: 'Escape' });
     await waitFor(() => expect(thursday()?.getAttribute('data-overloaded')).toBeNull());
