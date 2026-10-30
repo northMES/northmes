@@ -32,6 +32,7 @@ function countingSource(): { source: GanttDataSource; loads: () => number } {
   let count = 0;
   return {
     source: {
+      ...g1DataSource,
       load: (input) => {
         count += 1;
         return g1DataSource.load(input);
