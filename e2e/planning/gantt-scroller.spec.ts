@@ -69,11 +69,14 @@ test.describe('the time scroller of the order Gantt', () => {
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
 
-    // Scroll to the right edge until the content is several views wide, as the range grows.
+    // Scroll to the right edge until the content is several views wide, as the range grows. The
+    // scroll event is dispatched as well, so a growth does not wait for the browser's next frame;
+    // a second call at the same position changes nothing.
     await expect
       .poll(() =>
         gantt.evaluate((grid) => {
           grid.scrollLeft = grid.scrollWidth;
+          grid.dispatchEvent(new Event('scroll'));
           return grid.scrollWidth / grid.clientWidth;
         }),
       )

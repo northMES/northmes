@@ -823,6 +823,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               <div
                 role="row"
                 aria-rowindex={1}
+                // As wide as its tracks, as GanttRowView's rows are (#890).
                 className="sticky top-0 z-20 grid w-max min-w-full border-b border-border bg-muted"
                 style={{ gridTemplateColumns, height: `${timeHeaderHeightRem}rem` }}
               >
@@ -839,6 +840,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 rows={unplaced}
                 gridTemplateColumns={gridTemplateColumns}
                 columnCount={columns.length}
+                stickyTree={stickyTree}
               />
               <div className="relative">
                 {flatRows.map((row, index) => {
