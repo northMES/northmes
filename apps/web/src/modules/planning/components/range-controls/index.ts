@@ -6,4 +6,5 @@ export {
   type RangeControlsProps,
 } from './range-controls.tsx';
 export { PressedGroup } from './range-controls-pressed-group.tsx';
+export { VisibleSpanText } from './range-controls-visible-span.tsx';
 export { ZoomControls, type ZoomControlsProps } from './range-controls-zoom.tsx';

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cn } from 'cn';
 import { Ellipsis, FoldHorizontal, Pencil } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import {
@@ -27,7 +28,7 @@ export interface GanttToolbarProps {
   readonly onEarlier: () => void;
   readonly onNow: () => void;
   readonly onLater: () => void;
-  readonly rangeLabel: string;
+  readonly rangeLabel: ReactNode;
   readonly options: GanttOptions;
   readonly onOptionsChange: (change: Partial<GanttOptions>) => void;
   /** The changes in the planner's draft, which the My draft button names. */

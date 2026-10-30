@@ -19,6 +19,10 @@ describe('jobOrdersSearch (ADR 0089, Zoom levels)', () => {
     expect(jobOrdersSearch({ zoom: 'year' })).toEqual({ zoom: '4weeks' });
   });
 
+  it('opens a link whose from is the visible start of the board or the Gantt at its date (ADR 0089)', () => {
+    expect(jobOrdersSearch({ from: '2026-11-03T13:20' })).toEqual({ from: '2026-11-03' });
+  });
+
   it('drops an unknown zoom', () => {
     expect(jobOrdersSearch({ zoom: 'decade' })).toEqual({});
   });

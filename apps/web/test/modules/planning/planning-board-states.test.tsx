@@ -136,16 +136,19 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
 
   it('DR22 a refusal of a later range shows no access, not the error state', async () => {
     const user = userEvent.setup();
+    // The loads answer until the planner asks for a later range, whose load is refused.
+    let refusing = false;
     const refusingLater: GanttDataSource = {
       ...g1DataSource,
       load: async (input) => {
-        if (input.from.startsWith('2026-11-08')) throw new PlanningForbidden();
+        if (refusing) throw new PlanningForbidden();
         return g1DataSource.load(input);
       },
     };
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, refusingLater, 'board');
     await screen.findByRole('grid', { name: /board/ });
 
+    refusing = true;
     await user.click(await screen.findByRole('button', { name: 'Show later range' }));
     expect(
       await screen.findByRole('heading', {

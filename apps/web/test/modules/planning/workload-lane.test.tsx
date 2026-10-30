@@ -107,7 +107,25 @@ describe('the workload lane (plan 18, The workload lane)', () => {
     ).toBe('false');
   });
 
-  it('GT5 the lane header button opens the text table: the seven production days of week 45 and the visible range, with the GT5 values of Thu 5 Nov, a closed Saturday and the range', async () => {
+  it('GT5 names a closed production day in view closed in the text table, with no load', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-06' });
+    await findGantt();
+    // With closed time shown, the view from Fri 6 Nov holds the Saturday.
+    await userEvent.click(screen.getByRole('button', { name: 'Hide closed time' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 1' }));
+
+    const table = within(screen.getByRole('dialog', { name: 'Workload on CNC 1' })).getByRole(
+      'table',
+      { name: 'Workload on CNC 1' },
+    );
+    const saturday = within(table).getByRole('rowheader', { name: 'Sat 7 Nov' }).closest('tr');
+
+    expect(
+      Array.from(saturday?.querySelectorAll('th, td') ?? []).map((cell) => cell.textContent),
+    ).toEqual(['Sat 7 Nov', '0 min', '0 min', '0 min', '0 min', '0 min', 'closed', '0 min']);
+  });
+
+  it('GT5 the lane header button opens the text table: the production days that start in view and the visible range, with the GT5 values of Thu 5 Nov and the range', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     await findGantt();
 
@@ -123,31 +141,18 @@ describe('the workload lane (plan 18, The workload lane)', () => {
       .getAllByRole('row')
       .slice(1)
       .map((row) => Array.from(row.querySelectorAll('th, td')).map((cell) => cell.textContent));
-    // Mon 2 Nov to Sun 8 Nov, then the visible range; the GT5 values of g1.expected.json are
-    // compared whole in gantt-analysis.test.ts.
-    expect(rows).toHaveLength(8);
+    // The view starts at Mon 2 Nov 00:00 and holds about 41 open hours at Week with closed time
+    // hidden, so the days that start in it are Mon 2 Nov to Fri 6 Nov (ADR 0089); the GT5 values
+    // of g1.expected.json are compared whole in gantt-analysis.test.ts.
     expect(rows.map((row) => row[0])).toEqual([
       'Mon 2 Nov',
       'Tue 3 Nov',
       'Wed 4 Nov',
       'Thu 5 Nov',
       'Fri 6 Nov',
-      'Sat 7 Nov',
-      'Sun 8 Nov',
       'Visible range',
     ]);
-    // The weekend's production days are closed buckets, drawn as nothing and named closed.
     expect(rows[5]).toEqual([
-      'Sat 7 Nov',
-      '0 min',
-      '0 min',
-      '0 min',
-      '0 min',
-      '0 min',
-      'closed',
-      '0 min',
-    ]);
-    expect(rows[7]).toEqual([
       'Visible range',
       '41 h 15 min',
       '20 h',

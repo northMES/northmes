@@ -16,7 +16,7 @@ import { Button } from '../../../../ui/primitives/button.tsx';
 import type { GanttSnapshot, WorkloadBucket } from '../../gantt-data.ts';
 import { type MoveStore, useMoveOf } from '../../move-store.ts';
 import { visibleItems } from '../../timeline/culling.ts';
-import { formatMonth, type TimeScale } from '../../timeline/time-scale.ts';
+import { formatMonth, type TimeRange, type TimeScale } from '../../timeline/time-scale.ts';
 import {
   type BucketKind,
   bucketKindOf,
@@ -406,9 +406,15 @@ export function GanttWorkloadPanel({
   stickyWidth,
   timeWidth,
   moveStore,
+  visible,
 }: {
   readonly snapshot: GanttSnapshot;
   readonly scale: TimeScale;
+  /**
+   * The span in view when scrolling last stopped: the text table lists its buckets and sums them
+   * as the visible range, while the lanes draw the whole buffer (ADR 0089, The endless axis).
+   */
+  readonly visible?: TimeRange;
   readonly treeWidth: number;
   /**
    * The width of the tree columns that stick in the treegrid: all of them, or the Name column
@@ -474,7 +480,9 @@ export function GanttWorkloadPanel({
         <WorkloadTable
           key={open.code}
           name={`Workload on ${open.name}`}
-          buckets={lanesOf(open.code)}
+          buckets={
+            visible === undefined ? lanesOf(open.code) : visibleItems(lanesOf(open.code), visible)
+          }
           kind={kind}
           timeZone={snapshot.plant.timeZone}
           dialogId={`${idBase}-${open.code}-table`}

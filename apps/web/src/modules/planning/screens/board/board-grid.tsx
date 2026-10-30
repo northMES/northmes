@@ -60,6 +60,8 @@ export interface BoardGridProps {
   readonly height: number | undefined;
   /** True while the grid still draws the range before, and the range it names is loading. */
   readonly busy?: boolean;
+  /** The scroll listener of the endless axis (ADR 0089). */
+  readonly onScroll?: () => void;
 }
 
 /**
@@ -202,6 +204,7 @@ export function BoardGrid({
   gridRef,
   height,
   busy,
+  onScroll,
 }: BoardGridProps) {
   const columns = `${machineWidth}px ${timeWidth}px`;
   const machineCount = model.groups.reduce((sum, group) => sum + group.machines.length, 0);
@@ -375,6 +378,7 @@ export function BoardGrid({
       aria-rowcount={rowIndex}
       aria-busy={busy || undefined}
       onKeyDown={onKeyDown}
+      onScroll={onScroll}
       className="min-h-0 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
       style={{
         ...(height !== undefined && { height: `${height}px` }),

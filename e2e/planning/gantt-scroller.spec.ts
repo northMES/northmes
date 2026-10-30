@@ -1,15 +1,77 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { planningLinks } from '@northmes/planning-contracts';
+import type { Locator } from '@playwright/test';
 import { expect, plant, test } from '../fixtures.ts';
 
-// The time scroller of the order Gantt (#685): a sideways overscroll at an edge never navigates
-// the browser history, and the loaded range grows by a span of the preset as the planner scrolls
-// towards an edge, with the chosen start kept in the URL.
+// The time scroller of the order Gantt: a sideways overscroll at an edge never navigates the
+// browser history (#685), and the axis is endless (ADR 0089, #891): the time area is a buffer of
+// three viewport widths that moves by one width near an edge, with the scroll position corrected
+// so the view stays, and the toolbar's range text and `from` in the URL follow the view (#883).
 
 /** The Gantt page of the seed plant with its search. */
 function ganttHref(search: Record<string, string>): string {
   return `${planningLinks.gantt({ plant }).href}?${new URLSearchParams(search).toString()}`;
+}
+
+/** Scrolls the grid to its right edge a number of times, each time waiting for the buffer to move. */
+async function toRightEdge(grid: Locator, times: number): Promise<void> {
+  for (let step = 0; step < times; step += 1) {
+    await grid.evaluate(async (element) => {
+      element.scrollLeft = element.scrollWidth;
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+  }
+}
+
+/**
+ * Scrolls the grid by a fifth of its width a number of times in one direction. Before each step it
+ * takes the header cell at three quarters of the view, and after the step finds that cell again by
+ * its name: it must have moved by the step, also when the buffer moved under it. Returns how many
+ * steps moved the buffer and the worst miss in pixels.
+ */
+async function scrollSteps(
+  grid: Locator,
+  steps: number,
+  direction: 1 | -1,
+): Promise<{ moves: number; worst: number }> {
+  return grid.evaluate(
+    async (element, { steps, direction }) => {
+      const frames = () =>
+        new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const cells = () => [...element.querySelectorAll<HTMLElement>('[data-tier="bottom"]')];
+      const nameOf = (cell: HTMLElement) => cell.querySelector('.sr-only')?.textContent ?? '';
+      const overlayStart = () =>
+        (element.querySelector('[data-overlay]') as HTMLElement).getBoundingClientRect().left;
+      const box = element.getBoundingClientRect();
+      const x = box.left + box.width * 0.75;
+      // A fifth of the visible time area, less than the quarter-width margin, so no step reaches past
+      // the buffer's edge before it moves.
+      const sticky = Number.parseFloat(getComputedStyle(element).scrollPaddingInlineStart) || 0;
+      const step = Math.round((element.clientWidth - sticky) / 5) * direction;
+      let moves = 0;
+      let worst = 0;
+      for (let index = 0; index < steps; index += 1) {
+        const cell = cells().find((each) => {
+          const rect = each.getBoundingClientRect();
+          return rect.left <= x && x < rect.right;
+        });
+        if (cell === undefined) throw new Error('No header cell under the point');
+        const name = nameOf(cell);
+        const left = cell.getBoundingClientRect().left;
+        const start = overlayStart();
+        element.scrollLeft += step;
+        await frames();
+        const again = cells().find((each) => nameOf(each) === name);
+        if (again === undefined) throw new Error(`The header cell ${name} is gone`);
+        worst = Math.max(worst, Math.abs(left - step - again.getBoundingClientRect().left));
+        // The time column moves by the step unless the buffer moved under it.
+        if (Math.abs(start - step - overlayStart()) > 1) moves += 1;
+      }
+      return { moves, worst };
+    },
+    { steps, direction },
+  );
 }
 
 test.describe('the time scroller of the order Gantt', () => {
@@ -30,40 +92,144 @@ test.describe('the time scroller of the order Gantt', () => {
     expect(overscroll).toEqual({ x: 'contain', y: 'contain' });
   });
 
-  test('#685 scrolling to the right edge loads the next span of the preset and keeps from', async ({
+  test('#891 scrolls far into the future and back with the date under a point kept at every step, and the range text follows the view', async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
+    await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+    await expect(gantt).toBeVisible();
+    await expect(page.locator('[data-block="jo-1003-10"]')).toBeVisible();
+    const rangeText = page.locator('[data-range-text]');
+    await expect(rangeText).toHaveText(/^W45, Mon 2 Nov to /);
+    const first = await rangeText.textContent();
+
+    // Forty steps of a fifth of the view each way: the buffer moves every few steps, and each
+    // header cell in view moves by exactly the step, so no move shifts the view.
+    const far = await scrollSteps(gantt, 40, 1);
+    expect(far.moves).toBeGreaterThan(5);
+    expect(far.worst).toBeLessThanOrEqual(1);
+    await expect(rangeText).not.toHaveText(/^W4[56], /);
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get('from'))
+      .toMatch(/^2026-1[12]-\d\dT/);
+    await checkA11y('the order Gantt scrolled far into the future');
+
+    const back = await scrollSteps(gantt, 40, -1);
+    expect(back.moves).toBeGreaterThan(5);
+    expect(back.worst).toBeLessThanOrEqual(1);
+    await expect(rangeText).toHaveText(first ?? '');
+    await expect(page.locator('[data-block="jo-1003-10"]')).toBeVisible();
+  });
+
+  for (const zoom of ['quarter-hours', 'hours', 'day', 'week', '4weeks', 'quarter', 'year']) {
+    test(`ADR0089 at ${zoom}, after the view reaches both edges three times, the Name column stays at the grid's edge, no header labels overlap or start in a gap, and the range text names the start in the URL`, async ({
+      page,
+      signIn,
+    }) => {
+      await signIn(ganttHref({ zoom, from: '2026-11-04' }));
+      const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+      await expect(gantt).toBeVisible();
+
+      await toRightEdge(gantt, 3);
+      await gantt.evaluate(async (grid) => {
+        for (let step = 0; step < 3; step += 1) {
+          grid.scrollLeft = 0;
+          await new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          );
+        }
+      });
+      await expect.poll(() => new URL(page.url()).searchParams.get('from')).toMatch(/T\d\d:\d\d$/);
+
+      const layout = await gantt.evaluate((grid) => {
+        const box = (each: Element) => {
+          const rect = each.getBoundingClientRect();
+          return { left: rect.left, right: rect.right };
+        };
+        const header = grid.querySelector(
+          '[role="columnheader"][aria-label="Time"]',
+        ) as HTMLElement;
+        const shown = (each: Element) => each.querySelector('[data-tick-label]')?.textContent ?? '';
+        return {
+          grid: grid.getBoundingClientRect().left + grid.clientLeft,
+          name: (
+            grid.querySelector('[aria-rowindex="1"] > [role="columnheader"]') as HTMLElement
+          ).getBoundingClientRect().left,
+          gaps: [...header.querySelectorAll('[data-header-gap]')].map(box),
+          labels: [...header.querySelectorAll('[data-tier]')]
+            .filter((each) => shown(each) !== '')
+            .map((each) => ({
+              ...box(each),
+              tier: each.getAttribute('data-tier') ?? '',
+              text: shown(each),
+            })),
+        };
+      });
+      expect(layout.name).toBeCloseTo(layout.grid, 0);
+      for (const tier of ['top', 'bottom']) {
+        const labels = layout.labels
+          .filter((label) => label.tier === tier)
+          .sort((a, b) => a.left - b.left);
+        for (const [index, label] of labels.entries()) {
+          const next = labels[index + 1];
+          if (next === undefined) continue;
+          expect(label.right, `${label.text} ends before ${next.text}`).toBeLessThanOrEqual(
+            next.left + 0.5,
+          );
+        }
+      }
+      for (const label of layout.labels) {
+        for (const gap of layout.gaps) {
+          expect(
+            label.left >= gap.left - 0.5 && label.left < gap.right - 0.5,
+            `${label.text} starts inside a gap`,
+          ).toBe(false);
+        }
+      }
+      // The range text names the date of the start in the URL: its day and month, or its month at
+      // the levels that span months.
+      const from = new URL(page.url()).searchParams.get('from') ?? '';
+      const [year, month, day] = from.slice(0, 10).split('-').map(Number);
+      const monthName = new Date(Date.UTC(year ?? 0, (month ?? 1) - 1, 1)).toLocaleString('en-GB', {
+        month: 'long',
+        timeZone: 'UTC',
+      });
+      const expected =
+        zoom === 'quarter' || zoom === 'year'
+          ? `${monthName} ${year}`
+          : `${day} ${monthName.slice(0, 3)}`;
+      await expect(page.locator('[data-range-text]')).toContainText(expected);
+    });
+  }
+
+  test('#883 the buffer stays three viewport widths however often the view reaches the right edge', async ({
     page,
     signIn,
   }) => {
-    await signIn(ganttHref({ zoom: 'day', from: '2026-11-04' }));
+    await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
-    const header = gantt.getByRole('columnheader', { name: 'Time' });
-    await expect(header).toContainText('Fri 6 Nov');
-    // Closed time is hidden by default, so the closed weekend has no label (#892): the next span
-    // shows from its first open weekday.
-    await expect(header).not.toContainText('Mon 9 Nov');
+    const widthOf = () =>
+      gantt.evaluate(
+        (grid) =>
+          (grid.querySelector('[data-overlay]') as HTMLElement).getBoundingClientRect().width,
+      );
+    const width = await widthOf();
 
-    await gantt.evaluate((grid) => {
-      grid.scrollLeft = grid.scrollWidth;
-    });
-
-    await expect(header).toContainText('Mon 9 Nov');
-    expect(new URL(page.url()).searchParams.get('from')).toBe('2026-11-04');
-    await expect(page.getByText('Wed 4 Nov to Fri 6 Nov')).toBeVisible();
-    // The grid keeps scrolling: the content is wider than before and the rows kept their height.
-    const widths = await gantt.evaluate((grid) => ({
-      scroll: grid.scrollWidth,
-      client: grid.clientWidth,
-      row: (grid.querySelector('[data-row-id="jo-1003-10"]') as HTMLElement).getBoundingClientRect()
-        .height,
-    }));
-    expect(widths.scroll).toBeGreaterThan(widths.client);
-    expect(widths.row).toBeGreaterThan(40);
+    for (let step = 0; step < 6; step += 1) {
+      await gantt.evaluate(async (grid) => {
+        grid.scrollLeft = grid.scrollWidth;
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      });
+      expect(Math.abs((await widthOf()) - width)).toBeLessThanOrEqual(7);
+    }
   });
 
   // A sticky cell cannot leave its row, so a row only as wide as the grid let the tree columns
   // scroll away once the scroll position passed the row's width (#890).
-  test('#890 the Name and Deadline columns stay in view after the range grows and the grid scrolls to the far right', async ({
+  test('#890 the Name and Deadline columns stay in view after the buffer moves and the grid scrolls to the far right', async ({
     page,
     signIn,
   }) => {
@@ -71,23 +237,12 @@ test.describe('the time scroller of the order Gantt', () => {
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
 
-    // Scroll to the right edge until the content is several views wide, as the range grows. The
-    // scroll event is dispatched as well, so a growth does not wait for the browser's next frame;
-    // a second call at the same position changes nothing.
-    await expect
-      .poll(() =>
-        gantt.evaluate((grid) => {
-          grid.scrollLeft = grid.scrollWidth;
-          grid.dispatchEvent(new Event('scroll'));
-          return grid.scrollWidth / grid.clientWidth;
-        }),
-      )
-      .toBeGreaterThan(4);
-    await gantt.evaluate((grid) => {
-      grid.scrollLeft = grid.scrollWidth;
-    });
+    // Scroll to the right edge a few times, so the buffer moves, then to its far right, measured
+    // before the browser reports that scroll.
+    await toRightEdge(gantt, 3);
 
     const edges = await gantt.evaluate((grid) => {
+      grid.scrollLeft = grid.scrollWidth;
       const rect = (selector: string) =>
         (grid.querySelector(selector) as HTMLElement).getBoundingClientRect();
       return {
@@ -145,7 +300,7 @@ test.describe('the time scroller of the order Gantt', () => {
 
   // The workload lanes had the treegrid rows' defect: a lane as wide as its scroller took its
   // sticky label with it once the scroll passed the lane's width (#910).
-  test('#910 the workload labels stay in view, as wide as the sticky tree columns, after the range grows and the panel scrolls to the far right', async ({
+  test('#910 the workload labels stay in view, as wide as the sticky tree columns, after the buffer moves and the panel scrolls to the far right', async ({
     page,
     signIn,
   }) => {
@@ -158,16 +313,8 @@ test.describe('the time scroller of the order Gantt', () => {
     const label = page.getByRole('button', { name: 'Workload on CNC 1' });
     await expect(label).toBeVisible();
 
-    // Grow the range as the #890 test does, so the lanes are several views wide.
-    await expect
-      .poll(() =>
-        gantt.evaluate((grid) => {
-          grid.scrollLeft = grid.scrollWidth;
-          grid.dispatchEvent(new Event('scroll'));
-          return grid.scrollWidth / grid.clientWidth;
-        }),
-      )
-      .toBeGreaterThan(4);
+    // Move the buffer as the #890 test does; the lanes are three views wide.
+    await toRightEdge(gantt, 3);
 
     // The grid is wide enough for every tree column to stick, so the tree headers sit side by side
     // at the grid's start edge: the label sticks as wide as all of them.

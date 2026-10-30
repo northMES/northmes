@@ -2,17 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type GanttDataSource, g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { politeRegionId } from '../../../src/ui/lib/announce.ts';
-import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
+import { findGantt, measureGridsAt, renderGanttRoute } from './gantt-fixtures.tsx';
 
-afterEach(cleanup);
-
-/** Gives the grid the visible width the test browser has no layout for. */
-function widen(gantt: HTMLElement, clientWidth: number) {
-  Object.defineProperty(gantt, 'clientWidth', { value: clientWidth, configurable: true });
-}
+// The grid measures 1 400 px, as a laid-out page would report it.
+beforeEach(() => measureGridsAt(1400));
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 /**
  * A Ctrl+wheel event over the grid at a viewport x, and whether its default was prevented. The
@@ -110,7 +110,6 @@ describe('the zoom of the order Gantt (ADR 0089, Zoom levels)', () => {
   it('#896 Ctrl+wheel over the time area steps one level per gesture and keeps the page from zooming; a plain wheel and a Ctrl+wheel over the tree columns are left to the browser', async () => {
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
-    widen(gantt, 1400);
 
     expect(ctrlWheel(gantt, -40, 1200, false)).toBe(false);
     expect(ctrlWheel(gantt, -40, 50)).toBe(false);
@@ -131,8 +130,7 @@ describe('the zoom of the order Gantt (ADR 0089, Zoom levels)', () => {
 
   it('#896 Zoom to fit fits the selected order, and says so', async () => {
     const router = renderGanttRoute({ zoom: 'year', from: '2026-11-01', order: 'po-1003' });
-    const gantt = await findGantt();
-    widen(gantt, 1400);
+    await findGantt();
 
     await userEvent.click(
       within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {
@@ -143,7 +141,8 @@ describe('the zoom of the order Gantt (ADR 0089, Zoom levels)', () => {
     // Order 1003 runs from Wed 4 Nov 08:00 to Thu 5 Nov 06:15, a night of closed time between,
     // which Hide closed time (on by default) compresses: Hours holds it in the view.
     await waitFor(() => expect(router.state.location.search.zoom).toBe('hours'));
-    expect(router.state.location.search.from).toBe('2026-11-04');
+    // from names the visible start (ADR 0089), a step before the order's start.
+    expect(router.state.location.search.from).toMatch(/^2026-11-04T0[67]:/);
     await waitFor(() =>
       expect(document.getElementById(politeRegionId)?.textContent).toBe(
         'Zoomed to fit order 1003, zoom level Hours',
@@ -154,7 +153,6 @@ describe('the zoom of the order Gantt (ADR 0089, Zoom levels)', () => {
   it('#896 a two-finger pinch on a touchscreen steps one level per pinch, and the grid leaves pinch zoom to it', async () => {
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
-    widen(gantt, 1400);
     expect(gantt.style.touchAction).toBe('pan-x pan-y');
 
     touch(gantt, 'touchstart', [
@@ -178,7 +176,6 @@ describe('the zoom of the order Gantt (ADR 0089, Zoom levels)', () => {
   it("#896 Safari's trackpad pinch over the time area steps one level and keeps the page from zooming", async () => {
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
-    widen(gantt, 1400);
 
     expect(gesture(gantt, 'gesturestart', 1, 1200)).toBe(true);
     expect(gesture(gantt, 'gesturechange', 0.6, 1200)).toBe(true);
@@ -188,14 +185,13 @@ describe('the zoom of the order Gantt (ADR 0089, Zoom levels)', () => {
   it('#896 Now keeps the level and rebuilds the range around now, also at Quarter hours', async () => {
     const router = renderGanttRoute({ zoom: 'quarter-hours', from: '2026-11-05' });
     const gantt = await findGantt();
-    widen(gantt, 1400);
     Object.defineProperty(gantt, 'scrollLeft', { value: 0, configurable: true, writable: true });
 
     await userEvent.click(screen.getByRole('button', { name: 'Now' }));
 
     // G1's now is Mon 2 Nov 09:40, 3 h 40 min into the range at 240 px an hour: the grid scrolls
     // so now sits at the centre of the time area instead of the range's start at its left edge.
-    await waitFor(() => expect(router.state.location.search.from).toBe('2026-11-02'));
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-11-02T0[789]:/));
     expect(router.state.location.search.zoom).toBe('quarter-hours');
     await waitFor(() => expect(gantt.scrollLeft).toBeGreaterThan(0));
   });
@@ -223,9 +219,13 @@ describe('the zoom of the order Gantt (ADR 0089, Zoom levels)', () => {
 
     await userEvent.click(within(zoom).getByRole('button', { name: 'Zoom in' }));
     await waitFor(() => expect(router.state.location.search.zoom).toBe('day'));
+    // With no grid drawn the zoom still keeps the centre of the view, so the start stays on the
+    // week the URL named.
+    expect(router.state.location.search.from).toMatch(/^2026-11-(09|1\d)T/);
     await userEvent.click(screen.getByRole('button', { name: 'Now' }));
-    // G1's now is Mon 2 Nov 09:40.
-    await waitFor(() => expect(router.state.location.search.from).toBe('2026-11-02'));
+    // G1's now, Mon 2 Nov 09:40, sits at the centre of the view; with closed time hidden, the half
+    // of the view before it reaches back over the weekend to Friday.
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-10-30T/));
   });
 
   it('#896 at the end of the ladder Zoom out keeps focus and minus says why it steps no further', async () => {
@@ -261,22 +261,21 @@ describe('the zoom of the order Gantt (ADR 0089, Zoom levels)', () => {
     expect(router.state.location.search.zoom).toBe('week');
   });
 
-  it('#896 Now with now already in the range scrolls to it without a new range', async () => {
-    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
-    const gantt = await findGantt();
-    widen(gantt, 1400);
-    Object.defineProperty(gantt, 'scrollLeft', { value: 0, configurable: true, writable: true });
+  it('ADR0089 Now rebuilds the buffer around now at the centre of the view and keeps the level', async () => {
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-09' });
+    await findGantt();
 
     await userEvent.click(screen.getByRole('button', { name: 'Now' }));
 
-    await waitFor(() => expect(gantt.scrollLeft).toBeGreaterThan(0));
-    expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
+    // G1's now is Mon 2 Nov 09:40; the view starts half a view before it, which with closed time
+    // hidden is 26 open hours back, on Wed 28 Oct.
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-10-28T/));
+    expect(router.state.location.search.zoom).toBe('week');
   });
 
   it('#896 zooms no level while a block is dragged, so the drop stays under the pointer', async () => {
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
-    widen(gantt, 1400);
     const block = gantt.querySelector('[data-block="jo-1001-10"]') as HTMLElement;
     const pointer = { pointerId: 1, button: 0, isPrimary: true, clientY: 300 };
     fireEvent.pointerDown(block, { ...pointer, clientX: 900 });

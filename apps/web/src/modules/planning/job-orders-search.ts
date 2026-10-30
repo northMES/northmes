@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { z } from 'zod';
 import type { ZoomPreset } from './gantt-data.ts';
+import { plantDateTime } from './gantt-search.ts';
 import { presetOfLevel, zoomLevelIds } from './timeline/time-scale.ts';
 
 /** The sortable columns of the job order table, by their column ids. */
@@ -44,7 +45,11 @@ const sortValues = [
 /** The URL keys, each of which falls back to its default on its own (ADR 0062). */
 const searchKeys = z.object({
   zoom: z.enum(zoomLevelIds).transform(presetOfLevel).optional().catch(undefined),
-  from: z.iso.date().optional().catch(undefined),
+  // A link from the board or the Gantt names their visible start, which opens at its date.
+  from: z
+    .union([z.iso.date(), plantDateTime.transform((value) => value.slice(0, 10))])
+    .optional()
+    .catch(undefined),
   late: z
     .union([z.literal(1), z.literal('1'), z.literal(true)])
     .transform(() => 1 as const)
