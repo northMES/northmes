@@ -814,7 +814,7 @@ The full rules are in [08-pyramid-connector.md](08-pyramid-connector.md) and [AD
 ### In release 1
 
 - Machine rows grouped by equipment group with group colors and collapse; row virtualization; sticky time header and machine column.
-- A linear axis with four zoom presets from hours to weeks, in plant time with a zone label. [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) replaces the presets with a ladder of zoom levels that keeps the four.
+- A linear axis with four zoom presets from hours to weeks, in plant time with a zone label. [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) replaces the presets with a ladder of zoom levels that keeps the four, and [ADR 0090](../adr/0090-a-smooth-zoom-and-a-slim-bar-above-the-timeline-on-the-planning-board-and-the-order-gantt.md) (proposed) makes the zoom continuous with the levels as bands.
 - Non-working shading per machine from the availability query.
 - Blocks with settings-driven fields and a hover card that includes ERP free fields; the fill is the order color.
 - Move in time and between allowed machines with snapping: first to the zoom preset's step, then forward to the next working instant on the target machine. Snap steps per preset are set in the board design task, and per zoom level in [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md).
@@ -886,7 +886,7 @@ Board settings choose which fields show on a block and which on hover, including
 - The block menu (click, context-menu key, Shift+F10) lists Move, Lock or unlock, Break lock and Open order. Its Move dialog lists every allowed machine.
 - Keyboard move mode: M on a focused block enters move mode; Left and Right step one snap slot; Up and Down step through allowed machines and skip collapsed groups; Enter commits to the draft; Escape cancels. Focus stays on the moving block, with polite step messages ("CNC2, Tue 3 Nov 07:30 to 11:45. Not saved."), debounced to about 300 ms.
 - Range extension follows the move preview, not focus; under [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) the buffer moves instead of the range growing. After a commit, focus returns to the block by id, because the block remounts under another row.
-- Drag-to-pan has alternatives: visible scrollbars, toolbar buttons Earlier, Later, Now and Go to date, and zoom buttons beside Ctrl+wheel.
+- Drag-to-pan has alternatives: visible scrollbars, toolbar buttons Earlier, Later, Now and Go to date, and zoom buttons beside Ctrl+wheel. Under [ADR 0090](../adr/0090-a-smooth-zoom-and-a-slim-bar-above-the-timeline-on-the-planning-board-and-the-order-gantt.md) (proposed) the bar keeps Go to now, Alt+Page Up and Alt+Page Down take the place of Earlier and Later, and the zoom buttons sit over the time area.
 
 ### Grid semantics and focus
 
