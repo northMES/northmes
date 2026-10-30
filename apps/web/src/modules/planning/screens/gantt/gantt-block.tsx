@@ -4,10 +4,11 @@
 import type { JobOrderSpan } from '@northmes/planning-domain';
 import { cn } from 'cn';
 import { Clock, Lock, Pencil, TriangleAlert } from 'lucide-react';
-import { type KeyboardEvent, type PointerEvent, useRef } from 'react';
+import { type KeyboardEvent, type PointerEvent, useLayoutEffect, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import { blockLines } from '../../board-fields.ts';
 import { useMoveOf } from '../../move-store.ts';
+import { autoscrollStep, visibleAreaOf } from '../../timeline/autoscroll.ts';
 import type { TimeScale } from '../../timeline/time-scale.ts';
 import { blockName, blockStates } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
@@ -60,10 +61,26 @@ export function GanttBlock({
   const { scale, snapshot, machineName, draftRowIds, move, boardFields, materialShortages } =
     useGanttView();
   const { jobOrder, operation, order } = row;
-  // The press in progress: where it started, and whether it has become a drag.
-  const press = useRef<{ clientX: number; setupStartMs: number; dragging: boolean } | undefined>(
-    undefined,
-  );
+  // The press in progress: where it started, whether it has become a drag, where the pointer is,
+  // and the scroller it drags in with its position at the start and its autoscroll frame (#899).
+  const press = useRef<
+    | {
+        clientX: number;
+        setupStartMs: number;
+        dragging: boolean;
+        pointerX: number;
+        pointerY: number;
+        scroller: HTMLElement | null;
+        scrollLeft: number;
+        frame?: number;
+      }
+    | undefined
+  >(undefined);
+  // The scale and the move of the latest render, for the autoscroll frames to read.
+  const latest = useRef({ scale, move });
+  useLayoutEffect(() => {
+    latest.current = { scale, move };
+  });
   // The click the browser fires after a drop is not a selection.
   const dropped = useRef(false);
   // Only how this row moves, if it does: the position of a move draws in its preview layer (#898).
@@ -112,11 +129,46 @@ export function GanttBlock({
 
   const onPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0 || move === undefined) return;
+    const scroller = event.currentTarget.closest<HTMLElement>('[role="treegrid"]');
     press.current = {
       clientX: event.clientX,
       setupStartMs: placement.setupStartMs,
       dragging: false,
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+      scroller,
+      scrollLeft: scroller?.scrollLeft ?? 0,
     };
+  };
+  // The drop snaps first to the preset's step, then forward to working time in the preview. The
+  // pointer's travel counts the time area's scroll since the press, so the preview follows an
+  // autoscroll under a pointer that stands still.
+  const previewPointer = (current: NonNullable<typeof press.current>) => {
+    const { scale: at, move: moving } = latest.current;
+    const scrolled = (current.scroller?.scrollLeft ?? 0) - current.scrollLeft;
+    const dx = current.pointerX - current.clientX + scrolled;
+    moving?.previewAt(at.snap(at.instant(at.x(current.setupStartMs) + dx)));
+  };
+  // One frame of autoscroll (#899): near the left or right edge of the visible time area the view
+  // scrolls, within the content it has, and the preview follows; the frames stop at the content's
+  // end, when the pointer leaves the margin, and on the drop. The range does not grow during a drag
+  // (the screen holds it), and the view does not scroll up or down: the block moves in time only,
+  // so a vertical scroll would carry it out of view.
+  const autoscroll = () => {
+    const current = press.current;
+    if (current?.dragging !== true || current.scroller === null) return;
+    current.frame = undefined;
+    const { scroller } = current;
+    const { dx } = autoscrollStep(
+      { x: current.pointerX, y: current.pointerY },
+      visibleAreaOf(scroller),
+    );
+    const end = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+    const scrollLeft = Math.max(0, Math.min(end, scroller.scrollLeft + dx));
+    if (scrollLeft === scroller.scrollLeft) return;
+    scroller.scrollLeft = scrollLeft;
+    previewPointer(current);
+    current.frame = requestAnimationFrame(autoscroll);
   };
   const onPointerMove = (event: PointerEvent<HTMLButtonElement>) => {
     const current = press.current;
@@ -135,12 +187,15 @@ export function GanttBlock({
         // A test browser without pointer capture still delivers the events to the block.
       }
     }
-    // The drop snaps first to the preset's step, then forward to working time in the preview.
-    move.previewAt(scale.snap(scale.instant(scale.x(current.setupStartMs) + dx)));
+    current.pointerX = event.clientX;
+    current.pointerY = event.clientY;
+    previewPointer(current);
+    current.frame ??= requestAnimationFrame(autoscroll);
   };
   const endPress = (commit: boolean) => {
     const current = press.current;
     press.current = undefined;
+    if (current?.frame !== undefined) cancelAnimationFrame(current.frame);
     if (current?.dragging !== true || move === undefined) return;
     dropped.current = true;
     if (commit) move.commit();
@@ -367,12 +422,24 @@ function GanttMovePreview({
   const preview = useMoveOf(move?.store, (each) =>
     each?.state.jobOrderId === jobOrderId ? each.preview : undefined,
   );
+  const movedBy = useMoveOf(move?.store, (each) =>
+    each?.state.jobOrderId === jobOrderId ? each.state.source : undefined,
+  );
   const ghost = useMoveOf(move?.store, (each) => each?.preview?.ghosts.get(jobOrderId));
+  const outline = useRef<HTMLSpanElement>(null);
+  // A step in keyboard move mode past the visible edge scrolls the preview into view, past the
+  // sticky columns the grid's scroll padding keeps clear (#899).
+  useLayoutEffect(() => {
+    if (movedBy === 'keyboard' && preview !== undefined) {
+      outline.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+  }, [movedBy, preview]);
   if (preview !== undefined) {
     const box = blockBox(scale, preview.span);
     return (
       <>
         <span
+          ref={outline}
           aria-hidden
           data-move-preview={jobOrderId}
           data-from-ms={preview.span.setupStartMs}

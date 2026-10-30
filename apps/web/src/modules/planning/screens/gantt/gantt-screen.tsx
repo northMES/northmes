@@ -292,6 +292,9 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     const previous = lastScrollLeft.current;
     lastScrollLeft.current = scrollLeft;
     if (clientWidth <= 0 || scrollLeft === previous) return;
+    // A pointer drag scrolls within the range it has: a range that grew under it would move the
+    // axis under the pointer, so the range grows after the drop (#899).
+    if (moveStore.get()?.state.source === 'pointer') return;
     if (scrollLeft > previous && scrollLeft + clientWidth >= scrollWidth - clientWidth) {
       setExtension((current) => ({ ...current, after: current.after + 1 }));
     } else if (scrollLeft < previous && scrollLeft <= clientWidth) {

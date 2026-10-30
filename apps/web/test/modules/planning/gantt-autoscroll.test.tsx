@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cleanup, fireEvent, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { type GanttDataSource, g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
@@ -35,6 +35,7 @@ function layOut(gantt: HTMLElement) {
     Object.defineProperty(gantt, key, { value, configurable: true });
   }
   Object.defineProperty(gantt, 'scrollLeft', { value: 500, configurable: true, writable: true });
+  gantt.style.scrollPaddingInlineStart = '200px';
   gantt.getBoundingClientRect = () => DOMRect.fromRect({ x: 0, y: 0, width: 800, height: 600 });
 }
 
@@ -55,6 +56,7 @@ describe('the time area scrolls while a block is dragged to its edge (#899)', ()
     const { source, loads } = countingSource();
     renderGanttRoute({ zoom: 'day', from: '2026-11-04' }, source);
     const gantt = await findGantt();
+    const loaded = loads();
     layOut(gantt);
     const block = blockOf(gantt, 'jo-1001-10');
 
@@ -72,7 +74,7 @@ describe('the time area scrolls while a block is dragged to its edge (#899)', ()
 
     await waitFor(() => expect(gantt.querySelector('[data-move-preview]')).toBeNull());
     const scrolledTo = gantt.scrollLeft;
-    expect(loads()).toBe(1);
+    expect(loads()).toBe(loaded);
     // The drop ends the scrolling.
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(gantt.scrollLeft).toBe(scrolledTo);
