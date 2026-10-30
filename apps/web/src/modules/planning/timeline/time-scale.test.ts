@@ -256,4 +256,78 @@ describe('the header tiers with closed time hidden (ADR 0089, Header tiers)', ()
     expect(monday?.widthPx).toBe(16 * 16);
     expect(top[1]?.x).toBe(compressed.x(local(3, 6)));
   });
+
+  it('#892 gives a cell wholly inside a gap no tick, so the weekend holds no label', () => {
+    expect(top.map((tick) => tick.label)).toEqual([
+      'Mon 2 Nov',
+      'Tue 3 Nov',
+      'Wed 4 Nov',
+      'Thu 5 Nov',
+      'Fri 6 Nov',
+    ]);
+    for (const tick of compressed.ticks()) {
+      expect(compressed.inGap(tick.ms) && tick.x === compressed.x(tick.ms)).toBe(false);
+      for (const gap of compressed.gaps) {
+        expect(tick.x >= gap.x && tick.x < gap.x + gap.widthPx).toBe(false);
+      }
+    }
+  });
+
+  it('#892 uses the long label where it fits its cell, then the short one, then none', () => {
+    // Monday open 06:00 to 10:00 (64 px), Tuesday 06:00 to 07:00 (16 px), Wednesday 06:00 to 08:00.
+    const short = {
+      closed: [
+        { fromMs: local(2, 0), toMs: local(2, 6) },
+        { fromMs: local(2, 10), toMs: local(3, 6) },
+        { fromMs: local(3, 7), toMs: local(4, 6) },
+        { fromMs: local(4, 8), toMs: local(9, 0) },
+      ],
+    };
+    const ticks = createTimeScale({
+      range: week45,
+      zoom: 'week',
+      timeZone: stockholm,
+      widthPx: naturalWidthPx(week45, 'week', short),
+      hideClosed: short,
+    }).ticks();
+
+    expect(ticks.filter((tick) => tick.tier === 'top').map((tick) => tick.label)).toEqual([
+      '2',
+      '',
+      '4',
+    ]);
+    expect(ticks.filter((tick) => tick.tier === 'bottom').map((tick) => tick.label)).toEqual([
+      '06:00',
+      '',
+      '06',
+    ]);
+  });
+
+  it('#892 shortens a week cell of 4 weeks to its week number', () => {
+    const range = rangeOf('2026-11-02', '4weeks', stockholm, '06:00');
+    // Only Mondays are open, 06:00 to 22:00: 48 px a week.
+    const mondays = {
+      closed: [
+        { fromMs: local(2, 0), toMs: local(2, 6) },
+        ...[0, 1, 2, 3].map((week) => ({
+          fromMs: local(2 + 7 * week, 22),
+          toMs: local(9 + 7 * week, 6),
+        })),
+      ],
+    };
+    const ticks = createTimeScale({
+      range,
+      zoom: '4weeks',
+      timeZone: stockholm,
+      widthPx: naturalWidthPx(range, '4weeks', mondays),
+      hideClosed: mondays,
+    }).ticks();
+
+    expect(ticks.filter((tick) => tick.tier === 'top').map((tick) => tick.label)).toEqual([
+      'W45',
+      'W46',
+      'W47',
+      'W48',
+    ]);
+  });
 });
