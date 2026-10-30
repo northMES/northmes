@@ -106,7 +106,9 @@ describe('a drag into the time before now (ADR 0089, Time before now)', () => {
 
     await dragIntoPast(
       board,
-      board.querySelector<HTMLElement>('[role="gridcell"][data-job-order="1001.10"]') as HTMLElement,
+      board.querySelector<HTMLElement>(
+        '[role="gridcell"][data-job-order="1001.10"]',
+      ) as HTMLElement,
     );
   });
 });
