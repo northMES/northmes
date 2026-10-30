@@ -150,7 +150,9 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     const panel = await findDetails();
     expect(within(panel).getByRole('heading', { level: 2 }).textContent).toBe('Order 1003');
     expect(panel.textContent).toContain('Wed 4 Nov 15:00, end of shift');
-    expect(panel.querySelector('[data-exception]')?.textContent).toBe('Late by 15 h 15 min');
+    expect(panel.querySelector('[data-exception]')?.textContent).toBe(
+      'Late by 15 h 15 min elapsed',
+    );
     expect(panel.textContent).toContain('15 min on Mill 1');
     expect(panel.textContent).toContain('2: Turn on CNC 1, Mill on Mill 1');
   });

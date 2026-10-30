@@ -25,11 +25,12 @@ async function fitsWithoutScrolling(drawer: Locator): Promise<boolean> {
 }
 
 test.describe('the Details drawer (#917)', () => {
-  test('#917 the first view of every G1 job order fits the sheet at 768 px tall on the Gantt', async ({
+  test('#917 the first view of each of the ten G1 job orders fits the sheet at 768 px tall on the Gantt', async ({
     page,
     signIn,
   }) => {
     await signIn(planningLinks.gantt({ plant }, { zoom: 'week', from: '2026-11-02' }).href);
+    const visited = new Set<string>();
     for (const from of ['2026-11-02', '2026-11-09']) {
       await page.goto(planningLinks.gantt({ plant }, { zoom: 'week', from }).href);
       const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
@@ -52,11 +53,13 @@ test.describe('the Details drawer (#917)', () => {
         expect(await fitsWithoutScrolling(drawer), `${id} at ${from}`).toBe(true);
         await page.keyboard.press('Escape');
         await expect(drawer).toBeHidden();
+        visited.add(id ?? '');
       }
     }
+    expect(visited.size).toBe(10);
   });
 
-  test('ADR0021 #917 a job order on the Gantt toggles a section by keyboard and passes the WCAG 2.2 AA rules open and closed', async ({
+  test('ADR0021 #917 a job order on the Gantt toggles a section by keyboard, reaches the disabled actions with their reason by keyboard, and passes the WCAG 2.2 AA rules with its sections open and closed and its menu open', async ({
     page,
     signIn,
     checkA11y,
@@ -88,16 +91,22 @@ test.describe('the Details drawer (#917)', () => {
     await page.keyboard.press('Enter');
     const menu = page.getByRole('menu', { name: 'Actions for 1001.20' });
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole('menuitem', { name: 'Lock' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-    await expect(menu.getByRole('menuitem', { name: 'Lock' })).toHaveAccessibleDescription(
+    // The menu fades in; axe must read its colors once the transition has ended (#867).
+    await expect(menu).toHaveCSS('opacity', '1');
+    const lock = menu.getByRole('menuitem', { name: 'Lock' });
+    for (let step = 0; step < 6; step += 1) {
+      if (await lock.evaluate((element) => element === document.activeElement)) break;
+      await page.keyboard.press('ArrowDown');
+    }
+    await expect(lock).toBeFocused();
+    await expect(lock).toHaveAttribute('aria-disabled', 'true');
+    await expect(lock).toHaveAccessibleDescription(
       'Moves and changes come with the live data; this view reads the fixture G1.',
     );
     await checkA11y('the actions menu of the Details drawer');
     await page.keyboard.press('Escape');
     await expect(menu).toBeHidden();
+    await expect(drawer).toBeVisible();
   });
 
   test('ADR0021 #917 the board opens the same drawer, which fits without scrolling and passes the WCAG 2.2 AA rules', async ({

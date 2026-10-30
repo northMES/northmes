@@ -5,14 +5,14 @@
 // the order, and the plant's hover fields that have no place above.
 import { formatDuration, formatPlantDateTime } from '@northmes/contracts/format';
 import { type ShownField, shownFields } from '../../board-fields.ts';
-import type { ConstraintLine, GanttSnapshot } from '../../gantt-data.ts';
+import type { ConstraintLine, GanttSnapshot, OrderAnalysis } from '../../gantt-data.ts';
 import type { MaterialShortage } from '../../material-projection.ts';
 import { materialShortText } from './gantt-block-states.ts';
 import type { JobOrderRow } from './gantt-rows.ts';
 
 /** The exception line of a job order's header, by the kind that picked it. */
 export interface DetailsException {
-  readonly kind: 'constraint' | 'late' | 'material' | 'held' | 'locked';
+  readonly kind: 'constraint' | 'late' | 'early' | 'material' | 'held' | 'locked';
   readonly text: string;
 }
 
@@ -25,12 +25,15 @@ function isConflict(line: ConstraintLine): boolean {
 }
 
 /**
- * The one exception of a job order, in this order: a broken constraint, an end after the order
- * deadline, a material shortage, another planner's hold, a hard lock. None when nothing is wrong.
+ * The one exception of a job order, in this order: a broken constraint, lateness, a material
+ * shortage, another planner's hold, a hard lock. A row that ends after the order deadline says by
+ * how much; an earlier row of a late order says the order's lateness, which its broken deadline
+ * line stands for. None when nothing is wrong.
  */
 export function exceptionOf(
   row: JobOrderRow,
   shortages: readonly MaterialShortage[],
+  order?: OrderAnalysis,
 ): DetailsException | undefined {
   const broken = row.analysis?.constraints.find(isConflict);
   if (broken !== undefined) {
@@ -43,6 +46,10 @@ export function exceptionOf(
   if (endMs !== undefined && endMs > row.order.deadlineMs) {
     const late = formatDuration((endMs - row.order.deadlineMs) / 1000);
     return { kind: 'late', text: `Ends ${late} after the order deadline` };
+  }
+  if (order?.late === true) {
+    const late = formatDuration(-order.slackElapsedS);
+    return { kind: 'late', text: `Order ${row.order.number} ends ${late} after its deadline` };
   }
   const shortage = shortages[0];
   if (shortage !== undefined) {
@@ -124,14 +131,16 @@ export function linkedJobOrdersOf(
 }
 
 /**
- * The hover fields the drawer shows elsewhere: in its title, subline and status badge, in At a
- * glance, or in the Setup and run section. Plan 07 keeps every hover field in Details too.
+ * The hover fields the drawer shows elsewhere: in its title, subline, status badge and exception
+ * line (Late by), in At a glance, or in the Setup and run section (Run start). Plan 07 keeps every
+ * hover field in Details too.
  */
 const placedFieldIds: ReadonlySet<string> = new Set([
   'operation',
   'article',
   'quantity',
   'status',
+  'lateBy',
   'machine',
   'setupStart',
   'end',
@@ -139,6 +148,7 @@ const placedFieldIds: ReadonlySet<string> = new Set([
   'freeFloat',
   'customer',
   'setupAndRun',
+  'runStart',
 ]);
 
 /** The plant's hover fields that have no place above, which At a glance lists in their order. */

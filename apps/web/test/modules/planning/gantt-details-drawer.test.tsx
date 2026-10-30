@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { formatPlantDateTime } from '@northmes/contracts/format';
 import { planningLinks } from '@northmes/planning-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import { createG1BoardFieldsStore } from '../../../src/modules/planning/board-fields-store.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { phase1Reason } from '../../../src/modules/planning/mock-reasons.ts';
 import {
+  chooseDetailsAction,
   detailsOpen,
   findDetails,
   findGantt,
@@ -86,31 +87,55 @@ describe('the Details drawer leads with the move decision (#917)', () => {
     expect(entriesOf(glance).some((entry) => entry.startsWith('Before:'))).toBe(false);
   });
 
-  it('#917 shows the quantity, the article and the deadline once in the first view of every G1 job order', async () => {
+  it('#917 shows the quantity, the article and the deadline once in the first view of each of the ten G1 job orders', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
     const snapshot = g1Snapshot();
+    const deadlines: Record<string, string> = {
+      '1001': 'Fri 6 Nov 15:00',
+      '1002': 'Thu 5 Nov 15:00',
+      '1003': 'Wed 4 Nov 15:00',
+      '1004': 'Fri 6 Nov 15:00',
+      '1005': 'Fri 13 Nov 15:00',
+      '1006': 'Fri 13 Nov 15:00',
+    };
+    const visited: string[] = [];
     for (const order of snapshot.productionOrders) {
       for (const jobOrder of order.jobOrders) {
-        if (gantt.querySelector(`[data-block="${jobOrder.id}"]`) === null) continue;
-        const panel = await openDetails(gantt, jobOrder.id);
-        const deadline = formatPlantDateTime(order.deadlineMs, snapshot.plant.timeZone);
+        const row = gantt.querySelector<HTMLElement>(`[data-row-id="${jobOrder.id}"]`);
+        if (row === null) throw new Error(`No row ${jobOrder.id}`);
+        row.focus();
+        await userEvent.keyboard('{Enter}');
+        const panel = await findDetails();
+        const deadline = deadlines[order.number] ?? '';
         // 1002.10 ends at its deadline: the end and the deadline are two facts with one value.
-        const endsAtDeadline = jobOrder.placement?.endMs === order.deadlineMs ? 1 : 0;
+        const endsAtDeadline = jobOrder.id === 'jo-1002-10' ? 1 : 0;
         expect(countOf(panel, `${jobOrder.quantity} pcs`), jobOrder.id).toBe(1);
         expect(countOf(panel, order.article), jobOrder.id).toBe(1);
         expect(countOf(panel, deadline), `${jobOrder.id} ${deadline}`).toBe(1 + endsAtDeadline);
+        visited.push(jobOrder.id);
         await userEvent.keyboard('{Escape}');
         await waitFor(() => {
           expect(detailsOpen()).toBe(false);
         });
       }
     }
+    expect(visited).toHaveLength(10);
   });
 
-  it('#917 says a late job order in the exception line, in place of the badges', async () => {
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
-    const panel = await openDetails(await findGantt(), 'jo-1003-20');
+  it('#917 says a late job order in the exception line, in place of the chain and release badges', async () => {
+    // The chain of 1003 is shown, so the old drawer drew "On the critical chain" on 1003.20.
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02', order: 'po-1003', chain: 1 });
+    const gantt = await findGantt();
+    await findDetails();
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+    expect(gantt.querySelector('[data-block="jo-1003-20"]')?.getAttribute('data-states')).toContain(
+      'chain',
+    );
+    const panel = await openDetails(gantt, 'jo-1003-20');
 
     expect(panel.querySelector('[data-exception]')?.textContent).toBe(
       'Ends 15 h 15 min after the order deadline',
@@ -207,7 +232,7 @@ describe('the Details drawer leads with the move decision (#917)', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('#917 lists the actions in a menu, Lock and Split disabled with their reason', async () => {
+  it('#917 lists Move, Open order, Show critical chain, Lock and Split in the actions menu, Lock and Split disabled with their reason', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const panel = await openDetails(await findGantt(), 'jo-1001-20');
 
@@ -236,8 +261,7 @@ describe('the Details drawer leads with the move decision (#917)', () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const panel = await openDetails(await findGantt(), 'jo-1001-20');
 
-    await userEvent.click(within(panel).getByRole('button', { name: 'Actions for 1001.20' }));
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Move' }));
+    await chooseDetailsAction(panel, 'Move');
 
     expect(within(panel).getByRole('group', { name: 'Move 1001.20' })).toBeTruthy();
   });
@@ -251,12 +275,141 @@ describe('the Details drawer leads with the move decision (#917)', () => {
     const panel = await findDetails();
 
     expect(within(panel).getByRole('heading', { level: 2 }).textContent).toBe('Order 1003');
-    expect(panel.querySelector('[data-exception]')?.textContent).toBe('Late by 15 h 15 min');
+    expect(panel.querySelector('[data-exception]')?.textContent).toBe(
+      'Late by 15 h 15 min elapsed',
+    );
     expect(within(panel).getByRole('button', { name: 'Actions for order 1003' })).toBeTruthy();
     const why = within(panel).getByRole('region', { name: 'Why late' });
     expect(why.querySelector('p')?.textContent).toBe(
       'The critical chain starts at 1001.10 on CNC 1. Show critical chain names the rows that bind it.',
     );
     expect(within(panel).queryByRole('region', { name: 'Actions' })).toBeNull();
+  });
+
+  it('#917 gives an earlier row of a late order the lateness of its order', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const panel = await openDetails(await findGantt(), 'jo-1003-10');
+
+    expect(panel.querySelector('[data-exception]')?.textContent).toBe(
+      'Order 1003 ends 15 h 15 min after its deadline',
+    );
+  });
+
+  it('#917 puts a broken constraint before lateness, and says a held row', async () => {
+    const snapshot = g1Snapshot();
+    const late = snapshot.analysis.jobOrders['jo-1003-20'];
+    if (late === undefined) throw new Error('G1 analyses 1003.20');
+    const changed = {
+      ...snapshot,
+      productionOrders: snapshot.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) =>
+          row.id === 'jo-1001-20' ? { ...row, held: true } : row,
+        ),
+      })),
+      analysis: {
+        ...snapshot.analysis,
+        jobOrders: {
+          ...snapshot.analysis.jobOrders,
+          'jo-1003-20': {
+            ...late,
+            constraints: late.constraints.map((line) =>
+              line.kind === 'oneJobAtATime'
+                ? {
+                    ...line,
+                    holds: false,
+                    code: 'OVERLAP' as const,
+                    text: 'One job at a time on Mill 1: overlaps 1004.20',
+                  }
+                : line,
+            ),
+          },
+        },
+      },
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(changed));
+    const gantt = await findGantt();
+
+    const late20 = await openDetails(gantt, 'jo-1003-20');
+    expect(late20.querySelector('[data-exception]')?.textContent).toBe(
+      'One job at a time on Mill 1: overlaps 1004.20 (OVERLAP)',
+    );
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+    const held = await openDetails(gantt, 'jo-1001-20');
+    expect(held.querySelector('[data-exception]')?.textContent).toBe(
+      "Held: another planner's draft holds the order",
+    );
+  });
+
+  it('#917 says a job order without a place is not placed, and draws its Move disabled with the reason', async () => {
+    const g1 = g1Snapshot();
+    const unplaced = {
+      ...g1,
+      productionOrders: g1.productionOrders.map((order) => ({
+        ...order,
+        jobOrders: order.jobOrders.map((row) => {
+          if (row.id !== 'jo-1005-20') return row;
+          const { placement: _, equipment: __, ...rest } = row;
+          return rest;
+        }),
+      })),
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(unplaced));
+    const gantt = await findGantt();
+    gantt.querySelector<HTMLElement>('[data-row-id="jo-1005-20"]')?.focus();
+    await userEvent.keyboard('{Enter}');
+    const panel = await findDetails();
+
+    const glance = within(panel).getByRole('region', { name: 'At a glance' });
+    const machine = within(glance).getByLabelText('Machine') as HTMLSelectElement;
+    expect(machine.selectedOptions[0]?.textContent).toBe('Not placed');
+    expect(entriesOf(glance)).toContain('Time: Not placed');
+    await userEvent.click(within(panel).getByRole('button', { name: 'Actions for 1005.20' }));
+    const move = within(await screen.findByRole('menu', { name: 'Actions for 1005.20' })).getByRole(
+      'menuitem',
+      { name: 'Move' },
+    );
+    expect(move.getAttribute('aria-disabled')).toBe('true');
+    expect(document.getElementById(move.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
+      'Cannot move 1005.20: not placed.',
+    );
+  });
+
+  it('#917 draws Move disabled while the row is moving, so a second Move cannot reset the move', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const panel = await openDetails(await findGantt(), 'jo-1001-20');
+    await chooseDetailsAction(panel, 'Move');
+    expect(within(panel).getByRole('group', { name: 'Move 1001.20' })).toBeTruthy();
+
+    await userEvent.click(within(panel).getByRole('button', { name: 'Actions for 1001.20' }));
+    const move = within(await screen.findByRole('menu', { name: 'Actions for 1001.20' })).getByRole(
+      'menuitem',
+      { name: 'Move' },
+    );
+    expect(move.getAttribute('aria-disabled')).toBe('true');
+    expect(document.getElementById(move.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
+      '1001.20 is moving: use the controls in Details.',
+    );
+  });
+
+  it('#917 shows a late-by or run start from the plant hover list once, where Details already has it', async () => {
+    const store = createG1BoardFieldsStore();
+    store.save(plant, { hover: ['lateBy', 'runStart', 'priority'] });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'gantt', store);
+    const panel = await openDetails(await findGantt(), 'jo-1003-20');
+
+    const glance = within(panel).getByRole('region', { name: 'At a glance' });
+    expect(entriesOf(glance).map((entry) => entry.split(':')[0])).toEqual([
+      'Machine',
+      'Time',
+      'Deadline',
+      'Customer',
+      'Priority',
+      'Before',
+    ]);
+    expect(countOf(panel, '15 h 15 min')).toBe(1);
   });
 });

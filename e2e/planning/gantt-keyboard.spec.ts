@@ -96,6 +96,7 @@ test.describe('keyboard move mode on the order Gantt', () => {
     // Move sits in the actions menu of the drawer's heading (#917).
     await details.getByRole('button', { name: 'Actions for 1003.10' }).click();
     await page.getByRole('menuitem', { name: 'Move', exact: true }).click();
+    await expect(page.getByRole('menu')).toHaveCount(0);
     const controls = details.getByRole('group', { name: 'Move 1003.10' });
     await expect(controls).toBeVisible();
     await controls.getByRole('button', { name: 'Later' }).click();
