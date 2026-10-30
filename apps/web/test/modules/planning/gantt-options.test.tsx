@@ -24,15 +24,19 @@ describe('useGanttOptions', () => {
     });
   });
 
-  it('#943 keeps the tree pane share within 10 and 90 percent of the view', () => {
-    window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: 0.55 }));
-    expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.55);
+  it('#943 keeps any tree pane share between 0 and 1, which the screen then fits to the view', () => {
+    // An 1800 px grid stores 160 / 1800 at the least width and 1640 / 1800 at the most.
+    window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: 0.0889 }));
+    expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.0889);
     cleanup();
-    window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: 3 }));
-    expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.4);
+    window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: 0.9111 }));
+    expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.9111);
     cleanup();
-    window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: 'wide' }));
-    expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.4);
+    for (const kept of [0, 1, 3, 'wide', null]) {
+      window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: kept }));
+      expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.4);
+      cleanup();
+    }
   });
 
   it('keeps a browser that turned Hide closed time off', () => {

@@ -8,6 +8,7 @@ import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  window.localStorage.removeItem('northmes.planning.gantt.options');
 });
 
 /** The rows of the tree at a level, under the treegrid. */
@@ -177,7 +178,7 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     }
   });
 
-  it('#943 with every column shown the tree pane keeps 40 percent of the view and its columns scroll inside it', async () => {
+  it('#943 with every column shown the tree pane keeps 40 percent of the view, holds every column and has its own scrollbar', async () => {
     // Every column shown: 1206 px of tree columns against a pane of 40 percent of 1100 px.
     window.localStorage.setItem(
       'northmes.planning.gantt.options',
@@ -211,10 +212,11 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
-    // Name, Deadline and Float in 440 px: Deadline 128 and Float 96 leave 216 px to Name.
+    // Name, Deadline and Float in 440 px less the pane's 1 px end border: Deadline 128 and Float
+    // 96 leave 215 px to Name.
     const name = within(gantt).getAllByRole('columnheader')[0] as HTMLElement;
     const columns = name.closest('[data-tree-pane]')?.firstElementChild as HTMLElement;
-    expect(columns.style.gridTemplateColumns).toBe('216px 128px 96px');
+    expect(columns.style.gridTemplateColumns).toBe('215px 128px 96px');
     expect(gantt.querySelector('[data-tree-scroller]')).toBeNull();
   });
 
@@ -249,19 +251,108 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     window.localStorage.removeItem('northmes.planning.gantt.options');
   });
 
-  it('#943 the splitter moves with the pointer', async () => {
+  it('#943 the splitter follows the pointer and sets the pane when the pointer is released', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
+    const paneTrack = () => header.style.gridTemplateColumns.split(' ')[0];
+
+    const splitter = screen.getByRole('separator', { name: 'Resize the tree pane' });
+    expect(splitter.getAttribute('aria-controls')).toBe(gantt.id);
+    fireEvent.pointerDown(splitter, { pointerId: 1, clientX: 500, button: 0 });
+    fireEvent.pointerMove(splitter, { pointerId: 1, clientX: 610, buttons: 1 });
+    // The splitter shows where the pane will end; the grid lays out once, on release.
+    expect(splitter.style.left).toBe('551px');
+    expect(paneTrack()).toBe('440px');
+    fireEvent.pointerUp(splitter, { pointerId: 1, clientX: 610 });
+
+    expect(paneTrack()).toBe('550px');
+    expect(splitter.getAttribute('aria-valuenow')).toBe('50');
+  });
+
+  it('#943 a splitter drag whose pointer capture is lost leaves the pane as it was', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
     const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
 
     const splitter = screen.getByRole('separator', { name: 'Resize the tree pane' });
     fireEvent.pointerDown(splitter, { pointerId: 1, clientX: 500, button: 0 });
-    fireEvent.pointerMove(splitter, { pointerId: 1, clientX: 610 });
-    fireEvent.pointerUp(splitter, { pointerId: 1, clientX: 610 });
+    fireEvent.pointerMove(splitter, { pointerId: 1, clientX: 610, buttons: 1 });
+    fireEvent.lostPointerCapture(splitter, { pointerId: 1 });
+    // A later hover with no button pressed moves nothing.
+    fireEvent.pointerMove(splitter, { pointerId: 1, clientX: 700, buttons: 0 });
 
-    expect(header.style.gridTemplateColumns.split(' ')[0]).toBe('550px');
-    expect(splitter.getAttribute('aria-valuenow')).toBe('50');
-    window.localStorage.removeItem('northmes.planning.gantt.options');
+    expect(header.style.gridTemplateColumns.split(' ')[0]).toBe('440px');
+    expect(splitter.style.left).toBe('441px');
+  });
+
+  it('#943 Board options sets the tree pane width with one click, the alternative to the drag (WCAG 2.5.7)', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
+
+    await userEvent.click(screen.getByRole('button', { name: 'Board options' }));
+    expect(
+      screen.getByRole('menuitemradio', { name: 'Medium tree pane' }).getAttribute('aria-checked'),
+    ).toBe('true');
+    await userEvent.click(screen.getByRole('menuitemradio', { name: 'Wide tree pane' }));
+
+    expect(header.style.gridTemplateColumns.split(' ')[0]).toBe('660px');
+    expect(
+      screen.getByRole('separator', { name: 'Resize the tree pane' }).getAttribute('aria-valuenow'),
+    ).toBe('60');
+  });
+
+  it('#943 a sideways wheel over the tree pane scrolls the pane, and hiding columns brings it back within its columns', async () => {
+    window.localStorage.setItem(
+      'northmes.planning.gantt.options',
+      JSON.stringify({ hiddenColumns: [] }),
+    );
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const rowheader = within(within(gantt).getByRole('row', { name: /^1003 / })).getByRole(
+      'rowheader',
+    );
+
+    const wheel = new WheelEvent('wheel', {
+      deltaX: 300,
+      deltaY: 40,
+      bubbles: true,
+      cancelable: true,
+    });
+    rowheader.dispatchEvent(wheel);
+    expect(wheel.defaultPrevented).toBe(true);
+    expect(gantt.style.getPropertyValue('--tree-scroll')).toBe('300px');
+    // The vertical part of a diagonal swipe still scrolls the rows.
+    expect(gantt.scrollTop).toBe(40);
+
+    // A vertical wheel is the grid's own.
+    const down = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true });
+    rowheader.dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(false);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Columns' }));
+    for (const name of ['Machine', 'Quantity', 'Start', 'End', 'Working time', 'Late by']) {
+      await userEvent.click(screen.getByRole('menuitemcheckbox', { name }));
+    }
+    // Deadline, Float, Status and Lock: 394 px beside Name's 160 in a 440 px pane.
+    await waitFor(() => {
+      expect(gantt.style.getPropertyValue('--tree-scroll')).toBe('115px');
+    });
+  });
+
+  it("#943 the selection bar stays at the pane's start edge while the pane scrolls", async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02', order: 'po-1003' });
+    const gantt = await findGantt();
+    const row = within(gantt).getByRole('row', { name: /^1003 / });
+
+    const bar = row.querySelector('[data-tree-pane] > [data-selection-bar]');
+    expect(bar).not.toBeNull();
+    expect(
+      within(gantt)
+        .getByRole('row', { name: /^1002 / })
+        .querySelector('[data-selection-bar]'),
+    ).toBeNull();
   });
 
   it('plan 18 the fill height is measured again when the window or the zoom changes', async () => {
