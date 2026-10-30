@@ -99,6 +99,18 @@ test.describe('the planning board', () => {
     ).toBeVisible();
     await checkA11y('the board that could not be loaded');
 
+    // A time chunk still loading and one refused as too large draw their bands over the machines'
+    // time cells, with the status line (ADR 0089, Loading by time chunk).
+    await page.goto(boardHref({ zoom: 'week', from: '2026-11-02', preview: 'chunks-loading' }));
+    await expect(page.locator('[data-chunk-band="loading"]').first()).toBeVisible();
+    await expect(page.locator('[data-chunk-status]')).toContainText('Loading the job orders of');
+    await checkA11y('the board while its time chunks load', { busy: true });
+
+    await page.goto(boardHref({ zoom: 'week', from: '2026-11-02', preview: 'range-too-large' }));
+    await expect(page.locator('[data-chunk-band="refused"]').first()).toBeVisible();
+    await expect(page.locator('[data-chunk-status]')).toContainText('narrow the filter or zoom in');
+    await checkA11y('the board with its time chunks refused as too large');
+
     await page.goto(boardHref({ preview: 'forbidden' }));
     await expect(
       page.getByRole('heading', {

@@ -2,24 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { type GanttDataSource, g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
-/** A source that answers from G1 and counts its loads: the Gantt loads once per buffer. */
-function countingSource(): { source: GanttDataSource; loads: () => number } {
-  let count = 0;
-  return {
-    source: {
-      ...g1DataSource,
-      load: (input) => {
-        count += 1;
-        return g1DataSource.load(input);
-      },
-    },
-    loads: () => count,
-  };
+/** The first cell of the time header, which a move of the time buffer changes. */
+function bufferStart(gantt: HTMLElement): string {
+  return gantt.querySelector('[data-tier="top"] .sr-only')?.textContent ?? '';
 }
 
 /** The test browser lays nothing out, so the grid is the 1 100 px the view assumes. */
@@ -66,11 +55,10 @@ describe('the endless axis of the order Gantt (ADR 0089, #883)', () => {
   });
 
   it('ADR0089 moves the buffer by one viewport width near the right edge, with the scroll corrected so the view stays', async () => {
-    const { source, loads } = countingSource();
-    renderGanttRoute({ zoom: 'day', from: '2026-11-04' }, source);
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
     const { bufferWidth, viewport } = geometry(gantt);
-    const loaded = loads();
+    const before = bufferStart(gantt);
 
     // The view ends 20 px before the buffer's end, inside the quarter-width margin.
     const left = bufferWidth - viewport - 20;
@@ -79,10 +67,11 @@ describe('the endless axis of the order Gantt (ADR 0089, #883)', () => {
 
     expect(Math.abs(gantt.scrollLeft - (left - viewport))).toBeLessThanOrEqual(7);
     expect(rangeText()).toBe(shown);
-    await waitFor(() => expect(loads()).toBe(loaded + 1));
+    const moved = bufferStart(gantt);
+    expect(moved).not.toBe(before);
     // The browser reports the corrected position as a scroll event, which moves nothing.
     fireEvent.scroll(gantt);
-    expect(loads()).toBe(loaded + 1);
+    expect(bufferStart(gantt)).toBe(moved);
     expect(Math.abs(geometry(gantt).bufferWidth - 3 * viewport)).toBeLessThanOrEqual(7);
   });
 
@@ -124,10 +113,9 @@ describe('the endless axis of the order Gantt (ADR 0089, #883)', () => {
   });
 
   it('ADR0089 a vertical scroll moves nothing', async () => {
-    const { source, loads } = countingSource();
-    renderGanttRoute({ zoom: 'day', from: '2026-11-04' }, source);
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
-    const loaded = loads();
+    const before = bufferStart(gantt);
     const left = gantt.scrollLeft;
     const shown = rangeText();
 
@@ -136,7 +124,7 @@ describe('the endless axis of the order Gantt (ADR 0089, #883)', () => {
 
     expect(gantt.scrollLeft).toBe(left);
     expect(rangeText()).toBe(shown);
-    expect(loads()).toBe(loaded);
+    expect(bufferStart(gantt)).toBe(before);
   });
 
   it('ADR0089 Earlier and Later show the view one viewport width before or after', async () => {

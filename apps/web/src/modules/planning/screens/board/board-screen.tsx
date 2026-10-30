@@ -10,13 +10,19 @@ import { PageFrame, type PageState } from '../../../../ui/components/page-frame/
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { useBoardFields } from '../../board-fields-store.ts';
+import {
+  ChunkBands,
+  ChunkStatus,
+  RowsStatus,
+  unloadedChunks,
+} from '../../components/chunk-status/index.ts';
 import { MoveDialog } from '../../components/move-dialog/index.ts';
 import {
   RangeControls,
   VisibleSpanText,
   ZoomControls,
 } from '../../components/range-controls/index.ts';
-import type { GanttSnapshot } from '../../gantt-data.ts';
+import { type GanttPageRequest, ganttMaxOrders } from '../../gantt-data.ts';
 import {
   applyDraft,
   cascadeFromHere,
@@ -31,6 +37,7 @@ import {
   orderNumbersText,
   splitRunInDraft,
 } from '../../gantt-draft.ts';
+import { loadedSnapshot } from '../../gantt-loaded.ts';
 import {
   type BoardSearch,
   boardSearch,
@@ -47,16 +54,19 @@ import { PlanningForbidden } from '../../planning-preview.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import { plantDateOf, spanLabel, zoomLevels } from '../../timeline/time-scale.ts';
 import { useTimeBuffer } from '../../timeline/use-time-buffer.ts';
+import { useTimeChunks } from '../../timeline/use-time-chunks.ts';
 import { useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
+import { useGanttRows } from '../../use-gantt-rows.ts';
 import { useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { useMoveActions } from '../../use-move-actions.ts';
 import { type GanttViewContext, GanttViewProvider } from '../gantt/gantt-context.ts';
 import { GanttDetailDrawer } from '../gantt/gantt-detail-panel.tsx';
 import { changesText, GanttDraftDrawer } from '../gantt/gantt-draft-drawer.tsx';
 import { movedMessage, previewOf, refusalMessage } from '../gantt/gantt-move.ts';
+import { timeHeaderHeightRem } from '../gantt/gantt-time-area.tsx';
 import { BlockMenu } from './board-block-menu.tsx';
 import { type BoardCellItem, cellsOf } from './board-cells.ts';
-import { BoardGrid, focusKeys } from './board-grid.tsx';
+import { BoardGrid, boardRowRem, focusKeys } from './board-grid.tsx';
 import { type BoardLine, boardEntry, boardFocusAfter } from './board-navigation.ts';
 import { type BoardModel, boardFitTargetOf, boardModelOf } from './board-rows.ts';
 import { BoardSkeleton } from './board-skeleton.tsx';
@@ -142,9 +152,25 @@ export function BoardScreen() {
       }),
     [navigate],
   );
-  const [committed, setCommitted] = useState<GanttSnapshot | undefined>(undefined);
-  /** The range the snapshot was loaded for, so a range still loading reads as busy. */
-  const [loadedRange, setLoadedRange] = useState<string | undefined>(undefined);
+  // The row list, every page of it, since the board needs every order for its blocks, and the
+  // job orders by time chunk (ADR 0089, Loading by time chunk). The preview is the mock source's
+  // page state; a change of it drops the rows shown and loads everything again, so the state it
+  // asks for shows at once.
+  const loadOptions = useMemo(
+    () => (search.preview === undefined ? {} : { preview: search.preview }),
+    [search.preview],
+  );
+  const loadRows = useCallback(
+    (page: GanttPageRequest) => source.loadRows({}, page, loadOptions),
+    [source, loadOptions],
+  );
+  const loadChunk = useCallback(
+    (from: string, to: string) => source.loadChunk(from, to, {}, loadOptions),
+    [source, loadOptions],
+  );
+  const rowList = useGanttRows({ load: loadRows, all: true, resetKey: search.preview ?? '' });
+  const frame = rowList.frame;
+  const loadError = rowList.status === 'failed' ? rowList.error : undefined;
   // The planner's draft, which the Gantt and the job order table share (plan 07, Drafts).
   const [draft, setDraft] = usePlanningDraft();
   const [draftOpen, setDraftOpen] = useState(false);
@@ -158,25 +184,25 @@ export function BoardScreen() {
   // The job order stays after the dialog closes, so the dialog fades out with its content.
   const [moveDialogFor, setMoveDialogFor] = useState<string | undefined>(undefined);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const [loadError, setLoadError] = useState<unknown>(undefined);
-  const [attempt, setAttempt] = useState(0);
   /** Settles the promise of Try again once the load it started has settled. */
   const retryDone = useRef<(() => void) | undefined>(undefined);
-  // A change of the preview drops the board shown before, so the state it asks for shows at once.
-  const [shownPreview, setShownPreview] = useState(search.preview);
-  if (shownPreview !== search.preview) {
-    setShownPreview(search.preview);
-    setCommitted(undefined);
-    setLoadError(undefined);
-  }
+  useEffect(() => {
+    if (rowList.status === 'loading') return;
+    retryDone.current?.();
+    retryDone.current = undefined;
+  }, [rowList.status]);
+  // Details of a job order in the Gantt's drawer (Krister, 2026-10-21): a double click or Enter
+  // opens it and selects the order (#886), and a link that names an order opens its first job
+  // order in the range.
+  const [detailFor, setDetailFor] = useState<string | undefined>(undefined);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [focused, setFocused] = useState<string | undefined>(undefined);
   const [width, measureRef] = useMeasuredWidth();
   const urlZoom = search.zoom ?? defaultZoom;
   const [fillHeight, fillRef] = useViewportFill(`${urlZoom}|${search.from ?? ''}`);
 
-  const timeZone = committed?.plant.timeZone ?? 'UTC';
-  const productionDayStart = committed?.plant.productionDayStart ?? '06:00';
+  const timeZone = frame?.plant.timeZone ?? 'UTC';
+  const productionDayStart = frame?.plant.productionDayStart ?? '06:00';
   const gridElement = useRef<HTMLDivElement | null>(null);
   // One ref for the grid, kept across renders, so the width is not measured again on each one.
   const boardGridRef = useCallback(
@@ -196,7 +222,7 @@ export function BoardScreen() {
   const buffer = useTimeBuffer({
     zoom: urlZoom,
     from: search.from,
-    nowMs: committed?.nowMs ?? Date.now(),
+    nowMs: frame?.nowMs ?? Date.now(),
     widthPx: width,
     grid: gridElement,
     columns: { treeWidth: machineWidth, stickyWidth: machineWidth },
@@ -211,38 +237,50 @@ export function BoardScreen() {
   });
   const zoom = buffer.zoom;
   const range = buffer.range;
-  const rangeKey = range === undefined ? undefined : `${range.fromMs}/${range.toMs}`;
   // The visible start, which the URL holds once scrolling stops and links to the other pages carry.
-  const from = search.from ?? plantDateOf(committed?.nowMs ?? Date.now(), timeZone);
+  const from = search.from ?? plantDateOf(frame?.nowMs ?? Date.now(), timeZone);
 
-  useEffect(() => {
-    if (range === undefined) return;
-    let cancelled = false;
-    setLoadError(undefined);
-    source
-      .load({
-        from: new Date(range.fromMs).toISOString(),
-        to: new Date(range.toMs).toISOString(),
-        filter: {},
-        ...(search.preview !== undefined && { preview: search.preview }),
-      })
-      .then((loaded) => {
-        if (cancelled) return;
-        setCommitted(loaded);
-        setLoadedRange(`${range.fromMs}/${range.toMs}`);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) setLoadError(error ?? new Error('The board could not be loaded'));
-      })
-      .finally(() => {
-        if (cancelled) return;
-        retryDone.current?.();
-        retryDone.current = undefined;
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [source, range, attempt, search.preview]);
+  // The view keeps the chunks that hold the selected order's job orders and the one in Details.
+  // The view keeps the chunks of the selected order's job orders, of the one in Details and of the
+  // focused block (ADR 0089).
+  const keep = useMemo(() => {
+    const ids = new Set<string>(detailFor === undefined ? [] : [detailFor]);
+    if (focused !== undefined) ids.add(focused);
+    for (const order of rowList.orders) {
+      if (order.id === search.order) for (const row of order.jobOrders) ids.add(row.id);
+    }
+    return ids;
+  }, [detailFor, focused, rowList.orders, search.order]);
+  const chunks = useTimeChunks({
+    load: loadChunk,
+    zoom,
+    timeZone,
+    // The chunks are aligned to the plant's dates, which the first page of the row list brings.
+    buffer: frame === undefined ? undefined : range,
+    view: buffer.settled,
+    keep,
+  });
+  // The chunks of the buffer without their job orders, which the bands and the status line show.
+  const unloaded = unloadedChunks(chunks.chunks, range);
+  // The board is busy while a chunk of its buffer or a page of its row list loads: the job orders
+  // of an order on a page still to come draw once it is in.
+  const chunksLoading =
+    unloaded.some((chunk) => chunk.status === 'loading') || rowList.next === 'loading';
+  // A machine without blocks says why while a chunk of the buffer has no job orders.
+  const emptyText = chunksLoading
+    ? 'Loading job orders'
+    : unloaded.some((chunk) => chunk.status === 'refused')
+      ? 'Too many job orders to show'
+      : unloaded.some((chunk) => chunk.status === 'failed')
+        ? 'Job orders not loaded'
+        : 'No jobs in this range';
+  const committed = useMemo(
+    () =>
+      frame === undefined || range === undefined
+        ? undefined
+        : loadedSnapshot(frame, rowList.orders, chunks.jobOrders, range),
+    [frame, rowList.orders, chunks.jobOrders, range],
+  );
 
   // Everything the board draws reads the plan with the draft applied, analysed over the buffer.
   const snapshot = useMemo(
@@ -312,10 +350,6 @@ export function BoardScreen() {
   const selectOrder = (orderId: string | undefined) => {
     if (orderId !== search.order) void setSearch(withOrder(search, orderId), 'push');
   };
-  // Details of a job order in the Gantt's drawer (Krister, 2026-10-21): a double click or Enter
-  // opens it and selects the order (#886), and a link that names an order opens its first job
-  // order in the range.
-  const [detailFor, setDetailFor] = useState<string | undefined>(undefined);
   /** The block that takes focus when the drawer closes. */
   const detailReturn = useRef<string | undefined>(undefined);
   const allRows = useMemo(
@@ -370,8 +404,8 @@ export function BoardScreen() {
   const openedFromLink = useRef(false);
   useEffect(() => {
     if (openedFromLink.current || model === undefined) return;
-    openedFromLink.current = true;
-    // The order's first operation in the range: by operation sequence, then by setup start.
+    // The order's first operation in the range: by operation sequence, then by setup start. Its
+    // block draws once its time chunk has loaded, so the link waits for the chunks loading.
     const first = allRows
       .filter((row) => row.order.id === search.order)
       .sort(
@@ -380,10 +414,17 @@ export function BoardScreen() {
           (a.jobOrder.placement?.setupStartMs ?? Number.MAX_SAFE_INTEGER) -
             (b.jobOrder.placement?.setupStartMs ?? Number.MAX_SAFE_INTEGER),
       )[0];
+    if (
+      first === undefined &&
+      (chunksLoading || chunks.chunks.length === 0 || rowList.next !== 'done')
+    ) {
+      return;
+    }
+    openedFromLink.current = true;
     if (first === undefined) return;
     detailReturn.current = first.jobOrder.id;
     setDetailFor(first.jobOrder.id);
-  }, [model, allRows, search.order]);
+  }, [model, allRows, search.order, chunksLoading, chunks.chunks.length, rowList.next]);
 
   const boardFields = useBoardFields(plant);
   // Up and Down in move mode step through the allowed machines in the board's row order, past the
@@ -553,11 +594,13 @@ export function BoardScreen() {
 
   // The page states of design D3 (DR17 to DR22): loading draws the grid's skeleton; no access and
   // no machines to plan replace the board and its toolbar.
-  // A refusal shows no access also when a range before is still in memory: the mock source's
-  // refusal, or the API's FORBIDDEN of a server source.
+  // The mock source's refusal, or the API's FORBIDDEN of a server source.
+  const isRefusal = (error: unknown) =>
+    error instanceof PlanningForbidden || classifyError(error).page === 'forbidden';
+  // A refusal shows no access, of the rows or of a time chunk the board loads later.
   const forbidden =
-    loadError !== undefined &&
-    (loadError instanceof PlanningForbidden || classifyError(loadError).page === 'forbidden');
+    (loadError !== undefined && isRefusal(loadError)) ||
+    chunks.chunks.some((chunk) => chunk.status === 'failed' && isRefusal(chunk.error));
   const noMachines = model !== undefined && model.groups.length === 0;
   let state: PageState = { status: 'ready' };
   if (forbidden) {
@@ -578,6 +621,18 @@ export function BoardScreen() {
         </Link>
       ),
     };
+  } else if (rowList.status === 'refused') {
+    state = {
+      status: 'error',
+      title: 'Too many orders for the board',
+      description: `More than ${ganttMaxOrders.toLocaleString('en-GB')} orders match. Narrow the filter.`,
+      error: rowList.error,
+      onRetry: () =>
+        new Promise<void>((resolve) => {
+          retryDone.current = resolve;
+          rowList.retry();
+        }),
+    };
   } else if (loadError !== undefined) {
     // A failed load shows the error, also when the range before is still in memory: its rows
     // would read as a range without job orders.
@@ -590,7 +645,7 @@ export function BoardScreen() {
       onRetry: () =>
         new Promise<void>((resolve) => {
           retryDone.current = resolve;
-          setAttempt((count) => count + 1);
+          rowList.retry();
         }),
       action: (
         <Link
@@ -696,6 +751,14 @@ export function BoardScreen() {
       {snapshot?.fixture !== undefined && (
         <p className="text-xs text-muted-foreground">Showing fixture {snapshot.fixture}.</p>
       )}
+      {gridShown && <ChunkStatus chunks={unloaded} timeZone={timeZone} onRetry={chunks.retry} />}
+      {gridShown && rowList.next === 'failed' && (
+        <RowsStatus
+          loaded={rowList.orders.length}
+          total={rowList.totalCount}
+          onRetry={rowList.retry}
+        />
+      )}
       {state.status === 'loading' && (
         <BoardSkeleton name={gridName} machineWidth={machineWidth} gridRef={measureRef} />
       )}
@@ -736,7 +799,15 @@ export function BoardScreen() {
                 onKeyDown={onKeyDown}
                 gridRef={boardGridRef}
                 height={fillHeight}
-                busy={loadedRange !== rangeKey}
+                busy={chunksLoading}
+                bands={
+                  <ChunkBands
+                    chunks={unloaded}
+                    scale={scale}
+                    labelTop={`${timeHeaderHeightRem + boardRowRem.notPlaced}rem`}
+                  />
+                }
+                emptyText={emptyText}
                 onScroll={buffer.onScroll}
               />
             </div>

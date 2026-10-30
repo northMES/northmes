@@ -35,17 +35,16 @@ import {
   earlyText,
   type GanttRow,
   type JobOrderRow,
-  jobOrderRowsOf,
   type Level1Row,
   latenessText,
   machinesText,
   orderSubtext,
   quantityText,
+  rowSpan,
   runLatenessText,
   runSubtext,
   runTitle,
   statusLabel,
-  summarySpan,
   workingSecondsOf,
 } from './gantt-rows.ts';
 
@@ -110,7 +109,7 @@ function spanOf(row: GanttRow): { readonly fromMs: number; readonly toMs: number
       ? undefined
       : { fromMs: placement.setupStartMs, toMs: placement.endMs };
   }
-  return summarySpan(jobOrderRowsOf(row));
+  return rowSpan(row);
 }
 
 function timeCell(which: 'fromMs' | 'toMs') {

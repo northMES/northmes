@@ -436,7 +436,8 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     const board = await findBoard();
     const row = machineRow(board, 'CNC 1');
     const cluster = within(row).getByRole('gridcell', {
-      name: named('2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 late, 1 locked'),
+      // The move makes 1002.10 overlap 1003.10, which the analysis of the loaded plan finds.
+      name: named('2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 late, 1 locked, 1 in conflict'),
     });
 
     expect(within(row).getAllByRole('gridcell')).toHaveLength(4);
@@ -484,26 +485,34 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(document.activeElement).toBe(first);
   });
 
-  it('DR20 shows the error state when a later range fails to load, not the range before', async () => {
+  it('ADR0089 a time chunk that fails to load shows its error band and Try again, and the board stays', async () => {
     const user = userEvent.setup();
-    // The loads answer until the planner asks for a later range, whose load fails.
-    let failing = false;
+    // The chunks from W47 on fail until the planner tries again.
+    let failing = true;
     const failingLater: GanttDataSource = {
       ...g1DataSource,
-      load: async (input) => {
-        if (failing) throw new Error('The plan server did not answer');
-        return g1DataSource.load(input);
+      loadChunk: async (from, to, filter, options) => {
+        if (failing && from >= '2026-11-15T23:00:00.000Z') {
+          throw new Error('The plan server did not answer');
+        }
+        return g1DataSource.loadChunk(from, to, filter, options);
       },
     };
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, failingLater, 'board');
-    await findBoard();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-16' }, failingLater, 'board');
+    const board = await findBoard();
 
-    failing = true;
-    await user.click(screen.getByRole('button', { name: 'Show later range' }));
-    expect(
-      await screen.findByRole('heading', { level: 2, name: 'The board could not be loaded' }),
-    ).toBeTruthy();
-    expect(screen.queryByRole('grid')).toBeNull();
+    await waitFor(() =>
+      expect(
+        board.querySelector('[data-chunk-band="failed"][data-chunk="2026-W47"]'),
+      ).not.toBeNull(),
+    );
+    expect(document.querySelector('[data-chunk-status]')?.textContent).toContain(
+      'The job orders of W47, Mon 16 Nov to Sun 22 Nov could not be loaded.',
+    );
+
+    failing = false;
+    await user.click(screen.getByRole('button', { name: 'Try again: job orders' }));
+    await waitFor(() => expect(board.querySelector('[data-chunk-band]')).toBeNull());
   });
 
   it('plan 07 one Escape closes the hover card, and the next clears the selection', async () => {
@@ -535,7 +544,7 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(
       within(machineRow(board, 'CNC 1')).getByRole('gridcell', {
         name: named(
-          '2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 late, 1 being edited by another planner, 1 locked',
+          '2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 late, 1 being edited by another planner, 1 locked, 1 in conflict',
         ),
       }),
     ).toBeTruthy();
@@ -642,32 +651,33 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
       '1005.10',
     ]);
   });
-  it('BO1 marks the board busy while a later range loads, and not once it has loaded', async () => {
-    const user = userEvent.setup();
-    // The loads answer at once until the planner asks for a later range, whose load waits.
-    let slow = false;
+  it('BO1 marks the board busy while a time chunk in its buffer loads, with its loading band, and not once it has loaded', async () => {
+    // The chunks from W47 on wait until the test releases them.
     let release: () => void = () => {};
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     const slowLater: GanttDataSource = {
       ...g1DataSource,
-      load: async (input) => {
-        if (slow) {
-          await new Promise<void>((resolve) => {
-            release = resolve;
-          });
-        }
-        return g1DataSource.load(input);
+      loadChunk: async (from, to, filter, options) => {
+        if (from >= '2026-11-15T23:00:00.000Z') await waiting;
+        return g1DataSource.loadChunk(from, to, filter, options);
       },
     };
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, slowLater, 'board');
-    const board = await findBoard();
-    await waitFor(() => expect(board.getAttribute('aria-busy')).toBeNull());
-
-    slow = true;
-    await user.click(screen.getByRole('button', { name: 'Show later range' }));
-    await waitFor(() => expect(board.getAttribute('aria-busy')).toBe('true'));
+    renderGanttRoute({ zoom: 'week', from: '2026-11-16' }, slowLater, 'board');
+    // The grid is drawn once the rows have loaded, while the chunk still loads.
+    await waitFor(() =>
+      expect(document.querySelector('[role="grid"] [data-chunk-band="loading"]')).not.toBeNull(),
+    );
+    const board = screen.getByRole('grid', { name: /board/ });
+    expect(board.getAttribute('aria-busy')).toBe('true');
+    expect(document.querySelector('[data-chunk-status]')?.textContent).toContain(
+      'Loading the job orders of W47, Mon 16 Nov to Sun 22 Nov.',
+    );
 
     release();
     await waitFor(() => expect(board.getAttribute('aria-busy')).toBeNull());
+    expect(board.querySelector('[data-chunk-band]')).toBeNull();
   });
 
   // The D1 block text in pure black in both themes, and the group button's target height (WCAG

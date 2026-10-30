@@ -3,9 +3,9 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { type GanttDataSource, g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { politeRegionId } from '../../../src/ui/lib/announce.ts';
-import { findGantt, measureGridsAt, renderGanttRoute } from './gantt-fixtures.tsx';
+import { findGantt, measureGridsAt, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 // The grid measures 1 400 px, as a laid-out page would report it.
 beforeEach(() => measureGridsAt(1400));
@@ -209,12 +209,11 @@ describe('the zoom of the order Gantt (ADR 0089, Zoom levels)', () => {
   });
 
   it('#896 with no rows to draw, the zoom controls and Now still set the level and the start', async () => {
-    const empty: GanttDataSource = {
-      ...g1DataSource,
-      load: async (input) => ({ ...(await g1DataSource.load(input)), productionOrders: [] }),
-    };
-    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-09' }, empty);
-    await screen.findByText('No orders in this range');
+    const router = renderGanttRoute(
+      { zoom: 'week', from: '2026-11-09' },
+      sourceOf({ ...g1Snapshot(), productionOrders: [] }),
+    );
+    await screen.findByText('No open orders');
     const zoom = screen.getByRole('group', { name: 'Zoom' });
 
     await userEvent.click(within(zoom).getByRole('button', { name: 'Zoom in' }));

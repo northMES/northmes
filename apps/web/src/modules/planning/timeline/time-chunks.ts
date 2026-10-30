@@ -5,7 +5,7 @@
 // valid while the buffer moves over it.
 import { Temporal } from 'temporal-polyfill';
 import type { ZoomLevel } from '../gantt-data.ts';
-import type { TimeRange } from './time-scale.ts';
+import { formatMonth, spanLabel, type TimeRange } from './time-scale.ts';
 
 /** The length of a chunk: an ISO week from Monday, a calendar month or a calendar quarter. */
 export type ChunkUnit = 'isoWeek' | 'month' | 'quarter';
@@ -119,4 +119,11 @@ export function wantedChunks({
 export function isFarChunk(chunk: TimeRange, buffer: TimeRange): boolean {
   const reach = 2 * (buffer.toMs - buffer.fromMs);
   return chunk.fromMs > buffer.toMs + reach || chunk.toMs < buffer.fromMs - reach;
+}
+
+/** A chunk as the status line names it: "W46, Mon 9 Nov to Sun 15 Nov", "November 2026", "Q4 2026". */
+export function chunkName(chunk: TimeChunk, timeZone: string): string {
+  if (chunk.key.includes('-W')) return spanLabel(chunk, 'week', timeZone);
+  if (chunk.key.includes('-Q')) return chunk.key.replace(/^(\d+)-(Q\d)$/, '$2 $1');
+  return formatMonth(chunk.key);
 }

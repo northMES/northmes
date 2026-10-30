@@ -292,6 +292,36 @@ describe('g1DataSource rows and chunks (ADR 0089, Loading by time chunk)', () =>
     expect(w48.jobOrders).toEqual([]);
   });
 
+  it('ADR0089 refuses every time chunk as too large on the range-too-large preview, and answers the row list', async () => {
+    await expect(
+      g1DataSource.loadChunk(w45.from, w45.to, {}, { preview: 'range-too-large' }),
+    ).rejects.toSatisfy((error: unknown) =>
+      isPlanningRefusal(error, 'planning.board.range_too_large'),
+    );
+    const rows = await g1DataSource.loadRows(
+      {},
+      { first: ganttPageSize },
+      { preview: 'range-too-large' },
+    );
+    expect(rows.totalCount).toBe(6);
+  });
+
+  it('ADR0089 answers the row list and keeps every time chunk loading on the chunks-loading preview', async () => {
+    const rows = await g1DataSource.loadRows(
+      {},
+      { first: ganttPageSize },
+      { preview: 'chunks-loading' },
+    );
+    expect(rows.totalCount).toBe(6);
+    const chunk = await Promise.race([
+      g1DataSource
+        .loadChunk(w45.from, w45.to, {}, { preview: 'chunks-loading' })
+        .then(() => 'answered'),
+      new Promise((resolve) => setTimeout(() => resolve('waiting'), 300)),
+    ]);
+    expect(chunk).toBe('waiting');
+  });
+
   it('DR17 DR18 DR20 DR22 answers each page state of the preview for rows and chunks alike', async () => {
     const reads = {
       rows: (options: GanttLoadOptions) =>
