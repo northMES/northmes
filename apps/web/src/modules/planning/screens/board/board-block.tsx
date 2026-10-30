@@ -80,9 +80,12 @@ export function BoardBlock({
   /** Whether the block's order is the selected one, which draws the 3 px bar on top. */
   readonly selected: boolean;
   readonly onFocus: (event: FocusEvent<HTMLDivElement>) => void;
-  /** Space selects the block's order; M enters keyboard move mode. */
+  /** A click or Space selects the block's order; M enters keyboard move mode. */
   readonly onSelect: () => void;
-  /** A click or Enter opens the block's Details, which selects its order too. */
+  /**
+   * A double click or Enter opens the block's Details, which selects its order too; a single
+   * click only selects, as on the Gantt (#886).
+   */
   readonly onOpenDetails: () => void;
   /** Shift+F10, the context menu key or a right click opens the block menu at the block. */
   readonly onMenu: (anchor: HTMLElement) => void;
@@ -249,8 +252,11 @@ export function BoardBlock({
                 event.stopPropagation();
                 return;
               }
-              onOpenDetails();
+              onSelect();
             }}
+            // The block holds no control, and its hover card takes no pointer events, so every
+            // double click that reaches it is on the block.
+            onDoubleClick={onOpenDetails}
             onContextMenu={(event) => {
               event.preventDefault();
               onMenu(event.currentTarget);

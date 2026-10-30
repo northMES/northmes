@@ -276,8 +276,9 @@ export function BoardScreen() {
   const selectOrder = (orderId: string | undefined) => {
     if (orderId !== search.order) void setSearch(withOrder(search, orderId), 'push');
   };
-  // Details of a job order in the Gantt's drawer (Krister, 2026-10-21): a click or Enter opens it
-  // and selects the order, and a link that names an order opens its first job order in the range.
+  // Details of a job order in the Gantt's drawer (Krister, 2026-10-21): a double click or Enter
+  // opens it and selects the order (#886), and a link that names an order opens its first job
+  // order in the range.
   const [detailFor, setDetailFor] = useState<string | undefined>(undefined);
   /** The block that takes focus when the drawer closes. */
   const detailReturn = useRef<string | undefined>(undefined);

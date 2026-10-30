@@ -441,7 +441,8 @@ export function BoardGrid({
                 data-job-order={row.jobOrder.displayNumber}
                 aria-selected={row.order.id === selectedOrderId}
                 onFocus={() => onFocusTarget(focusKeys.block(row.jobOrder.id))}
-                onClick={() => onOpenDetails(row.jobOrder.id)}
+                onClick={() => onSelectOrder(row.order.id)}
+                onDoubleClick={() => onOpenDetails(row.jobOrder.id)}
                 onKeyDown={(event) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return;
                   event.preventDefault();
