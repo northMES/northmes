@@ -1,47 +1,59 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { type DurationOptions, formatDuration, formatPlantDay } from '@northmes/contracts/format';
+import {
+  type DurationOptions,
+  formatDuration,
+  formatPlantDate,
+  formatPlantDay,
+} from '@northmes/contracts/format';
 
 /** Workload is working time, so its sums print in hours: "41 h 15 min", never in days. */
 const hours: DurationOptions = { form: 'hours' };
 
 import { cn } from 'cn';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import type { GanttSnapshot, WorkloadBucket } from '../../gantt-data.ts';
+import { type MoveStore, useMoveOf } from '../../move-store.ts';
 import { visibleItems } from '../../timeline/culling.ts';
 import type { TimeScale } from '../../timeline/time-scale.ts';
+import {
+  type BucketKind,
+  bucketKindOf,
+  withMovePreview,
+  workloadOf,
+} from '../../workload-lanes.ts';
 import { laneHeightRem } from './gantt-rows.ts';
 
-/** A bucket placed on the axis: its production day as a span, and its bar. */
+/** A bucket placed on the axis: its shift, production day or ISO week as a span, and its bar. */
 interface PlacedBucket {
   readonly bucket: WorkloadBucket;
   readonly fromMs: number;
   readonly toMs: number;
 }
 
-/** The buckets of a machine inside the visible range, sorted by day. */
-export function laneBuckets(
-  snapshot: GanttSnapshot,
-  equipment: string,
-  scale: TimeScale,
-): PlacedBucket[] {
-  const placed = snapshot.analysis.workload
-    .filter((bucket) => bucket.equipment === equipment)
+/** The buckets of a machine inside the visible range, sorted by time. */
+export function laneBuckets(buckets: readonly WorkloadBucket[], scale: TimeScale): PlacedBucket[] {
+  const placed = buckets
     .map((bucket) => ({ bucket, fromMs: bucket.fromMs, toMs: bucket.toMs }))
     .sort((a, b) => a.fromMs - b.fromMs);
   return visibleItems(placed, scale.range);
 }
 
-/** The machines the visible orders use, by equipment group then code (plan 18, The workload lane). */
+/**
+ * The machines the visible orders use, by equipment group then code (plan 18, The workload lane),
+ * and the machine a move in progress enters, so its load shows while it is previewed.
+ */
 export function laneMachines(
   snapshot: GanttSnapshot,
+  entered?: string,
 ): readonly { readonly code: string; readonly name: string }[] {
   const used = new Set(
     snapshot.productionOrders.flatMap((order) =>
       order.jobOrders.flatMap((row) => (row.equipment === undefined ? [] : [row.equipment])),
     ),
   );
+  if (entered !== undefined) used.add(entered);
   const groupOrder = new Map(snapshot.equipmentGroups.map((group, index) => [group.code, index]));
   return snapshot.equipment
     .filter((machine) => used.has(machine.code))
@@ -53,18 +65,51 @@ export function laneMachines(
     .map(({ code, name }) => ({ code, name }));
 }
 
-/** "42 %" from a permille, "closed" for a bucket without availability. */
+/**
+ * "42 %" from a permille, "closed" for a bucket without availability, and "109 %, over capacity"
+ * for a bucket loaded above its availability, so the table says it in words (#901).
+ */
 export function utilizationText(bucket: WorkloadBucket): string {
-  return bucket.utilizationPermille === null
-    ? 'closed'
-    : `${Math.round(bucket.utilizationPermille / 10)} %`;
+  const value =
+    bucket.utilizationPermille === null
+      ? 'closed'
+      : `${Math.round(bucket.utilizationPermille / 10)} %`;
+  return bucket.overloadS > 0 ? `${value}, over capacity` : value;
+}
+
+/** The name of a bucket kind in the heading and the table's first column. */
+const kindNames: Readonly<
+  Record<BucketKind, { readonly heading: string; readonly column: string }>
+> = {
+  shift: { heading: 'shift', column: 'Shift' },
+  productionDay: { heading: 'production day', column: 'Production day' },
+  isoWeek: { heading: 'ISO week', column: 'ISO week' },
+};
+
+/**
+ * A bucket's name in plant time: "Thu 5 Nov" for a production day, "Thu 5 Nov 06:00 to 15:00" for
+ * a shift, "W45, Mon 2 Nov" for an ISO week.
+ */
+function bucketName(bucket: WorkloadBucket, kind: BucketKind, timeZone: string): string {
+  if (kind === 'productionDay') return formatPlantDay(bucket.label);
+  if (kind === 'isoWeek') {
+    // "W1" as the time header and the toolbar print it, not the label's "W01".
+    const week = Number(bucket.label.slice(bucket.label.indexOf('-W') + 2));
+    return `W${week}, ${formatPlantDate(bucket.fromMs, timeZone)}`;
+  }
+  const [date = '', ...clock] = bucket.label.split(' ');
+  return [formatPlantDay(date), ...clock].join(' ');
 }
 
 /** One row of the lane's text table: the bucket's values as durations. */
-export function bucketRow(bucket: WorkloadBucket): readonly string[] {
+export function bucketRow(
+  bucket: WorkloadBucket,
+  kind: BucketKind,
+  timeZone: string,
+): readonly string[] {
   const free = Math.max(0, bucket.availableS - bucket.loadedS);
   return [
-    formatPlantDay(bucket.label),
+    bucketName(bucket, kind, timeZone),
     formatDuration(bucket.availableS, hours),
     formatDuration(bucket.loadedS, hours),
     formatDuration(bucket.setupS, hours),
@@ -88,7 +133,9 @@ function totalsRow(buckets: readonly WorkloadBucket[]): readonly string[] {
     formatDuration(sum('setupS'), hours),
     formatDuration(sum('runS'), hours),
     formatDuration(Math.max(0, available - loaded), hours),
-    available === 0 ? 'closed' : `${Math.round((loaded * 100) / available)} %`,
+    `${available === 0 ? 'closed' : `${Math.round((loaded * 100) / available)} %`}${
+      sum('overloadS') > 0 ? ', over capacity' : ''
+    }`,
     formatDuration(sum('overloadS'), hours),
   ];
 }
@@ -102,16 +149,15 @@ const barShare = 0.75;
 /** The overload the headroom can show, as a share of the available seconds. */
 const overloadHeadroom = (1 - barShare) / barShare;
 
-const tableHeaders = [
-  'Production day',
-  'Available',
-  'Loaded',
-  'Setup',
-  'Run',
-  'Free',
-  'Utilization',
-  'Overload',
-];
+/**
+ * The share of a bucket's width a bar within its availability takes, centred; an overbooked
+ * bucket's bar takes the whole width, so overload reads from shape and not from colour alone
+ * (#901; WCAG 1.4.1).
+ */
+const barWidthShare = 0.6;
+
+/** The table's columns after the bucket's name. */
+const valueHeaders = ['Available', 'Loaded', 'Setup', 'Run', 'Free', 'Utilization', 'Overload'];
 
 /**
  * One machine's lane (plan 18, The workload lane): a bar per bucket whose height is the
@@ -201,19 +247,21 @@ function WorkloadLane({
           // The overload is drawn above the bar's top edge inside the headroom; it is capped there
           // and the lane's table carries its value.
           const overloadShare = Math.min(bucket.overloadS / bucket.availableS, overloadHeadroom);
+          const overloaded = bucket.overloadS > 0;
+          const inset = overloaded ? 0 : (width * (1 - barWidthShare)) / 2;
           return (
             <span
               key={bucket.label}
               data-bucket={bucket.label}
               data-full={utilization >= 1 || undefined}
-              data-overloaded={bucket.overloadS > 0 || undefined}
+              data-overloaded={overloaded || undefined}
               className={cn(
                 'absolute bottom-0 border-s border-card bg-foreground',
                 utilization >= 1 ? 'opacity-100' : 'opacity-75',
               )}
               style={{
-                left: `${left}px`,
-                width: `${width}px`,
+                left: `${left + inset}px`,
+                width: `${width - 2 * inset}px`,
                 height: `${utilization * barShare * 100}%`,
               }}
             >
@@ -249,6 +297,7 @@ function WorkloadLane({
 
 /** A cell of the lane's table: the row header for the first column, a cell otherwise. */
 function TableCells({ cells }: { readonly cells: readonly string[] }) {
+  const headers = ['', ...valueHeaders];
   return (
     <>
       {cells.map((cell, index) =>
@@ -257,10 +306,7 @@ function TableCells({ cells }: { readonly cells: readonly string[] }) {
             {cell}
           </th>
         ) : (
-          <td
-            key={`${tableHeaders[index]}-${cell}`}
-            className="px-2 py-1 font-mono whitespace-nowrap"
-          >
+          <td key={`${headers[index]}-${cell}`} className="px-2 py-1 font-mono whitespace-nowrap">
             {cell}
           </td>
         ),
@@ -277,12 +323,16 @@ function TableCells({ cells }: { readonly cells: readonly string[] }) {
 function WorkloadTable({
   name,
   buckets,
+  kind,
+  timeZone,
   dialogId,
   buttonId,
   onClose,
 }: {
   readonly name: string;
   readonly buckets: readonly PlacedBucket[];
+  readonly kind: BucketKind;
+  readonly timeZone: string;
   readonly dialogId: string;
   readonly buttonId: string;
   readonly onClose: () => void;
@@ -310,11 +360,11 @@ function WorkloadTable({
     >
       <table className="text-xs" aria-label={name}>
         <caption className="sr-only">
-          {name}, one row per production day in the visible range, with a totals row
+          {name}, one row per {kindNames[kind].heading} in the visible range, with a totals row
         </caption>
         <thead>
           <tr>
-            {tableHeaders.map((header) => (
+            {[kindNames[kind].column, ...valueHeaders].map((header) => (
               <th
                 key={header}
                 scope="col"
@@ -328,7 +378,7 @@ function WorkloadTable({
         <tbody>
           {buckets.map(({ bucket }) => (
             <tr key={bucket.label} className="border-t border-border">
-              <TableCells cells={bucketRow(bucket)} />
+              <TableCells cells={bucketRow(bucket, kind, timeZone)} />
             </tr>
           ))}
           <tr className="border-t border-border bg-muted font-semibold">
@@ -342,8 +392,10 @@ function WorkloadTable({
 
 /**
  * The workload panel docked at the bottom of the time area (plan 18, The workload lane): one lane
- * per machine the visible orders use, by production day at Week zoom, capped at 40 percent of the
- * view height and scrolling inside, with the open lane's table under the lanes.
+ * per machine the visible orders use, of the plan with the draft, in the bucket of the zoom level,
+ * capped at 40 percent of the view height and scrolling inside, with the open lane's table under
+ * the lanes. During a move the machines it touches show the preview's load (#901); the panel
+ * reads the move store, so it renders again with the preview layer and the rows do not.
  */
 export function GanttWorkloadPanel({
   snapshot,
@@ -351,6 +403,7 @@ export function GanttWorkloadPanel({
   treeWidth,
   stickyWidth,
   timeWidth,
+  moveStore,
 }: {
   readonly snapshot: GanttSnapshot;
   readonly scale: TimeScale;
@@ -362,25 +415,48 @@ export function GanttWorkloadPanel({
    */
   readonly stickyWidth: number;
   readonly timeWidth: number;
+  readonly moveStore?: MoveStore;
 }) {
   const [openLane, setOpenLane] = useState<string | undefined>(undefined);
   const idBase = useId();
-  const machines = laneMachines(snapshot);
+  const preview = useMoveOf(moveStore, (move) => move?.preview);
+  const machines = laneMachines(snapshot, preview?.equipment);
   const open = machines.find((machine) => machine.code === openLane);
+  const kind = bucketKindOf(scale.zoom);
+  const { fromMs, toMs } = scale.range;
+  const planned = useMemo(
+    () => workloadOf(snapshot, scale.zoom, { fromMs, toMs }),
+    [snapshot, scale.zoom, fromMs, toMs],
+  );
+  // The buckets by machine, once per plan or preview rather than once per lane.
+  const byMachine = useMemo(() => {
+    const shown =
+      preview === undefined
+        ? planned
+        : withMovePreview(snapshot, planned, preview, { fromMs, toMs });
+    const map = new Map<string, WorkloadBucket[]>();
+    for (const bucket of shown) {
+      const list = map.get(bucket.equipment);
+      if (list === undefined) map.set(bucket.equipment, [bucket]);
+      else list.push(bucket);
+    }
+    return map;
+  }, [snapshot, planned, preview, fromMs, toMs]);
+  const lanesOf = (code: string) => laneBuckets(byMachine.get(code) ?? [], scale);
   return (
     <section
       aria-label="Workload"
       className="flex max-h-[40vh] flex-col overflow-hidden rounded-lg border border-border bg-card"
     >
       <h2 className="border-b border-border bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
-        Workload by production day, committed plan
+        Workload by {kindNames[kind].heading}, the plan with my draft
       </h2>
       <div className="min-h-0 overflow-auto">
         {machines.map((machine) => (
           <WorkloadLane
             key={machine.code}
             machine={machine}
-            buckets={laneBuckets(snapshot, machine.code, scale)}
+            buckets={lanesOf(machine.code)}
             scale={scale}
             treeWidth={treeWidth}
             stickyWidth={stickyWidth}
@@ -396,7 +472,9 @@ export function GanttWorkloadPanel({
         <WorkloadTable
           key={open.code}
           name={`Workload on ${open.name}`}
-          buckets={laneBuckets(snapshot, open.code, scale)}
+          buckets={lanesOf(open.code)}
+          kind={kind}
+          timeZone={snapshot.plant.timeZone}
           dialogId={`${idBase}-${open.code}-table`}
           buttonId={`${idBase}-${open.code}-button`}
           onClose={() => setOpenLane(undefined)}

@@ -915,6 +915,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 treeWidth={treeWidth}
                 stickyWidth={stickyWidth}
                 timeWidth={timeWidth}
+                moveStore={moveStore}
               />
             )}
           </div>
