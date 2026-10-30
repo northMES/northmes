@@ -586,10 +586,11 @@ describe('the ranges and header tiers of the new levels (ADR 0089, Zoom levels)'
     });
 
     expect(tierLabels(scale, 'top')).toEqual(['2026', '2027']);
-    // January starts the 2027 cell of the top tier, which names it.
+    // The year above January does not name the month, so January keeps its own cell.
     expect(tierLabels(scale, 'bottom')).toEqual([
       'November',
       'December',
+      'January',
       'February',
       'March',
       'April',
@@ -600,6 +601,37 @@ describe('the ranges and header tiers of the new levels (ADR 0089, Zoom levels)'
       'September',
       'October',
     ]);
+  });
+
+  it('keeps the week that starts on the first of a month at Quarter, since the month does not name it', () => {
+    const range = rangeOf('2026-12-01', 'quarter', stockholm, '06:00');
+    const bottom = createTimeScale({
+      range,
+      zoom: 'quarter',
+      timeZone: stockholm,
+      widthPx: naturalWidthPx(range, 'quarter'),
+    })
+      .ticks()
+      .filter((tick) => tick.tier === 'bottom');
+
+    // Mon 1 Feb 2027 starts both February and W05.
+    expect(bottom.map((tick) => tick.name)).toContain('Week 5, Mon 1 Feb');
+  });
+
+  it('names a top hour cell by the clock where its open time starts, as the bottom tier does', () => {
+    const range = rangeOf('2026-11-04', 'quarter-hours', stockholm, '06:30');
+    const top = createTimeScale({
+      range,
+      zoom: 'quarter-hours',
+      timeZone: stockholm,
+      productionDayStart: '06:30',
+      widthPx: naturalWidthPx(range, 'quarter-hours'),
+    })
+      .ticks()
+      .filter((tick) => tick.tier === 'top');
+
+    // The first hour holds 30 open minutes, 120 px: room for the clock, not the date.
+    expect(top[0]).toMatchObject({ x: 0, label: '06:30', name: 'Wed 4 Nov 06:30' });
   });
 
   it('snaps to 5 minutes at Quarter hours', () => {

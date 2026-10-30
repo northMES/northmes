@@ -146,6 +146,21 @@ describe('the Gantt page (plan 18, URL state)', () => {
     expect(screen.queryByRole('treegrid')).toBeNull();
   });
 
+  it('ADR0089 opens an unknown zoom at Week, and a level that is no preset with every preset unpressed', async () => {
+    renderGanttRoute({ zoom: 'decade', from: '2026-11-02' });
+    await findGantt();
+    const pressed = () =>
+      [
+        ...screen.getByRole('group', { name: 'Zoom' }).querySelectorAll('[aria-pressed="true"]'),
+      ].map((button) => button.textContent);
+    expect(pressed()).toEqual(['Week']);
+    cleanup();
+
+    renderGanttRoute({ zoom: 'quarter', from: '2026-11-01' });
+    await findGantt();
+    expect(pressed()).toEqual([]);
+  });
+
   it('opens the Gantt at Week zoom from the fixture week when the URL names no zoom and no date', async () => {
     const router = renderGanttRoute({});
 

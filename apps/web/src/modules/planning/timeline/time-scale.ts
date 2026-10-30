@@ -53,7 +53,14 @@ export interface ZoomLevelSpec {
   readonly bottomTier: TierUnit;
   /** The width of one hour at the level's natural size, so the time area scrolls sideways. */
   readonly pxPerHour: number;
+  /** The bucket of the workload lanes at the level. */
   readonly bucket: BucketKind;
+  /**
+   * Whether plan 18's rules for Hours and Day zoom apply (the deadline's time label, the wait and
+   * free float lines), or else its rules for Week and 4 weeks (the shift strip's working days, the
+   * 2 px rule for hollow segments).
+   */
+  readonly fine: boolean;
 }
 
 const tier = (unit: TierUnit['unit'], count = 1): TierUnit => ({ unit, count });
@@ -74,6 +81,7 @@ export const zoomLevels: Readonly<Record<ZoomLevel, ZoomLevelSpec>> = {
     bottomTier: tier('minute', 15),
     pxPerHour: 240,
     bucket: 'shift',
+    fine: true,
   },
   hours: {
     id: 'hours',
@@ -85,6 +93,7 @@ export const zoomLevels: Readonly<Record<ZoomLevel, ZoomLevelSpec>> = {
     bottomTier: tier('hour'),
     pxPerHour: 100,
     bucket: 'shift',
+    fine: true,
   },
   day: {
     id: 'day',
@@ -96,6 +105,7 @@ export const zoomLevels: Readonly<Record<ZoomLevel, ZoomLevelSpec>> = {
     bottomTier: tier('hour', 3),
     pxPerHour: 48,
     bucket: 'shift',
+    fine: true,
   },
   week: {
     id: 'week',
@@ -107,6 +117,7 @@ export const zoomLevels: Readonly<Record<ZoomLevel, ZoomLevelSpec>> = {
     bottomTier: tier('hour', 6),
     pxPerHour: 16,
     bucket: 'productionDay',
+    fine: false,
   },
   '4weeks': {
     id: '4weeks',
@@ -118,6 +129,7 @@ export const zoomLevels: Readonly<Record<ZoomLevel, ZoomLevelSpec>> = {
     bottomTier: tier('day'),
     pxPerHour: 3,
     bucket: 'isoWeek',
+    fine: false,
   },
   quarter: {
     id: 'quarter',
@@ -129,6 +141,7 @@ export const zoomLevels: Readonly<Record<ZoomLevel, ZoomLevelSpec>> = {
     bottomTier: tier('week'),
     pxPerHour: 0.6,
     bucket: 'isoWeek',
+    fine: false,
   },
   year: {
     id: 'year',
@@ -140,6 +153,7 @@ export const zoomLevels: Readonly<Record<ZoomLevel, ZoomLevelSpec>> = {
     bottomTier: tier('month'),
     pxPerHour: 0.15,
     bucket: 'month',
+    fine: false,
   },
 };
 
@@ -152,7 +166,7 @@ export const zoomLevelIds = [
   '4weeks',
   'quarter',
   'year',
-] as const satisfies readonly ZoomLevel[];
+] as const;
 
 /** The four presets of D3 in the job order table's Range group, finest first. */
 export const zoomPresetIds: readonly ZoomPreset[] = ['hours', 'day', 'week', '4weeks'];
@@ -163,20 +177,14 @@ export function steppedLevel(level: ZoomLevel, direction: 'in' | 'out'): ZoomLev
   return zoomLevelIds[Math.max(0, Math.min(zoomLevelIds.length - 1, index))] ?? level;
 }
 
-/**
- * Whether plan 18's rules for Hours and Day zoom apply (the deadline's time label, the wait and
- * free float lines): at `day` and every finer level (ADR 0089).
- */
+/** Whether plan 18's rules for Hours and Day zoom apply: at `day` and every finer level (ADR 0089). */
 export function isFineLevel(level: ZoomLevel): boolean {
-  return zoomLevelIds.indexOf(level) <= zoomLevelIds.indexOf('day');
+  return zoomLevels[level].fine;
 }
 
-/**
- * Whether plan 18's rules for Week and 4 weeks zoom apply (the shift strip's working days, the
- * 2 px rule for hollow segments): at `week` and every coarser level (ADR 0089).
- */
+/** Whether plan 18's rules for Week and 4 weeks zoom apply: at `week` and every coarser level. */
 export function isCoarseLevel(level: ZoomLevel): boolean {
-  return !isFineLevel(level);
+  return !zoomLevels[level].fine;
 }
 
 /**
@@ -225,7 +233,7 @@ export function rangeOf(
 }
 
 /**
- * The natural width of a range at a preset: its hours at the preset's pixels per hour, or, with
+ * The natural width of a range at a level: its hours at the level's pixels per hour, or, with
  * closed time hidden, its open hours plus a gap per closed window. The time area takes this width
  * when the view is narrower, and scrolls sideways inside its container (plan 18, Reflow).
  */
@@ -256,9 +264,9 @@ export function shiftedFrom(from: string, zoom: ZoomLevel, direction: 'earlier' 
 }
 
 /**
- * The loaded range of a preset from a plant date, extended by whole spans before and after it
+ * The loaded range of a level from a plant date, extended by whole spans before and after it
  * (#685): the view grows the margin on demand as the planner scrolls towards an edge, so the time
- * area never ends at the preset's span while `from` stays the chosen start.
+ * area never ends at the level's span while `from` stays the chosen start.
  */
 export function extendedRange(
   from: string,
@@ -583,50 +591,38 @@ export function createTimeScale({
   };
 
   /** The step of a calendar cell: wall-clock days, weeks, months and years (ADR 0024). */
-  const cellStep = ({ unit, count }: TierUnit): Temporal.DurationLike =>
-    unit === 'minute'
-      ? { minutes: count }
-      : unit === 'hour'
-        ? { hours: count }
-        : unit === 'day'
-          ? { days: count }
-          : unit === 'week'
-            ? { weeks: count }
-            : unit === 'month'
-              ? { months: count }
-              : { years: count };
+  const cellStep = ({ unit, count }: TierUnit): Temporal.DurationLike => ({ [`${unit}s`]: count });
 
   /**
    * The label formats of a calendar cell, longest first, and its full name (#902). A day reads
    * "Mon 2 Nov" or its day of the month, a week "W45, Mon 2 Nov" or "W45", a month "November
    * 2026" in the top tier and "November" in the bottom one, and an hour of the top tier
-   * "Wed 4 Nov, 06:00" or its clock.
+   * "Wed 4 Nov, 06:00" or its clock, from where its open time starts (`openFromMs`), as a clock
+   * cell of the bottom tier is named.
    */
   const cellText = (
     unit: TierUnit['unit'],
     at: Temporal.ZonedDateTime,
     topTier: boolean,
+    openFromMs: number,
   ): { readonly formats: readonly string[]; readonly name: string } => {
-    const ms = at.epochMilliseconds;
-    const date = formatPlantDate(ms, timeZone);
     if (unit === 'year') return { formats: [String(at.year)], name: String(at.year) };
     if (unit === 'month') {
-      const long = monthNames[at.month - 1] ?? '';
+      const name = formatMonth(at.toPlainDate().toPlainYearMonth().toString());
+      const [long = '', year = ''] = name.split(' ');
       const short = long.slice(0, 3);
-      const name = `${long} ${at.year}`;
-      return {
-        formats: topTier ? [name, `${short} ${at.year}`, short] : [long, short],
-        name,
-      };
+      return { formats: topTier ? [name, `${short} ${year}`, short] : [long, short], name };
     }
+    const date = formatPlantDate(at.epochMilliseconds, timeZone);
     if (unit === 'week') {
       const week = `W${at.weekOfYear ?? ''}`;
       return { formats: [`${week}, ${date}`, week], name: `Week ${at.weekOfYear ?? ''}, ${date}` };
     }
     if (unit === 'day') return { formats: [date, String(at.day)], name: date };
+    const ms = openFromMs;
     const clock = formatPlantTime(ms, timeZone);
     return {
-      formats: [`${date}, ${clock}`, ...clockFormats(clock)],
+      formats: [`${formatPlantDate(ms, timeZone)}, ${clock}`, ...clockFormats(clock)],
       name: formatPlantDateTime(ms, timeZone),
     };
   };
@@ -642,7 +638,7 @@ export function createTimeScale({
       const ms = at.epochMilliseconds;
       const cell = openCell(ms, next.epochMilliseconds);
       if (cell !== undefined) {
-        const { formats, name } = cellText(topUnit, at, true);
+        const { formats, name } = cellText(topUnit, at, true, cell.openFromMs);
         top.push({
           ms,
           x: cell.x,
@@ -654,7 +650,12 @@ export function createTimeScale({
       }
       at = next;
     }
-    const topMs = new Set(top.map((tick) => tick.ms));
+    // A bottom cell that starts with a top cell goes without a tick where the top cell names it:
+    // the day over its first hours, the ISO week over its Monday, the hour over its first quarter.
+    // A month does not name its first week, nor a year its January, so those keep their cells.
+    const { unit: bottomUnit, count } = level.bottomTier;
+    const namedByTop = bottomUnit !== 'week' && bottomUnit !== 'month';
+    const topMs = new Set(namedByTop ? top.map((tick) => tick.ms) : []);
     const bottom: TimeTick[] = [];
     const pushBottom = (
       ms: number,
@@ -673,7 +674,6 @@ export function createTimeScale({
         tier: 'bottom',
       });
     };
-    const { unit: bottomUnit, count } = level.bottomTier;
     if (bottomUnit === 'minute' || bottomUnit === 'hour') {
       // Clock ticks come from exact instants, so a clock change gives 23 or 25 hours. A cell
       // clipped at its start is named by the clock where its open time starts, as its x is.
@@ -689,7 +689,7 @@ export function createTimeScale({
     } else {
       for (let at = cellStart(bottomUnit, false); at.epochMilliseconds < range.toMs; ) {
         const next = at.add(cellStep(level.bottomTier));
-        const { formats, name } = cellText(bottomUnit, at, false);
+        const { formats, name } = cellText(bottomUnit, at, false, at.epochMilliseconds);
         pushBottom(
           at.epochMilliseconds,
           next.epochMilliseconds,
@@ -733,7 +733,8 @@ export function rangeLabel(range: TimeRange, zoom: ZoomLevel, timeZone: string):
     return `${first}, ${formatPlantTime(range.fromMs, timeZone)} to ${formatPlantTime(range.toMs, timeZone)}`;
   }
   if ('months' in span) {
-    const month = (at: Temporal.ZonedDateTime) => `${monthNames[at.month - 1] ?? ''} ${at.year}`;
+    const month = (at: Temporal.ZonedDateTime) =>
+      formatMonth(at.toPlainDate().toPlainYearMonth().toString());
     return `${month(start)} to ${month(lastDay)}`;
   }
   const last = formatPlantDate(lastDay.epochMilliseconds, timeZone);

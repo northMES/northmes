@@ -23,7 +23,9 @@ const laneContexts = new WeakMap<GanttSnapshot, Map<string, PlanContext>>();
 
 /**
  * The plan context the lanes read, built once per plan with the draft and range: its availability
- * covers the range, which the context of a move, laid from now to the fence, need not.
+ * covers the range and the 31 days on each side, so a bucket the range edge cuts, a week that
+ * starts before a Quarter's first of the month or a month around a range, keeps its working time.
+ * The context of a move, laid from now to the fence, need not.
  */
 function laneContextOf(snapshot: GanttSnapshot, range: TimeRange): PlanContext {
   let byRange = laneContexts.get(snapshot);
@@ -34,7 +36,10 @@ function laneContextOf(snapshot: GanttSnapshot, range: TimeRange): PlanContext {
   const key = `${range.fromMs} ${range.toMs}`;
   let context = byRange.get(key);
   if (context === undefined) {
-    context = planContextOf(snapshot, range);
+    context = planContextOf(snapshot, {
+      fromMs: range.fromMs - 31 * day,
+      toMs: range.toMs + 31 * day,
+    });
     byRange.set(key, context);
   }
   return context;

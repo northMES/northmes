@@ -42,9 +42,10 @@ export type {
 
 import type { EnteredOrders } from './entered-orders.ts';
 import type { EffectivePlanningRules } from './planning-rules.ts';
+import type { zoomLevelIds } from './timeline/time-scale.ts';
 
 /** The levels of the zoom ladder, finest first, by their URL ids (ADR 0089, Zoom levels). */
-export type ZoomLevel = 'quarter-hours' | 'hours' | 'day' | 'week' | '4weeks' | 'quarter' | 'year';
+export type ZoomLevel = (typeof zoomLevelIds)[number];
 
 /**
  * The four zoom presets of the approved board design D3, which the job order table keeps as its

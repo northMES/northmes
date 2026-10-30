@@ -38,17 +38,22 @@ describe('the buckets of the workload lanes follow the zoom level (ADR 0089; #90
     expect(bucketKindOf('year')).toBe('month');
   });
 
-  it('by month, CNC1 holds the load of every shift of November in 2026-11, named November 2026', () => {
-    const buckets = workloadOf(g1Snapshot(), 'year', week);
-    // November in the plant's zone: Sun 1 Nov 00:00 to Tue 1 Dec 00:00.
-    const month = { fromMs: Date.UTC(2026, 9, 31, 23), toMs: Date.UTC(2026, 10, 30, 23) };
-    const byShift = workloadOf(g1Snapshot(), 'day', month)
-      .filter((bucket) => bucket.equipment === 'CNC1')
-      .reduce((sum, bucket) => sum + bucket.loadedS, 0);
+  it('by ISO week at Quarter, a week that starts before the range keeps its working time', () => {
+    // Quarter from Sun 1 Nov: W44 runs Mon 26 Oct to Mon 2 Nov, five open days of 8 h 15 min.
+    const quarter = { fromMs: Date.UTC(2026, 9, 31, 23), toMs: Date.UTC(2027, 0, 31, 23) };
 
+    const buckets = workloadOf(g1Snapshot(), 'quarter', quarter);
+
+    expect(bucketOf(buckets, 'CNC1', '2026-W44')?.availableS).toBe(5 * 29_700);
+  });
+
+  it('by month, CNC1 holds the work of its four job orders of November in 2026-11, named November 2026', () => {
+    const buckets = workloadOf(g1Snapshot(), 'year', week);
+
+    // The placements of g1.expected.json on CNC1: 1001.10 5 h 30 min, 1003.10 4 h, 1004.10
+    // 10 h 30 min and 1005.10 5 h 30 min of working segments.
     const november = bucketOf(buckets, 'CNC1', '2026-11');
-    expect(byShift).toBeGreaterThan(72_000);
-    expect(november?.loadedS).toBe(byShift);
+    expect(november?.loadedS).toBe(19_800 + 14_400 + 37_800 + 19_800);
     expect(november && bucketRow(november, 'month', 'Europe/Stockholm')[0]).toBe('November 2026');
   });
 
