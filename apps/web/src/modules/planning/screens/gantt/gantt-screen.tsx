@@ -47,7 +47,6 @@ import {
   type MaterialShortage,
   materialShortages as materialShortageList,
 } from '../../material-projection.ts';
-import { useMoveOf } from '../../move-store.ts';
 import { usePlanningDraft } from '../../planning-draft.tsx';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
@@ -387,8 +386,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     timeZone,
     focusBlock,
   });
-  // Whether a move is in progress, which the Escape stack reads; its position stays in the store.
-  const moving = useMoveOf(moveStore, (move) => move !== undefined);
   const rowById = useMemo(() => {
     const map = new Map<string, GanttRow>();
     const addOrder = (order: GanttRow) => {
@@ -735,7 +732,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         event.currentTarget.querySelector<HTMLElement>('[data-row-menu]')?.click();
         break;
       case 'Escape':
-        if (moving) moveActions?.cancel();
+        if (moveStore.get() !== undefined) moveActions?.cancel();
         else if (chain !== undefined) void setSearch(withChain(search, false));
         else handled = false;
         break;
@@ -808,7 +805,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               aria-busy={state.status === 'loading' || undefined}
               onKeyDown={(event) => {
                 // The Escape stack: move mode ends first, then the chain highlight.
-                if (event.key === 'Escape' && moving) {
+                // The move is read from its store, so a move that begins renders no rows.
+                if (event.key === 'Escape' && moveStore.get() !== undefined) {
                   event.stopPropagation();
                   moveActions?.cancel();
                 } else if (event.key === 'Escape' && chain !== undefined) {

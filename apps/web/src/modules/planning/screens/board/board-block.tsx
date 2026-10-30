@@ -104,11 +104,11 @@ export function BoardBlock({
   // The click the browser fires after a drop is not a selection.
   const dropped = useRef(false);
   const { jobOrder, order } = row;
-  const moving = useMoveOf(move?.store, (each) => each?.state.jobOrderId === jobOrder.id);
-  const inMoveMode = useMoveOf(
-    move?.store,
-    (each) => each?.state.jobOrderId === jobOrder.id && each.state.source === 'keyboard',
+  const movedBy = useMoveOf(move?.store, (each) =>
+    each?.state.jobOrderId === jobOrder.id ? each.state.source : undefined,
   );
+  const moving = movedBy !== undefined;
+  const inMoveMode = movedBy === 'keyboard';
   const placement = jobOrder.placement;
   if (placement === undefined) return null;
   const timeZone = snapshot.plant.timeZone;

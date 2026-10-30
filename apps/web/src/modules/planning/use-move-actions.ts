@@ -44,10 +44,11 @@ export interface MoveActionsInput {
  * plan 18, Moves on the order Gantt), which the board and the order Gantt share: the move in
  * progress and its preview through the domain's cascade over the plan with the draft applied, in a
  * store outside React state (ADR 0030; #898), the debounced step messages of move mode, and the
- * actions a block calls. The actions stay the same object during a move, so the screen that holds
- * them does not render again on a pointer move; the parts that draw the move read the store with
- * useMoveOf. A commit writes the move into the draft and announces it, a refusal says why, and
- * focus returns to the block by id.
+ * actions a block calls. The actions stay the same object during a move, so a pointer move does
+ * not render the screen that holds them again; the parts that draw the move read the store with
+ * useMoveOf (the Gantt's preview layer; the board still reads the preview in its screen). A commit
+ * writes the move into the draft and announces it, a refusal says why, and focus returns to the
+ * block by id.
  */
 export function useMoveActions({
   committed,
@@ -72,10 +73,13 @@ export function useMoveActions({
   const active = useRef(false);
   const focusBlock = useRef(focus);
   const machineSteps = useRef(steps);
-  // The latest callbacks, for the actions to call after the render that made them.
+  // The latest callbacks and plan, for the actions and the step message to read after the render
+  // that made them.
+  const latestSnapshot = useRef(snapshot);
   useLayoutEffect(() => {
     focusBlock.current = focus;
     machineSteps.current = steps;
+    latestSnapshot.current = snapshot;
   });
   // A new plan or cascade switch during a move previews it again over that plan.
   useLayoutEffect(() => {
@@ -84,7 +88,8 @@ export function useMoveActions({
     store.refresh();
   }, [store, snapshot, cascadeOn]);
   // The step message of keyboard move mode, debounced to about 300 ms (plan 07, Moving without
-  // dragging); the end of the move drops a message still waiting.
+  // dragging); the end of the move drops a message still waiting. It reads the plan through a ref,
+  // so a new plan within the 300 ms keeps the subscription and its message.
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const unsubscribe = store.subscribe(() => {
@@ -93,7 +98,7 @@ export function useMoveActions({
       if (move?.state.source !== 'keyboard' || move.preview === undefined) return;
       const { preview } = move;
       const machine =
-        snapshot?.equipment.find((each) => each.code === preview.equipment)?.name ??
+        latestSnapshot.current?.equipment.find((each) => each.code === preview.equipment)?.name ??
         preview.equipment;
       timer = setTimeout(() => announce(stepMessage(preview, machine, timeZone)), 300);
     });
@@ -101,7 +106,9 @@ export function useMoveActions({
       clearTimeout(timer);
       unsubscribe();
     };
-  }, [store, snapshot, timeZone]);
+  }, [store, timeZone]);
+  // A screen that goes away mid-move leaves no frame pending.
+  useEffect(() => () => store.set(undefined), [store]);
   const actions = useMemo<GanttMoveActions | undefined>(() => {
     if (snapshot === undefined || committed === undefined) return undefined;
     const machineOf = (code: string | undefined) =>

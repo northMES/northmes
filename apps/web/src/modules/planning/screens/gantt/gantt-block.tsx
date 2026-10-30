@@ -66,12 +66,12 @@ export function GanttBlock({
   );
   // The click the browser fires after a drop is not a selection.
   const dropped = useRef(false);
-  // Only whether this row moves: the position of a move draws in its preview layer (#898).
-  const moving = useMoveOf(move?.store, (each) => each?.state.jobOrderId === jobOrder.id);
-  const inMoveMode = useMoveOf(
-    move?.store,
-    (each) => each?.state.jobOrderId === jobOrder.id && each.state.source === 'keyboard',
+  // Only how this row moves, if it does: the position of a move draws in its preview layer (#898).
+  const movedBy = useMoveOf(move?.store, (each) =>
+    each?.state.jobOrderId === jobOrder.id ? each.state.source : undefined,
   );
+  const moving = movedBy !== undefined;
+  const inMoveMode = movedBy === 'keyboard';
   if (jobOrder.placement === undefined) return null;
   const { placement } = jobOrder;
   const { left, width } = blockBox(scale, placement);
