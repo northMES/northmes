@@ -214,6 +214,7 @@ describe('the zoom of the order Gantt (ADR 0089, Zoom levels)', () => {
 
   it('#896 with no rows to draw, the zoom controls and Now still set the level and the start', async () => {
     const empty: GanttDataSource = {
+      ...g1DataSource,
       load: async (input) => ({ ...(await g1DataSource.load(input)), productionOrders: [] }),
     };
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-09' }, empty);

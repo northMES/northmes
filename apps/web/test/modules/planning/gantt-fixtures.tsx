@@ -15,7 +15,7 @@ import {
   EnteredOrdersStoreProvider,
 } from '../../../src/modules/planning/entered-orders-store.ts';
 import type { GanttDataSource, GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts';
-import { g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
+import { g1DataSource, snapshotSource } from '../../../src/modules/planning/gantt-data.ts';
 import { GanttSourceProvider } from '../../../src/modules/planning/gantt-source-context.ts';
 import {
   createG1PlanningRulesStore,
@@ -105,7 +105,7 @@ export async function findGantt(): Promise<HTMLElement> {
 
 /** A data source that answers every load with one snapshot, for a test with changed data. */
 export function sourceOf(snapshot: GanttSnapshot): GanttDataSource {
-  return { load: async () => snapshot };
+  return snapshotSource(async () => snapshot);
 }
 
 /** The accessible text of the markers of a kind inside an element, as the layer records it. */

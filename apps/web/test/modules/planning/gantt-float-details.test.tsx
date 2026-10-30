@@ -3,7 +3,7 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { GanttDataSource } from '../../../src/modules/planning/gantt-data.ts';
+import { type GanttDataSource, g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import {
   detailsOpen,
@@ -160,6 +160,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
   it('closes Details and forgets the row when a reload drops it, and opens again for another row', async () => {
     // Week 45 answers G1; the week after, reached with Later, answers G1 without order 1003.
     const source: GanttDataSource = {
+      ...g1DataSource,
       load: async ({ from }) => {
         const snapshot = g1Snapshot();
         return Date.parse(from) < Date.UTC(2026, 10, 8)

@@ -20,20 +20,26 @@ import {
   suppliesOf,
 } from './entered-orders.ts';
 import { analyzeGantt, placementWithSegments, workingCalendarOf } from './gantt-analysis.ts';
-import type {
-  CustomerOrderLine,
-  GanttDataSource,
-  GanttJobOrder,
-  GanttOperation,
-  GanttOrder,
-  GanttSettings,
-  GanttSnapshot,
-  GanttStock,
-  HistoryEntry,
-  OrderOrigin,
+import {
+  type CustomerOrderLine,
+  type GanttDataSource,
+  type GanttFilter,
+  type GanttJobOrder,
+  type GanttLoadOptions,
+  type GanttOperation,
+  type GanttOrder,
+  type GanttPageRequest,
+  type GanttSettings,
+  type GanttSnapshot,
+  type GanttStock,
+  ganttMaxOrders,
+  ganttPageSize,
+  type HistoryEntry,
+  type OrderOrigin,
 } from './gantt-data.ts';
-import { PlanningForbidden } from './planning-preview.ts';
+import { PlanningForbidden, PlanningRefusal } from './planning-preview.ts';
 import { type EffectivePlanningRules, ganttSettingsWith } from './planning-rules.ts';
+import { compareOrders } from './screens/gantt/gantt-rows.ts';
 
 /** An ISO instant as epoch milliseconds: the one place a snapshot's instants are parsed. */
 function ms(instant: string): number {
@@ -428,29 +434,134 @@ export function g1Snapshot(
   return { ...base, analysis: analyzeGantt(base, range) };
 }
 
+/** The snapshot a mock load answers for its page state, or the page state's failure. */
+async function previewedSnapshot(
+  range: { readonly fromMs: number; readonly toMs: number },
+  { preview, rules, entered }: GanttLoadOptions,
+): Promise<GanttSnapshot> {
+  // The page states of design D3 on mock data: a load that never ends, one that fails, the
+  // API's refusal, and the plant before any machine is marked as plannable.
+  if (preview === 'loading') return new Promise<never>(() => {});
+  if (preview === 'error') throw new Error('The plan could not be loaded');
+  if (preview === 'forbidden') throw new PlanningForbidden();
+  const snapshot = g1Snapshot(g1, range, g1Pages, rules, entered);
+  if (preview !== 'empty') return snapshot;
+  return {
+    ...snapshot,
+    equipment: snapshot.equipment.map((machine) => ({ ...machine, isPlannable: false })),
+  };
+}
+
+/**
+ * The orders of a snapshot a filter matches: Late only, and the search by order number as a
+ * trimmed, case-insensitive substring (ADR 0016).
+ */
+function filtered(snapshot: GanttSnapshot, filter: GanttFilter): GanttOrder[] {
+  const search = filter.search?.trim().toLowerCase() ?? '';
+  return snapshot.productionOrders.filter(
+    (order) =>
+      (filter.lateOnly !== true || snapshot.analysis.orders[order.id]?.late === true) &&
+      order.number.toLowerCase().includes(search),
+  );
+}
+
+/**
+ * The slice of a list of `count` rows a page asks for, by the index cursors this source gives: a
+ * size outside 1 to `ganttPageSize` and a cursor it never gave are refused, as ADR 0016's
+ * connections refuse them.
+ */
+function pageSlice(count: number, page: GanttPageRequest): { start: number; end: number } {
+  const size = 'first' in page ? page.first : page.last;
+  if (!Number.isInteger(size) || size < 1 || size > ganttPageSize) {
+    throw new PlanningRefusal('core.list.bad_argument');
+  }
+  const cursor = 'first' in page ? page.after : page.before;
+  if (cursor !== undefined && (!/^\d+$/.test(cursor) || Number(cursor) >= count)) {
+    throw new PlanningRefusal('core.list.invalid_cursor');
+  }
+  if ('first' in page) {
+    const start = cursor === undefined ? 0 : Number(cursor) + 1;
+    return { start, end: Math.min(count, start + size) };
+  }
+  const end = cursor === undefined ? count : Number(cursor);
+  return { start: Math.max(0, end - size), end };
+}
+
+/** An order as the row list holds it: its span, and its job orders without their placements. */
+function rowOf(order: GanttOrder): GanttOrder {
+  const placements = order.jobOrders.flatMap((row) =>
+    row.placement === undefined ? [] : [row.placement],
+  );
+  const jobOrders = order.jobOrders.map(({ placement: _, ...row }) => row);
+  if (placements.length === 0) return { ...order, jobOrders };
+  return {
+    ...order,
+    jobOrders,
+    span: {
+      fromMs: Math.min(...placements.map((placement) => placement.setupStartMs)),
+      toMs: Math.max(...placements.map((placement) => placement.endMs)),
+    },
+  };
+}
+
+/**
+ * A data source that answers every read from the snapshots a function gives for a range: one
+ * snapshot for `load`, the orders of the snapshot of week 45, the week G1 is written for, for the
+ * row list, and the placements of the snapshot of a chunk for that chunk (ADR 0089). The mock
+ * source and the tests with changed data are built on it.
+ */
+export function snapshotSource(
+  snapshotOf: (
+    range: { readonly fromMs: number; readonly toMs: number },
+    options: GanttLoadOptions,
+  ) => Promise<GanttSnapshot>,
+): GanttDataSource {
+  return {
+    load: ({ from, to, filter: _, ...options }) =>
+      snapshotOf({ fromMs: Date.parse(from), toMs: Date.parse(to) }, options),
+    loadRows: async (filter, page, options = {}) => {
+      const snapshot = await snapshotOf(g1Week, options);
+      // G1 has no finished or cancelled order, so every order it has is open.
+      const orders = filtered(snapshot, filter).sort(compareOrders);
+      const cursor = 'first' in page ? page.after : page.before;
+      if (cursor === undefined && orders.length > ganttMaxOrders) {
+        throw new PlanningRefusal('planning.gantt.too_many_orders');
+      }
+      // A cursor is the index of an order, opaque to the view as a Relay cursor is.
+      const { start, end } = pageSlice(orders.length, page);
+      const { productionOrders: __, analysis: ___, ...frame } = snapshot;
+      return {
+        frame,
+        orders: orders.slice(start, end).map(rowOf),
+        pageInfo: {
+          hasNextPage: end < orders.length,
+          hasPreviousPage: start > 0,
+          ...(end > start && { startCursor: String(start), endCursor: String(end - 1) }),
+        },
+        totalCount: orders.length,
+      };
+    },
+    loadChunk: async (from, to, filter, options = {}) => {
+      const chunk = { fromMs: Date.parse(from), toMs: Date.parse(to) };
+      const snapshot = await snapshotOf(chunk, options);
+      // A span overlaps the half-open chunk; a span of no length belongs to the chunk it starts in.
+      return {
+        jobOrders: filtered(snapshot, filter).flatMap((order) =>
+          order.jobOrders.filter(
+            ({ placement }) =>
+              placement !== undefined &&
+              placement.setupStartMs < chunk.toMs &&
+              (placement.endMs > chunk.fromMs || placement.setupStartMs >= chunk.fromMs),
+          ),
+        ),
+      };
+    },
+  };
+}
+
 /**
  * The mock data source of phase 1 (plan 18): every load answers with the fixture G1 analysed over
  * the asked range, so the product owner evaluates the Gantt on known data before a backend exists.
  * The screen shows "Showing fixture G1" while it is in use.
  */
-export const g1DataSource: GanttDataSource = {
-  load: async ({ from, to, preview, rules, entered }) => {
-    // The page states of design D3 on mock data: a load that never ends, one that fails, the
-    // API's refusal, and the plant before any machine is marked as plannable.
-    if (preview === 'loading') return new Promise<never>(() => {});
-    if (preview === 'error') throw new Error('The plan could not be loaded');
-    if (preview === 'forbidden') throw new PlanningForbidden();
-    const snapshot = g1Snapshot(
-      g1,
-      { fromMs: Date.parse(from), toMs: Date.parse(to) },
-      g1Pages,
-      rules,
-      entered,
-    );
-    if (preview !== 'empty') return snapshot;
-    return {
-      ...snapshot,
-      equipment: snapshot.equipment.map((machine) => ({ ...machine, isPlannable: false })),
-    };
-  },
-};
+export const g1DataSource: GanttDataSource = snapshotSource(previewedSnapshot);

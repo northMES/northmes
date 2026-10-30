@@ -478,6 +478,7 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     const user = userEvent.setup();
     let loads = 0;
     const failingLater: GanttDataSource = {
+      ...g1DataSource,
       load: async (input) => {
         loads += 1;
         if (loads > 1 && input.from.startsWith('2026-11-08')) {
@@ -636,6 +637,7 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     const user = userEvent.setup();
     let release: () => void = () => {};
     const slowLater: GanttDataSource = {
+      ...g1DataSource,
       load: async (input) => {
         if (input.from.startsWith('2026-11-08')) {
           await new Promise<void>((resolve) => {
