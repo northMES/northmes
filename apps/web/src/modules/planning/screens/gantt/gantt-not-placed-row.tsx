@@ -29,8 +29,9 @@ export function GanttNotPlacedRow({
     <div
       role="row"
       aria-rowindex={2}
-      // As wide as its tracks, as GanttRowView's rows are (#890).
-      className="sticky top-12 z-10 grid h-8 w-max min-w-full border-b border-border bg-lane-alt"
+      // As wide as its tracks, as GanttRowView's rows are (#890). Above the data rows' sticky tree
+      // cells (z-10), which scroll up under it, and below the time header (z-20) (#911).
+      className="sticky top-12 z-15 grid h-8 w-max min-w-full border-b border-border bg-lane-alt"
       style={{ gridTemplateColumns }}
     >
       <div
