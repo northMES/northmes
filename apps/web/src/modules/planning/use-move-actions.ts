@@ -14,7 +14,9 @@ import {
   moveRefusalOf,
   previewOf,
   refusalMessage,
+  staysOverdue,
   stepBackStart,
+  stepLaterStart,
   stepMessage,
 } from './screens/gantt/gantt-move.ts';
 import { zoomLevels } from './timeline/time-scale.ts';
@@ -144,7 +146,9 @@ export function useMoveActions({
         })),
       // A step moves one snap step from the snapped preview. Backwards, the forward snap of the
       // calendar would land a step in closed time on the same instant again, so the step jumps to
-      // the last step before the closed time (plan 18, Snapping and the calendar).
+      // the last step before the closed time (plan 18, Snapping and the calendar). Forwards from
+      // an overdue row, the steps go on until the start is at or after now; a step back to before
+      // now is refused with PAST and the row stays (ADR 0089, Time before now).
       stepTime: (direction) => {
         const move = store.get();
         if (move === undefined) return;
@@ -152,12 +156,18 @@ export function useMoveActions({
         const stepMs = zoomLevels[zoom].stepMs;
         const from = move.preview?.span.setupStartMs ?? state.setupStartMs;
         if (direction > 0) {
-          store.set({ ...state, setupStartMs: from + stepMs });
+          store.set({ ...state, setupStartMs: stepLaterStart(from, stepMs, snapshot.nowMs) });
           return;
         }
         const windows = availabilityOn(moveContextOf(snapshot), state.equipment);
         const setupStartMs = stepBackStart(windows, from, stepMs);
         const next = previewOf(snapshot, { ...state, setupStartMs }, cascadeOn);
+        // Back to before now is refused, also onto an overdue row's own start, which the preview
+        // reads as no move: the later start stays.
+        if (next !== undefined && setupStartMs < snapshot.nowMs) {
+          announce(refusalMessage(next.displayNumber, 'PAST'));
+          return;
+        }
         // The row cannot start before its release or its last-piece bound: it stays.
         if (
           next !== undefined &&
@@ -183,7 +193,21 @@ export function useMoveActions({
         const move = store.get();
         if (!active.current || move?.preview === undefined) return;
         const { state, preview } = move;
+        // An overdue row that did not move writes nothing (ADR 0089): the move ends as a cancel.
+        if (staysOverdue(snapshot, state)) {
+          active.current = false;
+          store.set(undefined);
+          announce('Move cancelled.');
+          requestAnimationFrame(() => focusBlock.current(state.jobOrderId));
+          return;
+        }
         active.current = false;
+        // A preview refused with PAST writes nothing; the cascade knows no now (ADR 0089).
+        if (preview.refused !== undefined) {
+          store.set(undefined);
+          announce(refusalMessage(preview.displayNumber, preview.refused));
+          return;
+        }
         const { draft: next, result } = moveInDraft(
           committed,
           draft,

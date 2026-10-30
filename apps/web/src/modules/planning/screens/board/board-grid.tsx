@@ -93,7 +93,12 @@ function MoveOutline({
         data-move-preview={preview.jobOrderId}
         data-from-ms={preview.span.setupStartMs}
         data-to-ms={preview.span.endMs}
-        className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground"
+        data-refused={preview.refused}
+        className={cn(
+          'pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground',
+          // A refused move, such as one before now, outlines where it was asked for, dashed.
+          preview.refused !== undefined && 'border-dashed border-destructive',
+        )}
         style={{
           left: `${left}px`,
           width: `${Math.max(2, scale.x(preview.span.endMs) - left)}px`,
@@ -309,7 +314,7 @@ export function BoardGrid({
             {machine.equipment.name}
           </div>
           <div className="relative bg-lane">
-            <TimeCellShading windows={machine.closed} scale={scale} />
+            <TimeCellShading windows={machine.closed} scale={scale} nowMs={snapshot.nowMs} />
             {preview !== undefined && preview.equipment === code && (
               <MoveOutline preview={preview} scale={scale} timeZone={snapshot.plant.timeZone} />
             )}

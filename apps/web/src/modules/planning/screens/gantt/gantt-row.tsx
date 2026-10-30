@@ -173,7 +173,7 @@ export function GanttRowView({
           aria-label={summaryName(original, timeZone)}
           className="relative overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         >
-          <TimeCellShading windows={shading} scale={scale} />
+          <TimeCellShading windows={shading} scale={scale} nowMs={snapshot.nowMs} />
           <GanttMarkerLayer markers={markers} scale={scale} />
           {span !== undefined && (
             <SummaryBar
@@ -199,7 +199,7 @@ export function GanttRowView({
             }),
           })}
         >
-          <TimeCellShading windows={shading} scale={scale} />
+          <TimeCellShading windows={shading} scale={scale} nowMs={snapshot.nowMs} />
           <GanttMarkerLayer markers={markers} scale={scale} />
           <GanttBlock
             row={original}

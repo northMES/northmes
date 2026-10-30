@@ -78,18 +78,35 @@ export function GanttTimeHeader({
 
 /**
  * The closed time of a row's calendar in the off-time token (plan 18, Shading and the shift
- * strip), each compressed window as a hatched gap when closed time is hidden. Decorative: the
- * row's name and the hover card carry the words.
+ * strip), each compressed window as a hatched gap when closed time is hidden, over the flat past
+ * tone of the time before now (ADR 0089, Time before now). Decorative: the row's name and the
+ * hover card carry the words, and the now marker names now.
  */
 export function TimeCellShading({
   windows,
   scale,
+  nowMs,
 }: {
   readonly windows: readonly ClosedWindow[];
   readonly scale: TimeScale;
+  /** Now, from the snapshot's clock: the time before it takes the past tone. */
+  readonly nowMs: number;
 }) {
+  const pastWidth =
+    nowMs <= scale.range.fromMs
+      ? 0
+      : scale.x(Math.min(nowMs, scale.range.toMs)) - scale.x(scale.range.fromMs);
   return (
     <>
+      {pastWidth > 0 && (
+        <div
+          aria-hidden
+          data-past
+          data-to-ms={nowMs}
+          className="gantt-past absolute top-0 bottom-0"
+          style={{ left: `${scale.x(scale.range.fromMs)}px`, width: `${pastWidth}px` }}
+        />
+      )}
       {windows.map((window) => {
         const fromMs = Math.max(window.fromMs, scale.range.fromMs);
         const toMs = Math.min(window.toMs, scale.range.toMs);

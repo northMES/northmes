@@ -62,7 +62,7 @@ import { useMoveActions } from '../../use-move-actions.ts';
 import { type GanttViewContext, GanttViewProvider } from '../gantt/gantt-context.ts';
 import { GanttDetailDrawer } from '../gantt/gantt-detail-panel.tsx';
 import { changesText, GanttDraftDrawer } from '../gantt/gantt-draft-drawer.tsx';
-import { movedMessage, previewOf, refusalMessage } from '../gantt/gantt-move.ts';
+import { movedMessage, previewOf, refusalMessage, staysOverdue } from '../gantt/gantt-move.ts';
 import { timeHeaderHeightRem } from '../gantt/gantt-time-area.tsx';
 import { BlockMenu } from './board-block-menu.tsx';
 import { type BoardCellItem, cellsOf } from './board-cells.ts';
@@ -464,21 +464,24 @@ export function BoardScreen() {
   // dragging), with its announcement, and focus returns to the block by id.
   const moveFromDialog = (jobOrderId: string, equipment: string, setupStartMs: number) => {
     if (committed === undefined || snapshot === undefined) return;
-    const preview = previewOf(
-      snapshot,
-      { jobOrderId, setupStartMs, equipment, source: 'keyboard' },
-      true,
-    );
+    const state = { jobOrderId, setupStartMs, equipment, source: 'keyboard' } as const;
+    const preview = previewOf(snapshot, state, true);
+    if (preview === undefined) return;
+    // A start before now is refused with PAST in the preview, as the cascade knows no now, and an
+    // overdue row left where it was writes nothing (ADR 0089).
+    if (preview.refused !== undefined) {
+      announce(refusalMessage(preview.displayNumber, preview.refused));
+      return;
+    }
+    if (staysOverdue(snapshot, state)) return;
     const { draft: next, result } = moveInDraft(
       committed,
       draft,
       { jobOrderId, setupStartMs, equipment },
       { cascade: true },
     );
-    if (result.refused !== undefined || preview === undefined) {
-      if (result.refused !== undefined && preview !== undefined) {
-        announce(refusalMessage(preview.displayNumber, result.refused));
-      }
+    if (result.refused !== undefined) {
+      announce(refusalMessage(preview.displayNumber, result.refused));
       return;
     }
     setDraft(next);

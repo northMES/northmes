@@ -16,6 +16,14 @@ import {
 } from '@northmes/planning-domain';
 import { orderOfRow, planContextOf } from '../../gantt-analysis.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
+import type { TimeScale } from '../../timeline/time-scale.ts';
+
+/**
+ * Why a move cannot be written: the refusals of the domain, and `PAST` for a setup start before
+ * now (ADR 0089, Time before now). `PAST` refuses the move itself and does not join judgeMove, so
+ * Save lists a start that passed in the draft as a conflict instead.
+ */
+export type GanttMoveRefusal = MoveRefusal | 'PAST';
 
 export interface MoveState {
   readonly jobOrderId: string;
@@ -42,7 +50,7 @@ export interface MovePreview {
   };
   readonly reason?: MoveReason;
   readonly conflicts: readonly Conflict[];
-  readonly refused?: MoveRefusal;
+  readonly refused?: GanttMoveRefusal;
 }
 
 /** Why a row cannot enter a move (plan 07, judgeMove): its lock, its status or another planner's lock. */
@@ -61,12 +69,13 @@ export function moveRefusalOf(
 }
 
 /** "Cannot move 1002.10: locked." */
-export function refusalMessage(displayNumber: string, refused: MoveRefusal): string {
+export function refusalMessage(displayNumber: string, refused: GanttMoveRefusal): string {
   const why = {
     PINNED: 'locked',
     STARTED: 'started',
     LOCKED: 'held by another planner',
     NOT_ALLOWED: 'the machine is not allowed for its operation',
+    PAST: 'it would start before now',
   }[refused];
   return `Cannot move ${displayNumber}: ${why}.`;
 }
@@ -87,6 +96,14 @@ export function moveContextOf(applied: GanttSnapshot): PlanContext {
 }
 
 /**
+ * The setup start a step later asks for (ADR 0089): one snap step on, or from a start before now
+ * the first step on the same grid at or after now, so an overdue row reaches now in one step.
+ */
+export function stepLaterStart(fromMs: number, stepMs: number, nowMs: number): number {
+  return fromMs + Math.max(1, Math.ceil((nowMs - fromMs) / stepMs)) * stepMs;
+}
+
+/**
  * The setup start a step back in move mode asks for (plan 18, Snapping and the calendar): one snap
  * step back, or, where that lands in closed time the forward snap would undo, the last step on
  * the same grid before the previous working window closes.
@@ -99,6 +116,51 @@ export function stepBackStart(windows: Windows, fromMs: number, stepMs: number):
   return fromMs - (Math.floor((fromMs - before.toMs) / stepMs) + 1) * stepMs;
 }
 
+/**
+ * The setup start a pointer at `rawMs` asks for (ADR 0089, Time before now): the scale's snap step,
+ * and, when the pointer is at or after now but the step rounds back before it, the first snap
+ * step at or after now. A pointer before now keeps its snap step: before now the preview refuses
+ * it, and where the step rounds forward to now or later the row starts there, after now.
+ */
+export function pointerStart(
+  scale: Pick<TimeScale, 'snap' | 'stepMs'>,
+  rawMs: number,
+  nowMs: number,
+): number {
+  // A fractional width gives a fractional instant, which Temporal refuses, so the snap takes the
+  // whole millisecond.
+  const atMs = Math.round(rawMs);
+  let startMs = scale.snap(atMs);
+  if (atMs < nowMs) return startMs;
+  // One step forward reaches now; the guard of three covers a day step that a change of clocks
+  // shortens, and stops the loop on a scale whose snap would not move forward.
+  for (let count = 0; startMs < nowMs && count < 3; count += 1) {
+    startMs = scale.snap(startMs + scale.stepMs);
+  }
+  return startMs;
+}
+
+/** Whether the move holds the row at its own start on its own machine, so it moves nothing. */
+function heldInPlace(
+  row: { readonly placement?: { readonly setupStartMs: number }; readonly equipment?: string },
+  move: MoveState,
+): boolean {
+  return row.placement?.setupStartMs === move.setupStartMs && row.equipment === move.equipment;
+}
+
+/**
+ * Whether a move ends on an overdue row where it started (ADR 0089): its start lies before now, and
+ * it stayed at that start on its machine. It writes nothing; a draft change there would list a
+ * PAST conflict for a row the planner did not move.
+ */
+export function staysOverdue(applied: GanttSnapshot, move: MoveState): boolean {
+  if (move.setupStartMs >= applied.nowMs) return false;
+  const row = orderOfRow(applied.productionOrders, move.jobOrderId)?.jobOrders.find(
+    (each) => each.id === move.jobOrderId,
+  );
+  return row !== undefined && heldInPlace(row, move);
+}
+
 /** The preview of a move over the plan with the draft applied, through the cascade. */
 export function previewOf(
   applied: GanttSnapshot,
@@ -107,6 +169,32 @@ export function previewOf(
 ): MovePreview | undefined {
   const order = orderOfRow(applied.productionOrders, move.jobOrderId);
   if (order === undefined) return undefined;
+  const row = order.jobOrders.find((each) => each.id === move.jobOrderId);
+  // A start before now is refused before the cascade runs; the outline stays where the pointer
+  // asks, as long as the row, so the refusal shows over the past (ADR 0089). An overdue row held
+  // at its own start on its own machine is not a move, so it may stay until it moves to now or
+  // later.
+  if (
+    row?.placement !== undefined &&
+    move.setupStartMs < applied.nowMs &&
+    !heldInPlace(row, move)
+  ) {
+    const shift = move.setupStartMs - row.placement.setupStartMs;
+    return {
+      jobOrderId: row.id,
+      displayNumber: row.displayNumber,
+      equipment: move.equipment,
+      span: {
+        setupStartMs: move.setupStartMs,
+        runStartMs: row.placement.runStartMs + shift,
+        endMs: row.placement.endMs + shift,
+      },
+      ghosts: new Map(),
+      count: 0,
+      conflicts: [],
+      refused: 'PAST',
+    };
+  }
   const context = moveContextOf(applied);
   const result = cascade(
     order,
@@ -116,7 +204,6 @@ export function previewOf(
   );
   const [moved, ...rest] = result.moves;
   if (moved === undefined) {
-    const row = order.jobOrders.find((each) => each.id === move.jobOrderId);
     return row?.placement === undefined
       ? undefined
       : {
@@ -149,8 +236,12 @@ function rowsSentence(count: number): string {
   return count === 1 ? '1 row moves with it.' : `${count} rows move with it.`;
 }
 
-/** The drag tooltip: the span, the release snap and the cascade count (plan 18, Cascade rule 8). */
+/**
+ * The drag tooltip: the span, the release snap and the cascade count (plan 18, Cascade rule 8), or
+ * why the move is refused.
+ */
 export function tooltipText(preview: MovePreview, timeZone: string): string {
+  if (preview.refused !== undefined) return refusalMessage(preview.displayNumber, preview.refused);
   const parts = [formatSpan(preview.span.setupStartMs, preview.span.endMs, timeZone)];
   if (preview.snappedTo !== undefined) {
     parts.push(
@@ -171,6 +262,7 @@ export function tooltipText(preview: MovePreview, timeZone: string): string {
 
 /** The step message of move mode: "CNC 1, Wed 4 Nov 06:00 to Wed 4 Nov 12:15. 1 row moves with it. Not saved." */
 export function stepMessage(preview: MovePreview, machine: string, timeZone: string): string {
+  if (preview.refused !== undefined) return refusalMessage(preview.displayNumber, preview.refused);
   return [
     `${machine}, ${formatSpan(preview.span.setupStartMs, preview.span.endMs, timeZone)}.`,
     rowsSentence(preview.count),

@@ -8,6 +8,7 @@ import { emptyDraft, type GanttDraft } from '../../../src/modules/planning/gantt
 import { useMoveOf } from '../../../src/modules/planning/move-store.ts';
 import { previewOf } from '../../../src/modules/planning/screens/gantt/gantt-move.ts';
 import { useMoveActions } from '../../../src/modules/planning/use-move-actions.ts';
+import { g1WithOverdueRow } from './past-fixtures.ts';
 
 afterEach(cleanup);
 
@@ -17,8 +18,7 @@ const hour = 3_600_000;
  * The move actions over G1, how often the screen that holds them rendered, and the drafts they
  * wrote; rerender with a new snapshot or cascade switch as a screen would.
  */
-function renderMoveActions() {
-  const committed = g1Snapshot();
+function renderMoveActions(committed: GanttSnapshot = g1Snapshot()) {
   let renders = 0;
   const drafts: GanttDraft[] = [];
   const hook = renderHook(
@@ -123,6 +123,111 @@ describe('the move actions during a drag (ADR 0030; #898)', () => {
 
     await waitFor(() => {
       expect(announced()).toContain('Not saved.');
+    });
+  });
+});
+
+describe('a move before now (ADR 0089, Time before now)', () => {
+  const minute = 60_000;
+
+  it('ADR0089 a drop before now is refused with PAST, announced, and writes nothing to the draft', async () => {
+    const { result, drafts, committed } = renderMoveActions();
+    act(() => {
+      result.current.actions?.begin('jo-1001-10', 'pointer');
+    });
+
+    act(() => {
+      result.current.actions?.previewAt(committed.nowMs - hour);
+      result.current.store.flush();
+    });
+    expect(result.current.store.get()?.preview?.refused).toBe('PAST');
+    act(() => {
+      result.current.actions?.commit();
+    });
+
+    expect(drafts).toEqual([]);
+    expect(result.current.store.get()).toBeUndefined();
+    await waitFor(() => {
+      expect(announced()).toBe('Cannot move 1001.10: it would start before now.');
+    });
+  });
+
+  it('ADR0089 a step earlier in move mode that would start before now is refused, and the row stays', async () => {
+    const { result, committed } = renderMoveActions();
+    act(() => {
+      result.current.actions?.begin('jo-1001-10', 'keyboard');
+    });
+    const state = result.current.store.get()?.state;
+    act(() => {
+      if (state !== undefined) {
+        result.current.store.set({ ...state, setupStartMs: committed.nowMs + 30 * minute });
+      }
+    });
+
+    act(() => {
+      result.current.actions?.stepTime(-1);
+    });
+
+    expect(result.current.store.get()?.state.setupStartMs).toBe(committed.nowMs + 30 * minute);
+    expect(result.current.store.get()?.preview?.refused).toBeUndefined();
+    await waitFor(() => {
+      expect(announced()).toBe('Cannot move 1001.10: it would start before now.');
+    });
+  });
+
+  it('ADR0089 a step later from an overdue row lands at now or later, never before it', () => {
+    const { result, committed } = renderMoveActions(g1WithOverdueRow());
+    act(() => {
+      result.current.actions?.begin('jo-1001-10', 'keyboard');
+    });
+    expect(result.current.store.get()?.preview?.refused).toBeUndefined();
+
+    act(() => {
+      result.current.actions?.stepTime(1);
+    });
+
+    const move = result.current.store.get();
+    expect(move?.state.setupStartMs).toBeGreaterThanOrEqual(committed.nowMs);
+    expect(move?.state.setupStartMs).toBeLessThan(committed.nowMs + hour);
+    expect(move?.preview?.refused).toBeUndefined();
+  });
+
+  it('ADR0089 Enter on an overdue row that did not move ends the move and writes nothing', async () => {
+    const { result, drafts } = renderMoveActions(g1WithOverdueRow());
+    act(() => {
+      result.current.actions?.begin('jo-1001-10', 'keyboard');
+    });
+
+    act(() => {
+      result.current.actions?.commit();
+    });
+
+    expect(drafts).toEqual([]);
+    expect(result.current.store.get()).toBeUndefined();
+    await waitFor(() => {
+      expect(announced()).toBe('Move cancelled.');
+    });
+  });
+
+  it("ADR0089 a step earlier back to an overdue row's own start is refused, and the later start stays", async () => {
+    // 1001.10 overdue from Mon 09:00 with now at 09:40: the 1 h step at Day takes it to 10:00.
+    const { result, committed } = renderMoveActions(g1WithOverdueRow('2026-11-02T08:00:00Z'));
+    act(() => {
+      result.current.actions?.begin('jo-1001-10', 'keyboard');
+    });
+    act(() => {
+      result.current.actions?.stepTime(1);
+    });
+    const later = result.current.store.get()?.state.setupStartMs;
+    expect(later).toBeGreaterThanOrEqual(committed.nowMs);
+
+    act(() => {
+      result.current.actions?.stepTime(-1);
+    });
+
+    expect(result.current.store.get()?.state.setupStartMs).toBe(later);
+    await waitFor(() => {
+      expect(announced()).toBe('Cannot move 1001.10: it would start before now.');
     });
   });
 });
