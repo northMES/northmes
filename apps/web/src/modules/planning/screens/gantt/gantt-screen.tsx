@@ -376,14 +376,13 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     block?.focus({ preventScroll: true });
     block?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   };
-  const { actions: moveActions, state: moveState } = useMoveActions({
+  const { actions: moveActions, store: moveStore } = useMoveActions({
     committed,
     snapshot,
     draft,
     setDraft,
     cascadeOn: options.cascade,
     zoom,
-    range,
     timeZone,
     focusBlock,
   });
@@ -733,7 +732,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         event.currentTarget.querySelector<HTMLElement>('[data-row-menu]')?.click();
         break;
       case 'Escape':
-        if (moveState !== undefined) moveActions?.cancel();
+        if (moveStore.get() !== undefined) moveActions?.cancel();
         else if (chain !== undefined) void setSearch(withChain(search, false));
         else handled = false;
         break;
@@ -806,7 +805,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               aria-busy={state.status === 'loading' || undefined}
               onKeyDown={(event) => {
                 // The Escape stack: move mode ends first, then the chain highlight.
-                if (event.key === 'Escape' && moveState !== undefined) {
+                // The move is read from its store, so a move that begins renders no rows.
+                if (event.key === 'Escape' && moveStore.get() !== undefined) {
                   event.stopPropagation();
                   moveActions?.cancel();
                 } else if (event.key === 'Escape' && chain !== undefined) {
