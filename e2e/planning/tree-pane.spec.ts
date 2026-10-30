@@ -83,19 +83,26 @@ test.describe('the left pane of the timelines', () => {
     page,
     signIn,
   }) => {
-    await signIn(planningHref('gantt', { zoom: 'day', from: '2026-11-04' }));
+    await signIn(planningHref('gantt', { zoom: 'day', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
-    await expect(gantt).toBeVisible();
-    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
-    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     const firstJobOrder = '[data-row-kind="jobOrder"]';
 
-    for (const [marker, row] of [
-      ['[data-overlay] [data-marker="now"]', firstJobOrder],
-      ['[data-overlay] [data-marker="frozen"]', firstJobOrder],
-      ['[data-row-id="jo-1003-10"] [data-marker="wait"]', '[data-row-id="jo-1003-10"]'],
-      ['[data-row-id="po-1003"] [data-marker="deadline"]', '[data-row-id="po-1003"]'],
+    // Each marker from a view that holds it, at Day zoom, where the wait lines show: now and the
+    // frozen window on Monday, 1003's wait and deadline on Wednesday.
+    for (const [from, marker, row] of [
+      ['2026-11-02', '[data-overlay] [data-marker="now"]', firstJobOrder],
+      ['2026-11-02', '[data-overlay] [data-marker="frozen"]', firstJobOrder],
+      [
+        '2026-11-04',
+        '[data-row-id="jo-1003-10"] [data-marker="wait"]',
+        '[data-row-id="jo-1003-10"]',
+      ],
+      ['2026-11-04', '[data-row-id="po-1003"] [data-marker="deadline"]', '[data-row-id="po-1003"]'],
     ] as const) {
+      await page.goto(planningHref('gantt', { zoom: 'day', from }));
+      // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+      await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
+      await expect(gantt.locator(marker)).toBeAttached();
       const cover = await coverOf(gantt, marker, row);
       expect(cover, marker).toEqual({
         under: true,
@@ -157,8 +164,8 @@ test.describe('the left pane of the timelines', () => {
         grid.querySelector('[aria-rowindex="1"] [data-tree-pane]') as HTMLElement
       ).getBoundingClientRect();
       const time = grid.querySelector('[role="columnheader"][aria-label="Time"]') as HTMLElement;
-      // Past the splitter's grab area at the pane's end.
-      const at = document.elementFromPoint(pane.right + 8, pane.top + pane.height / 2);
+      // Past the splitter's grip, which reaches 12 px over the time header.
+      const at = document.elementFromPoint(pane.right + 20, pane.top + pane.height / 2);
       return {
         header: lefts('[aria-rowindex="1"] [data-tree-pane] [role="columnheader"]'),
         order: lefts('[data-row-id="po-1003"] [data-tree-pane] > * > *'),
