@@ -362,12 +362,14 @@ export function treePaneLayout(
   share: number,
 ): TreePaneLayout {
   const maxWidth = Math.max(leastPx, Math.floor(viewWidth - leastPx));
-  const minWidth = Math.min(leastPx, maxWidth);
+  const minWidth = leastPx;
   const paneWidth = Math.min(maxWidth, Math.max(minWidth, Math.round(viewWidth * share)));
   const innerWidth = paneWidth - 1;
   const others = columns.slice(1);
   const fixedWidth = others.reduce((sum, column) => sum + column.widthPx, 0);
-  const nameWidth = Math.max(leastPx, innerWidth - fixedWidth);
+  // At the least pane width a lone Name column fits the inner width, so the pane has nothing to
+  // scroll.
+  const nameWidth = Math.max(Math.min(leastPx, innerWidth), innerWidth - fixedWidth);
   return {
     paneWidth,
     minWidth,

@@ -82,7 +82,8 @@ export function GanttSplitter({
     const start = drag.current;
     if (start === undefined || start.pointerId !== event.pointerId) return;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
-    commit(start.width + event.clientX - start.x);
+    // A click without a move keeps the share as chosen, which the pane may round or clamp.
+    if (event.clientX !== start.x) commit(start.width + event.clientX - start.x);
     endDrag();
   };
   // A capture lost without a pointerup, as when the window loses focus, ends the drag unapplied.
@@ -111,7 +112,8 @@ export function GanttSplitter({
         onPointerCancel={onPointerLost}
         onLostPointerCapture={onPointerLost}
         // Centred on the pane's end edge, inside the grid's 1 px border, above the grid's sticky
-        // header; 24 px wide (WCAG 2.5.8) and as high as the header row.
+        // header; 24 px wide (WCAG 2.5.8) and as high as the header row, so it covers the last
+        // 12 px of the tree header there and the first 12 px of the time header.
         className="peer absolute top-px z-30 flex w-(--nm-target-min) -translate-x-1/2 cursor-col-resize touch-none items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring"
         style={{ left, height: `${gripHeightRem}rem` }}
       >

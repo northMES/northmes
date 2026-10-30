@@ -1014,9 +1014,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                   </div>
                 </div>
                 {paneScrolls && (
-                  // The tree pane's own scrollbar, under the rows at the pane's width and 24 px
-                  // high (2.5.8). It is for the pointer: the keyboard reaches every column by its
-                  // header, which scrolls into the pane on focus, so the bar takes no Tab stop (#943).
+                  // The tree pane's own scrollbar, which the browser draws, in a strip under the rows
+                  // at the pane's width. It is for the pointer: the keyboard reaches every column by
+                  // its header, which scrolls into the pane on focus, so the bar takes no Tab stop
+                  // (#943).
                   <div
                     ref={treeScroll.scrollerRef}
                     aria-hidden

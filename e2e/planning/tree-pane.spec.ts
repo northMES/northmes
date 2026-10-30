@@ -200,22 +200,24 @@ test.describe('the left pane of the timelines', () => {
         return box.left >= pane.left - 0.5 && box.right <= pane.right + 0.5;
       }, name);
 
-    // Lock, the last column, lies past the pane; Tab reaches it, and the pane scrolls to it.
-    await page.getByRole('button', { name: /^Late by/ }).focus();
+    // Lock, the last column, lies past the pane; Tab reaches it, and the pane scrolls to it. The
+    // browser's own focus scroll of the grid is undone at the next scroll event, so the position
+    // is read before any focus and polled after.
     const before = await time();
+    await page.getByRole('button', { name: /^Late by/ }).focus();
     await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
     await page.keyboard.press('Tab');
     await expect(gantt.getByRole('columnheader', { name: 'Lock' })).toBeFocused();
-    expect(await inPane('Lock')).toBe(true);
-    expect(await time()).toEqual(before);
+    await expect.poll(() => inPane('Lock')).toBe(true);
+    await expect.poll(time).toEqual(before);
 
     // Focus on the Name column's sort button scrolls the pane back to its start.
     await page.getByRole('button', { name: /^Name/ }).focus();
     await expect
       .poll(() => gantt.evaluate((grid) => grid.style.getPropertyValue('--tree-scroll')))
       .toBe('0px');
-    expect(await time()).toEqual(before);
+    await expect.poll(time).toEqual(before);
 
     // The pane's own scrollbar moves the columns in every row.
     await gantt.locator('[data-tree-scroller]').evaluate((bar) => {
@@ -262,6 +264,12 @@ test.describe('the left pane of the timelines', () => {
     await page.keyboard.press('ArrowLeft');
     expect(await paneWidth()).toBeLessThan(narrowed);
     await checkA11y('the Gantt with the tree pane narrowed');
+
+    // Board options offers the widths in one click (WCAG 2.5.7).
+    await page.getByRole('button', { name: 'Board options' }).click();
+    await expect(page.getByRole('menuitemradio', { name: 'Wide tree pane' })).toBeVisible();
+    await checkA11y('the Gantt Board options with the tree pane widths');
+    await page.keyboard.press('Escape');
 
     const kept = await paneWidth();
     await page.reload();

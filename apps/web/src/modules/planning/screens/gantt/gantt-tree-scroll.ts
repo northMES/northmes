@@ -46,12 +46,19 @@ export function useTreePaneScroll({
   const settled = useRef({ left: 0, top: 0 });
   /** Until when a scroll of the grid is the browser bringing a focused pane cell into view. */
   const focusScrollUntil = useRef(0);
+  /**
+   * Whether the focus scroll being undone is a header's, which sticks at the top as well, so the
+   * rows' vertical position is kept too; a row's cells stick only sideways.
+   */
+  const keepTop = useRef(false);
   /** Puts the grid back where its last scroll event left it. */
   const keepGrid = useCallback(() => {
     const node = grid.current;
     if (node === null) return;
     if (node.scrollLeft !== settled.current.left) node.scrollLeft = settled.current.left;
-    if (node.scrollTop !== settled.current.top) node.scrollTop = settled.current.top;
+    if (keepTop.current && node.scrollTop !== settled.current.top) {
+      node.scrollTop = settled.current.top;
+    }
   }, []);
   const scrollTo = useCallback((left: number) => {
     const next = Math.min(layout.current.range, Math.max(0, left));
@@ -75,19 +82,16 @@ export function useTreePaneScroll({
       const sideways = event.shiftKey || Math.abs(event.deltaX) > Math.abs(event.deltaY);
       const shifted = event.deltaX === 0 && event.shiftKey;
       // A wheel that counts lines or pages, as Firefox's may, scrolls by lines of 16 px or by the pane.
-      const unit =
-        event.deltaMode === WheelEvent.DOM_DELTA_LINE
-          ? 16
-          : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
-            ? layout.current.innerWidth
-            : 1;
-      const delta = (shifted ? event.deltaY : event.deltaX) * unit;
+      const page = event.deltaMode === WheelEvent.DOM_DELTA_PAGE;
+      const line = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : 1;
+      const delta =
+        (shifted ? event.deltaY : event.deltaX) * (page ? layout.current.innerWidth : line);
       if (!sideways || delta === 0) return;
       event.preventDefault();
       scrollTo(position.current + delta);
       // The vertical part of a diagonal swipe still scrolls the rows.
       if (!shifted && event.deltaY !== 0 && grid.current !== null) {
-        grid.current.scrollTop += event.deltaY * unit;
+        grid.current.scrollTop += event.deltaY * (page ? grid.current.clientHeight : line);
       }
     },
     [scrollTo],
@@ -122,7 +126,12 @@ export function useTreePaneScroll({
   const onFocus = useCallback(
     (event: FocusEvent<HTMLElement>) => {
       if (!(event.target instanceof HTMLElement)) return;
-      if (event.target.closest('[data-tree-pane]') === null) return;
+      // Focus elsewhere, as on a row, may scroll the grid as the browser likes.
+      if (event.target.closest('[data-tree-pane]') === null) {
+        focusScrollUntil.current = 0;
+        return;
+      }
+      keepTop.current = event.target.closest('[role="columnheader"]') !== null;
       keepGrid();
       focusScrollUntil.current = performance.now() + focusScrollMs;
       if (layout.current.range === 0) return;
