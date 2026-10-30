@@ -164,10 +164,13 @@ export function blockName(
 ): string {
   const { jobOrder, operation, order } = row;
   const timeZone = snapshot.plant.timeZone;
+  // A row whose placement comes with a time chunk not loaded yet is placed, its time unknown.
   const span =
-    jobOrder.placement === undefined
-      ? 'not placed'
-      : formatSpan(jobOrder.placement.setupStartMs, jobOrder.placement.endMs, timeZone);
+    jobOrder.placement !== undefined
+      ? formatSpan(jobOrder.placement.setupStartMs, jobOrder.placement.endMs, timeZone)
+      : jobOrder.awaitingPlacement === true
+        ? 'time loading'
+        : 'not placed';
   const states = blockStates(row, snapshot, options);
   const release = releaseText(row, timeZone, snapshot.settings.retoolOverlapsLeadTime);
   return [

@@ -3,7 +3,14 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  type GanttDataSource,
+  type GanttOrder,
+  type GanttSnapshot,
+  g1DataSource,
+} from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { PlanningRefusal } from '../../../src/modules/planning/planning-preview.ts';
 import { findGantt, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
@@ -19,7 +26,72 @@ afterEach(() => {
   window.localStorage.removeItem('northmes.planning.gantt.options');
 });
 
+/**
+ * G1 with GT6's extra row (g1.expected.json, GT6_overload_definition): 1007.10 of 3 600 s on CNC2
+ * at Thu 5 Nov 12:00 plant time, over the locked 1002.10, which loads CNC2 with 32 400 s against
+ * 29 700 s available on that production day.
+ */
+function withGt6Row(snapshot: GanttSnapshot): GanttSnapshot {
+  const template = snapshot.productionOrders.find((order) => order.number === '1002');
+  const row = template?.jobOrders[0];
+  if (template === undefined || row === undefined) throw new Error('G1 has 1002.10');
+  const startMs = Date.UTC(2026, 10, 5, 11);
+  const endMs = startMs + 3_600_000;
+  const order: GanttOrder = {
+    ...template,
+    id: 'po-1007',
+    number: '1007',
+    jobOrders: [
+      {
+        ...row,
+        id: 'jo-1007-10',
+        orderId: 'po-1007',
+        displayNumber: '1007.10',
+        status: 'planned',
+        plannedSetupS: 0,
+        plannedRunS: 3600,
+        placement: {
+          setupStartMs: startMs,
+          runStartMs: startMs,
+          endMs,
+          segments: [{ fromMs: startMs, toMs: endMs }],
+        },
+      },
+    ],
+  };
+  return { ...snapshot, productionOrders: [...snapshot.productionOrders, order] };
+}
+
 describe('the workload lane (plan 18, The workload lane)', () => {
+  it('ADR0089 shows a bucket that touches a time chunk still loading as loading, never as a partial sum', async () => {
+    const never = new Promise<never>(() => {});
+    const source: GanttDataSource = {
+      ...g1DataSource,
+      loadChunk: (from, to, filter, options) =>
+        from.startsWith('2026-11-01T23')
+          ? never
+          : g1DataSource.loadChunk(from, to, filter, options),
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, source);
+    // The chunk keeps loading, so the grid is found without waiting for its chunks.
+    await screen.findByRole('treegrid', { name: /order Gantt/ });
+
+    const lane = screen
+      .getByRole('region', { name: 'Workload' })
+      .querySelector('[data-lane="CNC1"]');
+    await waitFor(() =>
+      expect(lane?.querySelector('[data-bucket="2026-11-05"]')?.getAttribute('data-pending')).toBe(
+        'loading',
+      ),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 1' }));
+    const table = within(screen.getByRole('dialog')).getByRole('table');
+    const thursday = within(table).getByRole('rowheader', { name: 'Thu 5 Nov' }).closest('tr');
+    expect(thursday?.textContent).toBe('Thu 5 Novloading');
+    const total = within(table).getByRole('rowheader', { name: 'Visible range' }).closest('tr');
+    expect(total?.textContent).toBe('Visible rangeloading');
+  });
+
   it('ADR0089 the lanes scroll with the time area, both ways, so a lane stays under its time', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
@@ -37,6 +109,30 @@ describe('the workload lane (plan 18, The workload lane)', () => {
     lanes.scrollLeft -= 50;
     fireEvent.scroll(lanes);
     expect(gantt.scrollLeft).toBe(lanes.scrollLeft);
+  });
+
+  it('ADR0089 names a bucket that touches a refused time chunk with the refusal, in the bucket and in the range', async () => {
+    const source: GanttDataSource = {
+      ...g1DataSource,
+      loadChunk: async (from, to, filter, options) => {
+        if (from.startsWith('2026-11-01T23')) {
+          throw new PlanningRefusal('planning.board.range_too_large');
+        }
+        return g1DataSource.loadChunk(from, to, filter, options);
+      },
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, source);
+    await screen.findByRole('treegrid', { name: /order Gantt/ });
+    await waitFor(() =>
+      expect(document.querySelector('[data-chunk-band="refused"]')).not.toBeNull(),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 1' }));
+    const table = within(screen.getByRole('dialog')).getByRole('table');
+    const thursday = within(table).getByRole('rowheader', { name: 'Thu 5 Nov' }).closest('tr');
+    expect(thursday?.textContent).toBe('Thu 5 Novtoo many job orders');
+    const total = within(table).getByRole('rowheader', { name: 'Visible range' }).closest('tr');
+    expect(total?.textContent).toBe('Visible rangetoo many job orders');
   });
 
   it('GT5 shows a lane per machine, aria-hidden, under the time area when the option is on', async () => {
@@ -73,24 +169,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
   it('GT6 draws the overload of CNC2 on Thu 5 Nov above the bar, inside the lane', async () => {
     // GT6: a row of 3 600 s at Thu 12:00 over the locked 1002.10 gives 32 400 s loaded against
     // 29 700 s available on CNC2 and 2 700 s of overload.
-    const snapshot = g1Snapshot();
-    const overloaded = {
-      ...snapshot,
-      analysis: {
-        ...snapshot.analysis,
-        workload: snapshot.analysis.workload.map((bucket) =>
-          bucket.equipment === 'CNC2' && bucket.label === '2026-11-05'
-            ? {
-                ...bucket,
-                loadedS: 32_400,
-                runS: 32_400,
-                utilizationPermille: 1091,
-                overloadS: 2_700,
-              }
-            : bucket,
-        ),
-      },
-    };
+    const overloaded = withGt6Row(g1Snapshot());
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(overloaded));
     await findGantt();
 
@@ -270,24 +349,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
   });
 
   it('#901 the table says an overloaded bucket is over capacity in words', async () => {
-    const snapshot = g1Snapshot();
-    const overloaded = {
-      ...snapshot,
-      analysis: {
-        ...snapshot.analysis,
-        workload: snapshot.analysis.workload.map((bucket) =>
-          bucket.equipment === 'CNC2' && bucket.label === '2026-11-05'
-            ? {
-                ...bucket,
-                loadedS: 32_400,
-                runS: 32_400,
-                utilizationPermille: 1091,
-                overloadS: 2_700,
-              }
-            : bucket,
-        ),
-      },
-    };
+    const overloaded = withGt6Row(g1Snapshot());
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(overloaded));
     await findGantt();
 

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { type GanttDataSource, g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
+import { createEnteredOrdersStore } from '../../../src/modules/planning/entered-orders-store.ts';
+import { snapshotSource } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import {
   detailsOpen,
@@ -158,23 +159,26 @@ describe('the Float column and Details from the analysis (plan 18, What the time
   });
 
   it('closes Details and forgets the row when a reload drops it, and opens again for another row', async () => {
-    // The loads answer G1 until the order 1003 is dropped, which a later load answers without it.
+    // The reads answer G1 until the order 1003 is dropped, after which they answer without it.
     let dropped = false;
-    const source: GanttDataSource = {
-      ...g1DataSource,
-      load: async () => {
-        const snapshot = g1Snapshot();
-        return !dropped
-          ? snapshot
-          : {
-              ...snapshot,
-              productionOrders: snapshot.productionOrders.filter(
-                (order) => order.number !== '1003',
-              ),
-            };
-      },
-    };
-    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, source);
+    const source = snapshotSource(async () => {
+      const snapshot = g1Snapshot();
+      return !dropped
+        ? snapshot
+        : {
+            ...snapshot,
+            productionOrders: snapshot.productionOrders.filter((order) => order.number !== '1003'),
+          };
+    });
+    const entered = createEnteredOrdersStore();
+    renderGanttRoute(
+      { zoom: 'week', from: '2026-11-02' },
+      source,
+      'gantt',
+      undefined,
+      undefined,
+      entered,
+    );
     const gantt = await findGantt();
     await userEvent.dblClick(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
     await findDetails();
@@ -185,12 +189,23 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     await userEvent.dblClick(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
     await findDetails();
 
-    // A reload while Details is open, as a realtime refetch gives, that no longer has 1003.
+    // A reload while Details is open, as an order created by hand gives (#768), that no longer
+    // has 1003.
     dropped = true;
-    await router.navigate({
-      to: '.',
-      search: { view: 'gantt', zoom: 'week', from: '2026-11-03' } as Record<string, unknown>,
-    });
+    act(() =>
+      entered.addProductionOrder({
+        plant: 'plant-a',
+        number: 'N-1007',
+        article: 'Gear blank 32',
+        quantity: 10,
+        deadlineDate: '2026-11-20',
+        priority: null,
+        color: 'palette-1',
+        suppliedLines: [],
+        createdAtMs: Date.UTC(2026, 10, 2),
+        createdBy: 'planner',
+      }),
+    );
 
     await waitFor(() => {
       expect(gantt.querySelector('[data-block="jo-1003-20"]')).toBeNull();

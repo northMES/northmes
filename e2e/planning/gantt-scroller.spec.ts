@@ -90,6 +90,8 @@ test.describe('the time scroller of the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'day', from: '2026-11-04' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
 
     const overscroll = await gantt.evaluate((grid) => {
       const style = getComputedStyle(grid);
@@ -106,6 +108,8 @@ test.describe('the time scroller of the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     await expect(page.locator('[data-block="jo-1003-10"]')).toBeVisible();
     const rangeText = page.locator('[data-range-text]');
     await expect(rangeText).toHaveText(/^W45, Mon 2 Nov to /);
@@ -137,6 +141,8 @@ test.describe('the time scroller of the order Gantt', () => {
       await signIn(ganttHref({ zoom, from: '2026-11-04' }));
       const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
       await expect(gantt).toBeVisible();
+      // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+      await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
 
       await toRightEdge(gantt, 3);
       await gantt.evaluate(async (grid) => {
@@ -219,6 +225,8 @@ test.describe('the time scroller of the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     const widthOf = () =>
       gantt.evaluate(
         (grid) =>
@@ -244,6 +252,8 @@ test.describe('the time scroller of the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
 
     // Scroll to the right edge a few times, so the buffer moves, then to its far right, measured
     // before the browser reports that scroll.
@@ -288,6 +298,8 @@ test.describe('the time scroller of the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
 
     const hit = await gantt.evaluate((grid) => {
       const name = grid.querySelector('[aria-rowindex="1"] > [role="columnheader"]') as HTMLElement;
@@ -315,6 +327,8 @@ test.describe('the time scroller of the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     await page.getByRole('button', { name: 'Board options' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Workload' }).click();
     await page.keyboard.press('Escape');
@@ -365,6 +379,8 @@ test.describe('the time scroller of the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     await page.getByRole('button', { name: 'Board options' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Workload' }).click();
     await page.keyboard.press('Escape');

@@ -35,6 +35,8 @@ test.describe('the Details drawer (#917)', () => {
       await page.goto(planningLinks.gantt({ plant }, { zoom: 'week', from }).href);
       const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
       await expect(gantt).toBeVisible();
+      // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+      await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
       const rows = await gantt
         .locator('[data-row-id^="jo-"]')
         .evaluateAll((elements) => elements.map((element) => element.getAttribute('data-row-id')));

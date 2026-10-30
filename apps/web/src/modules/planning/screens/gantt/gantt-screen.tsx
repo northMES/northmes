@@ -15,8 +15,15 @@ import {
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { useBoardFields } from '../../board-fields-store.ts';
+import { ChunkBands, ChunkStatus, unloadedChunks } from '../../components/chunk-status/index.ts';
 import { VisibleSpanText } from '../../components/range-controls/index.ts';
-import type { GanttCalendar, GanttDataSource, GanttSnapshot } from '../../gantt-data.ts';
+import {
+  type GanttCalendar,
+  type GanttDataSource,
+  type GanttPageRequest,
+  type GanttSnapshot,
+  ganttMaxOrders,
+} from '../../gantt-data.ts';
 import {
   applyDraft,
   cascadeFromHere,
@@ -33,6 +40,7 @@ import {
   runSummary,
   splitRunInDraft,
 } from '../../gantt-draft.ts';
+import { loadedSnapshot } from '../../gantt-loaded.ts';
 import {
   droppedKeyMessage,
   type GanttSearch,
@@ -58,8 +66,10 @@ import {
   type TimeRange,
 } from '../../timeline/time-scale.ts';
 import { useTimeBuffer } from '../../timeline/use-time-buffer.ts';
+import { useTimeChunks } from '../../timeline/use-time-chunks.ts';
 import { useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
 import type { ZoomPlant } from '../../timeline/zoom-view.ts';
+import { useGanttRows } from '../../use-gantt-rows.ts';
 import { remPx, useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { useMoveActions } from '../../use-move-actions.ts';
 import { chainOf } from './gantt-chain.ts';
@@ -68,6 +78,7 @@ import { GanttDetailDrawer } from './gantt-detail-panel.tsx';
 import { GanttDraftDrawer } from './gantt-draft-drawer.tsx';
 import { GanttLinks, linksOf } from './gantt-links.tsx';
 import { GanttMarkerLayer, overlayMarkers } from './gantt-marker-layer.tsx';
+import { GanttMoreRows } from './gantt-more-rows.tsx';
 import { refusalMessage } from './gantt-move.ts';
 import { GanttNotPlacedRow, notPlacedHeightRem } from './gantt-not-placed-row.tsx';
 import { useGanttOptions } from './gantt-options.ts';
@@ -155,7 +166,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       navigate({ to: '.', search: next as Record<string, unknown>, replace: true }),
     [navigate],
   );
-  const [committed, setSnapshot] = useState<GanttSnapshot | undefined>(undefined);
   // The planner's draft, in memory until the plan server exists, and the move in progress.
   const [draft, setDraft] = usePlanningDraft();
   const [draftOpen, setDraftOpen] = useState(false);
@@ -166,9 +176,13 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const [runReview, setRunReview] = useState<readonly string[] | undefined>(undefined);
   /** The element that opened the My draft drawer, which takes focus back when it closes. */
   const draftOpener = useRef<HTMLElement | undefined>(undefined);
-  const [loadError, setLoadError] = useState<unknown>(undefined);
-  const [attempt, setAttempt] = useState(0);
   const [options, setOptions] = useGanttOptions();
+  // The row list by page and the job orders by time chunk (ADR 0089, Loading by time chunk); the
+  // Gantt has no filter of its own yet, so both read every open order.
+  const loadRows = useCallback((page: GanttPageRequest) => source.loadRows({}, page), [source]);
+  // The workload sums every order, so with the panel open every page of the row list loads.
+  const rowList = useGanttRows({ load: loadRows, all: options.workload });
+  const frame = rowList.frame;
   const [expanded, setExpanded] = useState<ExpandedState>(true);
   const [sort, setSort] = useState<GanttSort | undefined>(undefined);
   const [focusedRowId, setFocusedRowId] = useState<string | undefined>(undefined);
@@ -182,8 +196,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     `${urlZoom}|${search.from ?? ''}|${options.hideClosed}|${options.workload}`,
   );
 
-  const timeZone = committed?.plant.timeZone ?? 'UTC';
-  const productionDayStart = committed?.plant.productionDayStart ?? '06:00';
+  const timeZone = frame?.plant.timeZone ?? 'UTC';
+  const productionDayStart = frame?.plant.productionDayStart ?? '06:00';
   const columns = useMemo(() => visibleColumns(options.hiddenColumns), [options.hiddenColumns]);
   // The tree pane takes its columns' widths up to 40 percent of the view; the Name column gives
   // way first. While the pane fits the cap every tree cell sticks and the time column scrolls under
@@ -214,7 +228,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   );
   // Hide closed time compresses the plant calendar's closed windows; the calendar is kept while a
   // load answers the same one, so a load never rebuilds the buffer.
-  const calendar = useStableCalendar(committed?.calendar);
+  const calendar = useStableCalendar(frame?.calendar);
   const zoomPlant = useMemo<ZoomPlant>(
     () => ({
       timeZone,
@@ -231,7 +245,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const buffer = useTimeBuffer({
     zoom: urlZoom,
     from: search.from,
-    nowMs: committed?.nowMs ?? Date.now(),
+    nowMs: frame?.nowMs ?? Date.now(),
     widthPx: width,
     grid: gridElement,
     columns: { treeWidth, stickyWidth },
@@ -246,6 +260,39 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   });
   const zoom = buffer.zoom;
   const range = buffer.range;
+  // The view keeps the chunks that hold the job orders of the selected orders, of the row in
+  // Details and of the focused row, wherever the buffer moves (ADR 0089).
+  const keep = useMemo(() => {
+    const orderIds = new Set(search.order === undefined ? [] : [search.order, ...extraSelected]);
+    const ids = new Set<string>(
+      [detailRowId, focusedRowId].filter((id): id is string => id !== undefined),
+    );
+    for (const order of rowList.orders) {
+      if (orderIds.has(order.id)) for (const row of order.jobOrders) ids.add(row.id);
+    }
+    return ids;
+  }, [search.order, extraSelected, detailRowId, focusedRowId, rowList.orders]);
+  const loadChunk = useCallback(
+    (from: string, to: string) => source.loadChunk(from, to, {}),
+    [source],
+  );
+  const chunks = useTimeChunks({
+    load: loadChunk,
+    zoom,
+    timeZone,
+    // The chunks are aligned to the plant's dates, which the first page of the row list brings.
+    buffer: frame === undefined ? undefined : range,
+    view: buffer.settled,
+    keep,
+  });
+  // The plan of the loaded rows and chunks, analysed over the buffer.
+  const committed = useMemo(
+    () =>
+      frame === undefined || range === undefined
+        ? undefined
+        : loadedSnapshot(frame, rowList.orders, chunks.jobOrders, range),
+    [frame, rowList.orders, chunks.jobOrders, range],
+  );
   // Everything the view draws reads the plan with the draft applied, analysed over the buffer
   // (plan 18, Resolving a break in the draft).
   const snapshot = useMemo(
@@ -255,27 +302,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         : applyDraft(committed, draft, range),
     [committed, draft, range],
   );
-
-  useEffect(() => {
-    if (range === undefined) return;
-    let cancelled = false;
-    setLoadError(undefined);
-    source
-      .load({
-        from: new Date(range.fromMs).toISOString(),
-        to: new Date(range.toMs).toISOString(),
-        filter: {},
-      })
-      .then((loaded) => {
-        if (!cancelled) setSnapshot(loaded);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) setLoadError(error ?? new Error('The Gantt could not be loaded'));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [source, range, attempt]);
 
   // chain without order is dropped with the polite status message (ADR 0062, plan 18).
   const droppedChain = search.chain !== undefined && search.order === undefined;
@@ -616,21 +642,50 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       ? { links: [], limited: false }
       : linksOf(linkRows, snapshot, scale, search.order);
 
+  // The next page of the row list loads once the rows end within one view of the grid's bottom,
+  // as the planner scrolls down or when the rows loaded do not fill the grid.
+  const { next: rowsNext, loadNext } = rowList;
+  const loadMoreRows = useCallback(
+    (grid: HTMLElement | null) => {
+      if (grid === null || rowsNext !== 'idle' || grid.clientHeight <= 0) return;
+      if (grid.scrollTop + 2 * grid.clientHeight >= grid.scrollHeight) loadNext();
+    },
+    [rowsNext, loadNext],
+  );
+  // Also after each render, as a page that loaded or a collapsed order may leave the rows shorter
+  // than the grid, with nothing to scroll.
+  useEffect(() => {
+    loadMoreRows(gridElement.current);
+  });
+  // A page of the row list loading or failing is said as a polite status message.
+  useEffect(() => {
+    if (rowsNext === 'loading') announce('Loading more orders.');
+    else if (rowsNext === 'failed') announce('Orders could not be loaded.');
+  }, [rowsNext]);
+
   let state: PageState = { status: 'ready' };
-  if (snapshot === undefined && loadError !== undefined) {
+  if (rowList.status === 'refused') {
+    state = {
+      status: 'error',
+      title: 'Too many orders for the Gantt',
+      description: `More than ${ganttMaxOrders.toLocaleString('en-GB')} orders match. Narrow the filter.`,
+      error: rowList.error,
+      onRetry: async () => rowList.retry(),
+    };
+  } else if (rowList.status === 'failed') {
     state = {
       status: 'error',
       title: 'Could not load the Gantt',
-      error: loadError,
-      onRetry: async () => setAttempt((count) => count + 1),
+      error: rowList.error,
+      onRetry: async () => rowList.retry(),
     };
   } else if (snapshot === undefined) {
     state = { status: 'loading' };
-  } else if (rows.length === 0) {
+  } else if (rows.length === 0 && rowList.next === 'done') {
     state = {
       status: 'empty',
-      title: 'No orders in this range',
-      description: 'Show an earlier or later range, or widen the filter.',
+      title: 'No open orders',
+      description: 'Every order of this plant is finished or cancelled.',
     };
   }
 
@@ -771,7 +826,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     0,
     10,
   );
-  const rowCount = flatRows.length + 2;
+  // The row count is unknown while pages of the row list are still to load (WAI-ARIA: -1).
+  const rowCount = rowList.next === 'done' ? flatRows.length + 2 : -1;
+  // The chunks of the buffer without their job orders, which the bands and the status line show.
+  const unloaded = unloadedChunks(chunks.chunks, range);
   const focusedId =
     focusedRowId !== undefined && flatRows.some((row) => row.id === focusedRowId)
       ? focusedRowId
@@ -821,6 +879,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
           .filter((part) => part !== undefined)
           .join(' ')}
       </p>
+      <ChunkStatus chunks={unloaded} timeZone={timeZone} onRetry={chunks.retry} />
       {view !== undefined && snapshot !== undefined && scale !== undefined && (
         <GanttViewProvider value={view}>
           <div
@@ -834,7 +893,13 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               role="treegrid"
               aria-label={gridName}
               aria-rowcount={rowCount}
-              aria-busy={state.status === 'loading' || undefined}
+              // Busy while a chunk of the buffer or a page of the row list loads (ADR 0089).
+              aria-busy={
+                state.status === 'loading' ||
+                unloaded.some((chunk) => chunk.status === 'loading') ||
+                rowList.next === 'loading' ||
+                undefined
+              }
               onKeyDown={(event) => {
                 // Minus and plus step a level around the centre of the view (ADR 0089).
                 if (timelineZoom.onKeyDown(event)) {
@@ -852,9 +917,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                   void setSearch(withChain(search, false));
                 }
               }}
-              onScroll={() => {
+              onScroll={(event) => {
                 buffer.onScroll();
                 followGrid();
+                loadMoreRows(event.currentTarget);
               }}
               className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
               style={{
@@ -889,7 +955,11 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               <div className="relative">
                 {flatRows.map((row, index) => {
                   const parent = row.getParentRow();
-                  const siblings = parent === undefined ? rows.length : parent.subRows.length;
+                  // Order rows count every order of the row list, loaded or not.
+                  const siblings =
+                    parent === undefined
+                      ? Math.max(rows.length, rowList.totalCount ?? 0)
+                      : parent.subRows.length;
                   return (
                     <GanttRowView
                       key={row.id}
@@ -916,6 +986,16 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                     />
                   );
                 })}
+                {rowList.next !== 'done' && (
+                  <GanttMoreRows
+                    rowIndex={flatRows.length + 3}
+                    state={rowList.next}
+                    loaded={rowList.orders.length}
+                    total={rowList.totalCount}
+                    gridTemplateColumns={gridTemplateColumns}
+                    onRetry={rowList.retry}
+                  />
+                )}
                 <div
                   aria-hidden
                   data-overlay
@@ -926,6 +1006,11 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                     height: `${totalHeight}px`,
                   }}
                 >
+                  <ChunkBands
+                    chunks={unloaded}
+                    scale={scale}
+                    labelTop={`${timeHeaderHeightRem + notPlacedHeightRem}rem`}
+                  />
                   <GanttMarkerLayer markers={overlayMarkers(snapshot)} scale={scale} />
                   <GanttLinks links={links} width={timeWidth} height={totalHeight} />
                 </div>
@@ -941,6 +1026,12 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 moveStore={moveStore}
                 {...(buffer.settled !== undefined && { visible: buffer.settled })}
                 scrollerRef={workloadRef}
+                pending={
+                  // Every bucket waits while pages of the row list still load.
+                  rowList.next === 'done' || range === undefined
+                    ? unloaded
+                    : [...unloaded, { ...range, status: 'loading' as const }]
+                }
                 onScroll={(left) => {
                   const grid = gridElement.current;
                   if (grid === null || grid.scrollLeft === left) return;

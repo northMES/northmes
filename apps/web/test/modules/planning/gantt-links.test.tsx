@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { type GanttFixture, g1, g1Expected } from '@northmes/planning-domain';
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
@@ -115,8 +115,16 @@ describe('the links of the order Gantt (plan 18, Blocks, links and the selection
       sourceOf(manyOrdersSnapshot(70)),
     );
     const gantt = await findGantt();
+    // The rows end within a view of the grid's bottom, so the row list loads page after page
+    // (ADR 0089): 420 orders in five pages, more than 200 links once most of them are in.
+    for (const [key, value] of Object.entries({ clientHeight: 600, scrollHeight: 900 })) {
+      Object.defineProperty(gantt, key, { value, configurable: true });
+    }
+    fireEvent.scroll(gantt);
 
-    expect(linkIds(gantt)).toEqual(['jo-1001-10-3-jo-1001-20-3']);
+    await waitFor(() => expect(linkIds(gantt)).toEqual(['jo-1001-10-3-jo-1001-20-3']), {
+      timeout: 30_000,
+    });
     expect(screen.getByTestId('gantt-status').textContent).toContain(
       'Links shown for the selected order.',
     );

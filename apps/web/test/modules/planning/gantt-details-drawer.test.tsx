@@ -5,6 +5,7 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createG1BoardFieldsStore } from '../../../src/modules/planning/board-fields-store.ts';
+import type { GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { phase1Reason } from '../../../src/modules/planning/mock-reasons.ts';
 import {
@@ -44,6 +45,23 @@ function togglesOf(panel: HTMLElement): string[] {
 /** How often a text occurs in an element's text. */
 function countOf(element: HTMLElement, text: string): number {
   return (element.textContent ?? '').split(text).length - 1;
+}
+
+/** A snapshot with one job order moved onto the machine and the placement of another. */
+function withOverlap(snapshot: GanttSnapshot, movedId: string, ontoId: string): GanttSnapshot {
+  const onto = snapshot.productionOrders
+    .flatMap((order) => order.jobOrders)
+    .find((row) => row.id === ontoId);
+  if (onto?.placement === undefined) throw new Error(`G1 places ${ontoId}`);
+  return {
+    ...snapshot,
+    productionOrders: snapshot.productionOrders.map((order) => ({
+      ...order,
+      jobOrders: order.jobOrders.map((row) =>
+        row.id === movedId ? { ...row, equipment: onto.equipment, placement: onto.placement } : row,
+      ),
+    })),
+  };
 }
 
 describe('the Details drawer leads with the move decision (#917)', () => {
@@ -171,36 +189,13 @@ describe('the Details drawer leads with the move decision (#917)', () => {
   });
 
   it('#917 opens the Constraints section by itself on a broken constraint, the broken line first', async () => {
-    const snapshot = g1Snapshot();
-    const analysis = snapshot.analysis.jobOrders['jo-1001-20'];
-    if (analysis === undefined) throw new Error('G1 analyses 1001.20');
-    const broken = {
-      ...snapshot,
-      analysis: {
-        ...snapshot.analysis,
-        jobOrders: {
-          ...snapshot.analysis.jobOrders,
-          'jo-1001-20': {
-            ...analysis,
-            constraints: analysis.constraints.map((line) =>
-              line.kind === 'oneJobAtATime'
-                ? {
-                    ...line,
-                    holds: false,
-                    code: 'OVERLAP' as const,
-                    text: 'One job at a time on CNC 2: overlaps 1002.10',
-                  }
-                : line,
-            ),
-          },
-        },
-      },
-    };
+    // 1004.20 lies on CNC 2 at the time of 1001.20, which the analysis finds as an overlap.
+    const broken = withOverlap(g1Snapshot(), 'jo-1004-20', 'jo-1001-20');
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(broken));
     const panel = await openDetails(await findGantt(), 'jo-1001-20');
 
     expect(panel.querySelector('[data-exception]')?.textContent).toBe(
-      'One job at a time on CNC 2: overlaps 1002.10 (OVERLAP)',
+      'One job at a time on CNC 2: overlaps 1004.20 (OVERLAP)',
     );
     expect(togglesOf(panel)[0]).toBe('Constraints, 5 of 6 hold (true)');
     const constraints = within(panel).getByRole('region', { name: 'Constraints, 5 of 6 hold' });
@@ -296,36 +291,16 @@ describe('the Details drawer leads with the move decision (#917)', () => {
   });
 
   it('#917 puts a broken constraint before lateness, and says a held row', async () => {
-    const snapshot = g1Snapshot();
-    const late = snapshot.analysis.jobOrders['jo-1003-20'];
-    if (late === undefined) throw new Error('G1 analyses 1003.20');
+    // 1004.20 lies on Mill 1 at the time of the late 1003.20, and another planner holds 1001.20.
+    const overlapping = withOverlap(g1Snapshot(), 'jo-1004-20', 'jo-1003-20');
     const changed = {
-      ...snapshot,
-      productionOrders: snapshot.productionOrders.map((order) => ({
+      ...overlapping,
+      productionOrders: overlapping.productionOrders.map((order) => ({
         ...order,
         jobOrders: order.jobOrders.map((row) =>
           row.id === 'jo-1001-20' ? { ...row, held: true } : row,
         ),
       })),
-      analysis: {
-        ...snapshot.analysis,
-        jobOrders: {
-          ...snapshot.analysis.jobOrders,
-          'jo-1003-20': {
-            ...late,
-            constraints: late.constraints.map((line) =>
-              line.kind === 'oneJobAtATime'
-                ? {
-                    ...line,
-                    holds: false,
-                    code: 'OVERLAP' as const,
-                    text: 'One job at a time on Mill 1: overlaps 1004.20',
-                  }
-                : line,
-            ),
-          },
-        },
-      },
     };
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(changed));
     const gantt = await findGantt();

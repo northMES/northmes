@@ -4,7 +4,7 @@ import { planningLinks } from '@northmes/planning-contracts';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { vi } from 'vitest';
+import { expect, vi } from 'vitest';
 import {
   type BoardFieldsStore,
   BoardFieldsStoreProvider,
@@ -101,7 +101,13 @@ export function renderPlanningAt(
  * sheet, keeps the page behind it inert.
  */
 export async function findGantt(): Promise<HTMLElement> {
-  return screen.findByRole('treegrid', { name: /order Gantt/, hidden: true });
+  const gantt = await screen.findByRole('treegrid', { name: /order Gantt/, hidden: true });
+  // The rows draw before the time chunks bring their blocks (ADR 0089); a test that holds a chunk
+  // loading on purpose finds the grid by its role instead.
+  await waitFor(() => expect(document.querySelector('[data-chunk-band="loading"]')).toBeNull(), {
+    timeout: 3000,
+  });
+  return gantt;
 }
 
 /**

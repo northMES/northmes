@@ -3,6 +3,7 @@
 import { availabilityOf, subtractWindows } from '@northmes/planning-domain';
 import { workingCalendarOf } from '../../gantt-analysis.ts';
 import type { GanttEquipment, GanttSnapshot } from '../../gantt-data.ts';
+import { isNotPlaced } from '../../gantt-loaded.ts';
 import type { ClosedWindow, TimeRange } from '../../timeline/time-scale.ts';
 import {
   buildGanttRows,
@@ -87,7 +88,7 @@ export function boardModelOf(snapshot: GanttSnapshot, range: TimeRange): BoardMo
   return {
     groups,
     notPlaced: rows
-      .filter((row) => row.jobOrder.placement === undefined || row.jobOrder.equipment === undefined)
+      .filter((row) => isNotPlaced(row.jobOrder) || row.jobOrder.equipment === undefined)
       .sort(byStart),
   };
 }
