@@ -112,7 +112,29 @@ describe('the move store (ADR 0030, the drag preview outside React state; #898)'
     expect(store.get()).toBeUndefined();
   });
 
-  it('refresh runs the preview again over a new plan without a new position', () => {
+  it('the pointer moves of one frame all apply, so a machine one of them names is kept', () => {
+    const { store, frames } = storeWithCount();
+    store.set(start);
+
+    store.later((current) => ({ ...current, setupStartMs: 1, equipment: 'CNC2' }));
+    store.later((current) => ({ ...current, setupStartMs: 2 }));
+    frames.run();
+
+    expect(store.get()?.state).toMatchObject({ setupStartMs: 2, equipment: 'CNC2' });
+  });
+
+  it('a move of another row drops the position still pending from the last one', () => {
+    const { store, frames } = storeWithCount();
+    store.set(start);
+    store.later((current) => ({ ...current, setupStartMs: 5 }));
+
+    store.set({ ...start, jobOrderId: 'jo-2', source: 'keyboard' });
+    frames.run();
+
+    expect(store.get()?.state.setupStartMs).toBe(0);
+  });
+
+  it('refresh runs the preview again for the same position', () => {
     const { store, computed } = storeWithCount();
     store.set(start);
     const before = computed();
@@ -125,7 +147,7 @@ describe('the move store (ADR 0030, the drag preview outside React state; #898)'
 });
 
 describe('the plan context of a move (#898)', () => {
-  it('is built once per plan with the draft applied, so a pointer move runs the cascade only', () => {
+  it('is the same object for the same plan with the draft applied, and a new one for a new plan', () => {
     const snapshot = g1Snapshot();
 
     expect(moveContextOf(snapshot)).toBe(moveContextOf(snapshot));
