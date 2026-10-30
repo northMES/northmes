@@ -137,7 +137,7 @@ A view gives the core a row model and a drop model. Everything else is shared.
 
 ### Rows and the tree
 
-- Level 1: production order. Row header: order number, article name, quantity in the stock unit, deadline as a plant date, status, late-by when late. Collapsible; collapsed by default when the view loads more than 60 orders, expanded otherwise. Working default.
+- Level 1: production order. Row header: order number, article name, quantity in the stock unit, deadline as a plant date, status, late-by when late. Collapsible; collapsed by default when the row list's `totalCount` is above 60 orders, expanded otherwise. Working default.
 - Level 2: operation. Row header: display number, operation name, quantity, the allowed machines as a count with the default machine's code ("3 machines, default CNC1"), the hard lock when set. Collapsible; expanded by default.
 - Level 3: job order. Row header: machine code, quantity, status. One row per job order, so a split operation shows its halves on separate rows and two halves on different machines never overlap visually. A job order without a machine or without a setup start sits in the pinned Not placed row of the view, under the time header, as on the board; the operation row then shows the count ("1 not placed").
 - Sorting: orders by the autoplan order (deadline instant, priority with null last, order number by code units, id) by default; the tree columns sort on their own columns as [Tree columns](#tree-columns) says. Operations by sequence. Job orders by planned start, unplaced last.
@@ -471,7 +471,7 @@ Plan proposal, following the board's rules in [07](07-production-planning.md#dat
 
 - `planningGantt` splits into two queries ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md), proposed). The row query returns production orders with their operations and their job orders without placements, in deadline order, as a Relay connection ([ADR 0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)); decided for the list conventions. The chunk query returns the job orders whose span overlaps one time chunk. Job orders come as the same GraphQL type the board query returns, so Apollo's normalized cache holds one entry per job order for both views and a draft move shows in both without a refetch.
 - The axis is endless and loads by time chunk ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md)): the view draws a fixed buffer of three viewport widths, moves it by one viewport width near an edge with the scroll position corrected in the same frame, and loads job orders per chunk of plant time while the row list loads apart. `from` in the URL is the visible start. Proposed. The time scroller contains its overscroll (`overscroll-behavior: contain`), so a sideways swipe at an edge never navigates the browser (plan proposal, from the test of 2026-10-17).
-- The row list has no range. It pages through its Relay connection into the virtualized rows, and a row list with more than `ganttMaxOrders` (working default 1 250) orders fails with `planning.gantt.too_many_orders` and the toolbar says "Narrow the filter". The limit is a guard set from the spike measurement: 1 250 orders is the largest row model SP3b measures ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md)).
+- The row list has no range. It pages through its Relay connection into the virtualized rows, loading its pages in order from the first, and a row list with more than `ganttMaxOrders` (working default 1 250) orders, counted on its first page, fails with `planning.gantt.too_many_orders` and the toolbar says "Narrow the filter". The limit is a guard: 1 250 orders is the row model SP3b measures, and its verdict may lower it ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md)).
 - Rows a computation needs outside the loaded set (a chain root in another order, a plan-this-order horizon) are fetched by production order id through `planningProductionOrder` and the board query for the extra range, and merged into the same cache.
 - Availability comes from core's availability query for every machine the loaded rows use, memoized per calendar version. Instants stay ISO strings in the cache and become epoch milliseconds once at the data edge ([ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md)). Proposed.
 - Realtime: the Gantt subscribes to `planningBoardChanged(plantId)` like the board, debounces 250 ms, and refetches by ids when the changed ids fall in its loaded chunks, the chunks in view when the ids are null, and the row list when a production order is created, finished or cancelled; `core.calendar.availability_changed` refetches availability ([ADR 0018](../adr/0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md)). Accepted. Pause live updates works as on the board.
@@ -489,7 +489,7 @@ Plan proposal.
 | Workload under machines, Workload panel | Board options, local | on, off | off |
 | Shift strip | Board options, local | on, off | off |
 | Links | Board options, local | expanded orders, selected order | expanded orders, falling back above the link limit |
-| `ganttMaxOrders` | plant setting | 50 to 2 500 | 1 250 |
+| `ganttMaxOrders` | plant setting | 50 to 1 250 | 1 250 |
 | `earliestStartEnabled` | plant setting | boolean | false until the product owner answers |
 | `plannerAnchors` | plant setting | boolean | false until the decision in [Decisions this document needs](#decisions-this-document-needs) |
 | Tree columns | columns menu, local | as [Tree columns](#tree-columns) | Name, Machine, Start, End, Deadline, Late by, Float |
@@ -500,7 +500,7 @@ No new permission. Moves, cascade, plan this order and Move all later by need `p
 
 [ADR 0062](../adr/0062-web-form-contracts-url-view-state-and-module-link-manifests.md). Accepted for the rules; the new keys are a plan proposal.
 
-- The board, the Gantt and the job order table are separate routes under `/$plant/planning/`, each an entry under Planning in the sidebar (Krister, 2026-10-17). `zoom`, `from` and `order` keep their meaning on every page, and a link from one page to another, such as "Show on board" in Details, carries them, so the range and the selected order survive the switch. `?view=gantt` on the board route, the first round's key, redirects to the Gantt page with the other keys carried over.
+- The board, the Gantt and the job order table are separate routes under `/$plant/planning/`, each an entry under Planning in the sidebar (Krister, 2026-10-17). `zoom`, `from` and `order` keep their meaning on every page, and a link from one page to another, such as "Show on board" in Details, carries them, so the range and the selected order survive the switch, except that the job order table opens at the nearest preset and at the plant date of a date-time `from`. `?view=gantt` on the board route, the first round's key, redirects to the Gantt page with the other keys carried over.
 - `chain=1` with `order=<id>` opens the view with that order's critical chain highlighted, so "look at why 1003 is late" is one link. Without `order` the key is dropped with the polite status message the ADR prescribes.
 - The table view's filter keys apply to the Gantt unchanged.
 - The job order table keeps the four presets as its Range. A link from the board or the Gantt at another level opens it at the nearest preset: `quarter-hours` at `hours`, and `quarter` and `year` at `4weeks` ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md)).
@@ -552,7 +552,7 @@ The SP3 criteria of [ADR 0030](../adr/0030-a-planning-board-built-in-house.md) a
 | `cascade` preview per drag frame | at most 8 ms, so the frame stays under 33 ms with rendering |
 | Workload buckets for 60 machines over 8 weeks by production day | under 30 ms in the browser under the polyfill, as the availability budget of [ADR 0024](../adr/0024-time-utc-instants-plant-wall-clock-temporal-and-the-clamp-resolver.md) |
 | Links drawn | at most 200 before the view falls back to the selected order |
-| The Gantt's row query, one page of 100 orders | at most 500 ms server time at pilot scale |
+| The Gantt's row query, one page of 100 orders with its count | at most 200 ms server time at pilot scale |
 | `planningWorkload` for the plant over 8 weeks by production day | at most 300 ms |
 | Writing an identical Gantt result twice | zero extra block layer renders |
 
@@ -593,7 +593,7 @@ Tests are written first ([ADR 0041](../adr/0041-test-strategy-tdd-vitest-project
 
 ### Integration tests (`apps/backend`, Testcontainers)
 
-- `gantt-query.int.test.ts`: the row query returns G1 in deadline order with nested rows and no placements; the chunk query returns every job order whose span overlaps the chunk, `1006.10` in both ISO weeks it touches; a page holds at most 100 orders; 1 251 orders fail with `planning.gantt.too_many_orders`; a viewer reads, a planner reads, a user of another plant gets no rows.
+- `gantt-query.int.test.ts`: the row query returns G1 in deadline order with nested rows and no placements; the chunk query returns every job order whose span overlaps the chunk, `1006.10` in both ISO weeks it touches; a page holds at most 100 orders; with `ganttMaxOrders` set to 50, 51 orders fail with `planning.gantt.too_many_orders` and 50 pass, and the setting's default is 1 250; a viewer reads, a planner reads, a user of another plant gets no rows.
 - `workload.int.test.ts`: `planningWorkload` for G1 by production day equals the browser's GT5 table; a calendar deviation changes the available seconds of its buckets only.
 - `cascade-save.int.test.ts`: a cascade of two moves writes two draft changes under one soft lock; Save commits both or neither; the server's `validate()` finds no `LEAD_TIME` after GT3 with cascade on and one with cascade off.
 

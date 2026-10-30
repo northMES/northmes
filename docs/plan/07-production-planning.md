@@ -746,7 +746,7 @@ A conflict is a broken planning rule that NorthMES reports and never repairs on 
 | `FROZEN_WINDOW` | `judgeMove`, `validate()` | Save, proposals | confirmable on Save; a proposal item inside the window is blocked |
 | `LOCKED_IN_PAST` | `plan()` | autoplan | listed in the run result and on the board |
 | `PINNED`, `LOCKED`, `STARTED` | `judgeMove` | move, Save, proposals | refusal, not confirmable |
-| `PAST` | the move preview, keyboard move mode and the Move dialog; `validate()` | move; Save | refusal at the move; at Save a setup start that passed while the move waited in the draft is listed, and Save needs confirmation with a reason ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md)) |
+| `PAST` | the move preview, keyboard move mode and the Move dialog; `validate()` | move; Save; proposals (review panel, through `validate()`) | refusal at the move; at Save a setup start that passed while the move waited in the draft is listed, and Save needs confirmation with a reason ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md)) |
 | `STALE`, `LOCK_LOST`, `ROW_GONE`, `PENDING_ERP_CHANGE` | draft row status | Save | refusal for that row; discard or rebase |
 | Import conflict | connector import recomputes an untouched order | each poll | marked on the board and in the import log |
 | Report conflict | production-start | a report on another machine or on a finished or cancelled job order | Conflict state on the block |

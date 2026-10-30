@@ -79,20 +79,52 @@ Chosen option: "A ladder of zoom levels, an endless axis over a fixed buffer, an
 ### Loading by time chunk
 
 * Job orders load per time chunk: a fixed span of plant time, aligned to plant dates (midnight, ISO weeks from Monday, calendar months and quarters), whose length follows the level (working default: one ISO week up to `week`, one month at `4weeks` and `quarter`, one quarter at `year`). A chunk holds every job order whose span from setup start to end overlaps the chunk's half-open span, and a job order in two chunks is merged by id. Chunks do not move with the scroll, so a cached chunk stays valid within its chunk length; a level change that changes the chunk length loads the buffer's chunks again.
-* The view loads the chunks the buffer touches, the chunks in view first, and the next chunk on each side ahead of time. It drops chunks more than two buffer widths away, except a chunk that holds the focused job order or a job order of the selected order. A chunk that is still loading shows a loading band in its rows' time cells, with a polite status message. A chunk that fails to load shows an error band with Try again in its rows' time cells and a status message, so a failed load never looks like empty rows. A workload bucket that touches a chunk not yet loaded shows as loading, never as a partial sum.
+* The view loads the chunks the buffer touches, the chunks in view first, and the next chunk on each side ahead of time. It drops chunks more than two buffer widths away, except a chunk that holds the focused job order or a job order of the selected order. A chunk that is still loading shows a loading band in its rows' time cells, with a polite status message. A chunk that fails to load shows an error band with Try again in its rows' time cells and a status message, so a failed load never looks like empty rows. A workload bucket that touches a chunk not yet loaded shows as loading, never as a partial sum, and a bucket that touches a refused chunk shows no sum and names the refusal.
 * The order Gantt loads its rows apart from its blocks. The row list holds each production order with its operations, its job orders without their placements (id, number, machine, status, quantity), its span (first setup start to last end), its deadline and its status. Its default set is every order that is neither finished nor cancelled, which includes every late order. Finished orders join through the "Include finished" filter, for the chunks loaded. So with the default set rows never appear or move while the planner scrolls, and an order far in the future already shows its summary span before its job orders load.
 * A job order without a placement has no time, so no chunk holds it: on the Gantt it comes with the row list, and on the board the Not placed row loads apart from the chunks.
 * The board's rows are machines, so only its blocks load per chunk. The board's range limit (`planning.board.range_too_large`) applies per time chunk. A refused chunk shows a band in its rows' time cells that says to narrow the filter or zoom in, with a polite status message (Krister, 2026-10-30).
-* The row list pages through its Relay connection (pages of at most 100, [ADR 0016](0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)) into the virtualized rows, as ADR 0030 decides for rows: the view reserves `totalCount` rows and loads the pages the virtualizer's window touches, one page ahead. A row carries no placements, so the pilot's 500 orders are five small pages (Krister, 2026-10-30).
-* `ganttMaxOrders` stays as a guard against a filter that matches far more orders than a planner reads, at a working default of 1 250: the largest row model spike SP3b measures (1 250 orders, 5 000 blocks) and two and a half times the pilot's 500 orders. A row list above it fails with `planning.gantt.too_many_orders`.
-* The `GanttDataSource` seam gets `loadRows(filter)` and `loadChunk(from, to, filter)` in place of one `load` per range, and the mock source answers both from fixture G1. On the server, the planned `planningGantt` query splits into a row query (a Relay connection, [ADR 0016](0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)) and a chunk query that returns job orders of the same GraphQL type as the board's.
-* Computations that need rows outside the loaded chunks fetch them by order id, as plan 18 says. Realtime refetches changed ids that fall in loaded chunks, refetches the chunks in view when the changed ids are null ([ADR 0018](0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md)), and refetches the row list when a production order is created, finished or cancelled.
+* The row list pages through its Relay connection (pages of at most 100, [ADR 0016](0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)) into the virtualized rows, as ADR 0030 decides for rows: the view reserves `totalCount` rows and loads the pages in order from the first, one page ahead of the virtualizer's window. A jump past the loaded pages (End, or the scrollbar dragged far down) loads the last pages backward with `last` and fills the pages between in order, because a keyset cursor exists only for a loaded page. A reserved row whose page is loading shows a loading row with a polite status message, and a row of a failed page shows an error row with Try again. A row carries no placements, so the pilot's 500 orders are five small pages (Krister, 2026-10-30).
+* `ganttMaxOrders` stays as a guard against a filter that matches far more orders than a planner reads, at a working default of 1 250: the row model spike SP3b measures (1 250 orders, 5 000 blocks), two and a half times the pilot's 500 orders. SP3b's verdict may lower it. The row query counts the filter's orders on its first page and fails with `planning.gantt.too_many_orders` when the count passes `ganttMaxOrders`.
+* The `GanttDataSource` seam gets `loadRows(filter, page)`, which returns a page of rows with its page info and `totalCount`, and `loadChunk(from, to, filter)`, in place of one `load` per range, and the mock source answers both from fixture G1. On the server, the planned `planningGantt` query splits into a row query (a Relay connection, [ADR 0016](0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)) and a chunk query that returns job orders of the same GraphQL type as the board's.
+* Computations that need rows outside the loaded chunks fetch them by order id, as plan 18 says. Realtime refetches changed ids that fall in loaded chunks, refetches the chunks in view when the changed ids are null ([ADR 0018](0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md)), and refetches the row list when a production order is created, finished or cancelled. A row list refetch reloads the loaded pages in order from the first, so a row whose deadline moved across a page boundary is neither skipped nor read twice ([ADR 0016](0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)), and a changed order already in the list refetches its row by id.
 
 ### Time before now
 
 * The time area before the now line has a flat past tone, drawn behind blocks and shading. The frozen window band stays from now to the fence.
 * A move whose setup start would fall before now is refused with the refusal code `PAST`, next to `STARTED`, in the drag preview, in keyboard move mode and in the Move dialog. A drop before now lands on the first snap step at or after now, then snaps forward to working time as every drop does. Started and finished job orders stay fixed, as today.
-* `PAST` refuses the move itself and does not join `judgeMove`. At Save, a setup start that passed while the move waited in the draft shows as a `PAST` conflict, which the planner confirms with a reason, because Save never refuses a draft for a broken rule (Krister, 2026-10-17, in [plan 18](../plan/18-gantt-timeline.md#open-points); Krister, 2026-10-30).
+* `PAST` refuses the move itself and does not join `judgeMove`. At Save, a setup start that passed while the move waited in the draft shows as a `PAST` conflict, which the planner confirms with a reason, because Save never refuses a draft for a broken rule (Krister, 2026-10-17, in [plan 18](../plan/18-gantt-timeline.md#open-points); Krister, 2026-10-30). A proposal item is not refused for `PAST`; once accepted into the draft, Save lists it as a `PAST` conflict like any draft row.
+
+### Parts of accepted ADRs this decision changes
+
+The files below keep their text. Once this ADR is accepted, it holds over the parts listed here, and the rest of each ADR stands.
+
+#### Changes to ADR 0055
+
+[ADR 0055](0055-release-1-scope-under-option-b-and-the-scope-rule.md), release 1 scope. Under the scope rule, "An item enters release 1 only by the maintainer's decision, recorded in this ADR's ledger table". Krister Johansson decided on 2026-10-30 (M-100) that the zoom ladder on the planning board is in release 1.
+
+| Section | Before | After |
+|---|---|---|
+| Decision outcome (ledger additions) | "Additions from the stress test, which the maintainer still confirms:" and a table of seven additions | The table also holds the row below, which comes from this ADR and not from the stress test. No source gives a figure for it, so it is not estimated until its stories exist |
+
+| Addition | Estimate (raw days) |
+|---|---|
+| ADR 0089: the zoom ladder on the planning board | not estimated |
+
+#### Changes to ADR 0016
+
+[ADR 0016](0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md), GraphQL list conventions:
+
+| Section | Before | After |
+|---|---|---|
+| More information (Waits) | "infinite lists" wait | The order Gantt's row list is a virtualized list over a Relay connection, loaded page by page as [Loading by time chunk](#loading-by-time-chunk) says; other infinite lists still wait |
+
+#### Changes to ADR 0018
+
+[ADR 0018](0018-realtime-subscriptions-over-graphql-ws-fed-by-the-event-tail.md), realtime:
+
+| Section | Before | After |
+|---|---|---|
+| Decision outcome | "The board range resolver limits days and rows (`planning.board.range_too_large`)" | The limit applies per time chunk, and a refused chunk shows its band ([Loading by time chunk](#loading-by-time-chunk)) |
 * Finished job orders are drawn muted, with a finished cue besides colour and "finished" in their accessible name, as every block state has ([07](../plan/07-production-planning.md#block-states)). An overdue job order (planned, with its planned start passed) keeps its own state cue and is never muted, because it is the work the planner most needs to see. It may move to now or later.
 
 ### Consequences
@@ -104,7 +136,7 @@ Chosen option: "A ladder of zoom levels, an endless axis over a fixed buffer, an
 * Bad, because the coarse levels (`quarter`, `year`) put many job orders into a few pixels, which needs the culling and virtualization of ADR 0030 before they ship, and may need the coarse levels to draw summary spans only.
 * Bad, because a split row query and chunk query are two server queries where plan 18 has one.
 * Bad, because the D3 board design and the D5 Gantt frames show four preset buttons, so the toolbar needs a design round.
-* Neutral, because the row list has no time bound: at pilot scale (500 orders, [07](../plan/07-production-planning.md)) it pages through its connection, and `ganttMaxOrders` (1 250) is only a guard, where the time range kept the old set small.
+* Neutral, because the row list has no time bound: at pilot scale (500 orders, [07](../plan/07-production-planning.md)) it pages through its connection, and `ganttMaxOrders` (1 250) is only a guard.
 
 ### Confirmation
 
@@ -114,6 +146,10 @@ Chosen option: "A ladder of zoom levels, an endless axis over a fixed buffer, an
 * `gantt-chunks.test.tsx`, with a counting mock source: scrolling across four chunks loads each chunk once, scrolling back within two buffer widths loads nothing, and a chunk whose load fails shows the error band with Try again.
 * `gantt-move.test.ts`: a drag or a keyboard step to before now is refused with `PAST`, and an overdue row dropped on the now line at `week` with now at 09:40 lands at 12:00.
 * `gantt-search.test.tsx`: `zoom=week` and `hours`, `day` and `4weeks` open their levels, and an unknown id falls back to `week`.
+* `job-orders-search.test.tsx`: a link with `zoom=quarter-hours` opens the job order table at `hours`, and one with `zoom=quarter` or `zoom=year` at `4weeks`.
+* `gantt-rows.test.tsx`, with a counting source of 500 orders: the first page loads 100 rows, scrolling loads the next page, End loads the last page with `last`, and a failed page shows its error row.
+* `board-chunks.test.tsx`: a chunk the mock source refuses with `planning.board.range_too_large` shows the band that says to narrow the filter or zoom in, and announces it politely.
+* `draft-conflicts.test.tsx` and `cascade-save.int.test.ts`: a draft row whose setup start passed while it waited lists a `PAST` conflict, and Save commits it with confirmation and a reason.
 
 ## Pros and cons of the options
 
