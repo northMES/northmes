@@ -536,7 +536,7 @@ No new permission. Moves, cascade, plan this order and Move all later by need `p
 
 ### Gates
 
-- `e2e/a11y/gantt.axe.spec.ts` over the states populated, expanded order with links, chain highlight, workload lane with its table open, move mode, the review step of a run, the run row and the 640 px tabs, in `ci / a11y`.
+- `e2e/a11y/gantt.axe.spec.ts` over the states populated, expanded order with links, chain highlight, a focused block with its description, workload lane with its table open, move mode, the review step of a run, the run row and the 640 px tabs, in `ci / a11y`.
 - `e2e/planning/gantt-keyboard.spec.ts`: expand an order with Right, enter move mode on a job order row, step a machine with Down and two snaps with Right, Enter; the moved block is focused, lies inside the scroller, and the spoken text matches the server's start and names the cascade count.
 - One manual NVDA pass on the order Gantt on the pilot planner-class PC, with the board's pass.
 

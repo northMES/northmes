@@ -113,24 +113,42 @@ export function GanttHoverCard({
       <p className="text-xs opacity-80">
         {row.order.article}, {quantityText(row.jobOrder.quantity)}, order {row.order.number}
       </p>
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
-        {hoverFields(row, snapshot, machineName, hoverIds, material).map((field) =>
-          field.warning ? (
-            <div
-              key={field.id}
-              className="col-span-2 grid grid-cols-subgrid rounded-sm bg-warning-subtle px-1 text-foreground"
-            >
-              <dt>{field.label}</dt>
-              <dd className="text-end font-mono text-xs">{field.value}</dd>
-            </div>
-          ) : (
-            <div key={field.id} className="contents">
-              <dt className="opacity-80">{field.label}</dt>
-              <dd className="text-end font-mono text-xs">{field.value}</dd>
-            </div>
-          ),
-        )}
-      </dl>
+      <GanttHoverFields fields={hoverFields(row, snapshot, machineName, hoverIds, material)} />
     </div>
+  );
+}
+
+/**
+ * The fields of the hover card as a description list. A focused block is described by the same
+ * list, hidden (#902): the title and the order line are left out, since its name holds them.
+ */
+export function GanttHoverFields({
+  fields,
+  id,
+  hidden,
+}: {
+  readonly fields: readonly HoverField[];
+  readonly id?: string;
+  readonly hidden?: boolean;
+}) {
+  return (
+    <dl id={id} hidden={hidden} className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5">
+      {fields.map((field) =>
+        field.warning ? (
+          <div
+            key={field.id}
+            className="col-span-2 grid grid-cols-subgrid rounded-sm bg-warning-subtle px-1 text-foreground"
+          >
+            <dt>{field.label}</dt>
+            <dd className="text-end font-mono text-xs">{field.value}</dd>
+          </div>
+        ) : (
+          <div key={field.id} className="contents">
+            <dt className="opacity-80">{field.label}</dt>
+            <dd className="text-end font-mono text-xs">{field.value}</dd>
+          </div>
+        ),
+      )}
+    </dl>
   );
 }
