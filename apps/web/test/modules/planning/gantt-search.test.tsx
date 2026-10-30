@@ -5,7 +5,9 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   boardSearch,
+  fromAt,
   ganttSearch,
+  startOfFrom,
   withChain,
   withOrder,
 } from '../../../src/modules/planning/gantt-search.ts';
@@ -34,6 +36,36 @@ describe('ganttSearch (plan 18, URL state)', () => {
       expect(boardSearch({ zoom })).toEqual({ zoom });
     }
     expect(ganttSearch({ zoom: 'decade' })).toEqual({});
+  });
+
+  it('ADR0089 reads from as a plant date or as the plant-local date-time of the visible start, without an offset', () => {
+    expect(ganttSearch({ from: '2026-11-03T13:20' })).toEqual({ from: '2026-11-03T13:20' });
+    expect(boardSearch({ from: '2026-11-03T13:20' })).toEqual({ from: '2026-11-03T13:20' });
+    expect(ganttSearch({ from: '2026-11-03T25:20' })).toEqual({});
+    expect(ganttSearch({ from: '2026-11-03T13:20:00Z' })).toEqual({});
+    expect(ganttSearch({ from: '2026-11-03T13:20Z' })).toEqual({});
+    expect(ganttSearch({ from: '2026-11-03T13:20+01:00' })).toEqual({});
+  });
+
+  it('ADR0089 opens a plain date at the start of that day, its production day at the levels that span hours, and a date-time at that plant time', () => {
+    const zone = 'Europe/Stockholm';
+    expect(startOfFrom('2026-11-04', 'week', zone, '06:00')).toBe(
+      Date.parse('2026-11-03T23:00:00Z'),
+    );
+    expect(startOfFrom('2026-11-04', 'day', zone, '06:00')).toBe(
+      Date.parse('2026-11-04T05:00:00Z'),
+    );
+    // Not the Monday of its ISO week, nor the first of its month.
+    expect(startOfFrom('2026-11-04', '4weeks', zone, '06:00')).toBe(
+      Date.parse('2026-11-03T23:00:00Z'),
+    );
+    expect(startOfFrom('2026-11-04', 'year', zone, '06:00')).toBe(
+      Date.parse('2026-11-03T23:00:00Z'),
+    );
+    expect(startOfFrom('2026-11-03T13:20', 'day', zone, '06:00')).toBe(
+      Date.parse('2026-11-03T12:20:00Z'),
+    );
+    expect(fromAt(Date.parse('2026-11-03T12:20:40Z'), zone)).toBe('2026-11-03T13:20');
   });
 
   it('ends the chain with the order and keeps it only with one', () => {
@@ -73,9 +105,8 @@ describe('the Gantt page (plan 18, URL state)', () => {
     });
 
     const gantt = await findGantt();
-    expect(gantt.getAttribute('aria-label')).toBe(
-      'plant-a order Gantt, W45, Mon 2 Nov to Sun 8 Nov',
-    );
+    // The grid names the span in view, which starts at Mon 2 Nov (ADR 0089, The endless axis).
+    expect(gantt.getAttribute('aria-label')).toMatch(/^plant-a order Gantt, W45, Mon 2 Nov to /);
     // The chain opens the order's Details, a modal drawer, so the rows are read as hidden.
     const row = within(gantt).getByRole('row', { name: /^1003 /, hidden: true });
     expect(row.getAttribute('aria-selected')).toBe('true');
@@ -165,9 +196,8 @@ describe('the Gantt page (plan 18, URL state)', () => {
     const router = renderGanttRoute({});
 
     const gantt = await findGantt();
-    expect(gantt.getAttribute('aria-label')).toBe(
-      'plant-a order Gantt, W45, Mon 2 Nov to Sun 8 Nov',
-    );
+    // The grid names the span in view, which starts at Mon 2 Nov (ADR 0089, The endless axis).
+    expect(gantt.getAttribute('aria-label')).toMatch(/^plant-a order Gantt, W45, Mon 2 Nov to /);
     expect(router.state.location.search).toEqual({});
     expect(
       within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {

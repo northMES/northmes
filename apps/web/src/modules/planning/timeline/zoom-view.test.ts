@@ -2,14 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { describe, expect, it } from 'vitest';
 import type { ZoomLevel } from '../gantt-data.ts';
-import {
-  type ClosedWindow,
-  createTimeScale,
-  naturalWidthPx,
-  type TimeRange,
-  zoomLevelIds,
-  zoomLevels,
-} from './time-scale.ts';
+import { bufferAround, bufferScale } from './time-buffer.ts';
+import { type ClosedWindow, type TimeRange, zoomLevelIds, zoomLevels } from './time-scale.ts';
 import {
   anchorAt,
   anchoredScrollLeft,
@@ -17,7 +11,6 @@ import {
   createWheelZoom,
   fitView,
   type GridLayout,
-  rangeAround,
   type ZoomPlant,
 } from './zoom-view.ts';
 
@@ -38,27 +31,22 @@ function nightsOf(range: TimeRange): ClosedWindow[] {
 }
 
 /**
- * The screen's layout of a level around an anchor: the range rangeAround picks, its scale at the
- * time column's width, and the scroll position the browser clamps the anchored one to.
+ * The screen's layout of a level around an anchor: the buffer the view builds with the anchor at
+ * its viewport x (ADR 0089, The endless axis), its scale, and the scroll position the browser
+ * clamps the anchored one to.
  */
 function zoomedTo(zoom: ZoomLevel, ms: number, viewportX: number, hidden: boolean) {
   const at = hidden ? { ...plant, closedOf: nightsOf } : plant;
-  const { range } = rangeAround({ ms, viewportX }, layout, zoom, at);
-  const closed = hidden ? nightsOf(range) : undefined;
-  const hideClosed = closed === undefined ? undefined : { closed };
-  const widthPx = Math.max(
-    layout.clientWidth - layout.treeWidth,
-    Math.ceil(naturalWidthPx(range, zoom, hideClosed)),
-  );
-  const scale = createTimeScale({
-    range,
+  const viewportPx = layout.clientWidth - layout.stickyWidth;
+  const range = bufferAround({
+    anchorMs: ms,
+    anchorX: viewportPx + viewportX - layout.stickyWidth,
+    viewportPx,
     zoom,
-    timeZone: stockholm,
-    productionDayStart: '06:00',
-    widthPx,
-    ...(hideClosed !== undefined && { hideClosed }),
+    plant: at,
   });
-  const maxScroll = layout.treeWidth + widthPx - layout.clientWidth;
+  const scale = bufferScale(range, zoom, at);
+  const maxScroll = layout.treeWidth + scale.widthPx - layout.clientWidth;
   const scrollLeft = Math.max(
     0,
     Math.min(maxScroll, anchoredScrollLeft(scale, { ms, viewportX }, layout)),
@@ -73,7 +61,7 @@ describe('a level step keeps the instant under the pointer (ADR 0089, Zoom level
     const anchor = anchorAt(scale, 1001, layout, 767.421875);
 
     expect(Number.isInteger(anchor.ms)).toBe(true);
-    expect(() => rangeAround(anchor, layout, 'day', plant)).not.toThrow();
+    expect(() => zoomedTo('day', anchor.ms, 900, false)).not.toThrow();
   });
 
   // Noon on the autumn and the spring clock change days in Stockholm.

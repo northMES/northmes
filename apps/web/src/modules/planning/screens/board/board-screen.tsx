@@ -10,9 +10,19 @@ import { PageFrame, type PageState } from '../../../../ui/components/page-frame/
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { useBoardFields } from '../../board-fields-store.ts';
+import {
+  ChunkBands,
+  ChunkStatus,
+  RowsStatus,
+  unloadedChunks,
+} from '../../components/chunk-status/index.ts';
 import { MoveDialog } from '../../components/move-dialog/index.ts';
-import { RangeControls, ZoomControls } from '../../components/range-controls/index.ts';
-import type { GanttSnapshot } from '../../gantt-data.ts';
+import {
+  RangeControls,
+  VisibleSpanText,
+  ZoomControls,
+} from '../../components/range-controls/index.ts';
+import { type GanttPageRequest, ganttMaxOrders } from '../../gantt-data.ts';
 import {
   applyDraft,
   cascadeFromHere,
@@ -27,9 +37,11 @@ import {
   orderNumbersText,
   splitRunInDraft,
 } from '../../gantt-draft.ts';
+import { loadedSnapshot } from '../../gantt-loaded.ts';
 import {
   type BoardSearch,
   boardSearch,
+  startOfFrom,
   withFrom,
   withOrder,
   withZoom,
@@ -40,25 +52,21 @@ import { plantTime } from '../../order-facts.ts';
 import { usePlanningDraft } from '../../planning-draft.tsx';
 import { PlanningForbidden } from '../../planning-preview.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
-import {
-  createTimeScale,
-  extendedRange,
-  naturalWidthPx,
-  plantDateOf,
-  rangeLabel,
-  shiftedFrom,
-  zoomLevels,
-} from '../../timeline/time-scale.ts';
-import { useRangeExtension, useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
+import { plantDateOf, spanLabel, zoomLevels } from '../../timeline/time-scale.ts';
+import { useTimeBuffer } from '../../timeline/use-time-buffer.ts';
+import { useTimeChunks } from '../../timeline/use-time-chunks.ts';
+import { useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
+import { useGanttRows } from '../../use-gantt-rows.ts';
 import { useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { useMoveActions } from '../../use-move-actions.ts';
 import { type GanttViewContext, GanttViewProvider } from '../gantt/gantt-context.ts';
 import { GanttDetailDrawer } from '../gantt/gantt-detail-panel.tsx';
 import { changesText, GanttDraftDrawer } from '../gantt/gantt-draft-drawer.tsx';
 import { movedMessage, previewOf, refusalMessage, staysOverdue } from '../gantt/gantt-move.ts';
+import { timeHeaderHeightRem } from '../gantt/gantt-time-area.tsx';
 import { BlockMenu } from './board-block-menu.tsx';
 import { type BoardCellItem, cellsOf } from './board-cells.ts';
-import { BoardGrid, focusKeys } from './board-grid.tsx';
+import { BoardGrid, boardRowRem, focusKeys } from './board-grid.tsx';
 import { type BoardLine, boardEntry, boardFocusAfter } from './board-navigation.ts';
 import { type BoardModel, boardFitTargetOf, boardModelOf } from './board-rows.ts';
 import { BoardSkeleton } from './board-skeleton.tsx';
@@ -144,9 +152,25 @@ export function BoardScreen() {
       }),
     [navigate],
   );
-  const [committed, setCommitted] = useState<GanttSnapshot | undefined>(undefined);
-  /** The range the snapshot was loaded for, so a range still loading reads as busy. */
-  const [loadedRange, setLoadedRange] = useState<string | undefined>(undefined);
+  // The row list, every page of it, since the board needs every order for its blocks, and the
+  // job orders by time chunk (ADR 0089, Loading by time chunk). The preview is the mock source's
+  // page state; a change of it drops the rows shown and loads everything again, so the state it
+  // asks for shows at once.
+  const loadOptions = useMemo(
+    () => (search.preview === undefined ? {} : { preview: search.preview }),
+    [search.preview],
+  );
+  const loadRows = useCallback(
+    (page: GanttPageRequest) => source.loadRows({}, page, loadOptions),
+    [source, loadOptions],
+  );
+  const loadChunk = useCallback(
+    (from: string, to: string) => source.loadChunk(from, to, {}, loadOptions),
+    [source, loadOptions],
+  );
+  const rowList = useGanttRows({ load: loadRows, all: true, resetKey: search.preview ?? '' });
+  const frame = rowList.frame;
+  const loadError = rowList.status === 'failed' ? rowList.error : undefined;
   // The planner's draft, which the Gantt and the job order table share (plan 07, Drafts).
   const [draft, setDraft] = usePlanningDraft();
   const [draftOpen, setDraftOpen] = useState(false);
@@ -160,37 +184,25 @@ export function BoardScreen() {
   // The job order stays after the dialog closes, so the dialog fades out with its content.
   const [moveDialogFor, setMoveDialogFor] = useState<string | undefined>(undefined);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const [loadError, setLoadError] = useState<unknown>(undefined);
-  const [attempt, setAttempt] = useState(0);
   /** Settles the promise of Try again once the load it started has settled. */
   const retryDone = useRef<(() => void) | undefined>(undefined);
-  // A change of the preview drops the board shown before, so the state it asks for shows at once.
-  const [shownPreview, setShownPreview] = useState(search.preview);
-  if (shownPreview !== search.preview) {
-    setShownPreview(search.preview);
-    setCommitted(undefined);
-    setLoadError(undefined);
-  }
+  useEffect(() => {
+    if (rowList.status === 'loading') return;
+    retryDone.current?.();
+    retryDone.current = undefined;
+  }, [rowList.status]);
+  // Details of a job order in the Gantt's drawer (Krister, 2026-10-21): a double click or Enter
+  // opens it and selects the order (#886), and a link that names an order opens its first job
+  // order in the range.
+  const [detailFor, setDetailFor] = useState<string | undefined>(undefined);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [focused, setFocused] = useState<string | undefined>(undefined);
   const [width, measureRef] = useMeasuredWidth();
-  const zoom = search.zoom ?? defaultZoom;
-  const [fillHeight, fillRef] = useViewportFill(`${zoom}|${search.from ?? ''}`);
+  const urlZoom = search.zoom ?? defaultZoom;
+  const [fillHeight, fillRef] = useViewportFill(`${urlZoom}|${search.from ?? ''}`);
 
-  const timeZone = committed?.plant.timeZone ?? 'UTC';
-  const productionDayStart = committed?.plant.productionDayStart ?? '06:00';
-  const from =
-    search.from ??
-    (committed === undefined
-      ? plantDateOf(Date.now(), timeZone)
-      : plantDateOf(committed.nowMs, timeZone));
-  // A level change extends the range by the spans that hold its anchor where it was (ADR 0089).
-  const rangeExtension = useRangeExtension(from, zoom);
-  const { extension } = rangeExtension;
-  const range = useMemo(
-    () => extendedRange(from, zoom, timeZone, productionDayStart, extension),
-    [from, zoom, timeZone, productionDayStart, extension],
-  );
+  const timeZone = frame?.plant.timeZone ?? 'UTC';
+  const productionDayStart = frame?.plant.productionDayStart ?? '06:00';
   const gridElement = useRef<HTMLDivElement | null>(null);
   // One ref for the grid, kept across renders, so the width is not measured again on each one.
   const boardGridRef = useCallback(
@@ -200,38 +212,82 @@ export function BoardScreen() {
     },
     [measureRef],
   );
+  const machineWidth = Math.min(machineColumnPx, Math.floor(width * machineColumnShare));
+  const zoomPlant = useMemo(
+    () => ({ timeZone, productionDayStart }),
+    [timeZone, productionDayStart],
+  );
+  // The endless axis (ADR 0089): a buffer of three viewport widths that moves near an edge. A
+  // pointer drag holds it, since the drag reads its moves in this buffer's pixels.
+  const buffer = useTimeBuffer({
+    zoom: urlZoom,
+    from: search.from,
+    nowMs: frame?.nowMs ?? Date.now(),
+    widthPx: width,
+    grid: gridElement,
+    columns: { treeWidth: machineWidth, stickyWidth: machineWidth },
+    plant: zoomPlant,
+    // The level goes to the URL when it changes, so a default level stays out of it.
+    onNavigate: (level, start) =>
+      void setSearch(withFrom(level === urlZoom ? search : withZoom(search, level), start)),
+    frozen: {
+      get: () => moveStore.get()?.state.source === 'pointer',
+      subscribe: (listener) => moveStore.subscribe(listener),
+    },
+  });
+  const zoom = buffer.zoom;
+  const range = buffer.range;
+  // The visible start, which the URL holds once scrolling stops and links to the other pages carry.
+  const from = search.from ?? plantDateOf(frame?.nowMs ?? Date.now(), timeZone);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoadError(undefined);
-    source
-      .load({
-        from: new Date(range.fromMs).toISOString(),
-        to: new Date(range.toMs).toISOString(),
-        filter: {},
-        ...(search.preview !== undefined && { preview: search.preview }),
-      })
-      .then((loaded) => {
-        if (cancelled) return;
-        setCommitted(loaded);
-        setLoadedRange(`${range.fromMs}/${range.toMs}`);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) setLoadError(error ?? new Error('The board could not be loaded'));
-      })
-      .finally(() => {
-        if (cancelled) return;
-        retryDone.current?.();
-        retryDone.current = undefined;
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [source, range.fromMs, range.toMs, attempt, search.preview]);
+  // The view keeps the chunks that hold the selected order's job orders and the one in Details.
+  // The view keeps the chunks of the selected order's job orders, of the one in Details and of the
+  // focused block (ADR 0089).
+  const keep = useMemo(() => {
+    const ids = new Set<string>(detailFor === undefined ? [] : [detailFor]);
+    if (focused !== undefined) ids.add(focused);
+    for (const order of rowList.orders) {
+      if (order.id === search.order) for (const row of order.jobOrders) ids.add(row.id);
+    }
+    return ids;
+  }, [detailFor, focused, rowList.orders, search.order]);
+  const chunks = useTimeChunks({
+    load: loadChunk,
+    zoom,
+    timeZone,
+    // The chunks are aligned to the plant's dates, which the first page of the row list brings.
+    buffer: frame === undefined ? undefined : range,
+    view: buffer.settled,
+    keep,
+  });
+  // The chunks of the buffer without their job orders, which the bands and the status line show.
+  const unloaded = unloadedChunks(chunks.chunks, range);
+  // The board is busy while a chunk of its buffer or a page of its row list loads: the job orders
+  // of an order on a page still to come draw once it is in.
+  const chunksLoading =
+    unloaded.some((chunk) => chunk.status === 'loading') || rowList.next === 'loading';
+  // A machine without blocks says why while a chunk of the buffer has no job orders.
+  const emptyText = chunksLoading
+    ? 'Loading job orders'
+    : unloaded.some((chunk) => chunk.status === 'refused')
+      ? 'Too many job orders to show'
+      : unloaded.some((chunk) => chunk.status === 'failed')
+        ? 'Job orders not loaded'
+        : 'No jobs in this range';
+  const committed = useMemo(
+    () =>
+      frame === undefined || range === undefined
+        ? undefined
+        : loadedSnapshot(frame, rowList.orders, chunks.jobOrders, range),
+    [frame, rowList.orders, chunks.jobOrders, range],
+  );
 
-  // Everything the board draws reads the plan with the draft applied, analysed over the range.
+  // Everything the board draws reads the plan with the draft applied, analysed over the buffer.
   const snapshot = useMemo(
-    () => (committed === undefined ? undefined : applyDraft(committed, draft, range)),
+    () =>
+      committed === undefined || range === undefined
+        ? undefined
+        : applyDraft(committed, draft, range),
     [committed, draft, range],
   );
   const draftIds = useMemo(() => draftRowIds(draft), [draft]);
@@ -240,27 +296,21 @@ export function BoardScreen() {
     [snapshot, draft],
   );
   const model = useMemo(
-    () => (snapshot === undefined ? undefined : boardModelOf(snapshot, range)),
+    () =>
+      snapshot === undefined || range === undefined ? undefined : boardModelOf(snapshot, range),
     [snapshot, range],
   );
-  const machineWidth = Math.min(machineColumnPx, Math.floor(width * machineColumnShare));
-  const timeWidth = Math.max(width - machineWidth - 2, Math.ceil(naturalWidthPx(range, zoom)));
-  const scale = useMemo(
-    () => createTimeScale({ range, zoom, timeZone, widthPx: timeWidth }),
-    [range, zoom, timeZone, timeWidth],
-  );
+  const scale = buffer.scale;
+  const timeWidth = Math.ceil(scale?.widthPx ?? 0);
   const timelineZoom = useTimelineZoom({
-    zoom,
-    range: rangeExtension,
-    scale,
+    buffer,
     grid: gridElement,
-    columns: { treeWidth: machineWidth, stickyWidth: machineWidth },
-    plant: { timeZone, productionDayStart },
-    onNavigate: (level, start) => void setSearch(withFrom(withZoom(search, level), start)),
+    plant: zoomPlant,
     dragging: () => moveStore.get()?.state.source === 'pointer',
   });
   const cells = useMemo(() => {
     const byMachine = new Map<string, readonly BoardCellItem[]>();
+    if (scale === undefined) return byMachine;
     for (const group of model?.groups ?? []) {
       for (const machine of group.machines) {
         byMachine.set(machine.equipment.code, cellsOf(machine.blocks, scale));
@@ -300,10 +350,6 @@ export function BoardScreen() {
   const selectOrder = (orderId: string | undefined) => {
     if (orderId !== search.order) void setSearch(withOrder(search, orderId), 'push');
   };
-  // Details of a job order in the Gantt's drawer (Krister, 2026-10-21): a double click or Enter
-  // opens it and selects the order (#886), and a link that names an order opens its first job
-  // order in the range.
-  const [detailFor, setDetailFor] = useState<string | undefined>(undefined);
   /** The block that takes focus when the drawer closes. */
   const detailReturn = useRef<string | undefined>(undefined);
   const allRows = useMemo(
@@ -358,8 +404,8 @@ export function BoardScreen() {
   const openedFromLink = useRef(false);
   useEffect(() => {
     if (openedFromLink.current || model === undefined) return;
-    openedFromLink.current = true;
-    // The order's first operation in the range: by operation sequence, then by setup start.
+    // The order's first operation in the range: by operation sequence, then by setup start. Its
+    // block draws once its time chunk has loaded, so the link waits for the chunks loading.
     const first = allRows
       .filter((row) => row.order.id === search.order)
       .sort(
@@ -368,10 +414,17 @@ export function BoardScreen() {
           (a.jobOrder.placement?.setupStartMs ?? Number.MAX_SAFE_INTEGER) -
             (b.jobOrder.placement?.setupStartMs ?? Number.MAX_SAFE_INTEGER),
       )[0];
+    if (
+      first === undefined &&
+      (chunksLoading || chunks.chunks.length === 0 || rowList.next !== 'done')
+    ) {
+      return;
+    }
+    openedFromLink.current = true;
     if (first === undefined) return;
     detailReturn.current = first.jobOrder.id;
     setDetailFor(first.jobOrder.id);
-  }, [model, allRows, search.order]);
+  }, [model, allRows, search.order, chunksLoading, chunks.chunks.length, rowList.next]);
 
   const boardFields = useBoardFields(plant);
   // Up and Down in move mode step through the allowed machines in the board's row order, past the
@@ -441,7 +494,7 @@ export function BoardScreen() {
   };
 
   const view = useMemo<GanttViewContext | undefined>(() => {
-    if (snapshot === undefined) return undefined;
+    if (snapshot === undefined || scale === undefined || range === undefined) return undefined;
     const equipment = new Map(snapshot.equipment.map((machine) => [machine.code, machine]));
     const plantClosed = closedWindows(snapshot.calendar, timeZone, range);
     return {
@@ -504,12 +557,16 @@ export function BoardScreen() {
     const start = snapshot.productionOrders
       .flatMap((order) => order.jobOrders)
       .find((row) => row.id === pendingFocus)?.placement?.setupStartMs;
-    if (start === undefined || (start >= range.fromMs && start < range.toMs)) {
+    if (
+      start === undefined ||
+      range === undefined ||
+      (start >= range.fromMs && start < range.toMs)
+    ) {
       setPendingFocus(undefined);
       return;
     }
-    const next = plantDateOf(start, timeZone);
-    if (next !== from) void setSearch(withFrom(search, next));
+    // The buffer is rebuilt around the job order, which then draws and takes focus.
+    buffer.goTo(zoom, { ms: start, viewportX: machineWidth + (width - machineWidth) / 2 });
   });
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const key = (event.target as HTMLElement).getAttribute('data-board-focus');
@@ -540,11 +597,13 @@ export function BoardScreen() {
 
   // The page states of design D3 (DR17 to DR22): loading draws the grid's skeleton; no access and
   // no machines to plan replace the board and its toolbar.
-  // A refusal shows no access also when a range before is still in memory: the mock source's
-  // refusal, or the API's FORBIDDEN of a server source.
+  // The mock source's refusal, or the API's FORBIDDEN of a server source.
+  const isRefusal = (error: unknown) =>
+    error instanceof PlanningForbidden || classifyError(error).page === 'forbidden';
+  // A refusal shows no access, of the rows or of a time chunk the board loads later.
   const forbidden =
-    loadError !== undefined &&
-    (loadError instanceof PlanningForbidden || classifyError(loadError).page === 'forbidden');
+    (loadError !== undefined && isRefusal(loadError)) ||
+    chunks.chunks.some((chunk) => chunk.status === 'failed' && isRefusal(chunk.error));
   const noMachines = model !== undefined && model.groups.length === 0;
   let state: PageState = { status: 'ready' };
   if (forbidden) {
@@ -565,6 +624,18 @@ export function BoardScreen() {
         </Link>
       ),
     };
+  } else if (rowList.status === 'refused') {
+    state = {
+      status: 'error',
+      title: 'Too many orders for the board',
+      description: `More than ${ganttMaxOrders.toLocaleString('en-GB')} orders match. Narrow the filter.`,
+      error: rowList.error,
+      onRetry: () =>
+        new Promise<void>((resolve) => {
+          retryDone.current = resolve;
+          rowList.retry();
+        }),
+    };
   } else if (loadError !== undefined) {
     // A failed load shows the error, also when the range before is still in memory: its rows
     // would read as a range without job orders.
@@ -577,7 +648,7 @@ export function BoardScreen() {
       onRetry: () =>
         new Promise<void>((resolve) => {
           retryDone.current = resolve;
-          setAttempt((count) => count + 1);
+          rowList.retry();
         }),
       action: (
         <Link
@@ -607,8 +678,10 @@ export function BoardScreen() {
       ),
     };
   }
-  const label = rangeLabel(range, zoom, timeZone);
-  const gridName = `${plant} board, ${label}`;
+  const gridName = [
+    `${plant} board`,
+    ...(buffer.settled === undefined ? [] : [spanLabel(buffer.settled, zoom, timeZone)]),
+  ].join(', ');
   // The grid, My draft and the drawers show only with a drawn board.
   const gridShown =
     view !== undefined &&
@@ -643,12 +716,19 @@ export function BoardScreen() {
                   }}
                 />
               }
-              from={from}
-              onFromChange={(next) => void setSearch(withFrom(search, next))}
-              onEarlier={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'earlier')))}
+              from={from.slice(0, 10)}
+              onFromChange={(next) =>
+                buffer.goTo(zoom, {
+                  ms: startOfFrom(next, zoom, timeZone, productionDayStart),
+                  viewportX: machineWidth,
+                })
+              }
+              onEarlier={() => buffer.page('earlier')}
               onNow={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
-              onLater={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'later')))}
-              rangeLabel={label}
+              onLater={() => buffer.page('later')}
+              rangeLabel={
+                <VisibleSpanText visible={buffer.visible} zoom={zoom} timeZone={timeZone} />
+              }
             />
             <span className="grow" />
             {gridShown && (
@@ -674,135 +754,156 @@ export function BoardScreen() {
       {snapshot?.fixture !== undefined && (
         <p className="text-xs text-muted-foreground">Showing fixture {snapshot.fixture}.</p>
       )}
+      {gridShown && <ChunkStatus chunks={unloaded} timeZone={timeZone} onRetry={chunks.retry} />}
+      {gridShown && rowList.next === 'failed' && (
+        <RowsStatus
+          loaded={rowList.orders.length}
+          total={rowList.totalCount}
+          onRetry={rowList.retry}
+        />
+      )}
       {state.status === 'loading' && (
         <BoardSkeleton name={gridName} machineWidth={machineWidth} gridRef={measureRef} />
       )}
-      {gridShown && view !== undefined && snapshot !== undefined && model !== undefined && (
-        <GanttViewProvider value={view}>
-          <div ref={fillRef} className="flex min-w-0 flex-col">
-            <BoardGrid
-              name={gridName}
+      {gridShown &&
+        view !== undefined &&
+        snapshot !== undefined &&
+        model !== undefined &&
+        scale !== undefined && (
+          <GanttViewProvider value={view}>
+            <div ref={fillRef} className="flex min-w-0 flex-col">
+              <BoardGrid
+                name={gridName}
+                snapshot={snapshot}
+                model={model}
+                cellsOf={(code) => cells.get(code) ?? []}
+                scale={scale}
+                machineWidth={machineWidth}
+                timeWidth={timeWidth}
+                collapsed={collapsed}
+                onToggleGroup={(code) =>
+                  setCollapsed((current) => {
+                    const next = new Set(current);
+                    if (next.has(code)) next.delete(code);
+                    else next.add(code);
+                    return next;
+                  })
+                }
+                tabStop={tabStop}
+                {...(preview !== undefined && { preview })}
+                selectedOrderId={search.order}
+                onSelectOrder={selectOrder}
+                onOpenDetails={openDetails}
+                onBlockMenu={(jobOrderId, anchor) => {
+                  setMenu({ jobOrderId, anchor });
+                  setMenuOpen(true);
+                }}
+                onFocusTarget={setFocused}
+                onKeyDown={onKeyDown}
+                gridRef={boardGridRef}
+                height={fillHeight}
+                busy={chunksLoading}
+                bands={
+                  <ChunkBands
+                    chunks={unloaded}
+                    scale={scale}
+                    labelTop={`${timeHeaderHeightRem + boardRowRem.notPlaced}rem`}
+                  />
+                }
+                emptyText={emptyText}
+                onScroll={buffer.onScroll}
+              />
+            </div>
+            <BlockMenu
+              menu={menu}
+              open={menuOpen}
               snapshot={snapshot}
-              model={model}
-              cellsOf={(code) => cells.get(code) ?? []}
-              scale={scale}
-              machineWidth={machineWidth}
-              timeWidth={timeWidth}
-              collapsed={collapsed}
-              onToggleGroup={(code) =>
-                setCollapsed((current) => {
-                  const next = new Set(current);
-                  if (next.has(code)) next.delete(code);
-                  else next.add(code);
-                  return next;
+              plant={plant}
+              onClose={() => setMenuOpen(false)}
+              onMove={(jobOrderId) => {
+                setMenuOpen(false);
+                moveDialogReturn.current = jobOrderId;
+                setMoveDialogFor(jobOrderId);
+                setMoveDialogOpen(true);
+              }}
+            />
+            <MoveDialog
+              open={moveDialogOpen}
+              row={moveDialogRow}
+              snapshot={snapshot}
+              machineName={view.machineName}
+              stepMs={zoomLevels[zoom].stepMs}
+              presetLabel={zoomLevels[zoom].label}
+              onMove={(equipment, setupStartMs) => {
+                if (moveDialogFor === undefined) return;
+                setMoveDialogOpen(false);
+                moveFromDialog(moveDialogFor, equipment, setupStartMs);
+              }}
+              onCancel={() => setMoveDialogOpen(false)}
+              finalFocus={() =>
+                moveDialogReturn.current === undefined
+                  ? null
+                  : document.querySelector<HTMLElement>(
+                      `[data-board-focus="${CSS.escape(moveDialogReturn.current)}"]`,
+                    )
+              }
+            />
+            <GanttDetailDrawer
+              row={detailRow}
+              chain={undefined}
+              onClose={() => {
+                // A move begun in Details ends with it, without a change (plan 07, the Escape stack).
+                if (moveStore.get() !== undefined) moveActions?.cancel({ refocus: false });
+                setDetailFor(undefined);
+              }}
+              // The board draws no chain: Show critical chain opens the order's chain on the Gantt.
+              onToggleChain={(orderId) =>
+                void navigate({
+                  href: planningLinks.gantt({ plant }, { zoom, from, order: orderId, chain: '1' })
+                    .href,
                 })
               }
-              tabStop={tabStop}
-              {...(preview !== undefined && { preview })}
-              selectedOrderId={search.order}
-              onSelectOrder={selectOrder}
-              onOpenDetails={openDetails}
-              onBlockMenu={(jobOrderId, anchor) => {
-                setMenu({ jobOrderId, anchor });
-                setMenuOpen(true);
+              onFocusRow={(jobOrderId) => {
+                detailReturn.current = jobOrderId;
+                setDetailFor(undefined);
               }}
-              onFocusTarget={setFocused}
-              onKeyDown={onKeyDown}
-              gridRef={boardGridRef}
-              height={fillHeight}
-              busy={loadedRange !== `${range.fromMs}/${range.toMs}`}
-            />
-          </div>
-          <BlockMenu
-            menu={menu}
-            open={menuOpen}
-            snapshot={snapshot}
-            plant={plant}
-            onClose={() => setMenuOpen(false)}
-            onMove={(jobOrderId) => {
-              setMenuOpen(false);
-              moveDialogReturn.current = jobOrderId;
-              setMoveDialogFor(jobOrderId);
-              setMoveDialogOpen(true);
-            }}
-          />
-          <MoveDialog
-            open={moveDialogOpen}
-            row={moveDialogRow}
-            snapshot={snapshot}
-            machineName={view.machineName}
-            stepMs={zoomLevels[zoom].stepMs}
-            presetLabel={zoomLevels[zoom].label}
-            onMove={(equipment, setupStartMs) => {
-              if (moveDialogFor === undefined) return;
-              setMoveDialogOpen(false);
-              moveFromDialog(moveDialogFor, equipment, setupStartMs);
-            }}
-            onCancel={() => setMoveDialogOpen(false)}
-            finalFocus={() =>
-              moveDialogReturn.current === undefined
-                ? null
-                : document.querySelector<HTMLElement>(
-                    `[data-board-focus="${CSS.escape(moveDialogReturn.current)}"]`,
-                  )
-            }
-          />
-          <GanttDetailDrawer
-            row={detailRow}
-            chain={undefined}
-            onClose={() => {
-              // A move begun in Details ends with it, without a change (plan 07, the Escape stack).
-              if (moveStore.get() !== undefined) moveActions?.cancel({ refocus: false });
-              setDetailFor(undefined);
-            }}
-            // The board draws no chain: Show critical chain opens the order's chain on the Gantt.
-            onToggleChain={(orderId) =>
-              void navigate({
-                href: planningLinks.gantt({ plant }, { zoom, from, order: orderId, chain: '1' })
-                  .href,
-              })
-            }
-            onFocusRow={(jobOrderId) => {
-              detailReturn.current = jobOrderId;
-              setDetailFor(undefined);
-            }}
-            onMoveApplied={(jobOrderId) => {
-              detailReturn.current = jobOrderId;
-              setDetailFor(undefined);
-            }}
-            finalFocus={() =>
-              detailReturn.current === undefined ? null : detailTarget(detailReturn.current)
-            }
-          />
-          <GanttDraftDrawer
-            open={draftOpen}
-            onClose={() => setDraftOpen(false)}
-            draft={draft}
-            conflicts={conflicts}
-            timeZone={timeZone}
-            machineName={view.machineName}
-            onCascadeFromHere={(conflict: DraftConflict) => {
-              if (committed === undefined) return;
-              const { draft: next, refused } = cascadeFromHere(committed, draft, conflict);
-              if (refused !== undefined) announce(refusalMessage(conflict.rows[0], refused));
-              else setDraft(next);
-            }}
-            onMoveBack={(conflict: DraftConflict) => setDraft(moveBack(draft, conflict))}
-            onDiscardChange={(jobOrderId) => setDraft(discardChange(draft, jobOrderId))}
-            onSplitRun={(runId) => {
-              const run = draft.runs.find((each) => each.id === runId);
-              setDraft(splitRunInDraft(draft, runId));
-              if (run !== undefined) {
-                announce(
-                  `Run of ${run.article} split; ${orderNumbersText(run.orderNumbers)} are separate orders again.`,
-                );
+              onMoveApplied={(jobOrderId) => {
+                detailReturn.current = jobOrderId;
+                setDetailFor(undefined);
+              }}
+              finalFocus={() =>
+                detailReturn.current === undefined ? null : detailTarget(detailReturn.current)
               }
-            }}
-            onDiscardDraft={() => setDraft(emptyDraft)}
-            finalFocus={() => draftOpener.current ?? null}
-          />
-        </GanttViewProvider>
-      )}
+            />
+            <GanttDraftDrawer
+              open={draftOpen}
+              onClose={() => setDraftOpen(false)}
+              draft={draft}
+              conflicts={conflicts}
+              timeZone={timeZone}
+              machineName={view.machineName}
+              onCascadeFromHere={(conflict: DraftConflict) => {
+                if (committed === undefined) return;
+                const { draft: next, refused } = cascadeFromHere(committed, draft, conflict);
+                if (refused !== undefined) announce(refusalMessage(conflict.rows[0], refused));
+                else setDraft(next);
+              }}
+              onMoveBack={(conflict: DraftConflict) => setDraft(moveBack(draft, conflict))}
+              onDiscardChange={(jobOrderId) => setDraft(discardChange(draft, jobOrderId))}
+              onSplitRun={(runId) => {
+                const run = draft.runs.find((each) => each.id === runId);
+                setDraft(splitRunInDraft(draft, runId));
+                if (run !== undefined) {
+                  announce(
+                    `Run of ${run.article} split; ${orderNumbersText(run.orderNumbers)} are separate orders again.`,
+                  );
+                }
+              }}
+              onDiscardDraft={() => setDraft(emptyDraft)}
+              finalFocus={() => draftOpener.current ?? null}
+            />
+          </GanttViewProvider>
+        )}
     </PageFrame>
   );
 }

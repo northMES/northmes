@@ -52,17 +52,16 @@ import {
   earlyText,
   type GanttRow,
   type JobOrderRow,
-  jobOrderRowsOf,
   machinesText,
   type OperationRow,
   type OrderRow,
   quantityText,
   type RunRow,
+  rowSpan,
   runLatenessText,
   runTitle,
   savedSetupOf,
   statusLabel,
-  summarySpan,
 } from './gantt-rows.ts';
 
 export { phase1Reason, planReason };
@@ -515,7 +514,9 @@ function JobOrderDetails({
   const moveReason = moving
     ? `${jobOrder.displayNumber} is moving: use the controls in Details.`
     : !placed
-      ? `Cannot move ${jobOrder.displayNumber}: not placed.`
+      ? jobOrder.awaitingPlacement === true
+        ? `Cannot move ${jobOrder.displayNumber} yet: its time is still loading.`
+        : `Cannot move ${jobOrder.displayNumber}: not placed.`
       : refused === undefined
         ? undefined
         : refusalMessage(jobOrder.displayNumber, refused);
@@ -579,7 +580,11 @@ function JobOrderDetails({
           </dd>
           <Field label="Time">
             {jobOrder.placement === undefined ? (
-              'Not placed'
+              jobOrder.awaitingPlacement === true ? (
+                'Loading'
+              ) : (
+                'Not placed'
+              )
             ) : (
               <>
                 {formatPlantDateTime(jobOrder.placement.setupStartMs, timeZone)} to{' '}
@@ -737,7 +742,7 @@ function OrderDetails({
 }) {
   const { snapshot, timeZone, machineName, runActions } = useGanttView();
   const { order, analysis } = row;
-  const span = summarySpan(jobOrderRowsOf(row));
+  const span = rowSpan(row);
   const shown = chain !== undefined && chain.order.id === order.id;
   const combine = runActions?.canCombine(order.id);
   const openOrder = useOpenOrder(order.id);

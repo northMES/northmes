@@ -42,6 +42,8 @@ test.describe('the zoom of the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     const block = gantt.locator('[data-block="jo-1001-10"]');
     await block.scrollIntoViewIfNeeded();
     await watchWheel(page);
@@ -88,6 +90,8 @@ test.describe('the zoom of the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     const zoom = page.getByRole('group', { name: 'Zoom' });
 
     await zoom.getByRole('button', { name: 'Zoom in' }).click();
@@ -137,6 +141,8 @@ test.describe('the zoom of the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     const block = gantt.locator('[data-block="jo-1004-20"]');
     await block.scrollIntoViewIfNeeded();
     await block.focus();

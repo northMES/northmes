@@ -542,6 +542,10 @@ export function snapshotSource(
       };
     },
     loadChunk: async (from, to, filter, options = {}) => {
+      if (options.preview === 'range-too-large') {
+        throw new PlanningRefusal('planning.board.range_too_large');
+      }
+      if (options.preview === 'chunks-loading') return new Promise<never>(() => {});
       const chunk = { fromMs: Date.parse(from), toMs: Date.parse(to) };
       const snapshot = await snapshotOf(chunk, options);
       // A span overlaps the half-open chunk; a span of no length belongs to the chunk it starts in.

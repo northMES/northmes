@@ -150,7 +150,10 @@ export interface GanttJobOrder {
   readonly equipment?: string;
   readonly quantity: number;
   readonly status: JobOrderStatus;
-  /** Where the row lies; a job order without a placement sits in the Not placed row. */
+  /**
+   * Where the row lies; a job order without a placement sits in the Not placed row, unless it
+   * awaits its placement from a time chunk (`awaitingPlacement`).
+   */
   readonly placement?: GanttPlacement;
   readonly plannedSetupS: number;
   readonly plannedRunS: number;
@@ -159,6 +162,11 @@ export interface GanttJobOrder {
   readonly actualStartMs?: number;
   /** Whether another planner's live soft lock holds the row (plan 07, Held). */
   readonly held?: boolean;
+  /**
+   * Whether the row is placed but its placement comes with a time chunk the view has not loaded
+   * (ADR 0089): it is not in the Not placed row, and its order shows the row list's span.
+   */
+  readonly awaitingPlacement?: true;
 }
 
 export type OrderStatus = 'planned' | 'released';

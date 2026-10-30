@@ -6,7 +6,7 @@ import { GanttBlock } from './gantt-block.tsx';
 import { blockName } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
 import { GanttMarkerLayer, rowMarkers } from './gantt-marker-layer.tsx';
-import { jobOrderRowsOf, rowHeightRem, summaryName, summarySpan } from './gantt-rows.ts';
+import { rowHeightRem, rowSpan, summaryName } from './gantt-rows.ts';
 import { SummaryBar, TimeCellShading } from './gantt-time-area.tsx';
 import { type GanttColumn, GanttRowHeader, type GanttTableRow } from './gantt-tree-pane.tsx';
 
@@ -79,7 +79,7 @@ export function GanttRowView({
       : selectedOrderIds.has(original.order.id);
   const summary = original.kind !== 'jobOrder';
   const heightRem = rowHeightRem[original.kind];
-  const span = summary ? summarySpan(jobOrderRowsOf(original)) : undefined;
+  const span = summary ? rowSpan(original) : undefined;
   const shading =
     original.kind === 'jobOrder' ? closedWindowsOf(original.jobOrder.equipment) : closedWindows;
   const onChain = chainRowIds.has(original.id);
@@ -189,7 +189,8 @@ export function GanttRowView({
           role="gridcell"
           className="relative overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           // A job order without a placement has no block, so Right lands on the cell itself,
-          // named as the block would be, with "not placed".
+          // named as the block would be, with "not placed" or, while its time chunk loads, "time
+          // loading".
           {...(original.jobOrder.placement === undefined && {
             tabIndex: -1,
             'data-cell-focus': true,

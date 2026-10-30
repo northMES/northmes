@@ -22,6 +22,8 @@ test.describe('keyboard move mode on the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     const spoken = page.getByRole('status');
 
     // Collapse order 1001 and expand it again from the keyboard, then walk into its first row.

@@ -16,7 +16,7 @@ import { Button } from '../../../../ui/primitives/button.tsx';
 import type { GanttSnapshot, WorkloadBucket } from '../../gantt-data.ts';
 import { type MoveStore, useMoveOf } from '../../move-store.ts';
 import { visibleItems } from '../../timeline/culling.ts';
-import { formatMonth, type TimeScale } from '../../timeline/time-scale.ts';
+import { formatMonth, type TimeRange, type TimeScale } from '../../timeline/time-scale.ts';
 import {
   type BucketKind,
   bucketKindOf,
@@ -30,7 +30,61 @@ interface PlacedBucket {
   readonly bucket: WorkloadBucket;
   readonly fromMs: number;
   readonly toMs: number;
+  /**
+   * Whether the bucket touches a time chunk without its job orders: one still loading or failed,
+   * or one refused as too large; such a bucket shows no sum (ADR 0089).
+   */
+  readonly pending?: PendingState;
 }
+
+/** Why a bucket shows no sum: a chunk still loading, one that failed, or one refused as too large. */
+type PendingState = 'loading' | 'failed' | 'refused';
+
+/** The worst of the states a bucket or the visible range waits on: a refusal, a failure, a load. */
+function worstOf(states: readonly PendingState[]): PendingState | undefined {
+  return (['refused', 'failed', 'loading'] as const).find((state) => states.includes(state));
+}
+
+/** A span of time whose job orders are not loaded, and why. */
+export interface PendingSpan {
+  readonly fromMs: number;
+  readonly toMs: number;
+  readonly status: 'loading' | 'loaded' | 'failed' | 'refused';
+}
+
+/** The buckets with the span not loaded that each touches, a refusal before a load. */
+function withPending(
+  placed: readonly PlacedBucket[],
+  spans: readonly PendingSpan[],
+): PlacedBucket[] {
+  return placed.map((each) => {
+    const touched = spans.flatMap((span) =>
+      span.status !== 'loaded' && span.fromMs < each.toMs && span.toMs > each.fromMs
+        ? [span.status]
+        : [],
+    );
+    const pending = worstOf(touched);
+    return pending === undefined ? each : { ...each, pending };
+  });
+}
+
+/** The table row of a bucket without its sum: its name and why. */
+function pendingRow(label: string, pending: PendingState): readonly string[] {
+  return [label, pendingText[pending], '', '', '', '', '', ''];
+}
+
+const pendingText = {
+  loading: 'loading',
+  failed: 'not loaded',
+  refused: 'too many job orders',
+} as const;
+
+/** The pattern of a bucket without its sum, which tells it from closed time besides its tone. */
+const pendingClass = {
+  loading: 'gantt-gap motion-safe:animate-pulse',
+  failed: 'bg-destructive-subtle border border-dashed border-destructive',
+  refused: 'bg-warning-subtle border border-dashed border-foreground',
+} as const;
 
 /** The buckets of a machine inside the visible range, sorted by time. */
 export function laneBuckets(buckets: readonly WorkloadBucket[], scale: TimeScale): PlacedBucket[] {
@@ -230,9 +284,20 @@ function WorkloadLane({
         className="relative shrink-0 overflow-hidden"
         style={{ width: `${timeWidth}px` }}
       >
-        {buckets.map(({ bucket, fromMs, toMs }) => {
+        {buckets.map(({ bucket, fromMs, toMs, pending }) => {
           const left = scale.x(Math.max(fromMs, scale.range.fromMs));
           const width = Math.max(1, scale.x(Math.min(toMs, scale.range.toMs)) - left);
+          if (pending !== undefined) {
+            return (
+              <span
+                key={bucket.label}
+                data-bucket={bucket.label}
+                data-pending={pending}
+                className={cn('absolute inset-y-0', pendingClass[pending])}
+                style={{ left: `${left}px`, width: `${width}px` }}
+              />
+            );
+          }
           if (bucket.availableS === 0) {
             return (
               <span
@@ -378,13 +443,27 @@ function WorkloadTable({
           </tr>
         </thead>
         <tbody>
-          {buckets.map(({ bucket }) => (
-            <tr key={bucket.label} className="border-t border-border">
-              <TableCells cells={bucketRow(bucket, kind, timeZone)} />
-            </tr>
-          ))}
+          {buckets.map(({ bucket, pending }) => {
+            const row = bucketRow(bucket, kind, timeZone);
+            return (
+              <tr key={bucket.label} className="border-t border-border">
+                <TableCells
+                  cells={pending === undefined ? row : pendingRow(row[0] ?? '', pending)}
+                />
+              </tr>
+            );
+          })}
           <tr className="border-t border-border bg-muted font-semibold">
-            <TableCells cells={totalsRow(buckets.map(({ bucket }) => bucket))} />
+            <TableCells
+              cells={(() => {
+                const pending = worstOf(
+                  buckets.flatMap((each) => (each.pending === undefined ? [] : [each.pending])),
+                );
+                return pending === undefined
+                  ? totalsRow(buckets.map(({ bucket }) => bucket))
+                  : pendingRow('Visible range', pending);
+              })()}
+            />
           </tr>
         </tbody>
       </table>
@@ -406,9 +485,26 @@ export function GanttWorkloadPanel({
   stickyWidth,
   timeWidth,
   moveStore,
+  visible,
+  scrollerRef,
+  onScroll,
+  pending = [],
 }: {
   readonly snapshot: GanttSnapshot;
   readonly scale: TimeScale;
+  /**
+   * The span in view when scrolling last stopped: the text table lists its buckets and sums them
+   * as the visible range, while the lanes draw the whole buffer (ADR 0089, The endless axis).
+   */
+  readonly visible?: TimeRange;
+  /**
+   * The lanes' scroller and its scroll listener: the Gantt keeps it at the time area's scroll
+   * position both ways, so a lane stays under its time as the time buffer moves (ADR 0089).
+   */
+  readonly scrollerRef?: (node: HTMLDivElement | null) => void;
+  readonly onScroll?: (scrollLeft: number) => void;
+  /** The time chunks of the buffer without their job orders (ADR 0089, Loading by time chunk). */
+  readonly pending?: readonly PendingSpan[];
   readonly treeWidth: number;
   /**
    * The width of the tree columns that stick in the treegrid: all of them, or the Name column
@@ -444,7 +540,8 @@ export function GanttWorkloadPanel({
     }
     return map;
   }, [snapshot, planned, preview, fromMs, toMs]);
-  const lanesOf = (code: string) => laneBuckets(byMachine.get(code) ?? [], scale);
+  const lanesOf = (code: string) =>
+    withPending(laneBuckets(byMachine.get(code) ?? [], scale), pending);
   return (
     <section
       aria-label="Workload"
@@ -453,7 +550,12 @@ export function GanttWorkloadPanel({
       <h2 className="border-b border-border bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
         Workload by {kindNames[kind].heading}, the plan with my draft
       </h2>
-      <div className="min-h-0 overflow-auto">
+      <div
+        ref={scrollerRef}
+        data-workload-lanes
+        className="min-h-0 overflow-auto"
+        onScroll={(event) => onScroll?.(event.currentTarget.scrollLeft)}
+      >
         {machines.map((machine) => (
           <WorkloadLane
             key={machine.code}
@@ -474,7 +576,9 @@ export function GanttWorkloadPanel({
         <WorkloadTable
           key={open.code}
           name={`Workload on ${open.name}`}
-          buckets={lanesOf(open.code)}
+          buckets={
+            visible === undefined ? lanesOf(open.code) : visibleItems(lanesOf(open.code), visible)
+          }
           kind={kind}
           timeZone={snapshot.plant.timeZone}
           dialogId={`${idBase}-${open.code}-table`}

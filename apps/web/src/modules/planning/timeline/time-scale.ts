@@ -263,43 +263,6 @@ export function shiftedFrom(from: string, zoom: ZoomLevel, direction: 'earlier' 
   return (direction === 'earlier' ? plain.subtract(step) : plain.add(step)).toString();
 }
 
-/**
- * The loaded range of a level from a plant date, extended by whole spans before and after it
- * (#685): the view grows the margin on demand as the planner scrolls towards an edge, so the time
- * area never ends at the level's span while `from` stays the chosen start.
- */
-export function extendedRange(
-  from: string,
-  zoom: ZoomLevel,
-  timeZone: string,
-  productionDayStart: string,
-  extension: { readonly before: number; readonly after: number },
-): TimeRange {
-  const level = zoomLevels[zoom];
-  // Quarter hours and Hours span hours of one day, so their spans are added as hours; the other
-  // levels step whole dates or months, as Earlier and Later do.
-  if ('hours' in level.span) {
-    const chosen = rangeOf(from, zoom, timeZone, productionDayStart);
-    const spanMs = level.span.hours * hour;
-    return {
-      fromMs: chosen.fromMs - extension.before * spanMs,
-      toMs: chosen.toMs + extension.after * spanMs,
-    };
-  }
-  let first = from;
-  for (let count = 0; count < extension.before; count += 1) {
-    first = shiftedFrom(first, zoom, 'earlier');
-  }
-  let last = from;
-  for (let count = 0; count < extension.after; count += 1) {
-    last = shiftedFrom(last, zoom, 'later');
-  }
-  return {
-    fromMs: rangeOf(first, zoom, timeZone, productionDayStart).fromMs,
-    toMs: rangeOf(last, zoom, timeZone, productionDayStart).toMs,
-  };
-}
-
 /** The plant date of an instant, for the `from` of a range around it. */
 export function plantDateOf(epochMs: number, timeZone: string): string {
   return Temporal.Instant.fromEpochMilliseconds(epochMs)
@@ -678,13 +641,41 @@ export function createTimeScale({
       // Clock ticks come from exact instants, so a clock change gives 23 or 25 hours. A cell
       // clipped at its start is named by the clock where its open time starts, as its x is.
       const stepMs = count * (bottomUnit === 'hour' ? hour : 60_000);
-      for (let ms = range.fromMs; ms < range.toMs; ms += stepMs) {
-        pushBottom(
-          ms,
-          ms + stepMs,
-          (openFromMs) => clockFormats(formatPlantTime(openFromMs, timeZone)),
-          (openFromMs) => formatPlantDateTime(openFromMs, timeZone),
-        );
+      // The cells keep to the plant clock wherever the range starts, as a buffer of the endless
+      // axis starts anywhere (ADR 0089): each starts on the wall clock, every step from the day's
+      // start at the level (midnight or the production day start), so on a day of 23 or 25 hours
+      // the cell that holds the clock change is an hour shorter or longer and the next one is on
+      // the clock again. A wall-clock start in the spring gap is the first instant after it.
+      const start = rangeStart();
+      const clock = Temporal.PlainTime.from(
+        level.startsAt === 'productionDay'
+          ? (productionDayStart ?? start.toPlainTime().toString().slice(0, 5))
+          : '00:00',
+      );
+      let day = start.toPlainDate();
+      if (day.toZonedDateTime({ timeZone, plainTime: clock }).epochMilliseconds > range.fromMs) {
+        day = day.subtract({ days: 1 });
+      }
+      const stepMinutes = stepMs / 60_000;
+      const at = (minutes: number) =>
+        day
+          .toPlainDateTime(clock)
+          .add({ minutes })
+          .toZonedDateTime(timeZone, { disambiguation: 'compatible' }).epochMilliseconds;
+      let previousMs = Number.NEGATIVE_INFINITY;
+      for (let minutes = 0; ; minutes += stepMinutes) {
+        const ms = at(minutes);
+        if (ms >= range.toMs) break;
+        const nextMs = at(minutes + stepMinutes);
+        if (ms > previousMs && nextMs > range.fromMs) {
+          pushBottom(
+            ms,
+            nextMs,
+            (openFromMs) => clockFormats(formatPlantTime(openFromMs, timeZone)),
+            (openFromMs) => formatPlantDateTime(openFromMs, timeZone),
+          );
+        }
+        previousMs = ms;
       }
     } else {
       for (let at = cellStart(bottomUnit, false); at.epochMilliseconds < range.toMs; ) {
@@ -739,5 +730,37 @@ export function rangeLabel(range: TimeRange, zoom: ZoomLevel, timeZone: string):
   }
   const last = formatPlantDate(lastDay.epochMilliseconds, timeZone);
   const week = zoom === 'week' || zoom === '4weeks' ? `W${start.weekOfYear ?? ''}, ` : '';
+  return `${week}${first} to ${last}`;
+}
+
+/**
+ * The span in view as the toolbar names it while the planner scrolls (ADR 0089, The endless axis):
+ * "W45, Mon 2 Nov to Thu 5 Nov" at Week and 4 weeks, "Wed 4 Nov to Sat 7 Nov" at Day, "Wed 4 Nov,
+ * 06:00 to 18:00" at the levels that span hours ("Wed 4 Nov 20:20 to Thu 5 Nov 08:20" across
+ * midnight), and "November 2026 to February 2027" at the levels that span months. The last day is
+ * the day of the span's last instant, so a span that ends at midnight ends on the day before.
+ */
+export function spanLabel(span: TimeRange, zoom: ZoomLevel, timeZone: string): string {
+  const level = zoomLevels[zoom];
+  const lastMs = Math.max(span.fromMs, span.toMs - 1);
+  const zoned = (ms: number) =>
+    Temporal.Instant.fromEpochMilliseconds(ms).toZonedDateTimeISO(timeZone);
+  const first = formatPlantDate(span.fromMs, timeZone);
+  const last = formatPlantDate(lastMs, timeZone);
+  if ('hours' in level.span) {
+    const from = formatPlantTime(span.fromMs, timeZone);
+    const to = formatPlantTime(span.toMs, timeZone);
+    if (first === formatPlantDate(span.toMs, timeZone) || first === last) {
+      return `${first}, ${from} to ${to}`;
+    }
+    return `${first} ${from} to ${formatPlantDate(span.toMs, timeZone)} ${to}`;
+  }
+  if ('months' in level.span) {
+    const month = (ms: number) =>
+      formatMonth(zoned(ms).toPlainDate().toPlainYearMonth().toString());
+    return `${month(span.fromMs)} to ${month(lastMs)}`;
+  }
+  const week =
+    zoom === 'week' || zoom === '4weeks' ? `W${zoned(span.fromMs).weekOfYear ?? ''}, ` : '';
   return `${week}${first} to ${last}`;
 }

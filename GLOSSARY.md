@@ -112,6 +112,9 @@ This glossary fixes the words NorthMES uses for its domain. Use these terms in c
 | job order table view | The table of job orders with the same filters and actions as the board. | list view |
 | zoom level (Zoom) | One step of the timeline's zoom ladder: its header tiers, its width per hour, its snap step and its workload bucket. | zoom preset (on the board and the Gantt the presets are levels; the job order table's Range keeps the four presets), scale (that is the time scale) |
 | time chunk | A fixed span of plant time, aligned to plant dates (a week, a month or a quarter), for which the timeline loads job orders at once. | page (that is a page of a connection), window (that is a closed or frozen window) |
+| endless axis | The timeline's time axis without a start or an end: the view draws a time buffer of three viewport widths around what is in view and moves it by one width near an edge. | infinite scroll, range growth |
+| time buffer | The span of the endless axis the view draws, three viewport widths wide at the zoom level. | buffer alone (plan 18 avoids it for float), loaded range |
+| visible span | The span of plant time in view, which the toolbar's range text names and `from` in the URL starts. | chosen range |
 
 ## ERP integration
 

@@ -26,6 +26,8 @@ test.describe('the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     await expect(page.getByText('Showing fixture G1.')).toBeVisible();
     await checkA11y('the populated Gantt');
 
@@ -57,6 +59,8 @@ test.describe('the order Gantt', () => {
     await page.keyboard.press('Escape');
     await expect(drawer).toBeHidden();
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     await expect(gantt.locator('[data-row-id="po-1003"]')).toBeFocused();
 
     await gantt.locator('[data-block="jo-1001-20"]').dblclick();
@@ -74,6 +78,8 @@ test.describe('the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
 
     // A run (plan 18, Runs), by keyboard: Space selects 1001, Shift+Space adds 1005, Shift+F10
     // opens the row menu, Combine into a run opens the review step, and Combine draws the run row
@@ -123,6 +129,8 @@ test.describe('the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
 
     // Right moves focus from the row into its block, and focus opens the hover card.
     await gantt.locator('[data-row-id="jo-1006-10"]').focus();
@@ -169,6 +177,8 @@ test.describe('the order Gantt', () => {
     ]) {
       await page.setViewportSize(viewport);
       await expect(gantt).toBeVisible();
+      // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+      await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
       // The grid measures its height again after the resize, so each value is polled.
       const measure = () =>
         page.evaluate(() => {

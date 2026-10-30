@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-// The zoom of the board and the Gantt (ADR 0089, Zoom levels): the range extension a level change
-// asks for, and the steps of Ctrl+wheel, the minus and plus keys, the toolbar and Zoom to fit,
-// each of which keeps its anchor instant at its x.
+// The zoom of the board and the Gantt (ADR 0089, Zoom levels): the steps of Ctrl+wheel, the minus
+// and plus keys, the toolbar and Zoom to fit, each of which rebuilds the buffer of the endless
+// axis around its anchor instant at its x.
 import {
   type KeyboardEvent,
   type RefObject,
-  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -14,95 +13,25 @@ import {
 } from 'react';
 import { announce } from '../../../ui/lib/announce.ts';
 import type { ZoomLevel } from '../gantt-data.ts';
-import {
-  plantDateOf,
-  steppedLevel,
-  type TimeRange,
-  type TimeScale,
-  zoomLevels,
-} from './time-scale.ts';
+import { steppedLevel, type TimeRange, type TimeScale, zoomLevels } from './time-scale.ts';
+import type { TimeBuffer } from './use-time-buffer.ts';
 import {
   anchorAt,
-  anchoredScrollLeft,
   centreAnchor,
   createPinchZoom,
   createWheelZoom,
   fitView,
   type GridLayout,
-  rangeAround,
   type ViewAnchor,
   type ZoomPlant,
 } from './zoom-view.ts';
 
-/** Whole spans of the level added before and after the chosen range. */
-export interface Extension {
-  readonly before: number;
-  readonly after: number;
-}
-
-interface KeyedExtension extends Extension {
-  /** The chosen start and level the extension belongs to, "2026-11-02|week". */
-  readonly key: string;
-}
-
-/** The extension of the range in view, and the one a level change waits to show. */
-interface ExtensionState {
-  readonly current: KeyedExtension;
-  readonly next?: KeyedExtension;
-}
-
-export interface RangeExtension {
-  readonly key: string;
-  readonly extension: Extension;
-  /** Grows the extension of the range in view, as the Gantt does at an edge (#685). */
-  readonly setExtension: (update: (current: Extension) => Extension) => void;
-  /** The extension the range of a start and level takes once the URL names them. */
-  readonly expect: (next: KeyedExtension) => void;
-}
-
-/**
- * The extension of the range of a start and a level: none for a new start or level, as React's
- * rule for state derived from props says, unless a level change asked for one.
- */
-export function useRangeExtension(from: string, zoom: ZoomLevel): RangeExtension {
-  const key = `${from}|${zoom}`;
-  const [state, setState] = useState<ExtensionState>({ current: { key, before: 0, after: 0 } });
-  let current = state.current;
-  if (current.key !== key) {
-    current = state.next?.key === key ? state.next : { key, before: 0, after: 0 };
-    setState({ current });
-  }
-  const setExtension = useCallback(
-    (update: (current: Extension) => Extension) =>
-      setState((previous) => {
-        const base = previous.current.key === key ? previous.current : { before: 0, after: 0 };
-        return { ...previous, current: { key, ...update(base) } };
-      }),
-    [key],
-  );
-  const expect = useCallback(
-    (next: KeyedExtension) =>
-      setState((previous) =>
-        next.key === previous.current.key ? { current: next } : { ...previous, next },
-      ),
-    [],
-  );
-  return { key, extension: current, setExtension, expect };
-}
-
 export interface TimelineZoomInput {
-  readonly zoom: ZoomLevel;
-  readonly range: RangeExtension;
-  readonly scale: TimeScale;
+  /** The buffer of the endless axis, which a level change rebuilds. */
+  readonly buffer: TimeBuffer;
   /** The grid that scrolls the time area sideways. */
   readonly grid: RefObject<HTMLElement | null>;
-  /** Where the time column starts in the grid, and how much of it the sticky columns cover. */
-  readonly columns: Omit<GridLayout, 'clientWidth'>;
   readonly plant: ZoomPlant;
-  /** Puts the level and the chosen start in the URL. */
-  readonly onNavigate: (zoom: ZoomLevel, from: string) => void;
-  /** Called with the scroll position the zoom set, the screen's new baseline for its edges. */
-  readonly onScrolled?: (scrollLeft: number) => void;
   /**
    * Whether a pointer drag is in progress: it reads its moves in pixels of the level it began at,
    * so no gesture or key steps a level until it ends.
@@ -117,78 +46,29 @@ export interface TimelineZoom {
   readonly fit: (span: TimeRange | undefined, name: string) => void;
   /** Minus and plus with focus in the grid; true when the key was a zoom key. */
   readonly onKeyDown: (event: KeyboardEvent<HTMLElement>) => boolean;
-  /** Now: the level kept, now at the centre of the view, the range rebuilt around it. */
+  /** Now: the level kept, now at the centre of the view, the buffer rebuilt around it. */
   readonly goTo: (ms: number) => void;
 }
 
 /**
- * The zoom actions of a timeline. A level change asks for the range of the new level around its
- * anchor, puts the level and start in the URL, and once that range is laid out scrolls the grid
- * so the anchor instant is back at its x. Ctrl+wheel and Cmd+wheel over the time area step a level
- * per gesture at the pointer and keep the page from zooming; over the tree columns the browser
- * zooms as usual.
+ * The zoom actions of a timeline. A level change rebuilds the buffer of the new level around its
+ * anchor, which scrolls the grid so the anchor instant stays at its x, and the level and the
+ * visible start go to the URL. Ctrl+wheel and Cmd+wheel over the time area step a level per
+ * gesture at the pointer and keep the page from zooming; over the tree columns the browser zooms
+ * as usual.
  */
 export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
-  const { zoom, range, scale, grid, columns, plant, onNavigate, onScrolled, dragging } = input;
-  // The grid's width is read when the planner zooms, so it is the width the anchor was taken in.
-  const layoutOf = (element: HTMLElement | null): GridLayout => ({
-    clientWidth: element?.clientWidth ?? 0,
-    ...columns,
-  });
-  const pending = useRef<{ readonly key: string; readonly anchor: ViewAnchor } | undefined>(
-    undefined,
-  );
+  const { buffer, grid, plant, dragging } = input;
+  const zoom = buffer.zoom;
+  const scale = buffer.scale;
+  const layoutOf = (): GridLayout => buffer.layout;
 
-  const scrollTo = useCallback(
-    (left: number) => {
-      const element = grid.current;
-      if (element === null) return;
-      element.scrollLeft = left;
-      // The browser clamps the position on assignment, so the read is where the view is.
-      onScrolled?.(element.scrollLeft);
-    },
-    [grid, onScrolled],
-  );
-
-  /**
-   * Zooms to a level around an anchor, and says the new level, or the message given. With no grid
-   * laid out (an empty, loading or failed page), the level and the start go to the URL alone: the
-   * start the caller names, else the start in view.
-   */
-  const zoomTo = (level: ZoomLevel, anchor: ViewAnchor, message?: string, start?: string) => {
-    const say = () => {
-      if (message !== undefined) announce(message);
-      else if (level !== zoom) announce(`Zoom level ${zoomLevels[level].label}`);
-    };
-    if (grid.current === null || grid.current.clientWidth === 0) {
-      onNavigate(level, start ?? range.key.slice(0, range.key.indexOf('|')));
-      say();
-      return;
-    }
-    const layout = layoutOf(grid.current);
-    const next = rangeAround(anchor, layout, level, plant);
-    const key = `${next.from}|${level}`;
-    const held =
-      key === range.key &&
-      next.extension.before <= range.extension.before &&
-      next.extension.after <= range.extension.after;
-    if (held) {
-      scrollTo(anchoredScrollLeft(scale, anchor, layout));
-    } else {
-      pending.current = { key, anchor };
-      range.expect({ key, ...next.extension });
-      if (key !== range.key) onNavigate(level, next.from);
-    }
-    say();
+  /** Zooms to a level around an anchor, and says the new level, or the message given. */
+  const zoomTo = (level: ZoomLevel, anchor: ViewAnchor, message?: string) => {
+    buffer.goTo(level, anchor);
+    if (message !== undefined) announce(message);
+    else if (level !== zoom) announce(`Zoom level ${zoomLevels[level].label}`);
   };
-
-  // Once the range of the new level is laid out, the anchor goes back to its x.
-  useLayoutEffect(() => {
-    const target = pending.current;
-    if (target === undefined || target.key !== range.key) return;
-    pending.current = undefined;
-    scrollTo(anchoredScrollLeft(scale, target.anchor, layoutOf(grid.current)));
-  });
 
   /** Steps a level around an anchor; at an end of the ladder, says so when `sayEnd` asks. */
   const stepAt = (direction: 'in' | 'out', anchor: ViewAnchor, sayEnd = false) => {
@@ -201,7 +81,14 @@ export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
       );
     }
   };
-  const centre = () => centreAnchor(scale, grid.current?.scrollLeft ?? 0, layoutOf(grid.current));
+  /**
+   * The anchor at the centre of the view, also while no grid is drawn, or the start in view while
+   * the time area has no width.
+   */
+  const centre = (): ViewAnchor =>
+    scale === undefined
+      ? { ms: buffer.visible.get()?.fromMs ?? Date.now(), viewportX: buffer.layout.stickyWidth }
+      : centreAnchor(scale, buffer.scrollLeft(), layoutOf());
   /**
    * Where a key zooms: at the left edge of the focused block or cluster, so it stays where it was
    * and in view (WCAG 2.4.11), else around the centre of the view.
@@ -212,8 +99,8 @@ export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
       target instanceof Element
         ? target.closest('[data-block], [data-job-order], [data-cluster]')
         : null;
-    if (element === null || item === null) return centre();
-    const layout = layoutOf(element);
+    if (element === null || item === null || scale === undefined) return centre();
+    const layout = layoutOf();
     const viewportX =
       item.getBoundingClientRect().left - element.getBoundingClientRect().left - element.clientLeft;
     const start = timeAreaStart(layout, element.scrollLeft);
@@ -260,11 +147,11 @@ export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
     },
     fit: (span, name) => {
       // With no rows drawn there is nothing to fit, nor a view to fit it in.
-      if (span === undefined || grid.current === null || grid.current.clientWidth === 0) {
+      if (span === undefined || buffer.range === undefined) {
         announce('Nothing to fit');
         return;
       }
-      const fitted = fitView(span, layoutOf(grid.current), plant);
+      const fitted = fitView(span, layoutOf(), plant);
       zoomTo(
         fitted.zoom,
         fitted.anchor,
@@ -282,13 +169,8 @@ export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
       return true;
     },
     goTo: (ms) => {
-      const layout = layoutOf(grid.current);
-      zoomTo(
-        zoom,
-        { ms, viewportX: centreAnchor(scale, 0, layout).viewportX },
-        undefined,
-        plantDateOf(ms, plant.timeZone),
-      );
+      const { clientWidth, stickyWidth } = layoutOf();
+      zoomTo(zoom, { ms, viewportX: stickyWidth + (clientWidth - stickyWidth) / 2 });
     },
   };
 }
@@ -313,8 +195,8 @@ function timeAreaStart(layout: GridLayout, scrollLeft: number): number {
 
 interface LatestView {
   readonly stepAt: (direction: 'in' | 'out', anchor: ViewAnchor) => void;
-  readonly scale: TimeScale;
-  readonly layoutOf: (element: HTMLElement | null) => GridLayout;
+  readonly scale: TimeScale | undefined;
+  readonly layoutOf: () => GridLayout;
 }
 
 /** Safari's GestureEvent, which the DOM types do not know. */
@@ -338,7 +220,7 @@ function gestureListeners(latest: RefObject<LatestView>): GestureListeners {
   let gestureOverTime = false;
   /** The viewport x of a client x in the grid, and whether it lies over the time area. */
   const viewportOf = (element: HTMLElement, clientX: number) => {
-    const layout = latest.current.layoutOf(element);
+    const layout = latest.current.layoutOf();
     const viewportX = clientX - element.getBoundingClientRect().left - element.clientLeft;
     const start = timeAreaStart(layout, element.scrollLeft);
     return { layout, viewportX, start, overTime: viewportX >= start };
@@ -349,6 +231,7 @@ function gestureListeners(latest: RefObject<LatestView>): GestureListeners {
     // A pinch that started over the tree columns zooms around the time area's first pixel.
     const x = Math.max(start, Math.min(layout.clientWidth, viewportX));
     const view = latest.current;
+    if (view.scale === undefined) return;
     view.stepAt(direction, anchorAt(view.scale, element.scrollLeft, layout, x));
   };
   const twoTouches = (event: TouchEvent) => {

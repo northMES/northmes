@@ -3,7 +3,6 @@
 import { cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { type GanttDataSource, g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
 
 // Animation frames 1/60 s apart, as a 60 Hz display gives them: the test browser runs them back to
@@ -27,19 +26,9 @@ afterEach(() => {
 
 const hour = 3_600_000;
 
-/** A source that answers from G1 and counts its loads, one per range. */
-function countingSource(): { source: GanttDataSource; loads: () => number } {
-  let count = 0;
-  return {
-    source: {
-      ...g1DataSource,
-      load: (input) => {
-        count += 1;
-        return g1DataSource.load(input);
-      },
-    },
-    loads: () => count,
-  };
+/** The first cell of the time header, which a move of the time buffer changes. */
+function bufferStart(gantt: HTMLElement): string {
+  return gantt.querySelector('[data-tier="top"] .sr-only')?.textContent ?? '';
 }
 
 /**
@@ -102,11 +91,10 @@ describe('the time area scrolls while a block is dragged to its edge (#899)', ()
     fireEvent.pointerUp(block, { ...pointer, clientX: 795 });
   });
 
-  it('a drag the scroll takes past the point where the range grows keeps the range until the drop, which grows it', async () => {
-    const { source, loads } = countingSource();
-    renderGanttRoute({ zoom: 'day', from: '2026-11-04' }, source);
+  it('#899 a drag the scroll takes into the edge margin holds the buffer until the drop, which moves it (ADR 0089)', async () => {
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
-    const loaded = loads();
+    const before = bufferStart(gantt);
     layOut(gantt);
     const block = blockOf(gantt, 'jo-1001-10');
     await dragTo(gantt, block, 400, 795);
@@ -114,11 +102,11 @@ describe('the time area scrolls while a block is dragged to its edge (#899)', ()
 
     fireEvent.scroll(gantt);
     await frames(2);
-    expect(loads()).toBe(loaded);
+    expect(bufferStart(gantt)).toBe(before);
 
     fireEvent.pointerUp(block, { ...pointer, clientX: 795 });
 
-    await waitFor(() => expect(loads()).toBe(loaded + 1));
+    await waitFor(() => expect(bufferStart(gantt)).not.toBe(before));
   });
 
   it('the drop ends the scrolling', async () => {

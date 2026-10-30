@@ -60,6 +60,15 @@ export interface BoardGridProps {
   readonly height: number | undefined;
   /** True while the grid still draws the range before, and the range it names is loading. */
   readonly busy?: boolean;
+  /** The scroll listener of the endless axis (ADR 0089). */
+  readonly onScroll?: () => void;
+  /** The bands of the time chunks not loaded, over the machines' time cells (ADR 0089). */
+  readonly bands?: ReactNode;
+  /**
+   * What a machine without blocks says: that it has none in the range, or, while a time chunk of
+   * the buffer has no job orders, why, so a week not loaded never reads as empty (ADR 0089).
+   */
+  readonly emptyText?: string;
 }
 
 /**
@@ -207,6 +216,9 @@ export function BoardGrid({
   gridRef,
   height,
   busy,
+  onScroll,
+  bands,
+  emptyText = 'No jobs in this range',
 }: BoardGridProps) {
   const columns = `${machineWidth}px ${timeWidth}px`;
   const machineCount = model.groups.reduce((sum, group) => sum + group.machines.length, 0);
@@ -327,7 +339,7 @@ export function BoardGrid({
                 className="sticky start-0 inline-flex h-full items-center px-3 text-xs text-muted-foreground"
                 style={{ insetInlineStart: `${machineWidth}px` }}
               >
-                No jobs in this range
+                {emptyText}
               </div>
             ) : (
               cells.map((cell) =>
@@ -380,6 +392,7 @@ export function BoardGrid({
       aria-rowcount={rowIndex}
       aria-busy={busy || undefined}
       onKeyDown={onKeyDown}
+      onScroll={onScroll}
       className="min-h-0 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
       style={{
         ...(height !== undefined && { height: `${height}px` }),
@@ -482,6 +495,7 @@ export function BoardGrid({
           className="pointer-events-none absolute top-0"
           style={{ left: `${machineWidth}px`, width: `${timeWidth}px`, height: `${bodyRem}rem` }}
         >
+          {bands}
           <GanttMarkerLayer markers={overlayMarkers(snapshot)} scale={scale} />
         </div>
       </div>

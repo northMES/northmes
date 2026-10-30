@@ -10,12 +10,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/**
- * The natural width of the Day preset from Wed 4 Nov with closed time hidden: 72 hours at 48 px
- * less the closed time of G1's calendar, each closed window a 6 px gap.
- */
-const NATURAL_WIDTH_PX = 1242;
-
 /** The rows of the tree at a level, under the treegrid. */
 function rowsAtLevel(gantt: HTMLElement, level: number): HTMLElement[] {
   return within(gantt)
@@ -123,8 +117,8 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     expect(notPlaced.textContent).toContain('No job orders without a place');
   });
 
-  it("plan 18 the time area takes the preset's natural width and scrolls sideways under the sticky tree cells", async () => {
-    // The grid measures 900 px, less than the compressed day, so the natural width wins.
+  it('ADR0089 the time area is a buffer of three viewport widths and scrolls sideways under the sticky tree cells', async () => {
+    // The grid measures 900 px.
     vi.stubGlobal(
       'ResizeObserver',
       class {
@@ -142,9 +136,10 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
     const tracks = header.style.gridTemplateColumns.split(' ');
     const timeTrack = Number.parseFloat(tracks[tracks.length - 1] ?? '0');
-    // Hide closed time is on by default, so the natural width is the compressed one: the Day
-    // preset's 3 456 px for Wed 06:00 to Sat 06:00 less the closed time of G1's calendar.
-    expect(timeTrack).toBe(NATURAL_WIDTH_PX);
+    // Three widths of the visible time area, the grid less its sticky tree columns, with closed
+    // time compressed into gaps of 6 px, so a gap cut at an edge may add a few pixels.
+    const stickyWidth = Number.parseFloat(gantt.style.scrollPaddingInlineStart);
+    expect(Math.abs(timeTrack - 3 * (900 - stickyWidth))).toBeLessThanOrEqual(7);
     // The header and every row share the template, so the tree pane stays aligned with the rows.
     const row = within(gantt).getByRole('row', { name: /^1003 / });
     expect(row.style.gridTemplateColumns).toBe(header.style.gridTemplateColumns);

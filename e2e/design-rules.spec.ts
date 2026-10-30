@@ -309,6 +309,8 @@ test.describe('the design rules from computed style', () => {
     await signIn(planningHref('gantt', { zoom: 'week', from: '2026-11-02', order: 'po-1001' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     const block = (id: string) => gantt.locator(`[data-block="${id}"]`);
 
     // GT1: every block of the selected order carries the 3 px bar; the others their 1 px border.

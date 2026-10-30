@@ -40,6 +40,8 @@ test.describe('the time header of the order Gantt', () => {
         await signIn(ganttHref({ zoom, from }));
         const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
         await expect(gantt).toBeVisible();
+        // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+        await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
         const toggle = page.getByRole('button', { name: 'Hide closed time' });
         // Hide closed time is on by default.
         if (!hideClosed) await toggle.click();

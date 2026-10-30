@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { describe, expect, it } from 'vitest';
-import { chunksCovering, chunkUnitOf, isFarChunk, wantedChunks } from './time-chunks.ts';
+import { chunkName, chunksCovering, chunkUnitOf, isFarChunk, wantedChunks } from './time-chunks.ts';
 
 const zone = 'Europe/Stockholm';
 const at = (iso: string) => Date.parse(iso);
@@ -116,5 +116,16 @@ describe('ADR0089 time chunks (Loading by time chunk)', () => {
     ).toBe(true);
     expect(isFarChunk({ fromMs: 0, toMs: buffer.fromMs - 2 * span }, buffer)).toBe(false);
     expect(isFarChunk({ fromMs: 0, toMs: buffer.fromMs - 2 * span - 1 }, buffer)).toBe(true);
+  });
+
+  it('names a chunk as the status line says it: its ISO week and days, its month or its quarter', () => {
+    const range = { fromMs: at('2026-11-10T10:00:00Z'), toMs: at('2026-11-10T11:00:00Z') };
+    const [week] = chunksCovering(range, 'week', zone);
+    const [month] = chunksCovering(range, 'quarter', zone);
+    const [quarter] = chunksCovering(range, 'year', zone);
+
+    expect(week && chunkName(week, zone)).toBe('W46, Mon 9 Nov to Sun 15 Nov');
+    expect(month && chunkName(month, zone)).toBe('November 2026');
+    expect(quarter && chunkName(quarter, zone)).toBe('Q4 2026');
   });
 });
