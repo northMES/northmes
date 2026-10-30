@@ -4,8 +4,11 @@
 /** How near an edge of the time area a dragging pointer starts to scroll it, in px. */
 export const autoscrollMarginPx = 48;
 
-/** The most a frame scrolls, with the pointer at an edge or past it, in px. */
+/** The most a frame of 1/60 s scrolls, with the pointer at an edge or past it, in px. */
 export const autoscrollMaxPx = 24;
+
+/** What a step in keyboard move mode keeps in view of the focused block, in px (WCAG 2.4.11). */
+const keepVisiblePx = 8;
 
 /** The visible part of a time area in client coordinates, past its sticky columns and header. */
 export interface VisibleArea {
@@ -45,8 +48,8 @@ export function autoscrollStep(
 }
 
 /**
- * The visible time area of a scroller: its box less the scroll padding that keeps targets clear
- * of its sticky columns and header (WCAG 2.4.11).
+ * The visible time area of a scroller: its padding box less the scroll padding that keeps targets
+ * clear of its sticky columns and header (WCAG 2.4.11).
  */
 export function visibleAreaOf(scroller: HTMLElement): VisibleArea {
   const box = scroller.getBoundingClientRect();
@@ -55,10 +58,33 @@ export function visibleAreaOf(scroller: HTMLElement): VisibleArea {
     const px = Number.parseFloat(value);
     return Number.isFinite(px) && value.endsWith('px') ? px : 0;
   };
+  const left = box.left + scroller.clientLeft;
+  const top = box.top + scroller.clientTop;
   return {
-    left: box.left + inset(style.scrollPaddingInlineStart || style.scrollPaddingLeft),
-    top: box.top + inset(style.scrollPaddingTop),
-    right: box.left + scroller.clientWidth,
-    bottom: box.top + scroller.clientHeight,
+    left: left + inset(style.scrollPaddingInlineStart || style.scrollPaddingLeft),
+    top: top + inset(style.scrollPaddingTop),
+    right: left + scroller.clientWidth,
+    bottom: top + scroller.clientHeight,
   };
+}
+
+/**
+ * The sideways scroll that brings a move preview into the visible time area after a step in
+ * keyboard move mode (#899): by what it overhangs an edge, keeping its start in view when it is
+ * wider than the area, and never so far that the focused block, which keeps the focus during the
+ * move, leaves fewer than 8 px in view (WCAG 2.4.11).
+ */
+export function revealDelta(
+  target: { readonly left: number; readonly right: number },
+  area: { readonly left: number; readonly right: number },
+  keep?: { readonly left: number; readonly right: number },
+): number {
+  let delta = 0;
+  if (target.right > area.right)
+    delta = Math.min(target.right - area.right, target.left - area.left);
+  else if (target.left < area.left) delta = target.left - area.left;
+  if (keep === undefined) return delta;
+  if (delta > 0) return Math.min(delta, Math.max(0, keep.right - area.left - keepVisiblePx));
+  if (delta < 0) return Math.max(delta, Math.min(0, keep.left - area.right + keepVisiblePx));
+  return 0;
 }

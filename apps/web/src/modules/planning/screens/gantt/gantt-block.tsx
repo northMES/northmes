@@ -4,11 +4,16 @@
 import type { JobOrderSpan } from '@northmes/planning-domain';
 import { cn } from 'cn';
 import { Clock, Lock, Pencil, TriangleAlert } from 'lucide-react';
-import { type KeyboardEvent, type PointerEvent, useLayoutEffect, useRef } from 'react';
+import { type KeyboardEvent, type PointerEvent, useEffect, useLayoutEffect, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import { blockLines } from '../../board-fields.ts';
 import { useMoveOf } from '../../move-store.ts';
-import { autoscrollStep, visibleAreaOf } from '../../timeline/autoscroll.ts';
+import {
+  autoscrollStep,
+  revealDelta,
+  type VisibleArea,
+  visibleAreaOf,
+} from '../../timeline/autoscroll.ts';
 import type { TimeScale } from '../../timeline/time-scale.ts';
 import { blockName, blockStates } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
@@ -24,6 +29,9 @@ const hollowMinPx = 2;
 
 /** The pointer travel from which a press is a drag, not a click. */
 const dragThresholdPx = 3;
+
+/** The frame the autoscroll speed is set for, 1/60 s, in ms. */
+const frameMs = 1000 / 60;
 
 /**
  * Where a span draws on the time axis, at least 2 px wide: the one layout of a committed block,
@@ -62,7 +70,9 @@ export function GanttBlock({
     useGanttView();
   const { jobOrder, operation, order } = row;
   // The press in progress: where it started, whether it has become a drag, where the pointer is,
-  // and the scroller it drags in with its position at the start and its autoscroll frame (#899).
+  // and the scroller it drags in with its position at the start, its visible time area, whether
+  // the pointer has been outside the autoscroll margin since the drag began, and the autoscroll
+  // frame (#899).
   const press = useRef<
     | {
         clientX: number;
@@ -72,10 +82,21 @@ export function GanttBlock({
         pointerY: number;
         scroller: HTMLElement | null;
         scrollLeft: number;
+        area?: VisibleArea;
+        armed: boolean;
         frame?: number;
+        frameMs?: number;
       }
     | undefined
   >(undefined);
+  // A block that goes away during a drag leaves no autoscroll frame behind.
+  useEffect(
+    () => () => {
+      const frame = press.current?.frame;
+      if (frame !== undefined) cancelAnimationFrame(frame);
+    },
+    [],
+  );
   // The scale and the move of the latest render, for the autoscroll frames to read.
   const latest = useRef({ scale, move });
   useLayoutEffect(() => {
@@ -138,6 +159,7 @@ export function GanttBlock({
       pointerY: event.clientY,
       scroller,
       scrollLeft: scroller?.scrollLeft ?? 0,
+      armed: false,
     };
   };
   // The drop snaps first to the preset's step, then forward to working time in the preview. The
@@ -150,23 +172,31 @@ export function GanttBlock({
     moving?.previewAt(at.snap(at.instant(at.x(current.setupStartMs) + dx)));
   };
   // One frame of autoscroll (#899): near the left or right edge of the visible time area the view
-  // scrolls, within the content it has, and the preview follows; the frames stop at the content's
-  // end, when the pointer leaves the margin, and on the drop. The range does not grow during a drag
-  // (the screen holds it), and the view does not scroll up or down: the block moves in time only,
-  // so a vertical scroll would carry it out of view.
-  const autoscroll = () => {
+  // scrolls, within the content it has, at a speed per time rather than per frame, and the preview
+  // follows. The frames stop at the content's end, when the pointer leaves the margin, and when
+  // the move ends: a drop, Escape or a lost capture. The range grows only after the drop (the
+  // screen holds it), and the view does not scroll up or down: the block moves in time only, so a
+  // vertical scroll would carry it out of view.
+  const autoscroll = (nowMs: number) => {
     const current = press.current;
-    if (current?.dragging !== true || current.scroller === null) return;
+    if (current === undefined) return;
     current.frame = undefined;
-    const { scroller } = current;
-    const { dx } = autoscrollStep(
-      { x: current.pointerX, y: current.pointerY },
-      visibleAreaOf(scroller),
-    );
+    const { scroller, area } = current;
+    const moving = latest.current.move?.store.get()?.state;
+    if (!current.dragging || scroller === null || area === undefined) return;
+    if (moving?.jobOrderId !== jobOrder.id || moving.source !== 'pointer') return;
+    const { dx } = autoscrollStep({ x: current.pointerX, y: current.pointerY }, area);
+    if (dx === 0) return;
+    const elapsed =
+      current.frameMs === undefined ? frameMs : Math.min(3 * frameMs, nowMs - current.frameMs);
+    current.frameMs = nowMs;
+    const before = scroller.scrollLeft;
     const end = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
-    const scrollLeft = Math.max(0, Math.min(end, scroller.scrollLeft + dx));
-    if (scrollLeft === scroller.scrollLeft) return;
+    if (dx > 0 ? before >= end : before <= 0) return;
+    const scrollLeft = Math.max(0, Math.min(end, before + (dx * elapsed) / frameMs));
     scroller.scrollLeft = scrollLeft;
+    // A browser that keeps the position, at a zoom with fractional pixels, has reached the end.
+    if (scroller.scrollLeft === before && Math.abs(scrollLeft - before) >= 1) return;
     previewPointer(current);
     current.frame = requestAnimationFrame(autoscroll);
   };
@@ -181,6 +211,8 @@ export function GanttBlock({
         return;
       }
       current.dragging = true;
+      // The area stays put during a drag, so it is measured once.
+      current.area = current.scroller === null ? undefined : visibleAreaOf(current.scroller);
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
       } catch {
@@ -190,7 +222,15 @@ export function GanttBlock({
     current.pointerX = event.clientX;
     current.pointerY = event.clientY;
     previewPointer(current);
-    current.frame ??= requestAnimationFrame(autoscroll);
+    if (current.area === undefined) return;
+    // A drag that starts inside the margin scrolls only once the pointer has left it and come
+    // back, so grabbing a block cut by an edge does not scroll against the drag.
+    const step = autoscrollStep({ x: current.pointerX, y: current.pointerY }, current.area);
+    if (step.dx === 0) current.armed = true;
+    else if (current.armed && current.frame === undefined) {
+      current.frameMs = undefined;
+      current.frame = requestAnimationFrame(autoscroll);
+    }
   };
   const endPress = (commit: boolean) => {
     const current = press.current;
@@ -222,7 +262,10 @@ export function GanttBlock({
           move.commit();
           break;
         case 'Escape':
-          move.cancel();
+          // Escape during a drag ends the press too, so its autoscroll stops and the click
+          // after letting go selects nothing.
+          if (press.current?.dragging === true) endPress(false);
+          else move.cancel();
           break;
         default:
           handled = false;
@@ -266,6 +309,8 @@ export function GanttBlock({
               onPointerMove={onPointerMove}
               onPointerUp={() => endPress(true)}
               onPointerCancel={() => endPress(false)}
+              // A capture lost without a pointerup, as when the window loses focus, ends the drag.
+              onLostPointerCapture={() => endPress(false)}
               onKeyDown={onKeyDown}
               className={cn(
                 'absolute top-1 h-11 touch-none overflow-hidden border border-block-border px-1.5 py-0.5 text-start text-xs leading-4 text-palette-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
@@ -427,13 +472,33 @@ function GanttMovePreview({
   );
   const ghost = useMoveOf(move?.store, (each) => each?.preview?.ghosts.get(jobOrderId));
   const outline = useRef<HTMLSpanElement>(null);
-  // A step in keyboard move mode past the visible edge scrolls the preview into view, past the
-  // sticky columns the grid's scroll padding keeps clear (#899).
+  // The position the preview was last revealed at, so a preview over a new plan alone, without a
+  // step, leaves the view where the planner put it.
+  const revealed = useRef<string | undefined>(undefined);
+  // A step in keyboard move mode past the visible edge scrolls the time area sideways until the
+  // preview shows, past the sticky columns, keeping the focused block in view (#899). The grid
+  // scrolls, not the row's time cell, which clips what overhangs it.
   useLayoutEffect(() => {
-    if (movedBy === 'keyboard' && preview !== undefined) {
-      outline.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    if (movedBy !== 'keyboard' || preview === undefined) {
+      revealed.current = undefined;
+      return;
     }
-  }, [movedBy, preview]);
+    const at = `${preview.equipment} ${preview.span.setupStartMs}`;
+    if (at === revealed.current) return;
+    revealed.current = at;
+    const element = outline.current;
+    const scroller = element?.closest<HTMLElement>('[role="treegrid"]');
+    if (element === null || element === undefined || scroller === null || scroller === undefined) {
+      return;
+    }
+    const focused = scroller.querySelector(`[data-block="${jobOrderId}"]`);
+    const delta = revealDelta(
+      element.getBoundingClientRect(),
+      visibleAreaOf(scroller),
+      focused?.getBoundingClientRect(),
+    );
+    if (delta !== 0) scroller.scrollLeft += delta;
+  }, [movedBy, preview, jobOrderId]);
   if (preview !== undefined) {
     const box = blockBox(scale, preview.span);
     return (

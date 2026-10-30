@@ -288,13 +288,14 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     lastScrollLeft.current = grid.scrollLeft;
   }, [timeWidth]);
   const onGridScroll = (grid: HTMLElement) => {
+    // A pointer drag scrolls within the range it has: a range that grew under it would move the
+    // axis under the pointer. The position before the drag stays the baseline, and the drop checks
+    // the edges the drag scrolled to (#899).
+    if (moveStore.get()?.state.source === 'pointer') return;
     const { scrollLeft, clientWidth, scrollWidth } = grid;
     const previous = lastScrollLeft.current;
     lastScrollLeft.current = scrollLeft;
     if (clientWidth <= 0 || scrollLeft === previous) return;
-    // A pointer drag scrolls within the range it has: a range that grew under it would move the
-    // axis under the pointer, so the range grows after the drop (#899).
-    if (moveStore.get()?.state.source === 'pointer') return;
     if (scrollLeft > previous && scrollLeft + clientWidth >= scrollWidth - clientWidth) {
       setExtension((current) => ({ ...current, after: current.after + 1 }));
     } else if (scrollLeft < previous && scrollLeft <= clientWidth) {
@@ -389,6 +390,20 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     timeZone,
     focusBlock,
   });
+  // The end of a pointer drag checks the edges, as a scroll to where the drag left the view would.
+  const checkEdges = useRef(onGridScroll);
+  useLayoutEffect(() => {
+    checkEdges.current = onGridScroll;
+  });
+  useEffect(() => {
+    let dragging = false;
+    return moveStore.subscribe(() => {
+      const pointer = moveStore.get()?.state.source === 'pointer';
+      const grid = gridElement.current;
+      if (dragging && !pointer && grid !== null) checkEdges.current(grid);
+      dragging = pointer;
+    });
+  }, [moveStore]);
   const rowById = useMemo(() => {
     const map = new Map<string, GanttRow>();
     const addOrder = (order: GanttRow) => {

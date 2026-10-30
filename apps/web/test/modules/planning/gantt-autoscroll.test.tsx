@@ -2,9 +2,23 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cleanup, fireEvent, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type GanttDataSource, g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
+
+// Animation frames 1/60 s apart, as a 60 Hz display gives them: the test browser runs them back to
+// back, and autoscroll sets its speed per time.
+beforeEach(() => {
+  let nowMs = 0;
+  vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+    nowMs += 1000 / 60;
+    const at = nowMs;
+    return window.setTimeout(() => callback(at), 0);
+  });
+  vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((handle) => {
+    window.clearTimeout(handle);
+  });
+});
 
 afterEach(() => {
   cleanup();
@@ -174,7 +188,7 @@ describe('the time area scrolls while a block is dragged to its edge (#899)', ()
     const gantt = await findGantt();
     layOut(gantt);
     // The preview outline starts in view; after the step it lies at 1100 to 1150 px on screen. The
-    // focused block lies at 300 to 380 px.
+    // focused block lies at 700 to 780 px, far enough right to stay in view.
     let outlineX = 400;
     const box = Element.prototype.getBoundingClientRect;
     vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
@@ -184,7 +198,7 @@ describe('the time area scrolls while a block is dragged to its edge (#899)', ()
         return DOMRect.fromRect({ x: outlineX, width: 50 });
       }
       if (this.getAttribute('data-block') === 'jo-1001-10') {
-        return DOMRect.fromRect({ x: 300, width: 80 });
+        return DOMRect.fromRect({ x: 700, width: 80 });
       }
       return box.call(this);
     });
