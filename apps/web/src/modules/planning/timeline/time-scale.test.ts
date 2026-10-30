@@ -223,3 +223,36 @@ describe('createTimeScale (plan 18, Shared pieces)', () => {
     expect(naturalWidthPx(week45, 'week', { closed: [night] })).toBe((168 - 15) * 16 + 6);
   });
 });
+
+describe('the header tiers with closed time hidden (ADR 0089, Header tiers)', () => {
+  /** A plant clock time of November 2026 in Stockholm, UTC+1. */
+  const local = (date: number, hours: number, minutes = 0) =>
+    Date.UTC(2026, 10, date, hours - 1, minutes);
+  /** Week 45 open 06:00 to 22:00 Monday to Friday: the nights and the weekend are closed. */
+  const closed = [
+    { fromMs: local(2, 0), toMs: local(2, 6) },
+    { fromMs: local(2, 22), toMs: local(3, 6) },
+    { fromMs: local(3, 22), toMs: local(4, 6) },
+    { fromMs: local(4, 22), toMs: local(5, 6) },
+    { fromMs: local(5, 22), toMs: local(6, 6) },
+    { fromMs: local(6, 22), toMs: local(9, 0) },
+  ];
+  const hideClosed = { closed };
+  const compressed = createTimeScale({
+    range: week45,
+    zoom: 'week',
+    timeZone: stockholm,
+    widthPx: naturalWidthPx(week45, 'week', hideClosed),
+    hideClosed,
+  });
+  const top = compressed.ticks().filter((tick) => tick.tier === 'top');
+
+  it("#892 starts a day's cell at its first open segment and ends it at its last", () => {
+    const monday = top[0];
+
+    expect(monday?.label).toBe('Mon 2 Nov');
+    expect(monday?.x).toBe(compressed.x(local(2, 6)));
+    expect(monday?.widthPx).toBe(16 * 16);
+    expect(top[1]?.x).toBe(compressed.x(local(3, 6)));
+  });
+});
