@@ -912,6 +912,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 scale={scale}
                 treeWidth={treeWidth}
                 timeWidth={timeWidth}
+                moveStore={moveStore}
               />
             )}
           </div>
