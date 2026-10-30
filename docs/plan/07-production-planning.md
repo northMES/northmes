@@ -751,7 +751,7 @@ A conflict is a broken planning rule that NorthMES reports and never repairs on 
 | Import conflict | connector import recomputes an untouched order | each poll | marked on the board and in the import log |
 | Report conflict | production-start | a report on another machine or on a finished or cancelled job order | Conflict state on the block |
 
-The reason codes above are a plan proposal except `OVERLAP` and `STALE`, which come from the stress-tested design. Late orders and material shortages are warnings, not conflicts.
+The reason codes above are a plan proposal except `OVERLAP` and `STALE`, which come from the stress-tested design, and `PAST`, which [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) decides. Late orders and material shortages are warnings, not conflicts.
 
 ## Material warnings
 
