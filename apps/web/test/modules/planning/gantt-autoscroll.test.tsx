@@ -102,7 +102,7 @@ describe('the time area scrolls while a block is dragged to its edge (#899)', ()
     fireEvent.pointerUp(block, { ...pointer, clientX: 795 });
   });
 
-  it('a drag the scroll takes past the point where the range grows keeps the range until the drop, which grows it', async () => {
+  it('#899 a drag the scroll takes into the edge margin holds the buffer until the drop, which moves it (ADR 0089)', async () => {
     const { source, loads } = countingSource();
     renderGanttRoute({ zoom: 'day', from: '2026-11-04' }, source);
     const gantt = await findGantt();

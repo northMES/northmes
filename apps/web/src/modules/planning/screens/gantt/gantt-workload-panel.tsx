@@ -16,7 +16,7 @@ import { Button } from '../../../../ui/primitives/button.tsx';
 import type { GanttSnapshot, WorkloadBucket } from '../../gantt-data.ts';
 import { type MoveStore, useMoveOf } from '../../move-store.ts';
 import { visibleItems } from '../../timeline/culling.ts';
-import { formatMonth, type TimeScale } from '../../timeline/time-scale.ts';
+import { formatMonth, type TimeRange, type TimeScale } from '../../timeline/time-scale.ts';
 import {
   type BucketKind,
   bucketKindOf,
@@ -406,9 +406,23 @@ export function GanttWorkloadPanel({
   stickyWidth,
   timeWidth,
   moveStore,
+  visible,
+  scrollerRef,
+  onScroll,
 }: {
   readonly snapshot: GanttSnapshot;
   readonly scale: TimeScale;
+  /**
+   * The span in view when scrolling last stopped: the text table lists its buckets and sums them
+   * as the visible range, while the lanes draw the whole buffer (ADR 0089, The endless axis).
+   */
+  readonly visible?: TimeRange;
+  /**
+   * The lanes' scroller and its scroll listener: the Gantt keeps it at the time area's scroll
+   * position both ways, so a lane stays under its time as the time buffer moves (ADR 0089).
+   */
+  readonly scrollerRef?: (node: HTMLDivElement | null) => void;
+  readonly onScroll?: (scrollLeft: number) => void;
   readonly treeWidth: number;
   /**
    * The width of the tree columns that stick in the treegrid: all of them, or the Name column
@@ -453,7 +467,12 @@ export function GanttWorkloadPanel({
       <h2 className="border-b border-border bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
         Workload by {kindNames[kind].heading}, the plan with my draft
       </h2>
-      <div className="min-h-0 overflow-auto">
+      <div
+        ref={scrollerRef}
+        data-workload-lanes
+        className="min-h-0 overflow-auto"
+        onScroll={(event) => onScroll?.(event.currentTarget.scrollLeft)}
+      >
         {machines.map((machine) => (
           <WorkloadLane
             key={machine.code}
@@ -474,7 +493,9 @@ export function GanttWorkloadPanel({
         <WorkloadTable
           key={open.code}
           name={`Workload on ${open.name}`}
-          buckets={lanesOf(open.code)}
+          buckets={
+            visible === undefined ? lanesOf(open.code) : visibleItems(lanesOf(open.code), visible)
+          }
           kind={kind}
           timeZone={snapshot.plant.timeZone}
           dialogId={`${idBase}-${open.code}-table`}

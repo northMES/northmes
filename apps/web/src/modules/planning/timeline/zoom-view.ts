@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-// Zooming the view (ADR 0089, Zoom levels): the range of a level around the instant that stays in
-// place, the scroll position that keeps it there, the level and anchor of Zoom to fit, and the
-// wheel gesture that steps one level.
+// Zooming the view (ADR 0089, Zoom levels): the scroll position that keeps an instant in place,
+// the level and anchor of Zoom to fit, and the wheel and pinch gestures that step one level.
 import type { ZoomLevel } from '../gantt-data.ts';
 import {
   type ClosedWindow,
-  createTimeScale,
-  extendedRange,
   naturalWidthPx,
-  plantDateOf,
   type TimeRange,
   type TimeScale,
   zoomLevelIds,
@@ -38,64 +34,6 @@ export interface ZoomPlant {
   readonly productionDayStart: string;
   /** The closed windows of a range while Hide closed time is on; undefined while it is off. */
   readonly closedOf?: (range: TimeRange) => readonly ClosedWindow[];
-}
-
-/** The range of a level as the URL's from and the spans it is extended by. */
-export interface AnchoredRange {
-  readonly from: string;
-  readonly extension: { readonly before: number; readonly after: number };
-  readonly range: TimeRange;
-}
-
-/** The time scale of a range at its natural width, as the screens lay a range out. */
-function naturalScale(range: TimeRange, zoom: ZoomLevel, plant: ZoomPlant): TimeScale {
-  const closed = plant.closedOf?.(range);
-  const hideClosed = closed === undefined ? undefined : { closed };
-  return createTimeScale({
-    range,
-    zoom,
-    timeZone: plant.timeZone,
-    productionDayStart: plant.productionDayStart,
-    widthPx: naturalWidthPx(range, zoom, hideClosed),
-    ...(hideClosed !== undefined && { hideClosed }),
-  });
-}
-
-/**
- * The range of a level that holds an anchor where it is: from the plant date of the anchor,
- * extended by whole spans until the time before the anchor fills the viewport left of it and the
- * time after it fills the viewport right of it, so the scroll position that keeps the anchor in
- * place lies inside the scrollable width.
- */
-export function rangeAround(
-  anchor: ViewAnchor,
-  layout: GridLayout,
-  zoom: ZoomLevel,
-  plant: ZoomPlant,
-): AnchoredRange {
-  const from = plantDateOf(anchor.ms, plant.timeZone);
-  const beforePx = anchor.viewportX - layout.treeWidth;
-  const afterPx = layout.clientWidth - anchor.viewportX;
-  let before = 0;
-  let after = 0;
-  // A span holds at least a few hundred pixels at every level, so a few steps suffice; the bound
-  // only guards a viewport wider than any range would ever need.
-  for (let step = 0; step < 64; step += 1) {
-    const range = extendedRange(from, zoom, plant.timeZone, plant.productionDayStart, {
-      before,
-      after,
-    });
-    const scale = naturalScale(range, zoom, plant);
-    const x = scale.x(anchor.ms);
-    if (x < beforePx) before += 1;
-    else if (scale.widthPx - x < afterPx) after += 1;
-    else return { from, extension: { before, after }, range };
-  }
-  return {
-    from,
-    extension: { before, after },
-    range: extendedRange(from, zoom, plant.timeZone, plant.productionDayStart, { before, after }),
-  };
 }
 
 /** The scroll position that puts an anchor's instant at its viewport x. */

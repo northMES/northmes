@@ -7,10 +7,7 @@ import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
-/**
- * A source that answers from G1 and counts its loads: the Gantt loads once per range, so the
- * count says whether a scroll extended the range.
- */
+/** A source that answers from G1 and counts its loads: the Gantt loads once per buffer. */
 function countingSource(): { source: GanttDataSource; loads: () => number } {
   let count = 0;
   return {
@@ -25,171 +22,134 @@ function countingSource(): { source: GanttDataSource; loads: () => number } {
   };
 }
 
-/**
- * The text of the time header's ticks. Closed time is hidden by default, so a closed weekend has
- * no label (#892) and the tests name open weekdays.
- */
+/** The test browser lays nothing out, so the grid is the 1 100 px the view assumes. */
+const gridWidth = 1100;
+
+/** The grid across: the buffer's width, the sticky columns and the visible time area. */
+function geometry(gantt: HTMLElement) {
+  const overlay = gantt.querySelector<HTMLElement>('[data-overlay]') as HTMLElement;
+  const stickyWidth = Number.parseFloat(gantt.style.scrollPaddingInlineStart);
+  return {
+    bufferWidth: Number.parseFloat(overlay.style.width),
+    viewport: gridWidth - stickyWidth,
+  };
+}
+
+/** The toolbar's range text, which names the span in view. */
+function rangeText(): string {
+  return (document.querySelector('[data-range-text]')?.textContent ?? '').trim();
+}
+
 function timeHeaderText(gantt: HTMLElement): string {
   return within(gantt).getByRole('columnheader', { name: 'Time' }).textContent ?? '';
 }
 
-/**
- * Gives the grid the geometry of a scroller the test browser has no layout for: the content
- * width, the visible width and the scroll position.
- */
-/** Scrolls the grid sideways from one position to another, as two scroll events. */
-function scrollSideways(gantt: HTMLElement, fromLeft: number, toLeft: number) {
-  gantt.scrollLeft = fromLeft;
+function scrollTo(gantt: HTMLElement, left: number) {
+  gantt.scrollLeft = left;
   fireEvent.scroll(gantt);
-  gantt.scrollLeft = toLeft;
-  fireEvent.scroll(gantt);
-}
-
-function scroller(
-  gantt: HTMLElement,
-  geometry: { scrollWidth: number; clientWidth: number; scrollLeft: number },
-) {
-  for (const [key, value] of Object.entries(geometry)) {
-    Object.defineProperty(gantt, key, { value, configurable: true, writable: true });
-  }
 }
 
 // The contained overscroll, so a sideways swipe at an edge never navigates the browser, is read
 // from computed style in e2e/planning/gantt-scroller.spec.ts.
-describe('the time scroller of the order Gantt (#685)', () => {
-  it('extends the range by one span of the preset when the scroll comes within one screen of the right edge, keeping from in the URL', async () => {
+describe('the endless axis of the order Gantt (ADR 0089, #883)', () => {
+  it('ADR0089 opens with the start in the URL at the left edge of the view, inside a buffer of three viewport widths', async () => {
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
+    const gantt = await findGantt();
+
+    const { bufferWidth, viewport } = geometry(gantt);
+    expect(Math.abs(bufferWidth - 3 * viewport)).toBeLessThanOrEqual(7);
+    // The view starts one viewport width into the buffer, at Wed 4 Nov 06:00.
+    expect(gantt.scrollLeft).toBeGreaterThan(0.75 * viewport);
+    expect(rangeText()).toMatch(/^Wed 4 Nov to /);
+    expect(gantt.getAttribute('aria-label')).toBe(`plant-a order Gantt, ${rangeText()}`);
+    expect(timeHeaderText(gantt)).toContain('Tue 3 Nov');
+  });
+
+  it('ADR0089 moves the buffer by one viewport width near the right edge, with the scroll corrected so the view stays', async () => {
+    const { source, loads } = countingSource();
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' }, source);
+    const gantt = await findGantt();
+    const { bufferWidth, viewport } = geometry(gantt);
+    const loaded = loads();
+
+    // The view ends 20 px before the buffer's end, inside the quarter-width margin.
+    const left = bufferWidth - viewport - 20;
+    scrollTo(gantt, left);
+    const shown = rangeText();
+
+    expect(Math.abs(gantt.scrollLeft - (left - viewport))).toBeLessThanOrEqual(7);
+    expect(rangeText()).toBe(shown);
+    await waitFor(() => expect(loads()).toBe(loaded + 1));
+    // The browser reports the corrected position as a scroll event, which moves nothing.
+    fireEvent.scroll(gantt);
+    expect(loads()).toBe(loaded + 1);
+    expect(Math.abs(geometry(gantt).bufferWidth - 3 * viewport)).toBeLessThanOrEqual(7);
+  });
+
+  it('#883 keeps the range text with the view however often the planner scrolls to the right edge', async () => {
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const { viewport } = geometry(gantt);
+    const texts: string[] = [];
+
+    for (let step = 0; step < 6; step += 1) {
+      const { bufferWidth } = geometry(gantt);
+      scrollTo(gantt, bufferWidth - viewport);
+      texts.push(rangeText());
+      // The buffer keeps three viewport widths; it never grows with the scrolls.
+      expect(Math.abs(geometry(gantt).bufferWidth - 3 * viewport)).toBeLessThanOrEqual(7);
+    }
+
+    // Each scroll shows a later span than the one before, so the text follows the view.
+    expect(new Set(texts).size).toBe(6);
+    expect(texts[0]).not.toMatch(/^W45, Mon 2 Nov/);
+    // Once scrolling stops, the visible start goes to the URL and names the grid.
+    await waitFor(() =>
+      expect(router.state.location.search.from).toMatch(/^2026-1[12]-\d\dT\d\d:\d\d$/),
+    );
+    expect(gantt.getAttribute('aria-label')).toBe(`plant-a order Gantt, ${rangeText()}`);
+  });
+
+  it('ADR0089 writes the visible start to the URL with replace when scrolling stops', async () => {
     const router = renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
-    expect(timeHeaderText(gantt)).toContain('Fri 6 Nov');
-    expect(timeHeaderText(gantt)).not.toContain('Mon 9 Nov');
+    const entries = router.history.length;
 
-    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
-    scrollSideways(gantt, 0, 1500);
+    // One hour later at 48 px an hour.
+    scrollTo(gantt, gantt.scrollLeft + 48);
 
-    await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
-    });
-    expect(router.state.location.search).toMatchObject({ from: '2026-11-04' });
-    expect(screen.getByText('Wed 4 Nov to Fri 6 Nov')).toBeTruthy();
-    expect(gantt.getAttribute('aria-label')).toContain('Wed 4 Nov to Fri 6 Nov');
+    await waitFor(() => expect(router.state.location.search.from).toBe('2026-11-04T07:00'));
+    expect(router.history.length).toBe(entries);
+    expect(rangeText()).toMatch(/^Wed 4 Nov to /);
   });
 
-  it('extends the range to the left within one screen of the left edge and keeps the view where it was', async () => {
+  it('ADR0089 a vertical scroll moves nothing', async () => {
     const { source, loads } = countingSource();
     renderGanttRoute({ zoom: 'day', from: '2026-11-04' }, source);
     const gantt = await findGantt();
-    // The planner first scrolls right, which loads the later span, then heads back left.
-    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
-    scrollSideways(gantt, 0, 1500);
-    await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
-    });
-    const widthBefore = Number.parseFloat(
-      (gantt.querySelector('[data-overlay]') as HTMLElement).style.width,
-    );
-    expect(timeHeaderText(gantt)).not.toContain('Mon 2 Nov');
-
-    gantt.scrollLeft = 200;
-    fireEvent.scroll(gantt);
-
-    await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Mon 2 Nov');
-    });
-    const widthAfter = Number.parseFloat(
-      (gantt.querySelector('[data-overlay]') as HTMLElement).style.width,
-    );
-    expect(widthAfter).toBeGreaterThan(widthBefore);
-    // The content that was in view stays in view: the scroll position moved by the added width.
-    await waitFor(() => {
-      expect(gantt.scrollLeft).toBe(200 + (widthAfter - widthBefore));
-    });
-
-    // The browser reports that internal move as a scroll event; it is no movement of the planner
-    // towards the right edge, so nothing more loads: a range change loads in the same tick.
     const loaded = loads();
-    fireEvent.scroll(gantt);
-    expect(loads()).toBe(loaded);
-    expect(timeHeaderText(gantt)).not.toContain('Wed 11 Nov');
-  });
+    const left = gantt.scrollLeft;
+    const shown = rangeText();
 
-  it('the clamp of the scroll position after Later shrinks the range extends nothing', async () => {
-    const { source, loads } = countingSource();
-    const router = renderGanttRoute({ zoom: 'day', from: '2026-11-04' }, source);
-    const gantt = await findGantt();
-    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
-    scrollSideways(gantt, 0, 1500);
-    await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
-    });
-
-    // Later shrinks the range back to one span; the browser clamps the position to what is left
-    // and reports it as a scroll event, which looks like a move towards the left edge.
-    gantt.scrollLeft = 100;
-    fireEvent.click(screen.getByRole('button', { name: 'Show later range' }));
-    await waitFor(() => {
-      expect(router.state.location.search).toMatchObject({ from: '2026-11-07' });
-    });
-    await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
-      expect(timeHeaderText(gantt)).not.toContain('Wed 4 Nov');
-    });
-    const loaded = loads();
-    fireEvent.scroll(gantt);
-
-    expect(loads()).toBe(loaded);
-    expect(timeHeaderText(gantt)).not.toContain('Wed 4 Nov');
-    expect(timeHeaderText(gantt)).not.toContain('Tue 10 Nov');
-  });
-
-  it('a vertical scroll extends nothing, and a leftward scroll in a narrow range extends the earlier side only', async () => {
-    const { source, loads } = countingSource();
-    renderGanttRoute({ zoom: 'day', from: '2026-11-04' }, source);
-    const gantt = await findGantt();
-    // A range under two screens wide: the right edge is within one screen from anywhere, so the
-    // first rightward scroll loads the later span once.
-    scroller(gantt, { scrollWidth: 1200, clientWidth: 800, scrollLeft: 0 });
-    Object.defineProperty(gantt, 'scrollTop', { value: 0, configurable: true, writable: true });
-    scrollSideways(gantt, 0, 300);
-    await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
-    });
-
-    const loaded = loads();
     gantt.scrollTop = 120;
     fireEvent.scroll(gantt);
+
+    expect(gantt.scrollLeft).toBe(left);
+    expect(rangeText()).toBe(shown);
     expect(loads()).toBe(loaded);
-    expect(timeHeaderText(gantt)).not.toContain('Wed 11 Nov');
-    expect(timeHeaderText(gantt)).not.toContain('Mon 2 Nov');
-
-    // Scrolling left from 300 to 100 heads for the left edge: the earlier span loads, not another later one.
-    gantt.scrollLeft = 100;
-    fireEvent.scroll(gantt);
-
-    await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Mon 2 Nov');
-    });
-    expect(timeHeaderText(gantt)).not.toContain('Wed 11 Nov');
   });
 
-  it('Later moves from and forgets the extension', async () => {
+  it('ADR0089 Earlier and Later show the view one viewport width before or after', async () => {
     const router = renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
-    const gantt = await findGantt();
-    scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
-    scrollSideways(gantt, 0, 1500);
-    await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
-    });
+    await findGantt();
 
     fireEvent.click(screen.getByRole('button', { name: 'Show later range' }));
+    // One viewport width of drawn axis: closed time is hidden by default, so the night of Wed 4
+    // Nov takes a few pixels and the view lands on Thursday.
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-11-05T/));
 
-    await waitFor(() => {
-      expect(router.state.location.search).toMatchObject({ from: '2026-11-07' });
-    });
-    // The weekend is closed time, hidden by default, so the range from Saturday names Monday only.
-    await waitFor(() => {
-      expect(timeHeaderText(gantt)).not.toContain('Wed 4 Nov');
-    });
-    expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
-    expect(timeHeaderText(gantt)).not.toContain('Tue 10 Nov');
+    fireEvent.click(screen.getByRole('button', { name: 'Show earlier range' }));
+    await waitFor(() => expect(router.state.location.search.from).toBe('2026-11-04T06:00'));
+    expect(rangeText()).toMatch(/^Wed 4 Nov to /);
   });
 });

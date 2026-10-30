@@ -94,7 +94,8 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
 
-    expect(board.getAttribute('aria-label')).toBe('plant-a board, W45, Mon 2 Nov to Sun 8 Nov');
+    // The grid names the span in view, which starts at Mon 2 Nov (ADR 0089).
+    expect(board.getAttribute('aria-label')).toMatch(/^plant-a board, W45, Mon 2 Nov to /);
     expect(
       within(board)
         .getByRole('button', { name: 'Collapse Machining' })
@@ -193,15 +194,21 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     };
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
     const board = await findBoard();
-    const firstClosed = (machine: string) => {
-      const shading = machineRow(board, machine).querySelector('[data-shading]');
-      return [shading?.getAttribute('data-from-ms'), shading?.getAttribute('data-to-ms')].map(
-        (value) => new Date(Number(value)).toISOString(),
+    // The closed time that holds Mon 2 Nov 04:00 ends where each machine opens again.
+    const closedEnd = (machine: string) => {
+      const at = Date.parse('2026-11-02T03:00:00Z');
+      const shading = Array.from(
+        machineRow(board, machine).querySelectorAll<HTMLElement>('[data-shading]'),
+      ).find(
+        (each) =>
+          Number(each.getAttribute('data-from-ms')) <= at &&
+          Number(each.getAttribute('data-to-ms')) > at,
       );
+      return new Date(Number(shading?.getAttribute('data-to-ms'))).toISOString();
     };
 
-    expect(firstClosed('CNC 1')).toEqual(['2026-11-01T23:00:00.000Z', '2026-11-02T05:00:00.000Z']);
-    expect(firstClosed('Mill 1')).toEqual(['2026-11-01T23:00:00.000Z', '2026-11-03T05:00:00.000Z']);
+    expect(closedEnd('CNC 1')).toBe('2026-11-02T05:00:00.000Z');
+    expect(closedEnd('Mill 1')).toBe('2026-11-03T05:00:00.000Z');
   });
 
   it('DR18 gives each machine without job orders in the range one cell that says so', async () => {
@@ -250,17 +257,20 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     const router = renderGanttRoute({}, undefined, 'board');
     const board = await findBoard();
 
-    expect(board.getAttribute('aria-label')).toBe('plant-a board, W45, Mon 2 Nov to Sun 8 Nov');
+    // The grid names the span in view, which starts at Mon 2 Nov (ADR 0089).
+    expect(board.getAttribute('aria-label')).toMatch(/^plant-a board, W45, Mon 2 Nov to /);
     expect(screen.getByRole('heading', { level: 1, name: 'Planning board' })).toBeTruthy();
     expect(screen.getByText('Showing fixture G1.')).toBeTruthy();
     expect(screen.getByText('ERP data as of Mon 2 Nov 06:40')).toBeTruthy();
     expect(router.state.location.search).toEqual({});
 
+    // Later shows the view one viewport width on, and its start goes to the URL.
     await user.click(screen.getByRole('button', { name: 'Show later range' }));
-    expect(
-      await screen.findByRole('grid', { name: 'plant-a board, W46, Mon 9 Nov to Sun 15 Nov' }),
-    ).toBeTruthy();
-    expect(router.state.location.search).toEqual({ from: '2026-11-09' });
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-11-0[3-6]T/));
+    expect(Object.keys(router.state.location.search)).toEqual(['from']);
+    await waitFor(() =>
+      expect(board.getAttribute('aria-label')).not.toMatch(/^plant-a board, W45, Mon 2 Nov/),
+    );
   });
 
   it('BO12 draws the states of G1 in shape and in the name: a locked job order and the late ones', async () => {
@@ -476,20 +486,19 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
 
   it('DR20 shows the error state when a later range fails to load, not the range before', async () => {
     const user = userEvent.setup();
-    let loads = 0;
+    // The loads answer until the planner asks for a later range, whose load fails.
+    let failing = false;
     const failingLater: GanttDataSource = {
       ...g1DataSource,
       load: async (input) => {
-        loads += 1;
-        if (loads > 1 && input.from.startsWith('2026-11-08')) {
-          throw new Error('The plan server did not answer');
-        }
+        if (failing) throw new Error('The plan server did not answer');
         return g1DataSource.load(input);
       },
     };
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, failingLater, 'board');
     await findBoard();
 
+    failing = true;
     await user.click(screen.getByRole('button', { name: 'Show later range' }));
     expect(
       await screen.findByRole('heading', { level: 2, name: 'The board could not be loaded' }),
@@ -635,11 +644,13 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
   });
   it('BO1 marks the board busy while a later range loads, and not once it has loaded', async () => {
     const user = userEvent.setup();
+    // The loads answer at once until the planner asks for a later range, whose load waits.
+    let slow = false;
     let release: () => void = () => {};
     const slowLater: GanttDataSource = {
       ...g1DataSource,
       load: async (input) => {
-        if (input.from.startsWith('2026-11-08')) {
+        if (slow) {
           await new Promise<void>((resolve) => {
             release = resolve;
           });
@@ -648,13 +659,12 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
       },
     };
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, slowLater, 'board');
-    expect((await findBoard()).getAttribute('aria-busy')).toBeNull();
+    const board = await findBoard();
+    await waitFor(() => expect(board.getAttribute('aria-busy')).toBeNull());
 
+    slow = true;
     await user.click(screen.getByRole('button', { name: 'Show later range' }));
-    const board = await screen.findByRole('grid', {
-      name: 'plant-a board, W46, Mon 9 Nov to Sun 15 Nov',
-    });
-    expect(board.getAttribute('aria-busy')).toBe('true');
+    await waitFor(() => expect(board.getAttribute('aria-busy')).toBe('true'));
 
     release();
     await waitFor(() => expect(board.getAttribute('aria-busy')).toBeNull());

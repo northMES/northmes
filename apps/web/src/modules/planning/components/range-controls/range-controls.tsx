@@ -11,14 +11,17 @@ import { PressedGroup } from './range-controls-pressed-group.tsx';
 export interface RangeControlsProps {
   /** The zoom group first: the ladder's ZoomControls on the board and the Gantt, PresetControls on the job order table. */
   readonly zoomControls: ReactNode;
-  /** The first plant date of the range, "2026-11-02", which Go to date edits. */
+  /** The plant date of the range's start or of the visible start, which Go to date edits. */
   readonly from: string;
   readonly onFromChange: (from: string) => void;
   readonly onEarlier: () => void;
   readonly onNow: () => void;
   readonly onLater: () => void;
-  /** The range as text, "W45, Mon 2 Nov to Sun 8 Nov". */
-  readonly rangeLabel: string;
+  /**
+   * The range as text, "W45, Mon 2 Nov to Sun 8 Nov": the chosen range on the job order table, the
+   * span in view on the board and the Gantt.
+   */
+  readonly rangeLabel: ReactNode;
 }
 
 /**
@@ -61,7 +64,9 @@ export function RangeControls({
           className="h-8 rounded-md border border-input bg-background px-2 font-mono text-xs"
         />
       </label>
-      <span className="font-mono text-data font-medium whitespace-nowrap">{rangeLabel}</span>
+      <span data-range-text className="font-mono text-data font-medium whitespace-nowrap">
+        {rangeLabel}
+      </span>
     </>
   );
 }

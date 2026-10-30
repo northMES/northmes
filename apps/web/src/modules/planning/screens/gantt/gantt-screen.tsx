@@ -15,7 +15,8 @@ import {
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { useBoardFields } from '../../board-fields-store.ts';
-import type { GanttDataSource, GanttSnapshot } from '../../gantt-data.ts';
+import { VisibleSpanText } from '../../components/range-controls/index.ts';
+import type { GanttCalendar, GanttDataSource, GanttSnapshot } from '../../gantt-data.ts';
 import {
   applyDraft,
   cascadeFromHere,
@@ -36,6 +37,7 @@ import {
   droppedKeyMessage,
   type GanttSearch,
   ganttSearch,
+  startOfFrom,
   withChain,
   withFrom,
   withOrder,
@@ -51,16 +53,13 @@ import { usePlanningDraft } from '../../planning-draft.tsx';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
   type ClosedWindow,
-  createTimeScale,
-  extendedRange,
-  naturalWidthPx,
   plantDateOf,
-  rangeLabel,
-  rangeOf,
-  shiftedFrom,
+  spanLabel,
   type TimeRange,
 } from '../../timeline/time-scale.ts';
-import { useRangeExtension, useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
+import { useTimeBuffer } from '../../timeline/use-time-buffer.ts';
+import { useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
+import type { ZoomPlant } from '../../timeline/zoom-view.ts';
 import { remPx, useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { useMoveActions } from '../../use-move-actions.ts';
 import { chainOf } from './gantt-chain.ts';
@@ -121,6 +120,21 @@ function shortageChangeText(
 }
 
 /**
+ * The plant calendar, kept while a load answers the same one, so a load of the buffer never
+ * changes the closed time Hide closed time compresses and rebuilds the buffer again.
+ */
+function useStableCalendar(calendar: GanttCalendar | undefined): GanttCalendar | undefined {
+  // Each loaded calendar is compared once, when it arrives, as React's rule for state derived
+  // from props says.
+  const [kept, setKept] = useState({ seen: calendar, calendar });
+  if (calendar === kept.seen) return kept.calendar;
+  const same = JSON.stringify(calendar) === JSON.stringify(kept.calendar);
+  const next = { seen: calendar, calendar: same ? kept.calendar : calendar };
+  setKept(next);
+  return next.calendar;
+}
+
+/**
  * The order Gantt (plan 18, The order Gantt), the board route's view=gantt: the tree of orders,
  * operations and job orders on the left, the time area on the right, both inside one treegrid, the
  * pinned Not placed row under the time header, and the toolbar of D5. The URL holds the view, the
@@ -163,70 +177,13 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   /** The row that takes focus when the drawer closes: the opened row, or the row a chain link named. */
   const returnRowId = useRef<string | undefined>(undefined);
   const [width, gridRef] = useMeasuredWidth();
-  const zoom = search.zoom ?? defaultZoom;
+  const urlZoom = search.zoom ?? defaultZoom;
   const [fillHeight, fillRef] = useViewportFill(
-    `${zoom}|${search.from ?? ''}|${options.hideClosed}|${options.workload}`,
+    `${urlZoom}|${search.from ?? ''}|${options.hideClosed}|${options.workload}`,
   );
 
   const timeZone = committed?.plant.timeZone ?? 'UTC';
   const productionDayStart = committed?.plant.productionDayStart ?? '06:00';
-  // The range starts at the date in the URL, else at the snapshot's now, else at today.
-  const from =
-    search.from ??
-    (committed === undefined
-      ? plantDateOf(Date.now(), timeZone)
-      : plantDateOf(committed.nowMs, timeZone));
-  // The chosen range names the grid and the toolbar; the loaded range grows by whole spans of the
-  // preset as the planner scrolls towards an edge (#685), and shrinks back when from or zoom change.
-  const chosenRange = useMemo(
-    () => rangeOf(from, zoom, timeZone, productionDayStart),
-    [from, zoom, timeZone, productionDayStart],
-  );
-  // The extension belongs to one chosen start and zoom; a change of either resets it, unless a
-  // level change asked for the extension that holds its anchor (ADR 0089).
-  const rangeExtension = useRangeExtension(from, zoom);
-  const { extension, setExtension } = rangeExtension;
-  const range = useMemo(
-    () => extendedRange(from, zoom, timeZone, productionDayStart, extension),
-    [from, zoom, timeZone, productionDayStart, extension],
-  );
-  // Everything the view draws reads the plan with the draft applied, analysed over the loaded
-  // range (plan 18, Resolving a break in the draft).
-  const snapshot = useMemo(
-    () => (committed === undefined ? undefined : applyDraft(committed, draft, range)),
-    [committed, draft, range],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoadError(undefined);
-    source
-      .load({
-        from: new Date(range.fromMs).toISOString(),
-        to: new Date(range.toMs).toISOString(),
-        filter: {},
-      })
-      .then((loaded) => {
-        if (!cancelled) setSnapshot(loaded);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) setLoadError(error ?? new Error('The Gantt could not be loaded'));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [source, range.fromMs, range.toMs, attempt]);
-
-  // chain without order is dropped with the polite status message (ADR 0062, plan 18).
-  const droppedChain = search.chain !== undefined && search.order === undefined;
-  useEffect(() => {
-    if (!droppedChain) return;
-    const { chain: _, ...rest } = search;
-    void setSearch(rest);
-    announce(droppedKeyMessage);
-  }, [droppedChain, search, setSearch]);
-
-  const rows = useMemo(() => (snapshot === undefined ? [] : buildGanttRows(snapshot)), [snapshot]);
   const columns = useMemo(() => visibleColumns(options.hiddenColumns), [options.hiddenColumns]);
   // The tree pane takes its columns' widths up to 40 percent of the view; the Name column gives
   // way first. While the pane fits the cap every tree cell sticks and the time column scrolls under
@@ -246,26 +203,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     index === 0 ? 0 : nameWidth + columns.slice(1, index).reduce((sum, c) => sum + c.widthPx, 0),
   );
 
-  const plantClosed = useMemo(
-    () => (snapshot === undefined ? [] : closedWindows(snapshot.calendar, timeZone, range)),
-    [snapshot, timeZone, range],
-  );
-  const closedByCalendar = useMemo(() => {
-    const byName = new Map<string, readonly ClosedWindow[]>();
-    if (snapshot !== undefined) byName.set(snapshot.calendar.name, plantClosed);
-    return byName;
-  }, [snapshot, plantClosed]);
-  // The time area takes the preset's natural width when that is wider than the space beside the
-  // tree pane, and scrolls sideways inside the grid under the sticky tree columns.
-  const hideClosed = options.hideClosed ? { closed: plantClosed } : undefined;
-  const timeWidth = Math.max(
-    width - Math.min(treeWidth, cap),
-    Math.ceil(naturalWidthPx(range, zoom, hideClosed)),
-  );
-  // A span added before the range widens the time column on the left: the scroll position moves by
-  // the added width in the same frame, so what was in view stays in view.
-  const lastTimeWidth = useRef<number | undefined>(undefined);
-  const shiftAfterGrowth = useRef(false);
   const gridElement = useRef<HTMLElement | null>(null);
   // One ref for the grid, kept across renders, so the width is not measured again on each one.
   const ganttGridRef = useCallback(
@@ -275,77 +212,126 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     },
     [gridRef],
   );
-  // An edge counts only after a horizontal move of the planner towards it: a vertical scroll
-  // changes nothing, a range under two screens wide extends on the side the planner is heading
-  // for, and a move of the position the view makes itself (the shift after a span was added on
-  // the left, the clamp after the range shrank) counts as the new baseline, not as a move.
-  const lastScrollLeft = useRef(0);
-  useLayoutEffect(() => {
-    const previous = lastTimeWidth.current;
-    lastTimeWidth.current = timeWidth;
-    const grid = gridElement.current;
-    if (grid === null) return;
-    if (shiftAfterGrowth.current && previous !== undefined && timeWidth > previous) {
-      grid.scrollLeft += timeWidth - previous;
-    }
-    shiftAfterGrowth.current = false;
-    // The browser has laid the new width out and clamped the position by now.
-    lastScrollLeft.current = grid.scrollLeft;
-  }, [timeWidth]);
-  const onGridScroll = (grid: HTMLElement) => {
-    // A pointer drag scrolls within the range it has: a range that grew under it would move the
-    // axis under the pointer. The position before the drag stays the baseline, and the drop checks
-    // the edges the drag scrolled to (#899).
-    if (moveStore.get()?.state.source === 'pointer') return;
-    const { scrollLeft, clientWidth, scrollWidth } = grid;
-    const previous = lastScrollLeft.current;
-    lastScrollLeft.current = scrollLeft;
-    if (clientWidth <= 0 || scrollLeft === previous) return;
-    if (scrollLeft > previous && scrollLeft + clientWidth >= scrollWidth - clientWidth) {
-      setExtension((current) => ({ ...current, after: current.after + 1 }));
-    } else if (scrollLeft < previous && scrollLeft <= clientWidth) {
-      shiftAfterGrowth.current = true;
-      setExtension((current) => ({ ...current, before: current.before + 1 }));
-    }
-  };
-  const gridTemplateColumns = [
-    `${nameWidth}px`,
-    ...columns.slice(1).map((column) => `${column.widthPx}px`),
-    `${timeWidth}px`,
-  ].join(' ');
-  const scale = useMemo(
-    () =>
-      createTimeScale({
-        range,
-        zoom,
-        timeZone,
-        widthPx: timeWidth,
-        productionDayStart,
-        ...(options.hideClosed && { hideClosed: { closed: plantClosed } }),
-      }),
-    [range, zoom, timeZone, timeWidth, productionDayStart, options.hideClosed, plantClosed],
-  );
-  const calendar = snapshot?.calendar;
-  const timelineZoom = useTimelineZoom({
-    zoom,
-    range: rangeExtension,
-    scale,
-    grid: gridElement,
-    columns: { treeWidth, stickyWidth },
-    plant: {
+  // Hide closed time compresses the plant calendar's closed windows; the calendar is kept while a
+  // load answers the same one, so a load never rebuilds the buffer.
+  const calendar = useStableCalendar(committed?.calendar);
+  const zoomPlant = useMemo<ZoomPlant>(
+    () => ({
       timeZone,
       productionDayStart,
       ...(options.hideClosed &&
         calendar !== undefined && {
           closedOf: (around: TimeRange) => closedWindows(calendar, timeZone, around),
         }),
+    }),
+    [timeZone, productionDayStart, options.hideClosed, calendar],
+  );
+  // The endless axis (ADR 0089): a buffer of three viewport widths that moves near an edge. A
+  // pointer drag holds it, since the drag reads its moves in this buffer's pixels (#899).
+  const buffer = useTimeBuffer({
+    zoom: urlZoom,
+    from: search.from,
+    nowMs: committed?.nowMs ?? Date.now(),
+    widthPx: width,
+    grid: gridElement,
+    columns: { treeWidth, stickyWidth },
+    plant: zoomPlant,
+    // The level goes to the URL when it changes, so a default level stays out of it.
+    onNavigate: (level, start) =>
+      void setSearch(withFrom(level === urlZoom ? search : withZoom(search, level), start)),
+    frozen: {
+      get: () => moveStore.get()?.state.source === 'pointer',
+      subscribe: (listener) => moveStore.subscribe(listener),
     },
-    onNavigate: (level, start) => void setSearch(withFrom(withZoom(search, level), start)),
-    onScrolled: (left) => {
-      lastScrollLeft.current = left;
-    },
+  });
+  const zoom = buffer.zoom;
+  const range = buffer.range;
+  // Everything the view draws reads the plan with the draft applied, analysed over the buffer
+  // (plan 18, Resolving a break in the draft).
+  const snapshot = useMemo(
+    () =>
+      committed === undefined || range === undefined
+        ? undefined
+        : applyDraft(committed, draft, range),
+    [committed, draft, range],
+  );
+
+  useEffect(() => {
+    if (range === undefined) return;
+    let cancelled = false;
+    setLoadError(undefined);
+    source
+      .load({
+        from: new Date(range.fromMs).toISOString(),
+        to: new Date(range.toMs).toISOString(),
+        filter: {},
+      })
+      .then((loaded) => {
+        if (!cancelled) setSnapshot(loaded);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setLoadError(error ?? new Error('The Gantt could not be loaded'));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [source, range, attempt]);
+
+  // chain without order is dropped with the polite status message (ADR 0062, plan 18).
+  const droppedChain = search.chain !== undefined && search.order === undefined;
+  useEffect(() => {
+    if (!droppedChain) return;
+    const { chain: _, ...rest } = search;
+    void setSearch(rest);
+    announce(droppedKeyMessage);
+  }, [droppedChain, search, setSearch]);
+
+  const rows = useMemo(() => (snapshot === undefined ? [] : buildGanttRows(snapshot)), [snapshot]);
+
+  const plantClosed = useMemo(
+    () =>
+      snapshot === undefined || range === undefined
+        ? []
+        : closedWindows(snapshot.calendar, timeZone, range),
+    [snapshot, timeZone, range],
+  );
+  const closedByCalendar = useMemo(() => {
+    const byName = new Map<string, readonly ClosedWindow[]>();
+    if (snapshot !== undefined) byName.set(snapshot.calendar.name, plantClosed);
+    return byName;
+  }, [snapshot, plantClosed]);
+  // The time area is the buffer at its natural width, and scrolls sideways inside the grid under
+  // the sticky tree columns.
+  const scale = buffer.scale;
+  const timeWidth = Math.ceil(scale?.widthPx ?? 0);
+  const gridTemplateColumns = [
+    `${nameWidth}px`,
+    ...columns.slice(1).map((column) => `${column.widthPx}px`),
+    `${timeWidth}px`,
+  ].join(' ');
+  const timelineZoom = useTimelineZoom({
+    buffer,
+    grid: gridElement,
+    plant: zoomPlant,
     dragging: () => moveStore.get()?.state.source === 'pointer',
   });
+
+  // The workload lanes keep the time area's scroll position, also after a buffer move, which
+  // corrects the grid's position in a layout effect before this one runs.
+  const workloadLanes = useRef<HTMLDivElement | null>(null);
+  const followGrid = useCallback(() => {
+    const lanes = workloadLanes.current;
+    const left = gridElement.current?.scrollLeft;
+    if (lanes !== null && left !== undefined && lanes.scrollLeft !== left) lanes.scrollLeft = left;
+  }, []);
+  const workloadRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      workloadLanes.current = node;
+      followGrid();
+    },
+    [followGrid],
+  );
+  useLayoutEffect(followGrid);
 
   const table = useGanttTable({
     rows,
@@ -416,20 +402,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     timeZone,
     focusBlock,
   });
-  // The end of a pointer drag checks the edges, as a scroll to where the drag left the view would.
-  const checkEdges = useRef(onGridScroll);
-  useLayoutEffect(() => {
-    checkEdges.current = onGridScroll;
-  });
-  useEffect(() => {
-    let dragging = false;
-    return moveStore.subscribe(() => {
-      const pointer = moveStore.get()?.state.source === 'pointer';
-      const grid = gridElement.current;
-      if (dragging && !pointer && grid !== null) checkEdges.current(grid);
-      dragging = pointer;
-    });
-  }, [moveStore]);
   const rowById = useMemo(() => {
     const map = new Map<string, GanttRow>();
     const addOrder = (order: GanttRow) => {
@@ -592,7 +564,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   }, [committed, draft, materialShortages]);
   const boardFields = useBoardFields(plant);
   const view = useMemo<GanttViewContext | undefined>(() => {
-    if (snapshot === undefined) return undefined;
+    if (snapshot === undefined || scale === undefined) return undefined;
     const equipment = new Map(snapshot.equipment.map((machine) => [machine.code, machine]));
     const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     return {
@@ -640,7 +612,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     boardFields,
   ]);
   const { links, limited } =
-    snapshot === undefined
+    snapshot === undefined || scale === undefined
       ? { links: [], limited: false }
       : linksOf(linkRows, snapshot, scale, search.order);
 
@@ -789,7 +761,16 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     }
   };
 
-  const gridName = `${plant} order Gantt, ${rangeLabel(chosenRange, zoom, timeZone)}`;
+  const gridName = [
+    `${plant} order Gantt`,
+    ...(buffer.settled === undefined ? [] : [spanLabel(buffer.settled, zoom, timeZone)]),
+  ].join(', ');
+  // Go to date shows the date of the visible start, which the URL holds once scrolling stops; a
+  // date the planner picks opens at its level's start.
+  const goToDate = (search.from ?? plantDateOf(committed?.nowMs ?? Date.now(), timeZone)).slice(
+    0,
+    10,
+  );
   const rowCount = flatRows.length + 2;
   const focusedId =
     focusedRowId !== undefined && flatRows.some((row) => row.id === focusedRowId)
@@ -811,12 +792,17 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             const target = fitTargetOf(detailRow ?? selectionRowOf(selected, rowById), rows);
             timelineZoom.fit(target.span, target.name);
           }}
-          from={from}
-          onFromChange={(next) => void setSearch(withFrom(search, next))}
-          onEarlier={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'earlier')))}
+          from={goToDate}
+          onFromChange={(next) =>
+            buffer.goTo(zoom, {
+              ms: startOfFrom(next, zoom, timeZone, productionDayStart),
+              viewportX: stickyWidth,
+            })
+          }
+          onEarlier={() => buffer.page('earlier')}
           onNow={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
-          onLater={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'later')))}
-          rangeLabel={rangeLabel(chosenRange, zoom, timeZone)}
+          onLater={() => buffer.page('later')}
+          rangeLabel={<VisibleSpanText visible={buffer.visible} zoom={zoom} timeZone={timeZone} />}
           options={options}
           onOptionsChange={setOptions}
           draftCount={draftChangeCount(draft)}
@@ -835,7 +821,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
           .filter((part) => part !== undefined)
           .join(' ')}
       </p>
-      {view !== undefined && snapshot !== undefined && (
+      {view !== undefined && snapshot !== undefined && scale !== undefined && (
         <GanttViewProvider value={view}>
           <div
             ref={fillRef}
@@ -866,7 +852,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                   void setSearch(withChain(search, false));
                 }
               }}
-              onScroll={(event) => onGridScroll(event.currentTarget)}
+              onScroll={() => {
+                buffer.onScroll();
+                followGrid();
+              }}
               className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
               style={{
                 scrollPaddingTop: `${timeHeaderHeightRem + notPlacedHeightRem}rem`,
@@ -950,6 +939,14 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 stickyWidth={stickyWidth}
                 timeWidth={timeWidth}
                 moveStore={moveStore}
+                {...(buffer.settled !== undefined && { visible: buffer.settled })}
+                scrollerRef={workloadRef}
+                onScroll={(left) => {
+                  const grid = gridElement.current;
+                  if (grid === null || grid.scrollLeft === left) return;
+                  grid.scrollLeft = left;
+                  buffer.onScroll();
+                }}
               />
             )}
           </div>

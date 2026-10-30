@@ -4,6 +4,7 @@ import { planningLinks } from '@northmes/planning-contracts';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { vi } from 'vitest';
 import {
   type BoardFieldsStore,
   BoardFieldsStoreProvider,
@@ -101,6 +102,25 @@ export function renderPlanningAt(
  */
 export async function findGantt(): Promise<HTMLElement> {
   return screen.findByRole('treegrid', { name: /order Gantt/, hidden: true });
+}
+
+/**
+ * Makes every grid measure a width, as a ResizeObserver reports it, since the test browser lays
+ * nothing out; the time area's buffer takes its width from it (ADR 0089). Undo it with
+ * vi.unstubAllGlobals.
+ */
+export function measureGridsAt(widthPx: number) {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor(private readonly report: ResizeObserverCallback) {}
+      observe() {
+        this.report([{ contentRect: { width: widthPx } } as ResizeObserverEntry], this);
+      }
+      disconnect() {}
+      unobserve() {}
+    },
+  );
 }
 
 /** A data source that answers every load with one snapshot, for a test with changed data. */

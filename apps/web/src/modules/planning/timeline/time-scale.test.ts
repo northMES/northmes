@@ -3,7 +3,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   createTimeScale,
-  extendedRange,
   isCoarseLevel,
   isFineLevel,
   naturalWidthPx,
@@ -54,33 +53,6 @@ describe('rangeOf (plan 18, Shared pieces)', () => {
     expect(shiftedFrom('2026-11-02', 'day', 'earlier')).toBe('2026-10-30');
     expect(shiftedFrom('2026-11-02', 'hours', 'later')).toBe('2026-11-03');
     expect(shiftedFrom('2026-11-02', '4weeks', 'later')).toBe('2026-11-30');
-  });
-});
-
-describe('extendedRange (#685)', () => {
-  const stockholm = 'Europe/Stockholm';
-
-  it('extends a Day range by whole spans of three days, before and after', () => {
-    const chosen = rangeOf('2026-11-04', 'day', stockholm, '06:00');
-    const extended = extendedRange('2026-11-04', 'day', stockholm, '06:00', {
-      before: 1,
-      after: 2,
-    });
-
-    expect(extended.fromMs).toBe(chosen.fromMs - 3 * 86_400_000);
-    expect(extended.toMs).toBe(chosen.toMs + 6 * 86_400_000);
-  });
-
-  it("extends an Hours range by the preset's 12 h span, not by a whole date", () => {
-    const chosen = rangeOf('2026-11-04', 'hours', stockholm, '06:00');
-    const extended = extendedRange('2026-11-04', 'hours', stockholm, '06:00', {
-      before: 1,
-      after: 1,
-    });
-
-    expect(chosen.toMs - chosen.fromMs).toBe(12 * 3_600_000);
-    expect(extended.fromMs).toBe(chosen.fromMs - 12 * 3_600_000);
-    expect(extended.toMs).toBe(chosen.toMs + 12 * 3_600_000);
   });
 });
 
@@ -342,8 +314,8 @@ describe('the header tiers with closed time hidden (ADR 0089, Header tiers)', ()
 describe('the header tiers of an extended Hours range (#892)', () => {
   const local = (date: number, hours: number, minutes = 0) =>
     Date.UTC(2026, 10, date, hours - 1, minutes);
-  // One 12 h span before Wed 4 Nov 06:00: the range starts Tue 3 Nov 18:00.
-  const range = extendedRange('2026-11-04', 'hours', stockholm, '06:00', { before: 1, after: 0 });
+  // An Hours buffer that starts Tue 3 Nov 18:00, 12 h before the production day of Wed 4 Nov.
+  const range = { fromMs: local(3, 18), toMs: local(4, 18) };
 
   it('#892 aligns the day cells to the production day, so a day is named over its own open time', () => {
     const night = { closed: [{ fromMs: local(3, 15), toMs: local(4, 6) }] };
@@ -710,5 +682,52 @@ describe('Hide closed time at the coarse levels (ADR 0089, Header tiers)', () =>
         hideClosed: hidden,
       }).gaps,
     ).toHaveLength(8);
+  });
+});
+
+describe('ADR0089 the clock cells of a buffer that starts off the clock (The endless axis)', () => {
+  // A buffer starts wherever three viewport widths around the view reach, such as 05:30.
+  const local = (date: number, hours: number, minutes = 0) =>
+    Date.UTC(2026, 10, date, hours - 1, minutes);
+  const names = (zoom: 'week' | 'day', fromMs: number, toMs: number) =>
+    createTimeScale({
+      range: { fromMs, toMs },
+      zoom,
+      timeZone: stockholm,
+      productionDayStart: '06:00',
+      widthPx: 1000,
+    })
+      .ticks()
+      .filter((tick) => tick.tier === 'bottom')
+      .map((tick) => tick.name);
+
+  it('keeps the bottom tier on the plant clock: from midnight at Week, from the production day at Day', () => {
+    // The cell from midnight is named by its day above it, as every first cell of a day is.
+    expect(names('week', local(2, 5, 30), local(3, 12)).slice(0, 4)).toEqual([
+      'Mon 2 Nov 06:00',
+      'Mon 2 Nov 12:00',
+      'Mon 2 Nov 18:00',
+      'Tue 3 Nov 06:00',
+    ]);
+    expect(names('day', local(4, 7, 20), local(4, 16))).toEqual([
+      'Wed 4 Nov 09:00',
+      'Wed 4 Nov 12:00',
+      'Wed 4 Nov 15:00',
+    ]);
+  });
+
+  it('starts the clock cells of each day at its own start, also after the autumn clock change inside the buffer', () => {
+    // Sat 24 Oct to Tue 27 Oct 2026 in Stockholm: Sunday has 25 hours.
+    const fromMs = Date.UTC(2026, 9, 23, 22, 0);
+    const toMs = Date.UTC(2026, 9, 26, 23, 0);
+    const cells = names('week', fromMs, toMs);
+
+    expect(cells).toContain('Sun 25 Oct 06:00');
+    expect(cells).toContain('Sun 25 Oct 18:00');
+    expect(cells).toContain('Mon 26 Oct 06:00');
+    expect(cells).toContain('Mon 26 Oct 12:00');
+    expect(
+      cells.some((name) => name.endsWith(':00') && /0[5]:00|11:00|17:00|23:00/.test(name)),
+    ).toBe(false);
   });
 });

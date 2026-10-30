@@ -293,7 +293,9 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     // Fri 13:00 plus the 4 h step is Fri 17:00, closed, so the move lands on Mon 9 Nov 06:00.
     await user.keyboard('m{ArrowRight}{Enter}');
     await waitFor(() => expect(spoken()).toContain('1006.10 moved to Mill 1, Mon 9 Nov 06:00'));
-    await waitFor(() => expect(router.state.location.search).toMatchObject({ from: '2026-11-09' }));
+    // The buffer is rebuilt with the block at the centre of the view, so from is the visible
+    // start before it (ADR 0089).
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-11-0[789]T/));
     await waitFor(() =>
       expect(document.activeElement?.getAttribute('data-job-order')).toBe('1006.10'),
     );
@@ -526,7 +528,7 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     await user.clear(start);
     await user.type(start, '2026-11-16 06:00');
     await user.click(within(dialog).getByRole('button', { name: 'Move' }));
-    await waitFor(() => expect(router.state.location.search).toMatchObject({ from: '2026-11-16' }));
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-11-1[456]T/));
     await waitFor(() =>
       expect(document.activeElement?.getAttribute('data-job-order')).toBe('1001.10'),
     );

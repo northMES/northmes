@@ -37,6 +37,10 @@ test.describe('the planning board', () => {
     // A selected order, by Space, and the hover card that keyboard focus opens on the next job
     // order (D3 IN2).
     await page.getByRole('button', { name: 'Expand Machining' }).click();
+    // The snapshot may scroll the grid back to its start, which moves the time buffer a viewport
+    // earlier (ADR 0089), so the week opens again for the next states.
+    await page.goto(boardHref({ zoom: 'week', from: '2026-11-02' }));
+    await expect(board).not.toHaveAttribute('aria-busy', 'true');
     await board.locator('[data-job-order="1003.20"]').focus();
     await page.keyboard.press('Space');
     await expect(board.locator('[data-job-order="1003.10"]')).toHaveAttribute(
@@ -45,7 +49,8 @@ test.describe('the planning board', () => {
     );
     await page.keyboard.press('ArrowRight');
     await expect(board.locator('[data-job-order="1004.20"]')).toBeFocused();
-    const card = page.getByRole('tooltip');
+    // The card of 1003.20 may still be fading out, so the card is named.
+    const card = page.getByRole('tooltip', { name: /^1004\.20 / });
     await expect(card).toBeVisible();
     await expect(card).toHaveCSS('opacity', '1');
     await checkA11y('a selected order with the hover card of its job order');

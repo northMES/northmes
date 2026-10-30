@@ -158,12 +158,13 @@ describe('the Float column and Details from the analysis (plan 18, What the time
   });
 
   it('closes Details and forgets the row when a reload drops it, and opens again for another row', async () => {
-    // Week 45 answers G1; the week after, reached with Later, answers G1 without order 1003.
+    // The loads answer G1 until the order 1003 is dropped, which a later load answers without it.
+    let dropped = false;
     const source: GanttDataSource = {
       ...g1DataSource,
-      load: async ({ from }) => {
+      load: async () => {
         const snapshot = g1Snapshot();
-        return Date.parse(from) < Date.UTC(2026, 10, 8)
+        return !dropped
           ? snapshot
           : {
               ...snapshot,
@@ -184,10 +185,11 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     await userEvent.dblClick(gantt.querySelector('[data-block="jo-1003-20"]') as HTMLElement);
     await findDetails();
 
-    // A reload while Details is open, as a realtime refetch gives: the next week drops 1003.
+    // A reload while Details is open, as a realtime refetch gives, that no longer has 1003.
+    dropped = true;
     await router.navigate({
       to: '.',
-      search: { view: 'gantt', zoom: 'week', from: '2026-11-09' } as Record<string, unknown>,
+      search: { view: 'gantt', zoom: 'week', from: '2026-11-03' } as Record<string, unknown>,
     });
 
     await waitFor(() => {
