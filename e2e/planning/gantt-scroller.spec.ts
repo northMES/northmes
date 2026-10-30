@@ -216,7 +216,6 @@ test.describe('the time scroller of the order Gantt', () => {
     await expect(page.getByRole('menu')).toHaveCount(0);
     const label = page.getByRole('button', { name: 'Workload on CNC 1' });
     await expect(label).toBeVisible();
-    await checkA11y('the workload panel on a narrow grid');
 
     const grid = await gantt.evaluate((element) => {
       const header = (selector: string) =>
@@ -253,5 +252,9 @@ test.describe('the time scroller of the order Gantt', () => {
     expect(edges.scrolled).toBeGreaterThan(edges.client);
     expect(edges.label).toBeCloseTo(edges.panel, 0);
     expect(edges.buttonEnd).toBeLessThanOrEqual(edges.cellEnd);
+
+    // Last: the full-page Argos snapshot leaves each sticky cell it stabilized at position
+    // relative, so a sticky edge measured after it would scroll away (#926).
+    await checkA11y('the workload panel on a narrow grid');
   });
 });
