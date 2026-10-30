@@ -170,6 +170,7 @@ function WorkloadLane({
   buckets,
   scale,
   treeWidth,
+  stickyWidth,
   timeWidth,
   open,
   buttonId,
@@ -180,6 +181,7 @@ function WorkloadLane({
   readonly buckets: readonly PlacedBucket[];
   readonly scale: TimeScale;
   readonly treeWidth: number;
+  readonly stickyWidth: number;
   readonly timeWidth: number;
   readonly open: boolean;
   readonly buttonId: string;
@@ -187,23 +189,39 @@ function WorkloadLane({
   readonly onOpenChange: (open: boolean) => void;
 }) {
   return (
-    <div className="relative flex border-b border-border" style={{ height: `${laneHeightRem}rem` }}>
+    <div
+      // As wide as its tracks, as GanttRowView's rows are (#890, #910).
+      className="relative flex w-max min-w-full border-b border-border"
+      style={{ height: `${laneHeightRem}rem` }}
+    >
       <div
-        className="sticky start-0 z-10 flex shrink-0 items-center border-e border-border bg-card px-2"
-        style={{ width: `${treeWidth}px` }}
+        className="sticky start-0 z-10 flex min-w-0 shrink-0 items-center border-e border-border bg-card px-2"
+        style={{ width: `${stickyWidth}px` }}
       >
         <Button
           id={buttonId}
           variant="ghost"
-          className={cn('h-7 px-2 text-[0.8125rem] font-medium', open && 'bg-accent')}
+          // A long machine name is cut short inside the label, which may be as narrow as the Name
+          // column; the button's accessible name keeps the whole text.
+          className={cn(
+            'h-7 max-w-full min-w-0 shrink px-2 text-[0.8125rem] font-medium',
+            open && 'bg-accent',
+          )}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? dialogId : undefined}
           onClick={() => onOpenChange(!open)}
         >
-          Workload on {machine.name}
+          <span className="truncate">Workload on {machine.name}</span>
         </Button>
       </div>
+      {stickyWidth < treeWidth && (
+        <div
+          aria-hidden
+          className="shrink-0 border-e border-border"
+          style={{ width: `${treeWidth - stickyWidth}px` }}
+        />
+      )}
       <div
         aria-hidden
         data-lane={machine.code}
@@ -383,12 +401,19 @@ export function GanttWorkloadPanel({
   snapshot,
   scale,
   treeWidth,
+  stickyWidth,
   timeWidth,
   moveStore,
 }: {
   readonly snapshot: GanttSnapshot;
   readonly scale: TimeScale;
   readonly treeWidth: number;
+  /**
+   * The width of the tree columns that stick in the treegrid: all of them, or the Name column
+   * alone on a narrow grid (see GanttRowView). The lane's label sticks as wide, and the rest of the
+   * tree width scrolls away with the time.
+   */
+  readonly stickyWidth: number;
   readonly timeWidth: number;
   readonly moveStore?: MoveStore;
 }) {
@@ -434,6 +459,7 @@ export function GanttWorkloadPanel({
             buckets={lanesOf(machine.code)}
             scale={scale}
             treeWidth={treeWidth}
+            stickyWidth={stickyWidth}
             timeWidth={timeWidth}
             open={openLane === machine.code}
             buttonId={`${idBase}-${machine.code}-button`}

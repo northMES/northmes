@@ -159,7 +159,9 @@ function Row({
       role="row"
       aria-rowindex={index}
       data-machine={machine}
-      className={cn('grid border-b border-border', className)}
+      // As wide as its tracks: a sticky cell cannot leave its row, so a row only as wide as the
+      // grid would take the machine cells with it once the scroll passes the row's width (#910).
+      className={cn('grid w-max min-w-full border-b border-border', className)}
       style={{
         gridTemplateColumns: columns,
         height: `${heightRem}rem`,
