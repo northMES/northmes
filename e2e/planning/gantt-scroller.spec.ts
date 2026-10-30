@@ -58,4 +58,47 @@ test.describe('the time scroller of the order Gantt', () => {
     expect(widths.scroll).toBeGreaterThan(widths.client);
     expect(widths.row).toBeGreaterThan(40);
   });
+
+  // A sticky cell cannot leave its row, so a row only as wide as the grid let the tree columns
+  // scroll away once the range had grown past the overflow a fresh range has.
+  test('#890 the tree columns stay in view after the range grows and the grid scrolls to the far right', async ({
+    page,
+    signIn,
+  }) => {
+    await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+    await expect(gantt).toBeVisible();
+
+    for (let span = 0; span < 6; span += 1) {
+      const before = await gantt.evaluate((grid) => grid.scrollWidth);
+      await gantt.evaluate((grid) => {
+        grid.scrollLeft = grid.scrollWidth;
+        grid.dispatchEvent(new Event('scroll'));
+      });
+      await expect.poll(() => gantt.evaluate((grid) => grid.scrollWidth)).toBeGreaterThan(before);
+    }
+    await gantt.evaluate((grid) => {
+      grid.scrollLeft = grid.scrollWidth;
+    });
+
+    const edges = await gantt.evaluate((grid) => {
+      const left = (selector: string) =>
+        (grid.querySelector(selector) as HTMLElement).getBoundingClientRect().left;
+      return {
+        scrolled: grid.scrollLeft,
+        client: grid.clientWidth,
+        grid: grid.getBoundingClientRect().left + grid.clientLeft,
+        header: left('[aria-rowindex="1"] > [role="columnheader"]'),
+        notPlaced: left('[aria-rowindex="2"] > [role="rowheader"]'),
+        order: left('[data-row-kind="order"] > [role="rowheader"]'),
+        jobOrder: left('[data-row-kind="jobOrder"] > [role="rowheader"]'),
+      };
+    });
+    // The position passed a row as wide as the grid, where the bug showed.
+    expect(edges.scrolled).toBeGreaterThan(edges.client);
+    expect(edges.header).toBeCloseTo(edges.grid, 0);
+    expect(edges.notPlaced).toBeCloseTo(edges.grid, 0);
+    expect(edges.order).toBeCloseTo(edges.grid, 0);
+    expect(edges.jobOrder).toBeCloseTo(edges.grid, 0);
+  });
 });
