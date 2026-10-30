@@ -3,7 +3,7 @@
 
 import type { JobOrderSpan } from '@northmes/planning-domain';
 import { cn } from 'cn';
-import { Clock, Lock, Pencil, TriangleAlert } from 'lucide-react';
+import { CircleCheck, Clock, Lock, Pencil, TriangleAlert } from 'lucide-react';
 import {
   type KeyboardEvent,
   type PointerEvent,
@@ -26,7 +26,7 @@ import { isCoarseLevel, type TimeScale } from '../../timeline/time-scale.ts';
 import { blockName, blockStates } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
 import { GanttHoverCard, GanttHoverFields, hoverFields } from './gantt-hover-card.tsx';
-import { tooltipText } from './gantt-move.ts';
+import { pointerStart, tooltipText } from './gantt-move.ts';
 import type { JobOrderRow } from './gantt-rows.ts';
 
 /** The width from which a block shows its first line, its second line, and the setup hatch (D3). */
@@ -105,10 +105,10 @@ export function GanttBlock({
     },
     [],
   );
-  // The scale and the move of the latest render, for the autoscroll frames to read.
-  const latest = useRef({ scale, move });
+  // The scale, the move and now of the latest render, for the autoscroll frames to read.
+  const latest = useRef({ scale, move, nowMs: snapshot.nowMs });
   useLayoutEffect(() => {
-    latest.current = { scale, move };
+    latest.current = { scale, move, nowMs: snapshot.nowMs };
   });
   // The click the browser fires after a drop is not a selection.
   const dropped = useRef(false);
@@ -158,8 +158,11 @@ export function GanttBlock({
     .filter((hollow) => hollow.w > 0 && !(coarse && hollow.w < hollowMinPx));
   // The text lines sit on the order color: a hollow segment shows the lane color, which is dark
   // in the dark theme while the text is pure black, so text over a hollow could not be read (#882).
-  // The setup hatch, the outlines and the conflict edge sit above the text at z-[3].
-  const color = `var(--${order.color})`;
+  // The setup hatch, the outlines and the conflict edge sit above the text at z-[3]. A finished
+  // job order is drawn muted, with the order color as its leading edge and the finished cue
+  // (ADR 0089, Time before now); an overdue one keeps its color.
+  const finished = jobOrder.status === 'finished';
+  const color = finished ? 'var(--muted)' : `var(--${order.color})`;
 
   const onPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0 || move === undefined) return;
@@ -175,14 +178,14 @@ export function GanttBlock({
       armed: false,
     };
   };
-  // The drop snaps first to the preset's step, then forward to working time in the preview. The
-  // pointer's travel counts the time area's scroll since the press, so the preview follows an
-  // autoscroll under a pointer that stands still.
+  // The drop snaps first to the preset's step, at or after now while the pointer is (ADR 0089),
+  // then forward to working time in the preview. The pointer's travel counts the time area's
+  // scroll since the press, so the preview follows an autoscroll under a pointer that stands still.
   const previewPointer = (current: NonNullable<typeof press.current>) => {
-    const { scale: at, move: moving } = latest.current;
+    const { scale: at, move: moving, nowMs } = latest.current;
     const scrolled = (current.scroller?.scrollLeft ?? 0) - current.scrollLeft;
     const dx = current.pointerX - current.clientX + scrolled;
-    moving?.previewAt(at.snap(at.instant(at.x(current.setupStartMs) + dx)));
+    moving?.previewAt(pointerStart(at, at.instant(at.x(current.setupStartMs) + dx), nowMs));
   };
   // One frame of autoscroll (#899): near the left or right edge of the visible time area the view
   // scrolls, within the content it has, at a speed per time rather than per frame, and the preview
@@ -333,11 +336,14 @@ export function GanttBlock({
                 selected && 'border-t-3 border-t-black',
                 inDraft && 'border-3 border-double border-black',
                 moving && 'opacity-60',
+                finished && 'text-muted-foreground',
               )}
+              data-finished={finished || undefined}
               style={{
                 left: `${left}px`,
                 width: `${width}px`,
                 background: color,
+                ...(finished && { boxShadow: `inset 4px 0 0 var(--${order.color})` }),
               }}
             />
           }
@@ -406,6 +412,9 @@ export function GanttBlock({
               )}
               style={{ background: color }}
             >
+              {finished && (
+                <CircleCheck aria-hidden data-finished-cue className="size-3.5 shrink-0" />
+              )}
               {locked && <Lock aria-hidden className="size-3.5 shrink-0" />}
               {inDraft && <Pencil aria-hidden className="size-3.5 shrink-0" />}
               {late && <Clock aria-hidden className="size-3.5 shrink-0" />}
@@ -532,7 +541,12 @@ function GanttMovePreview({
           data-move-preview={jobOrderId}
           data-from-ms={preview.span.setupStartMs}
           data-to-ms={preview.span.endMs}
-          className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground bg-foreground/10"
+          data-refused={preview.refused}
+          className={cn(
+            'pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground bg-foreground/10',
+            // A refused move, such as one before now, outlines where it was asked for, dashed.
+            preview.refused !== undefined && 'border-dashed border-destructive',
+          )}
           style={{ left: `${box.left}px`, width: `${box.width}px` }}
         />
         <span

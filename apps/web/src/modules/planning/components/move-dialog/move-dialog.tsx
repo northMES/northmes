@@ -16,7 +16,7 @@ import {
 } from '../../../../ui/primitives/dialog.tsx';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/primitives/radio-group.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
-import { type MovePreview, previewOf } from '../../screens/gantt/gantt-move.ts';
+import { type MovePreview, previewOf, refusalMessage } from '../../screens/gantt/gantt-move.ts';
 import type { JobOrderRow } from '../../screens/gantt/gantt-rows.ts';
 import { startOf, startText } from './move-dialog-start.ts';
 
@@ -94,7 +94,6 @@ function MoveForm({
     const instant = startOf(next, timeZone);
     if (instant !== undefined) setSetupStartMs(instant);
   };
-  const showError = submits > 0 && parsed === undefined;
   const ids = useId();
   const startId = `${ids}-start`;
   const zone = formatPlantTime(setupStartMs, timeZone, { zoneLabel: true }).split(' ').at(-1);
@@ -116,6 +115,13 @@ function MoveForm({
   );
   const chosen = previews.get(equipment);
   const frozen = chosen?.conflicts.some((conflict) => conflict.kind === 'FROZEN_WINDOW') === true;
+  // A start before now is refused with PAST as a drag's would be (ADR 0089): Move keeps the
+  // dialog open with the refusal on the field.
+  const past = parsed !== undefined && chosen?.refused === 'PAST';
+  const showError = submits > 0 && (parsed === undefined || past);
+  const fieldError = past
+    ? `${refusalMessage(row.jobOrder.displayNumber, 'PAST')} Enter a start at or after ${formatPlantDateTime(snapshot.nowMs, timeZone)}.`
+    : 'Enter a date and time like 2026-11-03 11:30.';
   const stepText = formatDuration(stepMs / 1000);
   // A step moves the start one snap from the snapped start the preview shows and writes the
   // snapped start. Backwards, the forward snap of the calendar can land on the same instant again,
@@ -155,7 +161,7 @@ function MoveForm({
         onSubmit={(event) => {
           event.preventDefault();
           setSubmits((count) => count + 1);
-          if (parsed !== undefined) onMove(equipment, parsed);
+          if (parsed !== undefined && !past) onMove(equipment, parsed);
         }}
       >
         <ErrorSummary
@@ -243,7 +249,7 @@ function MoveForm({
             value={text}
             onChange={(event) => edit(event.target.value)}
             className="font-mono"
-            {...(showError && { error: 'Enter a date and time like 2026-11-03 11:30.' })}
+            {...(showError && { error: fieldError })}
             hint={`${
               frozen
                 ? `Starts in the frozen window, which ends at ${formatPlantTime(snapshot.fenceMs, timeZone)}, so Save asks for a reason. `

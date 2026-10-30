@@ -26,6 +26,7 @@ const countWords: Readonly<Record<BoardBlockState['kind'], string>> = {
   locked: 'locked',
   draft: 'changed in your draft',
   started: 'started',
+  finished: 'finished',
   conflict: 'in conflict',
   overdue: 'overdue',
 };

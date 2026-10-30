@@ -52,9 +52,15 @@ export interface GanttDraft {
 
 export const emptyDraft: GanttDraft = { changes: [], runs: [] };
 
+/**
+ * The code of a draft conflict: a broken constraint line, or `PAST` for a draft row whose setup
+ * start passed while it waited, which Save lists for a confirmation with a reason (ADR 0089).
+ */
+export type DraftConflictCode = ConstraintCode | 'PAST';
+
 /** A conflict the draft creates, as the My draft list shows it, with the rows its actions act on. */
 export interface DraftConflict {
-  readonly code: ConstraintCode;
+  readonly code: DraftConflictCode;
   readonly orderId: string;
   /** The two rows, the earlier first, by display number. */
   readonly rows: readonly [string, string];
@@ -169,7 +175,7 @@ export function moveInDraft(
 /** The display numbers of a conflict line, as its text names the rows. */
 export function conflictText(
   timeZone: string,
-  code: ConstraintCode,
+  code: DraftConflictCode,
   rows: readonly [string, string],
   clearsAtMs: number | undefined,
   beforeByS: number | undefined,
@@ -188,6 +194,8 @@ export function conflictText(
       return `${rows[0]} and ${rows[1]} overlap on the same machine`;
     case 'CLOSED_TIME':
       return `${rows[1]} has work in closed time`;
+    case 'PAST':
+      return `${rows[1]} starts before now`;
     default:
       return `${rows[1]}: ${code}`;
   }
@@ -197,11 +205,22 @@ export function conflictText(
  * The conflicts the draft creates (plan 18, Resolving a break in the draft): every broken
  * precedence or overlap line of a draft row, or of a row whose predecessor or machine neighbour is
  * a draft row, one line per conflict with the two rows, the rule and the instant that clears it.
- * The list equals what validate() finds for the draft over the committed rows.
+ * The list equals what validate() finds for the draft over the committed rows. A draft row whose
+ * setup start has passed while it waited lists a `PAST` line first, which no instant clears
+ * (ADR 0089, Time before now).
  */
 export function draftConflicts(applied: GanttSnapshot, draft: GanttDraft): DraftConflict[] {
   const draftIds = draftRowIds(draft);
-  const conflicts: DraftConflict[] = [];
+  const conflicts: DraftConflict[] = draft.changes
+    .filter((change) => change.to.setupStartMs < applied.nowMs)
+    .map((change) => ({
+      code: 'PAST',
+      orderId: change.orderId,
+      rows: [change.displayNumber, change.displayNumber],
+      draftRow: change.jobOrderId,
+      laterRow: change.jobOrderId,
+      text: `${change.displayNumber} starts at ${formatPlantDateTime(change.to.setupStartMs, applied.plant.timeZone)}, before now`,
+    }));
   const seen = new Set<string>();
   for (const order of applied.productionOrders) {
     for (const row of order.jobOrders) {

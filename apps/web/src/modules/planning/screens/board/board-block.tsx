@@ -2,7 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatPlantTime, formatSpan } from '@northmes/contracts/format';
 import { cn } from 'cn';
-import { Clock, ClockAlert, Lock, type LucideIcon, Pencil, Play, UserPen } from 'lucide-react';
+import {
+  CircleCheck,
+  Clock,
+  ClockAlert,
+  Lock,
+  type LucideIcon,
+  Pencil,
+  Play,
+  UserPen,
+} from 'lucide-react';
 import { type FocusEvent, type KeyboardEvent, type PointerEvent, useRef } from 'react';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
@@ -10,6 +19,7 @@ import type { GanttSnapshot } from '../../gantt-data.ts';
 import { orderNumbersText } from '../../gantt-draft.ts';
 import { useMoveOf } from '../../move-store.ts';
 import { useGanttView } from '../gantt/gantt-context.ts';
+import { pointerStart } from '../gantt/gantt-move.ts';
 import { type JobOrderRow, quantityText } from '../gantt/gantt-rows.ts';
 import { type BoardBlockState, boardBlockStates, borderMarkerOf } from './board-block-states.ts';
 import { BoardHoverCard } from './board-hover-card.tsx';
@@ -36,6 +46,7 @@ const stateIcons: Partial<Record<BoardBlockState['kind'], LucideIcon>> = {
   held: UserPen,
   draft: Pencil,
   started: Play,
+  finished: CircleCheck,
   late: Clock,
   overdue: ClockAlert,
 };
@@ -168,6 +179,7 @@ export function BoardBlock({
   };
   const marker = borderMarkerOf(states);
   const conflict = states.some((state) => state.kind === 'conflict');
+  const finished = states.some((state) => state.kind === 'finished');
   const icons = states.flatMap((state) => {
     const icon = stateIcons[state.kind];
     return icon === undefined ? [] : [{ kind: state.kind, icon }];
@@ -206,7 +218,7 @@ export function BoardBlock({
     const allowed = target === undefined || row.operation.allowedEquipment.includes(target);
     current.refusedOn = allowed ? undefined : target;
     move.previewAt(
-      scale.snap(scale.instant(scale.x(current.setupStartMs) + dx)),
+      pointerStart(scale, scale.instant(scale.x(current.setupStartMs) + dx), snapshot.nowMs),
       allowed ? target : undefined,
     );
   };
@@ -287,11 +299,15 @@ export function BoardBlock({
               // The origin of a move keeps its text at full contrast (WCAG 1.4.3): a dashed
               // border marks it, not a dimmed fill (design D3, IN4, the origin slot).
               moving && 'border-2 border-dashed border-foreground',
+              finished && 'text-muted-foreground',
             )}
+            // A finished job order is drawn muted, with the order color as its leading edge
+            // (ADR 0089, Time before now); an overdue one keeps its color.
             style={{
               left: `${left}px`,
               width: `${width}px`,
-              background: `var(--${order.color})`,
+              background: finished ? 'var(--muted)' : `var(--${order.color})`,
+              ...(finished && { boxShadow: `inset 4px 0 0 var(--${order.color})` }),
             }}
           />
         }

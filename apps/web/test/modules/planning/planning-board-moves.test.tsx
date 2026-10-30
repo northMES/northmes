@@ -284,6 +284,35 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     await waitFor(() => expect(document.activeElement).toBe(block(board, '1001.10')));
     expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
   });
+  it('ADR 0089 Move with a start before now keeps the dialog open with the PAST refusal and writes nothing', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+    await user.keyboard('{Shift>}{F10}{/Shift}');
+    await user.click(await screen.findByRole('menuitem', { name: 'Move' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Move 1001.10 Bracket L' });
+    const start = within(dialog).getByRole('textbox', { name: 'Start, plant time (CET)' });
+
+    // G1's now is Mon 2 Nov 09:40.
+    await user.clear(start);
+    await user.type(start, '2026-11-02 09:00');
+    await user.click(within(dialog).getByRole('button', { name: 'Move' }));
+
+    const summary = within(dialog).getByRole('group', { name: '1 field needs attention' });
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    expect(start.getAttribute('aria-invalid')).toBe('true');
+    expect(
+      within(dialog).getByText(
+        'Cannot move 1001.10: it would start before now. Enter a start at or after Mon 2 Nov 09:40.',
+      ),
+    ).toBeTruthy();
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+  });
+
   it('plan 07 a move that lands after the range moves the range with it and keeps focus on the block', async () => {
     const user = userEvent.setup();
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');

@@ -422,9 +422,11 @@ export function BoardScreen() {
       { jobOrderId, setupStartMs, equipment },
       { cascade: true },
     );
-    if (result.refused !== undefined || preview === undefined) {
-      if (result.refused !== undefined && preview !== undefined) {
-        announce(refusalMessage(preview.displayNumber, result.refused));
+    // A start before now is refused with PAST in the preview; the cascade knows no now (ADR 0089).
+    const refused = preview?.refused ?? result.refused;
+    if (refused !== undefined || preview === undefined) {
+      if (refused !== undefined && preview !== undefined) {
+        announce(refusalMessage(preview.displayNumber, refused));
       }
       return;
     }

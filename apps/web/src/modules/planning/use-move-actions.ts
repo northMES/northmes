@@ -144,7 +144,9 @@ export function useMoveActions({
         })),
       // A step moves one snap step from the snapped preview. Backwards, the forward snap of the
       // calendar would land a step in closed time on the same instant again, so the step jumps to
-      // the last step before the closed time (plan 18, Snapping and the calendar).
+      // the last step before the closed time (plan 18, Snapping and the calendar). Forwards from
+      // an overdue row, the steps go on until the start is at or after now; a step back to before
+      // now is refused with PAST and the row stays (ADR 0089, Time before now).
       stepTime: (direction) => {
         const move = store.get();
         if (move === undefined) return;
@@ -152,12 +154,18 @@ export function useMoveActions({
         const stepMs = zoomLevels[zoom].stepMs;
         const from = move.preview?.span.setupStartMs ?? state.setupStartMs;
         if (direction > 0) {
-          store.set({ ...state, setupStartMs: from + stepMs });
+          let setupStartMs = from + stepMs;
+          while (setupStartMs < snapshot.nowMs) setupStartMs += stepMs;
+          store.set({ ...state, setupStartMs });
           return;
         }
         const windows = availabilityOn(moveContextOf(snapshot), state.equipment);
         const setupStartMs = stepBackStart(windows, from, stepMs);
         const next = previewOf(snapshot, { ...state, setupStartMs }, cascadeOn);
+        if (next?.refused === 'PAST') {
+          announce(refusalMessage(next.displayNumber, next.refused));
+          return;
+        }
         // The row cannot start before its release or its last-piece bound: it stays.
         if (
           next !== undefined &&
@@ -184,6 +192,12 @@ export function useMoveActions({
         if (!active.current || move?.preview === undefined) return;
         const { state, preview } = move;
         active.current = false;
+        // A preview refused with PAST writes nothing; the cascade knows no now (ADR 0089).
+        if (preview.refused !== undefined) {
+          store.set(undefined);
+          announce(refusalMessage(preview.displayNumber, preview.refused));
+          return;
+        }
         const { draft: next, result } = moveInDraft(
           committed,
           draft,
