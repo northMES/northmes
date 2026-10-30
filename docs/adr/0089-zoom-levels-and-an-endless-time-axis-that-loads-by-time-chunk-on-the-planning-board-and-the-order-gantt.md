@@ -93,6 +93,7 @@ Chosen option: "A ladder of zoom levels, an endless axis over a fixed buffer, an
 * The time area before the now line has a flat past tone, drawn behind blocks and shading. The frozen window band stays from now to the fence.
 * A move whose setup start would fall before now is refused with the refusal code `PAST`, next to `STARTED`, in the drag preview, in keyboard move mode and in the Move dialog. A drop before now lands on the first snap step at or after now, then snaps forward to working time as every drop does. Started and finished job orders stay fixed, as today.
 * `PAST` refuses the move itself and does not join `judgeMove`. At Save, a setup start that passed while the move waited in the draft shows as a `PAST` conflict, which the planner confirms with a reason, because Save never refuses a draft for a broken rule (Krister, 2026-10-17, in [plan 18](../plan/18-gantt-timeline.md#open-points); Krister, 2026-10-30). A proposal item is not refused for `PAST`; once accepted into the draft, Save lists it as a `PAST` conflict like any draft row.
+* Finished job orders are drawn muted, with a finished cue besides colour and "finished" in their accessible name, as every block state has ([07](../plan/07-production-planning.md#block-states)). An overdue job order (planned, with its planned start passed) keeps its own state cue and is never muted, because it is the work the planner most needs to see. It may move to now or later.
 
 ### Parts of accepted ADRs this decision changes
 
@@ -125,7 +126,6 @@ The files below keep their text. Once this ADR is accepted, it holds over the pa
 | Section | Before | After |
 |---|---|---|
 | Decision outcome | "The board range resolver limits days and rows (`planning.board.range_too_large`)" | The limit applies per time chunk, and a refused chunk shows its band ([Loading by time chunk](#loading-by-time-chunk)) |
-* Finished job orders are drawn muted, with a finished cue besides colour and "finished" in their accessible name, as every block state has ([07](../plan/07-production-planning.md#block-states)). An overdue job order (planned, with its planned start passed) keeps its own state cue and is never muted, because it is the work the planner most needs to see. It may move to now or later.
 
 ### Consequences
 
