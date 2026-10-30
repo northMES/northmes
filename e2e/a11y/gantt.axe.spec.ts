@@ -4,9 +4,10 @@ import { planningLinks } from '@northmes/planning-contracts';
 import { expect, plant, test } from '../fixtures.ts';
 
 // The axe check of ADR 0021 over the states of the order Gantt (plan 18, Gates): populated, an
-// expanded order with its links, the chain highlight and the workload table. The Gantt reads the
-// fixture G1, so every state is the same in every run. Move mode, a row in the draft and the My
-// draft drawer are checked in e2e/planning/gantt-keyboard.spec.ts; the 640 px tabs are a later story.
+// expanded order with its links, the chain highlight, a focused block described by its hover card
+// fields (#902) and the workload table. The Gantt reads the fixture G1, so every state is the same
+// in every run. Move mode, a row in the draft and the My draft drawer are checked in
+// e2e/planning/gantt-keyboard.spec.ts; the 640 px tabs are a later story.
 // The review step of a run and the run row (plan 18, Runs) are checked here.
 
 /** The Gantt page of the seed plant with its search. */
@@ -112,6 +113,30 @@ test.describe('the order Gantt', () => {
     await page.getByRole('menuitem', { name: 'Split run' }).dispatchEvent('click');
     await expect(run).toHaveCount(0);
     await expect(page.getByRole('menu')).toHaveCount(0);
+  });
+
+  test('ADR0021 #902 a focused block described by its hover card passes the WCAG 2.2 AA rules', async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
+    await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+    await expect(gantt).toBeVisible();
+
+    // Right moves focus from the row into its block, and focus opens the hover card.
+    await gantt.locator('[data-row-id="jo-1006-10"]').focus();
+    await page.keyboard.press('ArrowRight');
+    const block = gantt.locator('[data-block="jo-1006-10"]');
+    await expect(block).toBeFocused();
+    const card = page.getByRole('tooltip');
+    await expect(card).toBeVisible();
+    // The card fades in; axe must read its colors once the transition has ended.
+    await expect(card).toHaveCSS('opacity', '1');
+    await expect(block).toHaveAccessibleDescription(/Working 3 h working/);
+    await expect(block).toHaveAccessibleDescription(/Constraints 4 hold/);
+    await expect(block).not.toHaveAccessibleDescription(/1006\.10 Mill/);
+    await checkA11y('a focused block with its hover card as its description');
   });
 
   test('ADR0021 the workload panel passes the WCAG 2.2 AA rules', async ({
