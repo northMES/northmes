@@ -332,3 +332,65 @@ describe('the header tiers with closed time hidden (ADR 0089, Header tiers)', ()
     ]);
   });
 });
+
+describe('the header tiers of an extended Hours range (#892)', () => {
+  const local = (date: number, hours: number, minutes = 0) =>
+    Date.UTC(2026, 10, date, hours - 1, minutes);
+  // One 12 h span before Wed 4 Nov 06:00: the range starts Tue 3 Nov 18:00.
+  const range = extendedRange('2026-11-04', 'hours', stockholm, '06:00', { before: 1, after: 0 });
+
+  it('#892 aligns the day cells to the production day, so a day is named over its own open time', () => {
+    const night = { closed: [{ fromMs: local(3, 15), toMs: local(4, 6) }] };
+    const hidden = createTimeScale({
+      range,
+      zoom: 'hours',
+      timeZone: stockholm,
+      productionDayStart: '06:00',
+      widthPx: naturalWidthPx(range, 'hours', night),
+      hideClosed: night,
+    })
+      .ticks()
+      .filter((tick) => tick.tier === 'top');
+    const plain = createTimeScale({
+      range,
+      zoom: 'hours',
+      timeZone: stockholm,
+      productionDayStart: '06:00',
+      widthPx: naturalWidthPx(range, 'hours'),
+    })
+      .ticks()
+      .filter((tick) => tick.tier === 'top');
+
+    expect(hidden.map((tick) => [tick.label, tick.x])).toEqual([['Wed 4 Nov', 6]]);
+    expect(plain.map((tick) => [tick.label, tick.x])).toEqual([
+      ['Tue 3 Nov', 0],
+      ['Wed 4 Nov', 1200],
+    ]);
+  });
+});
+
+describe('a clock cell clipped at its start (#892)', () => {
+  const local = (date: number, hours: number, minutes = 0) =>
+    Date.UTC(2026, 10, date, hours - 1, minutes);
+
+  it('#892 names an hour cell that starts in a break by the clock where its open time starts', () => {
+    const range = rangeOf('2026-11-04', 'hours', stockholm, '06:00');
+    const lunch = { closed: [{ fromMs: local(4, 11), toMs: local(4, 11, 30) }] };
+    const bottom = createTimeScale({
+      range,
+      zoom: 'hours',
+      timeZone: stockholm,
+      widthPx: naturalWidthPx(range, 'hours', lunch),
+      hideClosed: lunch,
+    })
+      .ticks()
+      .filter((tick) => tick.tier === 'bottom');
+
+    // 07:00 to 10:00 at 100 px an hour, the break's 6 px gap at 500, then 11:30 to 12:00.
+    expect(bottom.slice(3, 6).map((tick) => [tick.label, tick.x])).toEqual([
+      ['10:00', 400],
+      ['11:30', 506],
+      ['12:00', 556],
+    ]);
+  });
+});
