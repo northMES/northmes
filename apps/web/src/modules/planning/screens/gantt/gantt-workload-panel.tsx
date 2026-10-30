@@ -149,19 +149,24 @@ function WorkloadLane({
       style={{ height: `${laneHeightRem}rem` }}
     >
       <div
-        className="sticky start-0 z-10 flex shrink-0 items-center border-e border-border bg-card px-2"
+        className="sticky start-0 z-10 flex min-w-0 shrink-0 items-center border-e border-border bg-card px-2"
         style={{ width: `${stickyWidth}px` }}
       >
         <Button
           id={buttonId}
           variant="ghost"
-          className={cn('h-7 px-2 text-[0.8125rem] font-medium', open && 'bg-accent')}
+          // A long machine name is cut short inside the label, which may be as narrow as the Name
+          // column; the button's accessible name keeps the whole text.
+          className={cn(
+            'h-7 max-w-full min-w-0 shrink px-2 text-[0.8125rem] font-medium',
+            open && 'bg-accent',
+          )}
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? dialogId : undefined}
           onClick={() => onOpenChange(!open)}
         >
-          Workload on {machine.name}
+          <span className="truncate">Workload on {machine.name}</span>
         </Button>
       </div>
       {stickyWidth < treeWidth && (

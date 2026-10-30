@@ -244,6 +244,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   // starts where the time column starts.
   const treeWidth = nameWidth + fixedWidth;
   const stickyTree = treeWidth <= cap;
+  // The width of the tree columns that stick: all of them, or the Name column alone.
+  const stickyWidth = stickyTree ? treeWidth : nameWidth;
   // The left offset of each tree column, where its cells stick while the time column scrolls.
   const cellLefts = columns.map((_, index) =>
     index === 0 ? 0 : nameWidth + columns.slice(1, index).reduce((sum, c) => sum + c.widthPx, 0),
@@ -818,7 +820,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
               style={{
                 scrollPaddingTop: `${timeHeaderHeightRem}rem`,
-                scrollPaddingInlineStart: `${stickyTree ? treeWidth : nameWidth}px`,
+                scrollPaddingInlineStart: `${stickyWidth}px`,
               }}
             >
               <div
@@ -893,7 +895,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 snapshot={snapshot}
                 scale={scale}
                 treeWidth={treeWidth}
-                stickyWidth={stickyTree ? treeWidth : nameWidth}
+                stickyWidth={stickyWidth}
                 timeWidth={timeWidth}
               />
             )}
