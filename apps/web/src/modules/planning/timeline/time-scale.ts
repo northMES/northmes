@@ -193,10 +193,17 @@ export function plantDateOf(epochMs: number, timeZone: string): string {
     .toString();
 }
 
-/** One tick of the time header. */
+/**
+ * One cell of a time header tier. With closed time hidden the cell is clipped to the open time it
+ * holds (ADR 0089, Header tiers): it starts at its first open segment and ends at its last.
+ */
 export interface TimeTick {
+  /** The instant the cell starts at on the plant clock, before clipping. */
   readonly ms: number;
+  /** The x of the cell's first open segment, where its label starts. */
   readonly x: number;
+  /** The width from x to the end of the cell's last open segment. */
+  readonly widthPx: number;
   readonly label: string;
   readonly tier: 'top' | 'bottom';
 }
@@ -358,6 +365,19 @@ export function createTimeScale({
     }).epochMilliseconds;
   };
 
+  /**
+   * A cell of [fromMs, toMs) clipped to its open time: from the end of a gap it starts in to the
+   * start of a gap it ends in. The windows are merged, so one gap at most covers either edge. A cell
+   * wholly inside a gap has no open time and gives none.
+   */
+  const openCell = (fromMs: number, toMs: number) => {
+    const endMs = Math.min(toMs, range.toMs);
+    const openFrom = gaps.find((gap) => gap.fromMs <= fromMs && fromMs < gap.toMs)?.toMs ?? fromMs;
+    const openTo = gaps.find((gap) => gap.fromMs < endMs && endMs <= gap.toMs)?.fromMs ?? endMs;
+    if (openTo <= openFrom) return undefined;
+    return { x: x(openFrom), widthPx: x(openTo) - x(openFrom) };
+  };
+
   const ticks = (): TimeTick[] => {
     const start = Temporal.Instant.fromEpochMilliseconds(range.fromMs).toZonedDateTimeISO(timeZone);
     const top: TimeTick[] = [];
@@ -368,26 +388,31 @@ export function createTimeScale({
       at = at.add(preset.topTier === 'week' ? { weeks: 1 } : { days: 1 })
     ) {
       const ms = at.epochMilliseconds;
+      const next = at.add(preset.topTier === 'week' ? { weeks: 1 } : { days: 1 });
+      const cell = openCell(ms, next.epochMilliseconds);
+      if (cell === undefined) continue;
       const label =
         preset.topTier === 'week'
           ? `W${at.weekOfYear ?? ''}, ${formatPlantDate(ms, timeZone)}`
           : formatPlantDate(ms, timeZone);
-      top.push({ ms, x: x(ms), label, tier: 'top' });
+      top.push({ ms, ...cell, label, tier: 'top' });
     }
     const topMs = new Set(top.map((tick) => tick.ms));
     const bottom: TimeTick[] = [];
     if (preset.bottomTier === 'day') {
       for (let at = start; at.epochMilliseconds < range.toMs; at = at.add({ days: 1 })) {
         const ms = at.epochMilliseconds;
-        if (topMs.has(ms)) continue;
-        bottom.push({ ms, x: x(ms), label: formatPlantDate(ms, timeZone), tier: 'bottom' });
+        const cell = openCell(ms, at.add({ days: 1 }).epochMilliseconds);
+        if (topMs.has(ms) || cell === undefined) continue;
+        bottom.push({ ms, ...cell, label: formatPlantDate(ms, timeZone), tier: 'bottom' });
       }
     } else {
       // Hour ticks come from exact instants, so a clock change gives 23 or 25 of them.
       const stepMs = preset.bottomTier.hours * hour;
       for (let ms = range.fromMs; ms < range.toMs; ms += stepMs) {
-        if (topMs.has(ms) || inGap(ms)) continue;
-        bottom.push({ ms, x: x(ms), label: formatPlantTime(ms, timeZone), tier: 'bottom' });
+        const cell = openCell(ms, ms + stepMs);
+        if (topMs.has(ms) || cell === undefined) continue;
+        bottom.push({ ms, ...cell, label: formatPlantTime(ms, timeZone), tier: 'bottom' });
       }
     }
     return [...top, ...bottom];

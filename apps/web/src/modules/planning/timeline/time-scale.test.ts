@@ -189,12 +189,13 @@ describe('createTimeScale (plan 18, Shared pieces)', () => {
       Date.UTC(2026, 10, 3, 7, 0),
     );
     expect(compressed.inGap(Date.UTC(2026, 10, 2, 20, 0))).toBe(true);
+    // The 15:00 cell lies wholly in the night, so it has no label (#892).
     expect(
       compressed
         .ticks()
         .filter((tick) => tick.tier === 'bottom')
         .map((tick) => tick.label),
-    ).toEqual(['09:00', '12:00', '15:00', '09:00', '12:00']);
+    ).toEqual(['09:00', '12:00', '09:00', '12:00']);
   });
 
   it('names the range for the toolbar', () => {
