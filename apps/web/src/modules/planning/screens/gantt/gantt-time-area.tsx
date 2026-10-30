@@ -92,7 +92,8 @@ export function TimeCellShading({
       {windows.map((window) => {
         const left = scale.x(Math.max(window.fromMs, scale.range.fromMs));
         const right = scale.x(Math.min(window.toMs, scale.range.toMs));
-        if (right <= left) return null;
+        // A window under a pixel at the level, a break at Quarter, is not drawn (ADR 0089).
+        if (right - left < 1) return null;
         const gap = scale.gaps.some(
           (each) => each.fromMs <= window.fromMs && each.toMs >= window.toMs,
         );

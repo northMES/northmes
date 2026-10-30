@@ -3,7 +3,10 @@
 import { describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { previewOf } from '../../../src/modules/planning/screens/gantt/gantt-move.ts';
-import { utilizationText } from '../../../src/modules/planning/screens/gantt/gantt-workload-panel.tsx';
+import {
+  bucketRow,
+  utilizationText,
+} from '../../../src/modules/planning/screens/gantt/gantt-workload-panel.tsx';
 import {
   bucketKindOf,
   withMovePreview,
@@ -27,6 +30,26 @@ describe('the buckets of the workload lanes follow the zoom level (ADR 0089; #90
     expect(bucketKindOf('day')).toBe('shift');
     expect(bucketKindOf('week')).toBe('productionDay');
     expect(bucketKindOf('4weeks')).toBe('isoWeek');
+  });
+
+  it('Quarter hours buckets by shift, Quarter by ISO week and Year by month', () => {
+    expect(bucketKindOf('quarter-hours')).toBe('shift');
+    expect(bucketKindOf('quarter')).toBe('isoWeek');
+    expect(bucketKindOf('year')).toBe('month');
+  });
+
+  it('by month, CNC1 holds the load of every shift of November in 2026-11, named November 2026', () => {
+    const buckets = workloadOf(g1Snapshot(), 'year', week);
+    // November in the plant's zone: Sun 1 Nov 00:00 to Tue 1 Dec 00:00.
+    const month = { fromMs: Date.UTC(2026, 9, 31, 23), toMs: Date.UTC(2026, 10, 30, 23) };
+    const byShift = workloadOf(g1Snapshot(), 'day', month)
+      .filter((bucket) => bucket.equipment === 'CNC1')
+      .reduce((sum, bucket) => sum + bucket.loadedS, 0);
+
+    const november = bucketOf(buckets, 'CNC1', '2026-11');
+    expect(byShift).toBeGreaterThan(72_000);
+    expect(november?.loadedS).toBe(byShift);
+    expect(november && bucketRow(november, 'month', 'Europe/Stockholm')[0]).toBe('November 2026');
   });
 
   it('by shift, CNC1 holds the GT5 load of Thu 5 Nov in its shift from 06:00 to 15:00', () => {

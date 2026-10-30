@@ -28,6 +28,14 @@ describe('ganttSearch (plan 18, URL state)', () => {
     expect(ganttSearch({ order: 1003, chain: '1' })).toEqual({ order: '1003', chain: 1 });
   });
 
+  it('reads every level of the zoom ladder from zoom, and drops an unknown one (ADR 0089)', () => {
+    for (const zoom of ['quarter-hours', 'hours', 'day', 'week', '4weeks', 'quarter', 'year']) {
+      expect(ganttSearch({ zoom })).toEqual({ zoom });
+      expect(boardSearch({ zoom })).toEqual({ zoom });
+    }
+    expect(ganttSearch({ zoom: 'decade' })).toEqual({});
+  });
+
   it('ends the chain with the order and keeps it only with one', () => {
     const gantt = ganttSearch({ zoom: 'week', from: '2026-11-02', order: 'po-1003', chain: 1 });
 

@@ -4,14 +4,15 @@ import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useId } from 'react';
 import { IconButton } from '../../../../ui/components/icon-button/index.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
-import type { ZoomPreset } from '../../gantt-data.ts';
-import { zoomPresetIds, zoomPresets } from '../../timeline/time-scale.ts';
+import type { ZoomLevel, ZoomPreset } from '../../gantt-data.ts';
+import { zoomLevels, zoomPresetIds } from '../../timeline/time-scale.ts';
 import { PressedGroup } from './range-controls-pressed-group.tsx';
 
 export interface RangeControlsProps {
   /** The name of the preset group: "Zoom" on the Gantt (D5), "Range" on the job order table (T1). */
   readonly presetLabel: string;
-  readonly zoom: ZoomPreset;
+  /** The level shown; a level of the ladder that is no preset leaves every preset unpressed. */
+  readonly zoom: ZoomLevel;
   readonly onZoomChange: (zoom: ZoomPreset) => void;
   /** The first plant date of the range, "2026-11-02", which Go to date edits. */
   readonly from: string;
@@ -44,7 +45,7 @@ export function RangeControls({
     <>
       <PressedGroup
         label={presetLabel}
-        choices={zoomPresetIds.map((id) => ({ id, label: zoomPresets[id].label }))}
+        choices={zoomPresetIds.map((id) => ({ id, label: zoomLevels[id].label }))}
         value={zoom}
         onChange={onZoomChange}
       />

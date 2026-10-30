@@ -13,13 +13,13 @@ import {
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
 import { RangeControls } from '../../components/range-controls/index.ts';
-import type { ZoomPreset } from '../../gantt-data.ts';
+import type { ZoomLevel, ZoomPreset } from '../../gantt-data.ts';
 import { changesText } from './gantt-draft-drawer.tsx';
 import type { GanttOptions } from './gantt-options.ts';
 import { ganttColumnChoices } from './gantt-tree-pane.tsx';
 
 export interface GanttToolbarProps {
-  readonly zoom: ZoomPreset;
+  readonly zoom: ZoomLevel;
   readonly onZoomChange: (zoom: ZoomPreset) => void;
   readonly from: string;
   readonly onFromChange: (from: string) => void;

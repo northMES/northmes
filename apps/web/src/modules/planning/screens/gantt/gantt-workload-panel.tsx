@@ -16,7 +16,7 @@ import { Button } from '../../../../ui/primitives/button.tsx';
 import type { GanttSnapshot, WorkloadBucket } from '../../gantt-data.ts';
 import { type MoveStore, useMoveOf } from '../../move-store.ts';
 import { visibleItems } from '../../timeline/culling.ts';
-import type { TimeScale } from '../../timeline/time-scale.ts';
+import { formatMonth, type TimeScale } from '../../timeline/time-scale.ts';
 import {
   type BucketKind,
   bucketKindOf,
@@ -84,14 +84,16 @@ const kindNames: Readonly<
   shift: { heading: 'shift', column: 'Shift' },
   productionDay: { heading: 'production day', column: 'Production day' },
   isoWeek: { heading: 'ISO week', column: 'ISO week' },
+  month: { heading: 'month', column: 'Month' },
 };
 
 /**
  * A bucket's name in plant time: "Thu 5 Nov" for a production day, "Thu 5 Nov 06:00 to 15:00" for
- * a shift, "W45, Mon 2 Nov" for an ISO week.
+ * a shift, "W45, Mon 2 Nov" for an ISO week, "November 2026" for a month.
  */
 function bucketName(bucket: WorkloadBucket, kind: BucketKind, timeZone: string): string {
   if (kind === 'productionDay') return formatPlantDay(bucket.label);
+  if (kind === 'month') return formatMonth(bucket.label);
   if (kind === 'isoWeek') {
     // "W1" as the time header and the toolbar print it, not the label's "W01".
     const week = Number(bucket.label.slice(bucket.label.indexOf('-W') + 2));

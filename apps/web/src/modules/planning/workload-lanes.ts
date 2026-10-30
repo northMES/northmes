@@ -6,15 +6,16 @@
 import {
   type Bucket,
   isoWeekBuckets,
+  monthBuckets,
   type PlanContext,
   shiftBuckets,
   type WorkloadBucket,
   workload,
 } from '@northmes/planning-domain';
 import { planContextOf, workingCalendarOf } from './gantt-analysis.ts';
-import type { GanttSnapshot, ZoomPreset } from './gantt-data.ts';
+import type { GanttSnapshot, ZoomLevel } from './gantt-data.ts';
 import type { MovePreview } from './screens/gantt/gantt-move.ts';
-import type { TimeRange } from './timeline/time-scale.ts';
+import { type BucketKind, type TimeRange, zoomLevels } from './timeline/time-scale.ts';
 
 const day = 86_400_000;
 
@@ -40,42 +41,47 @@ function laneContextOf(snapshot: GanttSnapshot, range: TimeRange): PlanContext {
 }
 
 /**
- * The buckets of a kind that overlap a range, each over its whole span: a shift or a week the
- * range edge cuts keeps its values, and the lane draws only the part in the range.
+ * The buckets of a kind that overlap a range, each over its whole span: a shift, a week or a month
+ * the range edge cuts keeps its values, and the lane draws only the part in the range.
  */
-function bucketsOf(kind: 'shift' | 'isoWeek', snapshot: GanttSnapshot, range: TimeRange): Bucket[] {
+function bucketsOf(
+  kind: 'shift' | 'isoWeek' | 'month',
+  snapshot: GanttSnapshot,
+  range: TimeRange,
+): Bucket[] {
   const { timeZone } = snapshot.plant;
-  // A day on each side holds every shift that overlaps the range whole; a week, every week.
-  const margin = kind === 'shift' ? day : 7 * day;
+  // A day on each side holds every shift that overlaps the range whole; a week, every week; 31
+  // days, every month.
+  const margin = kind === 'shift' ? day : kind === 'isoWeek' ? 7 * day : 31 * day;
   const fromMs = range.fromMs - margin;
   const toMs = range.toMs + margin;
   const all =
     kind === 'shift'
       ? shiftBuckets(workingCalendarOf(snapshot.calendar, timeZone), fromMs, toMs)
-      : isoWeekBuckets({ timeZone, fromMs, toMs });
+      : kind === 'isoWeek'
+        ? isoWeekBuckets({ timeZone, fromMs, toMs })
+        : monthBuckets({ timeZone, fromMs, toMs });
   return all.filter((bucket) => bucket.toMs > range.fromMs && bucket.fromMs < range.toMs);
 }
 
-export type BucketKind = 'shift' | 'productionDay' | 'isoWeek';
+export type { BucketKind };
 
 /**
- * The bucket of a zoom level (ADR 0089, the ladder): Hours and Day by shift, Week by production
- * day, 4 weeks by ISO week.
+ * The bucket of a zoom level (ADR 0089, the ladder): Quarter hours, Hours and Day by shift, Week
+ * by production day, 4 weeks and Quarter by ISO week, Year by month.
  */
-export function bucketKindOf(zoom: ZoomPreset): BucketKind {
-  if (zoom === 'week') return 'productionDay';
-  if (zoom === '4weeks') return 'isoWeek';
-  return 'shift';
+export function bucketKindOf(zoom: ZoomLevel): BucketKind {
+  return zoomLevels[zoom].bucket;
 }
 
 /**
  * The workload of the plan with the draft applied, per machine and bucket of the zoom level. By
- * production day it is the snapshot's analysis; by shift and by ISO week the same domain function
+ * production day it is the snapshot's analysis; by shift, ISO week and month the same domain function
  * runs over the buckets of the range.
  */
 export function workloadOf(
   snapshot: GanttSnapshot,
-  zoom: ZoomPreset,
+  zoom: ZoomLevel,
   range: TimeRange,
 ): readonly WorkloadBucket[] {
   const kind = bucketKindOf(zoom);

@@ -4,10 +4,15 @@ import { describe, expect, it } from 'vitest';
 import {
   createTimeScale,
   extendedRange,
+  isCoarseLevel,
+  isFineLevel,
   naturalWidthPx,
   rangeLabel,
   rangeOf,
   shiftedFrom,
+  steppedLevel,
+  zoomLevelIds,
+  zoomLevels,
 } from './time-scale.ts';
 
 const stockholm = 'Europe/Stockholm';
@@ -449,5 +454,229 @@ describe('the names of the header cells (#902)', () => {
       'Week 48, Mon 23 Nov',
     ]);
     expect(ticks.find((tick) => tick.tier === 'bottom')?.name).toBe('Tue 3 Nov');
+  });
+});
+
+describe('the zoom ladder (ADR 0089, Zoom levels)', () => {
+  it('orders the levels from finest to coarsest, keeping the four preset ids of D3', () => {
+    expect(zoomLevelIds).toEqual([
+      'quarter-hours',
+      'hours',
+      'day',
+      'week',
+      '4weeks',
+      'quarter',
+      'year',
+    ]);
+  });
+
+  it("gives each level the ladder table's tiers, snap step and workload bucket", () => {
+    const minute = 60_000;
+    const hourMs = 60 * minute;
+    expect(
+      zoomLevelIds.map((id) => {
+        const level = zoomLevels[id];
+        return [id, level.topTier, level.bottomTier, level.stepMs, level.bucket];
+      }),
+    ).toEqual([
+      [
+        'quarter-hours',
+        { unit: 'hour', count: 1 },
+        { unit: 'minute', count: 15 },
+        5 * minute,
+        'shift',
+      ],
+      ['hours', { unit: 'day', count: 1 }, { unit: 'hour', count: 1 }, 15 * minute, 'shift'],
+      ['day', { unit: 'day', count: 1 }, { unit: 'hour', count: 3 }, hourMs, 'shift'],
+      ['week', { unit: 'day', count: 1 }, { unit: 'hour', count: 6 }, 4 * hourMs, 'productionDay'],
+      ['4weeks', { unit: 'week', count: 1 }, { unit: 'day', count: 1 }, 24 * hourMs, 'isoWeek'],
+      ['quarter', { unit: 'month', count: 1 }, { unit: 'week', count: 1 }, 24 * hourMs, 'isoWeek'],
+      ['year', { unit: 'year', count: 1 }, { unit: 'month', count: 1 }, 24 * hourMs, 'month'],
+    ]);
+  });
+
+  it('makes each level coarser than the one before it', () => {
+    const widths = zoomLevelIds.map((id) => zoomLevels[id].pxPerHour);
+    for (let index = 1; index < widths.length; index += 1) {
+      expect(widths[index]).toBeLessThan(widths[index - 1] ?? 0);
+    }
+  });
+});
+
+describe('the ranges and header tiers of the new levels (ADR 0089, Zoom levels)', () => {
+  const tierLabels = (scale: ReturnType<typeof createTimeScale>, tier: 'top' | 'bottom') =>
+    scale
+      .ticks()
+      .filter((tick) => tick.tier === tier)
+      .map((tick) => tick.label);
+
+  it('starts Quarter hours at the production day start and spans 6 hours', () => {
+    expect(rangeOf('2026-11-04', 'quarter-hours', stockholm, '06:00')).toEqual({
+      fromMs: Date.UTC(2026, 10, 4, 5, 0),
+      toMs: Date.UTC(2026, 10, 4, 11, 0),
+    });
+  });
+
+  it('starts Quarter and Year at the first of the month and spans 3 and 12 months', () => {
+    expect(rangeOf('2026-11-18', 'quarter', stockholm, '06:00')).toEqual({
+      fromMs: Date.UTC(2026, 9, 31, 23, 0),
+      toMs: Date.UTC(2027, 1, 0, 23, 0),
+    });
+    expect(rangeOf('2026-11-18', 'year', stockholm, '06:00')).toEqual({
+      fromMs: Date.UTC(2026, 9, 31, 23, 0),
+      toMs: Date.UTC(2027, 9, 31, 23, 0),
+    });
+  });
+
+  it('shifts Earlier and Later by whole months at Quarter and Year, and by a day at Quarter hours', () => {
+    expect(shiftedFrom('2026-11-01', 'quarter', 'later')).toBe('2027-02-01');
+    expect(shiftedFrom('2026-11-01', 'year', 'earlier')).toBe('2025-11-01');
+    expect(shiftedFrom('2026-11-04', 'quarter-hours', 'later')).toBe('2026-11-05');
+  });
+
+  it('labels Quarter hours by the hour on top and every 15 minutes below', () => {
+    const range = rangeOf('2026-11-04', 'quarter-hours', stockholm, '06:00');
+    const scale = createTimeScale({
+      range,
+      zoom: 'quarter-hours',
+      timeZone: stockholm,
+      widthPx: naturalWidthPx(range, 'quarter-hours'),
+    });
+
+    expect(tierLabels(scale, 'top')).toEqual([
+      'Wed 4 Nov, 06:00',
+      'Wed 4 Nov, 07:00',
+      'Wed 4 Nov, 08:00',
+      'Wed 4 Nov, 09:00',
+      'Wed 4 Nov, 10:00',
+      'Wed 4 Nov, 11:00',
+    ]);
+    expect(tierLabels(scale, 'bottom').slice(0, 4)).toEqual(['06:15', '06:30', '06:45', '07:15']);
+    expect(scale.ticks().find((tick) => tick.tier === 'top')?.name).toBe('Wed 4 Nov 06:00');
+  });
+
+  it('labels Quarter by the month on top and the ISO week below', () => {
+    const range = rangeOf('2026-11-01', 'quarter', stockholm, '06:00');
+    const scale = createTimeScale({
+      range,
+      zoom: 'quarter',
+      timeZone: stockholm,
+      widthPx: naturalWidthPx(range, 'quarter'),
+    });
+
+    expect(tierLabels(scale, 'top')).toEqual(['November 2026', 'December 2026', 'January 2027']);
+    const bottom = scale.ticks().filter((tick) => tick.tier === 'bottom');
+    // W44 starts Mon 26 Oct, before the range: its cell holds Sunday alone, 14.4 px, too narrow
+    // for a label.
+    expect(bottom.slice(0, 3).map((tick) => [tick.label, tick.name])).toEqual([
+      ['', 'Week 44, Mon 26 Oct'],
+      ['W45', 'Week 45, Mon 2 Nov'],
+      ['W46', 'Week 46, Mon 9 Nov'],
+    ]);
+    expect(bottom[1]?.x).toBeCloseTo(24 * 0.6 * 1);
+  });
+
+  it('labels Year by the year on top and the month below', () => {
+    const range = rangeOf('2026-11-01', 'year', stockholm, '06:00');
+    const scale = createTimeScale({
+      range,
+      zoom: 'year',
+      timeZone: stockholm,
+      widthPx: naturalWidthPx(range, 'year'),
+    });
+
+    expect(tierLabels(scale, 'top')).toEqual(['2026', '2027']);
+    // January starts the 2027 cell of the top tier, which names it.
+    expect(tierLabels(scale, 'bottom')).toEqual([
+      'November',
+      'December',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+    ]);
+  });
+
+  it('snaps to 5 minutes at Quarter hours', () => {
+    const range = rangeOf('2026-11-04', 'quarter-hours', stockholm, '06:00');
+    const scale = createTimeScale({
+      range,
+      zoom: 'quarter-hours',
+      timeZone: stockholm,
+      widthPx: 1440,
+    });
+
+    expect(scale.snap(Date.UTC(2026, 10, 4, 6, 12))).toBe(Date.UTC(2026, 10, 4, 6, 10));
+  });
+
+  it('names the range of each new level for the toolbar', () => {
+    expect(
+      rangeLabel(
+        rangeOf('2026-11-04', 'quarter-hours', stockholm, '06:00'),
+        'quarter-hours',
+        stockholm,
+      ),
+    ).toBe('Wed 4 Nov, 06:00 to 12:00');
+    expect(
+      rangeLabel(rangeOf('2026-11-18', 'quarter', stockholm, '06:00'), 'quarter', stockholm),
+    ).toBe('November 2026 to January 2027');
+    expect(rangeLabel(rangeOf('2026-11-18', 'year', stockholm, '06:00'), 'year', stockholm)).toBe(
+      'November 2026 to October 2027',
+    );
+  });
+});
+
+describe('stepping the ladder (ADR 0089, Zoom levels)', () => {
+  it('zooms in to the next finer level and out to the next coarser one, and stops at the ends', () => {
+    expect(steppedLevel('week', 'in')).toBe('day');
+    expect(steppedLevel('week', 'out')).toBe('4weeks');
+    expect(steppedLevel('quarter-hours', 'in')).toBe('quarter-hours');
+    expect(steppedLevel('year', 'out')).toBe('year');
+  });
+
+  it("applies plan 18's Hours and Day rules at day and finer, and its Week and 4 weeks rules at week and coarser", () => {
+    expect(zoomLevelIds.filter(isFineLevel)).toEqual(['quarter-hours', 'hours', 'day']);
+    expect(zoomLevelIds.filter(isCoarseLevel)).toEqual(['week', '4weeks', 'quarter', 'year']);
+  });
+});
+
+describe('Hide closed time at the coarse levels (ADR 0089, Header tiers)', () => {
+  /** Nights from 22:00 to 06:00 through November 2026 in Stockholm, UTC+1. */
+  const nights = Array.from({ length: 30 }, (_, index) => ({
+    fromMs: Date.UTC(2026, 10, 1 + index, 21),
+    toMs: Date.UTC(2026, 10, 2 + index, 5),
+  }));
+
+  it('compresses only a closed window whose natural width is wider than the gap, so the axis never widens', () => {
+    const quarter = rangeOf('2026-11-01', 'quarter', stockholm, '06:00');
+    // An 8 h night is 4.8 px at Quarter, narrower than the 6 px gap.
+    const hidden = { closed: nights };
+
+    expect(naturalWidthPx(quarter, 'quarter', hidden)).toBe(naturalWidthPx(quarter, 'quarter'));
+    expect(
+      createTimeScale({
+        range: quarter,
+        zoom: 'quarter',
+        timeZone: stockholm,
+        widthPx: naturalWidthPx(quarter, 'quarter'),
+        hideClosed: hidden,
+      }).gaps,
+    ).toEqual([]);
+    // At Week a night is 128 px, so each of the eight that reach into week 45 (from Sunday's into
+    // Monday to Sunday's into the next Monday) still becomes a gap.
+    expect(
+      createTimeScale({
+        range: week45,
+        zoom: 'week',
+        timeZone: stockholm,
+        widthPx: naturalWidthPx(week45, 'week', hidden),
+        hideClosed: hidden,
+      }).gaps,
+    ).toHaveLength(8);
   });
 });
