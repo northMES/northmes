@@ -285,11 +285,7 @@ const labelType = {
 } as const;
 
 /** The first of a cell's label formats, longest first, that fits its width, or none. */
-function fittingLabel(
-  formats: readonly string[],
-  widthPx: number,
-  tier: 'top' | 'bottom',
-): string {
+function fittingLabel(formats: readonly string[], widthPx: number, tier: 'top' | 'bottom'): string {
   const { charPx, paddingPx } = labelType[tier];
   return formats.find((format) => format.length * charPx + paddingPx <= widthPx) ?? '';
 }
