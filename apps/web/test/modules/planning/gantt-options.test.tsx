@@ -20,7 +20,19 @@ describe('useGanttOptions', () => {
       hiddenColumns: defaultHiddenColumns,
       workload: false,
       cascade: true,
+      treePaneShare: 0.4,
     });
+  });
+
+  it('#943 keeps the tree pane share within 10 and 90 percent of the view', () => {
+    window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: 0.55 }));
+    expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.55);
+    cleanup();
+    window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: 3 }));
+    expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.4);
+    cleanup();
+    window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: 'wide' }));
+    expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.4);
   });
 
   it('keeps a browser that turned Hide closed time off', () => {

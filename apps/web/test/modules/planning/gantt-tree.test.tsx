@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
@@ -117,7 +117,7 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     expect(notPlaced.textContent).toContain('No job orders without a place');
   });
 
-  it('ADR0089 the time area is a buffer of three viewport widths and scrolls sideways under the sticky tree cells', async () => {
+  it('ADR0089 the time area is a buffer of three viewport widths and scrolls sideways under the sticky tree pane', async () => {
     // The grid measures 900 px.
     vi.stubGlobal(
       'ResizeObserver',
@@ -134,22 +134,23 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     const gantt = await findGantt();
 
     const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
-    const tracks = header.style.gridTemplateColumns.split(' ');
-    const timeTrack = Number.parseFloat(tracks[tracks.length - 1] ?? '0');
-    // Three widths of the visible time area, the grid less its sticky tree columns, with closed
-    // time compressed into gaps of 6 px, so a gap cut at an edge may add a few pixels.
-    const stickyWidth = Number.parseFloat(gantt.style.scrollPaddingInlineStart);
-    expect(Math.abs(timeTrack - 3 * (900 - stickyWidth))).toBeLessThanOrEqual(7);
+    const [pane, time] = header.style.gridTemplateColumns.split(' ');
+    // Three widths of the visible time area, the grid less its tree pane, with closed time
+    // compressed into gaps of 6 px, so a gap cut at an edge may add a few pixels.
+    const paneWidth = Number.parseFloat(pane ?? '0');
+    expect(paneWidth).toBe(Number.parseFloat(gantt.style.scrollPaddingInlineStart));
+    expect(Math.abs(Number.parseFloat(time ?? '0') - 3 * (900 - paneWidth))).toBeLessThanOrEqual(7);
     // The header and every row share the template, so the tree pane stays aligned with the rows.
     const row = within(gantt).getByRole('row', { name: /^1003 / });
     expect(row.style.gridTemplateColumns).toBe(header.style.gridTemplateColumns);
-    // The sticky tree cells each carry their inset; position: sticky is read from computed style
-    // in e2e/design-rules.spec.ts.
+    // The tree cells of a row sit in one block, which sticks; position: sticky is read from
+    // computed style in e2e/design-rules.spec.ts.
     const [name, deadline] = within(header).getAllByRole('columnheader');
-    expect(name?.style.insetInlineStart).toBe('0px');
-    expect(deadline?.style.insetInlineStart).toBe(`${Number.parseFloat(tracks[0] ?? '0')}px`);
-    const cells = within(row).getAllByRole('gridcell');
-    expect(cells[0]?.style.insetInlineStart).toBe(deadline?.style.insetInlineStart);
+    const headerPane = name?.closest('[data-tree-pane]');
+    expect(headerPane).not.toBeNull();
+    expect(headerPane?.contains(deadline as HTMLElement)).toBe(true);
+    const rowPane = within(row).getByRole('rowheader').closest('[data-tree-pane]');
+    expect(rowPane?.contains(within(row).getAllByRole('gridcell')[0] as HTMLElement)).toBe(true);
   });
 
   it('plan 18 view=gantt fills the viewport height, so the rows scroll inside the grid', async () => {
@@ -176,8 +177,8 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     }
   });
 
-  it("WCAG 1.4.10 only the Name column sticks when the shown columns exceed the pane's cap", async () => {
-    // Every column shown: 1320 px of tree against a cap of 40 percent of 1100 px.
+  it('#943 with every column shown the tree pane keeps 40 percent of the view and its columns scroll inside it', async () => {
+    // Every column shown: 1206 px of tree columns against a pane of 40 percent of 1100 px.
     window.localStorage.setItem(
       'northmes.planning.gantt.options',
       JSON.stringify({ hiddenColumns: [] }),
@@ -186,17 +187,81 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
       renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
       const gantt = await findGantt();
 
-      // A sticky cell carries its inset; a cell that scrolls with the time area has none.
       const headers = within(gantt).getAllByRole('columnheader');
       expect(headers).toHaveLength(12);
-      expect(Number.parseFloat(headers[0]?.style.insetInlineStart ?? '')).toBe(0);
-      expect(headers[1]?.style.insetInlineStart).toBe('');
-      const row = within(gantt).getByRole('row', { name: /^1003 / });
-      expect(Number.parseFloat(within(row).getByRole('rowheader').style.insetInlineStart)).toBe(0);
-      expect(within(row).getAllByRole('gridcell')[0]?.style.insetInlineStart).toBe('');
+      const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
+      expect(header.style.gridTemplateColumns.split(' ')[0]).toBe('440px');
+      // Every tree column sits in the one pane, which is wider inside than the pane itself.
+      const pane = headers[0]?.closest<HTMLElement>('[data-tree-pane]');
+      expect(headers.slice(0, -1).every((each) => pane?.contains(each))).toBe(true);
+      const columns = pane?.firstElementChild as HTMLElement;
+      expect(columns.style.width).toBe('1206px');
+      // The pane's own scrollbar, as wide as the pane, scrolls the columns' full width.
+      const scroller = gantt.querySelector<HTMLElement>('[data-tree-scroller]');
+      expect(scroller?.style.width).toBe('440px');
+      expect((scroller?.firstElementChild as HTMLElement).style.width).toBe('1206px');
+      // The Name column keeps its least width, 160 px.
+      expect(columns.style.gridTemplateColumns.split(' ')[0]).toBe('160px');
     } finally {
       window.localStorage.removeItem('northmes.planning.gantt.options');
     }
+  });
+
+  it('#943 the Name column takes what the pane leaves, and the pane has no scrollbar while its columns fit', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    // Name, Deadline and Float in 440 px: Deadline 128 and Float 96 leave 216 px to Name.
+    const name = within(gantt).getAllByRole('columnheader')[0] as HTMLElement;
+    const columns = name.closest('[data-tree-pane]')?.firstElementChild as HTMLElement;
+    expect(columns.style.gridTemplateColumns).toBe('216px 128px 96px');
+    expect(gantt.querySelector('[data-tree-scroller]')).toBeNull();
+  });
+
+  it('#943 the splitter is a separator the arrow keys, Home and End move, and the pane width it sets stays in this browser', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
+    const paneTrack = () => header.style.gridTemplateColumns.split(' ')[0];
+
+    const splitter = screen.getByRole('separator', { name: 'Resize the tree pane' });
+    expect(splitter.getAttribute('aria-orientation')).toBe('vertical');
+    expect(splitter.getAttribute('aria-valuenow')).toBe('40');
+    expect(splitter.tabIndex).toBe(0);
+
+    splitter.focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(splitter.getAttribute('aria-valuenow')).toBe('42');
+    expect(paneTrack()).toBe('462px');
+    expect(
+      JSON.parse(window.localStorage.getItem('northmes.planning.gantt.options') ?? '{}'),
+    ).toMatchObject({ treePaneShare: 0.42 });
+
+    await userEvent.keyboard('{ArrowLeft}{ArrowLeft}');
+    expect(splitter.getAttribute('aria-valuenow')).toBe('38');
+    // Home takes the least width, 160 px; End leaves the time area its least width, 160 px.
+    await userEvent.keyboard('{Home}');
+    expect(paneTrack()).toBe('160px');
+    expect(splitter.getAttribute('aria-valuenow')).toBe(splitter.getAttribute('aria-valuemin'));
+    await userEvent.keyboard('{End}');
+    expect(paneTrack()).toBe('940px');
+    expect(splitter.getAttribute('aria-valuenow')).toBe(splitter.getAttribute('aria-valuemax'));
+    window.localStorage.removeItem('northmes.planning.gantt.options');
+  });
+
+  it('#943 the splitter moves with the pointer', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
+
+    const splitter = screen.getByRole('separator', { name: 'Resize the tree pane' });
+    fireEvent.pointerDown(splitter, { pointerId: 1, clientX: 500, button: 0 });
+    fireEvent.pointerMove(splitter, { pointerId: 1, clientX: 610 });
+    fireEvent.pointerUp(splitter, { pointerId: 1, clientX: 610 });
+
+    expect(header.style.gridTemplateColumns.split(' ')[0]).toBe('550px');
+    expect(splitter.getAttribute('aria-valuenow')).toBe('50');
+    window.localStorage.removeItem('northmes.planning.gantt.options');
   });
 
   it('plan 18 the fill height is measured again when the window or the zoom changes', async () => {
