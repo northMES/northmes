@@ -8,6 +8,7 @@ import { announce } from '../../../../ui/lib/announce.ts';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import { orderNumbersText } from '../../gantt-draft.ts';
+import { useMoveOf } from '../../move-store.ts';
 import { useGanttView } from '../gantt/gantt-context.ts';
 import { type JobOrderRow, quantityText } from '../gantt/gantt-rows.ts';
 import { type BoardBlockState, boardBlockStates, borderMarkerOf } from './board-block-states.ts';
@@ -80,9 +81,12 @@ export function BoardBlock({
   /** Whether the block's order is the selected one, which draws the 3 px bar on top. */
   readonly selected: boolean;
   readonly onFocus: (event: FocusEvent<HTMLDivElement>) => void;
-  /** Space selects the block's order; M enters keyboard move mode. */
+  /** A click or Space selects the block's order; M enters keyboard move mode. */
   readonly onSelect: () => void;
-  /** A click or Enter opens the block's Details, which selects its order too. */
+  /**
+   * A double click or Enter opens the block's Details, which selects its order too; a single
+   * click only selects, as on the Gantt (#886).
+   */
   readonly onOpenDetails: () => void;
   /** Shift+F10, the context menu key or a right click opens the block menu at the block. */
   readonly onMenu: (anchor: HTMLElement) => void;
@@ -102,13 +106,19 @@ export function BoardBlock({
   >(undefined);
   // The click the browser fires after a drop is not a selection.
   const dropped = useRef(false);
+  // Whether a press of the current click sequence ended a drag: the dblclick that follows a drop
+  // on the second press opens nothing (#886).
+  const sequenceDragged = useRef(false);
   const { jobOrder, order } = row;
+  const movedBy = useMoveOf(move?.store, (each) =>
+    each?.state.jobOrderId === jobOrder.id ? each.state.source : undefined,
+  );
+  const moving = movedBy !== undefined;
+  const inMoveMode = movedBy === 'keyboard';
   const placement = jobOrder.placement;
   if (placement === undefined) return null;
   const timeZone = snapshot.plant.timeZone;
   const states = boardBlockStates(row, snapshot, { inDraft: draftRowIds?.has(jobOrder.id) });
-  const moving = move?.state?.jobOrderId === jobOrder.id;
-  const inMoveMode = moving && move?.state?.source === 'keyboard';
   // Keyboard move mode (plan 07, Moving without dragging): M on the focused block enters it; Left
   // and Right step one snap, Up and Down the allowed machines, Enter commits to the draft and
   // Escape cancels. The keys stay with the block while it moves, so the grid's arrows wait.
@@ -243,13 +253,21 @@ export function BoardBlock({
             aria-labelledby={`${id}-number ${id}-article ${id}-facts`}
             onFocus={onFocus}
             onClick={(event) => {
+              // A click's detail counts the presses of its sequence; the first one starts anew.
+              sequenceDragged.current =
+                dropped.current || (event.detail > 1 && sequenceDragged.current);
               // The click after a drop is not a selection.
               if (dropped.current) {
                 dropped.current = false;
                 event.stopPropagation();
                 return;
               }
-              onOpenDetails();
+              onSelect();
+            }}
+            // The block holds no control, and its hover card is a React sibling of the block, not
+            // a child, so no double click bubbles in from either.
+            onDoubleClick={() => {
+              if (!sequenceDragged.current) onOpenDetails();
             }}
             onContextMenu={(event) => {
               event.preventDefault();

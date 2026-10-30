@@ -288,6 +288,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     lastScrollLeft.current = grid.scrollLeft;
   }, [timeWidth]);
   const onGridScroll = (grid: HTMLElement) => {
+    // A pointer drag scrolls within the range it has: a range that grew under it would move the
+    // axis under the pointer. The position before the drag stays the baseline, and the drop checks
+    // the edges the drag scrolled to (#899).
+    if (moveStore.get()?.state.source === 'pointer') return;
     const { scrollLeft, clientWidth, scrollWidth } = grid;
     const previous = lastScrollLeft.current;
     lastScrollLeft.current = scrollLeft;
@@ -376,17 +380,30 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     block?.focus({ preventScroll: true });
     block?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   };
-  const { actions: moveActions, state: moveState } = useMoveActions({
+  const { actions: moveActions, store: moveStore } = useMoveActions({
     committed,
     snapshot,
     draft,
     setDraft,
     cascadeOn: options.cascade,
     zoom,
-    range,
     timeZone,
     focusBlock,
   });
+  // The end of a pointer drag checks the edges, as a scroll to where the drag left the view would.
+  const checkEdges = useRef(onGridScroll);
+  useLayoutEffect(() => {
+    checkEdges.current = onGridScroll;
+  });
+  useEffect(() => {
+    let dragging = false;
+    return moveStore.subscribe(() => {
+      const pointer = moveStore.get()?.state.source === 'pointer';
+      const grid = gridElement.current;
+      if (dragging && !pointer && grid !== null) checkEdges.current(grid);
+      dragging = pointer;
+    });
+  }, [moveStore]);
   const rowById = useMemo(() => {
     const map = new Map<string, GanttRow>();
     const addOrder = (order: GanttRow) => {
@@ -733,7 +750,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         event.currentTarget.querySelector<HTMLElement>('[data-row-menu]')?.click();
         break;
       case 'Escape':
-        if (moveState !== undefined) moveActions?.cancel();
+        if (moveStore.get() !== undefined) moveActions?.cancel();
         else if (chain !== undefined) void setSearch(withChain(search, false));
         else handled = false;
         break;
@@ -806,7 +823,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               aria-busy={state.status === 'loading' || undefined}
               onKeyDown={(event) => {
                 // The Escape stack: move mode ends first, then the chain highlight.
-                if (event.key === 'Escape' && moveState !== undefined) {
+                // The move is read from its store, so a move that begins renders no rows.
+                if (event.key === 'Escape' && moveStore.get() !== undefined) {
                   event.stopPropagation();
                   moveActions?.cancel();
                 } else if (event.key === 'Escape' && chain !== undefined) {
