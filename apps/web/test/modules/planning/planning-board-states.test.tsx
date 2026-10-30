@@ -50,6 +50,7 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
     const user = userEvent.setup();
     let attempts = 0;
     const failingOnce: GanttDataSource = {
+      ...g1DataSource,
       load: async (input) => {
         attempts += 1;
         if (attempts === 1) throw new Error('The plan server did not answer');
@@ -114,6 +115,7 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
     let attempts = 0;
     let answer: (() => void) | undefined;
     const slowSecond: GanttDataSource = {
+      ...g1DataSource,
       load: async (input) => {
         attempts += 1;
         if (attempts === 1) throw new Error('The plan server did not answer');
@@ -135,6 +137,7 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
   it('DR22 a refusal of a later range shows no access, not the error state', async () => {
     const user = userEvent.setup();
     const refusingLater: GanttDataSource = {
+      ...g1DataSource,
       load: async (input) => {
         if (input.from.startsWith('2026-11-08')) throw new PlanningForbidden();
         return g1DataSource.load(input);

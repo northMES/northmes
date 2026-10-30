@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import { hasErrorCode } from '../../ui/lib/graphql-errors.ts';
 
 /**
  * A page state the product owner can open on mock data (design D3, DR17 to DR22), as the plant
@@ -16,4 +17,28 @@ export class PlanningForbidden extends Error {
     super('Forbidden');
     this.name = 'PlanningForbidden';
   }
+}
+
+/** The codes with which the planning reads refuse a load that would be too large (ADR 0089). */
+export type PlanningRefusalCode =
+  | 'planning.gantt.too_many_orders'
+  | 'planning.board.range_too_large';
+
+/** A refusal a mock source answers with, as the API's errorCode would arrive. */
+export class PlanningRefusal extends Error {
+  readonly errorCode: PlanningRefusalCode;
+
+  constructor(errorCode: PlanningRefusalCode) {
+    super(errorCode);
+    this.name = 'PlanningRefusal';
+    this.errorCode = errorCode;
+  }
+}
+
+/** Whether a failed load is the refusal of a code, from a mock source or from the API. */
+export function isPlanningRefusal(error: unknown, errorCode: PlanningRefusalCode): boolean {
+  return (
+    (error instanceof PlanningRefusal && error.errorCode === errorCode) ||
+    hasErrorCode(error, errorCode)
+  );
 }

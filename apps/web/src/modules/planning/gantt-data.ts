@@ -177,6 +177,11 @@ export interface GanttOrder {
   readonly color: string;
   readonly status: OrderStatus;
   /**
+   * The order's span from its first setup start to its last end, as the row list carries it, so a
+   * summary row shows before its job orders load (ADR 0089); none while nothing is placed.
+   */
+  readonly span?: { readonly fromMs: number; readonly toMs: number };
+  /**
    * Who owns the order's master fields: the ERP, or NorthMES for an order created in the app. The
    * one source of ownership; `origin` only adds the details.
    */
@@ -440,9 +445,68 @@ export interface GanttStock {
   readonly outputWarehouse: string;
 }
 
-/** Where the order Gantt reads from. */
-export interface GanttDataSource {
-  readonly load: (input: GanttLoadInput) => Promise<GanttSnapshot>;
+/**
+ * Everything a view of the plan reads besides its orders: the plant, its rules and calendar, the
+ * machines, the runs and what the planning pages show. A row page carries it.
+ */
+export type GanttFrame = Omit<GanttSnapshot, 'productionOrders' | 'analysis'>;
+
+/** The most orders a page of the row list holds (ADR 0016). */
+export const ganttPageSize = 100;
+
+/**
+ * The guard on the row list (ADR 0089, M-101): a filter that matches more orders than this fails
+ * with `planning.gantt.too_many_orders`, counted on the first page. The working default is the row
+ * model spike SP3b measures; its verdict may lower it.
+ */
+export const ganttMaxOrders = 1_250;
+
+/** A page of the row list as a Relay connection asks for it: the first n after a cursor. */
+export interface GanttPageRequest {
+  readonly first: number;
+  readonly after?: string;
 }
 
-export { g1DataSource } from './gantt-data-g1.ts';
+/**
+ * A page of the order Gantt's row list (ADR 0089): production orders in deadline order, each with
+ * its operations, its span and its job orders without their placements, which load per time
+ * chunk. `totalCount` counts every order the filter matches.
+ */
+export interface GanttRowsPage {
+  readonly frame: GanttFrame;
+  readonly orders: readonly GanttOrder[];
+  readonly pageInfo: { readonly hasNextPage: boolean; readonly endCursor?: string };
+  readonly totalCount: number;
+}
+
+/** The job orders whose span from setup start to end overlaps a time chunk, placements included. */
+export interface GanttChunk {
+  readonly jobOrders: readonly GanttJobOrder[];
+}
+
+/** What only a mock source reads; a server source ignores it (see GanttLoadInput). */
+export type GanttLoadOptions = Pick<GanttLoadInput, 'rules' | 'entered' | 'preview'>;
+
+/**
+ * Where the order Gantt and the board read from. The two views load their rows apart from their
+ * job orders, which load per time chunk (ADR 0089); the record pages and the job order table read
+ * one snapshot over a range until their own queries exist.
+ */
+export interface GanttDataSource {
+  readonly load: (input: GanttLoadInput) => Promise<GanttSnapshot>;
+  /** A page of the row list; the first page fails above `ganttMaxOrders`. */
+  readonly loadRows: (
+    filter: GanttFilter,
+    page: GanttPageRequest,
+    options?: GanttLoadOptions,
+  ) => Promise<GanttRowsPage>;
+  /** The job orders placed in a chunk, [from, to) as ISO 8601 instants. */
+  readonly loadChunk: (
+    from: string,
+    to: string,
+    filter: GanttFilter,
+    options?: GanttLoadOptions,
+  ) => Promise<GanttChunk>;
+}
+
+export { g1DataSource, snapshotSource } from './gantt-data-g1.ts';

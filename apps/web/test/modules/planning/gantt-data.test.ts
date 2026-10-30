@@ -1,7 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { describe, expect, it } from 'vitest';
-import { g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
+import {
+  type EnteredOrders,
+  noEnteredOrders,
+} from '../../../src/modules/planning/entered-orders.ts';
+import {
+  g1DataSource,
+  ganttMaxOrders,
+  ganttPageSize,
+} from '../../../src/modules/planning/gantt-data.ts';
+import {
+  isPlanningRefusal,
+  PlanningForbidden,
+} from '../../../src/modules/planning/planning-preview.ts';
 
 const week45 = {
   from: '2026-11-01T23:00:00Z',
@@ -114,5 +126,107 @@ describe('g1DataSource (plan 18, Data loading)', () => {
       holds: false,
       text: 'Deadline of order 1003: Wed 4 Nov 15:00, late by 15 h 15 min',
     });
+  });
+});
+
+const w45 = { from: '2026-11-01T23:00:00Z', to: '2026-11-08T23:00:00Z' };
+
+describe('g1DataSource rows and chunks (ADR 0089, Loading by time chunk)', () => {
+  it('answers the row list in deadline order, with each job order without its placement and each order with its span', async () => {
+    const page = await g1DataSource.loadRows({}, { first: ganttPageSize });
+
+    expect(page.totalCount).toBe(6);
+    expect(page.pageInfo.hasNextPage).toBe(false);
+    expect(page.frame.fixture).toBe('G1');
+    expect(page.frame.nowMs).toBe(Date.UTC(2026, 10, 2, 8, 40));
+    const deadlines = page.orders.map((order) => order.deadlineMs);
+    expect(deadlines).toEqual([...deadlines].sort((a, b) => a - b));
+    const jobOrders = page.orders.flatMap((order) => order.jobOrders);
+    expect(jobOrders).toHaveLength(10);
+    expect(jobOrders.every((row) => row.placement === undefined)).toBe(true);
+    expect(jobOrders.find((row) => row.id === 'jo-1001-10')?.equipment).toBe('CNC1');
+    expect(page.orders.find((order) => order.number === '1006')?.span).toEqual({
+      fromMs: Date.UTC(2026, 10, 6, 12, 0),
+      toMs: Date.UTC(2026, 10, 9, 6, 0),
+    });
+  });
+
+  it('pages through the row list with first and after, as a Relay connection does', async () => {
+    const first = await g1DataSource.loadRows({}, { first: 4 });
+    const second = await g1DataSource.loadRows({}, { first: 4, after: first.pageInfo.endCursor });
+
+    expect(first.orders).toHaveLength(4);
+    expect(first.pageInfo.hasNextPage).toBe(true);
+    expect(second.orders).toHaveLength(2);
+    expect(second.pageInfo.hasNextPage).toBe(false);
+    expect(second.totalCount).toBe(6);
+    expect(new Set([...first.orders, ...second.orders].map((order) => order.id)).size).toBe(6);
+  });
+
+  it('filters the row list by order number', async () => {
+    const page = await g1DataSource.loadRows({ search: '1003' }, { first: ganttPageSize });
+
+    expect(page.orders.map((order) => order.number)).toEqual(['1003']);
+    expect(page.totalCount).toBe(1);
+  });
+
+  it('refuses a row list above ganttMaxOrders with planning.gantt.too_many_orders on its first page', async () => {
+    const entered: EnteredOrders = {
+      ...noEnteredOrders,
+      productionOrders: Array.from({ length: ganttMaxOrders }, (_, index) => ({
+        number: `9${String(index).padStart(4, '0')}`,
+        article: 'A-100',
+        quantity: 10,
+        deadlineDate: '2026-11-20',
+        priority: null,
+        color: 'palette-1',
+        suppliedLines: [],
+        createdAtMs: Date.UTC(2026, 10, 1),
+        createdBy: 'planner',
+        plant: 'pyr',
+      })),
+    };
+
+    const refused = g1DataSource.loadRows({}, { first: ganttPageSize }, { entered });
+
+    await expect(refused).rejects.toSatisfy((error: unknown) =>
+      isPlanningRefusal(error, 'planning.gantt.too_many_orders'),
+    );
+  });
+
+  it('answers a chunk with the job orders whose span overlaps it, placements included', async () => {
+    const chunk = await g1DataSource.loadChunk(w45.from, w45.to, {});
+
+    // 1005 lies in week 46 alone.
+    expect(chunk.jobOrders.map((row) => row.displayNumber)).not.toContain('1005.10');
+    expect(chunk.jobOrders).toHaveLength(8);
+    expect(chunk.jobOrders.find((row) => row.id === 'jo-1001-10')?.placement?.setupStartMs).toBe(
+      Date.UTC(2026, 10, 3, 10, 30),
+    );
+  });
+
+  it('answers 1006.10 in both ISO weeks it touches, and nothing for a week without placements', async () => {
+    const w45Chunk = await g1DataSource.loadChunk(w45.from, w45.to, {});
+    const w46 = await g1DataSource.loadChunk('2026-11-08T23:00:00Z', '2026-11-15T23:00:00Z', {});
+    const w48 = await g1DataSource.loadChunk('2026-11-22T23:00:00Z', '2026-11-29T23:00:00Z', {});
+
+    expect(w45Chunk.jobOrders.map((row) => row.displayNumber)).toContain('1006.10');
+    expect(w46.jobOrders.map((row) => row.displayNumber)).toEqual([
+      '1005.10',
+      '1005.20',
+      '1006.10',
+    ]);
+    expect(w48.jobOrders).toEqual([]);
+  });
+
+  it('answers the page states of the preview for rows and chunks alike', async () => {
+    await expect(
+      g1DataSource.loadChunk(w45.from, w45.to, {}, { preview: 'error' }),
+    ).rejects.toThrow();
+    await expect(
+      g1DataSource.loadRows({}, { first: ganttPageSize }, { preview: 'forbidden' }),
+    ).rejects.toBeInstanceOf(PlanningForbidden);
+    const empty = await g1DataSource.loadRows({}, { first: ganttPageSize }, { preview: 'empty' });
+    expect(empty.frame.equipment.every((machine) => !machine.isPlannable)).toBe(true);
   });
 });

@@ -3,7 +3,7 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { GanttDataSource } from '../../../src/modules/planning/gantt-data.ts';
+import { type GanttDataSource, g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { phase1Reason } from '../../../src/modules/planning/mock-reasons.ts';
 import { politeRegionId } from '../../../src/ui/lib/announce.ts';
@@ -208,6 +208,7 @@ describe('the job orders page (plan 18, the job order table; design #660, T1)', 
     let hold: 'none' | 'wait' | 'fail' = 'none';
     let release: (() => void) | undefined;
     const source: GanttDataSource = {
+      ...g1DataSource,
       load: () => {
         if (hold === 'fail') return Promise.reject(new Error('The plan server is down'));
         if (hold === 'none') return Promise.resolve(snapshot);
