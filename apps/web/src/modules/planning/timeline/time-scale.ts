@@ -214,6 +214,11 @@ export interface TimeScaleInput {
   readonly timeZone: string;
   readonly widthPx: number;
   /**
+   * The plant's production day start, "06:00", where the day cells of Hours and Day begin. Without
+   * it they begin at the range start's clock, which an Hours range extended by 12 h spans moves.
+   */
+  readonly productionDayStart?: string;
+  /**
    * Hide closed time: every closed window of the calendar inside the range is drawn as a gap of a
    * few pixels, so the open time takes the width. A local option; ADR 0030 cut the compressed axis
    * from release 1 and the amendment that takes it back is named in the pull request.
@@ -314,6 +319,7 @@ export function createTimeScale({
   zoom,
   timeZone,
   widthPx,
+  productionDayStart,
   hideClosed,
 }: TimeScaleInput): TimeScale {
   const preset = zoomPresets[zoom];
@@ -383,65 +389,100 @@ export function createTimeScale({
   };
 
   /**
-   * A cell of [fromMs, toMs) clipped to its open time: from the end of a gap it starts in to the
-   * start of a gap it ends in. The windows are merged, so one gap at most covers either edge. A cell
-   * wholly inside a gap has no open time and gives none.
+   * A cell of [fromMs, toMs) clipped to the range and to its open time: from the end of a gap it
+   * starts in to the start of a gap it ends in. The windows are merged, so one gap at most covers
+   * either edge. A cell wholly inside a gap has no open time and gives none.
    */
   const openCell = (fromMs: number, toMs: number) => {
+    const startMs = Math.max(fromMs, range.fromMs);
     const endMs = Math.min(toMs, range.toMs);
-    const openFrom = gaps.find((gap) => gap.fromMs <= fromMs && fromMs < gap.toMs)?.toMs ?? fromMs;
+    const openFrom =
+      gaps.find((gap) => gap.fromMs <= startMs && startMs < gap.toMs)?.toMs ?? startMs;
     const openTo = gaps.find((gap) => gap.fromMs < endMs && endMs <= gap.toMs)?.fromMs ?? endMs;
     if (openTo <= openFrom) return undefined;
-    return { x: x(openFrom), widthPx: x(openTo) - x(openFrom) };
+    return { openFromMs: openFrom, x: x(openFrom), widthPx: x(openTo) - x(openFrom) };
+  };
+
+  /**
+   * The start of the top cell that holds the range start: the Monday of its ISO week, or its plant
+   * day from midnight or from the production day start, so a day cell names its own open time.
+   */
+  const firstTopStart = (): Temporal.ZonedDateTime => {
+    const start = Temporal.Instant.fromEpochMilliseconds(range.fromMs).toZonedDateTimeISO(timeZone);
+    if (preset.topTier === 'week')
+      return start.subtract({ days: start.dayOfWeek - 1 }).startOfDay();
+    const clock =
+      preset.startsAt === 'midnight'
+        ? '00:00'
+        : (productionDayStart ?? start.toPlainTime().toString().slice(0, 5));
+    const dayStart = start
+      .toPlainDate()
+      .toZonedDateTime({ timeZone, plainTime: Temporal.PlainTime.from(clock) });
+    return dayStart.epochMilliseconds > range.fromMs ? dayStart.subtract({ days: 1 }) : dayStart;
   };
 
   const ticks = (): TimeTick[] => {
-    const start = Temporal.Instant.fromEpochMilliseconds(range.fromMs).toZonedDateTimeISO(timeZone);
     const top: TimeTick[] = [];
-    // The top tier steps wall-clock days or weeks from the range start (ADR 0024).
-    for (
-      let at = start;
-      at.epochMilliseconds < range.toMs;
-      at = at.add(preset.topTier === 'week' ? { weeks: 1 } : { days: 1 })
-    ) {
+    // The top tier steps wall-clock days or weeks (ADR 0024).
+    const topStep = preset.topTier === 'week' ? { weeks: 1 } : { days: 1 };
+    for (let at = firstTopStart(); at.epochMilliseconds < range.toMs; ) {
+      const next = at.add(topStep);
       const ms = at.epochMilliseconds;
-      const next = at.add(preset.topTier === 'week' ? { weeks: 1 } : { days: 1 });
       const cell = openCell(ms, next.epochMilliseconds);
-      if (cell === undefined) continue;
-      // A week reads "W45, Mon 2 Nov" or "W45", a day "Mon 2 Nov" or its day of the month.
-      const formats =
-        preset.topTier === 'week'
-          ? [`W${at.weekOfYear ?? ''}, ${formatPlantDate(ms, timeZone)}`, `W${at.weekOfYear ?? ''}`]
-          : [formatPlantDate(ms, timeZone), String(at.day)];
-      top.push({ ms, ...cell, label: fittingLabel(formats, cell.widthPx, 'top'), tier: 'top' });
+      if (cell !== undefined) {
+        // A week reads "W45, Mon 2 Nov" or "W45", a day "Mon 2 Nov" or its day of the month.
+        const week = `W${at.weekOfYear ?? ''}`;
+        const formats =
+          preset.topTier === 'week'
+            ? [`${week}, ${formatPlantDate(ms, timeZone)}`, week]
+            : [formatPlantDate(ms, timeZone), String(at.day)];
+        top.push({
+          ms,
+          x: cell.x,
+          widthPx: cell.widthPx,
+          label: fittingLabel(formats, cell.widthPx, 'top'),
+          tier: 'top',
+        });
+      }
+      at = next;
     }
     const topMs = new Set(top.map((tick) => tick.ms));
     const bottom: TimeTick[] = [];
-    const pushBottom = (ms: number, toMs: number, formats: readonly string[]) => {
-      const cell = openCell(ms, toMs);
-      if (topMs.has(ms) || cell === undefined) return;
+    const pushBottom = (
+      ms: number,
+      toMs: number,
+      formats: (openFromMs: number) => readonly string[],
+    ) => {
+      const cell = topMs.has(ms) ? undefined : openCell(ms, toMs);
+      if (cell === undefined) return;
       bottom.push({
         ms,
-        ...cell,
-        label: fittingLabel(formats, cell.widthPx, 'bottom'),
+        x: cell.x,
+        widthPx: cell.widthPx,
+        label: fittingLabel(formats(cell.openFromMs), cell.widthPx, 'bottom'),
         tier: 'bottom',
       });
     };
+    const start = Temporal.Instant.fromEpochMilliseconds(range.fromMs).toZonedDateTimeISO(timeZone);
     if (preset.bottomTier === 'day') {
       for (let at = start; at.epochMilliseconds < range.toMs; at = at.add({ days: 1 })) {
         const ms = at.epochMilliseconds;
-        pushBottom(ms, at.add({ days: 1 }).epochMilliseconds, [
+        const date = at.day;
+        pushBottom(ms, at.add({ days: 1 }).epochMilliseconds, () => [
           formatPlantDate(ms, timeZone),
-          String(at.day),
+          String(date),
         ]);
       }
     } else {
-      // Hour ticks come from exact instants, so a clock change gives 23 or 25 of them.
+      // Hour ticks come from exact instants, so a clock change gives 23 or 25 of them. A cell
+      // clipped at its start is named by the clock where its open time starts, as its x is.
       const stepMs = preset.bottomTier.hours * hour;
       for (let ms = range.fromMs; ms < range.toMs; ms += stepMs) {
-        // "06:00" shortens to "06" on the hour only; "06:30" has no short form.
-        const clock = formatPlantTime(ms, timeZone);
-        pushBottom(ms, ms + stepMs, clock.endsWith(':00') ? [clock, clock.slice(0, -3)] : [clock]);
+        pushBottom(ms, ms + stepMs, (openFromMs) => {
+          // "06:00" shortens to "06" on the hour only; "06:30" has no short form.
+          const clock = formatPlantTime(openFromMs, timeZone);
+          return clock.endsWith(':00') ? [clock, clock.slice(0, -3)] : [clock];
+        });
       }
     }
     return [...top, ...bottom];

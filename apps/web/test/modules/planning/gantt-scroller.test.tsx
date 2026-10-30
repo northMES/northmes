@@ -113,7 +113,7 @@ describe('the time scroller of the order Gantt (#685)', () => {
 
   it('the clamp of the scroll position after Later shrinks the range extends nothing', async () => {
     const { source, loads } = countingSource();
-    renderGanttRoute({ zoom: 'day', from: '2026-11-04' }, source);
+    const router = renderGanttRoute({ zoom: 'day', from: '2026-11-04' }, source);
     const gantt = await findGantt();
     scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
     scrollSideways(gantt, 0, 1500);
@@ -126,6 +126,10 @@ describe('the time scroller of the order Gantt (#685)', () => {
     gantt.scrollLeft = 100;
     fireEvent.click(screen.getByRole('button', { name: 'Show later range' }));
     await waitFor(() => {
+      expect(router.state.location.search).toMatchObject({ from: '2026-11-07' });
+    });
+    await waitFor(() => {
+      expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
       expect(timeHeaderText(gantt)).not.toContain('Wed 4 Nov');
     });
     const loaded = loads();

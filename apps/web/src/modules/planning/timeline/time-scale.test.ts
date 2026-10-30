@@ -253,12 +253,14 @@ describe('the header tiers with closed time hidden (ADR 0089, Header tiers)', ()
     const monday = top[0];
 
     expect(monday?.label).toBe('Mon 2 Nov');
-    expect(monday?.x).toBe(compressed.x(local(2, 6)));
+    // Monday opens after the 6 px gap of the night before; Tuesday after 16 open hours at 16 px
+    // and the next gap.
+    expect(monday?.x).toBe(6);
     expect(monday?.widthPx).toBe(16 * 16);
-    expect(top[1]?.x).toBe(compressed.x(local(3, 6)));
+    expect(top[1]?.x).toBe(268);
   });
 
-  it('#892 gives a cell wholly inside a gap no tick, so the weekend holds no label', () => {
+  it('#892 gives a cell wholly inside a gap no tick, so the weekend holds no label and no tick of either tier starts in a gap', () => {
     expect(top.map((tick) => tick.label)).toEqual([
       'Mon 2 Nov',
       'Tue 3 Nov',
@@ -267,7 +269,6 @@ describe('the header tiers with closed time hidden (ADR 0089, Header tiers)', ()
       'Fri 6 Nov',
     ]);
     for (const tick of compressed.ticks()) {
-      expect(compressed.inGap(tick.ms) && tick.x === compressed.x(tick.ms)).toBe(false);
       for (const gap of compressed.gaps) {
         expect(tick.x >= gap.x && tick.x < gap.x + gap.widthPx).toBe(false);
       }
