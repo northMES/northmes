@@ -162,8 +162,10 @@ export function useMoveActions({
         const windows = availabilityOn(moveContextOf(snapshot), state.equipment);
         const setupStartMs = stepBackStart(windows, from, stepMs);
         const next = previewOf(snapshot, { ...state, setupStartMs }, cascadeOn);
-        if (next?.refused === 'PAST') {
-          announce(refusalMessage(next.displayNumber, next.refused));
+        // Back to before now is refused, also onto an overdue row's own start, which the preview
+        // reads as no move: the later start stays.
+        if (next !== undefined && setupStartMs < snapshot.nowMs) {
+          announce(refusalMessage(next.displayNumber, 'PAST'));
           return;
         }
         // The row cannot start before its release or its last-piece bound: it stays.

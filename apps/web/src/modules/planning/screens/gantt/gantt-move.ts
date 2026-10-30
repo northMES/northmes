@@ -119,7 +119,8 @@ export function stepBackStart(windows: Windows, fromMs: number, stepMs: number):
 /**
  * The setup start a pointer at `rawMs` asks for (ADR 0089, Time before now): the scale's snap step,
  * and, when the pointer is at or after now but the step rounds back before it, the first snap
- * step at or after now. A pointer before now stays before now, which the preview refuses.
+ * step at or after now. A pointer before now keeps its snap step: before now the preview refuses
+ * it, and where the step rounds forward to now or later the row starts there, after now.
  */
 export function pointerStart(
   scale: Pick<TimeScale, 'snap' | 'stepMs'>,

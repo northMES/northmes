@@ -208,4 +208,26 @@ describe('a move before now (ADR 0089, Time before now)', () => {
       expect(announced()).toBe('Move cancelled.');
     });
   });
+
+  it("ADR0089 a step earlier back to an overdue row's own start is refused, and the later start stays", async () => {
+    // 1001.10 overdue from Mon 09:00 with now at 09:40: the 1 h step at Day takes it to 10:00.
+    const { result, committed } = renderMoveActions(g1WithOverdueRow('2026-11-02T08:00:00Z'));
+    act(() => {
+      result.current.actions?.begin('jo-1001-10', 'keyboard');
+    });
+    act(() => {
+      result.current.actions?.stepTime(1);
+    });
+    const later = result.current.store.get()?.state.setupStartMs;
+    expect(later).toBeGreaterThanOrEqual(committed.nowMs);
+
+    act(() => {
+      result.current.actions?.stepTime(-1);
+    });
+
+    expect(result.current.store.get()?.state.setupStartMs).toBe(later);
+    await waitFor(() => {
+      expect(announced()).toBe('Cannot move 1001.10: it would start before now.');
+    });
+  });
 });

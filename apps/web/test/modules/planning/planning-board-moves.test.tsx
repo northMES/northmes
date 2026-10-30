@@ -542,6 +542,29 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     expect((start as HTMLInputElement).value).toBe('2026-11-04 06:00');
   });
 
+  it('ADR0089 the PAST refusal names the first whole minute at or after now', async () => {
+    const user = userEvent.setup();
+    // Mon 2 Nov 09:40:30 plant time: a clock with seconds.
+    const snapshot = { ...g1Snapshot(), nowMs: g1Snapshot().nowMs + 30_000 };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+    await user.keyboard('{Shift>}{F10}{/Shift}');
+    await user.click(await screen.findByRole('menuitem', { name: 'Move' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Move 1001.10 Bracket L' });
+    const start = within(dialog).getByRole('textbox', { name: 'Start, plant time (CET)' });
+
+    await user.clear(start);
+    await user.type(start, '2026-11-02 09:40');
+    await user.click(within(dialog).getByRole('button', { name: 'Move' }));
+
+    expect(
+      within(dialog).getByText(
+        'Cannot move 1001.10: it would start before now. Enter a start at or after Mon 2 Nov 09:41.',
+      ),
+    ).toBeTruthy();
+  });
+
   it('ADR0089 the later step of an overdue row lands at now or later in one press', async () => {
     const user = userEvent.setup();
     // Wed 4 Nov 11:00 plant time: 1001.10, planned for Tue 3 Nov 11:30, is overdue by a day.

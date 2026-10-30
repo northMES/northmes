@@ -6,10 +6,11 @@ import type { GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts'
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 
 /**
- * G1 with 1001.10 planned on CNC 1 from Mon 2 Nov 07:00 plant time, before now and not started:
- * an overdue job order (glossary).
+ * G1 with 1001.10 planned on CNC 1 from Mon 2 Nov 07:00 plant time, or another setup start before
+ * now, and not started: an overdue job order (glossary).
  */
-export function g1WithOverdueRow(): GanttSnapshot {
+export function g1WithOverdueRow(setupStartAt = '2026-11-02T06:00:00Z'): GanttSnapshot {
+  const at = (offsetMs: number) => new Date(Date.parse(setupStartAt) + offsetMs).toISOString();
   return g1Snapshot({
     ...g1,
     productionOrders: g1.productionOrders.map((order) => ({
@@ -18,9 +19,9 @@ export function g1WithOverdueRow(): GanttSnapshot {
         row.id === 'jo-1001-10'
           ? {
               ...row,
-              setupStartAt: '2026-11-02T06:00:00Z',
-              runStartAt: '2026-11-02T06:30:00Z',
-              endAt: '2026-11-02T11:30:00Z',
+              setupStartAt: at(0),
+              runStartAt: at(30 * 60_000),
+              endAt: at(5.5 * 3_600_000),
             }
           : row,
       ),

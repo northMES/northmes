@@ -70,6 +70,11 @@ function overlapsOf(
   return names.length === 0 ? 'none' : names.join(', ');
 }
 
+/** The first whole minute at or after an instant: the Start field takes whole minutes. */
+function firstMinuteFrom(ms: number): number {
+  return Math.ceil(ms / 60_000) * 60_000;
+}
+
 /**
  * The body of the Move dialog for one job order: its state starts from the row each time the
  * dialog opens, so a dialog closed without Move leaves nothing behind.
@@ -125,7 +130,7 @@ function MoveForm({
   const past = parsed !== undefined && chosen?.refused === 'PAST';
   const showError = submits > 0 && (parsed === undefined || past);
   const fieldError = past
-    ? `${refusalMessage(row.jobOrder.displayNumber, 'PAST')} Enter a start at or after ${formatPlantDateTime(snapshot.nowMs, timeZone)}.`
+    ? `${refusalMessage(row.jobOrder.displayNumber, 'PAST')} Enter a start at or after ${formatPlantDateTime(firstMinuteFrom(snapshot.nowMs), timeZone)}.`
     : 'Enter a date and time like 2026-11-03 11:30.';
   const stepText = formatDuration(stepMs / 1000);
   // A step moves the start one snap from the snapped start the preview shows and writes the
