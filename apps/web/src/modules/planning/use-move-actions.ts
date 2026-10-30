@@ -5,7 +5,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { announce } from '../../ui/lib/announce.ts';
 import type { GanttSnapshot, ZoomPreset } from './gantt-data.ts';
 import { type GanttDraft, moveInDraft } from './gantt-draft.ts';
-import { createMoveStore, type MoveStore } from './move-store.ts';
+import { createMoveStore, type MoveStore, useMoveOf } from './move-store.ts';
 import type { GanttMoveActions } from './screens/gantt/gantt-context.ts';
 import {
   type MoveState,
@@ -88,25 +88,20 @@ export function useMoveActions({
     store.refresh();
   }, [store, snapshot, cascadeOn]);
   // The step message of keyboard move mode, debounced to about 300 ms (plan 07, Moving without
-  // dragging); the end of the move drops a message still waiting. It reads the plan through a ref,
-  // so a new plan within the 300 ms keeps the subscription and its message.
+  // dragging): each new preview of a keyboard move, also one over a new plan, starts the wait
+  // again, and the end of the move drops a message still waiting. A pointer move reads as no
+  // preview here, so a drag does not render the screen.
+  const keyboardPreview = useMoveOf(store, (move) =>
+    move?.state.source === 'keyboard' ? move.preview : undefined,
+  );
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const unsubscribe = store.subscribe(() => {
-      clearTimeout(timer);
-      const move = store.get();
-      if (move?.state.source !== 'keyboard' || move.preview === undefined) return;
-      const { preview } = move;
-      const machine =
-        latestSnapshot.current?.equipment.find((each) => each.code === preview.equipment)?.name ??
-        preview.equipment;
-      timer = setTimeout(() => announce(stepMessage(preview, machine, timeZone)), 300);
-    });
-    return () => {
-      clearTimeout(timer);
-      unsubscribe();
-    };
-  }, [store, timeZone]);
+    if (keyboardPreview === undefined) return;
+    const machine =
+      latestSnapshot.current?.equipment.find((each) => each.code === keyboardPreview.equipment)
+        ?.name ?? keyboardPreview.equipment;
+    const timer = setTimeout(() => announce(stepMessage(keyboardPreview, machine, timeZone)), 300);
+    return () => clearTimeout(timer);
+  }, [keyboardPreview, timeZone]);
   // A screen that goes away mid-move leaves no frame pending.
   useEffect(() => () => store.set(undefined), [store]);
   const actions = useMemo<GanttMoveActions | undefined>(() => {
