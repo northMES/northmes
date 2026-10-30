@@ -47,7 +47,7 @@ import {
   withZoom,
 } from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
-import { useMoveOf } from '../../move-store.ts';
+import { useMoveOf, useNotAllowed } from '../../move-store.ts';
 import { plantTime } from '../../order-facts.ts';
 import { usePlanningDraft } from '../../planning-draft.tsx';
 import { PlanningForbidden } from '../../planning-preview.ts';
@@ -451,6 +451,7 @@ export function BoardScreen() {
     machineSteps,
   });
   const preview = useMoveOf(moveStore, (move) => move?.preview);
+  const notAllowed = useNotAllowed(moveStore, snapshot);
 
   // The Move dialog's job order, and the block that takes focus when it closes.
   const moveDialogReturn = useRef<string | undefined>(undefined);
@@ -791,6 +792,7 @@ export function BoardScreen() {
                 }
                 tabStop={tabStop}
                 {...(preview !== undefined && { preview })}
+                {...(notAllowed !== undefined && { notAllowed })}
                 selectedOrderId={search.order}
                 onSelectOrder={selectOrder}
                 onOpenDetails={openDetails}

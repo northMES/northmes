@@ -14,7 +14,7 @@ import { cn } from 'cn';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import type { GanttSnapshot, WorkloadBucket } from '../../gantt-data.ts';
-import { type MoveStore, useMoveOf } from '../../move-store.ts';
+import { type MoveStore, useMoveOf, useNotAllowed } from '../../move-store.ts';
 import { visibleItems } from '../../timeline/culling.ts';
 import { formatMonth, type TimeRange, type TimeScale } from '../../timeline/time-scale.ts';
 import {
@@ -219,10 +219,13 @@ const valueHeaders = ['Available', 'Loaded', 'Setup', 'Run', 'Free', 'Utilizatio
  * One machine's lane (plan 18, The workload lane): a bar per bucket whose height is the
  * utilization, full at 100 percent, the setup part hatched, the overload above the lane's top edge
  * in the late token. The lane is aria-hidden; its header button opens the text table with every
- * value, the accessible form, which the panel draws under the lanes.
+ * value, the accessible form, which the panel draws under the lanes. While a job order moves, the
+ * lane of a machine its operation does not allow is greyed out with a hatch, and the button says
+ * so (#944).
  */
 function WorkloadLane({
   machine,
+  notAllowedFor,
   buckets,
   scale,
   treeWidth,
@@ -234,6 +237,8 @@ function WorkloadLane({
   onOpenChange,
 }: {
   readonly machine: { readonly code: string; readonly name: string };
+  /** The operation of the moving job order when it may not go to this machine. */
+  readonly notAllowedFor?: string | undefined;
   readonly buckets: readonly PlacedBucket[];
   readonly scale: TimeScale;
   readonly treeWidth: number;
@@ -263,6 +268,11 @@ function WorkloadLane({
             'h-7 max-w-full min-w-0 shrink px-2 text-[0.8125rem] font-medium',
             open && 'bg-accent',
           )}
+          aria-label={
+            notAllowedFor === undefined
+              ? undefined
+              : `Workload on ${machine.name}, not allowed for ${notAllowedFor}`
+          }
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? dialogId : undefined}
@@ -281,9 +291,16 @@ function WorkloadLane({
       <div
         aria-hidden
         data-lane={machine.code}
+        data-not-allowed={notAllowedFor !== undefined || undefined}
         className="relative shrink-0 overflow-hidden"
         style={{ width: `${timeWidth}px` }}
       >
+        {notAllowedFor !== undefined && (
+          <span
+            data-not-allowed-hatch
+            className="planning-not-allowed pointer-events-none absolute inset-0"
+          />
+        )}
         {buckets.map(({ bucket, fromMs, toMs, pending }) => {
           const left = scale.x(Math.max(fromMs, scale.range.fromMs));
           const width = Math.max(1, scale.x(Math.min(toMs, scale.range.toMs)) - left);
@@ -518,6 +535,7 @@ export function GanttWorkloadPanel({
   const [openLane, setOpenLane] = useState<string | undefined>(undefined);
   const idBase = useId();
   const preview = useMoveOf(moveStore, (move) => move?.preview);
+  const notAllowed = useNotAllowed(moveStore, snapshot);
   const machines = laneMachines(snapshot, preview?.equipment);
   const open = machines.find((machine) => machine.code === openLane);
   const kind = bucketKindOf(scale.zoom);
@@ -560,6 +578,9 @@ export function GanttWorkloadPanel({
           <WorkloadLane
             key={machine.code}
             machine={machine}
+            notAllowedFor={
+              notAllowed?.machines.has(machine.code) === true ? notAllowed.operation : undefined
+            }
             buckets={lanesOf(machine.code)}
             scale={scale}
             treeWidth={treeWidth}

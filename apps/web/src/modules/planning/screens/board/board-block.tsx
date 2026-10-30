@@ -12,7 +12,7 @@ import {
   Play,
   UserPen,
 } from 'lucide-react';
-import { type FocusEvent, type KeyboardEvent, type PointerEvent, useRef } from 'react';
+import { type FocusEvent, type KeyboardEvent, type PointerEvent, useEffect, useRef } from 'react';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
@@ -126,6 +126,14 @@ export function BoardBlock({
   );
   const moving = movedBy !== undefined;
   const inMoveMode = movedBy === 'keyboard';
+  // The block whose cursor says not-allowed while a drag is over a machine the operation may not
+  // use (#944). Set on the element, so a pointer move renders nothing; any end of the move clears it.
+  const refusedCursor = useRef<HTMLElement | undefined>(undefined);
+  useEffect(() => {
+    if (moving || refusedCursor.current === undefined) return;
+    refusedCursor.current.style.cursor = '';
+    refusedCursor.current = undefined;
+  }, [moving]);
   const placement = jobOrder.placement;
   if (placement === undefined) return null;
   const timeZone = snapshot.plant.timeZone;
@@ -217,6 +225,8 @@ export function BoardBlock({
     const target = machineAt(event.clientX, event.clientY);
     const allowed = target === undefined || row.operation.allowedEquipment.includes(target);
     current.refusedOn = allowed ? undefined : target;
+    event.currentTarget.style.cursor = allowed ? '' : 'not-allowed';
+    refusedCursor.current = allowed ? undefined : event.currentTarget;
     move.previewAt(
       pointerStart(scale, scale.instant(scale.x(current.setupStartMs) + dx), snapshot.nowMs),
       allowed ? target : undefined,
