@@ -199,7 +199,29 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
 
   const timeZone = frame?.plant.timeZone ?? 'UTC';
   const productionDayStart = frame?.plant.productionDayStart ?? '06:00';
-  const columns = useMemo(() => visibleColumns(options.hiddenColumns), [options.hiddenColumns]);
+  // A column's width while its header edge is dragged, kept in the options on release (#943).
+  const [draggedWidth, setDraggedWidth] = useState<{ id: string; width: number } | undefined>(
+    undefined,
+  );
+  const columnWidths = useMemo(
+    () =>
+      draggedWidth === undefined
+        ? options.columnWidths
+        : { ...options.columnWidths, [draggedWidth.id]: draggedWidth.width },
+    [options.columnWidths, draggedWidth],
+  );
+  const columns = useMemo(
+    () => visibleColumns(options.hiddenColumns, columnWidths),
+    [options.hiddenColumns, columnWidths],
+  );
+  const changeColumnWidth = (id: string, width: number, done: boolean) => {
+    if (!done) {
+      setDraggedWidth({ id, width });
+      return;
+    }
+    setDraggedWidth(undefined);
+    setOptions({ columnWidths: { ...options.columnWidths, [id]: width } });
+  };
   // The tree pane sticks as one block at the share of the view its splitter sets, 40 percent by
   // default; columns wider than the pane scroll inside it, so the time area stays reachable on a
   // narrow grid (WCAG 1.4.10) and the time column always starts where the pane ends (#943).
@@ -945,6 +967,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                     layout={pane}
                     sort={sort}
                     onSortChange={setSort}
+                    onColumnWidthChange={changeColumnWidth}
                   />
                   <GanttTimeHeader scale={scale} nowMs={snapshot.nowMs} />
                 </div>

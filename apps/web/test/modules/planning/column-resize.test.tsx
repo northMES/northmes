@@ -116,20 +116,25 @@ describe('resizing the tree columns of the order Gantt (#943)', () => {
 });
 
 describe('resizing the machine column of the planning board (#943)', () => {
-  it('#943 the machine column resizes by the keys on its header handle and keeps the width', async () => {
+  it('#943 Alt+Left and Alt+Right on a machine row header resize the machine column and keep the width, and the grid keeps its one Tab stop', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
     const header = within(board).getAllByRole('row')[0] as HTMLElement;
 
     const handle = within(board).getByRole('separator', { name: 'Resize the Machines column' });
     expect(handle.getAttribute('aria-valuenow')).toBe('200');
-    handle.focus();
-    await userEvent.keyboard('{ArrowRight}{ArrowRight}');
+    // The board has one Tab stop (D3), so the handle is for the pointer.
+    expect(handle.tabIndex).toBe(-1);
+    const machine = within(board).getByRole('rowheader', { name: 'CNC 1' });
+    machine.focus();
+    await userEvent.keyboard('{Alt>}{ArrowRight}{ArrowRight}{/Alt}');
 
     expect(header.style.gridTemplateColumns.split(' ')[0]).toBe('216px');
     expect(JSON.parse(window.localStorage.getItem(boardKey) ?? '{}')).toEqual({ width: 216 });
-    // The keys stay with the handle: the board's own arrow keys do not move focus away.
-    expect(document.activeElement).toBe(handle);
+    // The keys stay with the resize: focus stays on the machine.
+    expect(document.activeElement).toBe(machine);
+    await userEvent.keyboard('{Alt>}{ArrowLeft}{/Alt}');
+    expect(header.style.gridTemplateColumns.split(' ')[0]).toBe('208px');
   });
 
   it('#943 the machine column follows the pointer and a kept width comes back', async () => {

@@ -29,6 +29,7 @@ import { type ReactNode, useMemo } from 'react';
 import type { ColumnChoice } from '../../../../ui/components/columns-menu/index.ts';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button } from '../../../../ui/primitives/button.tsx';
+import { ColumnResizer, keyedWidth } from '../../components/column-resizer/index.ts';
 import { useGanttView } from './gantt-context.ts';
 import { GanttRowMenu } from './gantt-row-menu.tsx';
 import {
@@ -54,6 +55,11 @@ export interface GanttColumn {
   readonly header: string;
   /** The width in pixels; the Name column instead takes what the pane leaves, at least 160 px. */
   readonly widthPx: number;
+  /**
+   * The least width a resize leaves the column, which keeps its header readable beside its 24 px
+   * resize handle (#943); the Name column has none, since it does not resize.
+   */
+  readonly minWidthPx?: number;
   /** Sorting on the column sorts the level 1 rows and keeps the tree under each. */
   readonly sortable?: boolean;
   readonly numeric?: boolean;
@@ -132,6 +138,7 @@ export const ganttColumns: readonly GanttColumn[] = [
     id: 'machine',
     header: 'Machine',
     widthPx: 96,
+    minWidthPx: 88,
     cell: (row, { machineName }) =>
       row.kind === 'jobOrder'
         ? machineName(row.jobOrder.equipment)
@@ -143,6 +150,7 @@ export const ganttColumns: readonly GanttColumn[] = [
     id: 'quantity',
     header: 'Quantity',
     widthPx: 90,
+    minWidthPx: 88,
     numeric: true,
     cell: (row) =>
       quantityText(
@@ -155,12 +163,13 @@ export const ganttColumns: readonly GanttColumn[] = [
               : row.jobOrder.quantity,
       ),
   },
-  { id: 'start', header: 'Start', widthPx: 128, cell: timeCell('fromMs') },
-  { id: 'end', header: 'End', widthPx: 128, cell: timeCell('toMs') },
+  { id: 'start', header: 'Start', widthPx: 128, minWidthPx: 80, cell: timeCell('fromMs') },
+  { id: 'end', header: 'End', widthPx: 128, minWidthPx: 72, cell: timeCell('toMs') },
   {
     id: 'workingTime',
     header: 'Working time',
     widthPx: 110,
+    minWidthPx: 108,
     numeric: true,
     cell: (row) => formatDuration(workingSecondsOf(row)),
   },
@@ -168,6 +177,7 @@ export const ganttColumns: readonly GanttColumn[] = [
     id: 'deadline',
     header: 'Deadline',
     widthPx: 128,
+    minWidthPx: 112,
     sortable: true,
     cell: (row, { timeZone, zoneLabel }) =>
       row.kind === 'order'
@@ -180,6 +190,7 @@ export const ganttColumns: readonly GanttColumn[] = [
     id: 'lateBy',
     header: 'Late by',
     widthPx: 100,
+    minWidthPx: 100,
     sortable: true,
     cell: (row) =>
       row.kind === 'order' && row.analysis?.late
@@ -192,12 +203,14 @@ export const ganttColumns: readonly GanttColumn[] = [
     id: 'float',
     header: 'Float',
     widthPx: 96,
+    minWidthPx: 72,
     cell: (row) => (row.kind === 'jobOrder' ? <FloatCell row={row} /> : ''),
   },
   {
     id: 'status',
     header: 'Status',
     widthPx: 90,
+    minWidthPx: 80,
     cell: (row) =>
       statusLabel(
         row.kind === 'jobOrder'
@@ -211,6 +224,7 @@ export const ganttColumns: readonly GanttColumn[] = [
     id: 'lock',
     header: 'Lock',
     widthPx: 80,
+    minWidthPx: 64,
     cell: (row) => (row.kind === 'operation' && row.operation.isLocked ? 'Hard lock' : ''),
   },
 ];
@@ -325,11 +339,30 @@ export function useGanttTable({
   return table;
 }
 
-/** The visible columns in order, with their widths, the Name column taking the rest of the pane. */
-export function visibleColumns(hiddenColumns: readonly string[]): GanttColumn[] {
-  return ganttColumns.filter(
-    (column) => column.id === 'name' || !hiddenColumns.includes(column.id),
-  );
+/** The most a resize makes a tree column. */
+export const columnMaxPx = 480;
+
+/** A column's width within its bounds: its least width and the most a resize makes a column. */
+export function columnWidthWithin(column: GanttColumn, width: number): number {
+  return Math.round(Math.min(columnMaxPx, Math.max(column.minWidthPx ?? 0, width)));
+}
+
+/**
+ * The visible columns in order, each at the width the planner gave it, if any, within its bounds;
+ * the Name column takes the rest of the pane whatever is kept for it.
+ */
+export function visibleColumns(
+  hiddenColumns: readonly string[],
+  widths: Readonly<Record<string, number>> = {},
+): GanttColumn[] {
+  return ganttColumns
+    .filter((column) => column.id === 'name' || !hiddenColumns.includes(column.id))
+    .map((column) => {
+      const kept = widths[column.id];
+      return column.id === 'name' || kept === undefined
+        ? column
+        : { ...column, widthPx: columnWidthWithin(column, kept) };
+    });
 }
 
 /** The least width of the tree pane, of its Name column and of the time area beside it. */
@@ -430,36 +463,54 @@ export function TreePane({
 const ariaSort = { asc: 'ascending', desc: 'descending' } as const;
 
 /**
- * The header cells of the tree pane: a sort button with aria-sort on a sortable column. A header
- * without one is a Tab stop itself, so the keyboard reaches every column of a pane that scrolls
- * sideways, which scrolls the focused header into view (#943).
+ * The header cells of the tree pane: a sort button with aria-sort on a sortable column, and on
+ * every column but Name the resize handle at its end edge (#943), which Alt+Left and Alt+Right on
+ * the sort button also move. Every header is a Tab stop, by its sort button or its handle, so the
+ * keyboard reaches every column of a pane that scrolls sideways, which scrolls the focused header
+ * into view.
  */
 export function GanttTreeHeaderCells({
   columns,
   layout,
   sort,
   onSortChange,
+  onColumnWidthChange,
 }: {
   readonly columns: readonly GanttColumn[];
   readonly layout: TreePaneLayout;
   readonly sort: GanttSort | undefined;
   readonly onSortChange: (sort: GanttSort) => void;
+  /** A column's width to show, and whether it is the one to keep (see ColumnResizer). */
+  readonly onColumnWidthChange: (id: string, width: number, done: boolean) => void;
 }) {
   return (
     <TreePane layout={layout} className="bg-muted">
       {columns.map((column) => {
         const sorted = sort?.id === column.id ? (sort.desc ? 'desc' : 'asc') : undefined;
         const SortIcon = sorted === 'asc' ? ArrowUp : sorted === 'desc' ? ArrowDown : ArrowUpDown;
+        const resizable = column.id !== 'name';
         return (
           <div
             key={column.id}
             role="columnheader"
-            tabIndex={column.sortable ? undefined : 0}
+            // Named by its text alone, not by the resize handle inside it.
+            aria-label={column.header}
             aria-sort={
               column.sortable ? (sorted === undefined ? 'none' : ariaSort[sorted]) : undefined
             }
+            onKeyDown={(event) => {
+              // Alt+Left and Alt+Right on the sort button resize the column it heads.
+              if (!resizable || event.target === event.currentTarget) return;
+              const next = keyedWidth(event, column.widthPx, { alt: true });
+              if (next === undefined) return;
+              event.preventDefault();
+              event.stopPropagation();
+              onColumnWidthChange(column.id, columnWidthWithin(column, next), true);
+            }}
             className={cn(
-              'flex min-w-0 items-center border-e border-border bg-muted px-2 text-xs font-semibold text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+              'relative flex min-w-0 items-center border-e border-border bg-muted ps-2 text-xs font-semibold text-muted-foreground',
+              // Clear of the resize handle.
+              resizable ? 'pe-7' : 'pe-2',
               column.numeric && 'justify-end',
             )}
           >
@@ -474,6 +525,15 @@ export function GanttTreeHeaderCells({
               </Button>
             ) : (
               column.header
+            )}
+            {resizable && (
+              <ColumnResizer
+                column={column.header}
+                width={column.widthPx}
+                minWidth={column.minWidthPx ?? 0}
+                maxWidth={columnMaxPx}
+                onWidthChange={(width, done) => onColumnWidthChange(column.id, width, done)}
+              />
             )}
           </div>
         );

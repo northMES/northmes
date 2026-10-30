@@ -4,7 +4,8 @@
 import type { JobOrderSpan } from '@northmes/planning-domain';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import type { KeyboardEvent, ReactNode } from 'react';
+import { type KeyboardEvent, type ReactNode, useId } from 'react';
+import { ColumnResizer, keyedWidth } from '../../components/column-resizer/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { TimeScale } from '../../timeline/time-scale.ts';
 import { GanttMarkerLayer, overlayMarkers } from '../gantt/gantt-marker-layer.tsx';
@@ -40,6 +41,10 @@ export interface BoardGridProps {
   readonly cellsOf: (machine: string) => readonly BoardCellItem[];
   readonly scale: TimeScale;
   readonly machineWidth: number;
+  /** What a resize of the machine column may make it (#943). */
+  readonly machineBounds: { readonly min: number; readonly max: number };
+  /** The machine column's width to show, and whether it is the one to keep (see ColumnResizer). */
+  readonly onMachineWidthChange: (width: number, done: boolean) => void;
   readonly timeWidth: number;
   readonly collapsed: ReadonlySet<string>;
   readonly onToggleGroup: (code: string) => void;
@@ -208,6 +213,8 @@ export function BoardGrid({
   cellsOf,
   scale,
   machineWidth,
+  machineBounds,
+  onMachineWidthChange,
   timeWidth,
   collapsed,
   onToggleGroup,
@@ -228,6 +235,7 @@ export function BoardGrid({
   emptyText = 'No jobs in this range',
 }: BoardGridProps) {
   const columns = `${machineWidth}px ${timeWidth}px`;
+  const headerId = useId();
   const machineCount = model.groups.reduce((sum, group) => sum + group.machines.length, 0);
   const tab = (key: string) => (key === tabStop ? 0 : -1);
   // The rows the move in progress carries with it, on their machines, also from outside the range.
@@ -320,6 +328,18 @@ export function BoardGrid({
                 : undefined
             }
             onFocus={() => onFocusTarget(focusKeys.header(code))}
+            onKeyDown={(event) => {
+              // Alt+Left and Alt+Right resize the machine column; the grid's one Tab stop
+              // leaves the header's handle to the pointer (#943).
+              const next = keyedWidth(event, machineWidth, { alt: true });
+              if (next === undefined) return;
+              event.preventDefault();
+              event.stopPropagation();
+              onMachineWidthChange(
+                Math.min(machineBounds.max, Math.max(machineBounds.min, next)),
+                true,
+              );
+            }}
             data-sticky-column
             className="sticky start-0 z-20 flex items-center border-e border-border bg-card px-3 text-sm"
             style={{
@@ -441,13 +461,25 @@ export function BoardGrid({
       <Row index={1} heightRem={headerRem} columns={columns} className="sticky top-0 z-40 bg-muted">
         <div
           role="columnheader"
-          className="sticky start-0 z-10 flex flex-col justify-center border-e border-border bg-muted px-3"
+          aria-labelledby={`${headerId}-text`}
+          className="sticky start-0 z-10 flex flex-col justify-center border-e border-border bg-muted ps-3 pe-7"
         >
-          <span className="text-xs font-medium">Machines</span>
-          <span className="text-xs text-muted-foreground">
-            <span className="sr-only">, </span>
-            {machineCount} in{' '}
-            {model.groups.length === 1 ? '1 group' : `${model.groups.length} groups`}
+          <ColumnResizer
+            column="Machines"
+            width={machineWidth}
+            minWidth={machineBounds.min}
+            maxWidth={machineBounds.max}
+            focusable={false}
+            onWidthChange={onMachineWidthChange}
+          />
+          {/* The header's name, without the resize handle's. */}
+          <span id={`${headerId}-text`} className="flex flex-col">
+            <span className="text-xs font-medium">Machines</span>
+            <span className="text-xs text-muted-foreground">
+              <span className="sr-only">, </span>
+              {machineCount} in{' '}
+              {model.groups.length === 1 ? '1 group' : `${model.groups.length} groups`}
+            </span>
           </span>
         </div>
         <GanttTimeHeader scale={scale} nowMs={snapshot.nowMs} />

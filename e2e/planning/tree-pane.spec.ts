@@ -7,7 +7,8 @@ import { expect, plant, test } from '../fixtures.ts';
 // The left pane of the timelines (#943): the order Gantt's tree pane and the planning board's
 // machine column cover whatever the time area draws under them at every scroll position. The
 // Gantt's tree pane sticks as one block at the width its splitter sets and scrolls sideways on its
-// own when its columns are wider. G1's now is Mon 2 Nov 09:40.
+// own when its columns are wider. Every tree column but Name, and the board's machine column,
+// resizes by its header edge and from the keyboard. G1's now is Mon 2 Nov 09:40.
 
 const optionsKey = 'northmes.planning.gantt.options';
 
@@ -211,11 +212,10 @@ test.describe('the left pane of the timelines', () => {
     // browser's own focus scroll of the grid is undone at the next scroll event, so the position
     // is read before any focus and polled after.
     const before = await time();
+    // From Late by's sort button: its resize handle, then Float's, Status's and Lock's.
     await page.getByRole('button', { name: /^Late by/ }).focus();
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
-    await expect(gantt.getByRole('columnheader', { name: 'Lock' })).toBeFocused();
+    for (let step = 0; step < 4; step += 1) await page.keyboard.press('Tab');
+    await expect(gantt.getByRole('separator', { name: 'Resize the Lock column' })).toBeFocused();
     await expect.poll(() => inPane('Lock')).toBe(true);
     await expect.poll(time).toEqual(before);
 
@@ -282,5 +282,98 @@ test.describe('the left pane of the timelines', () => {
     await page.reload();
     await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     expect(Math.abs((await paneWidth()) - kept)).toBeLessThanOrEqual(1);
+  });
+
+  test('#943 a Gantt column resizes by its header edge and the keys, keeps its least width, and keeps the width after a reload', async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
+    await signIn(planningHref('gantt', { zoom: 'week', from: '2026-11-02' }));
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
+    const width = (name: string) =>
+      gantt
+        .getByRole('columnheader', { name, exact: true })
+        .evaluate((header) => header.getBoundingClientRect().width);
+    const handle = gantt.getByRole('separator', { name: 'Resize the Deadline column' });
+    const start = await width('Deadline');
+
+    const box = (await handle.boundingBox()) as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    const y = box.y + box.height / 2;
+    await page.mouse.move(box.x + box.width - 4, y);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width + 36, y, { steps: 4 });
+    await page.mouse.up();
+    expect(Math.abs((await width('Deadline')) - (start + 40))).toBeLessThanOrEqual(1);
+    // The release did not sort.
+    await expect(gantt.getByRole('columnheader', { name: 'Deadline' })).toHaveAttribute(
+      'aria-sort',
+      'none',
+    );
+
+    await gantt.getByRole('button', { name: /^Deadline/ }).focus();
+    await page.keyboard.press('Alt+ArrowRight');
+    expect(Math.abs((await width('Deadline')) - (start + 48))).toBeLessThanOrEqual(1);
+
+    // The least width holds however often Left is pressed.
+    const float = gantt.getByRole('separator', { name: 'Resize the Float column' });
+    await float.focus();
+    for (let step = 0; step < 12; step += 1) await page.keyboard.press('ArrowLeft');
+    const least = Number(await float.getAttribute('aria-valuemin'));
+    await expect(float).toHaveAttribute('aria-valuenow', String(least));
+    expect(Math.abs((await width('Float')) - least)).toBeLessThanOrEqual(1);
+    await checkA11y('the Gantt with resized tree columns');
+
+    await page.reload();
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
+    expect(Math.abs((await width('Deadline')) - (start + 48))).toBeLessThanOrEqual(1);
+    expect(Math.abs((await width('Float')) - least)).toBeLessThanOrEqual(1);
+  });
+
+  test('#943 the board machine column resizes by its header edge and Alt with the arrows on a machine, and keeps the width after a reload', async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
+    await signIn(planningHref('board', { zoom: 'week', from: '2026-11-02' }));
+    const board = page.getByRole('grid', { name: /board/ });
+    await expect(board).not.toHaveAttribute('aria-busy', 'true');
+    const width = () =>
+      board
+        .locator('[aria-rowindex="1"] [role="columnheader"]')
+        .first()
+        .evaluate((header) => header.getBoundingClientRect().width);
+    const start = await width();
+
+    const handle = board.getByRole('separator', { name: 'Resize the Machines column' });
+    const box = (await handle.boundingBox()) as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    const y = box.y + box.height / 2;
+    await page.mouse.move(box.x + box.width - 4, y);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width + 36, y, { steps: 4 });
+    await page.mouse.up();
+    expect(Math.abs((await width()) - (start + 40))).toBeLessThanOrEqual(1);
+
+    const machine = board.getByRole('rowheader', { name: 'CNC 1' });
+    await machine.focus();
+    await page.keyboard.press('Alt+ArrowLeft');
+    expect(Math.abs((await width()) - (start + 32))).toBeLessThanOrEqual(1);
+    await expect(machine).toBeFocused();
+    await checkA11y('the board with the machine column resized');
+
+    await page.reload();
+    await expect(board).not.toHaveAttribute('aria-busy', 'true');
+    expect(Math.abs((await width()) - (start + 32))).toBeLessThanOrEqual(1);
   });
 });

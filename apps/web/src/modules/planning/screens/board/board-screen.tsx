@@ -67,19 +67,17 @@ import { timeHeaderHeightRem } from '../gantt/gantt-time-area.tsx';
 import { BlockMenu } from './board-block-menu.tsx';
 import { type BoardCellItem, cellsOf } from './board-cells.ts';
 import { BoardGrid, boardRowRem, focusKeys } from './board-grid.tsx';
+import {
+  machineColumnBounds,
+  machineColumnWidth,
+  useMachineColumnWidth,
+} from './board-machine-column.ts';
 import { type BoardLine, boardEntry, boardFocusAfter } from './board-navigation.ts';
 import { type BoardModel, boardFitTargetOf, boardModelOf } from './board-rows.ts';
 import { BoardSkeleton } from './board-skeleton.tsx';
 
 /** The board opens at Week, as the Gantt and the job order table do (D5; D3 open question 1). */
 const defaultZoom = 'week';
-
-/**
- * The machine column: 200 px, never more than 40 percent of the grid (plan 07). D3 proposes fitting
- * the longest name between 168 and 272 px.
- */
-const machineColumnPx = 200;
-const machineColumnShare = 0.4;
 
 /** The lines of the grid that the arrow keys move over, in the grid's order. */
 function linesOf(
@@ -212,7 +210,13 @@ export function BoardScreen() {
     },
     [measureRef],
   );
-  const machineWidth = Math.min(machineColumnPx, Math.floor(width * machineColumnShare));
+  // The machine column: 200 px, never more than 40 percent of the grid (plan 07), until the planner
+  // resizes it by its header edge; the width stays in this browser (#943). D3 proposes fitting the
+  // longest name between 168 and 272 px.
+  const [keptMachineWidth, keepMachineWidth] = useMachineColumnWidth();
+  const [draggedMachineWidth, setDraggedMachineWidth] = useState<number | undefined>(undefined);
+  const machineWidth = machineColumnWidth(width, draggedMachineWidth ?? keptMachineWidth);
+  const machineBounds = machineColumnBounds(width);
   const zoomPlant = useMemo(
     () => ({ timeZone, productionDayStart }),
     [timeZone, productionDayStart],
@@ -780,6 +784,15 @@ export function BoardScreen() {
                 cellsOf={(code) => cells.get(code) ?? []}
                 scale={scale}
                 machineWidth={machineWidth}
+                machineBounds={machineBounds}
+                onMachineWidthChange={(next, done) => {
+                  if (!done) {
+                    setDraggedMachineWidth(next);
+                    return;
+                  }
+                  setDraggedMachineWidth(undefined);
+                  keepMachineWidth(next);
+                }}
                 timeWidth={timeWidth}
                 collapsed={collapsed}
                 onToggleGroup={(code) =>

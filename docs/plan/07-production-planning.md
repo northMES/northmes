@@ -916,7 +916,7 @@ Board settings choose which fields show on a block and which on hover, including
 
 ### Reflow, zoom and color
 
-- The board grid is the 1.4.10 excepted section: it scrolls in both directions inside its own container; the page around it does not. The machine column is capped at about 40 percent of the board width.
+- The board grid is the 1.4.10 excepted section: it scrolls in both directions inside its own container; the page around it does not. The machine column starts at 200 px, never more than 40 percent of the board width, and the planner resizes it by its header edge or with Alt+Left and Alt+Right on a machine's row header, as [18](18-gantt-timeline.md#tree-columns) describes.
 - Row height and block font size use `rem`, so 200 percent text zoom grows the rows.
 - Under `prefers-reduced-motion`, scrolling and block moves do not animate.
 - In Windows contrast themes the border, icon and line-style cues keep states readable; `forced-color-adjust: none` is used only on color swatches.
