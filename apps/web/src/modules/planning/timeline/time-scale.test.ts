@@ -417,19 +417,23 @@ describe('the names of the header cells (#902)', () => {
       hideClosed: short,
     }).ticks();
 
-    expect(ticks.filter((tick) => tick.tier === 'top').map((tick) => tick.name)).toEqual([
-      'Mon 2 Nov',
-      'Tue 3 Nov',
-      'Wed 4 Nov',
+    expect(
+      ticks.filter((tick) => tick.tier === 'top').map((tick) => [tick.label, tick.name]),
+    ).toEqual([
+      ['2', 'Mon 2 Nov'],
+      ['', 'Tue 3 Nov'],
+      ['4', 'Wed 4 Nov'],
     ]);
-    expect(ticks.filter((tick) => tick.tier === 'bottom').map((tick) => tick.name)).toEqual([
-      'Mon 2 Nov 06:00',
-      'Tue 3 Nov 06:00',
-      'Wed 4 Nov 06:00',
+    expect(
+      ticks.filter((tick) => tick.tier === 'bottom').map((tick) => [tick.label, tick.name]),
+    ).toEqual([
+      ['06:00', 'Mon 2 Nov 06:00'],
+      ['', 'Tue 3 Nov 06:00'],
+      ['06', 'Wed 4 Nov 06:00'],
     ]);
   });
 
-  it('#902 names a week cell by its week number and the date it starts, and a day cell of 4 weeks by its date', () => {
+  it('#902 names each week cell of 4 weeks by its week number and the date it starts, and a day cell by its date', () => {
     const range = rangeOf('2026-11-02', '4weeks', stockholm, '06:00');
     const ticks = createTimeScale({
       range,
