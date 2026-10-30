@@ -58,7 +58,9 @@ import {
   rangeLabel,
   rangeOf,
   shiftedFrom,
+  type TimeRange,
 } from '../../timeline/time-scale.ts';
+import { useRangeExtension, useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
 import { remPx, useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { useMoveActions } from '../../use-move-actions.ts';
 import { chainOf } from './gantt-chain.ts';
@@ -73,10 +75,12 @@ import { useGanttOptions } from './gantt-options.ts';
 import { GanttRowView } from './gantt-row.tsx';
 import {
   buildGanttRows,
+  fitTargetOf,
   type GanttRow,
   type JobOrderRow,
   notPlacedRows,
   rowHeightRem,
+  selectionRowOf,
 } from './gantt-rows.ts';
 import { GanttRunDialog } from './gantt-run-dialog.tsx';
 import { GanttTimeHeader, timeHeaderHeightRem } from './gantt-time-area.tsx';
@@ -178,19 +182,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     () => rangeOf(from, zoom, timeZone, productionDayStart),
     [from, zoom, timeZone, productionDayStart],
   );
-  // The extension belongs to one chosen start and zoom; a change of either resets it in the same
-  // render, through state, as React's rule for state derived from props says.
-  const extensionKey = `${from}|${zoom}`;
-  const [extended, setExtended] = useState({ key: extensionKey, before: 0, after: 0 });
-  if (extended.key !== extensionKey) setExtended({ key: extensionKey, before: 0, after: 0 });
-  const extension = extended.key === extensionKey ? extended : { before: 0, after: 0 };
-  const setExtension = (
-    update: (current: { before: number; after: number }) => { before: number; after: number },
-  ) =>
-    setExtended((current) => {
-      const base = current.key === extensionKey ? current : { before: 0, after: 0 };
-      return { key: extensionKey, ...update(base) };
-    });
+  // The extension belongs to one chosen start and zoom; a change of either resets it, unless a
+  // level change asked for the extension that holds its anchor (ADR 0089).
+  const rangeExtension = useRangeExtension(from, zoom);
+  const { extension, setExtension } = rangeExtension;
   const range = useMemo(
     () => extendedRange(from, zoom, timeZone, productionDayStart, extension),
     [from, zoom, timeZone, productionDayStart, extension.before, extension.after],
@@ -272,6 +267,14 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const lastTimeWidth = useRef<number | undefined>(undefined);
   const shiftAfterGrowth = useRef(false);
   const gridElement = useRef<HTMLElement | null>(null);
+  // One ref for the grid, kept across renders, so the width is not measured again on each one.
+  const ganttGridRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      gridElement.current = node;
+      gridRef(node);
+    },
+    [gridRef],
+  );
   // An edge counts only after a horizontal move of the planner towards it: a vertical scroll
   // changes nothing, a range under two screens wide extends on the side the planner is heading
   // for, and a move of the position the view makes itself (the shift after a span was added on
@@ -322,6 +325,27 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       }),
     [range, zoom, timeZone, timeWidth, productionDayStart, options.hideClosed, plantClosed],
   );
+  const calendar = snapshot?.calendar;
+  const timelineZoom = useTimelineZoom({
+    zoom,
+    range: rangeExtension,
+    scale,
+    grid: gridElement,
+    columns: { treeWidth, stickyWidth },
+    plant: {
+      timeZone,
+      productionDayStart,
+      ...(options.hideClosed &&
+        calendar !== undefined && {
+          closedOf: (around: TimeRange) => closedWindows(calendar, timeZone, around),
+        }),
+    },
+    onNavigate: (level, start) => void setSearch(withFrom(withZoom(search, level), start)),
+    onScrolled: (left) => {
+      lastScrollLeft.current = left;
+    },
+    dragging: () => moveStore.get()?.state.source === 'pointer',
+  });
 
   const table = useGanttTable({
     rows,
@@ -779,13 +803,18 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       toolbar={
         <GanttToolbar
           zoom={zoom}
-          onZoomChange={(next) => void setSearch(withZoom(search, next))}
+          onZoomChange={timelineZoom.setLevel}
+          onZoomToFit={() => {
+            // The row in the Details drawer, else the selected order or its run, else every
+            // loaded row.
+            const selected = search.order === undefined ? undefined : rowById.get(search.order);
+            const target = fitTargetOf(detailRow ?? selectionRowOf(selected, rowById), rows);
+            timelineZoom.fit(target.span, target.name);
+          }}
           from={from}
           onFromChange={(next) => void setSearch(withFrom(search, next))}
           onEarlier={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'earlier')))}
-          onNow={() =>
-            void setSearch(withFrom(search, plantDateOf(snapshot?.nowMs ?? Date.now(), timeZone)))
-          }
+          onNow={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
           onLater={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'later')))}
           rangeLabel={rangeLabel(chosenRange, zoom, timeZone)}
           options={options}
@@ -815,15 +844,18 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             style={fillHeight === undefined ? undefined : { height: `${fillHeight}px` }}
           >
             <div
-              ref={(node) => {
-                gridElement.current = node;
-                gridRef(node);
-              }}
+              ref={ganttGridRef}
               role="treegrid"
               aria-label={gridName}
               aria-rowcount={rowCount}
               aria-busy={state.status === 'loading' || undefined}
               onKeyDown={(event) => {
+                // Minus and plus step a level around the centre of the view (ADR 0089).
+                if (timelineZoom.onKeyDown(event)) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  return;
+                }
                 // The Escape stack: move mode ends first, then the chain highlight.
                 // The move is read from its store, so a move that begins renders no rows.
                 if (event.key === 'Escape' && moveStore.get() !== undefined) {
@@ -839,6 +871,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               style={{
                 scrollPaddingTop: `${timeHeaderHeightRem + notPlacedHeightRem}rem`,
                 scrollPaddingInlineStart: `${stickyWidth}px`,
+                // One finger scrolls; a pinch zooms the timeline, not the page (ADR 0089).
+                touchAction: 'pan-x pan-y',
               }}
             >
               <div

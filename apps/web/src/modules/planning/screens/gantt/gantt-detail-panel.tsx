@@ -768,7 +768,6 @@ function OrderDetails({
     openOrder,
     { label: 'Plan this order', reason: planReason },
     { label: 'Move all later by', reason: planReason },
-    { label: 'Zoom to order', reason: planReason },
   ];
   return (
     <>
@@ -849,7 +848,6 @@ function RunDetails({ row }: { readonly row: RunRow }) {
     ...(runActions === undefined
       ? []
       : [{ label: 'Split run', onSelect: () => runActions.split(run.id) }]),
-    { label: 'Zoom to run', reason: planReason },
   ];
   return (
     <>

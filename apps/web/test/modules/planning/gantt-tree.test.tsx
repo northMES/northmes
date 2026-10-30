@@ -217,7 +217,9 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
         configurable: true,
       });
       await userEvent.click(
-        within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', { name: 'Day' }),
+        within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {
+          name: 'Zoom in',
+        }),
       );
 
       await waitFor(() => {
