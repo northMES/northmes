@@ -220,6 +220,48 @@ describe('ADR0089 useTimeChunks (Loading by time chunk)', () => {
     await waitFor(() => expect(second.loads).toHaveLength(3));
   });
 
+  it('ADR0089 keeps drawing the job orders of the level before in every render while the chunks of a shorter level load, so a focused block stays', async () => {
+    let held: Promise<void> | undefined;
+    let answer: () => void = () => {};
+    const counting = countingLoad();
+    const load: TimeChunksInput['load'] = async (from, to) => {
+      if (held !== undefined) await held;
+      return counting.load(from, to);
+    };
+    // Every render's job orders, since one render without a block unmounts it and drops its focus.
+    const drawn: string[][] = [];
+    const base: TimeChunksInput = { load, zoom: '4weeks', timeZone: zone, ...at(0) };
+    const view = renderHook(
+      (props: TimeChunksInput) => {
+        const chunks = useTimeChunks(props);
+        drawn.push(chunks.jobOrders.map((row) => row.id).sort());
+        return chunks;
+      },
+      { initialProps: base },
+    );
+    await waitFor(() =>
+      expect(view.result.current.chunks.every((chunk) => chunk.status === 'loaded')).toBe(true),
+    );
+    const before = view.result.current.jobOrders.map((row) => row.id).sort();
+    expect(before.length).toBeGreaterThan(21);
+
+    held = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    const fromRender = drawn.length;
+    view.rerender({ ...base, zoom: 'week' });
+
+    expect(view.result.current.chunks.some((chunk) => chunk.status === 'loading')).toBe(true);
+    expect(drawn.slice(fromRender).every((ids) => ids.join() === before.join())).toBe(true);
+
+    answer();
+    await waitFor(() =>
+      expect(view.result.current.chunks.every((chunk) => chunk.status === 'loaded')).toBe(true),
+    );
+    // The weeks' answers replace what the months drew.
+    expect(view.result.current.jobOrders).toHaveLength(21);
+  });
+
   it('ADR0089 takes no answer of a chunk that started before the plant zone changed', async () => {
     let answer: () => void = () => {};
     const waiting = new Promise<void>((resolve) => {

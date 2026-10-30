@@ -70,6 +70,11 @@ interface ChunkCache {
   readonly stale: ReadonlySet<string>;
   /** The loaded chunks whose fresh answer is on its way. */
   readonly refreshing: ReadonlySet<string>;
+  /**
+   * The job orders of the chunk length before, drawn while the chunks of a new length load, so a
+   * zoom keeps its blocks and the focus on them; gone once no chunk is loading.
+   */
+  readonly carried: readonly GanttJobOrder[];
 }
 
 const noKeys: ReadonlySet<string> = new Set();
@@ -79,6 +84,7 @@ function newCache(
   unit: ChunkUnit,
   timeZone: string,
   entries: ReadonlyMap<string, ChunkEntry> = new Map(),
+  carried: readonly GanttJobOrder[] = [],
 ): ChunkCache {
   const loaded = [...entries.values()].filter((entry) => entry.status === 'loaded');
   return {
@@ -89,7 +95,17 @@ function newCache(
     entries: new Map(loaded.map((entry) => [entry.key, entry])),
     stale: new Set(loaded.map((entry) => entry.key)),
     refreshing: noKeys,
+    carried,
   };
+}
+
+/** The job orders of a cache's loaded chunks and those it carries, each once. */
+function drawnJobOrders(cache: ChunkCache): GanttJobOrder[] {
+  const byId = new Map<string, GanttJobOrder>();
+  for (const row of cache.carried) byId.set(row.id, row);
+  for (const entry of cache.entries.values())
+    for (const row of entry.jobOrders) byId.set(row.id, row);
+  return [...byId.values()];
 }
 
 /** The cache with a chunk's answer set, if the cache is still the one the load started in. */
@@ -106,7 +122,8 @@ function answered(
   entries.set(key, update(entry));
   const refreshing = new Set(cache.refreshing);
   refreshing.delete(key);
-  return { ...cache, entries, refreshing };
+  const loading = [...entries.values()].some((each) => each.status === 'loading');
+  return { ...cache, entries, refreshing, carried: loading ? cache.carried : [] };
 }
 
 /** The time chunks of a view and the job orders they hold (ADR 0089, Loading by time chunk). */
@@ -120,13 +137,16 @@ export function useTimeChunks({
 }: TimeChunksInput): TimeChunks {
   const unit = chunkUnitOf(zoom);
   const [stored, setCache] = useState<ChunkCache>(() => newCache(load, unit, timeZone));
-  // A new chunk length or plant zone starts an empty cache, and a new source or filter one that
-  // loads its chunks again while it draws the ones before, as React's rule for state from props
-  // says: a cached chunk is valid only within its chunk length and the plant dates it is aligned
-  // to (ADR 0089).
+  // A new plant zone starts an empty cache. A new chunk length starts one that draws the job orders
+  // before until its chunks load, and a new source or filter one that loads its chunks again while
+  // it draws the ones before, as React's rule for state from props says: a cached chunk is valid
+  // only within its chunk length and the plant dates it is aligned to (ADR 0089).
   let cache = stored;
-  if (cache.unit !== unit || cache.timeZone !== timeZone) {
+  if (cache.timeZone !== timeZone) {
     cache = newCache(load, unit, timeZone);
+    setCache(cache);
+  } else if (cache.unit !== unit) {
+    cache = newCache(load, unit, timeZone, undefined, drawnJobOrders(cache));
     setCache(cache);
   } else if (cache.load !== load) {
     cache = newCache(load, unit, timeZone, cache.entries);
@@ -184,7 +204,17 @@ export function useTimeChunks({
               isFarChunk(entry, buffer) &&
               !entry.jobOrders.some((row) => keep?.has(row.id) === true),
           );
-    if (missing.length === 0 && far.length === 0) return;
+    if (missing.length === 0 && far.length === 0) {
+      // Nothing is left to load at the new chunk length, so what it carried goes.
+      const loading = [...cache.entries.values()].some((entry) => entry.status === 'loading');
+      if (cache.carried.length > 0 && !loading) {
+        const { generation } = cache;
+        setCache((current) =>
+          current.generation === generation ? { ...current, carried: [] } : current,
+        );
+      }
+      return;
+    }
     const { generation } = cache;
     setCache((current) => {
       if (current.generation !== generation) return current;
@@ -236,8 +266,9 @@ export function useTimeChunks({
   );
   const jobOrders = useMemo(() => {
     const byId = new Map<string, GanttJobOrder>();
+    for (const row of cache.carried) byId.set(row.id, row);
     for (const entry of chunks) for (const row of entry.jobOrders) byId.set(row.id, row);
     return [...byId.values()];
-  }, [chunks]);
+  }, [chunks, cache.carried]);
   return { chunks, jobOrders, retry };
 }
