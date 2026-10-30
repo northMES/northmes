@@ -233,12 +233,11 @@ export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
   // and removed on unmount.
   useEffect(() => {
     const element = grid.current;
-    if (element === null) return;
     for (const [type, listener, passive] of listeners) {
-      element.addEventListener(type, listener, { passive });
+      element?.addEventListener(type, listener, { passive });
     }
     return () => {
-      for (const [type, listener] of listeners) element.removeEventListener(type, listener);
+      for (const [type, listener] of listeners) element?.removeEventListener(type, listener);
     };
   });
 
