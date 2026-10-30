@@ -90,6 +90,11 @@ describe('the pointer start of a drop near now (ADR 0089, Time before now)', () 
     expect(preview?.span.setupStartMs).toBe(mon(11));
   });
 
+  it('ADR0089 a pointer at a fractional instant, as a fractional width gives, snaps without a Temporal error', () => {
+    expect(pointerStart(week, mon(13, 10) + 0.4062, nowMs)).toBe(mon(15));
+    expect(pointerStart(week, nowMs - minute - 0.5, nowMs)).toBeLessThan(nowMs);
+  });
+
   it('ADR0089 a pointer after now snaps as before, and one before now stays before now', () => {
     expect(pointerStart(week, mon(13, 10), nowMs)).toBe(mon(15));
     expect(pointerStart(week, nowMs - minute, nowMs)).toBeLessThan(nowMs);

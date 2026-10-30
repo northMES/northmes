@@ -126,8 +126,11 @@ export function pointerStart(
   rawMs: number,
   nowMs: number,
 ): number {
-  let startMs = scale.snap(rawMs);
-  if (rawMs < nowMs) return startMs;
+  // A fractional width gives a fractional instant, which Temporal refuses, so the snap takes the
+  // whole millisecond.
+  const atMs = Math.round(rawMs);
+  let startMs = scale.snap(atMs);
+  if (atMs < nowMs) return startMs;
   // One step forward reaches now; the guard of three covers a day step that a change of clocks
   // shortens, and stops the loop on a scale whose snap would not move forward.
   for (let count = 0; startMs < nowMs && count < 3; count += 1) {
