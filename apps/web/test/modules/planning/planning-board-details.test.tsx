@@ -4,7 +4,13 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { detailsOpen, findDetails, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
+import {
+  chooseDetailsAction,
+  detailsOpen,
+  findDetails,
+  renderGanttRoute,
+  sourceOf,
+} from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -100,7 +106,7 @@ describe('Details on the planning board (Krister, 2026-10-21: the Gantt drawer)'
     await user.keyboard('{Enter}');
     const drawer = await findDetails();
 
-    await user.click(within(drawer).getByRole('button', { name: 'Move' }));
+    await chooseDetailsAction(drawer, 'Move');
     await user.click(within(drawer).getByRole('button', { name: 'Later' }));
     await user.click(within(drawer).getByRole('button', { name: 'Apply' }));
     await waitFor(() =>
@@ -122,7 +128,7 @@ describe('Details on the planning board (Krister, 2026-10-21: the Gantt drawer)'
     await user.keyboard('{Enter}');
     const drawer = await findDetails();
 
-    await user.click(within(drawer).getByRole('button', { name: 'Show critical chain' }));
+    await chooseDetailsAction(drawer, 'Show critical chain');
     await waitFor(() => expect(router.state.location.pathname).toBe('/plant-a/planning/gantt'));
     expect(router.state.location.search).toMatchObject({ order: 'po-1003', chain: 1 });
   });
@@ -201,7 +207,7 @@ describe('Details on the planning board (Krister, 2026-10-21: the Gantt drawer)'
     await user.keyboard('{Enter}');
     const drawer = await findDetails();
 
-    await user.click(within(drawer).getByRole('button', { name: 'Move' }));
+    await chooseDetailsAction(drawer, 'Move');
     await user.click(within(drawer).getByRole('button', { name: 'Later' }));
     await user.keyboard('{Escape}');
     await waitFor(() => expect(detailsOpen()).toBe(false));
