@@ -33,5 +33,49 @@ test.describe('the Not placed row of the order Gantt', () => {
     // The rows scrolled under the pinned row, where the bug showed.
     expect(hit.scrolled).toBe(200);
     expect(hit.onRow).toBe(true);
+
+    // The time header stays above the Not placed row. They never overlap today, so the order is
+    // read from the computed z-index.
+    const z = await gantt.evaluate((grid) => {
+      const of = (index: number) =>
+        Number(
+          getComputedStyle(grid.querySelector(`[aria-rowindex="${index}"]`) as Element).zIndex,
+        );
+      return { header: of(1), notPlaced: of(2) };
+    });
+    expect(z.notPlaced).toBeLessThan(z.header);
+  });
+
+  // The Not placed row covers the rows under it, so the grid's scroll padding must keep a focused
+  // row clear of it as well as of the time header (WCAG 2.4.11, #911).
+  test('#911 a row that takes focus under the Not placed row scrolls clear of it', async ({
+    page,
+    signIn,
+  }) => {
+    await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+    await expect(gantt).toBeVisible();
+
+    const focused = await gantt.evaluate((grid) => {
+      const top = grid.getBoundingClientRect().top + grid.clientTop;
+      const row = grid.querySelectorAll<HTMLElement>('[data-row-id]')[4] as HTMLElement;
+      // Rest the row's top a few pixels under the Not placed row's top edge.
+      grid.scrollTop = row.getBoundingClientRect().top - top - 52;
+      row.focus();
+      const pinned = (
+        grid.querySelector('[aria-rowindex="2"]') as HTMLElement
+      ).getBoundingClientRect();
+      const name = (row.querySelector('[role="rowheader"]') as HTMLElement).getBoundingClientRect();
+      const at = document.elementFromPoint(name.left + 20, name.top + name.height / 2);
+      return {
+        active: document.activeElement === row,
+        rowTop: row.getBoundingClientRect().top,
+        pinnedBottom: pinned.bottom,
+        onRow: at !== null && row.contains(at),
+      };
+    });
+    expect(focused.active).toBe(true);
+    expect(focused.rowTop).toBeGreaterThanOrEqual(focused.pinnedBottom - 1);
+    expect(focused.onRow).toBe(true);
   });
 });
