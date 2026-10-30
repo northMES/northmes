@@ -60,8 +60,8 @@ test.describe('the time scroller of the order Gantt', () => {
   });
 
   // A sticky cell cannot leave its row, so a row only as wide as the grid let the tree columns
-  // scroll away once the range had grown past the overflow a fresh range has.
-  test('#890 the tree columns stay in view after the range grows and the grid scrolls to the far right', async ({
+  // scroll away once the scroll position passed the row's width (#890).
+  test('#890 the Name and Deadline columns stay in view after the range grows and the grid scrolls to the far right', async ({
     page,
     signIn,
   }) => {
@@ -69,29 +69,33 @@ test.describe('the time scroller of the order Gantt', () => {
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
 
-    for (let span = 0; span < 6; span += 1) {
-      const before = await gantt.evaluate((grid) => grid.scrollWidth);
-      await gantt.evaluate((grid) => {
-        grid.scrollLeft = grid.scrollWidth;
-        grid.dispatchEvent(new Event('scroll'));
-      });
-      await expect.poll(() => gantt.evaluate((grid) => grid.scrollWidth)).toBeGreaterThan(before);
-    }
+    // Scroll to the right edge until the content is several views wide, as the range grows.
+    await expect
+      .poll(() =>
+        gantt.evaluate((grid) => {
+          grid.scrollLeft = grid.scrollWidth;
+          return grid.scrollWidth / grid.clientWidth;
+        }),
+      )
+      .toBeGreaterThan(4);
     await gantt.evaluate((grid) => {
       grid.scrollLeft = grid.scrollWidth;
     });
 
     const edges = await gantt.evaluate((grid) => {
-      const left = (selector: string) =>
-        (grid.querySelector(selector) as HTMLElement).getBoundingClientRect().left;
+      const rect = (selector: string) =>
+        (grid.querySelector(selector) as HTMLElement).getBoundingClientRect();
       return {
         scrolled: grid.scrollLeft,
         client: grid.clientWidth,
         grid: grid.getBoundingClientRect().left + grid.clientLeft,
-        header: left('[aria-rowindex="1"] > [role="columnheader"]'),
-        notPlaced: left('[aria-rowindex="2"] > [role="rowheader"]'),
-        order: left('[data-row-kind="order"] > [role="rowheader"]'),
-        jobOrder: left('[data-row-kind="jobOrder"] > [role="rowheader"]'),
+        header: rect('[aria-rowindex="1"] > [role="columnheader"]').left,
+        nameEnd: rect('[aria-rowindex="1"] > [role="columnheader"]').right,
+        deadline: rect('[aria-rowindex="1"] > [role="columnheader"]:nth-child(2)').left,
+        notPlaced: rect('[aria-rowindex="2"] > [role="rowheader"]').left,
+        order: rect('[data-row-kind="order"] > [role="rowheader"]').left,
+        jobOrder: rect('[data-row-kind="jobOrder"] > [role="rowheader"]').left,
+        orderDeadline: rect('[data-row-kind="order"] > [role="gridcell"]').left,
       };
     });
     // The position passed a row as wide as the grid, where the bug showed.
@@ -100,5 +104,37 @@ test.describe('the time scroller of the order Gantt', () => {
     expect(edges.notPlaced).toBeCloseTo(edges.grid, 0);
     expect(edges.order).toBeCloseTo(edges.grid, 0);
     expect(edges.jobOrder).toBeCloseTo(edges.grid, 0);
+    // The grid is wide enough for every tree cell to stick, so the Deadline column stays beside Name.
+    expect(edges.deadline).toBeCloseTo(edges.nameEnd, 0);
+    expect(edges.orderDeadline).toBeCloseTo(edges.nameEnd, 0);
+  });
+
+  // On a narrow grid only the Name column sticks (WCAG 1.4.10), and the Not placed row follows the
+  // same rule, so its list comes into view beside the Name column once the other tree columns
+  // have scrolled away (#890).
+  test('#890 on a narrow grid the Not placed list comes into view beside the Name column', async ({
+    page,
+    signIn,
+  }) => {
+    await page.setViewportSize({ width: 400, height: 800 });
+    await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+    await expect(gantt).toBeVisible();
+
+    const hit = await gantt.evaluate((grid) => {
+      const name = grid.querySelector('[aria-rowindex="1"] > [role="columnheader"]') as HTMLElement;
+      const list = grid.querySelector('[aria-rowindex="2"] > [role="gridcell"]') as HTMLElement;
+      // Scroll until the list's start meets the Name column's end.
+      grid.scrollLeft = list.getBoundingClientRect().left - name.getBoundingClientRect().right;
+      const box = list.getBoundingClientRect();
+      const at = document.elementFromPoint(box.left + 4, box.top + box.height / 2);
+      return {
+        onList: at !== null && list.contains(at),
+        listLeft: box.left,
+        nameEnd: name.getBoundingClientRect().right,
+      };
+    });
+    expect(hit.listLeft).toBeCloseTo(hit.nameEnd, 0);
+    expect(hit.onList).toBe(true);
   });
 });
