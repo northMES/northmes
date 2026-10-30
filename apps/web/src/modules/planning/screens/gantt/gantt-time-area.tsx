@@ -90,10 +90,10 @@ export function TimeCellShading({
   readonly windows: readonly ClosedWindow[];
   readonly scale: TimeScale;
   /** Now, from the snapshot's clock: the time before it takes the past tone. */
-  readonly nowMs?: number;
+  readonly nowMs: number;
 }) {
   const pastWidth =
-    nowMs === undefined || nowMs <= scale.range.fromMs
+    nowMs <= scale.range.fromMs
       ? 0
       : scale.x(Math.min(nowMs, scale.range.toMs)) - scale.x(scale.range.fromMs);
   return (

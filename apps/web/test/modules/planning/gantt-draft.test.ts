@@ -213,7 +213,7 @@ describe('the in-memory draft of the order Gantt (plan 18, Resolving a break in 
 });
 
 describe('a draft row whose setup start passed while it waited (ADR 0089, Time before now)', () => {
-  it('My draft lists a PAST conflict for it, which Move back resolves', () => {
+  it('ADR0089 My draft lists a PAST conflict for it first, which Move back resolves', () => {
     const { draft } = moveInDraft(
       g1Snapshot(),
       emptyDraft,
@@ -225,6 +225,7 @@ describe('a draft row whose setup start passed while it waited (ADR 0089, Time b
 
     const conflicts = draftConflicts(applyDraft(later, draft), draft);
 
+    expect(conflicts[0]?.code).toBe('PAST');
     const past = conflicts.filter((conflict) => conflict.code === 'PAST');
     expect(past).toEqual([
       {
@@ -245,7 +246,7 @@ describe('a draft row whose setup start passed while it waited (ADR 0089, Time b
     ).toEqual(['1003.20']);
   });
 
-  it('lists no PAST conflict while the draft start is now or later', () => {
+  it('ADR0089 lists no PAST conflict while the draft start is now or later', () => {
     const { draft } = moveInDraft(
       g1Snapshot(),
       emptyDraft,

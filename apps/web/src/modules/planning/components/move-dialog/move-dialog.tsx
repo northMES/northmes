@@ -16,7 +16,12 @@ import {
 } from '../../../../ui/primitives/dialog.tsx';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/primitives/radio-group.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
-import { type MovePreview, previewOf, refusalMessage } from '../../screens/gantt/gantt-move.ts';
+import {
+  type MovePreview,
+  previewOf,
+  refusalMessage,
+  stepLaterStart,
+} from '../../screens/gantt/gantt-move.ts';
 import type { JobOrderRow } from '../../screens/gantt/gantt-rows.ts';
 import { startOf, startText } from './move-dialog-start.ts';
 
@@ -135,7 +140,8 @@ function MoveForm({
     )?.span.setupStartMs ?? atMs;
   const step = (direction: -1 | 1) => {
     const from = chosen?.span.setupStartMs ?? setupStartMs;
-    let atMs = from + direction * stepMs;
+    // Later from a start before now goes to the first step at or after now, as move mode does.
+    let atMs = direction > 0 ? stepLaterStart(from, stepMs, snapshot.nowMs) : from - stepMs;
     for (let count = 0; direction < 0 && count < 500 && snappedAt(atMs) >= from; count += 1) {
       atMs -= stepMs;
     }

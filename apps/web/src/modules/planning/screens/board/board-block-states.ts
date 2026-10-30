@@ -23,11 +23,12 @@ export interface BoardBlockState {
 /**
  * The states of a block on the board, each with its words, in the order the name reads them
  * (plan 07, Block states; design D3, BO12): hard-locked, held by another planner, in my draft,
- * started, finished (ADR 0089), the conflicts, late and overdue. The Gantt's states give the locked, draft, conflict
- * and late words, so a block reads the same on both pages. A planned row that is not hard-locked
- * and whose setup start lies before now is overdue; the words name the day when it is not today's. The fixture has no reported quantities, proposals or
- * material lines, so started names no progress and finish pending, proposed and material short
- * are left for the data that carries them.
+ * started, finished (ADR 0089), the conflicts, late and overdue. The Gantt's states give the
+ * locked, draft, conflict and late words, so a block reads the same on both pages. A planned row
+ * that is not hard-locked and whose setup start lies before now is overdue; the words name the day
+ * when it is not today's. The fixture has no reported quantities, proposals or material lines, so
+ * started names no progress and finish pending, proposed and material short are left for the
+ * data that carries them.
  */
 export function boardBlockStates(
   row: JobOrderRow,

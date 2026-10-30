@@ -130,7 +130,7 @@ describe('the move actions during a drag (ADR 0030; #898)', () => {
 describe('a move before now (ADR 0089, Time before now)', () => {
   const minute = 60_000;
 
-  it('a drop before now is refused with PAST, announced, and writes nothing to the draft', async () => {
+  it('ADR0089 a drop before now is refused with PAST, announced, and writes nothing to the draft', async () => {
     const { result, drafts, committed } = renderMoveActions();
     act(() => {
       result.current.actions?.begin('jo-1001-10', 'pointer');
@@ -152,7 +152,7 @@ describe('a move before now (ADR 0089, Time before now)', () => {
     });
   });
 
-  it('a step earlier in move mode that would start before now is refused, and the row stays', async () => {
+  it('ADR0089 a step earlier in move mode that would start before now is refused, and the row stays', async () => {
     const { result, committed } = renderMoveActions();
     act(() => {
       result.current.actions?.begin('jo-1001-10', 'keyboard');
@@ -175,7 +175,7 @@ describe('a move before now (ADR 0089, Time before now)', () => {
     });
   });
 
-  it('a step later from an overdue row lands at now or later, never before it', () => {
+  it('ADR0089 a step later from an overdue row lands at now or later, never before it', () => {
     const { result, committed } = renderMoveActions(g1WithOverdueRow());
     act(() => {
       result.current.actions?.begin('jo-1001-10', 'keyboard');
@@ -190,5 +190,22 @@ describe('a move before now (ADR 0089, Time before now)', () => {
     expect(move?.state.setupStartMs).toBeGreaterThanOrEqual(committed.nowMs);
     expect(move?.state.setupStartMs).toBeLessThan(committed.nowMs + hour);
     expect(move?.preview?.refused).toBeUndefined();
+  });
+
+  it('ADR0089 Enter on an overdue row that did not move ends the move and writes nothing', async () => {
+    const { result, drafts } = renderMoveActions(g1WithOverdueRow());
+    act(() => {
+      result.current.actions?.begin('jo-1001-10', 'keyboard');
+    });
+
+    act(() => {
+      result.current.actions?.commit();
+    });
+
+    expect(drafts).toEqual([]);
+    expect(result.current.store.get()).toBeUndefined();
+    await waitFor(() => {
+      expect(announced()).toBe('Move cancelled.');
+    });
   });
 });

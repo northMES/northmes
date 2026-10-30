@@ -23,14 +23,14 @@ const move = (setupStartMs: number, jobOrderId = 'jo-1001-10', equipment = 'CNC1
   ({ jobOrderId, setupStartMs, equipment, source: 'pointer' }) as const;
 
 describe('a move before now is refused with PAST (ADR 0089, Time before now)', () => {
-  it('a setup start exactly at now is no refusal', () => {
+  it('ADR0089 a setup start exactly at now is no refusal', () => {
     const preview = previewOf(committed, move(nowMs), true);
 
     expect(preview?.refused).toBeUndefined();
     expect(preview?.span.setupStartMs).toBeGreaterThanOrEqual(nowMs);
   });
 
-  it('a setup start one minute before now is refused with PAST, and the tooltip says so', () => {
+  it('ADR0089 a setup start one minute before now is refused with PAST, in the refusal message, the tooltip and the step message', () => {
     const preview = previewOf(committed, move(nowMs - minute), true);
 
     expect(preview?.refused).toBe('PAST');
@@ -45,7 +45,7 @@ describe('a move before now is refused with PAST (ADR 0089, Time before now)', (
     );
   });
 
-  it('the refused preview outlines the place the pointer asks for, as long as the row', () => {
+  it('ADR0089 the refused preview outlines the place the pointer asks for, as long as the row', () => {
     const preview = previewOf(committed, move(mon(6)), true);
     const row = committed.productionOrders[0]?.jobOrders[0]?.placement;
 
@@ -53,7 +53,7 @@ describe('a move before now is refused with PAST (ADR 0089, Time before now)', (
     expect((preview?.span.endMs ?? 0) - mon(6)).toBe((row?.endMs ?? 0) - (row?.setupStartMs ?? 0));
   });
 
-  it('an overdue row held at its own start and machine is no move, so no refusal', () => {
+  it('ADR0089 an overdue row held at its own start and machine is no move, so no refusal', () => {
     const snapshot = withOverdueRow();
 
     const preview = previewOf(snapshot, move(mon(6)), true);
@@ -61,7 +61,7 @@ describe('a move before now is refused with PAST (ADR 0089, Time before now)', (
     expect(preview?.refused).toBeUndefined();
   });
 
-  it('an overdue row may move to now, and one minute before now is refused', () => {
+  it('ADR0089 an overdue row may move to now, and one minute before now is refused', () => {
     const snapshot = withOverdueRow();
 
     expect(previewOf(snapshot, move(nowMs), true)?.refused).toBeUndefined();
@@ -79,7 +79,7 @@ describe('the pointer start of a drop near now (ADR 0089, Time before now)', () 
     widthPx: 1680,
   });
 
-  it('an overdue row dropped on the now line at week, now 09:40, lands at 12:00', () => {
+  it('ADR0089 an overdue row dropped on the now line at week, now 09:40, lands at 12:00', () => {
     const snapshot = withOverdueRow();
 
     const startMs = pointerStart(week, nowMs, nowMs);
@@ -90,7 +90,7 @@ describe('the pointer start of a drop near now (ADR 0089, Time before now)', () 
     expect(preview?.span.setupStartMs).toBe(mon(11));
   });
 
-  it('a pointer after now snaps as before, and one before now stays before now', () => {
+  it('ADR0089 a pointer after now snaps as before, and one before now stays before now', () => {
     expect(pointerStart(week, mon(13, 10), nowMs)).toBe(mon(15));
     expect(pointerStart(week, nowMs - minute, nowMs)).toBeLessThan(nowMs);
   });

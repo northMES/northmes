@@ -159,8 +159,8 @@ export function GanttBlock({
   // The text lines sit on the order color: a hollow segment shows the lane color, which is dark
   // in the dark theme while the text is pure black, so text over a hollow could not be read (#882).
   // The setup hatch, the outlines and the conflict edge sit above the text at z-[3]. A finished
-  // job order is drawn muted, with the order color as its leading edge and the finished cue
-  // (ADR 0089, Time before now); an overdue one keeps its color.
+  // job order is drawn muted, with the order color as its leading edge, a dotted border and the
+  // finished cue (ADR 0089, Time before now); an overdue one keeps its color.
   const finished = jobOrder.status === 'finished';
   const color = finished ? 'var(--muted)' : `var(--${order.color})`;
 
@@ -336,18 +336,27 @@ export function GanttBlock({
                 selected && 'border-t-3 border-t-black',
                 inDraft && 'border-3 border-double border-black',
                 moving && 'opacity-60',
-                finished && 'text-muted-foreground',
+                // A dotted border is the finished cue at any width (ADR 0089).
+                finished && 'border-dotted text-muted-foreground',
               )}
               data-finished={finished || undefined}
               style={{
                 left: `${left}px`,
                 width: `${width}px`,
                 background: color,
-                ...(finished && { boxShadow: `inset 4px 0 0 var(--${order.color})` }),
               }}
             />
           }
         >
+          {finished && (
+            // The order color as the leading edge; a child, so the focus ring still paints.
+            <span
+              aria-hidden
+              data-finished-edge
+              className="pointer-events-none absolute inset-y-0 start-0 z-[3] w-1"
+              style={{ background: `var(--${order.color})` }}
+            />
+          )}
           {setupWidth > 0 && (
             <span
               aria-hidden

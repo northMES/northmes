@@ -284,7 +284,7 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     await waitFor(() => expect(document.activeElement).toBe(block(board, '1001.10')));
     expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
   });
-  it('ADR 0089 Move with a start before now keeps the dialog open with the PAST refusal and writes nothing', async () => {
+  it('ADR0089 Move with a start before now keeps the dialog open with the PAST refusal and writes nothing', async () => {
     const user = userEvent.setup();
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
@@ -540,6 +540,23 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     expect((start as HTMLInputElement).value).toBe('2026-11-04 10:00');
     await user.click(within(dialog).getByRole('button', { name: 'Start 4 h earlier' }));
     expect((start as HTMLInputElement).value).toBe('2026-11-04 06:00');
+  });
+
+  it('ADR0089 the later step of an overdue row lands at now or later in one press', async () => {
+    const user = userEvent.setup();
+    // Wed 4 Nov 11:00 plant time: 1001.10, planned for Tue 3 Nov 11:30, is overdue by a day.
+    const snapshot = { ...g1Snapshot(), nowMs: Date.UTC(2026, 10, 4, 10) };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+    await user.keyboard('{Shift>}{F10}{/Shift}');
+    await user.click(await screen.findByRole('menuitem', { name: 'Move' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Move 1001.10 Bracket L' });
+    const start = within(dialog).getByRole('textbox', { name: 'Start, plant time (CET)' });
+
+    await user.click(within(dialog).getByRole('button', { name: 'Start 4 h later' }));
+
+    expect((start as HTMLInputElement).value).toBe('2026-11-04 11:30');
   });
 
   it('IN8 a Move from the dialog past the range moves the range and focuses the block', async () => {

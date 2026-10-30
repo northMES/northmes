@@ -194,8 +194,6 @@ export function conflictText(
       return `${rows[0]} and ${rows[1]} overlap on the same machine`;
     case 'CLOSED_TIME':
       return `${rows[1]} has work in closed time`;
-    case 'PAST':
-      return `${rows[1]} starts before now`;
     default:
       return `${rows[1]}: ${code}`;
   }

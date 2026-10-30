@@ -30,7 +30,9 @@ describe('the closed time of a row (ADR 0089, Header tiers)', () => {
     const lunch = { fromMs: Date.UTC(2026, 10, 4, 11), toMs: Date.UTC(2026, 10, 4, 11, 30) };
     const night = { fromMs: Date.UTC(2026, 10, 4, 21), toMs: Date.UTC(2026, 10, 5, 5) };
 
-    const { container } = render(<TimeCellShading windows={[lunch, night]} scale={scale} />);
+    const { container } = render(
+      <TimeCellShading windows={[lunch, night]} scale={scale} nowMs={range.fromMs} />,
+    );
 
     expect(
       [...container.querySelectorAll<HTMLElement>('[data-shading]')].map((each) =>
@@ -52,7 +54,9 @@ describe('the closed time of a row (ADR 0089, Header tiers)', () => {
       hideClosed,
     });
 
-    const { container } = render(<TimeCellShading windows={[night]} scale={scale} />);
+    const { container } = render(
+      <TimeCellShading windows={[night]} scale={scale} nowMs={range.fromMs} />,
+    );
 
     expect(container.querySelector('[data-shading]')?.getAttribute('data-shading')).toBe('gap');
   });
@@ -65,27 +69,26 @@ describe('the time before now (ADR 0089, Time before now)', () => {
   const nowMs = Date.UTC(2026, 10, 2, 8, 40);
   const night = { fromMs: Date.UTC(2026, 10, 1, 21), toMs: Date.UTC(2026, 10, 2, 5) };
 
-  it('draws a past tone from the range start to now, behind the closed time', () => {
+  it('ADR0089 draws a past tone from the range start to now, behind the closed time', () => {
     const { container } = render(<TimeCellShading windows={[night]} scale={scale} nowMs={nowMs} />);
 
     const past = container.querySelector<HTMLElement>('[data-past]');
     expect(past?.dataset.toMs).toBe(String(nowMs));
     expect(past?.style.left).toBe('0px');
-    expect(Number.parseFloat(past?.style.width ?? '')).toBeCloseTo(scale.x(nowMs), 3);
+    // 168 h over 1680 px is 10 px an hour, so 9 h 40 min is 96.667 px.
+    expect(Number.parseFloat(past?.style.width ?? '')).toBeCloseTo(96.667, 3);
     // First in the cell, so the closed time and the blocks draw over it.
     expect(container.firstElementChild).toBe(past);
     expect(container.querySelector('[data-shading]')).not.toBeNull();
   });
 
-  it('draws no past tone while now is before the range, and a full one once it is after', () => {
+  it('ADR0089 draws no past tone while now is before the range, and a full one once it is after', () => {
     const before = render(<TimeCellShading windows={[]} scale={scale} nowMs={range.fromMs - 1} />);
     expect(before.container.querySelector('[data-past]')).toBeNull();
     cleanup();
 
     const after = render(<TimeCellShading windows={[]} scale={scale} nowMs={range.toMs + 1} />);
-    expect(after.container.querySelector<HTMLElement>('[data-past]')?.style.width).toBe(
-      `${scale.x(range.toMs)}px`,
-    );
+    expect(after.container.querySelector<HTMLElement>('[data-past]')?.style.width).toBe('1680px');
   });
 });
 

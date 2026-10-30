@@ -14,7 +14,9 @@ import {
   moveRefusalOf,
   previewOf,
   refusalMessage,
+  staysOverdue,
   stepBackStart,
+  stepLaterStart,
   stepMessage,
 } from './screens/gantt/gantt-move.ts';
 import { zoomLevels } from './timeline/time-scale.ts';
@@ -154,9 +156,7 @@ export function useMoveActions({
         const stepMs = zoomLevels[zoom].stepMs;
         const from = move.preview?.span.setupStartMs ?? state.setupStartMs;
         if (direction > 0) {
-          let setupStartMs = from + stepMs;
-          while (setupStartMs < snapshot.nowMs) setupStartMs += stepMs;
-          store.set({ ...state, setupStartMs });
+          store.set({ ...state, setupStartMs: stepLaterStart(from, stepMs, snapshot.nowMs) });
           return;
         }
         const windows = availabilityOn(moveContextOf(snapshot), state.equipment);
@@ -191,6 +191,14 @@ export function useMoveActions({
         const move = store.get();
         if (!active.current || move?.preview === undefined) return;
         const { state, preview } = move;
+        // An overdue row that did not move writes nothing (ADR 0089): the move ends as a cancel.
+        if (staysOverdue(snapshot, state)) {
+          active.current = false;
+          store.set(undefined);
+          announce('Move cancelled.');
+          requestAnimationFrame(() => focusBlock.current(state.jobOrderId));
+          return;
+        }
         active.current = false;
         // A preview refused with PAST writes nothing; the cascade knows no now (ADR 0089).
         if (preview.refused !== undefined) {

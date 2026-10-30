@@ -96,6 +96,14 @@ export function moveContextOf(applied: GanttSnapshot): PlanContext {
 }
 
 /**
+ * The setup start a step later asks for (ADR 0089): one snap step on, or from a start before now
+ * the first step on the same grid at or after now, so an overdue row reaches now in one step.
+ */
+export function stepLaterStart(fromMs: number, stepMs: number, nowMs: number): number {
+  return fromMs + Math.max(1, Math.ceil((nowMs - fromMs) / stepMs)) * stepMs;
+}
+
+/**
  * The setup start a step back in move mode asks for (plan 18, Snapping and the calendar): one snap
  * step back, or, where that lands in closed time the forward snap would undo, the last step on
  * the same grid before the previous working window closes.
@@ -120,22 +128,33 @@ export function pointerStart(
 ): number {
   let startMs = scale.snap(rawMs);
   if (rawMs < nowMs) return startMs;
+  // One step forward reaches now; the guard of three covers a day step that a change of clocks
+  // shortens, and stops the loop on a scale whose snap would not move forward.
   for (let count = 0; startMs < nowMs && count < 3; count += 1) {
     startMs = scale.snap(startMs + scale.stepMs);
   }
   return startMs;
 }
 
+/** Whether the move holds the row at its own start on its own machine, so it moves nothing. */
+function heldInPlace(
+  row: { readonly placement?: { readonly setupStartMs: number }; readonly equipment?: string },
+  move: MoveState,
+): boolean {
+  return row.placement?.setupStartMs === move.setupStartMs && row.equipment === move.equipment;
+}
+
 /**
- * Whether a move asks for a setup start before now (ADR 0089): an overdue row held at its own
- * start on its own machine is not a move, so it may stay there until it moves to now or later.
+ * Whether a move ends on an overdue row where it started (ADR 0089): its start lies before now, and
+ * it stayed at that start on its machine. It writes nothing; a draft change there would list a
+ * PAST conflict for a row the planner did not move.
  */
-function startsInPast(applied: GanttSnapshot, move: MoveState): boolean {
+export function staysOverdue(applied: GanttSnapshot, move: MoveState): boolean {
   if (move.setupStartMs >= applied.nowMs) return false;
   const row = orderOfRow(applied.productionOrders, move.jobOrderId)?.jobOrders.find(
     (each) => each.id === move.jobOrderId,
   );
-  return row?.placement?.setupStartMs !== move.setupStartMs || row.equipment !== move.equipment;
+  return row !== undefined && heldInPlace(row, move);
 }
 
 /** The preview of a move over the plan with the draft applied, through the cascade. */
@@ -148,8 +167,14 @@ export function previewOf(
   if (order === undefined) return undefined;
   const row = order.jobOrders.find((each) => each.id === move.jobOrderId);
   // A start before now is refused before the cascade runs; the outline stays where the pointer
-  // asks, as long as the row, so the refusal shows over the past (ADR 0089).
-  if (row?.placement !== undefined && startsInPast(applied, move)) {
+  // asks, as long as the row, so the refusal shows over the past (ADR 0089). An overdue row held
+  // at its own start on its own machine is not a move, so it may stay until it moves to now or
+  // later.
+  if (
+    row?.placement !== undefined &&
+    move.setupStartMs < applied.nowMs &&
+    !heldInPlace(row, move)
+  ) {
     const shift = move.setupStartMs - row.placement.setupStartMs;
     return {
       jobOrderId: row.id,

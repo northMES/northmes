@@ -299,19 +299,27 @@ export function BoardBlock({
               // The origin of a move keeps its text at full contrast (WCAG 1.4.3): a dashed
               // border marks it, not a dimmed fill (design D3, IN4, the origin slot).
               moving && 'border-2 border-dashed border-foreground',
-              finished && 'text-muted-foreground',
+              // A finished job order is drawn muted with a dotted border, a cue at any width
+              // (ADR 0089, Time before now); an overdue one keeps its color.
+              finished && 'border-dotted text-muted-foreground',
             )}
-            // A finished job order is drawn muted, with the order color as its leading edge
-            // (ADR 0089, Time before now); an overdue one keeps its color.
             style={{
               left: `${left}px`,
               width: `${width}px`,
               background: finished ? 'var(--muted)' : `var(--${order.color})`,
-              ...(finished && { boxShadow: `inset 4px 0 0 var(--${order.color})` }),
             }}
           />
         }
       >
+        {finished && (
+          // The order color as the leading edge; a child, so the focus ring still paints.
+          <span
+            aria-hidden
+            data-finished-edge
+            className="pointer-events-none absolute inset-y-0 start-0 w-1"
+            style={{ background: `var(--${order.color})` }}
+          />
+        )}
         {selected && (
           <span
             aria-hidden

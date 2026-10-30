@@ -60,7 +60,7 @@ function withFinishedAndOverdue(): GanttSnapshot {
 }
 
 describe('the time before now on the order Gantt (ADR 0089, Time before now)', () => {
-  it('every job order row tones its time before now', async () => {
+  it('ADR0089 every job order row tones its time before now', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
     const now = String(g1Snapshot().nowMs);
@@ -72,7 +72,7 @@ describe('the time before now on the order Gantt (ADR 0089, Time before now)', (
     }
   });
 
-  it('draws a finished job order muted with its cue and "finished" in its name; an overdue one keeps its colour', async () => {
+  it('ADR0089 draws a finished job order muted with its cue and "finished" in its name; an overdue one keeps its color', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(withFinishedAndOverdue()));
     const gantt = await findGantt();
     const block = (id: string) =>
@@ -82,6 +82,13 @@ describe('the time before now on the order Gantt (ADR 0089, Time before now)', (
     expect(finished.getAttribute('data-finished')).toBe('true');
     expect(finished.style.background).toBe('var(--muted)');
     expect(finished.querySelector('[data-finished-cue]')).not.toBeNull();
+    // The order color is a child edge, so the focus ring's box-shadow still paints (WCAG 2.4.7),
+    // and a dotted border is the cue at any width.
+    expect(finished.style.boxShadow).toBe('');
+    expect(finished.querySelector<HTMLElement>('[data-finished-edge]')?.style.background).toBe(
+      'var(--palette-5)',
+    );
+    expect(finished.className).toContain('border-dotted');
     expect(finished.getAttribute('aria-label')).toMatch(/, finished$/);
     const overdue = block('jo-1001-10');
     expect(overdue.getAttribute('data-finished')).toBeNull();
@@ -90,7 +97,7 @@ describe('the time before now on the order Gantt (ADR 0089, Time before now)', (
 });
 
 describe('a drag into the time before now (ADR 0089, Time before now)', () => {
-  it('on the order Gantt shows the PAST refusal in the preview and refuses the drop', async () => {
+  it('ADR0089 on the order Gantt shows the PAST refusal in the preview and refuses the drop', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
@@ -100,7 +107,7 @@ describe('a drag into the time before now (ADR 0089, Time before now)', () => {
     );
   });
 
-  it('on the planning board shows the PAST refusal in the preview and refuses the drop', async () => {
+  it('ADR0089 on the planning board shows the PAST refusal in the preview and refuses the drop', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
 
@@ -114,7 +121,7 @@ describe('a drag into the time before now (ADR 0089, Time before now)', () => {
 });
 
 describe('the time before now on the planning board (ADR 0089, Time before now)', () => {
-  it('every machine row tones its time before now', async () => {
+  it('ADR0089 every machine row tones its time before now', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
     const now = String(g1Snapshot().nowMs);
@@ -127,7 +134,7 @@ describe('the time before now on the planning board (ADR 0089, Time before now)'
     }
   });
 
-  it('draws a finished job order muted with its cue and "finished" in its name; an overdue one keeps its colour', async () => {
+  it('ADR0089 draws a finished job order muted with its cue and "finished" in its name; an overdue one keeps its color', async () => {
     renderGanttRoute(
       { zoom: 'week', from: '2026-11-02' },
       sourceOf(withFinishedAndOverdue()),
@@ -141,6 +148,9 @@ describe('the time before now on the planning board (ADR 0089, Time before now)'
     expect(finished.getAttribute('data-states')).toBe('finished');
     expect(finished.style.background).toBe('var(--muted)');
     expect(finished.querySelector('[data-state-icon="finished"]')).not.toBeNull();
+    expect(finished.style.boxShadow).toBe('');
+    expect(finished.querySelector('[data-finished-edge]')).not.toBeNull();
+    expect(finished.className).toContain('border-dotted');
     expect(finished.textContent).toContain('finished');
     const overdue = block('1001.10');
     expect(overdue.getAttribute('data-states')).toBe('overdue');
