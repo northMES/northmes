@@ -10,7 +10,7 @@ import { cn } from 'cn';
 import { Flag } from 'lucide-react';
 import type { GanttSnapshot, OrderAnalysis } from '../../gantt-data.ts';
 import { type MarkerDescriptor, placeMarkers } from '../../timeline/markers.ts';
-import type { TimeScale } from '../../timeline/time-scale.ts';
+import { isFineLevel, type TimeScale } from '../../timeline/time-scale.ts';
 import type { GanttRow } from './gantt-rows.ts';
 
 /**
@@ -26,7 +26,7 @@ export function rowMarkers(
   options: { readonly onChain: boolean },
 ): MarkerDescriptor[] {
   const timeZone = snapshot.plant.timeZone;
-  const fine = scale.zoom === 'hours' || scale.zoom === 'day';
+  const fine = isFineLevel(scale.zoom);
   const markers: MarkerDescriptor[] = [];
   if (row.kind === 'run') {
     const { run, analysis } = row;

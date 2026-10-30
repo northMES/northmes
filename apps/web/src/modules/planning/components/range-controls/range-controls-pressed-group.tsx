@@ -12,7 +12,8 @@ export function PressedGroup<TValue extends string>({
 }: {
   readonly label: string;
   readonly choices: readonly { readonly id: TValue; readonly label: string }[];
-  readonly value: TValue;
+  /** The pressed choice's id; an id that names no choice leaves every choice unpressed. */
+  readonly value: string;
   readonly onChange: (value: TValue) => void;
 }) {
   return (

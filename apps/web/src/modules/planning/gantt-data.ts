@@ -42,9 +42,16 @@ export type {
 
 import type { EnteredOrders } from './entered-orders.ts';
 import type { EffectivePlanningRules } from './planning-rules.ts';
+import type { zoomLevelIds } from './timeline/time-scale.ts';
 
-/** The zoom presets of the approved board design D3, by their URL ids (plan 18, Shared pieces). */
-export type ZoomPreset = 'hours' | 'day' | 'week' | '4weeks';
+/** The levels of the zoom ladder, finest first, by their URL ids (ADR 0089, Zoom levels). */
+export type ZoomLevel = (typeof zoomLevelIds)[number];
+
+/**
+ * The four zoom presets of the approved board design D3, which the job order table keeps as its
+ * Range (ADR 0089); on the board and the Gantt they are levels of the ladder.
+ */
+export type ZoomPreset = Extract<ZoomLevel, 'hours' | 'day' | 'week' | '4weeks'>;
 
 /** The filters of the job order table view, which apply to the Gantt unchanged (plan 18). */
 export interface GanttFilter {

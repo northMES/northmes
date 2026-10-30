@@ -28,6 +28,14 @@ describe('ganttSearch (plan 18, URL state)', () => {
     expect(ganttSearch({ order: 1003, chain: '1' })).toEqual({ order: '1003', chain: 1 });
   });
 
+  it('reads every level of the zoom ladder from zoom, and drops an unknown one (ADR 0089)', () => {
+    for (const zoom of ['quarter-hours', 'hours', 'day', 'week', '4weeks', 'quarter', 'year']) {
+      expect(ganttSearch({ zoom })).toEqual({ zoom });
+      expect(boardSearch({ zoom })).toEqual({ zoom });
+    }
+    expect(ganttSearch({ zoom: 'decade' })).toEqual({});
+  });
+
   it('ends the chain with the order and keeps it only with one', () => {
     const gantt = ganttSearch({ zoom: 'week', from: '2026-11-02', order: 'po-1003', chain: 1 });
 
@@ -136,6 +144,21 @@ describe('the Gantt page (plan 18, URL state)', () => {
     );
     expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
     expect(screen.queryByRole('treegrid')).toBeNull();
+  });
+
+  it('ADR0089 opens an unknown zoom at Week, and a level that is no preset with every preset unpressed', async () => {
+    renderGanttRoute({ zoom: 'decade', from: '2026-11-02' });
+    await findGantt();
+    const pressed = () =>
+      [
+        ...screen.getByRole('group', { name: 'Zoom' }).querySelectorAll('[aria-pressed="true"]'),
+      ].map((button) => button.textContent);
+    expect(pressed()).toEqual(['Week']);
+    cleanup();
+
+    renderGanttRoute({ zoom: 'quarter', from: '2026-11-01' });
+    await findGantt();
+    expect(pressed()).toEqual([]);
   });
 
   it('opens the Gantt at Week zoom from the fixture week when the URL names no zoom and no date', async () => {

@@ -3,7 +3,7 @@
 import { availabilityOn } from '@northmes/planning-domain';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { announce } from '../../ui/lib/announce.ts';
-import type { GanttSnapshot, ZoomPreset } from './gantt-data.ts';
+import type { GanttSnapshot, ZoomLevel } from './gantt-data.ts';
 import { type GanttDraft, moveInDraft } from './gantt-draft.ts';
 import { createMoveStore, type MoveStore, useMoveOf } from './move-store.ts';
 import type { GanttMoveActions } from './screens/gantt/gantt-context.ts';
@@ -17,7 +17,7 @@ import {
   stepBackStart,
   stepMessage,
 } from './screens/gantt/gantt-move.ts';
-import { zoomPresets } from './timeline/time-scale.ts';
+import { zoomLevels } from './timeline/time-scale.ts';
 
 export interface MoveActionsInput {
   /** The plan as the server committed it, which a move's cascade runs over with the draft. */
@@ -28,7 +28,7 @@ export interface MoveActionsInput {
   readonly setDraft: (draft: GanttDraft) => void;
   /** Cascade after a move (plan 18, Cascade rule 1). */
   readonly cascadeOn: boolean;
-  readonly zoom: ZoomPreset;
+  readonly zoom: ZoomLevel;
   readonly timeZone: string;
   /** Moves focus to a job order's block by id, once it has drawn at its new place. */
   readonly focusBlock: (jobOrderId: string) => void;
@@ -149,7 +149,7 @@ export function useMoveActions({
         const move = store.get();
         if (move === undefined) return;
         const { state } = move;
-        const stepMs = zoomPresets[zoom].stepMs;
+        const stepMs = zoomLevels[zoom].stepMs;
         const from = move.preview?.span.setupStartMs ?? state.setupStartMs;
         if (direction > 0) {
           store.set({ ...state, setupStartMs: from + stepMs });

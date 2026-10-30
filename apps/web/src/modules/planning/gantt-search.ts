@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { z } from 'zod';
-import type { ZoomPreset } from './gantt-data.ts';
+import type { ZoomLevel } from './gantt-data.ts';
 import { type PlanningPreview, planningPreviews } from './planning-preview.ts';
+import { zoomLevelIds } from './timeline/time-scale.ts';
 
 /**
- * The view state of the Gantt page in the URL (ADR 0062, plan 18): the zoom preset, the first
+ * The view state of the Gantt page in the URL (ADR 0062, plan 18): the zoom level, the first
  * plant date of the range, the selected order and the chain highlight. zoom, from and order mean
  * the same on the board, so a link between the pages carries them. chain needs order, and the
  * screen drops it with the polite status message when the order is missing.
  */
 export interface GanttSearch {
-  readonly zoom?: ZoomPreset;
+  /** The level of the zoom ladder (ADR 0089); an unknown id falls back to the screen's default. */
+  readonly zoom?: ZoomLevel;
   /** The first plant date of the visible range, "2026-11-02". */
   readonly from?: string;
   /** The selected order, by id. */
@@ -22,7 +24,7 @@ export interface GanttSearch {
 
 /** The URL keys, each of which falls back to its default on its own (ADR 0062). */
 const searchKeys = z.object({
-  zoom: z.enum(['hours', 'day', 'week', '4weeks']).optional().catch(undefined),
+  zoom: z.enum(zoomLevelIds).optional().catch(undefined),
   from: z.iso.date().optional().catch(undefined),
   order: z
     .union([z.string(), z.number()])
@@ -74,7 +76,7 @@ export function boardSearch(raw: Record<string, unknown>): BoardSearch {
   };
 }
 
-export function withZoom<T extends GanttSearch>(search: T, zoom: ZoomPreset): T {
+export function withZoom<T extends GanttSearch>(search: T, zoom: ZoomLevel): T {
   return { ...search, zoom };
 }
 
