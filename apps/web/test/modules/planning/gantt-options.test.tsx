@@ -24,7 +24,7 @@ describe('useGanttOptions', () => {
     });
   });
 
-  it('#943 keeps any tree pane share between 0 and 1, which the screen then fits to the view', () => {
+  it('#943 keeps any tree pane share between 0 and 1 and reads anything else as 40 percent', () => {
     // An 1800 px grid stores 160 / 1800 at the least width and 1640 / 1800 at the most.
     window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: 0.0889 }));
     expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.0889);

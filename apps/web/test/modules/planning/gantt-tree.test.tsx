@@ -286,6 +286,26 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     expect(splitter.style.left).toBe('441px');
   });
 
+  it('#943 a pointer move with no button pressed ends a splitter drag, and a click on the grip keeps the width chosen', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
+
+    const splitter = screen.getByRole('separator', { name: 'Resize the tree pane' });
+    fireEvent.pointerDown(splitter, { pointerId: 1, clientX: 500, button: 0 });
+    fireEvent.pointerMove(splitter, { pointerId: 1, clientX: 610, buttons: 1 });
+    // The release went elsewhere: the next move has no button pressed.
+    fireEvent.pointerMove(splitter, { pointerId: 1, clientX: 650, buttons: 0 });
+    expect(splitter.style.left).toBe('441px');
+    fireEvent.pointerUp(splitter, { pointerId: 1, clientX: 650 });
+    expect(header.style.gridTemplateColumns.split(' ')[0]).toBe('440px');
+
+    // A press and release without a move saves nothing.
+    fireEvent.pointerDown(splitter, { pointerId: 1, clientX: 500, button: 0 });
+    fireEvent.pointerUp(splitter, { pointerId: 1, clientX: 500 });
+    expect(window.localStorage.getItem('northmes.planning.gantt.options')).toBeNull();
+  });
+
   it('#943 Board options sets the tree pane width with one click, the alternative to the drag (WCAG 2.5.7)', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
@@ -303,7 +323,7 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     ).toBe('60');
   });
 
-  it('#943 a sideways wheel over the tree pane scrolls the pane, and hiding columns brings it back within its columns', async () => {
+  it("#943 a sideways wheel over the tree pane scrolls the pane and its vertical part the rows, a vertical wheel stays the grid's, and hiding columns brings the pane back within its columns", async () => {
     window.localStorage.setItem(
       'northmes.planning.gantt.options',
       JSON.stringify({ hiddenColumns: [] }),
@@ -341,7 +361,7 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     });
   });
 
-  it("#943 the selection bar stays at the pane's start edge while the pane scrolls", async () => {
+  it("#943 the selection bar sits on the tree pane, not in its cells, so it stays at the pane's start edge", async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02', order: 'po-1003' });
     const gantt = await findGantt();
     const row = within(gantt).getByRole('row', { name: /^1003 / });
