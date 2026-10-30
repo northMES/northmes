@@ -136,7 +136,7 @@ export function GanttRowView({
         ...(original.kind === 'run' && { borderInlineStartStyle: 'double' }),
       }}
     >
-      <TreePane layout={pane} className={background}>
+      <TreePane layout={pane} className={background} selected={selected}>
         {columns.map((column, index) =>
           index === 0 ? (
             <div
@@ -145,7 +145,6 @@ export function GanttRowView({
               className={cn(
                 'flex min-w-0 items-center gap-1.5 overflow-hidden border-e border-border pe-2',
                 background,
-                selected && 'shadow-[inset_3px_0_0_var(--foreground)]',
               )}
               style={{ paddingInlineStart: `${0.5 + (level - 1)}rem` }}
             >
@@ -172,8 +171,7 @@ export function GanttRowView({
           tabIndex={-1}
           data-cell-focus
           aria-label={summaryName(original, timeZone)}
-          // Isolated, so nothing it draws stacks above the tree pane (#943).
-          className="relative isolate overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          className="relative overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         >
           <TimeCellShading windows={shading} scale={scale} nowMs={snapshot.nowMs} />
           <GanttMarkerLayer markers={markers} scale={scale} />
@@ -189,7 +187,7 @@ export function GanttRowView({
       ) : (
         <div
           role="gridcell"
-          className="relative isolate overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+          className="relative overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           // A job order without a placement has no block, so Right lands on the cell itself,
           // named as the block would be, with "not placed" or, while its time chunk loads, "time
           // loading".

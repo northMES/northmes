@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { type KeyboardEvent, type PointerEvent, useRef } from 'react';
+import { type KeyboardEvent, type PointerEvent, useRef, useState } from 'react';
 import type { TreePaneLayout } from './gantt-tree-pane.tsx';
 
 /** One arrow key press moves the splitter by this share of the view. */
@@ -13,28 +13,39 @@ function rounded(share: number): number {
 
 /**
  * The splitter between the tree pane and the time area (#943), the window splitter of the WAI-ARIA
- * practices: a focusable separator whose value is the pane's share of the view in percent. The
- * pointer drags it; Left and Right move it by 2 percent, Home and End to the least and the most
- * the pane may take. It sits over the grid's edge at the pane's end, outside the treegrid, whose
- * rows may hold only cells.
+ * practices: a focusable separator whose value is the pane's share of the view in percent. Left
+ * and Right move it by 2 percent, Home and End to the least and the most the pane may take. The
+ * pointer drags it by its grip over the header row, 24 px wide, so a press near the pane's edge
+ * lower down still reaches a block; the line drawn while dragging shows where the pane will end,
+ * and the grid lays out again once, on release. Board options holds the one-click alternative to
+ * the drag (WCAG 2.5.7). It sits over the grid's edge, outside the treegrid, whose rows may hold
+ * only cells.
  */
 export function GanttSplitter({
   layout,
   viewWidth,
+  gridId,
+  gripHeightRem,
   onShareChange,
 }: {
   readonly layout: TreePaneLayout;
   /** The grid's width, of which the share is taken. */
   readonly viewWidth: number;
+  /** The treegrid the pane belongs to, which the separator controls. */
+  readonly gridId: string;
+  /** The height of the header row, which the grip covers. */
+  readonly gripHeightRem: number;
   readonly onShareChange: (share: number) => void;
 }) {
   const percent = (width: number) => Math.round((width / viewWidth) * 100);
-  const setWidth = (width: number) =>
-    onShareChange(rounded(Math.min(layout.maxWidth, Math.max(layout.minWidth, width)) / viewWidth));
+  const clamp = (width: number) => Math.min(layout.maxWidth, Math.max(layout.minWidth, width));
+  const commit = (width: number) => onShareChange(rounded(clamp(width) / viewWidth));
   /** Where a pointer drag started, and the pane's width then. */
   const drag = useRef<{ readonly pointerId: number; readonly x: number; readonly width: number }>(
     undefined,
   );
+  /** The width the drag in progress points at, drawn by the splitter alone until release. */
+  const [dragWidth, setDragWidth] = useState<number | undefined>(undefined);
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const share = layout.paneWidth / viewWidth;
     const next = {
@@ -45,7 +56,11 @@ export function GanttSplitter({
     }[event.key];
     if (next === undefined) return;
     event.preventDefault();
-    setWidth(next);
+    commit(next);
+  };
+  const endDrag = () => {
+    drag.current = undefined;
+    setDragWidth(undefined);
   };
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
@@ -56,38 +71,60 @@ export function GanttSplitter({
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const start = drag.current;
     if (start === undefined || start.pointerId !== event.pointerId) return;
-    setWidth(start.width + event.clientX - start.x);
+    // A move with no button pressed means the release went elsewhere.
+    if (event.buttons === 0) {
+      endDrag();
+      return;
+    }
+    setDragWidth(clamp(start.width + event.clientX - start.x));
   };
-  const onPointerEnd = (event: PointerEvent<HTMLDivElement>) => {
-    if (drag.current?.pointerId !== event.pointerId) return;
-    drag.current = undefined;
+  const onPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const start = drag.current;
+    if (start === undefined || start.pointerId !== event.pointerId) return;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
+    commit(start.width + event.clientX - start.x);
+    endDrag();
   };
+  // A capture lost without a pointerup, as when the window loses focus, ends the drag unapplied.
+  const onPointerLost = (event: PointerEvent<HTMLDivElement>) => {
+    if (drag.current?.pointerId === event.pointerId) endDrag();
+  };
+  const left = `${(dragWidth ?? layout.paneWidth) + 1}px`;
   return (
-    <div
-      role="separator"
-      aria-label="Resize the tree pane"
-      aria-orientation="vertical"
-      aria-valuenow={percent(layout.paneWidth)}
-      aria-valuemin={percent(layout.minWidth)}
-      aria-valuemax={percent(layout.maxWidth)}
-      aria-valuetext={`Tree pane ${percent(layout.paneWidth)} percent of the view`}
-      tabIndex={0}
-      data-tree-splitter
-      onKeyDown={onKeyDown}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerEnd}
-      onPointerCancel={onPointerEnd}
-      // Centred on the pane's end edge, inside the grid's 1 px border; above the grid's sticky
-      // header, and wide enough to grab without covering a header's sort button.
-      className="group absolute inset-y-px z-30 flex w-2 -translate-x-1/2 cursor-col-resize touch-none justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      style={{ left: `${layout.paneWidth + 1}px` }}
-    >
+    <>
+      <div
+        role="separator"
+        aria-label="Resize the tree pane"
+        aria-controls={gridId}
+        aria-orientation="vertical"
+        aria-valuenow={percent(layout.paneWidth)}
+        aria-valuemin={percent(layout.minWidth)}
+        aria-valuemax={percent(layout.maxWidth)}
+        aria-valuetext={`Tree pane ${percent(layout.paneWidth)} percent of the view`}
+        tabIndex={0}
+        data-tree-splitter
+        data-dragging={dragWidth === undefined ? undefined : true}
+        onKeyDown={onKeyDown}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerLost}
+        onLostPointerCapture={onPointerLost}
+        // Centred on the pane's end edge, inside the grid's 1 px border, above the grid's sticky
+        // header; 24 px wide (WCAG 2.5.8) and as high as the header row.
+        className="peer absolute top-px z-30 flex w-(--nm-target-min) -translate-x-1/2 cursor-col-resize touch-none items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        style={{ left, height: `${gripHeightRem}rem` }}
+      >
+        {/* The grip, which shows where the splitter is at rest. */}
+        <span aria-hidden className="h-6 w-1 rounded-full bg-muted-foreground/60" />
+      </div>
+      {/* The pane's edge as a line down the grid while the grip is hovered, focused or dragged. */}
       <span
         aria-hidden
-        className="h-full w-0.5 group-hover:bg-ring group-focus-visible:bg-ring group-active:bg-ring"
+        data-tree-splitter-line
+        className="pointer-events-none absolute inset-y-px z-30 w-0.5 -translate-x-1/2 bg-ring opacity-0 peer-hover:opacity-100 peer-focus-visible:opacity-100 peer-data-dragging:opacity-100"
+        style={{ left }}
       />
-    </div>
+    </>
   );
 }

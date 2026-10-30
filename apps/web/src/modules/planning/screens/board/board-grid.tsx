@@ -313,9 +313,7 @@ export function BoardGrid({
           >
             {machine.equipment.name}
           </div>
-          {/* Isolated, so nothing a block or the move outline draws stacks above the machine
-              column (#943). */}
-          <div className="relative isolate bg-lane">
+          <div className="relative bg-lane">
             <TimeCellShading windows={machine.closed} scale={scale} nowMs={snapshot.nowMs} />
             {preview !== undefined && preview.equipment === code && (
               <MoveOutline preview={preview} scale={scale} timeZone={snapshot.plant.timeZone} />

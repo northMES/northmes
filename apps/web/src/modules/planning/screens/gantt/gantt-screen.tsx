@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -202,9 +203,18 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   // The tree pane sticks as one block at the share of the view its splitter sets, 40 percent by
   // default; columns wider than the pane scroll inside it, so the time area stays reachable on a
   // narrow grid (WCAG 1.4.10) and the time column always starts where the pane ends (#943).
-  const pane = treePaneLayout(columns, width, options.treePaneShare);
+  const pane = useMemo(
+    () => treePaneLayout(columns, width, options.treePaneShare),
+    [columns, width, options.treePaneShare],
+  );
+  // The pane scrolls sideways while its columns are wider than it shows.
+  const paneScrolls = pane.contentWidth > pane.innerWidth;
   const paneWidth = pane.paneWidth;
-  const treeScroll = useTreePaneScroll({ paneWidth, contentWidth: pane.contentWidth });
+  const treeScroll = useTreePaneScroll({
+    innerWidth: pane.innerWidth,
+    contentWidth: pane.contentWidth,
+  });
+  const gridId = useId();
 
   const gridElement = useRef<HTMLElement | null>(null);
   // One ref for the grid, kept across renders, so the width is not measured again on each one.
@@ -879,6 +889,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             <div className="relative flex min-h-0 flex-1 flex-col">
               <div
                 ref={ganttGridRef}
+                id={gridId}
                 role="treegrid"
                 aria-label={gridName}
                 aria-rowcount={rowCount}
@@ -906,7 +917,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                     void setSearch(withChain(search, false));
                   }
                 }}
-                onFocus={treeScroll.onFocusCapture}
+                onFocus={treeScroll.onFocus}
                 onScroll={(event) => {
                   buffer.onScroll();
                   followGrid();
@@ -916,6 +927,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 style={{
                   scrollPaddingTop: `${timeHeaderHeightRem + notPlacedHeightRem}rem`,
                   scrollPaddingInlineStart: `${paneWidth}px`,
+                  // The pane's scrollbar sticks at the bottom, so focus stays clear of it (2.4.11).
+                  ...(paneScrolls && { scrollPaddingBottom: 'var(--nm-target-min)' }),
                   // One finger scrolls; a pinch zooms the timeline, not the page (ADR 0089).
                   touchAction: 'pan-x pan-y',
                 }}
@@ -1000,24 +1013,28 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                     <GanttLinks links={links} width={timeWidth} height={totalHeight} />
                   </div>
                 </div>
-                {pane.contentWidth > paneWidth && (
-                  // The tree pane's own scrollbar, under the rows at the pane's width; the keyboard
-                  // reaches every column by its header and the splitter (#943).
+                {paneScrolls && (
+                  // The tree pane's own scrollbar, under the rows at the pane's width and 24 px
+                  // high (2.5.8). It is for the pointer: the keyboard reaches every column by its
+                  // header, which scrolls into the pane on focus, so the bar takes no Tab stop (#943).
                   <div
                     ref={treeScroll.scrollerRef}
                     aria-hidden
+                    tabIndex={-1}
                     data-tree-scroller
                     onScroll={treeScroll.onScrollerScroll}
-                    className="sticky start-0 bottom-0 z-10 h-3 overflow-x-auto overflow-y-hidden border-e border-t border-border bg-muted"
-                    style={{ width: `${paneWidth}px`, scrollbarWidth: 'thin' }}
+                    className="sticky start-0 bottom-0 z-10 flex min-h-(--nm-target-min) items-end overflow-x-auto overflow-y-hidden border-e border-t border-border bg-muted"
+                    style={{ width: `${paneWidth}px` }}
                   >
-                    <div className="h-px" style={{ width: `${pane.contentWidth}px` }} />
+                    <div className="h-px shrink-0" style={{ width: `${pane.contentWidth}px` }} />
                   </div>
                 )}
               </div>
               <GanttSplitter
                 layout={pane}
                 viewWidth={width}
+                gridId={gridId}
+                gripHeightRem={timeHeaderHeightRem}
                 onShareChange={(treePaneShare) => setOptions({ treePaneShare })}
               />
             </div>

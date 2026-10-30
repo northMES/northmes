@@ -137,10 +137,11 @@ test.describe('the left pane of the timelines', () => {
     await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     await expect(gantt.getByRole('columnheader', { name: 'Lock' })).toBeAttached();
 
-    // A sideways wheel over the pane scrolls the pane, not the time area.
-    const before = await gantt.evaluate((grid) => grid.scrollLeft);
+    // A sideways wheel over the pane scrolls the pane, not the time area. The hover may scroll the
+    // grid, so the position is read after it.
     const name = gantt.locator('[data-row-id="po-1003"] [role="rowheader"]');
     await name.hover();
+    const before = await gantt.evaluate((grid) => grid.scrollLeft);
     await page.mouse.wheel(300, 0);
     await expect
       .poll(() => gantt.evaluate((grid) => grid.style.getPropertyValue('--tree-scroll')))
@@ -178,6 +179,53 @@ test.describe('the left pane of the timelines', () => {
     await checkA11y('the Gantt with every tree column shown');
   });
 
+  test('#943 a header that takes focus scrolls into the pane while the time area stays, and the pane scrollbar scrolls the pane', async ({
+    page,
+    signIn,
+  }) => {
+    await signIn(planningHref('gantt', { zoom: 'week', from: '2026-11-02' }));
+    await showEveryColumn(page);
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
+    const time = () => gantt.evaluate((grid) => ({ left: grid.scrollLeft, top: grid.scrollTop }));
+    const inPane = (name: string) =>
+      gantt.evaluate((grid, name) => {
+        const pane = (
+          grid.querySelector('[aria-rowindex="1"] [data-tree-pane]') as HTMLElement
+        ).getBoundingClientRect();
+        const header = [...grid.querySelectorAll<HTMLElement>('[role="columnheader"]')].find(
+          (each) => each.textContent === name,
+        ) as HTMLElement;
+        const box = header.getBoundingClientRect();
+        return box.left >= pane.left - 0.5 && box.right <= pane.right + 0.5;
+      }, name);
+
+    // Lock, the last column, lies past the pane; Tab reaches it, and the pane scrolls to it.
+    await page.getByRole('button', { name: /^Late by/ }).focus();
+    const before = await time();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    await expect(gantt.getByRole('columnheader', { name: 'Lock' })).toBeFocused();
+    expect(await inPane('Lock')).toBe(true);
+    expect(await time()).toEqual(before);
+
+    // Focus on the Name column's sort button scrolls the pane back to its start.
+    await page.getByRole('button', { name: /^Name/ }).focus();
+    await expect
+      .poll(() => gantt.evaluate((grid) => grid.style.getPropertyValue('--tree-scroll')))
+      .toBe('0px');
+    expect(await time()).toEqual(before);
+
+    // The pane's own scrollbar moves the columns in every row.
+    await gantt.locator('[data-tree-scroller]').evaluate((bar) => {
+      bar.scrollLeft = 200;
+    });
+    await expect
+      .poll(() => gantt.evaluate((grid) => grid.style.getPropertyValue('--tree-scroll')))
+      .toBe('200px');
+  });
+
   test('#943 the splitter moves with the pointer and the arrow keys, and the width stays after a reload', async ({
     page,
     signIn,
@@ -194,10 +242,17 @@ test.describe('the left pane of the timelines', () => {
         .evaluate((pane) => pane.getBoundingClientRect().width);
     const start = await paneWidth();
 
-    const box = (await splitter.boundingBox()) as { x: number; y: number; width: number };
-    await page.mouse.move(box.x + box.width / 2, box.y + 100);
+    // The grip sits over the header row.
+    const box = (await splitter.boundingBox()) as {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    };
+    const y = box.y + box.height / 2;
+    await page.mouse.move(box.x + box.width / 2, y);
     await page.mouse.down();
-    await page.mouse.move(box.x + box.width / 2 - 150, box.y + 100, { steps: 5 });
+    await page.mouse.move(box.x + box.width / 2 - 150, y, { steps: 5 });
     await page.mouse.up();
     expect(Math.abs((await paneWidth()) - (start - 150))).toBeLessThanOrEqual(1);
     await expect(splitter).toHaveAttribute('aria-valuenow', /^\d+$/);

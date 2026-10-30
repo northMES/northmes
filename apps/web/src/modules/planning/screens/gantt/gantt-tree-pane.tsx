@@ -52,7 +52,7 @@ import {
 export interface GanttColumn {
   readonly id: string;
   readonly header: string;
-  /** The width in pixels; the Name column takes what the pane leaves, at least its own width. */
+  /** The width in pixels; the Name column instead takes what the pane leaves, at least 160 px. */
   readonly widthPx: number;
   /** Sorting on the column sorts the level 1 rows and keeps the tree under each. */
   readonly sortable?: boolean;
@@ -332,10 +332,8 @@ export function visibleColumns(hiddenColumns: readonly string[]): GanttColumn[] 
   );
 }
 
-/** The least width of the tree pane and of its Name column, and the least the time area keeps. */
-const paneMinPx = 160;
-const nameMinPx = 160;
-const timeMinPx = 160;
+/** The least width of the tree pane, of its Name column and of the time area beside it. */
+const leastPx = 160;
 
 /** How the tree pane lays out at a view width (#943). */
 export interface TreePaneLayout {
@@ -346,31 +344,35 @@ export interface TreePaneLayout {
   readonly maxWidth: number;
   /** The tree columns' CSS grid tracks inside the pane. */
   readonly tracks: string;
-  /** The tree columns' full width, at least the pane's; the pane scrolls when it is wider. */
+  /** The pane's width less its 1 px end border: what the columns show at once. */
+  readonly innerWidth: number;
+  /** The tree columns' full width, at least the inner width; the pane scrolls when it is wider. */
   readonly contentWidth: number;
 }
 
 /**
  * The tree pane at a view width and the share the splitter set (#943): the pane takes the share
- * within its least width and what leaves the time area its own, and the Name column takes what
- * the other columns leave of it, never under its least width. Columns wider than the pane scroll
- * inside it, so the pane always sticks as one block.
+ * within 160 px and what leaves the time area 160 px, as far as the view allows both, and the Name
+ * column takes what the other columns leave of it, never under 160 px. Columns wider than the
+ * pane scroll inside it, so the pane always sticks as one block.
  */
 export function treePaneLayout(
   columns: readonly GanttColumn[],
   viewWidth: number,
   share: number,
 ): TreePaneLayout {
-  const maxWidth = Math.max(paneMinPx, Math.floor(viewWidth - timeMinPx));
-  const minWidth = Math.min(paneMinPx, maxWidth);
+  const maxWidth = Math.max(leastPx, Math.floor(viewWidth - leastPx));
+  const minWidth = Math.min(leastPx, maxWidth);
   const paneWidth = Math.min(maxWidth, Math.max(minWidth, Math.round(viewWidth * share)));
+  const innerWidth = paneWidth - 1;
   const others = columns.slice(1);
   const fixedWidth = others.reduce((sum, column) => sum + column.widthPx, 0);
-  const nameWidth = Math.max(nameMinPx, paneWidth - fixedWidth);
+  const nameWidth = Math.max(leastPx, innerWidth - fixedWidth);
   return {
     paneWidth,
     minWidth,
     maxWidth,
+    innerWidth,
     tracks: [nameWidth, ...others.map((column) => column.widthPx)]
       .map((width) => `${width}px`)
       .join(' '),
@@ -387,11 +389,14 @@ export function treePaneLayout(
 export function TreePane({
   layout,
   className,
+  selected = false,
   children,
 }: {
   readonly layout: TreePaneLayout;
   /** The row's background, which the pane needs to cover the time area. */
   readonly className: string;
+  /** Draws the 3 px selection bar at the pane's start edge, which stays while the cells scroll. */
+  readonly selected?: boolean;
   readonly children: ReactNode;
 }) {
   return (
@@ -409,13 +414,24 @@ export function TreePane({
       >
         {children}
       </div>
+      {selected && (
+        <span
+          aria-hidden
+          data-selection-bar
+          className="pointer-events-none absolute inset-y-0 start-0 w-0.75 bg-foreground"
+        />
+      )}
     </div>
   );
 }
 
 const ariaSort = { asc: 'ascending', desc: 'descending' } as const;
 
-/** The header cells of the tree pane: a sort button with aria-sort on a sortable column. */
+/**
+ * The header cells of the tree pane: a sort button with aria-sort on a sortable column. A header
+ * without one is a Tab stop itself, so the keyboard reaches every column of a pane that scrolls
+ * sideways, which scrolls the focused header into view (#943).
+ */
 export function GanttTreeHeaderCells({
   columns,
   layout,
@@ -436,11 +452,12 @@ export function GanttTreeHeaderCells({
           <div
             key={column.id}
             role="columnheader"
+            tabIndex={column.sortable ? undefined : 0}
             aria-sort={
               column.sortable ? (sorted === undefined ? 'none' : ariaSort[sorted]) : undefined
             }
             className={cn(
-              'flex min-w-0 items-center border-e border-border bg-muted px-2 text-xs font-semibold text-muted-foreground',
+              'flex min-w-0 items-center border-e border-border bg-muted px-2 text-xs font-semibold text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
               column.numeric && 'justify-end',
             )}
           >

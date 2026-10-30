@@ -46,11 +46,9 @@ export const defaultOptions: GanttOptions = {
   treePaneShare: 0.4,
 };
 
-/** A kept share of the view outside 10 to 90 percent is read as the default. */
+/** A kept share of the view between 0 and 1; the screen fits it to the view's width. */
 function shareOf(value: unknown): number {
-  return typeof value === 'number' && value >= 0.1 && value <= 0.9
-    ? value
-    : defaultOptions.treePaneShare;
+  return typeof value === 'number' && value > 0 && value < 1 ? value : defaultOptions.treePaneShare;
 }
 
 function stored(): GanttOptions {
