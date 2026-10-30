@@ -59,7 +59,9 @@ test.describe('the Not placed row of the order Gantt', () => {
     const focused = await gantt.evaluate((grid) => {
       const top = grid.getBoundingClientRect().top + grid.clientTop;
       const row = grid.querySelectorAll<HTMLElement>('[data-row-id]')[4] as HTMLElement;
-      // Rest the row's top a few pixels under the Not placed row's top edge.
+      // Rest the row's top a few pixels under the Not placed row's top edge. A focused row would
+      // not scroll again, so nothing holds focus first.
+      (document.activeElement as HTMLElement | null)?.blur();
       grid.scrollTop = row.getBoundingClientRect().top - top - 52;
       row.focus();
       const pinned = (
