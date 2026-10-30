@@ -5,7 +5,14 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { findDetails, findGantt, plant, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
+import {
+  chooseDetailsAction,
+  findDetails,
+  findGantt,
+  plant,
+  renderGanttRoute,
+  sourceOf,
+} from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -150,7 +157,7 @@ describe('the material warning on the order Gantt (plan 07, Material warnings; d
     await userEvent.dblClick(blockOf(gantt, 'jo-1004-10'));
     const panel = await findDetails();
 
-    await userEvent.click(within(panel).getByRole('button', { name: 'Move' }));
+    await chooseDetailsAction(panel, 'Move');
     const controls = within(panel).getByRole('group', { name: 'Move 1004.10' });
     // Later until the move starts on Monday, after purchase order 7740 arrives.
     const startsMonday = () => /CNC \d, Mon 9 Nov/.test(controls.textContent ?? '');

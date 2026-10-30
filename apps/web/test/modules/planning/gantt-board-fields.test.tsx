@@ -68,7 +68,7 @@ describe('board fields on the order Gantt (plan 07, Board settings; #762)', () =
     expect(within(card).getByText('Hallberg Verkstad AB, Svea Komponent AB')).toBeTruthy();
   });
 
-  it('#762 lists every hover field in Details as well, in the same order', async () => {
+  it('#762 #917 lists every hover field in Details as well: the ones with no place above under At a glance, in the same order', async () => {
     const store = createG1BoardFieldsStore();
     store.save(plant, { hover: ['erp:SURFACE', 'slot:tooling.toolLife', 'status'] });
     renderGanttRoute({ zoom: 'day', from: '2026-11-03' }, undefined, 'gantt', store);
@@ -77,8 +77,18 @@ describe('board fields on the order Gantt (plan 07, Board settings; #762)', () =
     await userEvent.dblClick(blockOf(gantt, 'jo-1001-10'));
 
     const panel = await findDetails();
-    const fields = within(panel).getByRole('region', { name: 'Hover fields' });
-    expect(termsOf(fields)).toEqual(['SURFACE', 'Tool life', 'Status']);
-    expect(within(fields).getByText('T-311, 1 840 pcs left')).toBeTruthy();
+    const glance = within(panel).getByRole('region', { name: 'At a glance' });
+    expect(termsOf(glance)).toEqual([
+      'Machine',
+      'Time',
+      'Deadline',
+      'Customer',
+      'SURFACE',
+      'Tool life',
+      'After',
+    ]);
+    expect(within(glance).getByText('T-311, 1 840 pcs left')).toBeTruthy();
+    // Status shows as the header's badge.
+    expect(within(panel).getByText('Planned')).toBeTruthy();
   });
 });

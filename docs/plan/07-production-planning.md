@@ -875,9 +875,14 @@ Board settings choose which fields show on a block and which on hover, including
 
 [ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md). Accepted: the web app, the board included, targets WCAG 2.2 AA. Whether "Pause live updates" is wanted at all is open for the product owner.
 
+### Details
+
+- Details is a Sheet from the right over the board and the order Gantt, 320 px wide, as Krister chose on 2026-10-17; it does not dock or narrow the grid. It is modal: Escape or its close button closes it and focus returns to the block or row it opened from. Plan 18 describes its content (#917): a header with the status, at most one exception line and an actions menu, At a glance, and the sections Constraints, Float and timing, Material and Setup and run, which start closed.
+- Its machine select lists the allowed machines. While the plan server is missing, the select is disabled and the reason is its description.
+
 ### Moving without dragging
 
-- The detail panel has a machine select limited to allowed machines, a start field in the plant zone labelled with the zone, Earlier and Later buttons that step one snap slot, and Apply. Apply goes through the same draft move as a drag.
+- Move in the actions menu of Details starts a move of the job order in the drawer: Earlier and Later step one snap slot, Previous machine and Next machine step through the allowed machines, Apply goes through the same draft move as a drag, and Cancel ends the move. A job order that cannot move keeps Move, disabled and described by the reason.
 - The block menu (click, context-menu key, Shift+F10) lists Move, Lock or unlock, Break lock and Open order. Its Move dialog lists every allowed machine.
 - Keyboard move mode: M on a focused block enters move mode; Left and Right step one snap slot; Up and Down step through allowed machines and skip collapsed groups; Enter commits to the draft; Escape cancels. Focus stays on the moving block, with polite step messages ("CNC2, Tue 3 Nov 07:30 to 11:45. Not saved."), debounced to about 300 ms.
 - Range extension follows the move preview, not focus; under [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) the buffer moves instead of the range growing. After a commit, focus returns to the block by id, because the block remounts under another row.
@@ -886,13 +891,13 @@ Board settings choose which fields show on a block and which on hover, including
 ### Grid semantics and focus
 
 - The board is `role="grid"` named after plant and range. Each machine is a row with a row header and one cell per block in time order; a machine with no blocks in range gets one focusable "No jobs in this range" cell. Group rows hold a collapse button with `aria-expanded`.
-- Roving tabindex, not `aria-activedescendant`. Tab enters at the selected block and leaves the grid. Left and Right move along a row, Up and Down go to the block nearest in time on the adjacent row, Home and End go to the row's first and last block, Page Up and Page Down move a screenful, Enter opens the detail panel.
+- Roving tabindex, not `aria-activedescendant`. Tab enters at the selected block and leaves the grid. Left and Right move along a row, Up and Down go to the block nearest in time on the adjacent row, Home and End go to the row's first and last block, Page Up and Page Down move a screenful, Enter opens Details.
 - Virtualized rows set `aria-rowcount` and `aria-rowindex`. The range extractor keeps the focused row and the move preview's row mounted.
 - Each block's accessible name is built through `aria-labelledby` from visible spans that carry `lang` plus visually hidden spans for times and states, so an article name in another language keeps its language.
 - Blocks hold no interactive elements; plugin block fields render text and icons only.
 - Selection is separate from focus (`aria-selected`); selecting a block outlines the other blocks of the same order.
-- One Escape stack: hover card, popover, move mode, docked panel; each press closes one layer, and modal dialogs sit on top.
-- `scroll-padding` on the scroller and `scrollPaddingStart` on the virtualizers keep a focused block from hiding under the sticky header or column (2.4.11). The detail panel docks and narrows the board instead of covering it.
+- One Escape stack: hover card, popover, move mode, the Details drawer; each press closes one layer, and modal dialogs sit on top.
+- `scroll-padding` on the scroller and `scrollPaddingStart` on the virtualizers keep a focused block from hiding under the sticky header or column (2.4.11). Details covers the board as a modal Sheet, so no focused block sits under it.
 
 ### Targets and density
 
@@ -906,7 +911,7 @@ Board settings choose which fields show on a block and which on hover, including
 - Realtime announcements cover only what concerns this planner: the focused block moved by someone else, a lock this planner holds was broken (assertive), a draft row now conflicts.
 - Autoplan status comes as polite messages backed by a visible status line: started; finished with moved and late counts; failed with a reason.
 - "Pause live updates" stays inside planning. While paused, the board and the table view render from a frozen block model taken at pause time; the planner's own draft operations and own autoplan results apply by id; a counter reads "12 changes waiting"; Resume rebuilds the model and refetches the visible range. The `planning/board/side/v1` slot props carry `paused`. A broken lock or draft conflict still announces while paused.
-- The hover card opens on focus as well as hover, closes on Escape without moving focus, holds no interactive content, and every hover field is also in the detail panel.
+- The hover card opens on focus as well as hover, closes on Escape without moving focus, holds no interactive content, and every hover field is also in Details: in its header, At a glance or Setup and run, and a field with no place there under At a glance.
 
 ### Reflow, zoom and color
 

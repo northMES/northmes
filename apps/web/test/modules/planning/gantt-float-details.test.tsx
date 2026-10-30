@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, waitFor, within } from '@testing-library/react';
+import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { GanttDataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { detailsOpen, findDetails, findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
+import {
+  detailsOpen,
+  findDetails,
+  findGantt,
+  openDetailsSection,
+  renderGanttRoute,
+} from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -52,6 +58,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
 
     const panel = await findDetails();
     expect(within(panel).getByRole('heading', { level: 2 }).textContent).toBe('1004.20 Mill');
+    await openDetailsSection(panel, 'Constraints');
     const constraints = within(panel).getByRole('region', { name: 'Constraints, 6 of 6 hold' });
     const lines = within(constraints).getAllByRole('listitem');
     expect(lines.map((line) => line.getAttribute('data-constraint'))).toEqual([
@@ -70,15 +77,22 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     expect(within(panel).getByText('22 h 25 min elapsed')).toBeTruthy();
   });
 
-  it('GT1 shows the Float section of 1001.20 with wait, free and total float and the binding constraint', async () => {
+  it('GT1 #917 shows the free float of 1001.20 at a glance, and its total float, wait and binding constraint in Float and timing', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     await userEvent.dblClick(gantt.querySelector('[data-block="jo-1001-20"]') as HTMLElement);
 
     const panel = await findDetails();
-    const float = within(panel).getByRole('region', { name: 'Float' });
-    expect(float.textContent).toContain('Wait 0 min. Free float 15 min. Total float 12 h.');
+    expect(
+      within(within(panel).getByRole('region', { name: 'At a glance' })).getByText(
+        'Fri 6 Nov 15:00, free float 15 min',
+      ),
+    ).toBeTruthy();
+    const toggle = await openDetailsSection(panel, 'Float and timing');
+    expect(toggle.getAttribute('aria-label')).toBe('Float and timing, total float 12 h');
+    const float = within(panel).getByRole('region', { name: 'Float and timing' });
+    expect(float.textContent).toContain('Wait 0 min.');
     expect(float.textContent).toContain('Starts at its release: 1001.10 end plus 1 h lead.');
     expect(float.textContent).toContain(
       'Latest start Thu 5 Nov 13:15, latest end Fri 6 Nov 15:00.',
@@ -92,7 +106,8 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     await userEvent.dblClick(gantt.querySelector('[data-block="jo-1003-10"]') as HTMLElement);
 
     const panel = await findDetails();
-    const float = within(panel).getByRole('region', { name: 'Float' });
+    await openDetailsSection(panel, 'Float and timing');
+    const float = within(panel).getByRole('region', { name: 'Float and timing' });
     expect(float.textContent).toContain('Starts when 1001.10 ends on CNC 1.');
   });
 
@@ -106,22 +121,22 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     const machine = within(panel).getByLabelText('Machine') as HTMLSelectElement;
     expect(machine.disabled).toBe(true);
     expect(machine.value).toBe('CNC2');
+    expect(
+      document.getElementById(machine.getAttribute('aria-describedby') ?? '')?.textContent,
+    ).toBe('Moves and changes come with the live data; this view reads the fixture G1.');
     // Move works from Details without dragging (WCAG 2.5.7); the other actions wait for the server.
+    await userEvent.click(within(panel).getByRole('button', { name: 'Actions for 1001.20' }));
+    const menu = await screen.findByRole('menu', { name: 'Actions for 1001.20' });
+    const disabled = (name: string) =>
+      within(menu).getByRole('menuitem', { name }).getAttribute('aria-disabled');
+    expect(disabled('Move')).toBeNull();
+    expect(disabled('Lock')).toBe('true');
+    expect(disabled('Show critical chain')).toBeNull();
     expect(
-      (within(panel).getByRole('button', { name: 'Move' }) as HTMLButtonElement).disabled,
-    ).toBe(false);
-    expect(
-      (within(panel).getByRole('button', { name: 'Lock' }) as HTMLButtonElement).disabled,
-    ).toBe(true);
-    expect(
-      (within(panel).getByRole('button', { name: 'Show critical chain' }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(false);
-    expect(
-      within(panel).getAllByText(
+      within(menu).getByText(
         'Moves and changes come with the live data; this view reads the fixture G1.',
-      ).length,
-    ).toBeGreaterThan(0);
+      ),
+    ).toBeTruthy();
   });
 
   it('shows the order details with deadline, slack or late-by and the operations', async () => {
@@ -135,7 +150,7 @@ describe('the Float column and Details from the analysis (plan 18, What the time
     const panel = await findDetails();
     expect(within(panel).getByRole('heading', { level: 2 }).textContent).toBe('Order 1003');
     expect(panel.textContent).toContain('Wed 4 Nov 15:00, end of shift');
-    expect(panel.textContent).toContain('15 h 15 min elapsed');
+    expect(panel.querySelector('[data-exception]')?.textContent).toBe('Late by 15 h 15 min');
     expect(panel.textContent).toContain('15 min on Mill 1');
     expect(panel.textContent).toContain('2: Turn on CNC 1, Mill on Mill 1');
   });

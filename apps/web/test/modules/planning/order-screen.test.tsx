@@ -298,7 +298,9 @@ describe('the production order page (plan 07, planning records; design #686, PO1
     renderGanttRoute({ zoom: 'week', from: '2026-11-02', order: 'po-1001', chain: 1 });
     await findGantt();
     const details = await findDetails();
-    expect(within(details).getByRole('link', { name: 'Open order' }).getAttribute('href')).toBe(
+    await userEvent.click(within(details).getByRole('button', { name: 'Actions for order 1001' }));
+    const menu = await screen.findByRole('menu', { name: 'Actions for order 1001' });
+    expect(within(menu).getByRole('menuitem', { name: 'Open order' }).getAttribute('href')).toBe(
       '/plant-a/planning/orders/po-1001',
     );
     cleanup();
