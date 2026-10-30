@@ -449,7 +449,7 @@ export function BoardGrid({
                   if (event.key === 'Enter') onOpenDetails(row.jobOrder.id);
                   else onSelectOrder(row.order.id);
                 }}
-                className="relative flex h-7 items-center gap-1.5 overflow-hidden rounded-sm border border-foreground bg-card px-2 text-xs"
+                className="relative flex h-7 items-center gap-1.5 overflow-hidden rounded-sm border border-foreground bg-card px-2 text-xs select-none"
               >
                 {row.order.id === selectedOrderId && (
                   <span

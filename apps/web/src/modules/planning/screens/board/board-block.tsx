@@ -105,6 +105,9 @@ export function BoardBlock({
   >(undefined);
   // The click the browser fires after a drop is not a selection.
   const dropped = useRef(false);
+  // Whether a press of the current click sequence ended a drag: the dblclick that follows a drop
+  // on the second press opens nothing (#886).
+  const sequenceDragged = useRef(false);
   const { jobOrder, order } = row;
   const placement = jobOrder.placement;
   if (placement === undefined) return null;
@@ -246,6 +249,9 @@ export function BoardBlock({
             aria-labelledby={`${id}-number ${id}-article ${id}-facts`}
             onFocus={onFocus}
             onClick={(event) => {
+              // A click's detail counts the presses of its sequence; the first one starts anew.
+              sequenceDragged.current =
+                dropped.current || (event.detail > 1 && sequenceDragged.current);
               // The click after a drop is not a selection.
               if (dropped.current) {
                 dropped.current = false;
@@ -254,9 +260,11 @@ export function BoardBlock({
               }
               onSelect();
             }}
-            // The block holds no control, and its hover card takes no pointer events, so every
-            // double click that reaches it is on the block.
-            onDoubleClick={onOpenDetails}
+            // The block holds no control, and its hover card is a React sibling of the block, not
+            // a child, so no double click bubbles in from either.
+            onDoubleClick={() => {
+              if (!sequenceDragged.current) onOpenDetails();
+            }}
             onContextMenu={(event) => {
               event.preventDefault();
               onMenu(event.currentTarget);

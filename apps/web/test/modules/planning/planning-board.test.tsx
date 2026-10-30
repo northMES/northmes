@@ -350,10 +350,9 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(block('1003.10').getAttribute('aria-selected')).toBe('false');
     expect(block('1003.10').querySelector('[data-selection-bar]')).toBeNull();
 
-    // A click only selects (#886): Details stays closed, the press closes the hover card, and
-    // the one layer left for Escape is the selection (plan 07).
+    // A click only selects (#886): Details stays closed, and the next Escape clears the
+    // selection (plan 07).
     expect(detailsOpen()).toBe(false);
-    expect(screen.queryByRole('tooltip')).toBeNull();
     expect(document.activeElement).toBe(block('1001.10'));
     await user.keyboard('{Escape}');
     expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });

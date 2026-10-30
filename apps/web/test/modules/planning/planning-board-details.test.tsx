@@ -70,7 +70,7 @@ describe('Details on the planning board (Krister, 2026-10-21: the Gantt drawer)'
     expect(detailsOpen()).toBe(false);
   });
 
-  it('#886 a double click on a job order opens its Details, as on the Gantt', async () => {
+  it('#886 a double click on a job order opens its Details, as on the Gantt, and Escape returns focus to the block', async () => {
     const user = userEvent.setup();
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
@@ -80,6 +80,9 @@ describe('Details on the planning board (Krister, 2026-10-21: the Gantt drawer)'
     const drawer = await findDetails();
     expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('1004.10 Turn');
     expect(router.state.location.search).toMatchObject({ order: 'po-1004' });
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(detailsOpen()).toBe(false));
+    await waitFor(() => expect(document.activeElement).toBe(block(board, '1004.10')));
   });
 
   it('IN31 a link that names an order opens the Details of its first job order in the range', async () => {
