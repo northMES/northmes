@@ -8,7 +8,7 @@ import type { KeyboardEvent, ReactNode } from 'react';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { TimeScale } from '../../timeline/time-scale.ts';
 import { GanttMarkerLayer, overlayMarkers } from '../gantt/gantt-marker-layer.tsx';
-import { type MovePreview, tooltipText } from '../gantt/gantt-move.ts';
+import { type MovePreview, type NotAllowed, tooltipText } from '../gantt/gantt-move.ts';
 import { quantityText } from '../gantt/gantt-rows.ts';
 import {
   GanttTimeHeader,
@@ -47,6 +47,8 @@ export interface BoardGridProps {
   readonly tabStop: string | undefined;
   /** The move in progress, which draws its outline in the row of its target machine. */
   readonly preview?: MovePreview;
+  /** The machines the job order in a move may not go to, whose rows are greyed out (#944). */
+  readonly notAllowed?: NotAllowed;
   /** The selected order, by id, whose job orders carry aria-selected. */
   readonly selectedOrderId: string | undefined;
   readonly onSelectOrder: (orderId: string) => void;
@@ -156,6 +158,7 @@ function Row({
   className,
   top,
   machine,
+  notAllowed,
   children,
 }: {
   readonly index: number;
@@ -166,6 +169,8 @@ function Row({
   readonly top?: number;
   /** The machine of a machine row, which a pointer drag reads to find its target. */
   readonly machine?: string;
+  /** Whether the job order in a move may not go to the row's machine, which greys it out. */
+  readonly notAllowed?: boolean;
   readonly children: ReactNode;
 }) {
   return (
@@ -173,9 +178,14 @@ function Row({
       role="row"
       aria-rowindex={index}
       data-machine={machine}
+      data-not-allowed={notAllowed || undefined}
       // As wide as its tracks: a sticky cell cannot leave its row, so a row only as wide as the
       // grid would take the machine cells with it once the scroll passes the row's width (#910).
-      className={cn('grid w-max min-w-full border-b border-border', className)}
+      className={cn(
+        'grid w-max min-w-full border-b border-border',
+        notAllowed && 'cursor-not-allowed',
+        className,
+      )}
       style={{
         gridTemplateColumns: columns,
         height: `${heightRem}rem`,
@@ -207,6 +217,7 @@ export function BoardGrid({
   onToggleGroup,
   tabStop,
   preview,
+  notAllowed,
   selectedOrderId,
   onSelectOrder,
   onOpenDetails,
@@ -291,6 +302,9 @@ export function BoardGrid({
       bodyRem += boardRowRem.machine;
       const code = machine.equipment.code;
       const cells = cellsOf(code);
+      // A machine the moving job order may not go to is greyed out with a hatch, so the cue does
+      // not rest on colour alone, and its row header says so (#944).
+      const greyed = notAllowed?.machines.has(code) === true;
       bodyRows.push(
         <Row
           key={code}
@@ -298,11 +312,17 @@ export function BoardGrid({
           heightRem={boardRowRem.machine}
           columns={columns}
           machine={code}
+          notAllowed={greyed}
         >
           <div
             role="rowheader"
             tabIndex={tab(focusKeys.header(code))}
             data-board-focus={focusKeys.header(code)}
+            aria-label={
+              greyed
+                ? `${machine.equipment.name}, not allowed for ${notAllowed?.operation}`
+                : undefined
+            }
             onFocus={() => onFocusTarget(focusKeys.header(code))}
             data-sticky-column
             className="sticky start-0 z-20 flex items-center border-e border-border bg-card px-3 text-sm"
@@ -311,10 +331,25 @@ export function BoardGrid({
                 group.color === undefined ? undefined : `inset 6px 0 0 var(--${group.color})`,
             }}
           >
-            {machine.equipment.name}
+            {greyed && (
+              <span
+                aria-hidden
+                className="planning-not-allowed pointer-events-none absolute inset-0"
+              />
+            )}
+            <span data-machine-name className="relative">
+              {machine.equipment.name}
+            </span>
           </div>
           <div className="relative bg-lane">
             <TimeCellShading windows={machine.closed} scale={scale} nowMs={snapshot.nowMs} />
+            {greyed && (
+              <span
+                aria-hidden
+                data-not-allowed-hatch
+                className="planning-not-allowed pointer-events-none absolute inset-0"
+              />
+            )}
             {preview !== undefined && preview.equipment === code && (
               <MoveOutline preview={preview} scale={scale} timeZone={snapshot.plant.timeZone} />
             )}

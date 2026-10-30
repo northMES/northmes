@@ -62,7 +62,13 @@ import { useMoveActions } from '../../use-move-actions.ts';
 import { type GanttViewContext, GanttViewProvider } from '../gantt/gantt-context.ts';
 import { GanttDetailDrawer } from '../gantt/gantt-detail-panel.tsx';
 import { changesText, GanttDraftDrawer } from '../gantt/gantt-draft-drawer.tsx';
-import { movedMessage, previewOf, refusalMessage, staysOverdue } from '../gantt/gantt-move.ts';
+import {
+  movedMessage,
+  notAllowedOf,
+  previewOf,
+  refusalMessage,
+  staysOverdue,
+} from '../gantt/gantt-move.ts';
 import { timeHeaderHeightRem } from '../gantt/gantt-time-area.tsx';
 import { BlockMenu } from './board-block-menu.tsx';
 import { type BoardCellItem, cellsOf } from './board-cells.ts';
@@ -451,6 +457,9 @@ export function BoardScreen() {
     machineSteps,
   });
   const preview = useMoveOf(moveStore, (move) => move?.preview);
+  // The machines the moving job order may not go to, greyed out until the move ends (#944).
+  const movingId = useMoveOf(moveStore, (move) => move?.state.jobOrderId);
+  const notAllowed = useMemo(() => notAllowedOf(snapshot, movingId), [snapshot, movingId]);
 
   // The Move dialog's job order, and the block that takes focus when it closes.
   const moveDialogReturn = useRef<string | undefined>(undefined);
@@ -791,6 +800,7 @@ export function BoardScreen() {
                 }
                 tabStop={tabStop}
                 {...(preview !== undefined && { preview })}
+                {...(notAllowed !== undefined && { notAllowed })}
                 selectedOrderId={search.order}
                 onSelectOrder={selectOrder}
                 onOpenDetails={openDetails}

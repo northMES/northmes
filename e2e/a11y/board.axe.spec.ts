@@ -29,6 +29,20 @@ test.describe('the planning board', () => {
     await expect(board.locator('[data-job-order="1001.10"]')).toBeVisible();
     await checkA11y('the populated board');
 
+    // A drag of 1001.10, whose operation Turn runs on CNC 1 and CNC 2, greys out Mill 1 (#944).
+    const dragged = board.locator('[data-job-order="1001.10"]');
+    const box = await dragged.boundingBox();
+    if (box === null) throw new Error('1001.10 has no box');
+    await page.mouse.move(box.x + 10, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 40, box.y + box.height / 2, { steps: 4 });
+    await expect(board.getByRole('rowheader', { name: 'Mill 1, not allowed for Turn' })).toBeVisible();
+    await expect(board.locator('[role="row"][data-not-allowed]')).toHaveCount(1);
+    await checkA11y('a drag with the machines its operation may not use greyed out');
+    await page.keyboard.press('Escape');
+    await page.mouse.up();
+    await expect(board.locator('[role="row"][data-not-allowed]')).toHaveCount(0);
+
     await page.getByRole('button', { name: 'Collapse Machining' }).click();
     await expect(page.getByRole('button', { name: 'Expand Machining' })).toBeVisible();
     await expect(board.getByRole('rowheader', { name: 'CNC 1' })).toHaveCount(0);

@@ -68,6 +68,33 @@ export function moveRefusalOf(
   return undefined;
 }
 
+/** The machines a job order in a move may not go to, and the operation that rules them out. */
+export interface NotAllowed {
+  /** The operation's name, which the greyed rows name: "not allowed for Turn". */
+  readonly operation: string;
+  /** The equipment codes outside the operation's allowed machines. */
+  readonly machines: ReadonlySet<string>;
+}
+
+/**
+ * The machines of the plan that a job order's operation does not allow (#944): every timeline
+ * greys them out while the job order moves. Undefined without a move or an operation.
+ */
+export function notAllowedOf(
+  snapshot: GanttSnapshot | undefined,
+  jobOrderId: string | undefined,
+): NotAllowed | undefined {
+  if (snapshot === undefined || jobOrderId === undefined) return undefined;
+  const order = orderOfRow(snapshot.productionOrders, jobOrderId);
+  const row = order?.jobOrders.find((each) => each.id === jobOrderId);
+  const operation = order?.operations.find((each) => each.id === row?.operationId);
+  if (operation === undefined) return undefined;
+  const machines = snapshot.equipment
+    .map((machine) => machine.code)
+    .filter((code) => !operation.allowedEquipment.includes(code));
+  return { operation: operation.name, machines: new Set(machines) };
+}
+
 /** "Cannot move 1002.10: locked." */
 export function refusalMessage(displayNumber: string, refused: GanttMoveRefusal): string {
   const why = {

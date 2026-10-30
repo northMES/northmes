@@ -280,7 +280,7 @@ A constraint is a rule that bounds where a job order may lie. NorthMES already h
 | Started | machine and actual start stay | status other than `planned` | the play cue and the progress bar | `STARTED` on a move |
 | Frozen window | setup start inside [now, now + `frozenHours`) keeps its machine and order | `frozenHours` | a band from `now` to the fence over every row, in the `off-time` token at half opacity with a dashed left edge | `FROZEN_WINDOW`, confirmable |
 | Held | rows of an order under another planner's live soft lock | soft locks | the initials badge and dashed border | `LOCKED` on a move |
-| Allowed machines | the row's machine is one of the operation's allowed machines | operation equipment | the machine select and the Move dialog list only these; during a drag on the board the rows of machines the operation cannot use are dimmed and refuse the drop, and the drag tooltip says why ("Mill 2 is not allowed for 1003.10") | refused before a draft change is written; a committed row on a machine that is no longer allowed shows the conflict cue with "machine not allowed" (plan proposal) |
+| Allowed machines | the row's machine is one of the operation's allowed machines | operation equipment | the machine select and the Move dialog list only these; during a drag or move mode on the board the rows of machines the operation cannot use are greyed out with a hatch, their row headers say "not allowed for Turn", and a drop there is refused with the machines the operation runs on; on the order Gantt the workload lanes of those machines are greyed out the same way ([07](07-production-planning.md#moving-without-dragging)) | refused before a draft change is written; a committed row on a machine that is no longer allowed shows the conflict cue with "machine not allowed" (plan proposal) |
 | One job at a time | no two rows overlap on one machine | `validate()` | the striped edge on both rows | `OVERLAP` |
 | Calendar | a row's work lies in its machine's availability | availability | hollow segments; a committed row with work in closed time shows the conflict cue with "work in closed time" (plan proposal, arises after a calendar change) | `CLOSED_TIME` (plan proposal) |
 | Not plannable | a row on non-plannable equipment is not placed by autoplan | `is_plannable` | the row in the Not placed row with its reason | `notPlannable` in the run result |
@@ -451,6 +451,7 @@ For a machine `m` and a bucket `[a, b)`:
 - Hovering a bar shows the same values for that bucket in the hover card, on focus too.
 - A bar's color is the lane's foreground token; utilization is read from height and from the number, never from a hue, so no state maps to a color ([07](07-production-planning.md#block-states)).
 - The lane follows the draft: dragging a row updates the two affected buckets in the drag preview's frame.
+- During a move on the order Gantt, the lanes of the machines the job order's operation does not allow are greyed out as the board's rows are: a veil with a hatch, and "not allowed for Turn" in the lane button's accessible name, until the move ends (#944).
 
 ### The workload query
 
