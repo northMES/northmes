@@ -231,13 +231,26 @@ export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
   const [listeners] = useState(() => gestureListeners(latest));
   // Attached to the grid in view, again when the grid changes (the page's states draw it anew),
   // and removed on unmount.
+  // The wheel and Safari's gesture listeners are not passive, so preventDefault keeps the page
+  // from zooming; touch-action on the grid already does that for touches, so a one-finger scroll
+  // never waits for the touch listeners.
   useEffect(() => {
     const element = grid.current;
-    for (const [type, listener, passive] of listeners) {
-      element?.addEventListener(type, listener, { passive });
-    }
+    const active = { passive: false };
+    const passive = { passive: true };
+    element?.addEventListener('wheel', listeners.wheel, active);
+    element?.addEventListener('touchstart', listeners.touchstart, passive);
+    element?.addEventListener('touchmove', listeners.touchmove, passive);
+    element?.addEventListener('touchend', listeners.touchend, passive);
+    element?.addEventListener('gesturestart', listeners.gesturestart, active);
+    element?.addEventListener('gesturechange', listeners.gesturechange, active);
     return () => {
-      for (const [type, listener] of listeners) element?.removeEventListener(type, listener);
+      element?.removeEventListener('wheel', listeners.wheel);
+      element?.removeEventListener('touchstart', listeners.touchstart);
+      element?.removeEventListener('touchmove', listeners.touchmove);
+      element?.removeEventListener('touchend', listeners.touchend);
+      element?.removeEventListener('gesturestart', listeners.gesturestart);
+      element?.removeEventListener('gesturechange', listeners.gesturechange);
     };
   });
 
@@ -280,8 +293,15 @@ export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
   };
 }
 
-/** An event type, its listener, and whether the listener is passive. */
-type GestureListener = [string, (event: Event) => void, boolean];
+/** The listener of each gesture event the grid takes. */
+interface GestureListeners {
+  readonly wheel: (event: Event) => void;
+  readonly touchstart: (event: Event) => void;
+  readonly touchmove: (event: Event) => void;
+  readonly touchend: (event: Event) => void;
+  readonly gesturestart: (event: Event) => void;
+  readonly gesturechange: (event: Event) => void;
+}
 
 /**
  * Where the time area starts in the grid's viewport: after the sticky columns, or after every tree
@@ -310,7 +330,7 @@ interface GestureLike extends UIEvent {
  * keeps the page from zooming over the time area and steps one level per gesture, anchored at the
  * pointer or between the fingers.
  */
-function gestureListeners(latest: RefObject<LatestView>): GestureListener[] {
+function gestureListeners(latest: RefObject<LatestView>): GestureListeners {
   const wheel = createWheelZoom();
   const pinch = createPinchZoom();
   let startDistance = 0;
@@ -339,74 +359,47 @@ function gestureListeners(latest: RefObject<LatestView>): GestureListener[] {
       clientX: (first.clientX + second.clientX) / 2,
     };
   };
-  return [
-    [
-      'wheel',
-      (event) => {
-        const wheelEvent = event as WheelEvent;
-        if (!wheelEvent.ctrlKey && !wheelEvent.metaKey) return;
-        const element = event.currentTarget as HTMLElement;
-        if (!viewportOf(element, wheelEvent.clientX).overTime) return;
-        event.preventDefault();
-        step(element, wheel(wheelEvent.deltaY, event.timeStamp), wheelEvent.clientX);
-      },
-      // Not passive, so preventDefault keeps the page from zooming.
-      false,
-    ],
-    [
-      'touchstart',
-      (event) => {
-        const touches = twoTouches(event as TouchEvent);
-        if (touches === undefined) return;
-        startDistance = touches.distance;
-        pinch.start();
-      },
-      // touch-action on the grid already keeps the page from pinch zooming, so a one-finger
-      // scroll never waits for these.
-      true,
-    ],
-    [
-      'touchmove',
-      (event) => {
-        const touches = twoTouches(event as TouchEvent);
-        if (touches === undefined || startDistance === 0) return;
-        step(
-          event.currentTarget as HTMLElement,
-          pinch.move(touches.distance / startDistance),
-          touches.clientX,
-        );
-      },
-      true,
-    ],
-    [
-      'touchend',
-      (event) => {
-        if ((event as TouchEvent).touches.length < 2) startDistance = 0;
-      },
-      true,
-    ],
-    [
-      'gesturestart',
-      (event) => {
-        const element = event.currentTarget as HTMLElement;
-        gestureOverTime = viewportOf(element, (event as GestureLike).clientX).overTime;
-        if (!gestureOverTime) return;
-        event.preventDefault();
-        // On iOS the touches lead the same pinch; Safari's gesture only leads on a trackpad.
-        if (startDistance === 0) pinch.start();
-      },
-      false,
-    ],
-    [
-      'gesturechange',
-      (event) => {
-        if (!gestureOverTime) return;
-        event.preventDefault();
-        if (startDistance !== 0) return;
-        const gesture = event as GestureLike;
-        step(event.currentTarget as HTMLElement, pinch.move(gesture.scale), gesture.clientX);
-      },
-      false,
-    ],
-  ];
+  return {
+    wheel: (event: Event) => {
+      const wheelEvent = event as WheelEvent;
+      if (!wheelEvent.ctrlKey && !wheelEvent.metaKey) return;
+      const element = event.currentTarget as HTMLElement;
+      if (!viewportOf(element, wheelEvent.clientX).overTime) return;
+      event.preventDefault();
+      step(element, wheel(wheelEvent.deltaY, event.timeStamp), wheelEvent.clientX);
+    },
+    touchstart: (event: Event) => {
+      const touches = twoTouches(event as TouchEvent);
+      if (touches === undefined) return;
+      startDistance = touches.distance;
+      pinch.start();
+    },
+    touchmove: (event: Event) => {
+      const touches = twoTouches(event as TouchEvent);
+      if (touches === undefined || startDistance === 0) return;
+      step(
+        event.currentTarget as HTMLElement,
+        pinch.move(touches.distance / startDistance),
+        touches.clientX,
+      );
+    },
+    touchend: (event: Event) => {
+      if ((event as TouchEvent).touches.length < 2) startDistance = 0;
+    },
+    gesturestart: (event: Event) => {
+      const element = event.currentTarget as HTMLElement;
+      gestureOverTime = viewportOf(element, (event as GestureLike).clientX).overTime;
+      if (!gestureOverTime) return;
+      event.preventDefault();
+      // On iOS the touches lead the same pinch; Safari's gesture only leads on a trackpad.
+      if (startDistance === 0) pinch.start();
+    },
+    gesturechange: (event: Event) => {
+      if (!gestureOverTime) return;
+      event.preventDefault();
+      if (startDistance !== 0) return;
+      const gesture = event as GestureLike;
+      step(event.currentTarget as HTMLElement, pinch.move(gesture.scale), gesture.clientX);
+    },
+  };
 }
