@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+
+import type { JobOrderSpan } from '@northmes/planning-domain';
 import { cn } from 'cn';
 import { Clock, Lock, Pencil, TriangleAlert } from 'lucide-react';
 import { type KeyboardEvent, type PointerEvent, useRef } from 'react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import { blockLines } from '../../board-fields.ts';
+import { useMoveOf } from '../../move-store.ts';
+import type { TimeScale } from '../../timeline/time-scale.ts';
 import { blockName, blockStates } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
 import { GanttHoverCard } from './gantt-hover-card.tsx';
@@ -19,6 +23,18 @@ const hollowMinPx = 2;
 
 /** The pointer travel from which a press is a drag, not a click. */
 const dragThresholdPx = 3;
+
+/**
+ * Where a span draws on the time axis, at least 2 px wide: the one layout of a committed block,
+ * the move preview and a ghost span, so the preview shows the block the drop draws (#898).
+ */
+export function blockBox(
+  scale: TimeScale,
+  span: Pick<JobOrderSpan, 'setupStartMs' | 'endMs'>,
+): { readonly left: number; readonly width: number } {
+  const left = scale.x(span.setupStartMs);
+  return { left, width: Math.max(2, scale.x(span.endMs) - left) };
+}
 
 /**
  * The one block of a job order row (plan 18, Blocks across closed time; plan 07, Block states):
@@ -41,16 +57,8 @@ export function GanttBlock({
   readonly onChain: boolean;
   readonly onSelect: () => void;
 }) {
-  const {
-    scale,
-    snapshot,
-    machineName,
-    timeZone,
-    draftRowIds,
-    move,
-    boardFields,
-    materialShortages,
-  } = useGanttView();
+  const { scale, snapshot, machineName, draftRowIds, move, boardFields, materialShortages } =
+    useGanttView();
   const { jobOrder, operation, order } = row;
   // The press in progress: where it started, and whether it has become a drag.
   const press = useRef<{ clientX: number; setupStartMs: number; dragging: boolean } | undefined>(
@@ -58,10 +66,15 @@ export function GanttBlock({
   );
   // The click the browser fires after a drop is not a selection.
   const dropped = useRef(false);
+  // Only whether this row moves: the position of a move draws in its preview layer (#898).
+  const moving = useMoveOf(move?.store, (each) => each?.state.jobOrderId === jobOrder.id);
+  const inMoveMode = useMoveOf(
+    move?.store,
+    (each) => each?.state.jobOrderId === jobOrder.id && each.state.source === 'keyboard',
+  );
   if (jobOrder.placement === undefined) return null;
   const { placement } = jobOrder;
-  const left = scale.x(placement.setupStartMs);
-  const width = Math.max(2, scale.x(placement.endMs) - left);
+  const { left, width } = blockBox(scale, placement);
   const machine = machineName(jobOrder.equipment);
   const inDraft = draftRowIds?.has(jobOrder.id) === true;
   const material = materialShortages?.get(operation.displayNumber);
@@ -96,10 +109,6 @@ export function GanttBlock({
   // in the dark theme while the text is pure black, so text over a hollow could not be read (#882).
   // The setup hatch, the outlines and the conflict edge sit above the text at z-[3].
   const color = `var(--${order.color})`;
-  const moving = move?.state?.jobOrderId === jobOrder.id;
-  const inMoveMode = moving && move?.state?.source === 'keyboard';
-  const preview = moving ? move?.preview : undefined;
-  const ghost = move?.preview?.ghosts.get(jobOrder.id);
 
   const onPointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.button !== 0 || move === undefined) return;
@@ -335,47 +344,64 @@ export function GanttBlock({
           />
         </TooltipContent>
       </Tooltip>
-      {/* The move preview: the snapped span as an outline in the draft style, with the tooltip
-          that names the landing span, the release snap and the cascade count. Decorative: the
-          step message and the block's name carry the words. */}
-      {preview !== undefined && (
-        <>
-          <span
-            aria-hidden
-            data-move-preview={jobOrder.id}
-            data-from-ms={preview.span.setupStartMs}
-            data-to-ms={preview.span.endMs}
-            className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground bg-foreground/10"
-            style={{
-              left: `${scale.x(preview.span.setupStartMs)}px`,
-              width: `${Math.max(2, scale.x(preview.span.endMs) - scale.x(preview.span.setupStartMs))}px`,
-            }}
-          />
-          <span
-            aria-hidden
-            data-drag-tooltip
-            className="pointer-events-none absolute bottom-0 z-[4] rounded-sm bg-popover px-1.5 py-0.5 font-mono text-tick whitespace-nowrap text-popover-foreground shadow-sm"
-            style={{ left: `${scale.x(preview.span.setupStartMs)}px` }}
-          >
-            {tooltipText(preview, timeZone)}
-          </span>
-        </>
-      )}
-      {/* A ghost span: where the cascade would put this row, in the draft style at reduced opacity. */}
-      {ghost !== undefined && (
+      <GanttMovePreview jobOrderId={jobOrder.id} color={color} />
+    </>
+  );
+}
+
+/**
+ * The preview layer of a block during a move, the one part of the row that renders again on a
+ * pointer move (#898): on the moving row the snapped span as an outline in the draft style, with
+ * the tooltip that names the landing span, the release snap and the cascade count; on a row the
+ * cascade would carry, its ghost span. Decorative: the step message and the block's name carry
+ * the words.
+ */
+function GanttMovePreview({
+  jobOrderId,
+  color,
+}: {
+  readonly jobOrderId: string;
+  readonly color: string;
+}) {
+  const { scale, timeZone, move } = useGanttView();
+  const preview = useMoveOf(move?.store, (each) =>
+    each?.state.jobOrderId === jobOrderId ? each.preview : undefined,
+  );
+  const ghost = useMoveOf(move?.store, (each) => each?.preview?.ghosts.get(jobOrderId));
+  if (preview !== undefined) {
+    const box = blockBox(scale, preview.span);
+    return (
+      <>
         <span
           aria-hidden
-          data-ghost={jobOrder.id}
-          data-from-ms={ghost.setupStartMs}
-          data-to-ms={ghost.endMs}
-          className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground opacity-45"
-          style={{
-            left: `${scale.x(ghost.setupStartMs)}px`,
-            width: `${Math.max(2, scale.x(ghost.endMs) - scale.x(ghost.setupStartMs))}px`,
-            background: color,
-          }}
+          data-move-preview={jobOrderId}
+          data-from-ms={preview.span.setupStartMs}
+          data-to-ms={preview.span.endMs}
+          className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground bg-foreground/10"
+          style={{ left: `${box.left}px`, width: `${box.width}px` }}
         />
-      )}
-    </>
+        <span
+          aria-hidden
+          data-drag-tooltip
+          className="pointer-events-none absolute bottom-0 z-[4] rounded-sm bg-popover px-1.5 py-0.5 font-mono text-tick whitespace-nowrap text-popover-foreground shadow-sm"
+          style={{ left: `${box.left}px` }}
+        >
+          {tooltipText(preview, timeZone)}
+        </span>
+      </>
+    );
+  }
+  if (ghost === undefined) return null;
+  // A ghost span: where the cascade would put this row, in the draft style at reduced opacity.
+  const box = blockBox(scale, ghost);
+  return (
+    <span
+      aria-hidden
+      data-ghost={jobOrderId}
+      data-from-ms={ghost.setupStartMs}
+      data-to-ms={ghost.endMs}
+      className="pointer-events-none absolute top-1 z-[3] h-11 border-3 border-double border-foreground opacity-45"
+      style={{ left: `${box.left}px`, width: `${box.width}px`, background: color }}
+    />
   );
 }

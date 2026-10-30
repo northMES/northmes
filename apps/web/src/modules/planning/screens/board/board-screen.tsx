@@ -35,6 +35,7 @@ import {
   withZoom,
 } from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
+import { useMoveOf } from '../../move-store.ts';
 import { plantTime } from '../../order-facts.ts';
 import { usePlanningDraft } from '../../planning-draft.tsx';
 import { PlanningForbidden } from '../../planning-preview.ts';
@@ -359,20 +360,20 @@ export function BoardScreen() {
   // A job order that takes focus after a move but is not drawn yet: it may lie outside the range
   // or inside a cluster (plan 07: range extension follows the move, and focus returns by id).
   const [pendingFocus, setPendingFocus] = useState<string | undefined>(undefined);
-  const { actions: moveActions, preview } = useMoveActions({
+  const { actions: moveActions, store: moveStore } = useMoveActions({
     committed,
     snapshot,
     draft,
     setDraft,
     cascadeOn: true,
     zoom,
-    range,
     timeZone,
     focusBlock: (jobOrderId) => {
       if (!focusTarget(focusKeys.block(jobOrderId))) setPendingFocus(jobOrderId);
     },
     machineSteps,
   });
+  const preview = useMoveOf(moveStore, (move) => move?.preview);
 
   // The Move dialog's job order, and the block that takes focus when it closes.
   const moveDialogReturn = useRef<string | undefined>(undefined);
@@ -489,7 +490,7 @@ export function BoardScreen() {
     // A key with a modifier belongs to the browser and to the commands of later stories.
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     // The Escape stack (plan 07): a move still in progress ends first, the selection last.
-    if (event.key === 'Escape' && moveActions?.state !== undefined) {
+    if (event.key === 'Escape' && moveActions !== undefined && moveStore.get() !== undefined) {
       event.preventDefault();
       moveActions.cancel();
       return;
@@ -715,7 +716,7 @@ export function BoardScreen() {
             chain={undefined}
             onClose={() => {
               // A move begun in Details ends with it, without a change (plan 07, the Escape stack).
-              if (moveActions?.state !== undefined) moveActions.cancel({ refocus: false });
+              if (moveStore.get() !== undefined) moveActions?.cancel({ refocus: false });
               setDetailFor(undefined);
             }}
             // The board draws no chain: Show critical chain opens the order's chain on the Gantt.

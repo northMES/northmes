@@ -47,6 +47,7 @@ import {
   type MaterialShortage,
   materialShortages as materialShortageList,
 } from '../../material-projection.ts';
+import { useMoveOf } from '../../move-store.ts';
 import { usePlanningDraft } from '../../planning-draft.tsx';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
@@ -376,17 +377,18 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     block?.focus({ preventScroll: true });
     block?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   };
-  const { actions: moveActions, state: moveState } = useMoveActions({
+  const { actions: moveActions, store: moveStore } = useMoveActions({
     committed,
     snapshot,
     draft,
     setDraft,
     cascadeOn: options.cascade,
     zoom,
-    range,
     timeZone,
     focusBlock,
   });
+  // Whether a move is in progress, which the Escape stack reads; its position stays in the store.
+  const moving = useMoveOf(moveStore, (move) => move !== undefined);
   const rowById = useMemo(() => {
     const map = new Map<string, GanttRow>();
     const addOrder = (order: GanttRow) => {
@@ -733,7 +735,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         event.currentTarget.querySelector<HTMLElement>('[data-row-menu]')?.click();
         break;
       case 'Escape':
-        if (moveState !== undefined) moveActions?.cancel();
+        if (moving) moveActions?.cancel();
         else if (chain !== undefined) void setSearch(withChain(search, false));
         else handled = false;
         break;
@@ -806,7 +808,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
               aria-busy={state.status === 'loading' || undefined}
               onKeyDown={(event) => {
                 // The Escape stack: move mode ends first, then the chain highlight.
-                if (event.key === 'Escape' && moveState !== undefined) {
+                if (event.key === 'Escape' && moving) {
                   event.stopPropagation();
                   moveActions?.cancel();
                 } else if (event.key === 'Escape' && chain !== undefined) {

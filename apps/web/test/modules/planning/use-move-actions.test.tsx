@@ -35,15 +35,16 @@ describe('the move actions during a drag (ADR 0030; #898)', () => {
   it('a pointer move renders the screen that holds the actions no more, and keeps the actions', async () => {
     const { result, renders } = renderMoveActions();
     const actions = result.current.actions;
-    const { result: preview } = renderHook(() =>
-      useMoveOf(result.current.store, (move) => move?.preview?.span.setupStartMs),
+    // The position the pointer asked for, before the calendar and release snaps.
+    const { result: position } = renderHook(() =>
+      useMoveOf(result.current.store, (move) => move?.state.setupStartMs),
     );
 
     act(() => {
       actions?.begin('jo-1003-10', 'pointer');
     });
     const before = renders();
-    const startMs = preview.current ?? 0;
+    const startMs = position.current ?? 0;
     for (const step of [1, 2, 3]) {
       act(() => {
         actions?.previewAt(startMs + step * hour);
@@ -51,7 +52,7 @@ describe('the move actions during a drag (ADR 0030; #898)', () => {
     }
 
     await waitFor(() => {
-      expect(preview.current).toBe(startMs + 3 * hour);
+      expect(position.current).toBe(startMs + 3 * hour);
     });
     expect(renders()).toBe(before);
     expect(result.current.actions).toBe(actions);

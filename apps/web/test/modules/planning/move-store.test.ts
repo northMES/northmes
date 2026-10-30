@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import { createMoveStore } from '../../../src/modules/planning/move-store.ts';
 import {
-  type MovePreview,
   type MoveState,
   moveContextOf,
   stepBackStart,
@@ -71,7 +70,7 @@ describe('the move store (ADR 0030, the drag preview outside React state; #898)'
     expect(computed() - afterBegin.computed).toBe(1);
     expect(notified - afterBegin.notified).toBe(1);
     expect(store.get()?.state.setupStartMs).toBe(3);
-    expect((store.get()?.preview as MovePreview).span.setupStartMs).toBe(3);
+    expect(store.get()?.preview?.span.setupStartMs).toBe(3);
   });
 
   it('a pointer move that stays on the same snapped instant runs no preview and notifies nobody', () => {
