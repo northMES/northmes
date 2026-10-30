@@ -6,14 +6,55 @@
 import {
   type Bucket,
   isoWeekBuckets,
+  type PlanContext,
   shiftBuckets,
   type WorkloadBucket,
   workload,
 } from '@northmes/planning-domain';
-import { workingCalendarOf } from './gantt-analysis.ts';
+import { planContextOf, workingCalendarOf } from './gantt-analysis.ts';
 import type { GanttSnapshot, ZoomPreset } from './gantt-data.ts';
-import { type MovePreview, moveContextOf } from './screens/gantt/gantt-move.ts';
+import type { MovePreview } from './screens/gantt/gantt-move.ts';
 import type { TimeRange } from './timeline/time-scale.ts';
+
+const day = 86_400_000;
+
+const laneContexts = new WeakMap<GanttSnapshot, Map<string, PlanContext>>();
+
+/**
+ * The plan context the lanes read, built once per plan with the draft and range: its availability
+ * covers the range, which the context of a move, laid from now to the fence, need not.
+ */
+function laneContextOf(snapshot: GanttSnapshot, range: TimeRange): PlanContext {
+  let byRange = laneContexts.get(snapshot);
+  if (byRange === undefined) {
+    byRange = new Map();
+    laneContexts.set(snapshot, byRange);
+  }
+  const key = `${range.fromMs} ${range.toMs}`;
+  let context = byRange.get(key);
+  if (context === undefined) {
+    context = planContextOf(snapshot, range);
+    byRange.set(key, context);
+  }
+  return context;
+}
+
+/**
+ * The buckets of a kind that overlap a range, each over its whole span: a shift or a week the
+ * range edge cuts keeps its values, and the lane draws only the part in the range.
+ */
+function bucketsOf(kind: 'shift' | 'isoWeek', snapshot: GanttSnapshot, range: TimeRange): Bucket[] {
+  const { timeZone } = snapshot.plant;
+  // A day on each side holds every shift that overlaps the range whole; a week, every week.
+  const margin = kind === 'shift' ? day : 7 * day;
+  const fromMs = range.fromMs - margin;
+  const toMs = range.toMs + margin;
+  const all =
+    kind === 'shift'
+      ? shiftBuckets(workingCalendarOf(snapshot.calendar, timeZone), fromMs, toMs)
+      : isoWeekBuckets({ timeZone, fromMs, toMs });
+  return all.filter((bucket) => bucket.toMs > range.fromMs && bucket.fromMs < range.toMs);
+}
 
 export type BucketKind = 'shift' | 'productionDay' | 'isoWeek';
 
@@ -39,28 +80,33 @@ export function workloadOf(
 ): readonly WorkloadBucket[] {
   const kind = bucketKindOf(zoom);
   if (kind === 'productionDay') return snapshot.analysis.workload;
-  const { timeZone } = snapshot.plant;
-  const buckets =
-    kind === 'shift'
-      ? shiftBuckets(workingCalendarOf(snapshot.calendar, timeZone), range.fromMs, range.toMs)
-      : isoWeekBuckets({ timeZone, fromMs: range.fromMs, toMs: range.toMs });
-  return workload(moveContextOf(snapshot), buckets);
+  return workload(laneContextOf(snapshot, range), bucketsOf(kind, snapshot, range));
 }
 
 /**
  * The workload while a move is previewed (plan 18: the lane follows the draft in the drag
- * preview's frame): the machines the moved row leaves and enters and the machines of the rows the
- * cascade carries are computed again with the preview's spans; every other bucket stays the same
- * object.
+ * preview's frame): on the machines the moved row leaves and enters and the machines of the rows
+ * the cascade carries, the buckets the old and the new spans overlap are computed again with the
+ * preview's spans; every other bucket stays the same object. A preview of a move that does not
+ * happen, refused or past the horizon, leaves the workload as it is.
  */
 export function withMovePreview(
   snapshot: GanttSnapshot,
   buckets: readonly WorkloadBucket[],
   preview: MovePreview,
+  range: TimeRange,
 ): readonly WorkloadBucket[] {
-  const context = moveContextOf(snapshot);
+  if (preview.reason === undefined) return buckets;
+  const context = laneContextOf(snapshot, range);
   const spans = new Map([[preview.jobOrderId, preview.span], ...preview.ghosts]);
   const touched = new Set<string>([preview.equipment]);
+  // The time the old and the new spans cover, where the load changes.
+  let changedFromMs = Number.POSITIVE_INFINITY;
+  let changedToMs = Number.NEGATIVE_INFINITY;
+  const cover = (span: { readonly setupStartMs: number; readonly endMs: number }) => {
+    changedFromMs = Math.min(changedFromMs, span.setupStartMs);
+    changedToMs = Math.max(changedToMs, span.endMs);
+  };
   const orders = context.orders.map((order) => {
     if (!order.jobOrders.some((row) => spans.has(row.id))) return order;
     return {
@@ -69,6 +115,8 @@ export function withMovePreview(
         const span = spans.get(row.id);
         if (span === undefined) return row;
         if (row.equipment !== undefined) touched.add(row.equipment);
+        if (row.placement !== undefined) cover(row.placement);
+        cover(span);
         const equipment = row.id === preview.jobOrderId ? preview.equipment : row.equipment;
         return { ...row, ...(equipment !== undefined && { equipment }), placement: span };
       }),
@@ -77,7 +125,8 @@ export function withMovePreview(
   // Every machine shares the buckets of the range, so the spans of the first one serve.
   const spansOfBuckets = new Map<string, Bucket>();
   for (const bucket of buckets) {
-    if (!spansOfBuckets.has(bucket.label)) {
+    const changed = bucket.toMs > changedFromMs && bucket.fromMs < changedToMs;
+    if (changed && !spansOfBuckets.has(bucket.label)) {
       spansOfBuckets.set(bucket.label, {
         label: bucket.label,
         fromMs: bucket.fromMs,

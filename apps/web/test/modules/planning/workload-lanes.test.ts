@@ -93,7 +93,7 @@ describe('the workload follows a move preview (plan 18, The workload lane; #901)
   const before = workloadOf(snapshot, 'week', week);
 
   it('moves the load of the dragged row from its day to the day it is dragged to', () => {
-    const after = withMovePreview(snapshot, before, preview);
+    const after = withMovePreview(snapshot, before, preview, week);
 
     expect(bucketOf(after, 'CNC1', '2026-11-04')?.loadedS).toBe(21_600 - 14_400);
     expect(bucketOf(after, 'CNC1', '2026-11-05')?.loadedS).toBe(29_700 + 14_400);
@@ -101,7 +101,7 @@ describe('the workload follows a move preview (plan 18, The workload lane; #901)
   });
 
   it('recomputes the machines the move and its cascade touch, and keeps the others as they are', () => {
-    const after = withMovePreview(snapshot, before, preview);
+    const after = withMovePreview(snapshot, before, preview, week);
 
     // 1003.20 on Mill 1 leaves Wednesday with the cascade.
     expect(bucketOf(after, 'MILL1', '2026-11-04')?.loadedS).toBeLessThan(
@@ -132,7 +132,7 @@ describe('the workload of a move to another machine, and of a move that does not
     );
     if (preview === undefined) throw new Error('No preview of 1001.10');
 
-    const after = withMovePreview(snapshot, before, preview);
+    const after = withMovePreview(snapshot, before, preview, week);
 
     expect(bucketOf(before, 'CNC1', '2026-11-03')?.loadedS).toBe(12_600);
     expect(bucketOf(after, 'CNC1', '2026-11-03')?.loadedS).toBe(0);
@@ -153,7 +153,7 @@ describe('the workload of a move to another machine, and of a move that does not
     );
     if (preview === undefined) throw new Error('No preview of 1002.10');
 
-    expect(withMovePreview(snapshot, before, preview)).toBe(before);
+    expect(withMovePreview(snapshot, before, preview, week)).toBe(before);
   });
 
   it('says a closed bucket that holds work in closed time is over capacity', () => {

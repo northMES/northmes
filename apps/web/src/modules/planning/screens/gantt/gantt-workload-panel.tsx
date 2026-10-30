@@ -33,27 +33,27 @@ interface PlacedBucket {
 }
 
 /** The buckets of a machine inside the visible range, sorted by time. */
-export function laneBuckets(
-  buckets: readonly WorkloadBucket[],
-  equipment: string,
-  scale: TimeScale,
-): PlacedBucket[] {
+export function laneBuckets(buckets: readonly WorkloadBucket[], scale: TimeScale): PlacedBucket[] {
   const placed = buckets
-    .filter((bucket) => bucket.equipment === equipment)
     .map((bucket) => ({ bucket, fromMs: bucket.fromMs, toMs: bucket.toMs }))
     .sort((a, b) => a.fromMs - b.fromMs);
   return visibleItems(placed, scale.range);
 }
 
-/** The machines the visible orders use, by equipment group then code (plan 18, The workload lane). */
+/**
+ * The machines the visible orders use, by equipment group then code (plan 18, The workload lane),
+ * and the machine a move in progress enters, so its load shows while it is previewed.
+ */
 export function laneMachines(
   snapshot: GanttSnapshot,
+  entered?: string,
 ): readonly { readonly code: string; readonly name: string }[] {
   const used = new Set(
     snapshot.productionOrders.flatMap((order) =>
       order.jobOrders.flatMap((row) => (row.equipment === undefined ? [] : [row.equipment])),
     ),
   );
+  if (entered !== undefined) used.add(entered);
   const groupOrder = new Map(snapshot.equipmentGroups.map((group, index) => [group.code, index]));
   return snapshot.equipment
     .filter((machine) => used.has(machine.code))
@@ -70,9 +70,11 @@ export function laneMachines(
  * for a bucket loaded above its availability, so the table says it in words (#901).
  */
 export function utilizationText(bucket: WorkloadBucket): string {
-  if (bucket.utilizationPermille === null) return 'closed';
-  const percent = `${Math.round(bucket.utilizationPermille / 10)} %`;
-  return bucket.overloadS > 0 ? `${percent}, over capacity` : percent;
+  const value =
+    bucket.utilizationPermille === null
+      ? 'closed'
+      : `${Math.round(bucket.utilizationPermille / 10)} %`;
+  return bucket.overloadS > 0 ? `${value}, over capacity` : value;
 }
 
 /** The name of a bucket kind in the heading and the table's first column. */
@@ -91,8 +93,9 @@ const kindNames: Readonly<
 function bucketName(bucket: WorkloadBucket, kind: BucketKind, timeZone: string): string {
   if (kind === 'productionDay') return formatPlantDay(bucket.label);
   if (kind === 'isoWeek') {
-    const week = bucket.label.slice(bucket.label.indexOf('-W') + 1);
-    return `${week}, ${formatPlantDate(bucket.fromMs, timeZone)}`;
+    // "W1" as the time header and the toolbar print it, not the label's "W01".
+    const week = Number(bucket.label.slice(bucket.label.indexOf('-W') + 2));
+    return `W${week}, ${formatPlantDate(bucket.fromMs, timeZone)}`;
   }
   const [date = '', ...clock] = bucket.label.split(' ');
   return [formatPlantDay(date), ...clock].join(' ');
@@ -101,8 +104,8 @@ function bucketName(bucket: WorkloadBucket, kind: BucketKind, timeZone: string):
 /** One row of the lane's text table: the bucket's values as durations. */
 export function bucketRow(
   bucket: WorkloadBucket,
-  kind: BucketKind = 'productionDay',
-  timeZone = 'UTC',
+  kind: BucketKind,
+  timeZone: string,
 ): readonly string[] {
   const free = Math.max(0, bucket.availableS - bucket.loadedS);
   return [
@@ -130,7 +133,9 @@ function totalsRow(buckets: readonly WorkloadBucket[]): readonly string[] {
     formatDuration(sum('setupS'), hours),
     formatDuration(sum('runS'), hours),
     formatDuration(Math.max(0, available - loaded), hours),
-    available === 0 ? 'closed' : `${Math.round((loaded * 100) / available)} %`,
+    `${available === 0 ? 'closed' : `${Math.round((loaded * 100) / available)} %`}${
+      sum('overloadS') > 0 ? ', over capacity' : ''
+    }`,
     formatDuration(sum('overloadS'), hours),
   ];
 }
@@ -389,7 +394,8 @@ export function GanttWorkloadPanel({
 }) {
   const [openLane, setOpenLane] = useState<string | undefined>(undefined);
   const idBase = useId();
-  const machines = laneMachines(snapshot);
+  const preview = useMoveOf(moveStore, (move) => move?.preview);
+  const machines = laneMachines(snapshot, preview?.equipment);
   const open = machines.find((machine) => machine.code === openLane);
   const kind = bucketKindOf(scale.zoom);
   const { fromMs, toMs } = scale.range;
@@ -397,11 +403,21 @@ export function GanttWorkloadPanel({
     () => workloadOf(snapshot, scale.zoom, { fromMs, toMs }),
     [snapshot, scale.zoom, fromMs, toMs],
   );
-  const preview = useMoveOf(moveStore, (move) => move?.preview);
-  const buckets = useMemo(
-    () => (preview === undefined ? planned : withMovePreview(snapshot, planned, preview)),
-    [snapshot, planned, preview],
-  );
+  // The buckets by machine, once per plan or preview rather than once per lane.
+  const byMachine = useMemo(() => {
+    const shown =
+      preview === undefined
+        ? planned
+        : withMovePreview(snapshot, planned, preview, { fromMs, toMs });
+    const map = new Map<string, WorkloadBucket[]>();
+    for (const bucket of shown) {
+      const list = map.get(bucket.equipment);
+      if (list === undefined) map.set(bucket.equipment, [bucket]);
+      else list.push(bucket);
+    }
+    return map;
+  }, [snapshot, planned, preview, fromMs, toMs]);
+  const lanesOf = (code: string) => laneBuckets(byMachine.get(code) ?? [], scale);
   return (
     <section
       aria-label="Workload"
@@ -415,7 +431,7 @@ export function GanttWorkloadPanel({
           <WorkloadLane
             key={machine.code}
             machine={machine}
-            buckets={laneBuckets(buckets, machine.code, scale)}
+            buckets={lanesOf(machine.code)}
             scale={scale}
             treeWidth={treeWidth}
             timeWidth={timeWidth}
@@ -430,7 +446,7 @@ export function GanttWorkloadPanel({
         <WorkloadTable
           key={open.code}
           name={`Workload on ${open.name}`}
-          buckets={laneBuckets(buckets, open.code, scale)}
+          buckets={lanesOf(open.code)}
           kind={kind}
           timeZone={snapshot.plant.timeZone}
           dialogId={`${idBase}-${open.code}-table`}
