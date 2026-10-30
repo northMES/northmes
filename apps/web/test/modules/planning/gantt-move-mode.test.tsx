@@ -75,8 +75,8 @@ describe('keyboard move mode on the order Gantt (plan 18, Tree grid semantics)',
       ).toBe(String(Date.UTC(2026, 10, 4, 5)));
     });
 
-    // Wed 06:00 less 4 h is Wed 02:00, which snaps forward to Wed 06:00 again; the step keeps
-    // going back until the preview is earlier: Tue 14:00.
+    // Wed 06:00 less 4 h is Wed 02:00, which snaps forward to Wed 06:00 again; the step jumps
+    // over the closed night to the last step before it closed: Tue 14:00.
     await userEvent.keyboard('{ArrowLeft}');
 
     await waitFor(() => {
