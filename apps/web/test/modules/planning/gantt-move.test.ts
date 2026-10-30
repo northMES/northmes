@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
 import {
+  notAllowedOf,
   pointerStart,
   previewOf,
   refusalMessage,
@@ -98,5 +99,35 @@ describe('the pointer start of a drop near now (ADR 0089, Time before now)', () 
   it('ADR0089 a pointer after now snaps as before, and one before now stays before now', () => {
     expect(pointerStart(week, mon(13, 10), nowMs)).toBe(mon(15));
     expect(pointerStart(week, nowMs - minute, nowMs)).toBeLessThan(nowMs);
+  });
+});
+
+describe('the machines a moving job order may not go to (#944)', () => {
+  it('#944 are the machines outside its operation\'s allowed machines: Mill 1 for 1001.10, Turn', () => {
+    expect(notAllowedOf(committed, 'jo-1001-10')).toEqual({
+      operation: 'Turn',
+      machines: new Set(['MILL1']),
+    });
+  });
+
+  it('#944 leave out the machine the job order is on, also when its operation no longer allows it', () => {
+    // 1001.10 sits on CNC 1; its operation now allows CNC 2 only.
+    const narrowed = {
+      ...committed,
+      productionOrders: committed.productionOrders.map((order) => ({
+        ...order,
+        operations: order.operations.map((operation) =>
+          operation.displayNumber === '1001.10'
+            ? { ...operation, allowedEquipment: ['CNC2'] }
+            : operation,
+        ),
+      })),
+    };
+
+    expect(notAllowedOf(narrowed, 'jo-1001-10')?.machines).toEqual(new Set(['MILL1']));
+  });
+
+  it('#944 are none without a move', () => {
+    expect(notAllowedOf(committed, undefined)).toBeUndefined();
   });
 });
