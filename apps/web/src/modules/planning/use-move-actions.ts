@@ -1,20 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import { availabilityOn } from '@northmes/planning-domain';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { announce } from '../../ui/lib/announce.ts';
 import type { GanttSnapshot, ZoomPreset } from './gantt-data.ts';
 import { type GanttDraft, moveInDraft } from './gantt-draft.ts';
+import { createMoveStore, type MoveStore, useMoveOf } from './move-store.ts';
 import type { GanttMoveActions } from './screens/gantt/gantt-context.ts';
 import {
-  type MovePreview,
   type MoveState,
+  moveContextOf,
   movedMessage,
   moveRefusalOf,
   previewOf,
   refusalMessage,
+  stepBackStart,
   stepMessage,
 } from './screens/gantt/gantt-move.ts';
-import { type TimeRange, zoomPresets } from './timeline/time-scale.ts';
+import { zoomPresets } from './timeline/time-scale.ts';
 
 export interface MoveActionsInput {
   /** The plan as the server committed it, which a move's cascade runs over with the draft. */
@@ -26,7 +29,6 @@ export interface MoveActionsInput {
   /** Cascade after a move (plan 18, Cascade rule 1). */
   readonly cascadeOn: boolean;
   readonly zoom: ZoomPreset;
-  readonly range: TimeRange;
   readonly timeZone: string;
   /** Moves focus to a job order's block by id, once it has drawn at its new place. */
   readonly focusBlock: (jobOrderId: string) => void;
@@ -40,9 +42,13 @@ export interface MoveActionsInput {
 /**
  * A move of a job order by pointer or in keyboard move mode (plan 07, Moving without dragging;
  * plan 18, Moves on the order Gantt), which the board and the order Gantt share: the move in
- * progress, its preview through the domain's cascade over the plan with the draft applied, the
- * debounced step messages of move mode, and the actions a block calls. A commit writes the move
- * into the draft and announces it, a refusal says why, and focus returns to the block by id.
+ * progress and its preview through the domain's cascade over the plan with the draft applied, in a
+ * store outside React state (ADR 0030; #898), the debounced step messages of move mode, and the
+ * actions a block calls. The actions stay the same object during a move, so a pointer move does
+ * not render the screen that holds them again; the parts that draw the move read the store with
+ * useMoveOf (the Gantt's preview layer; the board still reads the preview in its screen). A commit
+ * writes the move into the draft and announces it, a refusal says why, and focus returns to the
+ * block by id.
  */
 export function useMoveActions({
   committed,
@@ -51,42 +57,53 @@ export function useMoveActions({
   setDraft,
   cascadeOn,
   zoom,
-  range,
   timeZone,
   focusBlock: focus,
   machineSteps: steps = (allowed) => allowed,
 }: MoveActionsInput): {
   readonly actions: GanttMoveActions | undefined;
-  readonly state: MoveState | undefined;
-  readonly preview: MovePreview | undefined;
+  readonly store: MoveStore;
 } {
-  const [moveState, setMoveState] = useState<MoveState | undefined>(undefined);
+  // The preview over the latest plan, which the store calls outside render.
+  const previewFor = useRef<(state: MoveState) => ReturnType<typeof previewOf>>(() => undefined);
+  const [store] = useState(() => createMoveStore((state) => previewFor.current(state)));
   // Whether a move is in progress now: a commit or a cancel ends it at once, so an event that
   // arrives before the next render, such as the blur when the moved block leaves its row in a
   // browser, cannot end the same move a second time.
   const active = useRef(false);
   const focusBlock = useRef(focus);
   const machineSteps = useRef(steps);
-  // The latest callbacks, for the actions to call after the render that made them.
+  // The latest callbacks and plan, for the actions and the step message to read after the render
+  // that made them.
+  const latestSnapshot = useRef(snapshot);
   useLayoutEffect(() => {
     focusBlock.current = focus;
     machineSteps.current = steps;
+    latestSnapshot.current = snapshot;
   });
-  const preview = useMemo(
-    () =>
-      snapshot === undefined || moveState === undefined
-        ? undefined
-        : previewOf(snapshot, moveState, cascadeOn),
-    [snapshot, moveState, cascadeOn],
+  // A new plan or cascade switch during a move previews it again over that plan.
+  useLayoutEffect(() => {
+    previewFor.current = (state) =>
+      snapshot === undefined ? undefined : previewOf(snapshot, state, cascadeOn);
+    store.refresh();
+  }, [store, snapshot, cascadeOn]);
+  // The step message of keyboard move mode, debounced to about 300 ms (plan 07, Moving without
+  // dragging): each new preview of a keyboard move, also one over a new plan, starts the wait
+  // again, and the end of the move drops a message still waiting. A pointer move reads as no
+  // preview here, so a drag does not render the screen.
+  const keyboardPreview = useMoveOf(store, (move) =>
+    move?.state.source === 'keyboard' ? move.preview : undefined,
   );
-  // The step message of keyboard move mode, debounced to about 300 ms (plan 07, Moving without dragging).
   useEffect(() => {
-    if (moveState?.source !== 'keyboard' || preview === undefined || snapshot === undefined) return;
+    if (keyboardPreview === undefined) return;
     const machine =
-      snapshot.equipment.find((each) => each.code === preview.equipment)?.name ?? preview.equipment;
-    const timer = setTimeout(() => announce(stepMessage(preview, machine, timeZone)), 300);
+      latestSnapshot.current?.equipment.find((each) => each.code === keyboardPreview.equipment)
+        ?.name ?? keyboardPreview.equipment;
+    const timer = setTimeout(() => announce(stepMessage(keyboardPreview, machine, timeZone)), 300);
     return () => clearTimeout(timer);
-  }, [moveState?.source, preview, snapshot, timeZone]);
+  }, [keyboardPreview, timeZone]);
+  // A screen that goes away mid-move leaves no frame pending.
+  useEffect(() => () => store.set(undefined), [store]);
   const actions = useMemo<GanttMoveActions | undefined>(() => {
     if (snapshot === undefined || committed === undefined) return undefined;
     const machineOf = (code: string | undefined) =>
@@ -100,8 +117,7 @@ export function useMoveActions({
       return { order, row, operation };
     };
     return {
-      state: moveState,
-      preview,
+      store,
       begin: (jobOrderId, source) => {
         const { row } = rowOf(jobOrderId);
         if (row?.placement === undefined || row.equipment === undefined) return false;
@@ -111,7 +127,7 @@ export function useMoveActions({
           return false;
         }
         active.current = true;
-        setMoveState({
+        store.set({
           jobOrderId,
           setupStartMs: row.placement.setupStartMs,
           equipment: row.equipment,
@@ -119,58 +135,66 @@ export function useMoveActions({
         });
         return true;
       },
+      // A pointer move: the store previews the latest position once per animation frame.
       previewAt: (setupStartMs, equipment) =>
-        setMoveState((current) =>
-          current === undefined
-            ? current
-            : { ...current, setupStartMs, equipment: equipment ?? current.equipment },
-        ),
+        store.later((current) => ({
+          ...current,
+          setupStartMs,
+          equipment: equipment ?? current.equipment,
+        })),
       // A step moves one snap step from the snapped preview. Backwards, the forward snap of the
-      // calendar can land on the same instant again, so the step keeps going back until the
-      // preview is earlier, or the horizon ends (plan 18, Snapping and the calendar).
-      stepTime: (direction) =>
-        setMoveState((current) => {
-          if (current === undefined) return current;
-          const stepMs = zoomPresets[zoom].stepMs;
-          const from = preview?.span.setupStartMs ?? current.setupStartMs;
-          let setupStartMs = from + direction * stepMs;
-          if (direction < 0) {
-            const floor = range.fromMs - 28 * 86_400_000;
-            for (let count = 0; count < 500 && setupStartMs > floor; count += 1) {
-              const next = previewOf(snapshot, { ...current, setupStartMs }, cascadeOn);
-              if (next === undefined || next.span.setupStartMs < from) break;
-              // The row cannot start before its release or its last-piece bound: it stays.
-              if (next.reason === 'snappedToRelease' || next.reason === 'snappedToLastPiece') {
-                return current;
-              }
-              setupStartMs -= stepMs;
-            }
-          }
-          return { ...current, setupStartMs };
-        }),
-      stepMachine: (direction) =>
-        setMoveState((current) => {
-          if (current === undefined) return current;
-          const { operation } = rowOf(current.jobOrderId);
-          const allowed = machineSteps.current(operation?.allowedEquipment ?? []);
-          const index = allowed.indexOf(current.equipment);
-          const next = allowed[Math.max(0, Math.min(allowed.length - 1, index + direction))];
-          return next === undefined ? current : { ...current, equipment: next };
-        }),
+      // calendar would land a step in closed time on the same instant again, so the step jumps to
+      // the last step before the closed time (plan 18, Snapping and the calendar).
+      stepTime: (direction) => {
+        const move = store.get();
+        if (move === undefined) return;
+        const { state } = move;
+        const stepMs = zoomPresets[zoom].stepMs;
+        const from = move.preview?.span.setupStartMs ?? state.setupStartMs;
+        if (direction > 0) {
+          store.set({ ...state, setupStartMs: from + stepMs });
+          return;
+        }
+        const windows = availabilityOn(moveContextOf(snapshot), state.equipment);
+        const setupStartMs = stepBackStart(windows, from, stepMs);
+        const next = previewOf(snapshot, { ...state, setupStartMs }, cascadeOn);
+        // The row cannot start before its release or its last-piece bound: it stays.
+        if (
+          next !== undefined &&
+          next.span.setupStartMs >= from &&
+          (next.reason === 'snappedToRelease' || next.reason === 'snappedToLastPiece')
+        ) {
+          return;
+        }
+        store.set({ ...state, setupStartMs });
+      },
+      stepMachine: (direction) => {
+        const state = store.get()?.state;
+        if (state === undefined) return;
+        const { operation } = rowOf(state.jobOrderId);
+        const allowed = machineSteps.current(operation?.allowedEquipment ?? []);
+        const index = allowed.indexOf(state.equipment);
+        const next = allowed[Math.max(0, Math.min(allowed.length - 1, index + direction))];
+        if (next !== undefined) store.set({ ...state, equipment: next });
+      },
       commit: () => {
-        if (!active.current || moveState === undefined || preview === undefined) return;
+        // The drop commits where the pointer let go, also before its frame has run.
+        store.flush();
+        const move = store.get();
+        if (!active.current || move?.preview === undefined) return;
+        const { state, preview } = move;
         active.current = false;
         const { draft: next, result } = moveInDraft(
           committed,
           draft,
           {
-            jobOrderId: moveState.jobOrderId,
-            setupStartMs: moveState.setupStartMs,
-            equipment: moveState.equipment,
+            jobOrderId: state.jobOrderId,
+            setupStartMs: state.setupStartMs,
+            equipment: state.equipment,
           },
           { cascade: cascadeOn },
         );
-        setMoveState(undefined);
+        store.set(undefined);
         if (result.refused !== undefined) {
           announce(refusalMessage(preview.displayNumber, result.refused));
           return;
@@ -178,18 +202,19 @@ export function useMoveActions({
         setDraft(next);
         announce(movedMessage(preview, machineOf(preview.equipment), timeZone));
         // Focus returns to the block by id once it has drawn at its new place (plan 18).
-        requestAnimationFrame(() => focusBlock.current(moveState.jobOrderId));
+        requestAnimationFrame(() => focusBlock.current(state.jobOrderId));
       },
       cancel: (options) => {
-        if (!active.current || moveState === undefined) return;
+        const state = store.get()?.state;
+        if (!active.current || state === undefined) return;
         active.current = false;
-        setMoveState(undefined);
+        store.set(undefined);
         if (options?.announce !== false) announce('Move cancelled.');
         if (options?.refocus !== false) {
-          requestAnimationFrame(() => focusBlock.current(moveState.jobOrderId));
+          requestAnimationFrame(() => focusBlock.current(state.jobOrderId));
         }
       },
     };
-  }, [snapshot, committed, moveState, preview, draft, setDraft, cascadeOn, zoom, timeZone, range]);
-  return { actions, state: moveState, preview };
+  }, [store, snapshot, committed, draft, setDraft, cascadeOn, zoom, timeZone]);
+  return { actions, store };
 }

@@ -23,6 +23,7 @@ import { orderNumbersText } from '../../gantt-draft.ts';
 import type { InventorySnapshot, PlannedMovement } from '../../inventory-data.ts';
 import { type MaterialShortage, roundQuantity } from '../../material-projection.ts';
 import { phase1Reason, planReason } from '../../mock-reasons.ts';
+import { useMoveOf } from '../../move-store.ts';
 import { amountText, quantityWithUnit, signedQuantity, whenText } from '../../stock-facts.ts';
 import { durationsOf, releaseText } from './gantt-block-states.ts';
 import type { ChainView } from './gantt-chain.ts';
@@ -151,7 +152,10 @@ function MoveControls({
   const { snapshot, timeZone, machineName, move } = useGanttView();
   const reasonId = useId();
   const refused = moveRefusalOf(snapshot, row.id);
-  const moving = move?.state?.jobOrderId === row.id;
+  const moving = useMoveOf(move?.store, (each) => each?.state.jobOrderId === row.id);
+  const preview = useMoveOf(move?.store, (each) =>
+    each?.state.jobOrderId === row.id ? each.preview : undefined,
+  );
   if (move === undefined) return null;
   if (!moving) {
     return (
@@ -175,7 +179,6 @@ function MoveControls({
       </>
     );
   }
-  const preview = move.preview;
   const status =
     preview === undefined
       ? 'Computing the move.'

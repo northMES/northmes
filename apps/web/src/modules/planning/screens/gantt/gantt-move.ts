@@ -10,6 +10,9 @@ import {
   type JobOrderSpan,
   type MoveReason,
   type MoveRefusal,
+  nextWorkingInstant,
+  type PlanContext,
+  type Windows,
 } from '@northmes/planning-domain';
 import { orderOfRow, planContextOf } from '../../gantt-analysis.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
@@ -68,6 +71,34 @@ export function refusalMessage(displayNumber: string, refused: MoveRefusal): str
   return `Cannot move ${displayNumber}: ${why}.`;
 }
 
+const moveContexts = new WeakMap<GanttSnapshot, PlanContext>();
+
+/**
+ * The plan context a move's cascade runs over, built once per plan with the draft applied: a new
+ * draft revision is a new snapshot, so a pointer move during a drag runs the cascade only (#898).
+ */
+export function moveContextOf(applied: GanttSnapshot): PlanContext {
+  let context = moveContexts.get(applied);
+  if (context === undefined) {
+    context = planContextOf(applied, { fromMs: applied.nowMs, toMs: applied.fenceMs });
+    moveContexts.set(applied, context);
+  }
+  return context;
+}
+
+/**
+ * The setup start a step back in move mode asks for (plan 18, Snapping and the calendar): one snap
+ * step back, or, where that lands in closed time the forward snap would undo, the last step on
+ * the same grid before the previous working window closes.
+ */
+export function stepBackStart(windows: Windows, fromMs: number, stepMs: number): number {
+  const back = fromMs - stepMs;
+  if (nextWorkingInstant(windows, back) === back) return back;
+  const before = windows.findLast((window) => window.toMs <= back);
+  if (before === undefined) return back;
+  return fromMs - (Math.floor((fromMs - before.toMs) / stepMs) + 1) * stepMs;
+}
+
 /** The preview of a move over the plan with the draft applied, through the cascade. */
 export function previewOf(
   applied: GanttSnapshot,
@@ -76,7 +107,7 @@ export function previewOf(
 ): MovePreview | undefined {
   const order = orderOfRow(applied.productionOrders, move.jobOrderId);
   if (order === undefined) return undefined;
-  const context = planContextOf(applied, { fromMs: applied.nowMs, toMs: applied.fenceMs });
+  const context = moveContextOf(applied);
   const result = cascade(
     order,
     { jobOrderId: move.jobOrderId, setupStartMs: move.setupStartMs, equipment: move.equipment },

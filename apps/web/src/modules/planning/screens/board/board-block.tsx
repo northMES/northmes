@@ -8,6 +8,7 @@ import { announce } from '../../../../ui/lib/announce.ts';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import { orderNumbersText } from '../../gantt-draft.ts';
+import { useMoveOf } from '../../move-store.ts';
 import { useGanttView } from '../gantt/gantt-context.ts';
 import { type JobOrderRow, quantityText } from '../gantt/gantt-rows.ts';
 import { type BoardBlockState, boardBlockStates, borderMarkerOf } from './board-block-states.ts';
@@ -109,12 +110,15 @@ export function BoardBlock({
   // on the second press opens nothing (#886).
   const sequenceDragged = useRef(false);
   const { jobOrder, order } = row;
+  const movedBy = useMoveOf(move?.store, (each) =>
+    each?.state.jobOrderId === jobOrder.id ? each.state.source : undefined,
+  );
+  const moving = movedBy !== undefined;
+  const inMoveMode = movedBy === 'keyboard';
   const placement = jobOrder.placement;
   if (placement === undefined) return null;
   const timeZone = snapshot.plant.timeZone;
   const states = boardBlockStates(row, snapshot, { inDraft: draftRowIds?.has(jobOrder.id) });
-  const moving = move?.state?.jobOrderId === jobOrder.id;
-  const inMoveMode = moving && move?.state?.source === 'keyboard';
   // Keyboard move mode (plan 07, Moving without dragging): M on the focused block enters it; Left
   // and Right step one snap, Up and Down the allowed machines, Enter commits to the draft and
   // Escape cancels. The keys stay with the block while it moves, so the grid's arrows wait.
