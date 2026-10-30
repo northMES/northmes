@@ -313,7 +313,9 @@ export function BoardGrid({
           >
             {machine.equipment.name}
           </div>
-          <div className="relative bg-lane">
+          {/* Isolated, so nothing a block or the move outline draws stacks above the machine
+              column (#943). */}
+          <div className="relative isolate bg-lane">
             <TimeCellShading windows={machine.closed} scale={scale} nowMs={snapshot.nowMs} />
             {preview !== undefined && preview.equipment === code && (
               <MoveOutline preview={preview} scale={scale} timeZone={snapshot.plant.timeZone} />
@@ -490,9 +492,11 @@ export function BoardGrid({
       </Row>
       <div className="relative">
         {bodyRows}
+        {/* A stacking context of its own under the machine column (z-20), so no layer it draws
+            reaches over it (#943). */}
         <div
           aria-hidden
-          className="pointer-events-none absolute top-0"
+          className="pointer-events-none absolute top-0 z-0"
           style={{ left: `${machineWidth}px`, width: `${timeWidth}px`, height: `${bodyRem}rem` }}
         >
           {bands}

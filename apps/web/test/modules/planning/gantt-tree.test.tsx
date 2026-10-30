@@ -197,9 +197,9 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
       const columns = pane?.firstElementChild as HTMLElement;
       expect(columns.style.width).toBe('1206px');
       // The pane's own scrollbar, as wide as the pane, scrolls the columns' full width.
-      const scroller = gantt.querySelector<HTMLElement>('[data-tree-scroller]');
-      expect(scroller?.style.width).toBe('440px');
-      expect((scroller?.firstElementChild as HTMLElement).style.width).toBe('1206px');
+      const scroller = gantt.querySelector<HTMLElement>('[data-tree-scroller]') as HTMLElement;
+      expect(scroller.style.width).toBe('440px');
+      expect((scroller.firstElementChild as HTMLElement).style.width).toBe('1206px');
       // The Name column keeps its least width, 160 px.
       expect(columns.style.gridTemplateColumns.split(' ')[0]).toBe('160px');
     } finally {

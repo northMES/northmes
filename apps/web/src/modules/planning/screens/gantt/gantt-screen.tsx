@@ -93,15 +93,18 @@ import {
   selectionRowOf,
 } from './gantt-rows.ts';
 import { GanttRunDialog } from './gantt-run-dialog.tsx';
+import { GanttSplitter } from './gantt-splitter.tsx';
 import { GanttTimeHeader, timeHeaderHeightRem } from './gantt-time-area.tsx';
 import { GanttToolbar } from './gantt-toolbar.tsx';
 import {
   type GanttSort,
   type GanttTableRow,
   GanttTreeHeaderCells,
+  treePaneLayout,
   useGanttTable,
   visibleColumns,
 } from './gantt-tree-pane.tsx';
+import { useTreePaneScroll } from './gantt-tree-scroll.ts';
 import { GanttWorkloadPanel } from './gantt-workload-panel.tsx';
 
 export interface GanttScreenProps {
@@ -111,9 +114,6 @@ export interface GanttScreenProps {
 
 /** The Gantt opens at Week zoom (D5); the board's own default comes with the board. */
 const defaultZoom = 'week';
-
-/** The width the tree pane may take of the view, as the machine column on the board. */
-const treePaneShare = 0.4;
 
 /**
  * "Material short: 1004.10. No longer material short: 1005.20.", or nothing when no warning
@@ -199,32 +199,23 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const timeZone = frame?.plant.timeZone ?? 'UTC';
   const productionDayStart = frame?.plant.productionDayStart ?? '06:00';
   const columns = useMemo(() => visibleColumns(options.hiddenColumns), [options.hiddenColumns]);
-  // The tree pane takes its columns' widths up to 40 percent of the view; the Name column gives
-  // way first. While the pane fits the cap every tree cell sticks and the time column scrolls under
-  // it; beyond the cap only the Name column sticks and the rest scrolls with the time, so the
-  // time area stays reachable on a narrow grid (WCAG 1.4.10).
-  const cap = Math.floor(width * treePaneShare);
-  const fixedWidth = columns.slice(1).reduce((sum, column) => sum + column.widthPx, 0);
-  const nameWidth = Math.max(160, Math.min(columns[0]?.widthPx ?? 300, cap - fixedWidth));
-  // The tree columns' width as the grid lays them out, which may exceed the cap; the overlay
-  // starts where the time column starts.
-  const treeWidth = nameWidth + fixedWidth;
-  const stickyTree = treeWidth <= cap;
-  // The width of the tree columns that stick: all of them, or the Name column alone.
-  const stickyWidth = stickyTree ? treeWidth : nameWidth;
-  // The left offset of each tree column, where its cells stick while the time column scrolls.
-  const cellLefts = columns.map((_, index) =>
-    index === 0 ? 0 : nameWidth + columns.slice(1, index).reduce((sum, c) => sum + c.widthPx, 0),
-  );
+  // The tree pane sticks as one block at the share of the view its splitter sets, 40 percent by
+  // default; columns wider than the pane scroll inside it, so the time area stays reachable on a
+  // narrow grid (WCAG 1.4.10) and the time column always starts where the pane ends (#943).
+  const pane = treePaneLayout(columns, width, options.treePaneShare);
+  const paneWidth = pane.paneWidth;
+  const treeScroll = useTreePaneScroll({ paneWidth, contentWidth: pane.contentWidth });
 
   const gridElement = useRef<HTMLElement | null>(null);
   // One ref for the grid, kept across renders, so the width is not measured again on each one.
+  const { gridRef: treeScrollRef } = treeScroll;
   const ganttGridRef = useCallback(
     (node: HTMLDivElement | null) => {
       gridElement.current = node;
       gridRef(node);
+      treeScrollRef(node);
     },
-    [gridRef],
+    [gridRef, treeScrollRef],
   );
   // Hide closed time compresses the plant calendar's closed windows; the calendar is kept while a
   // load answers the same one, so a load never rebuilds the buffer.
@@ -248,7 +239,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     nowMs: frame?.nowMs ?? Date.now(),
     widthPx: width,
     grid: gridElement,
-    columns: { treeWidth, stickyWidth },
+    columns: { treeWidth: paneWidth, stickyWidth: paneWidth },
     plant: zoomPlant,
     // The level goes to the URL when it changes, so a default level stays out of it.
     onNavigate: (level, start) =>
@@ -327,14 +318,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     return byName;
   }, [snapshot, plantClosed]);
   // The time area is the buffer at its natural width, and scrolls sideways inside the grid under
-  // the sticky tree columns.
+  // the sticky tree pane.
   const scale = buffer.scale;
   const timeWidth = Math.ceil(scale?.widthPx ?? 0);
-  const gridTemplateColumns = [
-    `${nameWidth}px`,
-    ...columns.slice(1).map((column) => `${column.widthPx}px`),
-    `${timeWidth}px`,
-  ].join(' ');
+  const gridTemplateColumns = `${paneWidth}px ${timeWidth}px`;
   const timelineZoom = useTimelineZoom({
     buffer,
     grid: gridElement,
@@ -854,7 +841,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
           onFromChange={(next) =>
             buffer.goTo(zoom, {
               ms: startOfFrom(next, zoom, timeZone, productionDayStart),
-              viewportX: stickyWidth,
+              viewportX: paneWidth,
             })
           }
           onEarlier={() => buffer.page('earlier')}
@@ -888,140 +875,158 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             className="flex min-w-0 flex-col gap-3"
             style={fillHeight === undefined ? undefined : { height: `${fillHeight}px` }}
           >
-            <div
-              ref={ganttGridRef}
-              role="treegrid"
-              aria-label={gridName}
-              aria-rowcount={rowCount}
-              // Busy while a chunk of the buffer or a page of the row list loads (ADR 0089).
-              aria-busy={
-                state.status === 'loading' ||
-                unloaded.some((chunk) => chunk.status === 'loading') ||
-                rowList.next === 'loading' ||
-                undefined
-              }
-              onKeyDown={(event) => {
-                // Minus and plus step a level around the centre of the view (ADR 0089).
-                if (timelineZoom.onKeyDown(event)) {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  return;
-                }
-                // The Escape stack: move mode ends first, then the chain highlight.
-                // The move is read from its store, so a move that begins renders no rows.
-                if (event.key === 'Escape' && moveStore.get() !== undefined) {
-                  event.stopPropagation();
-                  moveActions?.cancel();
-                } else if (event.key === 'Escape' && chain !== undefined) {
-                  event.stopPropagation();
-                  void setSearch(withChain(search, false));
-                }
-              }}
-              onScroll={(event) => {
-                buffer.onScroll();
-                followGrid();
-                loadMoreRows(event.currentTarget);
-              }}
-              className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
-              style={{
-                scrollPaddingTop: `${timeHeaderHeightRem + notPlacedHeightRem}rem`,
-                scrollPaddingInlineStart: `${stickyWidth}px`,
-                // One finger scrolls; a pinch zooms the timeline, not the page (ADR 0089).
-                touchAction: 'pan-x pan-y',
-              }}
-            >
+            {/* The splitter sits over the grid's edge, outside the treegrid (#943). */}
+            <div className="relative flex min-h-0 flex-1 flex-col">
               <div
-                role="row"
-                aria-rowindex={1}
-                // As wide as its tracks, as GanttRowView's rows are (#890).
-                className="sticky top-0 z-20 grid w-max min-w-full border-b border-border bg-muted"
-                style={{ gridTemplateColumns, height: `${timeHeaderHeightRem}rem` }}
+                ref={ganttGridRef}
+                role="treegrid"
+                aria-label={gridName}
+                aria-rowcount={rowCount}
+                // Busy while a chunk of the buffer or a page of the row list loads (ADR 0089).
+                aria-busy={
+                  state.status === 'loading' ||
+                  unloaded.some((chunk) => chunk.status === 'loading') ||
+                  rowList.next === 'loading' ||
+                  undefined
+                }
+                onKeyDown={(event) => {
+                  // Minus and plus step a level around the centre of the view (ADR 0089).
+                  if (timelineZoom.onKeyDown(event)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return;
+                  }
+                  // The Escape stack: move mode ends first, then the chain highlight.
+                  // The move is read from its store, so a move that begins renders no rows.
+                  if (event.key === 'Escape' && moveStore.get() !== undefined) {
+                    event.stopPropagation();
+                    moveActions?.cancel();
+                  } else if (event.key === 'Escape' && chain !== undefined) {
+                    event.stopPropagation();
+                    void setSearch(withChain(search, false));
+                  }
+                }}
+                onFocus={treeScroll.onFocusCapture}
+                onScroll={(event) => {
+                  buffer.onScroll();
+                  followGrid();
+                  loadMoreRows(event.currentTarget);
+                }}
+                className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
+                style={{
+                  scrollPaddingTop: `${timeHeaderHeightRem + notPlacedHeightRem}rem`,
+                  scrollPaddingInlineStart: `${paneWidth}px`,
+                  // One finger scrolls; a pinch zooms the timeline, not the page (ADR 0089).
+                  touchAction: 'pan-x pan-y',
+                }}
               >
-                <GanttTreeHeaderCells
-                  columns={columns}
-                  cellLefts={cellLefts}
-                  stickyTree={stickyTree}
-                  sort={sort}
-                  onSortChange={setSort}
-                />
-                <GanttTimeHeader scale={scale} nowMs={snapshot.nowMs} />
-              </div>
-              <GanttNotPlacedRow
-                rows={unplaced}
-                gridTemplateColumns={gridTemplateColumns}
-                columnCount={columns.length}
-                stickyTree={stickyTree}
-              />
-              <div className="relative">
-                {flatRows.map((row, index) => {
-                  const parent = row.getParentRow();
-                  // Order rows count every order of the row list, loaded or not.
-                  const siblings =
-                    parent === undefined
-                      ? Math.max(rows.length, rowList.totalCount ?? 0)
-                      : parent.subRows.length;
-                  return (
-                    <GanttRowView
-                      key={row.id}
-                      row={row}
-                      columns={columns}
-                      gridTemplateColumns={gridTemplateColumns}
-                      cellLefts={cellLefts}
-                      stickyTree={stickyTree}
-                      rowIndex={index + 3}
-                      setSize={siblings}
-                      posInSet={row.index + 1}
-                      focused={row.id === focusedId}
-                      onFocus={() => setFocusedRowId(row.id)}
-                      onKeyDown={(event) => onRowKeyDown(event, row, index)}
-                      onSelect={(extend) => {
-                        if (extend === true) {
-                          extendSelection(row.original.order.id);
-                          return;
-                        }
-                        selectUnlessSelected(row.original.order.id);
-                      }}
-                      onOpen={() => openDetails(row)}
-                      onToggle={() => row.toggleExpanded()}
-                    />
-                  );
-                })}
-                {rowList.next !== 'done' && (
-                  <GanttMoreRows
-                    rowIndex={flatRows.length + 3}
-                    state={rowList.next}
-                    loaded={rowList.orders.length}
-                    total={rowList.totalCount}
-                    gridTemplateColumns={gridTemplateColumns}
-                    onRetry={rowList.retry}
-                  />
-                )}
                 <div
-                  aria-hidden
-                  data-overlay
-                  className="pointer-events-none absolute top-0"
-                  style={{
-                    left: `${treeWidth}px`,
-                    width: `${timeWidth}px`,
-                    height: `${totalHeight}px`,
-                  }}
+                  role="row"
+                  aria-rowindex={1}
+                  // As wide as its tracks, as GanttRowView's rows are (#890).
+                  className="sticky top-0 z-20 grid w-max min-w-full border-b border-border bg-muted"
+                  style={{ gridTemplateColumns, height: `${timeHeaderHeightRem}rem` }}
                 >
-                  <ChunkBands
-                    chunks={unloaded}
-                    scale={scale}
-                    labelTop={`${timeHeaderHeightRem + notPlacedHeightRem}rem`}
+                  <GanttTreeHeaderCells
+                    columns={columns}
+                    layout={pane}
+                    sort={sort}
+                    onSortChange={setSort}
                   />
-                  <GanttMarkerLayer markers={overlayMarkers(snapshot)} scale={scale} />
-                  <GanttLinks links={links} width={timeWidth} height={totalHeight} />
+                  <GanttTimeHeader scale={scale} nowMs={snapshot.nowMs} />
                 </div>
+                <GanttNotPlacedRow rows={unplaced} gridTemplateColumns={gridTemplateColumns} />
+                <div className="relative">
+                  {flatRows.map((row, index) => {
+                    const parent = row.getParentRow();
+                    // Order rows count every order of the row list, loaded or not.
+                    const siblings =
+                      parent === undefined
+                        ? Math.max(rows.length, rowList.totalCount ?? 0)
+                        : parent.subRows.length;
+                    return (
+                      <GanttRowView
+                        key={row.id}
+                        row={row}
+                        columns={columns}
+                        gridTemplateColumns={gridTemplateColumns}
+                        pane={pane}
+                        rowIndex={index + 3}
+                        setSize={siblings}
+                        posInSet={row.index + 1}
+                        focused={row.id === focusedId}
+                        onFocus={() => setFocusedRowId(row.id)}
+                        onKeyDown={(event) => onRowKeyDown(event, row, index)}
+                        onSelect={(extend) => {
+                          if (extend === true) {
+                            extendSelection(row.original.order.id);
+                            return;
+                          }
+                          selectUnlessSelected(row.original.order.id);
+                        }}
+                        onOpen={() => openDetails(row)}
+                        onToggle={() => row.toggleExpanded()}
+                      />
+                    );
+                  })}
+                  {rowList.next !== 'done' && (
+                    <GanttMoreRows
+                      rowIndex={flatRows.length + 3}
+                      state={rowList.next}
+                      loaded={rowList.orders.length}
+                      total={rowList.totalCount}
+                      gridTemplateColumns={gridTemplateColumns}
+                      onRetry={rowList.retry}
+                    />
+                  )}
+                  {/* A stacking context of its own under the tree panes (z-10), so no layer it
+                    draws reaches over them (#943). */}
+                  <div
+                    aria-hidden
+                    data-overlay
+                    className="pointer-events-none absolute top-0 z-0"
+                    style={{
+                      left: `${paneWidth}px`,
+                      width: `${timeWidth}px`,
+                      height: `${totalHeight}px`,
+                    }}
+                  >
+                    <ChunkBands
+                      chunks={unloaded}
+                      scale={scale}
+                      labelTop={`${timeHeaderHeightRem + notPlacedHeightRem}rem`}
+                    />
+                    <GanttMarkerLayer markers={overlayMarkers(snapshot)} scale={scale} />
+                    <GanttLinks links={links} width={timeWidth} height={totalHeight} />
+                  </div>
+                </div>
+                {pane.contentWidth > paneWidth && (
+                  // The tree pane's own scrollbar, under the rows at the pane's width; the keyboard
+                  // reaches every column by its header and the splitter (#943).
+                  <div
+                    ref={treeScroll.scrollerRef}
+                    aria-hidden
+                    data-tree-scroller
+                    onScroll={treeScroll.onScrollerScroll}
+                    className="sticky start-0 bottom-0 z-10 h-3 overflow-x-auto overflow-y-hidden border-e border-t border-border bg-muted"
+                    style={{ width: `${paneWidth}px`, scrollbarWidth: 'thin' }}
+                  >
+                    <div className="h-px" style={{ width: `${pane.contentWidth}px` }} />
+                  </div>
+                )}
               </div>
+              <GanttSplitter
+                layout={pane}
+                viewWidth={width}
+                onShareChange={(treePaneShare) => setOptions({ treePaneShare })}
+              />
             </div>
             {options.workload && (
               <GanttWorkloadPanel
                 snapshot={snapshot}
                 scale={scale}
-                treeWidth={treeWidth}
-                stickyWidth={stickyWidth}
+                treeWidth={paneWidth}
+                stickyWidth={paneWidth}
                 timeWidth={timeWidth}
                 moveStore={moveStore}
                 {...(buffer.settled !== undefined && { visible: buffer.settled })}

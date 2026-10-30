@@ -52,7 +52,7 @@ import {
 export interface GanttColumn {
   readonly id: string;
   readonly header: string;
-  /** The width in pixels at 1440; the Name column takes what the pane leaves. */
+  /** The width in pixels; the Name column takes what the pane leaves, at least its own width. */
   readonly widthPx: number;
   /** Sorting on the column sorts the level 1 rows and keeps the tree under each. */
   readonly sortable?: boolean;
@@ -332,27 +332,104 @@ export function visibleColumns(hiddenColumns: readonly string[]): GanttColumn[] 
   );
 }
 
+/** The least width of the tree pane and of its Name column, and the least the time area keeps. */
+const paneMinPx = 160;
+const nameMinPx = 160;
+const timeMinPx = 160;
+
+/** How the tree pane lays out at a view width (#943). */
+export interface TreePaneLayout {
+  /** The pane's width, which the splitter sets as a share of the view. */
+  readonly paneWidth: number;
+  /** The least and the most the splitter may make it. */
+  readonly minWidth: number;
+  readonly maxWidth: number;
+  /** The tree columns' CSS grid tracks inside the pane. */
+  readonly tracks: string;
+  /** The tree columns' full width, at least the pane's; the pane scrolls when it is wider. */
+  readonly contentWidth: number;
+}
+
+/**
+ * The tree pane at a view width and the share the splitter set (#943): the pane takes the share
+ * within its least width and what leaves the time area its own, and the Name column takes what
+ * the other columns leave of it, never under its least width. Columns wider than the pane scroll
+ * inside it, so the pane always sticks as one block.
+ */
+export function treePaneLayout(
+  columns: readonly GanttColumn[],
+  viewWidth: number,
+  share: number,
+): TreePaneLayout {
+  const maxWidth = Math.max(paneMinPx, Math.floor(viewWidth - timeMinPx));
+  const minWidth = Math.min(paneMinPx, maxWidth);
+  const paneWidth = Math.min(maxWidth, Math.max(minWidth, Math.round(viewWidth * share)));
+  const others = columns.slice(1);
+  const fixedWidth = others.reduce((sum, column) => sum + column.widthPx, 0);
+  const nameWidth = Math.max(nameMinPx, paneWidth - fixedWidth);
+  return {
+    paneWidth,
+    minWidth,
+    maxWidth,
+    tracks: [nameWidth, ...others.map((column) => column.widthPx)]
+      .map((width) => `${width}px`)
+      .join(' '),
+    contentWidth: nameWidth + fixedWidth,
+  };
+}
+
+/**
+ * The tree pane's part of one row (#943): one block that sticks at the grid's start edge and covers
+ * whatever the time area draws under it, holding the tree cells, which the pane's own scrollbar
+ * shifts through --tree-scroll when they are wider than the pane. Clipped, not a scroll container,
+ * so focus never scrolls one row's cells out of line with the others.
+ */
+export function TreePane({
+  layout,
+  className,
+  children,
+}: {
+  readonly layout: TreePaneLayout;
+  /** The row's background, which the pane needs to cover the time area. */
+  readonly className: string;
+  readonly children: ReactNode;
+}) {
+  return (
+    <div
+      data-tree-pane
+      className={cn('sticky start-0 z-10 overflow-clip border-e border-border', className)}
+    >
+      <div
+        className="grid h-full [&>:last-child]:border-e-0"
+        style={{
+          gridTemplateColumns: layout.tracks,
+          width: `${layout.contentWidth}px`,
+          transform: 'translateX(calc(-1 * var(--tree-scroll, 0px)))',
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 const ariaSort = { asc: 'ascending', desc: 'descending' } as const;
 
 /** The header cells of the tree pane: a sort button with aria-sort on a sortable column. */
 export function GanttTreeHeaderCells({
   columns,
-  cellLefts,
-  stickyTree,
+  layout,
   sort,
   onSortChange,
 }: {
   readonly columns: readonly GanttColumn[];
-  /** The left offset of each column, where its header sticks while the time column scrolls. */
-  readonly cellLefts: readonly number[];
-  /** Whether every header cell sticks, or the Name column alone (see GanttRowView). */
-  readonly stickyTree: boolean;
+  readonly layout: TreePaneLayout;
   readonly sort: GanttSort | undefined;
   readonly onSortChange: (sort: GanttSort) => void;
 }) {
   return (
-    <>
-      {columns.map((column, index) => {
+    <TreePane layout={layout} className="bg-muted">
+      {columns.map((column) => {
         const sorted = sort?.id === column.id ? (sort.desc ? 'desc' : 'asc') : undefined;
         const SortIcon = sorted === 'asc' ? ArrowUp : sorted === 'desc' ? ArrowDown : ArrowUpDown;
         return (
@@ -363,15 +440,9 @@ export function GanttTreeHeaderCells({
               column.sortable ? (sorted === undefined ? 'none' : ariaSort[sorted]) : undefined
             }
             className={cn(
-              'flex items-center border-e border-border bg-muted px-2 text-xs font-semibold text-muted-foreground',
-              (index === 0 || stickyTree) && 'sticky z-10',
+              'flex min-w-0 items-center border-e border-border bg-muted px-2 text-xs font-semibold text-muted-foreground',
               column.numeric && 'justify-end',
             )}
-            style={
-              index === 0 || stickyTree
-                ? { insetInlineStart: `${cellLefts[index] ?? 0}px` }
-                : undefined
-            }
           >
             {column.sortable ? (
               <Button
@@ -388,7 +459,7 @@ export function GanttTreeHeaderCells({
           </div>
         );
       })}
-    </>
+    </TreePane>
   );
 }
 

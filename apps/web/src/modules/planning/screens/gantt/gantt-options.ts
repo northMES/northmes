@@ -16,6 +16,8 @@ export interface GanttOptions {
   readonly workload: boolean;
   /** Cascade after a move (plan 18, Cascade rule 1): on by default, the choice stays local. */
   readonly cascade: boolean;
+  /** The share of the view the tree pane takes, which its splitter sets (#943). */
+  readonly treePaneShare: number;
 }
 
 const storageKey = 'northmes.planning.gantt.options';
@@ -41,7 +43,15 @@ export const defaultOptions: GanttOptions = {
   hiddenColumns: defaultHiddenColumns,
   workload: false,
   cascade: true,
+  treePaneShare: 0.4,
 };
+
+/** A kept share of the view outside 10 to 90 percent is read as the default. */
+function shareOf(value: unknown): number {
+  return typeof value === 'number' && value >= 0.1 && value <= 0.9
+    ? value
+    : defaultOptions.treePaneShare;
+}
 
 function stored(): GanttOptions {
   try {
@@ -55,6 +65,7 @@ function stored(): GanttOptions {
         : defaultHiddenColumns,
       workload: options.workload === true,
       cascade: options.cascade !== false,
+      treePaneShare: shareOf(options.treePaneShare),
     };
   } catch {
     return defaultOptions;

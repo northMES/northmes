@@ -162,7 +162,9 @@ The left pane is a TanStack Table over the tree. Columns, all optional except th
 | Status | all | the status word |
 | Lock | 1 to 3 | soft lock holder; hard lock at level 2 |
 
-Sorting on a column sorts level 1 rows and keeps the tree under each. The width of the left pane is capped at about 40 percent of the view, as the machine column on the board. Sortable headers set `aria-sort`. Decided through [ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md) for the table semantics.
+Sorting on a column sorts level 1 rows and keeps the tree under each. Sortable headers set `aria-sort`. Decided through [ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md) for the table semantics.
+
+The left pane is a locked grid beside the time area, as in Bryntum's Gantt and DHTMLX Gantt (#943). It sticks at the grid's start edge as one block and covers everything the time area draws under it: the now line, the frozen window, the wait and free float lines, the deadline markers, the links, the drag preview and the chunk bands. A splitter between the pane and the time area sets the pane's width, 40 percent of the view by default, never under 160 px and always leaving the time area 160 px; the width stays in this browser with the Gantt's other options. The Name column takes what the other shown columns leave of the pane, at least 160 px. When the shown columns are wider than the pane, the pane scrolls sideways on its own, with its own scrollbar under the rows, and the time area keeps its own scroll; a sideways wheel or swipe over the pane scrolls the pane.
 
 ### Blocks, links and the selection
 
@@ -523,6 +525,7 @@ No new permission. Moves, cascade, plan this order and Move all later by need `p
 - A summary bar cell is focusable for its name only; it has no move keys. Its name carries the span, the status and, for an order row, the slack or late-by.
 - Links are not focusable. The relation lives in the successor row's name ("released from 1003.10 at Wed 12:45, starts on time") and in the constraint list.
 - Roving tabindex, one Escape stack (hover card, popover, chain highlight, move mode, docked panel), `scroll-padding` for the sticky header and the tree pane: as the board.
+- The splitter is a focusable `separator` named "Resize the tree pane", the window splitter of the ARIA Authoring Practices: `aria-valuenow` is the pane's share of the view in percent, between `aria-valuemin` and `aria-valuemax`. Left and Right move it by 2 percent, Home and End to the least and the most width. It sits over the grid's edge, outside the treegrid, whose rows hold only cells. A header that takes focus in a pane scrolled sideways scrolls the pane to show it, so the keyboard reaches every shown column without the pane's scrollbar.
 
 ### The workload lane and the chain
 
@@ -532,7 +535,7 @@ No new permission. Moves, cascade, plan this order and Move all later by need `p
 
 ### Reflow, targets and color
 
-- Under 640 px of width the tree pane and the time area become two tabs ("Orders", "Timeline") over the same rows; the view keeps the selected row across the tabs. Above it the tree pane is capped at 40 percent of the width, as the machine column on the board. The time area is the 1.4.10 excepted section and scrolls in both directions inside its own container.
+- Under 640 px of width the tree pane and the time area become two tabs ("Orders", "Timeline") over the same rows; the view keeps the selected row across the tabs. Above it the tree pane takes the width its splitter sets, 40 percent by default, and its columns scroll inside it, so the time area keeps at least 160 px. The time area is the 1.4.10 excepted section and scrolls in both directions inside its own container.
 - Every target is at least 24 px: blocks, the disclosure buttons, the lane header button, the deadline marker's hit area in the row header (the marker itself is decorative). Row heights and fonts are in `rem`.
 - No state maps to a hue: the chain outline, the late band, the overload hatch and the summary bar all carry a shape or a pattern besides their token, and forced colors keep them ([06-web-and-ux.md](06-web-and-ux.md)). Decided.
 - Under `prefers-reduced-motion` the cascade ghost spans appear without animation and the chain highlight does not pulse.
