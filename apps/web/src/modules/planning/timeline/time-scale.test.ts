@@ -431,8 +431,12 @@ describe('the names of the header cells (#902)', () => {
 
   it('#902 names a week cell by its week number and the date it starts, and a day cell of 4 weeks by its date', () => {
     const range = rangeOf('2026-11-02', '4weeks', stockholm, '06:00');
-    const ticks = createTimeScale({ range, zoom: '4weeks', timeZone: stockholm, widthPx: 400 })
-      .ticks();
+    const ticks = createTimeScale({
+      range,
+      zoom: '4weeks',
+      timeZone: stockholm,
+      widthPx: 400,
+    }).ticks();
 
     expect(ticks.filter((tick) => tick.tier === 'top').map((tick) => tick.name)).toEqual([
       'Week 45, Mon 2 Nov',

@@ -49,7 +49,8 @@ test.describe('the time header of the order Gantt', () => {
           };
           const gaps = [...element.querySelectorAll('[data-header-gap]')];
           // The drawn label of a cell; its full date for a screen reader is not drawn (#902).
-          const shown = (each: Element) => each.querySelector('[data-tick-label]')?.textContent ?? '';
+          const shown = (each: Element) =>
+            each.querySelector('[data-tick-label]')?.textContent ?? '';
           const labels = [...element.querySelectorAll('[data-tier]')].filter(
             (each) => shown(each) !== '',
           );
