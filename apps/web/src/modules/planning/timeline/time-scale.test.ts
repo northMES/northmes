@@ -98,7 +98,8 @@ describe('createTimeScale (plan 18, Shared pieces)', () => {
     ]);
     expect(top.map((tick) => tick.x)).toEqual([0, 120, 240, 360, 480, 600, 720]);
     expect(bottom).toHaveLength(21);
-    expect(bottom.slice(0, 3).map((tick) => tick.label)).toEqual(['06:00', '12:00', '18:00']);
+    // A 6 h cell is 30 px at 840 px, too narrow for "06:00", so the hour stands alone.
+    expect(bottom.slice(0, 3).map((tick) => tick.label)).toEqual(['06', '12', '18']);
     expect(bottom[0]?.x).toBe(30);
   });
 

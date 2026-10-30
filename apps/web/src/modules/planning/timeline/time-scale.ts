@@ -273,6 +273,27 @@ function clippedWindows(closed: readonly ClosedWindow[], range: TimeRange): Clos
   return merged;
 }
 
+/**
+ * The width a label takes in its tier, from the header's type: the top tier is 12 px IBM Plex Sans
+ * with 6 px padding each side, the bottom tier 11 px IBM Plex Mono (6.6 px a character) with 4 px.
+ * Each character counts a little wider than the font draws it, so a label that fits never spills
+ * into the next cell, also in a fallback font.
+ */
+const labelType = {
+  top: { charPx: 7.5, paddingPx: 12 },
+  bottom: { charPx: 7, paddingPx: 8 },
+} as const;
+
+/** The first of a cell's label formats, longest first, that fits its width, or none. */
+function fittingLabel(
+  formats: readonly string[],
+  widthPx: number,
+  tier: 'top' | 'bottom',
+): string {
+  const { charPx, paddingPx } = labelType[tier];
+  return formats.find((format) => format.length * charPx + paddingPx <= widthPx) ?? '';
+}
+
 /** An anchor of the piecewise linear axis: an instant and its x. */
 interface Anchor {
   readonly ms: number;
@@ -391,28 +412,40 @@ export function createTimeScale({
       const next = at.add(preset.topTier === 'week' ? { weeks: 1 } : { days: 1 });
       const cell = openCell(ms, next.epochMilliseconds);
       if (cell === undefined) continue;
-      const label =
+      // A week reads "W45, Mon 2 Nov" or "W45", a day "Mon 2 Nov" or its day of the month.
+      const formats =
         preset.topTier === 'week'
-          ? `W${at.weekOfYear ?? ''}, ${formatPlantDate(ms, timeZone)}`
-          : formatPlantDate(ms, timeZone);
-      top.push({ ms, ...cell, label, tier: 'top' });
+          ? [`W${at.weekOfYear ?? ''}, ${formatPlantDate(ms, timeZone)}`, `W${at.weekOfYear ?? ''}`]
+          : [formatPlantDate(ms, timeZone), String(at.day)];
+      top.push({ ms, ...cell, label: fittingLabel(formats, cell.widthPx, 'top'), tier: 'top' });
     }
     const topMs = new Set(top.map((tick) => tick.ms));
     const bottom: TimeTick[] = [];
+    const pushBottom = (ms: number, toMs: number, formats: readonly string[]) => {
+      const cell = openCell(ms, toMs);
+      if (topMs.has(ms) || cell === undefined) return;
+      bottom.push({
+        ms,
+        ...cell,
+        label: fittingLabel(formats, cell.widthPx, 'bottom'),
+        tier: 'bottom',
+      });
+    };
     if (preset.bottomTier === 'day') {
       for (let at = start; at.epochMilliseconds < range.toMs; at = at.add({ days: 1 })) {
         const ms = at.epochMilliseconds;
-        const cell = openCell(ms, at.add({ days: 1 }).epochMilliseconds);
-        if (topMs.has(ms) || cell === undefined) continue;
-        bottom.push({ ms, ...cell, label: formatPlantDate(ms, timeZone), tier: 'bottom' });
+        pushBottom(ms, at.add({ days: 1 }).epochMilliseconds, [
+          formatPlantDate(ms, timeZone),
+          String(at.day),
+        ]);
       }
     } else {
       // Hour ticks come from exact instants, so a clock change gives 23 or 25 of them.
       const stepMs = preset.bottomTier.hours * hour;
       for (let ms = range.fromMs; ms < range.toMs; ms += stepMs) {
-        const cell = openCell(ms, ms + stepMs);
-        if (topMs.has(ms) || cell === undefined) continue;
-        bottom.push({ ms, ...cell, label: formatPlantTime(ms, timeZone), tier: 'bottom' });
+        // "06:00" shortens to "06" on the hour only; "06:30" has no short form.
+        const clock = formatPlantTime(ms, timeZone);
+        pushBottom(ms, ms + stepMs, clock.endsWith(':00') ? [clock, clock.slice(0, -3)] : [clock]);
       }
     }
     return [...top, ...bottom];

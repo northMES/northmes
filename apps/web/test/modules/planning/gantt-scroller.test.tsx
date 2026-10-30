@@ -24,7 +24,10 @@ function countingSource(): { source: GanttDataSource; loads: () => number } {
   };
 }
 
-/** The text of the time header's ticks. */
+/**
+ * The text of the time header's ticks. Closed time is hidden by default, so a closed weekend has
+ * no label (#892) and the tests name open weekdays.
+ */
 function timeHeaderText(gantt: HTMLElement): string {
   return within(gantt).getByRole('columnheader', { name: 'Time' }).textContent ?? '';
 }
@@ -57,13 +60,13 @@ describe('the time scroller of the order Gantt (#685)', () => {
     const router = renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
     const gantt = await findGantt();
     expect(timeHeaderText(gantt)).toContain('Fri 6 Nov');
-    expect(timeHeaderText(gantt)).not.toContain('Sun 8 Nov');
+    expect(timeHeaderText(gantt)).not.toContain('Mon 9 Nov');
 
     scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
     scrollSideways(gantt, 0, 1500);
 
     await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Sun 8 Nov');
+      expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
     });
     expect(router.state.location.search).toMatchObject({ from: '2026-11-04' });
     expect(screen.getByText('Wed 4 Nov to Fri 6 Nov')).toBeTruthy();
@@ -78,18 +81,18 @@ describe('the time scroller of the order Gantt (#685)', () => {
     scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
     scrollSideways(gantt, 0, 1500);
     await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Sun 8 Nov');
+      expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
     });
     const widthBefore = Number.parseFloat(
       (gantt.querySelector('[data-overlay]') as HTMLElement).style.width,
     );
-    expect(timeHeaderText(gantt)).not.toContain('Sun 1 Nov');
+    expect(timeHeaderText(gantt)).not.toContain('Mon 2 Nov');
 
     gantt.scrollLeft = 200;
     fireEvent.scroll(gantt);
 
     await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Sun 1 Nov');
+      expect(timeHeaderText(gantt)).toContain('Mon 2 Nov');
     });
     const widthAfter = Number.parseFloat(
       (gantt.querySelector('[data-overlay]') as HTMLElement).style.width,
@@ -115,7 +118,7 @@ describe('the time scroller of the order Gantt (#685)', () => {
     scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
     scrollSideways(gantt, 0, 1500);
     await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Sun 8 Nov');
+      expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
     });
 
     // Later shrinks the range back to one span; the browser clamps the position to what is left
@@ -123,7 +126,7 @@ describe('the time scroller of the order Gantt (#685)', () => {
     gantt.scrollLeft = 100;
     fireEvent.click(screen.getByRole('button', { name: 'Show later range' }));
     await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Sat 7 Nov');
+      expect(timeHeaderText(gantt)).not.toContain('Wed 4 Nov');
     });
     const loaded = loads();
     fireEvent.scroll(gantt);
@@ -143,7 +146,7 @@ describe('the time scroller of the order Gantt (#685)', () => {
     Object.defineProperty(gantt, 'scrollTop', { value: 0, configurable: true, writable: true });
     scrollSideways(gantt, 0, 300);
     await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Sun 8 Nov');
+      expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
     });
 
     const loaded = loads();
@@ -151,14 +154,14 @@ describe('the time scroller of the order Gantt (#685)', () => {
     fireEvent.scroll(gantt);
     expect(loads()).toBe(loaded);
     expect(timeHeaderText(gantt)).not.toContain('Wed 11 Nov');
-    expect(timeHeaderText(gantt)).not.toContain('Sun 1 Nov');
+    expect(timeHeaderText(gantt)).not.toContain('Mon 2 Nov');
 
     // Scrolling left from 300 to 100 heads for the left edge: the earlier span loads, not another later one.
     gantt.scrollLeft = 100;
     fireEvent.scroll(gantt);
 
     await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Sun 1 Nov');
+      expect(timeHeaderText(gantt)).toContain('Mon 2 Nov');
     });
     expect(timeHeaderText(gantt)).not.toContain('Wed 11 Nov');
   });
@@ -169,7 +172,7 @@ describe('the time scroller of the order Gantt (#685)', () => {
     scroller(gantt, { scrollWidth: 3000, clientWidth: 800, scrollLeft: 0 });
     scrollSideways(gantt, 0, 1500);
     await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Sun 8 Nov');
+      expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
     });
 
     fireEvent.click(screen.getByRole('button', { name: 'Show later range' }));
@@ -177,9 +180,11 @@ describe('the time scroller of the order Gantt (#685)', () => {
     await waitFor(() => {
       expect(router.state.location.search).toMatchObject({ from: '2026-11-07' });
     });
+    // The weekend is closed time, hidden by default, so the range from Saturday names Monday only.
     await waitFor(() => {
-      expect(timeHeaderText(gantt)).toContain('Sat 7 Nov');
+      expect(timeHeaderText(gantt)).not.toContain('Wed 4 Nov');
     });
+    expect(timeHeaderText(gantt)).toContain('Mon 9 Nov');
     expect(timeHeaderText(gantt)).not.toContain('Tue 10 Nov');
   });
 });
