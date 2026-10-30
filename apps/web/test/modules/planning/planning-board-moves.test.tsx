@@ -59,11 +59,22 @@ function rowsUnderPointer(board: HTMLElement, rowAt: (clientY: number) => string
   Object.defineProperty(document, 'elementsFromPoint', {
     configurable: true,
     value: (_x: number, y: number) => {
-      const header = within(board).getByRole('rowheader', { name: rowAt(y) });
+      // During a move, a machine the operation may not use says so after its name (#944).
+      const machine = rowAt(y);
+      const header = within(board).getByRole('rowheader', {
+        name: (name) => name === machine || name.startsWith(`${machine},`),
+      });
       const row = header.closest('[role="row"]');
       return row === null ? [] : [row];
     },
   });
+}
+
+/** The machine rows greyed out as not allowed for the job order that moves, by machine name. */
+function greyedRows(board: HTMLElement): string[] {
+  return [...board.querySelectorAll<HTMLElement>('[role="row"][data-not-allowed]')].map(
+    (row) => row.querySelector('[data-machine-name]')?.textContent ?? '',
+  );
 }
 
 describe('moves on the planning board (plan 07, Moving without dragging; design D3, IN6)', () => {
@@ -491,6 +502,98 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     );
     expect(machineOf(block(board, '1001.10'))).toBe('CNC 1');
     expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+  });
+
+  it('#944 a drag greys out the machines the operation may not use, refuses the drop there, and the greying ends on release', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    rowsUnderPointer(board, (y) => (y < 50 ? 'CNC 1' : y < 80 ? 'CNC 2' : 'Mill 1'));
+    const cell = block(board, '1001.10');
+    expect(greyedRows(board)).toEqual([]);
+
+    // 1001.10 is Turn, which runs on CNC 1 and CNC 2 only.
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 100, clientY: 40, pointerId: 1 });
+    await waitFor(() => expect(greyedRows(board)).toEqual(['Mill 1']));
+    const mill = within(board).getByRole('rowheader', { name: 'Mill 1, not allowed for Turn' });
+    expect(mill.closest('[role="row"]')?.querySelector('[data-not-allowed-hatch]')).not.toBeNull();
+    expect(within(board).getByRole('rowheader', { name: 'CNC 1' })).toBeTruthy();
+    expect(within(board).getByRole('rowheader', { name: 'CNC 2' })).toBeTruthy();
+
+    // Over Mill 1 the preview stays on the current machine and the cursor says not allowed.
+    fireEvent.pointerMove(cell, { clientX: 100, clientY: 90, pointerId: 1 });
+    await waitFor(() => expect(cell.style.cursor).toBe('not-allowed'));
+    const preview = board.querySelector<HTMLElement>('[data-move-preview="jo-1001-10"]');
+    expect(preview === null ? '' : machineOf(preview)).toBe('CNC 1');
+    fireEvent.pointerMove(cell, { clientX: 100, clientY: 40, pointerId: 1 });
+    expect(cell.style.cursor).toBe('');
+    fireEvent.pointerMove(cell, { clientX: 100, clientY: 90, pointerId: 1 });
+
+    fireEvent.pointerUp(cell, { clientX: 100, clientY: 90, pointerId: 1, button: 0 });
+    await waitFor(() =>
+      expect(spoken()).toBe(
+        'Cannot move 1001.10: not allowed on Mill 1. This operation runs on CNC 1 and CNC 2.',
+      ),
+    );
+    expect(machineOf(block(board, '1001.10'))).toBe('CNC 1');
+    expect(greyedRows(board)).toEqual([]);
+    expect(block(board, '1001.10').style.cursor).toBe('');
+    expect(within(board).getByRole('rowheader', { name: 'Mill 1' })).toBeTruthy();
+  });
+
+  it('#944 Escape during a drag ends the greying', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    rowsUnderPointer(board, () => 'Mill 1');
+    const cell = block(board, '1001.10');
+
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 164, clientY: 10, pointerId: 1 });
+    await waitFor(() => expect(greyedRows(board)).toEqual(['Mill 1']));
+    fireEvent.keyDown(cell, { key: 'Escape' });
+    await waitFor(() => expect(greyedRows(board)).toEqual([]));
+    expect(cell.style.cursor).toBe('');
+  });
+
+  it('#944 a cancelled drag ends the greying', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    rowsUnderPointer(board, () => 'Mill 1');
+    const cell = block(board, '1001.10');
+
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 164, clientY: 10, pointerId: 1 });
+    await waitFor(() => expect(greyedRows(board)).toEqual(['Mill 1']));
+    fireEvent.pointerCancel(cell, { pointerId: 1 });
+    await waitFor(() => expect(greyedRows(board)).toEqual([]));
+    expect(cell.style.cursor).toBe('');
+  });
+
+  it('#944 keyboard move mode greys out the machines the operation may not use until it ends', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+
+    await user.keyboard('m');
+    await waitFor(() => expect(greyedRows(board)).toEqual(['Mill 1']));
+    expect(
+      within(board).getByRole('rowheader', { name: 'Mill 1, not allowed for Turn' }),
+    ).toBeTruthy();
+    // Down steps to CNC 2 and stops there: Mill 1 is never a step.
+    await user.keyboard('{ArrowDown}{ArrowDown}');
+    await waitFor(() => expect(spoken()).toContain('CNC 2'));
+    expect(greyedRows(board)).toEqual(['Mill 1']);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(spoken()).toBe('Move cancelled.'));
+    expect(greyedRows(board)).toEqual([]);
+
+    block(board, '1001.10').focus();
+    await user.keyboard('m');
+    await waitFor(() => expect(greyedRows(board)).toEqual(['Mill 1']));
+    await user.keyboard('{ArrowDown}{Enter}');
+    await waitFor(() => expect(spoken()).toContain('1001.10 moved to CNC 2'));
+    expect(greyedRows(board)).toEqual([]);
   });
 
   it('IN4 Escape during a drag, then letting go, selects nothing', async () => {

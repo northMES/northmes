@@ -348,6 +348,34 @@ describe('the workload lane (plan 18, The workload lane)', () => {
     await waitFor(() => expect(thursday()?.getAttribute('data-overloaded')).toBeNull());
   });
 
+  it('#944 during a drag the lanes of the machines the operation may not use are greyed out, until Escape', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const panel = screen.getByRole('region', { name: 'Workload' });
+    const greyed = () =>
+      [...panel.querySelectorAll<HTMLElement>('[data-lane][data-not-allowed]')].map(
+        (lane) => lane.dataset.lane,
+      );
+    expect(greyed()).toEqual([]);
+    // 1003.10 is Turn, which runs on CNC1 only.
+    const dragged = gantt.querySelector<HTMLElement>('[data-block="jo-1003-10"]');
+    if (dragged === null) throw new Error('No block 1003.10');
+    const pointer = { pointerId: 1, button: 0, isPrimary: true, clientY: 10 };
+    fireEvent.pointerDown(dragged, { ...pointer, clientX: 100 });
+    fireEvent.pointerMove(dragged, { ...pointer, clientX: 140 });
+
+    await waitFor(() => expect(greyed()).toEqual(['CNC2', 'MILL1']));
+    expect(panel.querySelector('[data-lane="MILL1"] [data-not-allowed-hatch]')).not.toBeNull();
+    expect(
+      within(panel).getByRole('button', { name: 'Workload on Mill 1, not allowed for Turn' }),
+    ).toBeTruthy();
+    expect(within(panel).getByRole('button', { name: 'Workload on CNC 1' })).toBeTruthy();
+
+    fireEvent.keyDown(dragged, { key: 'Escape' });
+    await waitFor(() => expect(greyed()).toEqual([]));
+    expect(within(panel).getByRole('button', { name: 'Workload on Mill 1' })).toBeTruthy();
+  });
+
   it('#901 the table says an overloaded bucket is over capacity in words', async () => {
     const overloaded = withGt6Row(g1Snapshot());
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(overloaded));
