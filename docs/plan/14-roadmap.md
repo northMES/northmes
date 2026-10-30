@@ -3329,7 +3329,7 @@ Acceptance criteria:
 
 Tests first:
 
-- `modules/planning/test/board-range.int.test.ts`: "a range beyond the configured day limit is refused with planning.board.range_too_large"; "one board query loads 5 000 job orders with article names in one batched call".
+- `modules/planning/test/board-range.int.test.ts`: "a time chunk beyond the configured limit is refused with planning.board.range_too_large"; "one board query loads 5 000 job orders with article names in one batched call".
 - `modules/planning/test/late.int.test.ts`: "a late fixture order returns its deadline rule, asOf and fallback flag".
 
 ### E08 planning: Move job orders on the board and in the table view
