@@ -120,7 +120,9 @@ export function GanttRowView({
         onOpen();
       }}
       className={cn(
-        'grid border-b border-border outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+        // As wide as its tracks: a sticky cell cannot leave its row, so a row only as wide as the
+        // grid would take the tree cells with it once the scroll passes the row's width (#890).
+        'grid w-max min-w-full border-b border-border outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
         (original.kind === 'order' || original.kind === 'run') && 'bg-muted',
         original.kind === 'run' && 'border-s-4 border-s-foreground/60',
         original.kind === 'operation' && 'bg-lane-alt',
