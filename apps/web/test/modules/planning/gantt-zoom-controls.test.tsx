@@ -151,11 +151,7 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
     ctrlWheel(gantt, -Math.log(27.72 / 16) / 0.002, 1200);
 
     await waitFor(() => expect(router.state.location.search.zoom).toBe(27.7));
-    expect(
-      within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {
-        name: 'Zoom level, Week',
-      }),
-    ).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Zoom' }).getAttribute('data-zoom-band')).toBe('week');
   });
 
   it('#941 the instant under the pointer stays at its x through a Ctrl+wheel gesture', async () => {
