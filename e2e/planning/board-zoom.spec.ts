@@ -3,6 +3,7 @@
 import { planningLinks } from '@northmes/planning-contracts';
 import type { Locator } from '@playwright/test';
 import { expect, plant, test } from '../fixtures.ts';
+import { ctrlWheelRun } from './ctrl-wheel.ts';
 
 // The smooth zoom of the planning board (ADR 0090, Gestures, buttons and keys; #941), the same as
 // the Gantt's: each Ctrl+wheel event over the time area zooms by exp(-deltaY * 0.002) and keeps the
@@ -36,36 +37,39 @@ test.describe('the smooth zoom of the planning board', () => {
     await expect(board).not.toHaveAttribute('aria-busy', 'true');
     const block = board.locator('[data-job-order="1001.10"]');
     await block.scrollIntoViewIfNeeded();
-    await page.evaluate(() => {
-      const seen: boolean[] = [];
-      (window as unknown as { wheelPrevented: boolean[] }).wheelPrevented = seen;
-      document.addEventListener('wheel', (event) => seen.push(event.defaultPrevented));
-    });
     const start = await boxOf(block);
     const pointerX = Math.round(start.x + start.width / 2);
+    const pointerY = Math.round(start.y + start.height / 2);
     const share = (pointerX - start.x) / start.width;
-    await page.mouse.move(pointerX, Math.round(start.y + start.height / 2));
 
-    await page.keyboard.down('Control');
-    let before = start;
-    for (let event = 0; event < 20; event += 1) {
-      await page.mouse.wheel(0, -4);
-      await page.evaluate(
-        () =>
-          new Promise<void>((resolve) =>
-            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-          ),
-      );
-      const after = await boxOf(block);
+    const boxes = await ctrlWheelRun(page, {
+      measure: '[role="grid"] [data-job-order="1001.10"]',
+      x: pointerX,
+      y: pointerY,
+      deltaY: -4,
+      count: 20,
+    });
+    let before: { readonly x: number; readonly width: number } = start;
+    for (const [event, after] of boxes.entries()) {
       const factor = after.width / before.width;
       expect(factor, `event ${event}`).toBeGreaterThanOrEqual(1.005);
       expect(factor, `event ${event}`).toBeLessThanOrEqual(1.01);
       expect(Math.abs(after.x + share * after.width - pointerX), `event ${event}`).toBeLessThan(1);
       before = after;
     }
-    await page.keyboard.up('Control');
-
     await expect(page).toHaveURL(/zoom=18\.8\b/);
+
+    // A Ctrl+wheel from the mouse has its default prevented, so the page does not zoom.
+    await page.evaluate(() => {
+      const seen: boolean[] = [];
+      (window as unknown as { wheelPrevented: boolean[] }).wheelPrevented = seen;
+      document.addEventListener('wheel', (event) => seen.push(event.defaultPrevented));
+    });
+    await page.mouse.move(pointerX, pointerY);
+    await page.keyboard.down('Control');
+    await page.mouse.wheel(0, -4);
+    await page.keyboard.up('Control');
+    await expect(page).toHaveURL(/zoom=19(&|$)/);
     const prevented = await page.evaluate(
       () => (window as unknown as { wheelPrevented: boolean[] }).wheelPrevented,
     );

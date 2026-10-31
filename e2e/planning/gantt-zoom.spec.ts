@@ -3,6 +3,7 @@
 import { planningLinks } from '@northmes/planning-contracts';
 import type { Locator, Page } from '@playwright/test';
 import { expect, plant, test } from '../fixtures.ts';
+import { ctrlWheelRun } from './ctrl-wheel.ts';
 
 // The smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and keys; #941): Ctrl+wheel over
 // the time area zooms by exp(-deltaY * 0.002) per event and keeps the instant under the pointer at
@@ -27,20 +28,12 @@ async function watchWheel(page: Page): Promise<void> {
 }
 
 /** The box of a block in the viewport, once its row is drawn. */
-async function boxOf(block: Locator): Promise<{ x: number; width: number }> {
+async function boxOf(
+  block: Locator,
+): Promise<{ x: number; y: number; width: number; height: number }> {
   const box = await block.boundingBox();
   if (box === null) throw new Error('The block is not drawn');
   return box;
-}
-
-/** Waits for two animation frames, so a frame of the zoom has been laid out and painted. */
-async function frames(page: Page): Promise<void> {
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      ),
-  );
 }
 
 /** The Gantt at G1's week 45 with closed time shown, so a block's width is its hours. */
@@ -67,30 +60,38 @@ test.describe('the smooth zoom of the order Gantt', () => {
     const gantt = await openGantt(page, signIn);
     const block = gantt.locator('[data-block="jo-1001-10"]');
     await block.scrollIntoViewIfNeeded();
-    await watchWheel(page);
     const start = await boxOf(block);
     const pointerX = Math.round(start.x + start.width / 2);
+    const pointerY = Math.round(start.y + start.height / 2);
     // The instant under the pointer lies a share of the block's width after its start.
     const share = (pointerX - start.x) / start.width;
-    const box = await block.boundingBox();
-    await page.mouse.move(pointerX, Math.round((box?.y ?? 0) + (box?.height ?? 0) / 2));
 
-    await page.keyboard.down('Control');
-    let before = start;
-    for (let event = 0; event < 20; event += 1) {
-      await page.mouse.wheel(0, -4);
-      await frames(page);
-      const after = await boxOf(block);
+    const boxes = await ctrlWheelRun(page, {
+      measure: '[role="treegrid"] [data-block="jo-1001-10"]',
+      x: pointerX,
+      y: pointerY,
+      deltaY: -4,
+      count: 20,
+    });
+    let before: { readonly x: number; readonly width: number } = start;
+    for (const [event, after] of boxes.entries()) {
       const factor = after.width / before.width;
       expect(factor, `event ${event}`).toBeGreaterThanOrEqual(1.005);
       expect(factor, `event ${event}`).toBeLessThanOrEqual(1.01);
       expect(Math.abs(after.x + share * after.width - pointerX), `event ${event}`).toBeLessThan(1);
       before = after;
     }
-    await page.keyboard.up('Control');
-
     // The gesture ends 150 ms after its last event and writes the zoom: 16 * exp(0.16), 18.8.
     await expect(page).toHaveURL(/zoom=18\.8\b/);
+
+    // A Ctrl+wheel from the mouse has its default prevented, so the page does not zoom; it zooms
+    // the timeline from 18.8 to 18.95, which settles at 19.
+    await watchWheel(page);
+    await page.mouse.move(pointerX, pointerY);
+    await page.keyboard.down('Control');
+    await page.mouse.wheel(0, -4);
+    await page.keyboard.up('Control');
+    await expect(page).toHaveURL(/zoom=19(&|$)/);
     const prevented = await page.evaluate(
       () => (window as unknown as { wheelPrevented: boolean[] }).wheelPrevented,
     );
