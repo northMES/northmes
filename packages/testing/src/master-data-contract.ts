@@ -10,14 +10,19 @@ export interface MasterDataRegister {
   readonly module: string;
   /** The entity in PascalCase, such as EquipmentGroup. */
   readonly entity: string;
+  /** The entity's plural in PascalCase, such as EquipmentGroups: the list field's name. */
+  readonly plural: string;
   readonly scopes: readonly string[];
 }
 
 /**
- * One company with two plants, A and B, and clients that send their requests at a plant: each
- * holds the role its name says where its name says.
+ * One company with two plants, A and B, and clients: each holds the role its name says where its
+ * name says, and sends its requests at the plant it names, or in company settings without one.
  */
 export interface MasterDataPlace {
+  readonly company: string;
+  /** Another company, whose id a request of this company may not name. */
+  readonly otherCompany: string;
   readonly plantA: string;
   readonly plantB: string;
   /** Company admin, at plant A. */
@@ -28,6 +33,8 @@ export interface MasterDataPlace {
   readonly plantAdminB: GqlClient;
   /** A user who holds only the register's read permission at plant A, at plant A. */
   readonly readerA: GqlClient;
+  /** Company admin in company settings: without x-northmes-plant. */
+  readonly companySettings: GqlClient;
 }
 
 export interface MasterDataContractOptions {
@@ -67,7 +74,7 @@ export function masterDataContract(
   register: MasterDataRegister,
   options: MasterDataContractOptions,
 ): void {
-  const { module, entity, scopes } = register;
+  const { module, entity, plural, scopes } = register;
   const atCompany = scopes.includes('company');
   const field = `${module}${entity}`;
   const type = `${module[0]?.toUpperCase()}${module.slice(1)}`;
@@ -75,14 +82,22 @@ export function masterDataContract(
   const mutation = (action: string) => `mutation ($input: ${type}${action}${entity}Input!) {
     ${module}${action}${entity}(input: $input) { ${fields} }
   }`;
-  const list = `query ($includeArchived: Boolean) {
-    ${field}s(includeArchived: $includeArchived) { totalCount edges { node { code } } }
+  const listField = `${module}${plural}`;
+  const list = `query ($includeArchived: Boolean, $companyId: ID) {
+    ${listField}(includeArchived: $includeArchived, companyId: $companyId) {
+      totalCount edges { node { code } }
+    }
   }`;
   const { story } = options;
   const own = options.ownFields ?? {};
 
-  /** Sends a create of `code` at `scope`, as `client`. */
-  async function create(client: GqlClient, code: string, scope: 'company' | 'plant' = 'plant') {
+  /** Sends a create of `code` at `scope`, as `client`, in company settings with `companyId`. */
+  async function create(
+    client: GqlClient,
+    code: string,
+    scope: 'company' | 'plant' = 'plant',
+    companyId?: string,
+  ) {
     const answer = await client.send(mutation('Create'), {
       input: {
         id: randomUUIDv7(),
@@ -90,19 +105,27 @@ export function masterDataContract(
         name: `${entity} ${code}`,
         ...own,
         ...(atCompany ? { scope } : {}),
+        ...(companyId === undefined ? {} : { companyId }),
       },
     });
     return { answer, row: answer.data?.[`${module}Create${entity}`] as Row | undefined };
   }
 
-  /** The codes that `client` lists, by code. */
-  async function codes(client: GqlClient, includeArchived = false) {
+  /** The codes that `client` lists, by code, in company settings those of company `companyId`. */
+  async function codes(client: GqlClient, includeArchived = false, companyId?: string) {
     const answer = await client.send<Record<string, { edges: { node: { code: string } }[] }>>(
       list,
-      { includeArchived },
+      { includeArchived, companyId },
     );
     expect(answer.errors).toBeUndefined();
-    return (answer.data?.[`${field}s`]?.edges ?? []).map(({ node }) => node.code);
+    return (answer.data?.[listField]?.edges ?? []).map(({ node }) => node.code);
+  }
+
+  /** Sends an update of row `id` on version 1 that keeps its code, as `client`. */
+  function rename(client: GqlClient, id: string | undefined, code: string) {
+    return client.send(mutation('Update'), {
+      input: { id, expectedVersion: 1, code, name: 'Renamed', ...own },
+    });
   }
 
   describe(`the master-data contract of ${module}.${entity}`, () => {
@@ -190,13 +213,13 @@ export function masterDataContract(
       const { row } = await create(place.plantAdminA, 'M-1');
 
       const { answer: created } = await create(place.readerA, 'M-2');
+      const renamed = await rename(place.readerA, row?.id, 'M-1');
       const archived = await place.readerA.send(mutation('Archive'), {
         input: { id: row?.id, expectedVersion: 1 },
       });
 
       expect(await codes(place.readerA)).toEqual(['M-1']);
-      expect(refusal(created)).toEqual(forbidden);
-      expect(refusal(archived)).toEqual(forbidden);
+      expect([created, renamed, archived].map(refusal)).toEqual([forbidden, forbidden, forbidden]);
     });
 
     it(`${story} plant B cannot read, change or archive a row of plant A, which it finds as not there`, async () => {
@@ -206,13 +229,30 @@ export function masterDataContract(
       const read = await place.plantAdminB.send(`query ($id: ID!) { ${field}(id: $id) { id } }`, {
         id: row?.id,
       });
+      const renamed = await rename(place.plantAdminB, row?.id, 'M-1');
       const archived = await place.plantAdminB.send(mutation('Archive'), {
         input: { id: row?.id, expectedVersion: 1 },
       });
 
       expect(read.data?.[field]).toBeNull();
-      expect(archived.data ?? null).toBeNull();
-      expect(refusal(archived)?.code).toBe('NOT_FOUND');
+      expect([renamed, archived].map((answer) => answer.data ?? null)).toEqual([null, null]);
+      expect([renamed, archived].map((answer) => refusal(answer)?.code)).toEqual([
+        'NOT_FOUND',
+        'NOT_FOUND',
+      ]);
+    });
+
+    it(`${story} in company settings a Company admin lists every row of the company with companyId, and another company's id is core.forbidden`, async () => {
+      const place = await options.given();
+      await create(place.plantAdminA, 'A-1');
+      await create(place.plantAdminB, 'B-1');
+
+      const listed = await codes(place.companySettings, false, place.company);
+      const other = await place.companySettings.send(list, { companyId: place.otherCompany });
+
+      expect(listed).toEqual(['A-1', 'B-1']);
+      expect(other.data ?? null).toBeNull();
+      expect(refusal(other)).toEqual(forbidden);
     });
 
     if (!atCompany) return;
@@ -235,12 +275,39 @@ export function masterDataContract(
       const { row } = await create(place.companyAdmin, 'C-1', 'company');
 
       const { answer: created } = await create(place.plantAdminA, 'C-2', 'company');
+      const renamed = await rename(place.plantAdminA, row?.id, 'C-1');
       const archived = await place.plantAdminA.send(mutation('Archive'), {
         input: { id: row?.id, expectedVersion: 1 },
       });
 
-      expect(refusal(created)).toEqual(forbidden);
-      expect(refusal(archived)).toEqual(forbidden);
+      expect([created, renamed, archived].map(refusal)).toEqual([forbidden, forbidden, forbidden]);
+    });
+
+    it(`${story} in company settings a Company admin creates a row at the company with companyId; a plant row there is refused on scope, and another company's id is core.forbidden`, async () => {
+      const place = await options.given();
+
+      const { answer, row } = await create(place.companySettings, 'C-1', 'company', place.company);
+      const { answer: atPlant } = await create(
+        place.companySettings,
+        'C-2',
+        'plant',
+        place.company,
+      );
+      const { answer: other } = await create(
+        place.companySettings,
+        'C-3',
+        'company',
+        place.otherCompany,
+      );
+
+      expect(answer.errors).toBeUndefined();
+      expect(row).toMatchObject({ code: 'C-1', scope: 'company' });
+      expect(atPlant.errors?.[0]?.extensions).toMatchObject({
+        code: 'BAD_USER_INPUT',
+        fieldErrors: [{ path: ['scope'] }],
+      });
+      expect(refusal(other)).toEqual(forbidden);
+      expect(await codes(place.plantAdminB)).toEqual(['C-1']);
     });
 
     it(`${story} a plant code that the company uses is core.code_taken, and so is a company code that a plant uses`, async () => {
