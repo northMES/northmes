@@ -1,6 +1,5 @@
 /* NorthMES — generated from tokens.json */
-:root,
-[data-theme="light"] {
+:root, [data-theme="light"] {
   --background: oklch(0.985 0.002 250);
   --foreground: oklch(0.22 0.01 250);
   --card: oklch(1 0 0);
@@ -184,57 +183,12 @@
   --font-sans: "IBM Plex Sans", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 }
-.page-title {
-  font-family: var(--font-sans);
-  font-size: 1.75rem;
-  line-height: 2.125rem;
-  font-weight: 600;
-}
-.section {
-  font-family: var(--font-sans);
-  font-size: 1.25rem;
-  line-height: 1.75rem;
-  font-weight: 600;
-}
-.body {
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 400;
-}
-.button {
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  font-weight: 500;
-}
-.label {
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  line-height: 1rem;
-  font-weight: 600;
-}
-.small {
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  line-height: 1rem;
-  font-weight: 400;
-}
-.data {
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
-  line-height: 1.125rem;
-  font-weight: 500;
-}
-.block {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  line-height: 1rem;
-  font-weight: 700;
-}
-.station-number {
-  font-family: var(--font-mono);
-  font-size: 2rem;
-  line-height: 2.5rem;
-  font-weight: 600;
-}
+.page-title { font-family: var(--font-sans); font-size: 1.75rem; line-height: 2.125rem; font-weight: 600; }
+.section { font-family: var(--font-sans); font-size: 1.25rem; line-height: 1.75rem; font-weight: 600; }
+.body { font-family: var(--font-sans); font-size: 0.875rem; line-height: 1.25rem; font-weight: 400; }
+.button { font-family: var(--font-sans); font-size: 0.875rem; line-height: 1.25rem; font-weight: 500; }
+.label { font-family: var(--font-sans); font-size: 0.75rem; line-height: 1rem; font-weight: 600; }
+.small { font-family: var(--font-sans); font-size: 0.75rem; line-height: 1rem; font-weight: 400; }
+.data { font-family: var(--font-mono); font-size: 0.8125rem; line-height: 1.125rem; font-weight: 500; }
+.block { font-family: var(--font-mono); font-size: 0.75rem; line-height: 1rem; font-weight: 700; }
+.station-number { font-family: var(--font-mono); font-size: 2rem; line-height: 2.5rem; font-weight: 600; }

@@ -321,22 +321,39 @@ test.describe('the left pane of the timelines', () => {
     await page.keyboard.press('Alt+ArrowRight');
     expect(Math.abs((await width('Deadline')) - (start + 48))).toBeLessThanOrEqual(1);
 
-    // The least width holds however often Left is pressed.
+    // Float, the last column, ends at the pane's edge beside the splitter's grip; its handle still
+    // takes a drag there.
     const float = gantt.getByRole('separator', { name: 'Resize the Float column' });
+    const floatBox = (await float.boundingBox()) as { x: number; y: number; height: number };
+    const floatWidth = await width('Float');
+    await page.mouse.move(floatBox.x + 6, floatBox.y + floatBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(floatBox.x + 22, floatBox.y + floatBox.height / 2, { steps: 4 });
+    await page.mouse.up();
+    expect(Math.abs((await width('Float')) - (floatWidth + 16))).toBeLessThanOrEqual(1);
+
+    // The least width, 72 px for Float, holds however often Left is pressed.
+    const least = 72;
     await float.focus();
     for (let step = 0; step < 12; step += 1) await page.keyboard.press('ArrowLeft');
-    const least = Number(await float.getAttribute('aria-valuemin'));
     await expect(float).toHaveAttribute('aria-valuenow', String(least));
     expect(Math.abs((await width('Float')) - least)).toBeLessThanOrEqual(1);
-    await checkA11y('the Gantt with resized tree columns');
+
+    // A click on a handle shows Narrower and Wider, the one-click alternative to the drag.
+    await gantt.getByRole('separator', { name: 'Resize the Deadline column' }).click();
+    await expect(gantt.getByRole('group', { name: 'Deadline column width' })).toBeVisible();
+    await checkA11y('the Gantt with resized tree columns and the width buttons of Deadline');
+    await gantt.getByRole('button', { name: 'Widen the Deadline column' }).click();
+    expect(Math.abs((await width('Deadline')) - (start + 64))).toBeLessThanOrEqual(1);
+    await page.keyboard.press('Escape');
 
     await page.reload();
     await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
-    expect(Math.abs((await width('Deadline')) - (start + 48))).toBeLessThanOrEqual(1);
+    expect(Math.abs((await width('Deadline')) - (start + 64))).toBeLessThanOrEqual(1);
     expect(Math.abs((await width('Float')) - least)).toBeLessThanOrEqual(1);
   });
 
-  test('#943 the board machine column resizes by its header edge and Alt with the arrows on a machine, and keeps the width after a reload', async ({
+  test('#943 the board machine column resizes by its header edge and Alt with the arrows in the grid, and keeps the width after a reload', async ({
     page,
     signIn,
     checkA11y,
@@ -362,6 +379,9 @@ test.describe('the left pane of the timelines', () => {
     await page.mouse.move(box.x + box.width - 4, y);
     await page.mouse.down();
     await page.mouse.move(box.x + box.width + 36, y, { steps: 4 });
+    // The column waits for the release; a line shows where its edge goes.
+    await expect(board.locator('[data-column-resize-line]')).toBeVisible();
+    expect(await width()).toBe(start);
     await page.mouse.up();
     expect(Math.abs((await width()) - (start + 40))).toBeLessThanOrEqual(1);
 

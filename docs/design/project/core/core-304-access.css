@@ -11,699 +11,150 @@
    part of the UI. */
 
 /* Canvas (not UI): the URL in a frame label */
-.ca-url {
-  font:
-    400 12px / 16px "IBM Plex Mono",
-    ui-monospace,
-    monospace;
-  color: #4f4c46;
-}
+.ca-url{font:400 12px/16px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46}
 
 /* Headings, text and helpers inside the parts */
-.ca-h2 {
-  margin: 0;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 600;
-}
-.ca-h3 {
-  margin: 0;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 600;
-}
-.ca-desc {
-  margin: 2px 0 0;
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--muted-foreground);
-}
-.ca-p {
-  margin: 0;
-  max-width: 80ch;
-}
-.ca-sm {
-  font-size: 12px;
-  line-height: 16px;
-}
-.ca-mut {
-  color: var(--muted-foreground);
-}
-.ca-b {
-  font-weight: 600;
-}
-.ca-mono {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-.ca-ok {
-  color: var(--success);
-}
-.ca-no {
-  color: var(--destructive);
-}
-.ca-pid {
-  font: 400 12px / 16px var(--font-mono);
-  color: var(--muted-foreground);
-  overflow-wrap: anywhere;
-}
+.ca-h2{margin:0;font-size:16px;line-height:24px;font-weight:600}
+.ca-h3{margin:0;font-size:14px;line-height:20px;font-weight:600}
+.ca-desc{margin:2px 0 0;font-size:13px;line-height:18px;color:var(--muted-foreground)}
+.ca-p{margin:0;max-width:80ch}
+.ca-sm{font-size:12px;line-height:16px}
+.ca-mut{color:var(--muted-foreground)}
+.ca-b{font-weight:600}
+.ca-mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.ca-ok{color:var(--success)}
+.ca-no{color:var(--destructive)}
+.ca-pid{font:400 12px/16px var(--font-mono);color:var(--muted-foreground);overflow-wrap:anywhere}
 
 /* Badges: the text always carries the state, the tone only repeats it */
-.badge.ca-bg {
-  --bb: var(--success-subtle);
-  --bf: var(--success);
-}
-.badge.ca-br {
-  --bb: var(--destructive-subtle);
-  --bf: var(--destructive);
-}
-.badge.ca-bo {
-  --bb: transparent;
-  --bf: var(--muted-foreground);
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-.badge.ca-bd {
-  --bb: var(--secondary);
-  --bf: var(--secondary-foreground);
-}
+.badge.ca-bg{--bb:var(--success-subtle);--bf:var(--success)}
+.badge.ca-br{--bb:var(--destructive-subtle);--bf:var(--destructive)}
+.badge.ca-bo{--bb:transparent;--bf:var(--muted-foreground);box-shadow:inset 0 0 0 1px var(--border)}
+.badge.ca-bd{--bb:var(--secondary);--bf:var(--secondary-foreground)}
 
 /* Card with a heading row (the D1 Card): a DataTable card uses .lf-card.auto from the canonical styles */
-.ca-card {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--card);
-  color: var(--card-foreground);
-}
-.ca-card-h {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  padding: 14px 16px 12px;
-}
-.ca-card-b {
-  display: grid;
-  gap: 12px;
-  padding: 0 16px 16px;
-}
-.ca-hgrp {
-  flex: 1 1 240px;
-  min-width: 0;
-}
+.ca-card{display:flex;flex-direction:column;min-width:0;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);color:var(--card-foreground)}
+.ca-card-h{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:14px 16px 12px}
+.ca-card-b{display:grid;gap:12px;padding:0 16px 16px}
+.ca-hgrp{flex:1 1 240px;min-width:0}
 /* Info notes use the canonical .lf-note (info-subtle fill, info icon), so the page has one note style.
    The EmptyState of a page opened without the permission (NO1, RO31): the h1 names the page, so the state has no
    heading of its own and leads with the missing permission in the size of the canonical state heading */
-.lf-state p.ca-lead {
-  color: var(--foreground);
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 500;
-  text-wrap: balance;
-}
+.lf-state p.ca-lead{color:var(--foreground);font-size:16px;line-height:24px;font-weight:500;text-wrap:balance}
 
 /* Page layouts the spec page draws around the parts (option A's frames A1 and A2): a scrolling main column beside a
    340 px side column that holds the side cards, the reason field and the buttons; .one stacks them at 320 */
-.ca-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-}
-.ca-two {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 24px;
-  flex: 1;
-  min-width: 0;
-  min-height: 0;
-}
-.ca-two.one {
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-}
-.ca-col {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-  min-height: 0;
-}
-.ca-col.scroll {
-  margin: -6px;
-  padding: 6px;
-  overflow: auto;
-  scrollbar-width: thin;
-}
-.ca-foot {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
+.ca-page{display:flex;flex-direction:column;gap:16px;flex:1;min-width:0;min-height:0}
+.ca-two{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;flex:1;min-width:0;min-height:0}
+.ca-two.one{grid-template-columns:minmax(0,1fr);gap:16px}
+.ca-col{display:flex;flex-direction:column;gap:16px;min-width:0;min-height:0}
+.ca-col.scroll{margin:-6px;padding:6px;overflow:auto;scrollbar-width:thin}
+.ca-foot{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 /* Holders in the side card: the name, then the place on its own muted line, so long names and places both keep their width */
-.ca-hold {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 13px;
-  line-height: 18px;
-}
-.ca-hold li {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  min-width: 0;
-}
-.ca-hold li .ic {
-  margin-top: 1px;
-  color: var(--muted-foreground);
-}
-.ca-hold .w {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--muted-foreground);
-}
+.ca-hold{display:grid;gap:8px;margin:0;padding:0;list-style:none;font-size:13px;line-height:18px}
+.ca-hold li{display:flex;align-items:flex-start;gap:8px;min-width:0}
+.ca-hold li .ic{margin-top:1px;color:var(--muted-foreground)}
+.ca-hold .w{font-size:12px;line-height:16px;color:var(--muted-foreground)}
 
 /* Role editor checklist: permissions grouped by module, one disclosure per module */
-.ca-ph {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 4px 16px;
-}
-.ca-count {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--muted-foreground);
-}
-.ca-mgs {
-  display: grid;
-  gap: 8px;
-}
-.ca-mg {
-  min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-}
-.ca-mg-h {
-  margin: 0;
-}
-.ca-disc {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 44px;
-  padding: 0 12px;
-  border: 0;
-  border-radius: var(--radius-lg);
-  background: transparent;
-  color: var(--foreground);
-  font: 600 14px / 20px var(--font-sans);
-  text-align: left;
-  cursor: pointer;
-}
-.ca-disc .ic {
-  color: var(--muted-foreground);
-}
-.ca-disc .n {
-  margin-left: auto;
-  padding-left: 12px;
-  font: 400 12px / 16px var(--font-mono);
-  color: var(--muted-foreground);
-  white-space: nowrap;
-}
-.ca-disc .badge {
-  font-weight: 600;
-}
-.ca-perms {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--border);
-}
-.ca-perm {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto var(--mk, 72px);
-  align-items: center;
-  gap: 2px 10px;
-  min-height: 36px;
-  padding: 4px 12px 4px 10px;
-}
-.ca-perm + .ca-perm {
-  border-top: 1px solid var(--border);
-}
-.ca-perm.chg {
-  background: var(--accent);
-}
-.ca-perm.rf {
-  background: var(--destructive-subtle);
-}
-.ca-perm.rem .ca-pl {
-  text-decoration: line-through;
-  text-decoration-thickness: 1px;
-}
-.ca-perm .cb {
-  margin: -2px 0;
-}
-.ca-pt {
-  display: grid;
-  gap: 0;
-  min-width: 0;
-}
-.ca-pl {
-  font-size: 14px;
-  line-height: 20px;
-  overflow-wrap: break-word;
-}
-.ca-why {
-  display: flex;
-  align-items: flex-start;
-  gap: 4px;
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--muted-foreground);
-}
-.ca-why .ic {
-  width: 14px;
-  height: 14px;
-  margin-top: 1px;
-}
-.ca-why.err {
-  color: var(--destructive);
-}
-.ca-perm > .ca-pid {
-  text-align: right;
-}
-.ca-mk {
-  display: flex;
-  justify-content: flex-end;
-}
+.ca-ph{display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px 16px}
+.ca-count{font-size:12px;line-height:16px;color:var(--muted-foreground)}
+.ca-mgs{display:grid;gap:8px}
+.ca-mg{min-width:0;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--card)}
+.ca-mg-h{margin:0}
+.ca-disc{display:flex;align-items:center;gap:8px;width:100%;min-height:44px;padding:0 12px;border:0;border-radius:var(--radius-lg);background:transparent;color:var(--foreground);font:600 14px/20px var(--font-sans);text-align:left;cursor:pointer}
+.ca-disc .ic{color:var(--muted-foreground)}
+.ca-disc .n{margin-left:auto;padding-left:12px;font:400 12px/16px var(--font-mono);color:var(--muted-foreground);white-space:nowrap}
+.ca-disc .badge{font-weight:600}
+.ca-perms{display:grid;margin:0;padding:0;list-style:none;border-top:1px solid var(--border)}
+.ca-perm{display:grid;grid-template-columns:28px minmax(0,1fr) auto var(--mk,72px);align-items:center;gap:2px 10px;min-height:36px;padding:4px 12px 4px 10px}
+.ca-perm + .ca-perm{border-top:1px solid var(--border)}
+.ca-perm.chg{background:var(--accent)}
+.ca-perm.rf{background:var(--destructive-subtle)}
+.ca-perm.rem .ca-pl{text-decoration:line-through;text-decoration-thickness:1px}
+.ca-perm .cb{margin:-2px 0}
+.ca-pt{display:grid;gap:0;min-width:0}
+.ca-pl{font-size:14px;line-height:20px;overflow-wrap:break-word}
+.ca-why{display:flex;align-items:flex-start;gap:4px;font-size:12px;line-height:16px;color:var(--muted-foreground)}
+.ca-why .ic{width:14px;height:14px;margin-top:1px}
+.ca-why.err{color:var(--destructive)}
+.ca-perm > .ca-pid{text-align:right}
+.ca-mk{display:flex;justify-content:flex-end}
 /* The 24 px box that takes the checkbox's place: a lock (locked) or a check mark (read only) */
-.ca-box {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 24px;
-  height: 24px;
-  color: var(--muted-foreground);
-}
-.ca-box.on {
-  color: var(--foreground);
-}
+.ca-box{display:grid;place-items:center;flex:none;width:24px;height:24px;color:var(--muted-foreground)}
+.ca-box.on{color:var(--foreground)}
 /* Difference from the role a new role starts from (C's Start from) */
-.ca-diff {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  align-items: start;
-}
-.ca-dcol {
-  display: grid;
-  gap: 6px;
-  align-content: start;
-  min-width: 0;
-}
-.ca-dl {
-  display: grid;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.ca-dl li {
-  display: grid;
-  gap: 0;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--background);
-}
+.ca-diff{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.ca-dcol{display:grid;gap:6px;align-content:start;min-width:0}
+.ca-dl{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.ca-dl li{display:grid;gap:0;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--background)}
 
 /* Role picker: Where, then Role with its listbox */
-.ca-rg {
-  display: grid;
-  gap: 6px;
-}
-.ca-rad {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  gap: 2px 6px;
-  align-items: start;
-  padding: 2px 4px 2px 0;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  line-height: 20px;
-  cursor: pointer;
-}
-.ca-rad .d {
-  grid-column: 2;
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--muted-foreground);
-}
-.ca-rd {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  margin: -2px 0;
-}
-.ca-rd::before {
-  content: "";
-  width: 16px;
-  height: 16px;
-  border: 1px solid var(--input);
-  border-radius: 50%;
-  background: var(--card);
-  box-sizing: border-box;
-}
-.ca-rd.on::before {
-  border-color: var(--primary);
-}
-.ca-rd.on::after {
-  content: "";
-  position: absolute;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--primary);
-}
-.ca-cbw {
-  position: relative;
-  display: grid;
-  min-width: 0;
-}
-.inp.ca-sel {
-  cursor: pointer;
-}
-.inp.ca-sel .ca-chev {
-  margin-left: auto;
-  color: var(--muted-foreground);
-}
-.inp.ca-sel .ca-k {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--muted-foreground);
-}
-.pop.ca-lb {
-  position: absolute;
-  z-index: 16;
-  left: 0;
-  right: 0;
-  top: calc(100% + 4px);
-  min-width: 0;
-  max-height: 440px;
-  overflow: auto;
-  scrollbar-width: thin;
-}
-.ca-lbh {
-  padding: 8px 8px 4px;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
-  color: var(--muted-foreground);
-}
-.ca-opt {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) 16px;
-  gap: 2px 8px;
-  padding: 7px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--popover-foreground);
-}
-.ca-opt > .ic {
-  margin-top: 2px;
-  color: var(--muted-foreground);
-}
-.ca-opt .d {
-  grid-column: 2 / 3;
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--muted-foreground);
-  overflow-wrap: break-word;
-}
-.ca-opt.dis .t {
-  color: var(--muted-foreground);
-}
-.ca-opt.kfocus {
-  background: var(--accent);
-  outline: 2px solid var(--focus-outline);
-  outline-offset: -2px;
-}
-.ca-opt .ca-sc {
-  margin-top: 2px;
-  color: var(--foreground);
-}
+.ca-rg{display:grid;gap:6px}
+.ca-rad{display:grid;grid-template-columns:24px minmax(0,1fr);gap:2px 6px;align-items:start;padding:2px 4px 2px 0;border-radius:var(--radius-sm);font-size:14px;line-height:20px;cursor:pointer}
+.ca-rad .d{grid-column:2;font-size:12px;line-height:16px;color:var(--muted-foreground)}
+.ca-rd{position:relative;display:grid;place-items:center;width:24px;height:24px;margin:-2px 0}
+.ca-rd::before{content:"";width:16px;height:16px;border:1px solid var(--input);border-radius:50%;background:var(--card);box-sizing:border-box}
+.ca-rd.on::before{border-color:var(--primary)}
+.ca-rd.on::after{content:"";position:absolute;width:8px;height:8px;border-radius:50%;background:var(--primary)}
+.ca-cbw{position:relative;display:grid;min-width:0}
+.inp.ca-sel{cursor:pointer}
+.inp.ca-sel .ca-chev{margin-left:auto;color:var(--muted-foreground)}
+.inp.ca-sel .ca-k{min-width:0;overflow:hidden;text-overflow:ellipsis;color:var(--muted-foreground)}
+.pop.ca-lb{position:absolute;z-index:16;left:0;right:0;top:calc(100% + 4px);min-width:0;max-height:440px;overflow:auto;scrollbar-width:thin}
+.ca-lbh{padding:8px 8px 4px;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+.ca-opt{display:grid;grid-template-columns:20px minmax(0,1fr) 16px;gap:2px 8px;padding:7px 8px;border-radius:var(--radius-sm);font-size:14px;line-height:20px;color:var(--popover-foreground)}
+.ca-opt > .ic{margin-top:2px;color:var(--muted-foreground)}
+.ca-opt .d{grid-column:2 / 3;font-size:12px;line-height:16px;color:var(--muted-foreground);overflow-wrap:break-word}
+.ca-opt.dis .t{color:var(--muted-foreground)}
+.ca-opt.kfocus{background:var(--accent);outline:2px solid var(--focus-outline);outline-offset:-2px}
+.ca-opt .ca-sc{margin-top:2px;color:var(--foreground)}
 /* The highlighted role's permissions (side card) */
-.ca-kv {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 13px;
-  line-height: 18px;
-}
-.ca-kv li {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  min-width: 0;
-}
-.ca-kv .ic {
-  margin-top: 1px;
-}
+.ca-kv{display:grid;gap:8px;margin:0;padding:0;list-style:none;font-size:13px;line-height:18px}
+.ca-kv li{display:flex;align-items:flex-start;gap:8px;min-width:0}
+.ca-kv .ic{margin-top:1px}
 
 /* Access tab: the roles table, its 320 cards and the access changes */
-.ca-where {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-.ca-where .ic {
-  color: var(--muted-foreground);
-}
-.ca-line {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--muted-foreground);
-  text-align: right;
-}
-.ca-cards {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.ca-ci {
-  display: grid;
-  gap: 4px;
-  justify-items: start;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--card);
-}
-.ca-ci-h {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 8px;
-}
-.ca-ci .ca-line {
-  text-align: left;
-}
-.ca-ci-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--muted-foreground);
-}
-.ca-tool {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-.ca-tool .ca-h2 {
-  flex: 1 1 auto;
-}
-.ca-td-l > a,
-.ca-ci-h > a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-}
+.ca-where{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.ca-where .ic{color:var(--muted-foreground)}
+.ca-line{font-size:12px;line-height:16px;color:var(--muted-foreground);text-align:right}
+.ca-cards{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.ca-ci{display:grid;gap:4px;justify-items:start;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--card)}
+.ca-ci-h{display:flex;flex-wrap:wrap;align-items:center;gap:0 8px}
+.ca-ci .ca-line{text-align:left}
+.ca-ci-row{display:flex;align-items:center;gap:6px;font-size:13px;line-height:18px;color:var(--muted-foreground)}
+.ca-tool{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ca-tool .ca-h2{flex:1 1 auto}
+.ca-td-l > a,.ca-ci-h > a{display:inline-flex;align-items:center;min-height:24px}
 /* EmptyState inside a region that keeps its heading: the canonical .lf-state, shorter */
-.lf-state.ca-st {
-  min-height: 0;
-  padding: 24px 20px 28px;
-}
-.lf-state.ca-st .lf-state-h {
-  font-size: 14px;
-  line-height: 20px;
-}
+.lf-state.ca-st{min-height:0;padding:24px 20px 28px}
+.lf-state.ca-st .lf-state-h{font-size:14px;line-height:20px}
 
 /* Effective permissions: group rows by module, source chips, the "No access" cell */
-.ca-gh {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  padding: 6px 12px;
-  border-top: 1px solid var(--border);
-  background: var(--muted);
-  font-size: 13px;
-  line-height: 18px;
-  font-weight: 600;
-}
-.ca-gh .n {
-  font: 400 12px / 16px var(--font-mono);
-  color: var(--muted-foreground);
-}
-.ca-src-l {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-  min-width: 0;
-}
-.ca-src-i {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 22px;
-  max-width: 100%;
-  padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--background);
-  font-size: 12px;
-  line-height: 16px;
-  overflow-wrap: anywhere;
-}
-.ca-src-i .ic {
-  width: 12px;
-  height: 12px;
-  color: var(--muted-foreground);
-}
-.ca-noacc {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--muted-foreground);
-}
-.ca-noacc .ic {
-  width: 14px;
-  height: 14px;
-}
-.ca-one {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 14px 16px;
-  border-top: 1px solid var(--border);
-}
-.ca-one .ic {
-  margin-top: 2px;
-  color: var(--success);
-}
+.ca-gh{display:flex;align-items:center;gap:8px;min-height:36px;padding:6px 12px;border-top:1px solid var(--border);background:var(--muted);font-size:13px;line-height:18px;font-weight:600}
+.ca-gh .n{font:400 12px/16px var(--font-mono);color:var(--muted-foreground)}
+.ca-src-l{display:flex;flex-wrap:wrap;gap:4px 6px;min-width:0}
+.ca-src-i{display:inline-flex;align-items:center;gap:4px;min-height:22px;max-width:100%;padding:0 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--background);font-size:12px;line-height:16px;overflow-wrap:anywhere}
+.ca-src-i .ic{width:12px;height:12px;color:var(--muted-foreground)}
+.ca-noacc{display:inline-flex;align-items:center;gap:6px;font-size:13px;line-height:18px;color:var(--muted-foreground)}
+.ca-noacc .ic{width:14px;height:14px}
+.ca-one{display:flex;align-items:flex-start;gap:10px;padding:14px 16px;border-top:1px solid var(--border)}
+.ca-one .ic{margin-top:2px;color:var(--success)}
 /* Column header with a tooltip that names the missing permission */
-.ca-tw {
-  position: relative;
-  display: inline-flex;
-}
-.btn.ca-hb {
-  gap: 4px;
-  height: 24px;
-  margin: 0 -6px;
-  padding: 0 6px;
-  color: inherit;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
-}
-.ca-tip {
-  position: absolute;
-  z-index: 16;
-  left: -6px;
-  top: calc(100% + 6px);
-  width: 280px;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font: 500 12px / 16px var(--font-sans);
-  white-space: normal;
-  text-align: left;
-}
-.ca-cbl {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--foreground);
-}
+.ca-tw{position:relative;display:inline-flex}
+.btn.ca-hb{gap:4px;height:24px;margin:0 -6px;padding:0 6px;color:inherit;font-size:12px;line-height:16px;font-weight:600}
+.ca-tip{position:absolute;z-index:16;left:-6px;top:calc(100% + 6px);width:280px;padding:6px 10px;border-radius:var(--radius-sm);background:var(--primary);color:var(--primary-foreground);font:500 12px/16px var(--font-sans);white-space:normal;text-align:left}
+.ca-cbl{display:inline-flex;align-items:center;gap:2px;font-size:13px;line-height:18px;color:var(--foreground)}
 
 /* Narrow layout (320): one column; ids and marks go under the label */
-.lf-nar .ca-perm {
-  grid-template-columns: 28px minmax(0, 1fr);
-  align-items: start;
-  gap: 2px 6px;
-  padding: 6px 8px 6px 6px;
-}
-.lf-nar .ca-perm > .ca-pid,
-.lf-nar .ca-perm > .ca-mk {
-  grid-column: 2;
-  justify-content: flex-start;
-  text-align: left;
-}
-.lf-nar .ca-perm .cb,
-.lf-nar .ca-perm .ca-box {
-  margin: -2px 0 0;
-}
-.lf-nar .ca-diff {
-  grid-template-columns: minmax(0, 1fr);
-}
-.lf-nar .ca-card-h {
-  padding: 12px 12px 10px;
-}
-.lf-nar .ca-card-b {
-  padding: 0 12px 12px;
-}
-.lf-nar .ca-disc {
-  padding: 0 10px;
-}
+.lf-nar .ca-perm{grid-template-columns:28px minmax(0,1fr);align-items:start;gap:2px 6px;padding:6px 8px 6px 6px}
+.lf-nar .ca-perm > .ca-pid,.lf-nar .ca-perm > .ca-mk{grid-column:2;justify-content:flex-start;text-align:left}
+.lf-nar .ca-perm .cb,.lf-nar .ca-perm .ca-box{margin:-2px 0 0}
+.lf-nar .ca-diff{grid-template-columns:minmax(0,1fr)}
+.lf-nar .ca-card-h{padding:12px 12px 10px}
+.lf-nar .ca-card-b{padding:0 12px 12px}
+.lf-nar .ca-disc{padding:0 10px}
 /* At 320 the effective list drops its card chrome: one card per module, as option A's frame A5 draws it */
-.lf-nar .lf-card.ca-effc {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  overflow: visible;
-}
-.lf-nar .ca-effc .ca-card-h {
-  padding: 0 0 10px;
-}
-.lf-nar .ca-effc .ca-card-b {
-  padding: 0;
-}
+.lf-nar .lf-card.ca-effc{border:0;border-radius:0;background:transparent;overflow:visible}
+.lf-nar .ca-effc .ca-card-h{padding:0 0 10px}
+.lf-nar .ca-effc .ca-card-b{padding:0}

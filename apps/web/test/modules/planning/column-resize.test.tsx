@@ -32,20 +32,35 @@ function treeTracks(gantt: HTMLElement): string[] {
 
 describe('resizing the tree columns of the order Gantt (#943)', () => {
   it('#943 every column but Name has a resize handle on its header edge, a separator with its width', async () => {
+    window.localStorage.setItem(ganttKey, JSON.stringify({ hiddenColumns: [] }));
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     expect(within(gantt).queryByRole('separator', { name: 'Resize the Name column' })).toBeNull();
+    for (const column of [
+      'Machine',
+      'Quantity',
+      'Start',
+      'End',
+      'Working time',
+      'Deadline',
+      'Late by',
+      'Float',
+      'Status',
+      'Lock',
+    ]) {
+      const handle = within(gantt).getByRole('separator', { name: `Resize the ${column} column` });
+      // The handle sits in its own header, which keeps its name, so focus on it scrolls that
+      // header into the pane.
+      expect(handle.closest('[role="columnheader"]')?.getAttribute('aria-label')).toBe(column);
+    }
     const deadline = within(gantt).getByRole('separator', { name: 'Resize the Deadline column' });
     expect(deadline.getAttribute('aria-orientation')).toBe('vertical');
     expect(deadline.getAttribute('aria-valuenow')).toBe('128');
     expect(deadline.tabIndex).toBe(0);
-    // The handle sits in its own header, so focus on it scrolls that header into the pane.
-    expect(deadline.closest('[role="columnheader"]')?.textContent).toContain('Deadline');
-    expect(within(gantt).getByRole('separator', { name: 'Resize the Float column' })).toBeTruthy();
   });
 
-  it('#943 Left and Right on the handle and Alt+Left and Alt+Right on the sort button narrow and widen the column by 8 px, and the width stays in this browser', async () => {
+  it('#943 Left and Right on the handle narrow and widen the column by 8 px, and the width stays in this browser', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
     const handle = within(gantt).getByRole('separator', { name: 'Resize the Deadline column' });
@@ -54,18 +69,36 @@ describe('resizing the tree columns of the order Gantt (#943)', () => {
     await userEvent.keyboard('{ArrowRight}');
     expect(handle.getAttribute('aria-valuenow')).toBe('136');
     expect(treeTracks(gantt)[1]).toBe('136px');
-
-    within(gantt)
-      .getByRole('button', { name: /^Deadline/ })
-      .focus();
-    await userEvent.keyboard('{Alt>}{ArrowLeft}{ArrowLeft}{/Alt}');
+    await userEvent.keyboard('{ArrowLeft}{ArrowLeft}');
     expect(treeTracks(gantt)[1]).toBe('120px');
     expect(JSON.parse(window.localStorage.getItem(ganttKey) ?? '{}')).toMatchObject({
       columnWidths: { deadline: 120 },
     });
-    // A plain arrow on the sort button resizes nothing.
+  });
+
+  it("#943 Alt+Left and Alt+Right on a column's sort button narrow and widen it, a plain arrow does not, and on Name they do nothing", async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    within(gantt)
+      .getByRole('button', { name: /^Deadline/ })
+      .focus();
+    await userEvent.keyboard('{Alt>}{ArrowRight}{ArrowRight}{ArrowLeft}{/Alt}');
+    expect(treeTracks(gantt)[1]).toBe('136px');
     await userEvent.keyboard('{ArrowLeft}');
-    expect(treeTracks(gantt)[1]).toBe('120px');
+    expect(treeTracks(gantt)[1]).toBe('136px');
+
+    // Alt+Left is the browser's Back; on Name it is held, so the page stays.
+    within(gantt).getByRole('button', { name: /^Name/ }).focus();
+    const back = new KeyboardEvent('keydown', {
+      key: 'ArrowLeft',
+      altKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.activeElement?.dispatchEvent(back);
+    expect(back.defaultPrevented).toBe(true);
+    expect(treeTracks(gantt)[0]).toBe('215px');
   });
 
   it('#943 a column never narrows past the least width that keeps its header readable', async () => {
@@ -75,48 +108,102 @@ describe('resizing the tree columns of the order Gantt (#943)', () => {
 
     handle.focus();
     for (let step = 0; step < 20; step += 1) await userEvent.keyboard('{ArrowLeft}');
-    const least = handle.getAttribute('aria-valuemin');
-    expect(handle.getAttribute('aria-valuenow')).toBe(least);
-    expect(treeTracks(gantt)[2]).toBe(`${least}px`);
-    expect(Number(least)).toBeGreaterThanOrEqual(56);
+    // Float's least width is 72 px.
+    expect(handle.getAttribute('aria-valuemin')).toBe('72');
+    expect(handle.getAttribute('aria-valuenow')).toBe('72');
+    expect(treeTracks(gantt)[2]).toBe('72px');
   });
 
-  it('#943 the handle follows the pointer and the width is kept on release', async () => {
+  it('#943 a drag shows the column as it goes and keeps the width on release, and the Name column keeps its width so the edge follows the pointer', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
     const handle = within(gantt).getByRole('separator', { name: 'Resize the Deadline column' });
 
     fireEvent.pointerDown(handle, { pointerId: 1, clientX: 400, button: 0 });
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: 440, buttons: 1 });
-    expect(treeTracks(gantt)[1]).toBe('168px');
+    expect(treeTracks(gantt)).toEqual(['215px', '168px', '96px']);
     expect(window.localStorage.getItem(ganttKey)).toBeNull();
     fireEvent.pointerUp(handle, { pointerId: 1, clientX: 440 });
 
-    expect(treeTracks(gantt)[1]).toBe('168px');
+    expect(treeTracks(gantt)).toEqual(['215px', '168px', '96px']);
     expect(JSON.parse(window.localStorage.getItem(ganttKey) ?? '{}')).toMatchObject({
       columnWidths: { deadline: 168 },
     });
   });
 
-  it('#943 a kept width comes back on a new page, within the column bounds', async () => {
+  it('#943 a drag that comes back to where it started is kept, and a drag cut short keeps nothing', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const handle = within(gantt).getByRole('separator', { name: 'Resize the Deadline column' });
+
+    fireEvent.pointerDown(handle, { pointerId: 1, clientX: 400, button: 0 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 420, buttons: 1 });
+    fireEvent.lostPointerCapture(handle, { pointerId: 1 });
+    expect(treeTracks(gantt)[1]).toBe('128px');
+    expect(window.localStorage.getItem(ganttKey)).toBeNull();
+
+    fireEvent.pointerDown(handle, { pointerId: 2, clientX: 400, button: 0 });
+    fireEvent.pointerMove(handle, { pointerId: 2, clientX: 405, buttons: 1 });
+    fireEvent.pointerUp(handle, { pointerId: 2, clientX: 400 });
+    expect(treeTracks(gantt)[1]).toBe('128px');
+    expect(JSON.parse(window.localStorage.getItem(ganttKey) ?? '{}')).toMatchObject({
+      columnWidths: { deadline: 128 },
+    });
+  });
+
+  it('#943 a click on the handle shows Narrower and Wider buttons, the one-click alternative to the drag (WCAG 2.5.7)', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const handle = within(gantt).getByRole('separator', { name: 'Resize the Deadline column' });
+
+    fireEvent.pointerDown(handle, { pointerId: 1, clientX: 400, button: 0 });
+    fireEvent.pointerUp(handle, { pointerId: 1, clientX: 400 });
+    const stepper = await within(gantt).findByRole('group', { name: 'Deadline column width' });
+    const wider = within(stepper).getByRole('button', { name: 'Widen the Deadline column' });
+    expect(document.activeElement).toBe(wider);
+
+    await userEvent.click(wider);
+    expect(treeTracks(gantt)[1]).toBe('144px');
+    await userEvent.click(
+      within(stepper).getByRole('button', { name: 'Narrow the Deadline column' }),
+    );
+    await userEvent.click(
+      within(stepper).getByRole('button', { name: 'Narrow the Deadline column' }),
+    );
+    expect(treeTracks(gantt)[1]).toBe('112px');
+    // At the least width Narrower stops, and keeps its focus.
+    const narrower = within(stepper).getByRole('button', { name: 'Narrow the Deadline column' });
+    expect(narrower.getAttribute('aria-disabled')).toBe('true');
+    await userEvent.click(narrower);
+    expect(treeTracks(gantt)[1]).toBe('112px');
+    expect(JSON.parse(window.localStorage.getItem(ganttKey) ?? '{}')).toMatchObject({
+      columnWidths: { deadline: 112 },
+    });
+
+    await userEvent.keyboard('{Escape}');
+    expect(within(gantt).queryByRole('group', { name: 'Deadline column width' })).toBeNull();
+  });
+
+  it('#943 a kept width comes back on a new page within the column bounds, and a kept value that is no width is ignored', async () => {
     window.localStorage.setItem(
       ganttKey,
-      JSON.stringify({ columnWidths: { deadline: 150, float: 2, name: 500, other: 'wide' } }),
+      JSON.stringify({ columnWidths: { deadline: 150, float: 2, name: 500 } }),
     );
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
+    // Too narrow a kept width takes the least; Name takes what the pane leaves of the default
+    // widths, whatever is kept for it.
+    expect(treeTracks(gantt)).toEqual(['215px', '150px', '72px']);
+    cleanup();
 
-    const tracks = treeTracks(gantt);
-    expect(tracks[1]).toBe('150px');
-    // Too narrow a kept width takes the least; Name always takes what the pane leaves.
-    const float = within(gantt).getByRole('separator', { name: 'Resize the Float column' });
-    expect(tracks[2]).toBe(`${float.getAttribute('aria-valuemin')}px`);
-    expect(tracks[0]).not.toBe('500px');
+    window.localStorage.setItem(ganttKey, JSON.stringify({ columnWidths: { deadline: 'wide' } }));
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    expect(treeTracks(await findGantt())[1]).toBe('128px');
   });
 });
 
 describe('resizing the machine column of the planning board (#943)', () => {
-  it('#943 Alt+Left and Alt+Right on a machine row header resize the machine column and keep the width, and the grid keeps its one Tab stop', async () => {
+  it('#943 Alt+Left and Alt+Right anywhere in the board resize the machine column and keep the width, and the grid keeps its one Tab stop', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
     const header = within(board).getAllByRole('row')[0] as HTMLElement;
@@ -133,11 +220,16 @@ describe('resizing the machine column of the planning board (#943)', () => {
     expect(JSON.parse(window.localStorage.getItem(boardKey) ?? '{}')).toEqual({ width: 216 });
     // The keys stay with the resize: focus stays on the machine.
     expect(document.activeElement).toBe(machine);
+
+    // With the group collapsed no machine row is left; the group's button takes the keys.
+    const group = within(board).getByRole('button', { name: /^Collapse / });
+    await userEvent.click(group);
+    group.focus();
     await userEvent.keyboard('{Alt>}{ArrowLeft}{/Alt}');
     expect(header.style.gridTemplateColumns.split(' ')[0]).toBe('208px');
   });
 
-  it('#943 the machine column follows the pointer and a kept width comes back', async () => {
+  it('#943 a drag of the machine column draws a line and resizes once, on release, and the width is kept', async () => {
     window.localStorage.setItem(boardKey, JSON.stringify({ width: 240 }));
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
@@ -147,9 +239,13 @@ describe('resizing the machine column of the planning board (#943)', () => {
     const handle = within(board).getByRole('separator', { name: 'Resize the Machines column' });
     fireEvent.pointerDown(handle, { pointerId: 1, clientX: 300, button: 0 });
     fireEvent.pointerMove(handle, { pointerId: 1, clientX: 200, buttons: 1 });
+    expect(header.style.gridTemplateColumns.split(' ')[0]).toBe('240px');
+    expect(board.querySelector('[data-column-resize-line]')).not.toBeNull();
     fireEvent.pointerUp(handle, { pointerId: 1, clientX: 200 });
 
     expect(header.style.gridTemplateColumns.split(' ')[0]).toBe('140px');
     expect(handle.getAttribute('aria-valuenow')).toBe('140');
+    expect(JSON.parse(window.localStorage.getItem(boardKey) ?? '{}')).toEqual({ width: 140 });
+    expect(board.querySelector('[data-column-resize-line]')).toBeNull();
   });
 });
