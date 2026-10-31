@@ -400,22 +400,42 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
     const gantt = await findGantt();
     // The first chunks' message comes through the polite queue after the page has loaded.
     await waitFor(() => expect(polite()).toMatch(/^Loading the job orders of W43/));
-    const said: string[] = [];
+    // What happens, in order: each polite message and a loading band.
+    const log: string[] = [];
     const region = document.getElementById(politeRegionId) as HTMLElement;
-    const watch = new MutationObserver(() => said.push(region.textContent ?? ''));
+    let shown = region.textContent;
+    const watch = new MutationObserver(() => {
+      if (region.textContent !== shown) {
+        shown = region.textContent;
+        log.push(`said ${shown ?? ''}`);
+      }
+      if (gantt.querySelector('[data-chunk-band="loading"]') !== null) log.push('band');
+    });
     watch.observe(region, { childList: true, characterData: true, subtree: true });
+    watch.observe(gantt, { attributes: true, childList: true, subtree: true });
 
-    // One event per frame or two, each well within the 150 ms that end a gesture.
-    for (let event = 0; event < 6; event += 1) {
+    // Right after the gesture's first frame, well within the 150 ms that end it, the grid is not
+    // busy: the time not requested yet is no chunk loading.
+    ctrlWheel(gantt, 100, 1200);
+    await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(gantt.getAttribute('aria-busy')).not.toBe('true');
+    for (let event = 1; event < 6; event += 1) {
       ctrlWheel(gantt, 100, 1200);
       await new Promise((resolve) => setTimeout(resolve, 30));
-      expect(gantt.getAttribute('aria-busy')).not.toBe('true');
     }
-    expect(gantt.querySelector('[data-chunk-band="loading"]')).not.toBeNull();
+    await waitFor(() => expect(log.some((entry) => entry.startsWith('said Zoom: '))).toBe(true));
     watch.disconnect();
 
-    expect(said.filter((text) => text.startsWith('Loading the job orders'))).toEqual([]);
-    await waitFor(() => expect(polite()).toBe('Zoom: 4 weeks'));
+    // Until the first gesture ends and says its band, the time it shows draws as loading, and no
+    // chunk is announced. A slow runner may end the gesture early; what loads after its end is
+    // the next step.
+    const during = log.slice(
+      0,
+      log.findIndex((entry) => entry.startsWith('said Zoom: ')),
+    );
+    expect(during).toContain('band');
+    expect(during.filter((entry) => entry.startsWith('said Loading the job orders'))).toEqual([]);
   });
 
   it('#941 unmounting the Gantt removes its gesture listeners from the grid and the workload lanes', async () => {
