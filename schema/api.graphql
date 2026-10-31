@@ -265,6 +265,17 @@ input CoreArchiveArticleInput {
   id: ID!
 }
 
+"""The input of coreArchiveEquipmentGroup."""
+input CoreArchiveEquipmentGroupInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
+  expectedVersion: Int!
+
+  """The id of the entity the command changes."""
+  id: ID!
+}
+
 """The input of coreAssignRole."""
 input CoreAssignRoleInput {
   """
@@ -372,6 +383,40 @@ input CoreCreateArticleInput {
   stockUnit: String
 
   """The translations of the name; an empty list removes them."""
+  translations: [TranslationInput!]
+}
+
+"""The input of coreCreateEquipmentGroup."""
+input CoreCreateEquipmentGroupInput {
+  """The code, unique among the rows the scope sees, at most 32 characters."""
+  code: String!
+
+  """
+  The group's palette color. A create without one takes the first palette color that no group the request sees uses; an update without one keeps it.
+  """
+  color: String
+
+  """
+  The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+  """
+  companyId: String
+
+  """
+  The id of the new entity, a UUID the client generates, so a retry finds the first.
+  """
+  id: ID!
+
+  """The name, at most 200 characters."""
+  name: String!
+
+  """
+  Where the row sits: at the company, which every plant of it sees, or at the request's plant.
+  """
+  scope: String!
+
+  """
+  The translations of the name. An update that leaves them out keeps them.
+  """
   translations: [TranslationInput!]
 }
 
@@ -519,6 +564,17 @@ input CoreRestoreArticleInput {
   id: ID!
 }
 
+"""The input of coreRestoreEquipmentGroup."""
+input CoreRestoreEquipmentGroupInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
+  expectedVersion: Int!
+
+  """The id of the entity the command changes."""
+  id: ID!
+}
+
 """The input of coreRevokeIntegrationToken."""
 input CoreRevokeIntegrationTokenInput {
   """
@@ -635,6 +691,33 @@ input CoreUpdateArticleInput {
   stockUnit: String
 
   """The translations of the name; an empty list removes them."""
+  translations: [TranslationInput!]
+}
+
+"""The input of coreUpdateEquipmentGroup."""
+input CoreUpdateEquipmentGroupInput {
+  """The code, unique among the rows the scope sees, at most 32 characters."""
+  code: String!
+
+  """
+  The group's palette color. A create without one takes the first palette color that no group the request sees uses; an update without one keeps it.
+  """
+  color: String
+
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
+  expectedVersion: Int!
+
+  """The id of the entity the command changes."""
+  id: ID!
+
+  """The name, at most 200 characters."""
+  name: String!
+
+  """
+  The translations of the name. An update that leaves them out keeps them.
+  """
   translations: [TranslationInput!]
 }
 
@@ -865,6 +948,97 @@ type EffectivePermission {
 }
 
 """
+A group of equipment, such as Assembly or Turning, at the company or at one plant. Its color is the band the planning board shows for its equipment.
+"""
+type EquipmentGroup {
+  """
+  When the group was archived, or null while it is active. An archived group is hidden from coreEquipmentGroups unless includeArchived is true, and keeps its code.
+  """
+  archivedAt: DateTime
+
+  """
+  The code, unique among the groups of the company and the plant that see it.
+  """
+  code: String!
+
+  """The palette color, palette-1 to palette-20."""
+  color: String!
+
+  """
+  Where the color came from: erp, set by a person, or palette, the first free palette color when the group was created.
+  """
+  colorFrom: String!
+
+  """The group's id."""
+  id: ID!
+
+  """The group's name."""
+  name: String!
+
+  """
+  Where the group sits: company, which every plant of the company sees, or plant, the plant it was created at.
+  """
+  scope: String!
+
+  """The translations of the name, in the order they were saved."""
+  translations: [Translation!]!
+
+  """When the group last changed, its creation included."""
+  updatedAt: DateTime!
+
+  """
+  Grows by one with every change to the group; an update sends it as expectedVersion.
+  """
+  version: Int!
+}
+
+"""
+One page of the EquipmentGroup list, with keyset paging over opaque cursors.
+"""
+type EquipmentGroupConnection {
+  """The items of the page in the list's order."""
+  edges: [EquipmentGroupEdge!]!
+
+  """Where the page sits in the list."""
+  pageInfo: PageInfo!
+
+  """
+  How many items the list holds with the same search and filters, across all pages.
+  """
+  totalCount: Int!
+}
+
+"""One EquipmentGroup of a page, with its cursor."""
+type EquipmentGroupEdge {
+  """The cursor of this item, for after or before."""
+  cursor: String!
+
+  """The EquipmentGroup."""
+  node: EquipmentGroup!
+}
+
+"""One entry of the EquipmentGroup list's orderBy."""
+input EquipmentGroupOrderBy {
+  """The direction to sort in, ascending by default."""
+  direction: SortDirection = ASC
+
+  """The field to sort by."""
+  field: EquipmentGroupSortField!
+}
+
+"""The fields the EquipmentGroup list sorts by."""
+enum EquipmentGroupSortField {
+  """Sorts by code."""
+  CODE
+
+  """Sorts by name."""
+  NAME
+
+  """Sorts by updatedAt."""
+  UPDATED_AT
+}
+
+"""
 A credential that an outside system calls the public API with. It acts as itself, with its roles at the company or at one plant. Its secret is shown once, when it is created.
 """
 type IntegrationToken {
@@ -924,6 +1098,14 @@ type Mutation {
   ): ArticleGroup!
 
   """
+  Archives an equipment group: lists hide it, and it keeps its code. Needs core.equipmentGroup:archive where it sits.
+  """
+  coreArchiveEquipmentGroup(
+    """The input of the command core.archiveEquipmentGroup."""
+    input: CoreArchiveEquipmentGroupInput!
+  ): EquipmentGroup!
+
+  """
   Gives a user a role of the company at the company or at one of its plants. Needs core.roleAssignment:manage at that scope, and every permission of the role held by the assigner there.
   """
   coreAssignRole(
@@ -954,6 +1136,14 @@ type Mutation {
     """The input of the command core.createArticleGroup."""
     input: CoreCreateArticleGroupInput!
   ): ArticleGroup!
+
+  """
+  Creates an equipment group at the company or at the request's plant. Needs core.equipmentGroup:create there; a code that another equipment group the scope sees uses is refused with core.code_taken.
+  """
+  coreCreateEquipmentGroup(
+    """The input of the command core.createEquipmentGroup."""
+    input: CoreCreateEquipmentGroupInput!
+  ): EquipmentGroup!
 
   """
   Creates an integration token of the company that holds roles at the company or at one of its plants. Needs core.integration:manage at the company and every permission of each role at that place. The answer shows the secret once.
@@ -1020,6 +1210,14 @@ type Mutation {
   ): ArticleGroup!
 
   """
+  Restores an archived equipment group. Needs core.equipmentGroup:archive where it sits; one that is not archived is refused with core.not_archived.
+  """
+  coreRestoreEquipmentGroup(
+    """The input of the command core.restoreEquipmentGroup."""
+    input: CoreRestoreEquipmentGroupInput!
+  ): EquipmentGroup!
+
+  """
   Revokes an integration token at once and keeps its record. Needs core.integration:manage at the token's company.
   """
   coreRevokeIntegrationToken(
@@ -1066,6 +1264,14 @@ type Mutation {
     """The input of the command core.updateArticleGroup."""
     input: CoreUpdateArticleGroupInput!
   ): ArticleGroup!
+
+  """
+  Changes an equipment group: its code, its name and the other fields the input sends. Needs core.equipmentGroup:update where it sits; an archived equipment group is refused with core.archived.
+  """
+  coreUpdateEquipmentGroup(
+    """The input of the command core.updateEquipmentGroup."""
+    input: CoreUpdateEquipmentGroupInput!
+  ): EquipmentGroup!
 
   """
   Changes the name and the permissions of a custom role. Needs core.role:manage at the role's company, and each added permission held by the editor wherever the role is assigned.
@@ -1386,6 +1592,60 @@ type Query {
   The dashboard's tabs at the request's plant: the company's, then the plant's, then the signed-in user's own, each in its order. Needs no permission beyond opening the plant.
   """
   coreDashboardTabs: [DashboardTab!]!
+
+  """
+  The equipment group with this id among those the request reads, or null. Needs core.equipmentGroup:read.
+  """
+  coreEquipmentGroup(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+
+    """The equipment group's id."""
+    id: ID!
+  ): EquipmentGroup
+
+  """
+  One page of the equipment groups the request reads: at a plant the plant's and the company's, in company settings the company's. Needs core.equipmentGroup:read.
+  """
+  coreEquipmentGroups(
+    """
+    Reads the items after this cursor, such as the endCursor of the previous page.
+    """
+    after: String
+
+    """
+    Reads the items before this cursor, such as the startCursor of the next page. Not together with after.
+    """
+    before: String
+
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+
+    """
+    How many items to read forward, from 1 to 100. Ignored when last or before is given.
+    """
+    first: Int = 25
+
+    """Lists archived items too. Archived items are hidden by default."""
+    includeArchived: Boolean = false
+
+    """
+    How many items to read backward, from 1 to 100, 25 when only before is given.
+    """
+    last: Int
+
+    """The order of the list, at most 3 entries; the id breaks ties."""
+    orderBy: [EquipmentGroupOrderBy!]
+
+    """
+    Only the items whose text contains this, ignoring case; at most 100 characters.
+    """
+    search: String
+  ): EquipmentGroupConnection!
 
   """
   The integration tokens of the company, revoked ones too, newest first, without their secrets. Needs core.integration:manage at the company.

@@ -303,6 +303,122 @@
         ],
         "type": "object"
       },
+      "CoreEquipmentGroup": {
+        "properties": {
+          "archivedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "code": {
+            "type": "string"
+          },
+          "color": {
+            "description": "The group's palette color.",
+            "enum": [
+              "palette-1",
+              "palette-2",
+              "palette-3",
+              "palette-4",
+              "palette-5",
+              "palette-6",
+              "palette-7",
+              "palette-8",
+              "palette-9",
+              "palette-10",
+              "palette-11",
+              "palette-12",
+              "palette-13",
+              "palette-14",
+              "palette-15",
+              "palette-16",
+              "palette-17",
+              "palette-18",
+              "palette-19",
+              "palette-20"
+            ],
+            "type": "string"
+          },
+          "colorFrom": {
+            "description": "Where the color came from: erp, set by a person, or palette, the first free color at the group's create.",
+            "enum": [
+              "erp",
+              "set",
+              "palette"
+            ],
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "scope": {
+            "description": "Where the row sits: at the company, which every plant of it sees, or at the request's plant.",
+            "enum": [
+              "company",
+              "plant"
+            ],
+            "type": "string"
+          },
+          "translations": {
+            "items": {
+              "properties": {
+                "field": {
+                  "type": "string"
+                },
+                "locale": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "field",
+                "locale",
+                "text"
+              ],
+              "type": "object"
+            },
+            "readOnly": true,
+            "type": "array"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$",
+            "type": "string"
+          },
+          "version": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "translations",
+          "version",
+          "archivedAt",
+          "updatedAt",
+          "scope",
+          "color",
+          "colorFrom"
+        ],
+        "type": "object"
+      },
       "FieldError": {
         "description": "One error of an input field.",
         "properties": {
@@ -972,6 +1088,88 @@
         ]
       }
     },
+    "/api/v1/core/commands/archive-equipment-group": {
+      "post": {
+        "description": "Archives an equipment group: lists hide it, and it keeps its code. Needs core.equipmentGroup:archive where it sits.",
+        "operationId": "coreArchiveEquipmentGroup",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/plant"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "expectedVersion": {
+                    "description": "The version of the entity that the change was made on; the command is refused when the entity has changed since.",
+                    "maximum": 2147483647,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "description": "The id of the entity the command changes.",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "expectedVersion"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoreEquipmentGroup"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/NotSignedIn"
+          },
+          "403": {
+            "$ref": "#/components/responses/NotPermitted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "412": {
+            "$ref": "#/components/responses/PreconditionFailed"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "core.equipmentGroup:archive"
+            ]
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
     "/api/v1/core/commands/create-article": {
       "post": {
         "description": "Creates an article of the company, assigned to the plants or to All plants that the input names, else to the request's plant. Needs core.article:create; a code that another article of the company uses is refused with core.code_taken.",
@@ -1256,6 +1454,167 @@
         ]
       }
     },
+    "/api/v1/core/commands/create-equipment-group": {
+      "post": {
+        "description": "Creates an equipment group at the company or at the request's plant. Needs core.equipmentGroup:create there; a code that another equipment group the scope sees uses is refused with core.code_taken.",
+        "operationId": "coreCreateEquipmentGroup",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/plant"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "code": {
+                    "description": "The code, unique among the rows the scope sees, at most 32 characters.",
+                    "maxLength": 32,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "color": {
+                    "description": "The group's palette color. A create without one takes the first palette color that no group the request sees uses; an update without one keeps it.",
+                    "enum": [
+                      "palette-1",
+                      "palette-2",
+                      "palette-3",
+                      "palette-4",
+                      "palette-5",
+                      "palette-6",
+                      "palette-7",
+                      "palette-8",
+                      "palette-9",
+                      "palette-10",
+                      "palette-11",
+                      "palette-12",
+                      "palette-13",
+                      "palette-14",
+                      "palette-15",
+                      "palette-16",
+                      "palette-17",
+                      "palette-18",
+                      "palette-19",
+                      "palette-20"
+                    ],
+                    "type": "string"
+                  },
+                  "companyId": {
+                    "description": "The company of a command sent from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  },
+                  "id": {
+                    "description": "The id of the new entity, a UUID the client generates, so a retry finds the first.",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "The name, at most 200 characters.",
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "scope": {
+                    "description": "Where the row sits: at the company, which every plant of it sees, or at the request's plant.",
+                    "enum": [
+                      "company",
+                      "plant"
+                    ],
+                    "type": "string"
+                  },
+                  "translations": {
+                    "description": "The translations of the name. An update that leaves them out keeps them.",
+                    "items": {
+                      "properties": {
+                        "field": {
+                          "pattern": "^[a-z][a-zA-Z0-9]*$",
+                          "type": "string"
+                        },
+                        "locale": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "field",
+                        "locale",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 50,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "code",
+                  "name",
+                  "scope",
+                  "id"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoreEquipmentGroup"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoreEquipmentGroup"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/NotSignedIn"
+          },
+          "403": {
+            "$ref": "#/components/responses/NotPermitted"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "core.equipmentGroup:create"
+            ]
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
     "/api/v1/core/commands/restore-article": {
       "post": {
         "description": "Restores an archived article, so lists show it and it can be changed again. Needs core.article:archive.",
@@ -1412,6 +1771,88 @@
           {
             "bearer": [
               "core.articleGroup:archive"
+            ]
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/v1/core/commands/restore-equipment-group": {
+      "post": {
+        "description": "Restores an archived equipment group. Needs core.equipmentGroup:archive where it sits; one that is not archived is refused with core.not_archived.",
+        "operationId": "coreRestoreEquipmentGroup",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/plant"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "expectedVersion": {
+                    "description": "The version of the entity that the change was made on; the command is refused when the entity has changed since.",
+                    "maximum": 2147483647,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "description": "The id of the entity the command changes.",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "expectedVersion"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoreEquipmentGroup"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/NotSignedIn"
+          },
+          "403": {
+            "$ref": "#/components/responses/NotPermitted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "412": {
+            "$ref": "#/components/responses/PreconditionFailed"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "core.equipmentGroup:archive"
             ]
           }
         ],
@@ -1782,6 +2223,155 @@
         ]
       }
     },
+    "/api/v1/core/commands/update-equipment-group": {
+      "post": {
+        "description": "Changes an equipment group: its code, its name and the other fields the input sends. Needs core.equipmentGroup:update where it sits; an archived equipment group is refused with core.archived.",
+        "operationId": "coreUpdateEquipmentGroup",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/plant"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "code": {
+                    "description": "The code, unique among the rows the scope sees, at most 32 characters.",
+                    "maxLength": 32,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "color": {
+                    "description": "The group's palette color. A create without one takes the first palette color that no group the request sees uses; an update without one keeps it.",
+                    "enum": [
+                      "palette-1",
+                      "palette-2",
+                      "palette-3",
+                      "palette-4",
+                      "palette-5",
+                      "palette-6",
+                      "palette-7",
+                      "palette-8",
+                      "palette-9",
+                      "palette-10",
+                      "palette-11",
+                      "palette-12",
+                      "palette-13",
+                      "palette-14",
+                      "palette-15",
+                      "palette-16",
+                      "palette-17",
+                      "palette-18",
+                      "palette-19",
+                      "palette-20"
+                    ],
+                    "type": "string"
+                  },
+                  "expectedVersion": {
+                    "description": "The version of the entity that the change was made on; the command is refused when the entity has changed since.",
+                    "maximum": 2147483647,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "id": {
+                    "description": "The id of the entity the command changes.",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+                    "type": "string"
+                  },
+                  "name": {
+                    "description": "The name, at most 200 characters.",
+                    "maxLength": 200,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "translations": {
+                    "description": "The translations of the name. An update that leaves them out keeps them.",
+                    "items": {
+                      "properties": {
+                        "field": {
+                          "pattern": "^[a-z][a-zA-Z0-9]*$",
+                          "type": "string"
+                        },
+                        "locale": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "maxLength": 200,
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "field",
+                        "locale",
+                        "text"
+                      ],
+                      "type": "object"
+                    },
+                    "maxItems": 50,
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "code",
+                  "name",
+                  "id",
+                  "expectedVersion"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoreEquipmentGroup"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/NotSignedIn"
+          },
+          "403": {
+            "$ref": "#/components/responses/NotPermitted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "412": {
+            "$ref": "#/components/responses/PreconditionFailed"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "core.equipmentGroup:update"
+            ]
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
     "/api/v1/core/commands/upsert-article": {
       "post": {
         "description": "Creates or changes the article with this article number in the company, for an ERP that pushes its articles. Needs core.article:create, and core.article:update or core.article:assign for the changes it makes to an existing article.",
@@ -1948,6 +2538,194 @@
           {
             "bearer": [
               "core.article:create"
+            ]
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/v1/core/equipment-groups": {
+      "get": {
+        "operationId": "coreEquipmentGroups",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "first",
+            "required": false,
+            "schema": {
+              "maximum": 100,
+              "minimum": 1,
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "explode": false,
+            "in": "query",
+            "name": "orderBy",
+            "required": false,
+            "schema": {
+              "items": {
+                "enum": [
+                  "code",
+                  "name",
+                  "updatedAt",
+                  "-code",
+                  "-name",
+                  "-updatedAt"
+                ],
+                "type": "string"
+              },
+              "maxItems": 3,
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "maxLength": 100,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "includeArchived",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/plant"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "nodes": {
+                      "items": {
+                        "$ref": "#/components/schemas/CoreEquipmentGroup"
+                      },
+                      "type": "array"
+                    },
+                    "pageInfo": {
+                      "properties": {
+                        "endCursor": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "hasNextPage": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "hasNextPage",
+                        "endCursor"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "nodes",
+                    "pageInfo"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/NotSignedIn"
+          },
+          "403": {
+            "$ref": "#/components/responses/NotPermitted"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "core.equipmentGroup:read"
+            ]
+          }
+        ],
+        "tags": [
+          "core"
+        ]
+      }
+    },
+    "/api/v1/core/equipment-groups/{id}": {
+      "get": {
+        "operationId": "coreEquipmentGroup",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/plant"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoreEquipmentGroup"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/NotSignedIn"
+          },
+          "403": {
+            "$ref": "#/components/responses/NotPermitted"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          }
+        },
+        "security": [
+          {
+            "bearer": [
+              "core.equipmentGroup:read"
             ]
           }
         ],

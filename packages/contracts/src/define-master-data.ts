@@ -173,7 +173,7 @@ export function defineMasterData<
   });
   const update = defineCommandContract({
     name: `${module}.update${entity}`,
-    description: `Changes the code, name, translations and own fields of ${a}. Needs ${permission}:update where it sits; an archived ${label} is refused with core.archived.`,
+    description: `Changes ${a}: its code, its name and the other fields the input sends. Needs ${permission}:update where it sits; an archived ${label} is refused with core.archived.`,
     target: 'existing',
     fields,
     permission: `${permission}:update`,

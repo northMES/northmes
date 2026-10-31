@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { MasterDataAccess } from '@northmes/sdk/master-data';
-import type { CoreContext } from '../commands/context.ts';
 import { requestCompany } from '../commands/company-scope.ts';
+import type { CoreContext } from '../commands/context.ts';
 import { type RequestScope, readAsRequest, readIn, requestScope } from './request-scope.ts';
 
 /**

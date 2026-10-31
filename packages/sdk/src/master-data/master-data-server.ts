@@ -135,25 +135,27 @@ export function masterDataServer<
 
   /** The rows of the table as the service hands them out, which row-level security limits. */
   function select(tx: Transaction<RegisterDb>) {
-    return tx.selectFrom(table).select([
-      'id',
-      'code',
-      'name',
-      'translations',
-      'version',
-      'archived_at as archivedAt',
-      'updated_at as updatedAt',
-      ...(atCompany
-        ? [
-            sql<MasterDataScope>`case when scope_id = company_id then 'company' else 'plant' end`.as(
-              'scope',
-            ),
-          ]
-        : []),
-      ...Object.entries<string>(options.columns).map(([field, column]) =>
-        sql.ref(column).as(field),
-      ),
-    ]) as unknown as SelectQueryBuilder<RegisterDb, string, Record & { readonly id: string }>;
+    return tx
+      .selectFrom(table)
+      .select([
+        'id',
+        'code',
+        'name',
+        'translations',
+        'version',
+        'archived_at as archivedAt',
+        'updated_at as updatedAt',
+        ...(atCompany
+          ? [
+              sql<MasterDataScope>`case when scope_id = company_id then 'company' else 'plant' end`.as(
+                'scope',
+              ),
+            ]
+          : []),
+        ...Object.entries<string>(options.columns).map(([field, column]) =>
+          sql.ref(column).as(field),
+        ),
+      ]) as unknown as SelectQueryBuilder<RegisterDb, string, Record & { readonly id: string }>;
   }
 
   /** The rows that `scope` reads: the plant's and the company's, or in settings the company's. */
