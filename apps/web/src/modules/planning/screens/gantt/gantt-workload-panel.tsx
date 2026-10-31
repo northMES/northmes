@@ -572,6 +572,8 @@ export function GanttWorkloadPanel({
         ref={scrollerRef}
         data-workload-lanes
         className="min-h-0 overflow-auto"
+        // One finger scrolls; a pinch zooms the timeline, not the page (ADR 0090).
+        style={{ touchAction: 'pan-x pan-y' }}
         onScroll={(event) => onScroll?.(event.currentTarget.scrollLeft)}
       >
         {machines.map((machine) => (

@@ -23,6 +23,14 @@ describe('jobOrdersSearch (ADR 0089, Zoom levels)', () => {
     expect(jobOrdersSearch({ from: '2026-11-03T13:20' })).toEqual({ from: '2026-11-03' });
   });
 
+  it('#941 opens the zoom of a link from the board or the Gantt at the preset of its band (ADR 0090)', () => {
+    expect(jobOrdersSearch({ zoom: 37.5 })).toEqual({ zoom: 'day' });
+    expect(jobOrdersSearch({ zoom: '37.5' })).toEqual({ zoom: 'day' });
+    expect(jobOrdersSearch({ zoom: 200 })).toEqual({ zoom: 'hours' });
+    expect(jobOrdersSearch({ zoom: 0.5 })).toEqual({ zoom: '4weeks' });
+    expect(jobOrdersSearch({ zoom: 16 })).toEqual({ zoom: 'week' });
+  });
+
   it('drops an unknown zoom', () => {
     expect(jobOrdersSearch({ zoom: 'decade' })).toEqual({});
   });
