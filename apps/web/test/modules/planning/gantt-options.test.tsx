@@ -21,6 +21,7 @@ describe('useGanttOptions', () => {
       workload: false,
       cascade: true,
       treePaneShare: 0.4,
+      columnWidths: {},
     });
   });
 

@@ -160,7 +160,10 @@ export function GanttRowView({
                 column.numeric && 'justify-end tabular-nums',
               )}
             >
-              {column.cell(original, { timeZone, zoneLabel, machineName })}
+              {/* A value cut short by a narrow column ends in an ellipsis. */}
+              <span className="min-w-0 truncate">
+                {column.cell(original, { timeZone, zoneLabel, machineName })}
+              </span>
             </div>
           ),
         )}

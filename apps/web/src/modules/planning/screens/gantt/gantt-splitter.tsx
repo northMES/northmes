@@ -111,14 +111,14 @@ export function GanttSplitter({
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerLost}
         onLostPointerCapture={onPointerLost}
-        // Centred on the pane's end edge, inside the grid's 1 px border, above the grid's sticky
-        // header; 24 px wide (WCAG 2.5.8) and as high as the header row, so it covers the last
-        // 12 px of the tree header there and the first 12 px of the time header.
-        className="peer absolute top-px z-30 flex w-(--nm-target-min) -translate-x-1/2 cursor-col-resize touch-none items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        // From 4 px before the pane's end edge, inside the grid's 1 px border, above the grid's
+        // sticky header; 24 px wide (WCAG 2.5.8) and as high as the header row, mostly over the
+        // time header, so the last tree column keeps most of its own resize handle.
+        className="peer absolute top-px z-30 flex w-(--nm-target-min) -translate-x-1 cursor-col-resize touch-none items-center justify-start outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         style={{ left, height: `${gripHeightRem}rem` }}
       >
         {/* The grip, which shows where the splitter is at rest. */}
-        <span aria-hidden className="h-6 w-1 rounded-full bg-muted-foreground/60" />
+        <span aria-hidden className="ms-0.75 h-6 w-1 rounded-full bg-muted-foreground/60" />
       </div>
       {/* The pane's edge as a line down the grid while the grip is hovered, focused or dragged. */}
       <span
