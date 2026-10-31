@@ -56,8 +56,17 @@ test.describe('the slim bar above the timeline', () => {
     await view.focus();
     await page.keyboard.press('Enter');
     const menu = page.getByRole('menu');
-    await expect(menu.getByRole('menuitemcheckbox', { name: 'Hide closed time' })).toBeVisible();
+    const hide = menu.getByRole('menuitemcheckbox', { name: 'Hide closed time' });
+    await expect(hide).toBeVisible();
     await checkA11y('the Gantt View menu');
+    // The arrow keys reach Hide closed time and Space turns it.
+    for (let step = 0; step < 6; step += 1) {
+      if (await hide.evaluate((element) => element === document.activeElement)) break;
+      await page.keyboard.press('ArrowDown');
+    }
+    await expect(hide).toBeFocused();
+    await page.keyboard.press('Space');
+    await expect(hide).toHaveAttribute('aria-checked', 'false');
     await page.keyboard.press('Escape');
     await expect(menu).toHaveCount(0);
     await expect(view).toBeFocused();
@@ -111,11 +120,23 @@ test.describe('the slim bar above the timeline', () => {
     await expect(page).toHaveURL(/zoom=32\b/);
     await expect(zoomIn).toBeFocused();
 
-    // The last order row's block, scrolled into view by focus, ends clear of the buttons.
+    // A block put under the buttons' corner, then focused, is scrolled out from under them.
+    const target = gantt.locator('[data-block="jo-1004-20"]');
+    await target.scrollIntoViewIfNeeded();
     const overlay = await boxOf(zoom);
-    const block = gantt.locator('[data-block]').last();
-    await block.focus();
-    const blockBox = await boxOf(block);
+    const before = await boxOf(target);
+    await gantt.evaluate(
+      (element, shift) => {
+        element.scrollLeft -= shift.x;
+        element.scrollTop -= shift.y;
+      },
+      {
+        x: overlay.x + overlay.width / 2 - before.x,
+        y: overlay.y + overlay.height / 2 - (before.y + before.height / 2),
+      },
+    );
+    await target.focus();
+    const blockBox = await boxOf(target);
     const covered =
       blockBox.x < overlay.x + overlay.width &&
       blockBox.x + blockBox.width > overlay.x &&
@@ -154,6 +175,7 @@ test.describe('the slim bar above the timeline', () => {
 
     await expectGridUnderTitle(page, board, bar);
     await expect(bar.getByRole('button', { name: 'View' })).toHaveCount(0);
+    await expect(bar.getByRole('button', { name: /^My draft/ })).toHaveCount(0);
     await checkA11y('the board with the slim bar');
 
     const block = board.locator('[data-job-order="1001.10"]');
@@ -167,5 +189,25 @@ test.describe('the slim bar above the timeline', () => {
       .toMatch(/^2026-11-0[4-9]T/);
     const focusedRow = page.locator(':focus').locator('xpath=ancestor::*[@role="row"][1]');
     await expect(focusedRow).toHaveAttribute('aria-rowindex', rowName ?? '');
+  });
+
+  test("#939 My draft shows in the board's bar with a change, and passes axe", async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
+    await signIn(href('board', { from: '2026-11-02' }));
+    const board = page.getByRole('grid', { name: /board/ });
+    await expect(board).not.toHaveAttribute('aria-busy', 'true');
+    await board.locator('[role="gridcell"][data-job-order="1001.10"]').focus();
+    await page.keyboard.press('m');
+    await page.keyboard.press('ArrowRight');
+    await expect(board.locator('[data-move-preview="jo-1001-10"]')).toHaveCount(1);
+    await page.keyboard.press('Enter');
+
+    await expect(
+      page.getByRole('toolbar', { name: 'Board' }).getByRole('button', { name: /^My draft, / }),
+    ).toBeVisible();
+    await checkA11y('the board with My draft in the bar');
   });
 });

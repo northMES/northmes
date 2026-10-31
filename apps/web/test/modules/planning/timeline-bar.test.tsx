@@ -3,7 +3,8 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { findGantt, measureGridsAt, renderGanttRoute } from './gantt-fixtures.tsx';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { findGantt, measureGridsAt, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 // The slim bar above the timeline and the zoom buttons over the time area (ADR 0090, The bar above
 // the timeline; #939), on the order Gantt and the planning board.
@@ -34,7 +35,7 @@ function expectNoRangeControls() {
 }
 
 describe('the slim bar above the order Gantt (ADR 0090)', () => {
-  it('#939 holds Go to now and one View menu on the title row, and no range controls; My draft shows only with changes', async () => {
+  it('#939 holds Go to now and one View menu on the title row, and no range controls or My draft without changes', async () => {
     renderGanttRoute({ from: '2026-11-02' });
     await findGantt();
     const bar = screen.getByRole('toolbar', { name: 'Gantt' });
@@ -69,7 +70,13 @@ describe('the slim bar above the order Gantt (ADR 0090)', () => {
     ).toEqual(['Narrow tree pane', 'Medium tree pane', 'Wide tree pane']);
     const hide = within(menu).getByRole('menuitemcheckbox', { name: 'Hide closed time' });
     expect(hide.getAttribute('aria-checked')).toBe('true');
-    await userEvent.click(hide);
+    // The arrow keys reach the item, and Space turns it.
+    await waitFor(() => expect(menu.contains(document.activeElement)).toBe(true));
+    for (let step = 0; step < 6 && document.activeElement !== hide; step += 1) {
+      await userEvent.keyboard('{ArrowDown}');
+    }
+    expect(document.activeElement).toBe(hide);
+    await userEvent.keyboard(' ');
     await waitFor(() => expect(hide.getAttribute('aria-checked')).toBe('false'));
     await userEvent.keyboard('{Escape}');
     await waitFor(() => expect(document.activeElement).toBe(view));
@@ -83,9 +90,10 @@ describe('the slim bar above the order Gantt (ADR 0090)', () => {
     expect(gantt.contains(zoom)).toBe(false);
     expect(gantt.compareDocumentPosition(zoom) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole('toolbar', { name: 'Gantt' }).contains(zoom)).toBe(false);
-    // The time scroller keeps a focused block clear of the buttons (WCAG 2.4.11).
-    expect(gantt.style.scrollPaddingBottom).not.toBe('');
-    expect(gantt.style.scrollPaddingInlineEnd).not.toBe('');
+    // WCAG 2.4.11: the time scroller reserves the buttons' size, from the target size token, so a
+    // focused block scrolled into view is never under them.
+    expect(gantt.style.scrollPaddingBottom).toContain('var(--nm-target-min)');
+    expect(gantt.style.scrollPaddingInlineEnd).toContain('var(--nm-target-min)');
 
     const zoomIn = within(zoom).getByRole('button', { name: 'Zoom in' });
     await userEvent.click(zoomIn);
@@ -122,6 +130,55 @@ describe('the slim bar above the order Gantt (ADR 0090)', () => {
     await waitFor(() => expect(router.state.location.search.from).toBe('2026-11-02T06:00'));
   });
 
+  it("#939 Alt+Page Down moves focus to the row's block when it starts in the new view", async () => {
+    // With closed time shown, the view is 840 px at 48 px an hour, 17.5 h: from Mon 2 Nov 12:00 the
+    // next view runs from Tue 3 Nov 05:30, and 1001.10 starts in it at 11:30.
+    window.localStorage.setItem(
+      'northmes.planning.gantt.options',
+      JSON.stringify({ hideClosed: false }),
+    );
+    renderGanttRoute({ zoom: 'day', from: '2026-11-02T12:00' });
+    const gantt = await findGantt();
+    const row = gantt.querySelector<HTMLElement>('[data-row-id="jo-1001-10"]') as HTMLElement;
+    row.focus();
+
+    fireEvent.keyDown(row, { key: 'PageDown', altKey: true });
+
+    await waitFor(() =>
+      expect(document.activeElement?.getAttribute('data-block')).toBe('jo-1001-10'),
+    );
+  });
+
+  it('#939 Alt+Page Down from the header row moves in time and keeps focus there; with Ctrl or in move mode it does nothing', async () => {
+    const router = renderGanttRoute({ from: '2026-11-02T00:00' });
+    const gantt = await findGantt();
+    const sort = within(gantt)
+      .getAllByRole('columnheader')[0]
+      ?.querySelector('button') as HTMLElement;
+    // Focus in the tree pane keeps the grid where its last scroll left it (#943); the test browser
+    // sends no scroll event of its own.
+    fireEvent.scroll(gantt);
+    sort.focus();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    fireEvent.keyDown(sort, { key: 'PageDown', altKey: true, ctrlKey: true });
+    fireEvent.keyDown(sort, { key: 'PageDown', altKey: true });
+
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-11-0[4-9]T/));
+    expect(document.activeElement).toBe(sort);
+    const paged = router.state.location.search.from;
+
+    // In keyboard move mode the keys belong to the move.
+    const block = gantt.querySelector<HTMLElement>('[data-block]') as HTMLElement;
+    block.focus();
+    fireEvent.keyDown(block, { key: 'm' });
+    await waitFor(() => expect(block.getAttribute('data-move-mode')).toBe('true'));
+    fireEvent.keyDown(block, { key: 'PageDown', altKey: true });
+    fireEvent.keyDown(block, { key: 'Escape' });
+    await waitFor(() => expect(block.getAttribute('data-move-mode')).toBeNull());
+    expect(router.state.location.search.from).toBe(paged);
+  });
+
   it('#939 Alt+Page Down on a block moves focus to the row when the block leaves the view', async () => {
     renderGanttRoute({ from: '2026-11-02T00:00' });
     const gantt = await findGantt();
@@ -133,6 +190,30 @@ describe('the slim bar above the order Gantt (ADR 0090)', () => {
     await waitFor(() =>
       expect(document.activeElement?.getAttribute('data-row-id')).toBe('jo-1001-10'),
     );
+  });
+
+  it('#939 a Ctrl+wheel over the zoom buttons zooms the timeline, not the page', async () => {
+    const router = renderGanttRoute({ from: '2026-11-02' });
+    await findGantt();
+    const zoom = screen.getByRole('group', { name: 'Zoom' });
+    const event = new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true });
+    Object.defineProperties(event, {
+      ctrlKey: { value: true },
+      clientX: { value: 1300 },
+      deltaMode: { value: 0 },
+    });
+
+    zoom.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    await waitFor(() => expect(router.state.location.search.zoom).toBe(19.5));
+  });
+
+  it('#939 with no rows to draw the title row says nothing of chunks', async () => {
+    renderGanttRoute({ from: '2026-11-09' }, sourceOf({ ...g1Snapshot(), productionOrders: [] }));
+    await screen.findByText('No open orders');
+
+    expect(document.querySelector('[data-chunk-status]')).toBeNull();
   });
 
   it('#939 My draft goes when the drawer closes with no changes left, and focus moves to the bar', async () => {
@@ -175,6 +256,30 @@ describe('the slim bar above the planning board (ADR 0090)', () => {
     expect(board.contains(zoom)).toBe(false);
     expect(board.compareDocumentPosition(zoom) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(board.style.scrollPaddingBottom).not.toBe('');
+  });
+
+  it('#939 My draft on the board goes when the drawer closes with no changes left, and focus moves to Go to now', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    (board.querySelector('[role="gridcell"][data-job-order="1001.10"]') as HTMLElement).focus();
+    await user.keyboard('m{ArrowRight}');
+    await waitFor(() =>
+      expect(board.querySelector('[data-move-preview="jo-1001-10"]')).not.toBeNull(),
+    );
+    await user.keyboard('{Enter}');
+    await user.click(await screen.findByRole('button', { name: /^My draft, / }));
+    const drawer = await screen.findByRole('dialog', { name: /My draft/ });
+
+    await user.click(within(drawer).getByRole('button', { name: 'Discard draft' }));
+    await user.click(await screen.findByRole('button', { name: /^Discard \d+ changes?$/ }));
+    await waitFor(() => expect(within(drawer).getByText('No changes in your draft')).toBeTruthy());
+    await user.keyboard('{Escape}');
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Go to now' })),
+    );
+    expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
   });
 
   it('#939 Alt+Page Down on a job order scrolls one viewport width later and moves focus to the row', async () => {

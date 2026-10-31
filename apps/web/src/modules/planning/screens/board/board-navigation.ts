@@ -145,8 +145,9 @@ export function boardFocusAfter(
 
 /**
  * Where focus goes after Alt+Page Up or Alt+Page Down moved the view in time (ADR 0090): the first
- * job order of the focused target's line in the new view, else the line's row header, so focus
- * never stays on a job order that culling unmounts.
+ * job order of the focused target's line that starts in the new view, else the line's row header,
+ * so focus never stays on a job order that culling unmounts. A Not placed job order and a line's
+ * empty cell keep focus, since a move in time never unmounts them.
  */
 export function boardFocusInView(
   lines: readonly BoardLine[],
@@ -155,14 +156,13 @@ export function boardFocusInView(
 ): string | undefined {
   const at = locate(lines, current);
   const line = at === undefined ? undefined : lines[at.line];
-  if (line === undefined) return undefined;
+  if (at === undefined || line === undefined) return undefined;
+  if (line.kind === 'notPlaced') return current;
+  if (at.cell >= 0 && line.cells[at.cell]?.fromMs === undefined) return current;
   const inView = line.cells.find(
-    (cell) =>
-      cell.fromMs !== undefined &&
-      cell.fromMs < view.toMs &&
-      (cell.toMs ?? cell.fromMs) > view.fromMs,
+    (cell) => cell.fromMs !== undefined && cell.fromMs >= view.fromMs && cell.fromMs < view.toMs,
   );
-  return inView?.key ?? line.header ?? line.cells[0]?.key;
+  return inView?.key ?? line.header ?? current;
 }
 
 /**

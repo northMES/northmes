@@ -66,7 +66,7 @@ export interface TimelineZoom {
   readonly goTo: (ms: number) => void;
   /**
    * Ends a running zoom without a frame more, before something else moves the buffer, such as
-   * Earlier, Later or Go to date.
+   * Alt+Page Up and Alt+Page Down.
    */
   readonly stop: () => void;
 }

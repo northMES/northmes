@@ -311,7 +311,8 @@ export function PageFrame({
               {meta}
             </div>
           )}
-          {toolbarBesideTitle && <div className="min-w-0 flex-1">{toolbar}</div>}
+          {/* It takes the rest of the row, and moves under the title when its controls do not fit. */}
+          {toolbarBesideTitle && <div className="flex-auto">{toolbar}</div>}
         </div>
         {actions !== undefined && topBar === null && (
           <div className="flex flex-wrap gap-2">{actions}</div>

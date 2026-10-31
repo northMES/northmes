@@ -11,7 +11,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
 } from 'react';
 import { flushSync } from 'react-dom';
 import type { ZoomLevel } from '../gantt-data.ts';
@@ -67,11 +66,6 @@ function createVisibleStore(): VisibleStore & { readonly set: (span: TimeRange) 
       };
     },
   };
-}
-
-/** The span in view, read live, so a scroll redraws only the component that reads it. */
-export function useVisibleSpan(store: VisibleStore): TimeRange | undefined {
-  return useSyncExternalStore(store.subscribe, store.get, store.get);
 }
 
 export interface TimeBufferInput {
@@ -401,7 +395,8 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
    * drawn axis before or after the view's start, wherever in the buffer the view is.
    */
   const page = (direction: 'earlier' | 'later'): TimeRange | undefined => {
-    if (scale === undefined || current === undefined) return undefined;
+    // A pointer drag reads its moves in this buffer's pixels, so the view stays until it ends.
+    if (scale === undefined || current === undefined || frozen?.get() === true) return undefined;
     const startMs = Math.round(scale.instant(viewStartX()));
     const ms = instantAtDistance(
       startMs,

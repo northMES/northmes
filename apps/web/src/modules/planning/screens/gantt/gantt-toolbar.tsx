@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Pencil, SlidersHorizontal } from 'lucide-react';
 import type { Ref } from 'react';
+import { ColumnsMenuGroup } from '../../../../ui/components/columns-menu/index.ts';
 import { IconButton } from '../../../../ui/components/icon-button/index.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import {
@@ -55,7 +56,6 @@ export function GanttToolbar({
   draftCount,
   onOpenDraft,
 }: GanttToolbarProps) {
-  const hidden = new Set(options.hiddenColumns);
   return (
     <div role="toolbar" aria-label="Gantt" className="flex flex-wrap items-center gap-2">
       <Button ref={goToNowRef} variant="outline" className="h-8 px-3" onClick={onGoToNow}>
@@ -78,7 +78,7 @@ export function GanttToolbar({
         />
         <DropdownMenuContent align="end" className="min-w-56">
           <DropdownMenuGroup>
-            <DropdownMenuLabel>Show</DropdownMenuLabel>
+            <DropdownMenuLabel>Options</DropdownMenuLabel>
             <DropdownMenuCheckboxItem
               checked={options.hideClosed}
               closeOnClick={false}
@@ -102,32 +102,12 @@ export function GanttToolbar({
             </DropdownMenuCheckboxItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuGroup aria-label="Columns">
-            <DropdownMenuLabel>Columns</DropdownMenuLabel>
-            {ganttColumnChoices.map((column) => (
-              <DropdownMenuCheckboxItem
-                key={column.id}
-                checked={column.alwaysShown === true || !hidden.has(column.id)}
-                disabled={column.alwaysShown === true}
-                closeOnClick={false}
-                onCheckedChange={(shown: boolean) =>
-                  onOptionsChange({
-                    hiddenColumns: ganttColumnChoices
-                      .map(({ id }) => id)
-                      .filter((id) => (id === column.id ? !shown : hidden.has(id))),
-                  })
-                }
-              >
-                <span>{column.label}</span>
-                {column.alwaysShown === true && (
-                  <>
-                    {' '}
-                    <span className="ml-auto pl-4 text-xs text-muted-foreground">Always shown</span>
-                  </>
-                )}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuGroup>
+          <ColumnsMenuGroup
+            label="Columns"
+            columns={ganttColumnChoices}
+            hidden={options.hiddenColumns}
+            onChange={(hiddenColumns) => onOptionsChange({ hiddenColumns })}
+          />
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuLabel>Tree pane width</DropdownMenuLabel>

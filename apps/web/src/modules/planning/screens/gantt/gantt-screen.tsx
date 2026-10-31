@@ -352,10 +352,12 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   // corrects the grid's position in a layout effect before this one runs; a gesture over them
   // zooms the timeline (ADR 0090).
   const workloadLanes = useRef<HTMLDivElement | null>(null);
+  // The zoom buttons over the time area: a gesture over them zooms the timeline too.
+  const zoomOverlay = useRef<HTMLFieldSetElement | null>(null);
   const timelineZoom = useTimelineZoom({
     buffer,
     grid: gridElement,
-    panels: [workloadLanes],
+    panels: [workloadLanes, zoomOverlay],
     plant: zoomPlant,
     dragging: () => moveStore.get()?.state.source === 'pointer',
   });
@@ -713,22 +715,37 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     if (target !== undefined) focusRow(target.id);
   };
   /**
-   * One viewport width earlier or later. Focus stays on a focused block that is still in view,
-   * else it moves to the row, so it never stays on a block that culling unmounts.
+   * Alt+Page Up and Alt+Page Down from anywhere in the grid: one viewport width earlier or later
+   * (ADR 0090). From a row, focus moves to the row's block when it starts in the new view, once it
+   * is drawn, else to the row, the row's first cell, so it never stays on a block that culling
+   * unmounts. A header keeps focus, as the move never unmounts it.
    */
-  const pageInTime = (direction: 'earlier' | 'later', row: GanttTableRow, onRow: boolean) => {
+  const pageInTime = (direction: 'earlier' | 'later', target: HTMLElement) => {
     timelineZoom.stop();
     const span = buffer.page(direction);
+    const rowId = target.closest<HTMLElement>('[data-row-id]')?.dataset.rowId;
+    const row = rowId === undefined ? undefined : flatRows.find((each) => each.id === rowId);
+    if (span === undefined || row === undefined) return;
     const placement =
       row.original.kind === 'jobOrder' ? row.original.jobOrder.placement : undefined;
-    const blockInView =
-      !onRow &&
-      span !== undefined &&
+    const startsInView =
       placement !== undefined &&
-      placement.setupStartMs < span.toMs &&
-      placement.endMs > span.fromMs;
-    if (!blockInView) focusRow(row.id);
+      placement.setupStartMs >= span.fromMs &&
+      placement.setupStartMs < span.toMs;
+    focusRow(row.id);
+    if (startsInView)
+      setPendingBlock(row.original.kind === 'jobOrder' ? row.original.jobOrder.id : undefined);
   };
+  // The block that takes focus once a move in time has drawn it.
+  const [pendingBlock, setPendingBlock] = useState<string | undefined>(undefined);
+  // It waits for the render that draws it, as when its chunk loads after the move.
+  useEffect(() => {
+    if (pendingBlock === undefined) return;
+    const block = document.querySelector<HTMLElement>(`[data-block="${CSS.escape(pendingBlock)}"]`);
+    if (block === null) return;
+    block.focus({ preventScroll: true });
+    setPendingBlock(undefined);
+  });
   const openDetails = (row: GanttTableRow) => {
     selectUnlessSelected(row.original.order.id);
     setDetailRowId(row.id);
@@ -771,14 +788,9 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   ) => {
     const onRow = event.target === event.currentTarget;
     const cell = event.currentTarget.querySelector<HTMLElement>('[data-cell-focus]');
-    // Alt+Page Up and Alt+Page Down move in time, one viewport width (ADR 0090), and the row keys
-    // Page Up and Page Down ignore a press with Alt.
-    if (event.altKey && (event.key === 'PageDown' || event.key === 'PageUp')) {
-      event.preventDefault();
-      event.stopPropagation();
-      pageInTime(event.key === 'PageDown' ? 'later' : 'earlier', row, onRow);
-      return;
-    }
+    // The row keys Page Up and Page Down ignore a press with Alt, which moves in time instead and
+    // which the grid takes (ADR 0090).
+    if (event.altKey && (event.key === 'PageDown' || event.key === 'PageUp')) return;
     let handled = true;
     switch (event.key) {
       case 'ArrowDown':
@@ -871,32 +883,38 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       ? focusedRowId
       : flatRows[0]?.id;
 
+  const notes =
+    snapshot?.fixture !== undefined || limited ? (
+      <p className="text-xs text-muted-foreground" data-testid="gantt-status">
+        {[
+          snapshot?.fixture !== undefined ? `Showing fixture ${snapshot.fixture}.` : undefined,
+          limited ? 'Links shown for the selected order.' : undefined,
+        ]
+          .filter((part) => part !== undefined)
+          .join(' ')}
+      </p>
+    ) : undefined;
+
   return (
     <PageFrame
       title="Gantt"
       state={state}
       // One status line on the title row: the fixture and link notes while they have text, and
-      // the chunks, so the grid starts right under the bar (ADR 0090).
+      // the chunks while the time area is drawn, so the grid starts right under the bar (ADR 0090).
       meta={
-        <ChunkStatus
-          chunks={unloaded}
-          timeZone={timeZone}
-          onRetry={chunks.retry}
-          leading={
-            snapshot?.fixture !== undefined || limited ? (
-              <p className="text-xs text-muted-foreground" data-testid="gantt-status">
-                {[
-                  snapshot?.fixture !== undefined
-                    ? `Showing fixture ${snapshot.fixture}.`
-                    : undefined,
-                  limited ? 'Links shown for the selected order.' : undefined,
-                ]
-                  .filter((part) => part !== undefined)
-                  .join(' ')}
-              </p>
-            ) : undefined
-          }
-        />
+        state.status === 'ready' &&
+        view !== undefined &&
+        snapshot !== undefined &&
+        scale !== undefined ? (
+          <ChunkStatus
+            chunks={unloaded}
+            timeZone={timeZone}
+            onRetry={chunks.retry}
+            leading={notes}
+          />
+        ) : (
+          notes
+        )
       }
       toolbarBesideTitle
       toolbar={
@@ -937,6 +955,24 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                   undefined
                 }
                 onKeyDown={(event) => {
+                  // Alt+Page Up and Alt+Page Down move in time, from a row or a header; a move in
+                  // progress keeps the view, since the keys and the view belong to it.
+                  if (
+                    event.altKey &&
+                    !event.ctrlKey &&
+                    !event.metaKey &&
+                    (event.key === 'PageDown' || event.key === 'PageUp')
+                  ) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (moveStore.get() === undefined) {
+                      pageInTime(
+                        event.key === 'PageDown' ? 'later' : 'earlier',
+                        event.target as HTMLElement,
+                      );
+                    }
+                    return;
+                  }
                   // Minus and plus zoom by a factor of 2 at the focused block (ADR 0090).
                   if (timelineZoom.onKeyDown(event)) {
                     event.preventDefault();
@@ -1088,7 +1124,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                   const target = fitTargetOf(detailRow ?? selectionRowOf(selected, rowById), rows);
                   timelineZoom.fit(target.span, target.name);
                 }}
-                className="absolute end-3 bottom-4 z-30"
+                ref={zoomOverlay}
               />
             </div>
             {options.workload && (

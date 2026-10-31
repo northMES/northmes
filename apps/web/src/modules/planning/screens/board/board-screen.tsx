@@ -48,7 +48,7 @@ import { plantTime } from '../../order-facts.ts';
 import { usePlanningDraft } from '../../planning-draft.tsx';
 import { PlanningForbidden } from '../../planning-preview.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
-import { plantDateOf, spanLabel, zoomLevels } from '../../timeline/time-scale.ts';
+import { plantDateOf, spanLabel, type TimeRange, zoomLevels } from '../../timeline/time-scale.ts';
 import { useTimeBuffer } from '../../timeline/use-time-buffer.ts';
 import { useTimeChunks } from '../../timeline/use-time-chunks.ts';
 import { useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
@@ -126,7 +126,8 @@ function linesOf(
 /**
  * The planning board (plan 07, Planning board in release 1; design D3): the machines of the plant
  * grouped by equipment group on a time axis in plant time, each machine's job orders as blocks in
- * the order color, the pinned Not placed row and the range controls the timeline pages share. The
+ * the order color, the pinned Not placed row, the slim bar and the zoom buttons over the time area
+ * (ADR 0090). The
  * board, the order Gantt and the job order table are pages of their own (Krister, 2026-10-17), so
  * the page has no view control. zoom and from live in the URL; collapsed groups stay local. The
  * page reads one data source and never knows which; phase 1 reads the fixture G1 and says so.
@@ -313,9 +314,12 @@ export function BoardScreen() {
   );
   const scale = buffer.scale;
   const timeWidth = Math.ceil(scale?.widthPx ?? 0);
+  // The zoom buttons over the time area: a gesture over them zooms the timeline too.
+  const zoomOverlay = useRef<HTMLFieldSetElement | null>(null);
   const timelineZoom = useTimelineZoom({
     buffer,
     grid: gridElement,
+    panels: [zoomOverlay],
     plant: zoomPlant,
     dragging: () => moveStore.get()?.state.source === 'pointer',
   });
@@ -448,8 +452,11 @@ export function BoardScreen() {
   // A job order that takes focus after a move but is not drawn yet: it may lie outside the range
   // or inside a cluster (plan 07: range extension follows the move, and focus returns by id).
   const [pendingFocus, setPendingFocus] = useState<string | undefined>(undefined);
-  // A focus target that a move in time draws on its next render (Alt+Page Up and Alt+Page Down).
-  const [pendingKey, setPendingKey] = useState<string | undefined>(undefined);
+  // Alt+Page Up or Alt+Page Down moved the view in time from a focus target: focus moves on once
+  // the new buffer's lines are drawn, which hold the job orders of the new view.
+  const [pendingPage, setPendingPage] = useState<
+    { readonly from: string; readonly view: TimeRange } | undefined
+  >(undefined);
   const { actions: moveActions, store: moveStore } = useMoveActions({
     committed,
     snapshot,
@@ -537,12 +544,16 @@ export function BoardScreen() {
   // A target takes focus and scrolls into view past the sticky axes, which the scroll padding keeps
   // clear (WCAG 2.4.11). A target in the sticky machine column or the pinned Not placed row is in
   // view along that axis already, so the grid keeps its position there.
-  /** Moves focus to a target of the grid; false when it is not drawn. */
-  function focusTarget(key: string): boolean {
+  /**
+   * Moves focus to a target of the grid; false when it is not drawn. A move in time has already put
+   * the view where it goes, so its target takes focus without scrolling.
+   */
+  function focusTarget(key: string, scroll = true): boolean {
     const element = document.querySelector<HTMLElement>(`[data-board-focus="${CSS.escape(key)}"]`);
     if (element === null) return false;
     setFocused(key);
     element.focus({ preventScroll: true });
+    if (!scroll) return true;
     const grid = element.closest<HTMLElement>('[role="grid"]');
     const kept = { left: grid?.scrollLeft ?? 0, top: grid?.scrollTop ?? 0 };
     element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -552,16 +563,10 @@ export function BoardScreen() {
     return true;
   }
   useEffect(() => {
-    if (pendingKey === undefined) return;
-    // Drawn now, or no longer a target of the grid.
-    if (
-      focusTarget(pendingKey) ||
-      !lines.some(
-        (line) => line.header === pendingKey || line.cells.some((cell) => cell.key === pendingKey),
-      )
-    ) {
-      setPendingKey(undefined);
-    }
+    if (pendingPage === undefined) return;
+    const next = boardFocusInView(lines, pendingPage.from, pendingPage.view);
+    // Drawn now, or nothing left to focus: the grid went, or the target with it.
+    if (next === undefined || focusTarget(next, false)) setPendingPage(undefined);
   });
   useEffect(() => {
     if (pendingFocus === undefined || snapshot === undefined) return;
@@ -614,8 +619,7 @@ export function BoardScreen() {
       event.preventDefault();
       timelineZoom.stop();
       const view = buffer.page(event.key === 'PageDown' ? 'later' : 'earlier');
-      const next = view === undefined ? undefined : boardFocusInView(lines, key, view);
-      if (next !== undefined && !focusTarget(next)) setPendingKey(next);
+      if (view !== undefined) setPendingPage({ from: key, view });
       return;
     }
     // A key with a modifier belongs to the browser and to the commands of later stories.
@@ -732,37 +736,41 @@ export function BoardScreen() {
     !noMachines &&
     loadError === undefined;
 
+  const erpNote =
+    snapshot?.erp === undefined || noMachines ? undefined : (
+      <span className="text-sm text-muted-foreground">
+        ERP data as of {plantTime(snapshot, snapshot.erp.importedAtMs)}
+      </span>
+    );
+  // The chunks' status shows with the drawn board, not on its empty or error states.
+  const chunksShown = gridShown && state.status === 'ready';
+  const fixtureNote =
+    snapshot?.fixture === undefined ? undefined : (
+      <p className="text-xs text-muted-foreground">Showing fixture {snapshot.fixture}.</p>
+    );
+
   return (
     <PageFrame
       title="Planning board"
       // The title row holds the ERP time and one status line, the fixture's note while there is
-      // one and the chunks, so the grid starts right under the bar (ADR 0090).
+      // one and the chunks while the board is drawn, so the grid starts right under the bar
+      // (ADR 0090).
       meta={
-        <>
-          {snapshot?.erp !== undefined && !noMachines && (
-            <span className="text-sm text-muted-foreground">
-              ERP data as of {plantTime(snapshot, snapshot.erp.importedAtMs)}
-            </span>
-          )}
-          {gridShown ? (
-            <ChunkStatus
-              chunks={unloaded}
-              timeZone={timeZone}
-              onRetry={chunks.retry}
-              leading={
-                snapshot?.fixture !== undefined && (
-                  <p className="text-xs text-muted-foreground">
-                    Showing fixture {snapshot.fixture}.
-                  </p>
-                )
-              }
-            />
-          ) : (
-            snapshot?.fixture !== undefined && (
-              <p className="text-xs text-muted-foreground">Showing fixture {snapshot.fixture}.</p>
-            )
-          )}
-        </>
+        erpNote === undefined && fixtureNote === undefined && !chunksShown ? undefined : (
+          <>
+            {erpNote}
+            {chunksShown ? (
+              <ChunkStatus
+                chunks={unloaded}
+                timeZone={timeZone}
+                onRetry={chunks.retry}
+                leading={fixtureNote}
+              />
+            ) : (
+              fixtureNote
+            )}
+          </>
+        )
       }
       state={state}
       toolbarBesideTitle
@@ -871,7 +879,7 @@ export function BoardScreen() {
                   const target = boardFitTargetOf(snapshot, search.order);
                   timelineZoom.fit(target.span, target.name);
                 }}
-                className="absolute end-3 bottom-4 z-50"
+                ref={zoomOverlay}
               />
             </div>
             <BlockMenu
