@@ -17,6 +17,7 @@ import {
   unloadedChunks,
 } from '../../components/chunk-status/index.ts';
 import { MoveDialog } from '../../components/move-dialog/index.ts';
+import { OrderFilterField } from '../../components/order-filter/index.ts';
 import { ZoomOverlay } from '../../components/range-controls/index.ts';
 import { type GanttPageRequest, ganttMaxOrders } from '../../gantt-data.ts';
 import {
@@ -38,8 +39,11 @@ import {
   type BoardSearch,
   boardSearch,
   defaultZoom,
+  droppedKeyMessage,
+  matchesOrderFilter,
   withFrom,
   withOrder,
+  withQuery,
   withZoom,
 } from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
@@ -59,6 +63,7 @@ import { type GanttViewContext, GanttViewProvider } from '../gantt/gantt-context
 import { GanttDetailDrawer } from '../gantt/gantt-detail-panel.tsx';
 import { changesText, GanttDraftDrawer } from '../gantt/gantt-draft-drawer.tsx';
 import { movedMessage, previewOf, refusalMessage, staysOverdue } from '../gantt/gantt-move.ts';
+import type { JobOrderRow } from '../gantt/gantt-rows.ts';
 import { timeHeaderHeightRem } from '../gantt/gantt-time-area.tsx';
 import { BlockMenu } from './board-block-menu.tsx';
 import { type BoardCellItem, cellsOf } from './board-cells.ts';
@@ -166,6 +171,20 @@ export function BoardScreen() {
     [source, loadOptions],
   );
   const rowList = useGanttRows({ load: loadRows, all: true, resetKey: search.preview ?? '' });
+  // The order filter decides what is drawn (ADR 0090): the machine rows stay, the job orders of
+  // the orders whose number matches show, and its own row list of the matching orders names the
+  // first match and says when nothing matches. The move rules keep every job order.
+  const query = search.q ?? '';
+  const loadMatching = useCallback(
+    (page: GanttPageRequest) => source.loadRows({ search: query }, page, loadOptions),
+    [source, query, loadOptions],
+  );
+  const matchList = useGanttRows({
+    load: loadMatching,
+    all: true,
+    resetKey: search.preview ?? '',
+    enabled: query !== '',
+  });
   const frame = rowList.frame;
   const loadError = rowList.status === 'failed' ? rowList.error : undefined;
   // The planner's draft, which the Gantt and the job order table share (plan 07, Drafts).
@@ -173,8 +192,8 @@ export function BoardScreen() {
   const [draftOpen, setDraftOpen] = useState(false);
   /** The element that opened the My draft drawer, which takes focus back when it closes. */
   const draftOpener = useRef<HTMLElement | undefined>(undefined);
-  // Where focus goes when the draft drawer closes with no changes left and My draft leaves the bar.
-  const goToNowButton = useRef<HTMLButtonElement>(null);
+  // The order filter's field, where focus goes when My draft leaves the bar or the filter clears.
+  const filterInput = useRef<HTMLInputElement | null>(null);
   // The block menu at its block, and the job order the Move dialog moves (design D3, IN7 and IN8).
   const [menu, setMenu] = useState<{ jobOrderId: string; anchor: HTMLElement } | undefined>(
     undefined,
@@ -307,11 +326,34 @@ export function BoardScreen() {
     () => (snapshot === undefined ? [] : draftConflicts(snapshot, draft)),
     [snapshot, draft],
   );
-  const model = useMemo(
+  const fullModel = useMemo(
     () =>
       snapshot === undefined || range === undefined ? undefined : boardModelOf(snapshot, range),
     [snapshot, range],
   );
+  // What the board draws: with a filter, only the job orders of the matching orders, by number at
+  // once, so a stale chunk never shows the others (ADR 0090).
+  const model = useMemo(() => {
+    if (fullModel === undefined || query === '') return fullModel;
+    const matching = (row: JobOrderRow) => matchesOrderFilter(row.order.number, query);
+    return {
+      groups: fullModel.groups.map((group) => ({
+        ...group,
+        machines: group.machines.map((machine) => ({
+          ...machine,
+          blocks: machine.blocks.filter(matching),
+        })),
+      })),
+      notPlaced: fullModel.notPlaced.filter(matching),
+    };
+  }, [fullModel, query]);
+  const noMatch =
+    query !== '' &&
+    model !== undefined &&
+    model.notPlaced.length === 0 &&
+    model.groups.every((group) => group.machines.every((machine) => machine.blocks.length === 0)) &&
+    matchList.status === 'ready' &&
+    matchList.next === 'done';
   const scale = buffer.scale;
   const timeWidth = Math.ceil(scale?.widthPx ?? 0);
   // The zoom buttons over the time area: a gesture over them zooms the timeline too.
@@ -322,6 +364,48 @@ export function BoardScreen() {
     panels: [zoomOverlay],
     plant: zoomPlant,
     dragging: () => moveStore.get()?.state.source === 'pointer',
+  });
+  const setQuery = (next: string) => void setSearch(withQuery(search, next));
+  const clearFilter = () => {
+    setQuery('');
+    filterInput.current?.focus();
+  };
+  // A q longer than 100 characters is dropped with the polite status message (ADR 0062, 0090).
+  const droppedQuery = rawSearch.q !== undefined && rawSearch.q !== '' && search.q === undefined;
+  useEffect(() => {
+    if (!droppedQuery) return;
+    void setSearch(search);
+    announce(droppedKeyMessage);
+  }, [droppedQuery, search, setSearch]);
+  // The time area scrolls to the span of the filter's first match that has one, only when that
+  // first match changes, not on every key (ADR 0090). A link that opens filtered keeps its start.
+  const firstMatchStart = (() => {
+    if (query === '' || snapshot === undefined) return undefined;
+    const byId = new Map(snapshot.productionOrders.map((order) => [order.id, order]));
+    for (const listed of matchList.orders) {
+      const order = byId.get(listed.id);
+      if (order === undefined || !matchesOrderFilter(order.number, query)) continue;
+      const starts = order.jobOrders.flatMap((row) =>
+        row.placement === undefined ? [] : [row.placement.setupStartMs],
+      );
+      if (starts.length > 0) return { id: order.id, ms: Math.min(...starts) };
+    }
+    return undefined;
+  })();
+  const scrolledToMatch = useRef<string | null | undefined>(
+    search.q === undefined ? undefined : null,
+  );
+  useEffect(() => {
+    if (query === '') {
+      scrolledToMatch.current = undefined;
+      return;
+    }
+    if (firstMatchStart === undefined || firstMatchStart.id === scrolledToMatch.current) return;
+    const linked = scrolledToMatch.current === null;
+    scrolledToMatch.current = firstMatchStart.id;
+    if (linked || moveStore.get() !== undefined) return;
+    timelineZoom.stop();
+    buffer.goTo(zoomNow, { ms: firstMatchStart.ms, viewportX: machineWidth });
   });
   const cells = useMemo(() => {
     const byMachine = new Map<string, readonly BoardCellItem[]>();
@@ -707,6 +791,19 @@ export function BoardScreen() {
     };
   } else if (snapshot === undefined) {
     state = { status: 'loading' };
+  } else if (noMatch) {
+    // The filter matches no order: the empty state names it, and Clear filter brings every order
+    // back (ADR 0090).
+    state = {
+      status: 'empty',
+      title: `No orders match ${query}`,
+      description: 'No open production order has this text in its number.',
+      action: (
+        <Button variant="outline" onClick={clearFilter}>
+          Clear filter
+        </Button>
+      ),
+    };
   } else if (noMachines) {
     state = {
       status: 'empty',
@@ -778,13 +875,13 @@ export function BoardScreen() {
         forbidden || noMachines ? undefined : (
           <div role="toolbar" aria-label="Board" className="flex flex-wrap items-center gap-2">
             <Button
-              ref={goToNowButton}
               variant="outline"
               className="h-8 px-3"
               onClick={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
             >
               Go to now
             </Button>
+            <OrderFilterField value={query} onChange={setQuery} inputRef={filterInput} />
             <span className="grow" />
             {gridShown && draftChangeCount(draft) > 0 && (
               <Button
@@ -970,11 +1067,9 @@ export function BoardScreen() {
                 }
               }}
               onDiscardDraft={() => setDraft(emptyDraft)}
-              // With no changes left, My draft has left the bar, so focus goes to the bar.
+              // With no changes left, My draft has left the bar, so focus goes to the order filter.
               finalFocus={() =>
-                draftChangeCount(draft) === 0
-                  ? goToNowButton.current
-                  : (draftOpener.current ?? null)
+                draftChangeCount(draft) === 0 ? filterInput.current : (draftOpener.current ?? null)
               }
             />
           </GanttViewProvider>

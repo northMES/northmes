@@ -16,6 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
+import { OrderFilterField } from '../../components/order-filter/index.ts';
 import { changesText } from './gantt-draft-drawer.tsx';
 import type { GanttOptions } from './gantt-options.ts';
 import { ganttColumnChoices } from './gantt-tree-pane.tsx';
@@ -33,8 +34,11 @@ const paneWidths = [
 export interface GanttToolbarProps {
   /** Go to now: the zoom kept, now at the centre of the view. */
   readonly onGoToNow: () => void;
-  /** Go to now's button, where focus goes when My draft leaves the bar. */
-  readonly goToNowRef?: Ref<HTMLButtonElement>;
+  /** The order filter, the URL's q, and its change after a pause in typing (ADR 0090). */
+  readonly filter: string;
+  readonly onFilterChange: (filter: string) => void;
+  /** The filter's field, where focus goes when My draft leaves the bar. */
+  readonly filterRef?: Ref<HTMLInputElement>;
   readonly options: GanttOptions;
   readonly onOptionsChange: (change: Partial<GanttOptions>) => void;
   /** The changes in the planner's draft; My draft shows only while there are some. */
@@ -43,14 +47,17 @@ export interface GanttToolbarProps {
 }
 
 /**
- * The slim bar above the order Gantt (ADR 0090, The bar above the timeline): Go to now, My draft
+ * The slim bar above the order Gantt (ADR 0090, The bar above the timeline): Go to now, the order
+ * filter, My draft
  * while the draft has changes, and one View menu at the right end with the columns, Hide closed
  * time, Workload, Cascade and the tree pane widths, which stay local. The zoom buttons sit over the
  * time area instead.
  */
 export function GanttToolbar({
   onGoToNow,
-  goToNowRef,
+  filter,
+  onFilterChange,
+  filterRef,
   options,
   onOptionsChange,
   draftCount,
@@ -58,9 +65,10 @@ export function GanttToolbar({
 }: GanttToolbarProps) {
   return (
     <div role="toolbar" aria-label="Gantt" className="flex flex-wrap items-center gap-2">
-      <Button ref={goToNowRef} variant="outline" className="h-8 px-3" onClick={onGoToNow}>
+      <Button variant="outline" className="h-8 px-3" onClick={onGoToNow}>
         Go to now
       </Button>
+      <OrderFilterField value={filter} onChange={onFilterChange} inputRef={filterRef} />
       <span className="grow" />
       {draftCount > 0 && (
         <Button variant="outline" className="h-8 px-3" onClick={onOpenDraft} data-draft-button>

@@ -10,6 +10,7 @@ import {
   startOfFrom,
   withChain,
   withOrder,
+  withQuery,
   withZoom,
 } from '../../../src/modules/planning/gantt-search.ts';
 import { politeRegionId } from '../../../src/ui/lib/announce.ts';
@@ -54,6 +55,20 @@ describe('ganttSearch (plan 18, URL state)', () => {
     for (const zoom of ['abc', 'decade', Number.NaN, '']) {
       expect(ganttSearch({ zoom }), String(zoom)).toEqual({});
     }
+  });
+
+  it('#940 reads q as the order filter of at most 100 characters, a number as its text, and drops a longer one', () => {
+    expect(ganttSearch({ q: '1003' })).toEqual({ q: '1003' });
+    expect(ganttSearch({ q: 1003 })).toEqual({ q: '1003' });
+    expect(boardSearch({ q: 'PO-10' })).toEqual({ q: 'PO-10' });
+    expect(ganttSearch({ q: 'x'.repeat(100) })).toEqual({ q: 'x'.repeat(100) });
+    expect(ganttSearch({ q: 'x'.repeat(101) })).toEqual({});
+    expect(ganttSearch({ q: '' })).toEqual({});
+  });
+
+  it('#940 writes the filter, and leaves an empty one out of the URL', () => {
+    expect(withQuery({ from: '2026-11-02' }, '1003')).toEqual({ from: '2026-11-02', q: '1003' });
+    expect(withQuery({ from: '2026-11-02', q: '1003' }, '')).toEqual({ from: '2026-11-02' });
   });
 
   it('#941 leaves the default zoom, 16, out of the URL', () => {

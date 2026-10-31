@@ -15,6 +15,7 @@ import {
 } from 'react';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
+import { Button } from '../../../../ui/primitives/button.tsx';
 import { useBoardFields } from '../../board-fields-store.ts';
 import { ChunkBands, ChunkStatus, unloadedChunks } from '../../components/chunk-status/index.ts';
 import { ZoomOverlay, zoomOverlayReserve } from '../../components/range-controls/index.ts';
@@ -47,9 +48,11 @@ import {
   droppedKeyMessage,
   type GanttSearch,
   ganttSearch,
+  matchesOrderFilter,
   withChain,
   withFrom,
   withOrder,
+  withQuery,
   withZoom,
 } from '../../gantt-search.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
@@ -169,14 +172,26 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const [runReview, setRunReview] = useState<readonly string[] | undefined>(undefined);
   /** The element that opened the My draft drawer, which takes focus back when it closes. */
   const draftOpener = useRef<HTMLElement | undefined>(undefined);
-  // Where focus goes when the draft drawer closes with no changes left and My draft leaves the bar.
-  const goToNowButton = useRef<HTMLButtonElement>(null);
   const [options, setOptions] = useGanttOptions();
-  // The row list by page and the job orders by time chunk (ADR 0089, Loading by time chunk); the
-  // Gantt has no filter of its own yet, so both read every open order.
+  // The row list by page and the job orders by time chunk (ADR 0089, Loading by time chunk), both
+  // of every open order, so the move rules, the cascade and the workload see the whole plan.
   const loadRows = useCallback((page: GanttPageRequest) => source.loadRows({}, page), [source]);
   // The workload sums every order, so with the panel open every page of the row list loads.
   const rowList = useGanttRows({ load: loadRows, all: options.workload });
+  // The order filter decides what is drawn (ADR 0090): its own row list loads the matching orders
+  // by page, while there is a filter, and the rows drawn are those whose number matches.
+  const query = search.q ?? '';
+  const loadMatching = useCallback(
+    (page: GanttPageRequest) => source.loadRows({ search: query }, page),
+    [source, query],
+  );
+  const matchList = useGanttRows({ load: loadMatching, enabled: query !== '' });
+  const drawnList = query === '' ? rowList : matchList;
+  const loadedOrders = useMemo(() => {
+    if (query === '') return rowList.orders;
+    const ids = new Set(rowList.orders.map((order) => order.id));
+    return [...rowList.orders, ...matchList.orders.filter((order) => !ids.has(order.id))];
+  }, [query, rowList.orders, matchList.orders]);
   const frame = rowList.frame;
   const [expanded, setExpanded] = useState<ExpandedState>(true);
   const [sort, setSort] = useState<GanttSort | undefined>(undefined);
@@ -283,11 +298,11 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     const ids = new Set<string>(
       [detailRowId, focusedRowId].filter((id): id is string => id !== undefined),
     );
-    for (const order of rowList.orders) {
+    for (const order of loadedOrders) {
       if (orderIds.has(order.id)) for (const row of order.jobOrders) ids.add(row.id);
     }
     return ids;
-  }, [search.order, extraSelected, detailRowId, focusedRowId, rowList.orders]);
+  }, [search.order, extraSelected, detailRowId, focusedRowId, loadedOrders]);
   const loadChunk = useCallback(
     (from: string, to: string) => source.loadChunk(from, to, {}),
     [source],
@@ -307,8 +322,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     () =>
       frame === undefined || range === undefined
         ? undefined
-        : loadedSnapshot(frame, rowList.orders, chunks.jobOrders, range),
-    [frame, rowList.orders, chunks.jobOrders, range],
+        : loadedSnapshot(frame, loadedOrders, chunks.jobOrders, range),
+    [frame, loadedOrders, chunks.jobOrders, range],
   );
   // Everything the view draws reads the plan with the draft applied, analysed over the buffer
   // (plan 18, Resolving a break in the draft).
@@ -320,6 +335,21 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     [committed, draft, range],
   );
 
+  // The order filter's field, where focus goes when My draft leaves the bar or the filter clears.
+  const filterInput = useRef<HTMLInputElement | null>(null);
+  const setQuery = (next: string) => void setSearch(withQuery(search, next));
+  const clearFilter = () => {
+    setQuery('');
+    filterInput.current?.focus();
+  };
+  // A q longer than 100 characters is dropped with the polite status message (ADR 0062, 0090).
+  const droppedQuery = rawSearch.q !== undefined && rawSearch.q !== '' && search.q === undefined;
+  useEffect(() => {
+    if (!droppedQuery) return;
+    void setSearch(search);
+    announce(droppedKeyMessage);
+  }, [droppedQuery, search, setSearch]);
+
   // chain without order is dropped with the polite status message (ADR 0062, plan 18).
   const droppedChain = search.chain !== undefined && search.order === undefined;
   useEffect(() => {
@@ -329,7 +359,23 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     announce(droppedKeyMessage);
   }, [droppedChain, search, setSearch]);
 
-  const rows = useMemo(() => (snapshot === undefined ? [] : buildGanttRows(snapshot)), [snapshot]);
+  const allRows = useMemo(
+    () => (snapshot === undefined ? [] : buildGanttRows(snapshot)),
+    [snapshot],
+  );
+  // The rows of the orders the filter matches, by their number at once, so the rows of other
+  // orders go before the filtered page answers.
+  const rows = useMemo(
+    () =>
+      query === ''
+        ? allRows
+        : allRows.filter((row) =>
+            (row.kind === 'run' ? row.orders : [row.order]).some((order) =>
+              matchesOrderFilter(order.number, query),
+            ),
+          ),
+    [allRows, query],
+  );
 
   const plantClosed = useMemo(
     () =>
@@ -360,6 +406,29 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     panels: [workloadLanes, zoomOverlay],
     plant: zoomPlant,
     dragging: () => moveStore.get()?.state.source === 'pointer',
+  });
+  // The time area scrolls to the span of the filter's first match that has one, only when that
+  // first match changes, not on every key (ADR 0090). A link that opens filtered keeps its start.
+  const firstMatch =
+    query === '' ? undefined : rows.find((row) => fitTargetOf(row, rows).span !== undefined);
+  const scrolledToMatch = useRef<string | null | undefined>(
+    search.q === undefined ? undefined : null,
+  );
+  useEffect(() => {
+    if (query === '') {
+      scrolledToMatch.current = undefined;
+      return;
+    }
+    if (firstMatch === undefined || firstMatch.id === scrolledToMatch.current) return;
+    const linked = scrolledToMatch.current === null;
+    scrolledToMatch.current = firstMatch.id;
+    const span = fitTargetOf(firstMatch, rows).span;
+    if (linked || span === undefined || moveStore.get() !== undefined) return;
+    timelineZoom.stop();
+    buffer.goTo(
+      { band: zoom, pxPerHour: buffer.pxPerHour },
+      { ms: span.fromMs, viewportX: paneWidth },
+    );
   });
 
   const followGrid = useCallback(() => {
@@ -661,7 +730,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
 
   // The next page of the row list loads once the rows end within one view of the grid's bottom,
   // as the planner scrolls down or when the rows loaded do not fill the grid.
-  const { next: rowsNext, loadNext } = rowList;
+  const { next: rowsNext, loadNext } = drawnList;
   const loadMoreRows = useCallback(
     (grid: HTMLElement | null) => {
       if (grid === null || rowsNext !== 'idle' || grid.clientHeight <= 0) return;
@@ -681,24 +750,39 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   }, [rowsNext]);
 
   let state: PageState = { status: 'ready' };
-  if (rowList.status === 'refused') {
+  if (drawnList.status === 'refused') {
     state = {
       status: 'error',
       title: 'Too many orders for the Gantt',
       description: `More than ${ganttMaxOrders.toLocaleString('en-GB')} orders match. Narrow the filter.`,
-      error: rowList.error,
-      onRetry: async () => rowList.retry(),
+      error: drawnList.error,
+      onRetry: async () => drawnList.retry(),
     };
-  } else if (rowList.status === 'failed') {
+  } else if (drawnList.status === 'failed') {
     state = {
       status: 'error',
       title: 'Could not load the Gantt',
-      error: rowList.error,
-      onRetry: async () => rowList.retry(),
+      error: drawnList.error,
+      onRetry: async () => drawnList.retry(),
     };
   } else if (snapshot === undefined) {
     state = { status: 'loading' };
-  } else if (rows.length === 0 && rowList.next === 'done') {
+  } else if (query !== '') {
+    // The filter matches no order: the empty state names it, and Clear filter brings every order
+    // back (ADR 0090).
+    if (rows.length === 0 && drawnList.status === 'ready' && drawnList.next === 'done') {
+      state = {
+        status: 'empty',
+        title: `No orders match ${query}`,
+        description: 'No open production order has this text in its number.',
+        action: (
+          <Button variant="outline" onClick={clearFilter}>
+            Clear filter
+          </Button>
+        ),
+      };
+    }
+  } else if (rows.length === 0 && drawnList.next === 'done') {
     state = {
       status: 'empty',
       title: 'No open orders',
@@ -873,7 +957,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     ...(buffer.settled === undefined ? [] : [spanLabel(buffer.settled, zoom, timeZone)]),
   ].join(', ');
   // The row count is unknown while pages of the row list are still to load (WAI-ARIA: -1).
-  const rowCount = rowList.next === 'done' ? flatRows.length + 2 : -1;
+  const rowCount = drawnList.next === 'done' ? flatRows.length + 2 : -1;
   // The chunks of the buffer without their job orders, which the bands and the status line show.
   const unloaded = unloadedChunks(chunks.chunks, range);
   // The bands also cover the time a zoom gesture shows before its chunks are requested.
@@ -920,7 +1004,9 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       toolbar={
         <GanttToolbar
           onGoToNow={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
-          goToNowRef={goToNowButton}
+          filter={query}
+          onFilterChange={setQuery}
+          filterRef={filterInput}
           options={options}
           onOptionsChange={setOptions}
           draftCount={draftChangeCount(draft)}
@@ -951,7 +1037,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 aria-busy={
                   state.status === 'loading' ||
                   unloaded.some((chunk) => chunk.status === 'loading') ||
-                  rowList.next === 'loading' ||
+                  drawnList.next === 'loading' ||
                   undefined
                 }
                 onKeyDown={(event) => {
@@ -1030,7 +1116,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                     // Order rows count every order of the row list, loaded or not.
                     const siblings =
                       parent === undefined
-                        ? Math.max(rows.length, rowList.totalCount ?? 0)
+                        ? Math.max(rows.length, drawnList.totalCount ?? 0)
                         : parent.subRows.length;
                     return (
                       <GanttRowView
@@ -1057,14 +1143,14 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                       />
                     );
                   })}
-                  {rowList.next !== 'done' && (
+                  {drawnList.next !== 'done' && (
                     <GanttMoreRows
                       rowIndex={flatRows.length + 3}
-                      state={rowList.next}
-                      loaded={rowList.orders.length}
-                      total={rowList.totalCount}
+                      state={drawnList.next}
+                      loaded={drawnList.orders.length}
+                      total={drawnList.totalCount}
                       gridTemplateColumns={gridTemplateColumns}
-                      onRetry={rowList.retry}
+                      onRetry={drawnList.retry}
                     />
                   )}
                   {/* A stacking context of its own under the tree panes (z-10), so no layer it
@@ -1172,9 +1258,9 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             onDiscardChange={(jobOrderId) => setDraft(discardChange(draft, jobOrderId))}
             onSplitRun={(runId) => runActions?.split(runId)}
             onDiscardDraft={() => setDraft(emptyDraft)}
-            // With no changes left, My draft has left the bar, so focus goes to the bar.
+            // With no changes left, My draft has left the bar, so focus goes to the order filter.
             finalFocus={() =>
-              draftChangeCount(draft) === 0 ? goToNowButton.current : (draftOpener.current ?? null)
+              draftChangeCount(draft) === 0 ? filterInput.current : (draftOpener.current ?? null)
             }
           />
           <GanttRunDialog

@@ -84,11 +84,14 @@ export function useGanttRows({
   load,
   all = false,
   resetKey,
+  enabled = true,
 }: {
   readonly load: LoadRows;
   readonly all?: boolean;
   /** A key whose change drops the rows shown, as the board's preview of a page state does. */
   readonly resetKey?: string;
+  /** Whether the list loads at all, as the rows of the order filter only while there is one. */
+  readonly enabled?: boolean;
 }): GanttRows {
   const [stored, setState] = useState<RowsState>(() => firstPage(load, resetKey));
   // A new source or filter starts again from the first page (ADR 0016: a cursor belongs to its
@@ -117,6 +120,7 @@ export function useGanttRows({
 
   const { request } = state;
   useEffect(() => {
+    if (!enabled) return;
     let cancelled = false;
     load(request.page)
       .then((answer) => {
@@ -162,7 +166,7 @@ export function useGanttRows({
     return () => {
       cancelled = true;
     };
-  }, [load, request, all]);
+  }, [load, request, all, enabled]);
 
   const loadNext = useCallback(
     () =>

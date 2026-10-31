@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Search, X } from 'lucide-react';
-import { type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { type KeyboardEvent, type Ref, useEffect, useRef, useState } from 'react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '../../primitives/input-group.tsx';
 import { IconButton } from '../icon-button/index.ts';
 
@@ -21,6 +21,12 @@ export interface SearchFieldProps {
   /** Called with the trimmed text after a pause in typing, and with "" at once on Escape or Clear search. */
   readonly onSearch: (value: string) => void;
   readonly className?: string;
+  /** The pause in typing after which the field searches, 300 ms unless a screen says otherwise. */
+  readonly delayMs?: number;
+  /** The name of the button that empties the field. */
+  readonly clearLabel?: string;
+  /** The input, so a page can move focus to it. */
+  readonly inputRef?: Ref<HTMLInputElement>;
 }
 
 /**
@@ -28,7 +34,16 @@ export interface SearchFieldProps {
  * typing searches after a pause, Escape or Clear search empties it at once, and focus stays in the
  * field throughout.
  */
-export function SearchField({ id, label, value, onSearch, className }: SearchFieldProps) {
+export function SearchField({
+  id,
+  label,
+  value,
+  onSearch,
+  className,
+  delayMs = searchDelay,
+  clearLabel = 'Clear search',
+  inputRef,
+}: SearchFieldProps) {
   const [text, setText] = useState(value);
   const [shown, setShown] = useState(value);
   // The last search this field sent, so its echo through value keeps the text typed since.
@@ -78,7 +93,11 @@ export function SearchField({ id, label, value, onSearch, className }: SearchFie
         <Search aria-hidden />
       </InputGroupAddon>
       <InputGroupInput
-        ref={input}
+        ref={(node: HTMLInputElement | null) => {
+          input.current = node;
+          if (typeof inputRef === 'function') inputRef(node);
+          else if (inputRef !== undefined && inputRef !== null) inputRef.current = node;
+        }}
         id={id}
         type="search"
         aria-label={label}
@@ -89,7 +108,7 @@ export function SearchField({ id, label, value, onSearch, className }: SearchFie
           const next = event.target.value;
           setText(next);
           clearTimeout(timer.current);
-          timer.current = setTimeout(() => search(next.trim()), searchDelay);
+          timer.current = setTimeout(() => search(next.trim()), delayMs);
         }}
         onKeyDown={onKeyDown}
         className="[&::-webkit-search-cancel-button]:appearance-none"
@@ -97,7 +116,7 @@ export function SearchField({ id, label, value, onSearch, className }: SearchFie
       {text !== '' && (
         <InputGroupAddon align="inline-end">
           <IconButton
-            label="Clear search"
+            label={clearLabel}
             variant="ghost"
             size="icon-sm"
             onClick={() => {
