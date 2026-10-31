@@ -214,13 +214,13 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     () => visibleColumns(options.hiddenColumns, columnWidths),
     [options.hiddenColumns, columnWidths],
   );
-  const changeColumnWidth = (id: string, width: number, done: boolean) => {
-    if (!done) {
+  const changeColumnWidth = (id: string, width: number | undefined, done: boolean) => {
+    if (width !== undefined && !done) {
       setDraggedWidth({ id, width });
       return;
     }
     setDraggedWidth(undefined);
-    setOptions({ columnWidths: { ...options.columnWidths, [id]: width } });
+    if (width !== undefined) setOptions({ columnWidths: { ...options.columnWidths, [id]: width } });
   };
   // The tree pane sticks as one block at the share of the view its splitter sets, 40 percent by
   // default; columns wider than the pane scroll inside it, so the time area stays reachable on a

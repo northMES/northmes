@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useState } from 'react';
+import { widthWithin } from '../../components/column-resizer/index.ts';
 
 const storageKey = 'northmes.planning.board.machine-column';
 
@@ -22,11 +23,13 @@ export function machineColumnBounds(gridWidth: number): { min: number; max: numb
   };
 }
 
-/** The machine column's width at a grid width, from the width the planner kept, if any. */
+/**
+ * The machine column's width at a grid width, from the width the planner kept or else the default,
+ * within the bounds a resize keeps.
+ */
 export function machineColumnWidth(gridWidth: number, kept: number | undefined): number {
-  if (kept === undefined) return Math.min(defaultPx, Math.floor(gridWidth * defaultShare));
   const { min, max } = machineColumnBounds(gridWidth);
-  return Math.round(Math.min(max, Math.max(min, kept)));
+  return widthWithin(kept ?? Math.min(defaultPx, Math.floor(gridWidth * defaultShare)), min, max);
 }
 
 function stored(): number | undefined {

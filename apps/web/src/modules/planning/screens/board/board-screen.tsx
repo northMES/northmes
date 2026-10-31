@@ -786,12 +786,12 @@ export function BoardScreen() {
                 machineWidth={machineWidth}
                 machineBounds={machineBounds}
                 onMachineWidthChange={(next, done) => {
-                  if (!done) {
+                  if (next !== undefined && !done) {
                     setDraggedMachineWidth(next);
                     return;
                   }
                   setDraggedMachineWidth(undefined);
-                  keepMachineWidth(next);
+                  if (next !== undefined) keepMachineWidth(next);
                 }}
                 timeWidth={timeWidth}
                 collapsed={collapsed}

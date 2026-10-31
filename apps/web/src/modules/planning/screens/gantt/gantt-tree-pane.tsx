@@ -29,7 +29,12 @@ import { type ReactNode, useMemo } from 'react';
 import type { ColumnChoice } from '../../../../ui/components/columns-menu/index.ts';
 import { Badge } from '../../../../ui/primitives/badge.tsx';
 import { Button } from '../../../../ui/primitives/button.tsx';
-import { ColumnResizer, keyedWidth } from '../../components/column-resizer/index.ts';
+import {
+  ColumnResizer,
+  type ColumnWidthChange,
+  keyedWidth,
+  widthWithin,
+} from '../../components/column-resizer/index.ts';
 import { useGanttView } from './gantt-context.ts';
 import { GanttRowMenu } from './gantt-row-menu.tsx';
 import {
@@ -344,7 +349,7 @@ export const columnMaxPx = 480;
 
 /** A column's width within its bounds: its least width and the most a resize makes a column. */
 export function columnWidthWithin(column: GanttColumn, width: number): number {
-  return Math.round(Math.min(columnMaxPx, Math.max(column.minWidthPx ?? 0, width)));
+  return widthWithin(width, column.minWidthPx ?? 0, columnMaxPx);
 }
 
 /**
@@ -379,15 +384,16 @@ export interface TreePaneLayout {
   readonly tracks: string;
   /** The pane's width less its 1 px end border: what the columns show at once. */
   readonly innerWidth: number;
-  /** The tree columns' full width, at least the inner width; the pane scrolls when it is wider. */
+  /** The tree columns' full width; the pane scrolls when it is wider than the inner width. */
   readonly contentWidth: number;
 }
 
 /**
  * The tree pane at a view width and the share the splitter set (#943): the pane takes the share
  * within 160 px and what leaves the time area 160 px, as far as the view allows both, and the Name
- * column takes what the other columns leave of it, never under 160 px. Columns wider than the
- * pane scroll inside it, so the pane always sticks as one block.
+ * column takes what the other columns leave of it at their default widths, never under 160 px, so
+ * a resized column moves only the columns after it and its own edge follows the pointer. Columns
+ * wider than the pane scroll inside it, so the pane always sticks as one block.
  */
 export function treePaneLayout(
   columns: readonly GanttColumn[],
@@ -400,9 +406,14 @@ export function treePaneLayout(
   const innerWidth = paneWidth - 1;
   const others = columns.slice(1);
   const fixedWidth = others.reduce((sum, column) => sum + column.widthPx, 0);
+  const defaultWidth = others.reduce(
+    (sum, column) =>
+      sum + (ganttColumns.find((each) => each.id === column.id)?.widthPx ?? column.widthPx),
+    0,
+  );
   // At the least pane width a lone Name column fits the inner width, so the pane has nothing to
   // scroll.
-  const nameWidth = Math.max(Math.min(leastPx, innerWidth), innerWidth - fixedWidth);
+  const nameWidth = Math.max(Math.min(leastPx, innerWidth), innerWidth - defaultWidth);
   return {
     paneWidth,
     minWidth,
@@ -440,7 +451,11 @@ export function TreePane({
       className={cn('sticky start-0 z-10 overflow-clip border-e border-border', className)}
     >
       <div
-        className="grid h-full [&>:last-child]:border-e-0"
+        className={cn(
+          'grid h-full',
+          // The pane's own end border closes the last column when the columns fill it.
+          layout.contentWidth >= layout.innerWidth && '[&>:last-child]:border-e-0',
+        )}
         style={{
           gridTemplateColumns: layout.tracks,
           width: `${layout.contentWidth}px`,
@@ -480,8 +495,8 @@ export function GanttTreeHeaderCells({
   readonly layout: TreePaneLayout;
   readonly sort: GanttSort | undefined;
   readonly onSortChange: (sort: GanttSort) => void;
-  /** A column's width to show, and whether it is the one to keep (see ColumnResizer). */
-  readonly onColumnWidthChange: (id: string, width: number, done: boolean) => void;
+  /** A change of a column's width (see ColumnResizer). */
+  readonly onColumnWidthChange: (id: string, ...change: Parameters<ColumnWidthChange>) => void;
 }) {
   return (
     <TreePane layout={layout} className="bg-muted">
@@ -499,18 +514,18 @@ export function GanttTreeHeaderCells({
               column.sortable ? (sorted === undefined ? 'none' : ariaSort[sorted]) : undefined
             }
             onKeyDown={(event) => {
-              // Alt+Left and Alt+Right on the sort button resize the column it heads.
-              if (!resizable || event.target === event.currentTarget) return;
+              // Alt+Left and Alt+Right on the sort button resize the column it heads; on Name,
+              // which does not resize, they do nothing rather than leave the page.
+              if (event.target === event.currentTarget) return;
               const next = keyedWidth(event, column.widthPx, { alt: true });
               if (next === undefined) return;
               event.preventDefault();
               event.stopPropagation();
-              onColumnWidthChange(column.id, columnWidthWithin(column, next), true);
+              if (resizable) onColumnWidthChange(column.id, columnWidthWithin(column, next), true);
             }}
             className={cn(
-              'relative flex min-w-0 items-center border-e border-border bg-muted ps-2 text-xs font-semibold text-muted-foreground',
-              // Clear of the resize handle.
-              resizable ? 'pe-7' : 'pe-2',
+              // A numeric header ends where its values end, under the transparent handle.
+              'relative flex min-w-0 items-center border-e border-border bg-muted px-2 text-xs font-semibold text-muted-foreground',
               column.numeric && 'justify-end',
             )}
           >

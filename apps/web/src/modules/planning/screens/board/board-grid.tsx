@@ -5,7 +5,12 @@ import type { JobOrderSpan } from '@northmes/planning-domain';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { type KeyboardEvent, type ReactNode, useId } from 'react';
-import { ColumnResizer, keyedWidth } from '../../components/column-resizer/index.ts';
+import {
+  ColumnResizer,
+  type ColumnWidthChange,
+  keyedWidth,
+  widthWithin,
+} from '../../components/column-resizer/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { TimeScale } from '../../timeline/time-scale.ts';
 import { GanttMarkerLayer, overlayMarkers } from '../gantt/gantt-marker-layer.tsx';
@@ -43,8 +48,8 @@ export interface BoardGridProps {
   readonly machineWidth: number;
   /** What a resize of the machine column may make it (#943). */
   readonly machineBounds: { readonly min: number; readonly max: number };
-  /** The machine column's width to show, and whether it is the one to keep (see ColumnResizer). */
-  readonly onMachineWidthChange: (width: number, done: boolean) => void;
+  /** A change of the machine column's width (see ColumnResizer). */
+  readonly onMachineWidthChange: ColumnWidthChange;
   readonly timeWidth: number;
   readonly collapsed: ReadonlySet<string>;
   readonly onToggleGroup: (code: string) => void;
@@ -328,18 +333,6 @@ export function BoardGrid({
                 : undefined
             }
             onFocus={() => onFocusTarget(focusKeys.header(code))}
-            onKeyDown={(event) => {
-              // Alt+Left and Alt+Right resize the machine column; the grid's one Tab stop
-              // leaves the header's handle to the pointer (#943).
-              const next = keyedWidth(event, machineWidth, { alt: true });
-              if (next === undefined) return;
-              event.preventDefault();
-              event.stopPropagation();
-              onMachineWidthChange(
-                Math.min(machineBounds.max, Math.max(machineBounds.min, next)),
-                true,
-              );
-            }}
             data-sticky-column
             className="sticky start-0 z-20 flex items-center border-e border-border bg-card px-3 text-sm"
             style={{
@@ -447,7 +440,17 @@ export function BoardGrid({
       aria-multiselectable="true"
       aria-rowcount={rowIndex}
       aria-busy={busy || undefined}
-      onKeyDown={onKeyDown}
+      onKeyDown={(event) => {
+        // Alt+Left and Alt+Right anywhere in the grid resize the machine column: the grid keeps
+        // one Tab stop, so its header's handle is for the pointer (#943).
+        const next = keyedWidth(event, machineWidth, { alt: true });
+        if (next !== undefined) {
+          event.preventDefault();
+          onMachineWidthChange(widthWithin(next, machineBounds.min, machineBounds.max), true);
+          return;
+        }
+        onKeyDown(event);
+      }}
       onScroll={onScroll}
       className="min-h-0 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
       style={{
@@ -470,6 +473,8 @@ export function BoardGrid({
             minWidth={machineBounds.min}
             maxWidth={machineBounds.max}
             focusable={false}
+            // A new width rebuilds the time buffer, so a drag draws a line and resizes on release.
+            preview="line"
             onWidthChange={onMachineWidthChange}
           />
           {/* The header's name, without the resize handle's. */}
