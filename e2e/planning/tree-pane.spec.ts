@@ -27,9 +27,10 @@ async function showEveryColumn(page: Page): Promise<void> {
 
 /**
  * Scrolls the grid until the marker sits under the left pane, then reads, at the marker's x and the
- * row's vertical centre, at the marker's x on the row's bottom border, and at the centre of the cell
- * over the marker, what the browser hits. The buffer may move under a scroll, so the marker is
- * found again after each one.
+ * row's vertical centre and at the centre of the cell over the marker, what the browser hits, and
+ * whether the row's bottom border at the marker's x is the pane's own border line. The overlay takes
+ * the pointer while the probe reads, so a layer painted over the pane is what it hits. The buffer
+ * may move under a scroll, so the marker is found again after each one.
  */
 async function coverOf(
   grid: Locator,
@@ -71,18 +72,28 @@ async function coverOf(
       }) as HTMLElement;
       const rect = cell.getBoundingClientRect();
       const y = rect.top + rect.height / 2;
-      const hit = (px: number, py = y) => {
+      // The Gantt's tree pane holds the cells and draws the border; the board's cell is its own.
+      const cover = cell.closest<HTMLElement>('[data-tree-pane]') ?? cell;
+      const lineBottom = line.getBoundingClientRect().bottom;
+      const overlay = element.querySelector<HTMLElement>('[data-overlay]') as HTMLElement;
+      overlay.style.pointerEvents = 'auto';
+      const hit = (px: number, py: number, inside: HTMLElement) => {
         const at = document.elementFromPoint(px, py);
-        return at !== null && cell.contains(at);
+        return at !== null && inside.contains(at);
       };
-      return {
+      const result = {
         under: x > pane.left && x < pane.right,
-        atMarker: hit(x),
-        // The row's 1 px bottom border, which the cell covers too.
-        atBorder: hit(x, line.getBoundingClientRect().bottom - 0.5),
-        atCentre: hit(rect.left + rect.width / 2),
+        atMarker: hit(x, y, cell),
+        // The row's 1 px bottom border is the pane's own border, so the row line stays drawn.
+        atBorder:
+          hit(x, lineBottom - 0.5, cover) &&
+          getComputedStyle(cover).borderBottomWidth === '1px' &&
+          Math.abs(cover.getBoundingClientRect().bottom - lineBottom) < 0.5,
+        atCentre: hit(rect.left + rect.width / 2, y, cell),
         cell: cell.getAttribute('role') ?? '',
       };
+      overlay.style.pointerEvents = '';
+      return result;
     },
     { marker, row },
   );
@@ -124,7 +135,7 @@ test.describe('the left pane of the timelines', () => {
     }
   });
 
-  test('#943 the board machine column covers the now line and the frozen window scrolled under it, on the bottom border of its rows too', async ({
+  test('#943 the board machine column covers the now line and the frozen window scrolled under it, on the bottom border of its machine rows and group bands too', async ({
     page,
     signIn,
   }) => {
@@ -133,9 +144,14 @@ test.describe('the left pane of the timelines', () => {
     await expect(board).toBeVisible();
     await expect(board).not.toHaveAttribute('aria-busy', 'true');
 
-    for (const marker of ['[data-marker="now"]', '[data-marker="frozen"]']) {
-      const cover = await coverOf(board, marker, '[role="row"][data-machine]');
-      expect(cover, marker).toEqual({
+    // A machine row and the first group band, the row after the pinned Not placed row.
+    for (const [marker, row] of [
+      ['[data-marker="now"]', '[role="row"][data-machine]'],
+      ['[data-marker="frozen"]', '[role="row"][data-machine]'],
+      ['[data-marker="now"]', '[aria-rowindex="3"]'],
+    ] as const) {
+      const cover = await coverOf(board, marker, row);
+      expect(cover, `${marker} ${row}`).toEqual({
         under: true,
         atMarker: true,
         atBorder: true,
