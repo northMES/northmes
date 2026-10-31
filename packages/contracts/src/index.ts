@@ -23,6 +23,13 @@ export {
   type ListSortColumn,
 } from './define-list-query-contract.ts';
 export {
+  defineMasterData,
+  type MasterDataDefinition,
+  type MasterDataOptions,
+  type MasterDataScope,
+  type MasterDataScopes,
+} from './define-master-data.ts';
+export {
   defineCoreLinks,
   defineModuleLinks,
   type LinkBuilder,

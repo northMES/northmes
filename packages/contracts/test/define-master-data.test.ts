@@ -20,6 +20,9 @@ function gauges(own: Record<string, z.ZodType> = { size: z.int().min(1).optional
   });
 }
 
+/** The gauge register, built once, since its output schema registers the component ToolsGauge. */
+const gauge = gauges();
+
 /** A register of the fixture module tools at plant scope only. */
 const fixtures = defineMasterData({
   module: 'tools',
@@ -34,7 +37,7 @@ const fixtures = defineMasterData({
 
 describe('defineMasterData', () => {
   it("#66 names a register's commands and queries after its module and entity, each with the permission of its action", () => {
-    const { create, update, archive, restore, find, get } = gauges();
+    const { create, update, archive, restore, find, get } = gauge;
 
     expect(
       [create, update, archive, restore, find, get].map(({ name, permission }) => [
@@ -52,7 +55,7 @@ describe('defineMasterData', () => {
   });
 
   it('#66 a create takes the trimmed code and name, the own fields, the client id and the scope to write at', () => {
-    const { create } = gauges();
+    const { create } = gauge;
 
     const input = create.input.parse({
       id: ID,
@@ -67,7 +70,7 @@ describe('defineMasterData', () => {
   });
 
   it('#66 refuses an empty code and a code over 32 characters with the message the form shows', () => {
-    const { fields } = gauges();
+    const { fields } = gauge;
 
     const empty = fields.safeParse({ code: ' ', name: 'Gauge' });
     const long = fields.safeParse({ code: 'G'.repeat(33), name: 'Gauge' });
@@ -81,11 +84,11 @@ describe('defineMasterData', () => {
 
     expect(shape).toEqual(['code', 'id', 'name', 'translations']);
     expect(fixtures.operations.scope).toBe('plant');
-    expect(gauges().operations.scope).toBe('companyOrPlant');
+    expect(gauge.operations.scope).toBe('companyOrPlant');
   });
 
   it('#66 an update names the row by id and version, and takes no scope, since a row stays where it was made', () => {
-    const { update } = gauges();
+    const { update } = gauge;
 
     expect(Object.keys(update.input.shape).sort()).toEqual([
       'code',
@@ -98,7 +101,7 @@ describe('defineMasterData', () => {
   });
 
   it("#66 the output answers the kit's fields, the scope level and the own fields, as the component <Module><Entity>", () => {
-    const { node } = gauges();
+    const { node } = gauge;
     const answer = node.parse({
       id: ID,
       code: 'G-1',
@@ -106,7 +109,7 @@ describe('defineMasterData', () => {
       translations: [],
       version: 1,
       archivedAt: null,
-      updatedAt: new Date('2026-10-31T12:00:00Z'),
+      updatedAt: '2026-10-31T12:00:00Z',
       scope: 'company',
       size: null,
     });
@@ -116,7 +119,7 @@ describe('defineMasterData', () => {
   });
 
   it('#66 lists by code with search over code and name, archived rows hidden, as find answers it', () => {
-    const { list, find } = gauges();
+    const { list, find } = gauge;
 
     expect(list).toMatchObject({
       name: 'Gauge',
@@ -129,7 +132,7 @@ describe('defineMasterData', () => {
   });
 
   it('#66 declares the REST family under the resource, and no agent tool', () => {
-    const { operations } = gauges();
+    const { operations } = gauge;
 
     expect(
       Object.fromEntries(
@@ -148,15 +151,12 @@ describe('defineMasterData', () => {
     });
   });
 
-  it.each([
-    'code',
-    'name',
-    'scope',
-    'id',
-    'companyId',
-  ])("#66 throws on an own field named %s, which is the kit's", (field) => {
-    expect(() => gauges({ [field]: z.string() })).toThrow(
-      `Register tools.Gauge: field ${field} is the kit's own`,
-    );
-  });
+  it.each(['code', 'name', 'scope', 'id', 'companyId'])(
+    "#66 throws on an own field named %s, which is the kit's",
+    (field) => {
+      expect(() => gauges({ [field]: z.string() })).toThrow(
+        `Register tools.Gauge: field ${field} is the kit's own`,
+      );
+    },
+  );
 });
