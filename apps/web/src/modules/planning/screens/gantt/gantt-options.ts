@@ -16,6 +16,10 @@ export interface GanttOptions {
   readonly workload: boolean;
   /** Cascade after a move (plan 18, Cascade rule 1): on by default, the choice stays local. */
   readonly cascade: boolean;
+  /** The share of the view the tree pane takes, which its splitter sets (#943). */
+  readonly treePaneShare: number;
+  /** The widths the planner gave tree columns by their header edge, by column id (#943). */
+  readonly columnWidths: Readonly<Record<string, number>>;
 }
 
 const storageKey = 'northmes.planning.gantt.options';
@@ -41,7 +45,25 @@ export const defaultOptions: GanttOptions = {
   hiddenColumns: defaultHiddenColumns,
   workload: false,
   cascade: true,
+  treePaneShare: 0.4,
+  columnWidths: {},
 };
+
+/** A kept share of the view between 0 and 1; the screen fits it to the view's width. */
+function shareOf(value: unknown): number {
+  return typeof value === 'number' && value > 0 && value < 1 ? value : defaultOptions.treePaneShare;
+}
+
+/** The kept column widths that are positive numbers; the screen fits each to its column. */
+function widthsOf(value: unknown): Record<string, number> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, number] =>
+        typeof entry[1] === 'number' && Number.isFinite(entry[1]) && entry[1] > 0,
+    ),
+  );
+}
 
 function stored(): GanttOptions {
   try {
@@ -55,6 +77,8 @@ function stored(): GanttOptions {
         : defaultHiddenColumns,
       workload: options.workload === true,
       cascade: options.cascade !== false,
+      treePaneShare: shareOf(options.treePaneShare),
+      columnWidths: widthsOf(options.columnWidths),
     };
   } catch {
     return defaultOptions;

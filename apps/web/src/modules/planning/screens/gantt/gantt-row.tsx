@@ -6,22 +6,23 @@ import { GanttBlock } from './gantt-block.tsx';
 import { blockName } from './gantt-block-states.ts';
 import { useGanttView } from './gantt-context.ts';
 import { GanttMarkerLayer, rowMarkers } from './gantt-marker-layer.tsx';
-import { jobOrderRowsOf, rowHeightRem, summaryName, summarySpan } from './gantt-rows.ts';
+import { rowHeightRem, rowSpan, summaryName } from './gantt-rows.ts';
 import { SummaryBar, TimeCellShading } from './gantt-time-area.tsx';
-import { type GanttColumn, GanttRowHeader, type GanttTableRow } from './gantt-tree-pane.tsx';
+import {
+  type GanttColumn,
+  GanttRowHeader,
+  type GanttTableRow,
+  TreePane,
+  type TreePaneLayout,
+} from './gantt-tree-pane.tsx';
 
 export interface GanttRowProps {
   readonly row: GanttTableRow;
   readonly columns: readonly GanttColumn[];
-  /** The CSS grid template the header row shares, one track per tree column and one for time. */
+  /** The CSS grid template the header row shares, one track for the tree pane and one for time. */
   readonly gridTemplateColumns: string;
-  /** The left offset of each tree column, where its cell sticks while the time column scrolls. */
-  readonly cellLefts: readonly number[];
-  /**
-   * Whether every tree cell sticks: only while the pane fits its cap, so a narrow grid (320 px
-   * reflow, 400 percent zoom) keeps the time area reachable with the Name column alone pinned.
-   */
-  readonly stickyTree: boolean;
+  /** The tree pane's width and its columns' tracks (#943). */
+  readonly pane: TreePaneLayout;
   readonly rowIndex: number;
   readonly setSize: number;
   readonly posInSet: number;
@@ -40,14 +41,14 @@ export interface GanttRowProps {
  * One row of the treegrid (plan 18, Tree grid semantics): aria-level, aria-setsize, aria-posinset
  * and, at levels 1 and 2, aria-expanded; the rowheader, the tree columns as gridcells and one
  * gridcell for the time area, which holds the summary bar or the block. A row is a tab stop under
- * the roving tabindex; the keys of row focus mode arrive through onKeyDown.
+ * the roving tabindex; the keys of row focus mode arrive through onKeyDown. The tree cells sit in
+ * the tree pane, which covers the time cell where they meet (#943).
  */
 export function GanttRowView({
   row,
   columns,
   gridTemplateColumns,
-  cellLefts,
-  stickyTree,
+  pane,
   rowIndex,
   setSize,
   posInSet,
@@ -79,7 +80,7 @@ export function GanttRowView({
       : selectedOrderIds.has(original.order.id);
   const summary = original.kind !== 'jobOrder';
   const heightRem = rowHeightRem[original.kind];
-  const span = summary ? summarySpan(jobOrderRowsOf(original)) : undefined;
+  const span = summary ? rowSpan(original) : undefined;
   const shading =
     original.kind === 'jobOrder' ? closedWindowsOf(original.jobOrder.equipment) : closedWindows;
   const onChain = chainRowIds.has(original.id);
@@ -120,7 +121,9 @@ export function GanttRowView({
         onOpen();
       }}
       className={cn(
-        'grid border-b border-border outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+        // As wide as its tracks: a sticky cell cannot leave its row, so a row only as wide as the
+        // grid would take the tree cells with it once the scroll passes the row's width (#890).
+        'grid w-max min-w-full border-b border-border outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
         (original.kind === 'order' || original.kind === 'run') && 'bg-muted',
         original.kind === 'run' && 'border-s-4 border-s-foreground/60',
         original.kind === 'operation' && 'bg-lane-alt',
@@ -133,36 +136,38 @@ export function GanttRowView({
         ...(original.kind === 'run' && { borderInlineStartStyle: 'double' }),
       }}
     >
-      {columns.map((column, index) =>
-        index === 0 ? (
-          <div
-            key={column.id}
-            role="rowheader"
-            className={cn(
-              'sticky z-10 flex min-w-0 items-center gap-1.5 overflow-hidden border-e border-border pe-2',
-              background,
-              selected && 'shadow-[inset_3px_0_0_var(--foreground)]',
-            )}
-            style={{ paddingInlineStart: `${0.5 + (level - 1)}rem`, insetInlineStart: 0 }}
-          >
-            <GanttRowHeader row={row} expanded={expanded} onToggle={onToggle} />
-          </div>
-        ) : (
-          <div
-            key={column.id}
-            role="gridcell"
-            className={cn(
-              'flex min-w-0 items-center overflow-hidden border-e border-border px-2 font-mono text-xs whitespace-nowrap',
-              stickyTree && 'sticky z-10',
-              background,
-              column.numeric && 'justify-end tabular-nums',
-            )}
-            style={stickyTree ? { insetInlineStart: `${cellLefts[index] ?? 0}px` } : undefined}
-          >
-            {column.cell(original, { timeZone, zoneLabel, machineName })}
-          </div>
-        ),
-      )}
+      <TreePane layout={pane} className={background} selected={selected}>
+        {columns.map((column, index) =>
+          index === 0 ? (
+            <div
+              key={column.id}
+              role="rowheader"
+              className={cn(
+                'flex min-w-0 items-center gap-1.5 overflow-hidden border-e border-border pe-2',
+                background,
+              )}
+              style={{ paddingInlineStart: `${0.5 + (level - 1)}rem` }}
+            >
+              <GanttRowHeader row={row} expanded={expanded} onToggle={onToggle} />
+            </div>
+          ) : (
+            <div
+              key={column.id}
+              role="gridcell"
+              className={cn(
+                'flex min-w-0 items-center overflow-hidden border-e border-border px-2 font-mono text-xs whitespace-nowrap',
+                background,
+                column.numeric && 'justify-end tabular-nums',
+              )}
+            >
+              {/* A value cut short by a narrow column ends in an ellipsis. */}
+              <span className="min-w-0 truncate">
+                {column.cell(original, { timeZone, zoneLabel, machineName })}
+              </span>
+            </div>
+          ),
+        )}
+      </TreePane>
       {summary ? (
         <div
           role="gridcell"
@@ -171,7 +176,7 @@ export function GanttRowView({
           aria-label={summaryName(original, timeZone)}
           className="relative overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         >
-          <TimeCellShading windows={shading} scale={scale} />
+          <TimeCellShading windows={shading} scale={scale} nowMs={snapshot.nowMs} />
           <GanttMarkerLayer markers={markers} scale={scale} />
           {span !== undefined && (
             <SummaryBar
@@ -187,7 +192,8 @@ export function GanttRowView({
           role="gridcell"
           className="relative overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           // A job order without a placement has no block, so Right lands on the cell itself,
-          // named as the block would be, with "not placed".
+          // named as the block would be, with "not placed" or, while its time chunk loads, "time
+          // loading".
           {...(original.jobOrder.placement === undefined && {
             tabIndex: -1,
             'data-cell-focus': true,
@@ -196,7 +202,7 @@ export function GanttRowView({
             }),
           })}
         >
-          <TimeCellShading windows={shading} scale={scale} />
+          <TimeCellShading windows={shading} scale={scale} nowMs={snapshot.nowMs} />
           <GanttMarkerLayer markers={markers} scale={scale} />
           <GanttBlock
             row={original}

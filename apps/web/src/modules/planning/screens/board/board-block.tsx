@@ -2,13 +2,24 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatPlantTime, formatSpan } from '@northmes/contracts/format';
 import { cn } from 'cn';
-import { Clock, ClockAlert, Lock, type LucideIcon, Pencil, Play, UserPen } from 'lucide-react';
-import { type FocusEvent, type KeyboardEvent, type PointerEvent, useRef } from 'react';
+import {
+  CircleCheck,
+  Clock,
+  ClockAlert,
+  Lock,
+  type LucideIcon,
+  Pencil,
+  Play,
+  UserPen,
+} from 'lucide-react';
+import { type FocusEvent, type KeyboardEvent, type PointerEvent, useEffect, useRef } from 'react';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../../ui/primitives/tooltip.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import { orderNumbersText } from '../../gantt-draft.ts';
+import { useMoveOf } from '../../move-store.ts';
 import { useGanttView } from '../gantt/gantt-context.ts';
+import { pointerStart } from '../gantt/gantt-move.ts';
 import { type JobOrderRow, quantityText } from '../gantt/gantt-rows.ts';
 import { type BoardBlockState, boardBlockStates, borderMarkerOf } from './board-block-states.ts';
 import { BoardHoverCard } from './board-hover-card.tsx';
@@ -35,6 +46,7 @@ const stateIcons: Partial<Record<BoardBlockState['kind'], LucideIcon>> = {
   held: UserPen,
   draft: Pencil,
   started: Play,
+  finished: CircleCheck,
   late: Clock,
   overdue: ClockAlert,
 };
@@ -80,9 +92,12 @@ export function BoardBlock({
   /** Whether the block's order is the selected one, which draws the 3 px bar on top. */
   readonly selected: boolean;
   readonly onFocus: (event: FocusEvent<HTMLDivElement>) => void;
-  /** Space selects the block's order; M enters keyboard move mode. */
+  /** A click or Space selects the block's order; M enters keyboard move mode. */
   readonly onSelect: () => void;
-  /** A click or Enter opens the block's Details, which selects its order too. */
+  /**
+   * A double click or Enter opens the block's Details, which selects its order too; a single
+   * click only selects, as on the Gantt (#886).
+   */
   readonly onOpenDetails: () => void;
   /** Shift+F10, the context menu key or a right click opens the block menu at the block. */
   readonly onMenu: (anchor: HTMLElement) => void;
@@ -102,13 +117,27 @@ export function BoardBlock({
   >(undefined);
   // The click the browser fires after a drop is not a selection.
   const dropped = useRef(false);
+  // Whether a press of the current click sequence ended a drag: the dblclick that follows a drop
+  // on the second press opens nothing (#886).
+  const sequenceDragged = useRef(false);
   const { jobOrder, order } = row;
+  const movedBy = useMoveOf(move?.store, (each) =>
+    each?.state.jobOrderId === jobOrder.id ? each.state.source : undefined,
+  );
+  const moving = movedBy !== undefined;
+  const inMoveMode = movedBy === 'keyboard';
+  // The block whose cursor says not-allowed while a drag is over a machine the operation may not
+  // use (#944). Set on the element, so a pointer move renders nothing; any end of the move clears it.
+  const refusedCursor = useRef<HTMLElement | undefined>(undefined);
+  useEffect(() => {
+    if (moving || refusedCursor.current === undefined) return;
+    refusedCursor.current.style.cursor = '';
+    refusedCursor.current = undefined;
+  }, [moving]);
   const placement = jobOrder.placement;
   if (placement === undefined) return null;
   const timeZone = snapshot.plant.timeZone;
   const states = boardBlockStates(row, snapshot, { inDraft: draftRowIds?.has(jobOrder.id) });
-  const moving = move?.state?.jobOrderId === jobOrder.id;
-  const inMoveMode = moving && move?.state?.source === 'keyboard';
   // Keyboard move mode (plan 07, Moving without dragging): M on the focused block enters it; Left
   // and Right step one snap, Up and Down the allowed machines, Enter commits to the draft and
   // Escape cancels. The keys stay with the block while it moves, so the grid's arrows wait.
@@ -158,6 +187,7 @@ export function BoardBlock({
   };
   const marker = borderMarkerOf(states);
   const conflict = states.some((state) => state.kind === 'conflict');
+  const finished = states.some((state) => state.kind === 'finished');
   const icons = states.flatMap((state) => {
     const icon = stateIcons[state.kind];
     return icon === undefined ? [] : [{ kind: state.kind, icon }];
@@ -195,8 +225,10 @@ export function BoardBlock({
     const target = machineAt(event.clientX, event.clientY);
     const allowed = target === undefined || row.operation.allowedEquipment.includes(target);
     current.refusedOn = allowed ? undefined : target;
+    event.currentTarget.style.cursor = allowed ? '' : 'not-allowed';
+    refusedCursor.current = allowed ? undefined : event.currentTarget;
     move.previewAt(
-      scale.snap(scale.instant(scale.x(current.setupStartMs) + dx)),
+      pointerStart(scale, scale.instant(scale.x(current.setupStartMs) + dx), snapshot.nowMs),
       allowed ? target : undefined,
     );
   };
@@ -243,13 +275,21 @@ export function BoardBlock({
             aria-labelledby={`${id}-number ${id}-article ${id}-facts`}
             onFocus={onFocus}
             onClick={(event) => {
+              // A click's detail counts the presses of its sequence; the first one starts anew.
+              sequenceDragged.current =
+                dropped.current || (event.detail > 1 && sequenceDragged.current);
               // The click after a drop is not a selection.
               if (dropped.current) {
                 dropped.current = false;
                 event.stopPropagation();
                 return;
               }
-              onOpenDetails();
+              onSelect();
+            }}
+            // The block holds no control, and its hover card is a React sibling of the block, not
+            // a child, so no double click bubbles in from either.
+            onDoubleClick={() => {
+              if (!sequenceDragged.current) onOpenDetails();
             }}
             onContextMenu={(event) => {
               event.preventDefault();
@@ -269,15 +309,27 @@ export function BoardBlock({
               // The origin of a move keeps its text at full contrast (WCAG 1.4.3): a dashed
               // border marks it, not a dimmed fill (design D3, IN4, the origin slot).
               moving && 'border-2 border-dashed border-foreground',
+              // A finished job order is drawn muted with a dotted border, a cue at any width
+              // (ADR 0089, Time before now); an overdue one keeps its color.
+              finished && 'border-dotted text-muted-foreground',
             )}
             style={{
               left: `${left}px`,
               width: `${width}px`,
-              background: `var(--${order.color})`,
+              background: finished ? 'var(--muted)' : `var(--${order.color})`,
             }}
           />
         }
       >
+        {finished && (
+          // The order color as the leading edge; a child, so the focus ring still paints.
+          <span
+            aria-hidden
+            data-finished-edge
+            className="pointer-events-none absolute inset-y-0 start-0 w-1"
+            style={{ background: `var(--${order.color})` }}
+          />
+        )}
         {selected && (
           <span
             aria-hidden

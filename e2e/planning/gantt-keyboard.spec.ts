@@ -22,6 +22,8 @@ test.describe('keyboard move mode on the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     const spoken = page.getByRole('status');
 
     // Collapse order 1001 and expand it again from the keyboard, then walk into its first row.
@@ -93,7 +95,10 @@ test.describe('keyboard move mode on the order Gantt', () => {
     const details = page.locator('[role="dialog"][data-details-drawer]');
     await expect(details).toBeVisible();
     await expect(details).toHaveCSS('opacity', '1');
-    await details.getByRole('button', { name: 'Move' }).click();
+    // Move sits in the actions menu of the drawer's heading (#917).
+    await details.getByRole('button', { name: 'Actions for 1003.10' }).click();
+    await page.getByRole('menuitem', { name: 'Move', exact: true }).click();
+    await expect(page.getByRole('menu')).toHaveCount(0);
     const controls = details.getByRole('group', { name: 'Move 1003.10' });
     await expect(controls).toBeVisible();
     await controls.getByRole('button', { name: 'Later' }).click();

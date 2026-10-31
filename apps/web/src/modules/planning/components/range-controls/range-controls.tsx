@@ -1,37 +1,36 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useId } from 'react';
+import { type ReactNode, useId } from 'react';
 import { IconButton } from '../../../../ui/components/icon-button/index.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import type { ZoomPreset } from '../../gantt-data.ts';
-import { zoomPresetIds, zoomPresets } from '../../timeline/time-scale.ts';
+import { zoomLevels, zoomPresetIds } from '../../timeline/time-scale.ts';
 import { PressedGroup } from './range-controls-pressed-group.tsx';
 
 export interface RangeControlsProps {
-  /** The name of the preset group: "Zoom" on the Gantt (D5), "Range" on the job order table (T1). */
-  readonly presetLabel: string;
-  readonly zoom: ZoomPreset;
-  readonly onZoomChange: (zoom: ZoomPreset) => void;
-  /** The first plant date of the range, "2026-11-02", which Go to date edits. */
+  /** The zoom group first: the ladder's ZoomControls on the board and the Gantt, PresetControls on the job order table. */
+  readonly zoomControls: ReactNode;
+  /** The plant date of the range's start or of the visible start, which Go to date edits. */
   readonly from: string;
   readonly onFromChange: (from: string) => void;
   readonly onEarlier: () => void;
   readonly onNow: () => void;
   readonly onLater: () => void;
-  /** The range as text, "W45, Mon 2 Nov to Sun 8 Nov". */
-  readonly rangeLabel: string;
+  /**
+   * The range as text, "W45, Mon 2 Nov to Sun 8 Nov": the chosen range on the job order table, the
+   * span in view on the board and the Gantt.
+   */
+  readonly rangeLabel: ReactNode;
 }
 
 /**
- * The range controls the timeline pages share (plan 18, Shared pieces; D5): the preset group,
+ * The range controls the timeline pages share (plan 18, Shared pieces; D5): the zoom group,
  * Earlier, Now and Later, Go to date and the range as text. Zoom and from go to the URL, so a link
  * from one page to another carries them (Krister, 2026-10-17).
  */
 export function RangeControls({
-  presetLabel,
-  zoom,
-  onZoomChange,
+  zoomControls,
   from,
   onFromChange,
   onEarlier,
@@ -42,12 +41,7 @@ export function RangeControls({
   const dateId = useId();
   return (
     <>
-      <PressedGroup
-        label={presetLabel}
-        choices={zoomPresetIds.map((id) => ({ id, label: zoomPresets[id].label }))}
-        value={zoom}
-        onChange={onZoomChange}
-      />
+      {zoomControls}
       <IconButton label="Show earlier range" variant="outline" size="icon-sm" onClick={onEarlier}>
         <ChevronLeft />
       </IconButton>
@@ -70,7 +64,29 @@ export function RangeControls({
           className="h-8 rounded-md border border-input bg-background px-2 font-mono text-xs"
         />
       </label>
-      <span className="font-mono text-data font-medium whitespace-nowrap">{rangeLabel}</span>
+      <span data-range-text className="font-mono text-data font-medium whitespace-nowrap">
+        {rangeLabel}
+      </span>
     </>
+  );
+}
+
+/** The four presets of D3 as a pressed group: the job order table's Range (ADR 0089). */
+export function PresetControls({
+  label,
+  zoom,
+  onZoomChange,
+}: {
+  readonly label: string;
+  readonly zoom: ZoomPreset;
+  readonly onZoomChange: (zoom: ZoomPreset) => void;
+}) {
+  return (
+    <PressedGroup
+      label={label}
+      choices={zoomPresetIds.map((id) => ({ id, label: zoomLevels[id].label }))}
+      value={zoom}
+      onChange={onZoomChange}
+    />
   );
 }

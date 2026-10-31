@@ -27,7 +27,13 @@ export function useGanttSource(): GanttDataSource {
   const all = useEnteredOrders();
   const entered = useMemo(() => enteredAt(all, plant), [all, plant]);
   return useMemo(
-    () => ({ load: (input) => source.load({ ...input, rules, entered }) }),
+    () => ({
+      load: (input) => source.load({ ...input, rules, entered }),
+      loadRows: (filter, page, options) =>
+        source.loadRows(filter, page, { ...options, rules, entered }),
+      loadChunk: (from, to, filter, options) =>
+        source.loadChunk(from, to, filter, { ...options, rules, entered }),
+    }),
     [source, rules, entered],
   );
 }

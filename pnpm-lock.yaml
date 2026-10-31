@@ -603,6 +603,9 @@ importers:
       culori:
         specifier: 'catalog:'
         version: 4.0.2
+      fast-check:
+        specifier: 'catalog:'
+        version: 4.10.2
       shadcn:
         specifier: 'catalog:'
         version: 4.21.0(typescript@6.0.3)

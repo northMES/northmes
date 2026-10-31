@@ -50,10 +50,11 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
     const user = userEvent.setup();
     let attempts = 0;
     const failingOnce: GanttDataSource = {
-      load: async (input) => {
+      ...g1DataSource,
+      loadRows: async (filter, page, options) => {
         attempts += 1;
         if (attempts === 1) throw new Error('The plan server did not answer');
-        return g1DataSource.load(input);
+        return g1DataSource.loadRows(filter, page, options);
       },
     };
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, failingOnce, 'board');
@@ -114,13 +115,14 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
     let attempts = 0;
     let answer: (() => void) | undefined;
     const slowSecond: GanttDataSource = {
-      load: async (input) => {
+      ...g1DataSource,
+      loadRows: async (filter, page, options) => {
         attempts += 1;
         if (attempts === 1) throw new Error('The plan server did not answer');
         await new Promise<void>((resolve) => {
           answer = resolve;
         });
-        return g1DataSource.load(input);
+        return g1DataSource.loadRows(filter, page, options);
       },
     };
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, slowSecond, 'board');
@@ -132,18 +134,18 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
     expect(await screen.findByRole('grid', { name: /board/ })).toBeTruthy();
   });
 
-  it('DR22 a refusal of a later range shows no access, not the error state', async () => {
-    const user = userEvent.setup();
+  it('DR22 a refusal of a time chunk the board loads later shows no access, not its error band', async () => {
+    // The rows and the chunks of W45 answer; a later chunk is refused, as the API's FORBIDDEN of a
+    // permission taken away would arrive.
     const refusingLater: GanttDataSource = {
-      load: async (input) => {
-        if (input.from.startsWith('2026-11-08')) throw new PlanningForbidden();
-        return g1DataSource.load(input);
+      ...g1DataSource,
+      loadChunk: async (from, to, filter, options) => {
+        if (from >= '2026-11-15T23:00:00.000Z') throw new PlanningForbidden();
+        return g1DataSource.loadChunk(from, to, filter, options);
       },
     };
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, refusingLater, 'board');
-    await screen.findByRole('grid', { name: /board/ });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-16' }, refusingLater, 'board');
 
-    await user.click(await screen.findByRole('button', { name: 'Show later range' }));
     expect(
       await screen.findByRole('heading', {
         level: 2,

@@ -301,7 +301,7 @@ test.describe('the design rules from computed style', () => {
     await expect(page.getByRole('menu')).toHaveCount(0);
   });
 
-  test('plan 18 the Gantt draws block text in pure black in both themes, the 3 px selection bar, the chain outline dashed and further in than the locked one, and keeps its header, its Not placed row and the Name column sticky', async ({
+  test('plan 18 the Gantt draws block text in pure black in both themes, the 3 px selection bar, the chain outline dashed and further in than the locked one, and keeps its header, its Not placed row and its tree pane sticky', async ({
     page,
     signIn,
     checkA11y,
@@ -309,6 +309,8 @@ test.describe('the design rules from computed style', () => {
     await signIn(planningHref('gantt', { zoom: 'week', from: '2026-11-02', order: 'po-1001' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).toBeVisible();
+    // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     const block = (id: string) => gantt.locator(`[data-block="${id}"]`);
 
     // GT1: every block of the selected order carries the 3 px bar; the others their 1 px border.
@@ -322,13 +324,13 @@ test.describe('the design rules from computed style', () => {
       '1px',
     );
 
-    // The time header (row 1), the Not placed row (row 2) and the Name column stay in view while
+    // The time header (row 1), the Not placed row (row 2) and the tree pane stay in view while
     // the grid scrolls. Read before any screenshot: the Argos full-page capture turns sticky
     // elements static (e2e/snapshot.ts).
     const header = gantt.locator('[role="row"][aria-rowindex="1"]');
     await expect(header).toHaveCSS('position', 'sticky');
     await expect(gantt.locator('[role="row"][aria-rowindex="2"]')).toHaveCSS('position', 'sticky');
-    await expect(header.locator('[role="columnheader"]').first()).toHaveCSS('position', 'sticky');
+    await expect(header.locator('[data-tree-pane]')).toHaveCSS('position', 'sticky');
 
     // D1: block text in pure black on the order color, in the light and the dark theme.
     expect((await styleOf(block('jo-1001-10'), ['color'])).color).toMatch(black);

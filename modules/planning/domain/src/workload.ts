@@ -14,9 +14,9 @@ import {
   type PlanJobOrder,
 } from './plan-context.ts';
 
-/** One cell of the workload lane: a production day, a shift or an ISO week, [fromMs, toMs). */
+/** One cell of the workload lane: a production day, a shift, an ISO week or a month, [fromMs, toMs). */
 export interface Bucket {
-  /** The bucket's name: a plant date, "2026-11-02 06:00 to 15:00" or "2026-W45". */
+  /** The bucket's name: a plant date, "2026-11-02 06:00 to 15:00", "2026-W45" or "2026-11". */
   readonly label: string;
   readonly fromMs: number;
   readonly toMs: number;
@@ -117,6 +117,33 @@ export function isoWeekBuckets(input: {
       });
     }
     monday = next;
+  }
+  return clipped(buckets, fromMs, toMs);
+}
+
+/** One bucket per calendar month overlapping a range, from the first at 00:00 on the wall clock, labelled "2026-11". */
+export function monthBuckets(input: {
+  readonly timeZone: string;
+  readonly fromMs: number;
+  readonly toMs: number;
+}): Bucket[] {
+  const { timeZone, fromMs, toMs } = input;
+  const midnight = Temporal.PlainTime.from('00:00');
+  const buckets: Bucket[] = [];
+  let first = localDateOf(fromMs, timeZone).with({ day: 1 });
+  for (;;) {
+    const monthFromMs = atLocal(timeZone, first, midnight);
+    if (monthFromMs >= toMs) break;
+    const next = first.add({ months: 1 });
+    const monthToMs = atLocal(timeZone, next, midnight);
+    if (monthToMs > fromMs) {
+      buckets.push({
+        label: first.toPlainYearMonth().toString(),
+        fromMs: monthFromMs,
+        toMs: monthToMs,
+      });
+    }
+    first = next;
   }
   return clipped(buckets, fromMs, toMs);
 }

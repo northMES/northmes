@@ -63,8 +63,10 @@ describe('deadline markers (plan 18, Deadlines on the timeline)', () => {
     expect(markerTexts(overlay, 'now')).toEqual(['now, Mon 2 Nov 09:40']);
   });
 
-  it('GT9 draws nothing of a marker outside the visible range', async () => {
-    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
+  it('GT9 draws nothing of a marker outside the buffer of the time area', async () => {
+    // The buffer reaches a viewport width of open time before Mon 23 Nov, after every G1 deadline
+    // and after now (ADR 0089, The endless axis).
+    renderGanttRoute({ zoom: 'day', from: '2026-11-23' });
     const gantt = await findGantt();
 
     const row = within(gantt).getByRole('row', { name: /^1006 / });

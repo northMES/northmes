@@ -1,18 +1,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import { Temporal } from 'temporal-polyfill';
 import { z } from 'zod';
-import type { ZoomPreset } from './gantt-data.ts';
+import type { ZoomLevel } from './gantt-data.ts';
 import { type PlanningPreview, planningPreviews } from './planning-preview.ts';
+import { zoomLevelIds, zoomLevels } from './timeline/time-scale.ts';
 
 /**
- * The view state of the Gantt page in the URL (ADR 0062, plan 18): the zoom preset, the first
+ * The view state of the Gantt page in the URL (ADR 0062, plan 18): the zoom level, the first
  * plant date of the range, the selected order and the chain highlight. zoom, from and order mean
  * the same on the board, so a link between the pages carries them. chain needs order, and the
  * screen drops it with the polite status message when the order is missing.
  */
 export interface GanttSearch {
-  readonly zoom?: ZoomPreset;
-  /** The first plant date of the visible range, "2026-11-02". */
+  /** The level of the zoom ladder (ADR 0089); an unknown id falls back to the screen's default. */
+  readonly zoom?: ZoomLevel;
+  /**
+   * The visible start (ADR 0089): the plant-local date-time the view wrote when scrolling stopped,
+   * "2026-11-03T13:20", or a plant date, "2026-11-02", which opens at the start of that date at
+   * the level.
+   */
   readonly from?: string;
   /** The selected order, by id. */
   readonly order?: string;
@@ -20,10 +27,18 @@ export interface GanttSearch {
   readonly chain?: 1;
 }
 
+/**
+ * A plant-local date-time to the minute, "2026-11-03T13:20", without an offset: the URL holds the
+ * plant's wall clock (ADR 0089), and an offset or a Z would name another clock.
+ */
+export const plantDateTime = z.iso
+  .datetime({ local: true, precision: -1 })
+  .refine((value) => /T\d{2}:\d{2}$/.test(value));
+
 /** The URL keys, each of which falls back to its default on its own (ADR 0062). */
 const searchKeys = z.object({
-  zoom: z.enum(['hours', 'day', 'week', '4weeks']).optional().catch(undefined),
-  from: z.iso.date().optional().catch(undefined),
+  zoom: z.enum(zoomLevelIds).optional().catch(undefined),
+  from: z.union([z.iso.date(), plantDateTime]).optional().catch(undefined),
   order: z
     .union([z.string(), z.number()])
     .transform(String)
@@ -74,7 +89,32 @@ export function boardSearch(raw: Record<string, unknown>): BoardSearch {
   };
 }
 
-export function withZoom<T extends GanttSearch>(search: T, zoom: ZoomPreset): T {
+/**
+ * The instant a `from` opens at (ADR 0089): a plain date at the start of that day, which is its
+ * production day start at the levels that span hours and its midnight at the others; a date-time
+ * at that plant time, the first instant after it in the spring gap (ADR 0024).
+ */
+export function startOfFrom(
+  from: string,
+  zoom: ZoomLevel,
+  timeZone: string,
+  productionDayStart: string,
+): number {
+  const clock = zoomLevels[zoom].startsAt === 'productionDay' ? productionDayStart : '00:00';
+  const local = from.includes('T') ? from : `${from}T${clock}`;
+  return Temporal.PlainDateTime.from(local).toZonedDateTime(timeZone, { disambiguation: 'later' })
+    .epochMilliseconds;
+}
+
+/** The `from` of a visible start: its plant-local date-time to the minute, "2026-11-03T13:20". */
+export function fromAt(epochMs: number, timeZone: string): string {
+  return Temporal.Instant.fromEpochMilliseconds(epochMs)
+    .toZonedDateTimeISO(timeZone)
+    .toPlainDateTime()
+    .toString({ smallestUnit: 'minute', roundingMode: 'trunc' });
+}
+
+export function withZoom<T extends GanttSearch>(search: T, zoom: ZoomLevel): T {
   return { ...search, zoom };
 }
 

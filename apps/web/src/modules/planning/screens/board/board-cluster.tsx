@@ -26,6 +26,7 @@ const countWords: Readonly<Record<BoardBlockState['kind'], string>> = {
   locked: 'locked',
   draft: 'changed in your draft',
   started: 'started',
+  finished: 'finished',
   conflict: 'in conflict',
   overdue: 'overdue',
 };
@@ -90,7 +91,7 @@ export function BoardCluster({
   readonly selectedOrderId: string | undefined;
   readonly onFocus: (event: FocusEvent<HTMLDivElement>) => void;
   readonly onSelectOrder: (orderId: string) => void;
-  /** A row's button opens the Details of its job order, as a block's click does. */
+  /** A row's button opens the Details of its job order, as a block's double click does. */
   readonly onOpenDetails: (jobOrderId: string) => void;
 }) {
   const { draftRowIds } = useGanttView();

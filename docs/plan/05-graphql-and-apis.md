@@ -273,7 +273,7 @@ Refused arguments return `BAD_USER_INPUT` with `errorCode` `core.list.bad_argume
 
 Every connection field resolves lazily through a generated `<T>ConnectionResolver`, which also carries the list's permission guard. `edges` and `pageInfo` share one row query. A query that selects only `aggregates` and `groupedAggregates` runs no row query. `totalCount` runs one `count(*)` with the same filter only when selected. Append-only lists (the audit list, the event log, the connector import log) declare `totalCount: false` and show "more" from `hasNextPage`; they keep filter, orderBy, search and group by.
 
-The planning board's range query is described in [07-production-planning.md](07-production-planning.md). Its resolver limits days and rows and returns `planning.board.range_too_large` above them.
+The planning board's range query is described in [07-production-planning.md](07-production-planning.md). Its resolver limits days and rows and returns `planning.board.range_too_large` above them; under [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) the limit applies per time chunk.
 
 ### Cursors
 
@@ -452,7 +452,8 @@ Codes named by the decisions so far:
 | `core.client_outdated` | mutation from a tab running an older build |
 | `core.secret_reentry_required` | an outbound URL changed without a new secret |
 | `core.list.bad_argument`, `core.list.invalid_cursor`, `core.list.ref_search_too_broad` | list argument errors (`BAD_USER_INPUT`) |
-| `planning.board.range_too_large` | board range above its day or row limit |
+| `planning.board.range_too_large` | board range or time chunk above its day or row limit |
+| `planning.gantt.too_many_orders` | the Gantt's row list above `ganttMaxOrders` |
 | `core.request.malformed`, `core.request.too_large`, `core.request.unsupported_media_type`, `core.request.rate_limited` | request and transport errors on REST routes (M-51) |
 | `core.internal` | a masked error |
 

@@ -5,6 +5,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { politeRegionId } from '../../../src/ui/lib/announce.ts';
 import {
+  chooseDetailsAction,
   detailsOpen,
   findDetails,
   findGantt,
@@ -60,7 +61,7 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
       within(within(gantt).getByRole('row', { name: /^1003 / })).getByRole('rowheader'),
     );
     const panel = await findDetails();
-    await userEvent.click(within(panel).getByRole('button', { name: 'Show critical chain' }));
+    await chooseDetailsAction(panel, 'Show critical chain');
 
     await waitFor(() => {
       expect(router.state.location.search).toEqual({

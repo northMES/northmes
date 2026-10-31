@@ -57,6 +57,8 @@ Cut from release 1: resize (block length follows from quantity, rates and the ca
 
 The order Gantt offers Hide closed time, a local option that is on by default and compresses every closed calendar window to a few pixels on the same scale, so a week of the A1 calendar does not spend 73 percent of its width on nights and weekends ([18-gantt-timeline.md](../plan/18-gantt-timeline.md); decided 2026-10-17).
 
+[ADR 0089](0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) replaces the four zoom presets with a ladder of zoom levels, keeps the four as levels, and replaces the loaded range with an endless axis that loads job orders by time chunk, on both views. So the snap step above is the zoom level's step, and the field slot's `useValues` loads the values for the blocks of the loaded chunks.
+
 ### The job order table view
 
 The table view is the main screen-reader path and a second view for every planner. It is a semantic TanStack Table with order and operation, article, machine, start, end, quantity, status, lock holder, order deadline, planned end and late-by columns, and sortable headers set `aria-sort`. Each row has Move (the shared Move dialog), Lock and Open order. It pages on the server through the Relay connection ([ADR 0016](0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)), because NVDA browse mode stops at the last rendered row of a virtualized table.

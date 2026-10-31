@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
-import { RangeControls } from '../../components/range-controls/index.ts';
+import { PresetControls, RangeControls } from '../../components/range-controls/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import { applyDraft, draftRowIds } from '../../gantt-draft.ts';
 import { useGanttSource } from '../../gantt-source-context.ts';
@@ -222,9 +222,13 @@ export function JobOrdersScreen() {
         <div className="flex flex-col gap-2">
           <div role="toolbar" aria-label="Job table" className="flex flex-wrap items-center gap-2">
             <RangeControls
-              presetLabel="Range"
-              zoom={zoom}
-              onZoomChange={(next) => void setSearch({ ...search, zoom: next })}
+              zoomControls={
+                <PresetControls
+                  label="Range"
+                  zoom={zoom}
+                  onZoomChange={(next) => void setSearch({ ...search, zoom: next })}
+                />
+              }
               from={from}
               onFromChange={(next) => void setSearch({ ...search, from: next })}
               onEarlier={() =>

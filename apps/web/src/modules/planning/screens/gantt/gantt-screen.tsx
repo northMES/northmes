@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -15,7 +16,15 @@ import {
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { useBoardFields } from '../../board-fields-store.ts';
-import type { GanttDataSource, GanttSnapshot } from '../../gantt-data.ts';
+import { ChunkBands, ChunkStatus, unloadedChunks } from '../../components/chunk-status/index.ts';
+import { VisibleSpanText } from '../../components/range-controls/index.ts';
+import {
+  type GanttCalendar,
+  type GanttDataSource,
+  type GanttPageRequest,
+  type GanttSnapshot,
+  ganttMaxOrders,
+} from '../../gantt-data.ts';
 import {
   applyDraft,
   cascadeFromHere,
@@ -32,10 +41,12 @@ import {
   runSummary,
   splitRunInDraft,
 } from '../../gantt-draft.ts';
+import { loadedSnapshot } from '../../gantt-loaded.ts';
 import {
   droppedKeyMessage,
   type GanttSearch,
   ganttSearch,
+  startOfFrom,
   withChain,
   withFrom,
   withOrder,
@@ -51,14 +62,15 @@ import { usePlanningDraft } from '../../planning-draft.tsx';
 import { closedWindows } from '../../timeline/availability-shading.ts';
 import {
   type ClosedWindow,
-  createTimeScale,
-  extendedRange,
-  naturalWidthPx,
   plantDateOf,
-  rangeLabel,
-  rangeOf,
-  shiftedFrom,
+  spanLabel,
+  type TimeRange,
 } from '../../timeline/time-scale.ts';
+import { useTimeBuffer } from '../../timeline/use-time-buffer.ts';
+import { useTimeChunks } from '../../timeline/use-time-chunks.ts';
+import { useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
+import type { ZoomPlant } from '../../timeline/zoom-view.ts';
+import { useGanttRows } from '../../use-gantt-rows.ts';
 import { remPx, useMeasuredWidth, useViewportFill } from '../../use-grid-size.ts';
 import { useMoveActions } from '../../use-move-actions.ts';
 import { chainOf } from './gantt-chain.ts';
@@ -67,27 +79,33 @@ import { GanttDetailDrawer } from './gantt-detail-panel.tsx';
 import { GanttDraftDrawer } from './gantt-draft-drawer.tsx';
 import { GanttLinks, linksOf } from './gantt-links.tsx';
 import { GanttMarkerLayer, overlayMarkers } from './gantt-marker-layer.tsx';
+import { GanttMoreRows } from './gantt-more-rows.tsx';
 import { refusalMessage } from './gantt-move.ts';
-import { GanttNotPlacedRow } from './gantt-not-placed-row.tsx';
+import { GanttNotPlacedRow, notPlacedHeightRem } from './gantt-not-placed-row.tsx';
 import { useGanttOptions } from './gantt-options.ts';
 import { GanttRowView } from './gantt-row.tsx';
 import {
   buildGanttRows,
+  fitTargetOf,
   type GanttRow,
   type JobOrderRow,
   notPlacedRows,
   rowHeightRem,
+  selectionRowOf,
 } from './gantt-rows.ts';
 import { GanttRunDialog } from './gantt-run-dialog.tsx';
+import { GanttSplitter } from './gantt-splitter.tsx';
 import { GanttTimeHeader, timeHeaderHeightRem } from './gantt-time-area.tsx';
 import { GanttToolbar } from './gantt-toolbar.tsx';
 import {
   type GanttSort,
   type GanttTableRow,
   GanttTreeHeaderCells,
+  treePaneLayout,
   useGanttTable,
   visibleColumns,
 } from './gantt-tree-pane.tsx';
+import { useTreePaneScroll } from './gantt-tree-scroll.ts';
 import { GanttWorkloadPanel } from './gantt-workload-panel.tsx';
 
 export interface GanttScreenProps {
@@ -97,9 +115,6 @@ export interface GanttScreenProps {
 
 /** The Gantt opens at Week zoom (D5); the board's own default comes with the board. */
 const defaultZoom = 'week';
-
-/** The width the tree pane may take of the view, as the machine column on the board. */
-const treePaneShare = 0.4;
 
 /**
  * "Material short: 1004.10. No longer material short: 1005.20.", or nothing when no warning
@@ -114,6 +129,21 @@ function shortageChangeText(
     ...(cleared.length > 0 ? [`No longer material short: ${cleared.join(', ')}.`] : []),
   ];
   return parts.length === 0 ? undefined : parts.join(' ');
+}
+
+/**
+ * The plant calendar, kept while a load answers the same one, so a load of the buffer never
+ * changes the closed time Hide closed time compresses and rebuilds the buffer again.
+ */
+function useStableCalendar(calendar: GanttCalendar | undefined): GanttCalendar | undefined {
+  // Each loaded calendar is compared once, when it arrives, as React's rule for state derived
+  // from props says.
+  const [kept, setKept] = useState({ seen: calendar, calendar });
+  if (calendar === kept.seen) return kept.calendar;
+  const same = JSON.stringify(calendar) === JSON.stringify(kept.calendar);
+  const next = { seen: calendar, calendar: same ? kept.calendar : calendar };
+  setKept(next);
+  return next.calendar;
 }
 
 /**
@@ -137,7 +167,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       navigate({ to: '.', search: next as Record<string, unknown>, replace: true }),
     [navigate],
   );
-  const [committed, setSnapshot] = useState<GanttSnapshot | undefined>(undefined);
   // The planner's draft, in memory until the plan server exists, and the move in progress.
   const [draft, setDraft] = usePlanningDraft();
   const [draftOpen, setDraftOpen] = useState(false);
@@ -148,9 +177,13 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const [runReview, setRunReview] = useState<readonly string[] | undefined>(undefined);
   /** The element that opened the My draft drawer, which takes focus back when it closes. */
   const draftOpener = useRef<HTMLElement | undefined>(undefined);
-  const [loadError, setLoadError] = useState<unknown>(undefined);
-  const [attempt, setAttempt] = useState(0);
   const [options, setOptions] = useGanttOptions();
+  // The row list by page and the job orders by time chunk (ADR 0089, Loading by time chunk); the
+  // Gantt has no filter of its own yet, so both read every open order.
+  const loadRows = useCallback((page: GanttPageRequest) => source.loadRows({}, page), [source]);
+  // The workload sums every order, so with the panel open every page of the row list loads.
+  const rowList = useGanttRows({ load: loadRows, all: options.workload });
+  const frame = rowList.frame;
   const [expanded, setExpanded] = useState<ExpandedState>(true);
   const [sort, setSort] = useState<GanttSort | undefined>(undefined);
   const [focusedRowId, setFocusedRowId] = useState<string | undefined>(undefined);
@@ -159,68 +192,139 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   /** The row that takes focus when the drawer closes: the opened row, or the row a chain link named. */
   const returnRowId = useRef<string | undefined>(undefined);
   const [width, gridRef] = useMeasuredWidth();
-  const zoom = search.zoom ?? defaultZoom;
+  const urlZoom = search.zoom ?? defaultZoom;
   const [fillHeight, fillRef] = useViewportFill(
-    `${zoom}|${search.from ?? ''}|${options.hideClosed}|${options.workload}`,
+    `${urlZoom}|${search.from ?? ''}|${options.hideClosed}|${options.workload}`,
   );
 
-  const timeZone = committed?.plant.timeZone ?? 'UTC';
-  const productionDayStart = committed?.plant.productionDayStart ?? '06:00';
-  // The range starts at the date in the URL, else at the snapshot's now, else at today.
-  const from =
-    search.from ??
-    (committed === undefined
-      ? plantDateOf(Date.now(), timeZone)
-      : plantDateOf(committed.nowMs, timeZone));
-  // The chosen range names the grid and the toolbar; the loaded range grows by whole spans of the
-  // preset as the planner scrolls towards an edge (#685), and shrinks back when from or zoom change.
-  const chosenRange = useMemo(
-    () => rangeOf(from, zoom, timeZone, productionDayStart),
-    [from, zoom, timeZone, productionDayStart],
+  const timeZone = frame?.plant.timeZone ?? 'UTC';
+  const productionDayStart = frame?.plant.productionDayStart ?? '06:00';
+  // A column's width while its header edge is dragged, kept in the options on release (#943).
+  const [draggedWidth, setDraggedWidth] = useState<{ id: string; width: number } | undefined>(
+    undefined,
   );
-  // The extension belongs to one chosen start and zoom; a change of either resets it in the same
-  // render, through state, as React's rule for state derived from props says.
-  const extensionKey = `${from}|${zoom}`;
-  const [extended, setExtended] = useState({ key: extensionKey, before: 0, after: 0 });
-  if (extended.key !== extensionKey) setExtended({ key: extensionKey, before: 0, after: 0 });
-  const extension = extended.key === extensionKey ? extended : { before: 0, after: 0 };
-  const setExtension = (
-    update: (current: { before: number; after: number }) => { before: number; after: number },
-  ) =>
-    setExtended((current) => {
-      const base = current.key === extensionKey ? current : { before: 0, after: 0 };
-      return { key: extensionKey, ...update(base) };
-    });
-  const range = useMemo(
-    () => extendedRange(from, zoom, timeZone, productionDayStart, extension),
-    [from, zoom, timeZone, productionDayStart, extension.before, extension.after],
+  const columnWidths = useMemo(
+    () =>
+      draggedWidth === undefined
+        ? options.columnWidths
+        : { ...options.columnWidths, [draggedWidth.id]: draggedWidth.width },
+    [options.columnWidths, draggedWidth],
   );
-  // Everything the view draws reads the plan with the draft applied, analysed over the loaded
-  // range (plan 18, Resolving a break in the draft).
+  const columns = useMemo(
+    () => visibleColumns(options.hiddenColumns, columnWidths),
+    [options.hiddenColumns, columnWidths],
+  );
+  const changeColumnWidth = (id: string, width: number | undefined, done: boolean) => {
+    if (width !== undefined && !done) {
+      setDraggedWidth({ id, width });
+      return;
+    }
+    setDraggedWidth(undefined);
+    if (width !== undefined) setOptions({ columnWidths: { ...options.columnWidths, [id]: width } });
+  };
+  // The tree pane sticks as one block at the share of the view its splitter sets, 40 percent by
+  // default; columns wider than the pane scroll inside it, so the time area stays reachable on a
+  // narrow grid (WCAG 1.4.10) and the time column always starts where the pane ends (#943).
+  const pane = useMemo(
+    () => treePaneLayout(columns, width, options.treePaneShare),
+    [columns, width, options.treePaneShare],
+  );
+  // The pane scrolls sideways while its columns are wider than it shows.
+  const paneScrolls = pane.contentWidth > pane.innerWidth;
+  const paneWidth = pane.paneWidth;
+  const treeScroll = useTreePaneScroll({
+    innerWidth: pane.innerWidth,
+    contentWidth: pane.contentWidth,
+  });
+  const gridId = useId();
+
+  const gridElement = useRef<HTMLElement | null>(null);
+  // One ref for the grid, kept across renders, so the width is not measured again on each one.
+  const { gridRef: treeScrollRef } = treeScroll;
+  const ganttGridRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      gridElement.current = node;
+      gridRef(node);
+      treeScrollRef(node);
+    },
+    [gridRef, treeScrollRef],
+  );
+  // Hide closed time compresses the plant calendar's closed windows; the calendar is kept while a
+  // load answers the same one, so a load never rebuilds the buffer.
+  const calendar = useStableCalendar(frame?.calendar);
+  const zoomPlant = useMemo<ZoomPlant>(
+    () => ({
+      timeZone,
+      productionDayStart,
+      ...(options.hideClosed &&
+        calendar !== undefined && {
+          closedOf: (around: TimeRange) => closedWindows(calendar, timeZone, around),
+        }),
+    }),
+    [timeZone, productionDayStart, options.hideClosed, calendar],
+  );
+  // The endless axis (ADR 0089): a buffer of three viewport widths that moves near an edge. A
+  // pointer drag holds it, since the drag reads its moves in this buffer's pixels (#899).
+  const buffer = useTimeBuffer({
+    zoom: urlZoom,
+    from: search.from,
+    nowMs: frame?.nowMs ?? Date.now(),
+    widthPx: width,
+    grid: gridElement,
+    columns: { treeWidth: paneWidth, stickyWidth: paneWidth },
+    plant: zoomPlant,
+    // The level goes to the URL when it changes, so a default level stays out of it.
+    onNavigate: (level, start) =>
+      void setSearch(withFrom(level === urlZoom ? search : withZoom(search, level), start)),
+    frozen: {
+      get: () => moveStore.get()?.state.source === 'pointer',
+      subscribe: (listener) => moveStore.subscribe(listener),
+    },
+  });
+  const zoom = buffer.zoom;
+  const range = buffer.range;
+  // The view keeps the chunks that hold the job orders of the selected orders, of the row in
+  // Details and of the focused row, wherever the buffer moves (ADR 0089).
+  const keep = useMemo(() => {
+    const orderIds = new Set(search.order === undefined ? [] : [search.order, ...extraSelected]);
+    const ids = new Set<string>(
+      [detailRowId, focusedRowId].filter((id): id is string => id !== undefined),
+    );
+    for (const order of rowList.orders) {
+      if (orderIds.has(order.id)) for (const row of order.jobOrders) ids.add(row.id);
+    }
+    return ids;
+  }, [search.order, extraSelected, detailRowId, focusedRowId, rowList.orders]);
+  const loadChunk = useCallback(
+    (from: string, to: string) => source.loadChunk(from, to, {}),
+    [source],
+  );
+  const chunks = useTimeChunks({
+    load: loadChunk,
+    zoom,
+    timeZone,
+    // The chunks are aligned to the plant's dates, which the first page of the row list brings.
+    buffer: frame === undefined ? undefined : range,
+    view: buffer.settled,
+    keep,
+  });
+  // The plan of the loaded rows and chunks, analysed over the buffer.
+  const committed = useMemo(
+    () =>
+      frame === undefined || range === undefined
+        ? undefined
+        : loadedSnapshot(frame, rowList.orders, chunks.jobOrders, range),
+    [frame, rowList.orders, chunks.jobOrders, range],
+  );
+  // Everything the view draws reads the plan with the draft applied, analysed over the buffer
+  // (plan 18, Resolving a break in the draft).
   const snapshot = useMemo(
-    () => (committed === undefined ? undefined : applyDraft(committed, draft, range)),
+    () =>
+      committed === undefined || range === undefined
+        ? undefined
+        : applyDraft(committed, draft, range),
     [committed, draft, range],
   );
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoadError(undefined);
-    source
-      .load({
-        from: new Date(range.fromMs).toISOString(),
-        to: new Date(range.toMs).toISOString(),
-        filter: {},
-      })
-      .then((loaded) => {
-        if (!cancelled) setSnapshot(loaded);
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) setLoadError(error ?? new Error('The Gantt could not be loaded'));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [source, range.fromMs, range.toMs, attempt]);
 
   // chain without order is dropped with the polite status message (ADR 0062, plan 18).
   const droppedChain = search.chain !== undefined && search.order === undefined;
@@ -232,25 +336,12 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   }, [droppedChain, search, setSearch]);
 
   const rows = useMemo(() => (snapshot === undefined ? [] : buildGanttRows(snapshot)), [snapshot]);
-  const columns = useMemo(() => visibleColumns(options.hiddenColumns), [options.hiddenColumns]);
-  // The tree pane takes its columns' widths up to 40 percent of the view; the Name column gives
-  // way first. While the pane fits the cap every tree cell sticks and the time column scrolls under
-  // it; beyond the cap only the Name column sticks and the rest scrolls with the time, so the
-  // time area stays reachable on a narrow grid (WCAG 1.4.10).
-  const cap = Math.floor(width * treePaneShare);
-  const fixedWidth = columns.slice(1).reduce((sum, column) => sum + column.widthPx, 0);
-  const nameWidth = Math.max(160, Math.min(columns[0]?.widthPx ?? 300, cap - fixedWidth));
-  // The tree columns' width as the grid lays them out, which may exceed the cap; the overlay
-  // starts where the time column starts.
-  const treeWidth = nameWidth + fixedWidth;
-  const stickyTree = treeWidth <= cap;
-  // The left offset of each tree column, where its cells stick while the time column scrolls.
-  const cellLefts = columns.map((_, index) =>
-    index === 0 ? 0 : nameWidth + columns.slice(1, index).reduce((sum, c) => sum + c.widthPx, 0),
-  );
 
   const plantClosed = useMemo(
-    () => (snapshot === undefined ? [] : closedWindows(snapshot.calendar, timeZone, range)),
+    () =>
+      snapshot === undefined || range === undefined
+        ? []
+        : closedWindows(snapshot.calendar, timeZone, range),
     [snapshot, timeZone, range],
   );
   const closedByCalendar = useMemo(() => {
@@ -258,63 +349,34 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     if (snapshot !== undefined) byName.set(snapshot.calendar.name, plantClosed);
     return byName;
   }, [snapshot, plantClosed]);
-  // The time area takes the preset's natural width when that is wider than the space beside the
-  // tree pane, and scrolls sideways inside the grid under the sticky tree columns.
-  const hideClosed = options.hideClosed ? { closed: plantClosed } : undefined;
-  const timeWidth = Math.max(
-    width - Math.min(treeWidth, cap),
-    Math.ceil(naturalWidthPx(range, zoom, hideClosed)),
+  // The time area is the buffer at its natural width, and scrolls sideways inside the grid under
+  // the sticky tree pane.
+  const scale = buffer.scale;
+  const timeWidth = Math.ceil(scale?.widthPx ?? 0);
+  const gridTemplateColumns = `${paneWidth}px ${timeWidth}px`;
+  const timelineZoom = useTimelineZoom({
+    buffer,
+    grid: gridElement,
+    plant: zoomPlant,
+    dragging: () => moveStore.get()?.state.source === 'pointer',
+  });
+
+  // The workload lanes keep the time area's scroll position, also after a buffer move, which
+  // corrects the grid's position in a layout effect before this one runs.
+  const workloadLanes = useRef<HTMLDivElement | null>(null);
+  const followGrid = useCallback(() => {
+    const lanes = workloadLanes.current;
+    const left = gridElement.current?.scrollLeft;
+    if (lanes !== null && left !== undefined && lanes.scrollLeft !== left) lanes.scrollLeft = left;
+  }, []);
+  const workloadRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      workloadLanes.current = node;
+      followGrid();
+    },
+    [followGrid],
   );
-  // A span added before the range widens the time column on the left: the scroll position moves by
-  // the added width in the same frame, so what was in view stays in view.
-  const lastTimeWidth = useRef<number | undefined>(undefined);
-  const shiftAfterGrowth = useRef(false);
-  const gridElement = useRef<HTMLElement | null>(null);
-  // An edge counts only after a horizontal move of the planner towards it: a vertical scroll
-  // changes nothing, a range under two screens wide extends on the side the planner is heading
-  // for, and a move of the position the view makes itself (the shift after a span was added on
-  // the left, the clamp after the range shrank) counts as the new baseline, not as a move.
-  const lastScrollLeft = useRef(0);
-  useLayoutEffect(() => {
-    const previous = lastTimeWidth.current;
-    lastTimeWidth.current = timeWidth;
-    const grid = gridElement.current;
-    if (grid === null) return;
-    if (shiftAfterGrowth.current && previous !== undefined && timeWidth > previous) {
-      grid.scrollLeft += timeWidth - previous;
-    }
-    shiftAfterGrowth.current = false;
-    // The browser has laid the new width out and clamped the position by now.
-    lastScrollLeft.current = grid.scrollLeft;
-  }, [timeWidth]);
-  const onGridScroll = (grid: HTMLElement) => {
-    const { scrollLeft, clientWidth, scrollWidth } = grid;
-    const previous = lastScrollLeft.current;
-    lastScrollLeft.current = scrollLeft;
-    if (clientWidth <= 0 || scrollLeft === previous) return;
-    if (scrollLeft > previous && scrollLeft + clientWidth >= scrollWidth - clientWidth) {
-      setExtension((current) => ({ ...current, after: current.after + 1 }));
-    } else if (scrollLeft < previous && scrollLeft <= clientWidth) {
-      shiftAfterGrowth.current = true;
-      setExtension((current) => ({ ...current, before: current.before + 1 }));
-    }
-  };
-  const gridTemplateColumns = [
-    `${nameWidth}px`,
-    ...columns.slice(1).map((column) => `${column.widthPx}px`),
-    `${timeWidth}px`,
-  ].join(' ');
-  const scale = useMemo(
-    () =>
-      createTimeScale({
-        range,
-        zoom,
-        timeZone,
-        widthPx: timeWidth,
-        ...(options.hideClosed && { hideClosed: { closed: plantClosed } }),
-      }),
-    [range, zoom, timeZone, timeWidth, options.hideClosed, plantClosed],
-  );
+  useLayoutEffect(followGrid);
 
   const table = useGanttTable({
     rows,
@@ -368,21 +430,20 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     [snapshot, draft],
   );
   const draftIds = useMemo(() => draftRowIds(draft), [draft]);
-  // A block takes focus and scrolls into view past the sticky tree pane and the time header, which
-  // the grid's scroll padding keeps it clear of (WCAG 2.4.11).
+  // A block takes focus and scrolls into view past the sticky tree pane, the time header and the
+  // Not placed row, which the grid's scroll padding keeps it clear of (WCAG 2.4.11).
   const focusBlock = (jobOrderId: string) => {
     const block = document.querySelector<HTMLElement>(`[data-block="${jobOrderId}"]`);
     block?.focus({ preventScroll: true });
     block?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   };
-  const { actions: moveActions, state: moveState } = useMoveActions({
+  const { actions: moveActions, store: moveStore } = useMoveActions({
     committed,
     snapshot,
     draft,
     setDraft,
     cascadeOn: options.cascade,
     zoom,
-    range,
     timeZone,
     focusBlock,
   });
@@ -548,7 +609,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   }, [committed, draft, materialShortages]);
   const boardFields = useBoardFields(plant);
   const view = useMemo<GanttViewContext | undefined>(() => {
-    if (snapshot === undefined) return undefined;
+    if (snapshot === undefined || scale === undefined) return undefined;
     const equipment = new Map(snapshot.equipment.map((machine) => [machine.code, machine]));
     const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     return {
@@ -596,25 +657,54 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     boardFields,
   ]);
   const { links, limited } =
-    snapshot === undefined
+    snapshot === undefined || scale === undefined
       ? { links: [], limited: false }
       : linksOf(linkRows, snapshot, scale, search.order);
 
+  // The next page of the row list loads once the rows end within one view of the grid's bottom,
+  // as the planner scrolls down or when the rows loaded do not fill the grid.
+  const { next: rowsNext, loadNext } = rowList;
+  const loadMoreRows = useCallback(
+    (grid: HTMLElement | null) => {
+      if (grid === null || rowsNext !== 'idle' || grid.clientHeight <= 0) return;
+      if (grid.scrollTop + 2 * grid.clientHeight >= grid.scrollHeight) loadNext();
+    },
+    [rowsNext, loadNext],
+  );
+  // Also after each render, as a page that loaded or a collapsed order may leave the rows shorter
+  // than the grid, with nothing to scroll.
+  useEffect(() => {
+    loadMoreRows(gridElement.current);
+  });
+  // A page of the row list loading or failing is said as a polite status message.
+  useEffect(() => {
+    if (rowsNext === 'loading') announce('Loading more orders.');
+    else if (rowsNext === 'failed') announce('Orders could not be loaded.');
+  }, [rowsNext]);
+
   let state: PageState = { status: 'ready' };
-  if (snapshot === undefined && loadError !== undefined) {
+  if (rowList.status === 'refused') {
+    state = {
+      status: 'error',
+      title: 'Too many orders for the Gantt',
+      description: `More than ${ganttMaxOrders.toLocaleString('en-GB')} orders match. Narrow the filter.`,
+      error: rowList.error,
+      onRetry: async () => rowList.retry(),
+    };
+  } else if (rowList.status === 'failed') {
     state = {
       status: 'error',
       title: 'Could not load the Gantt',
-      error: loadError,
-      onRetry: async () => setAttempt((count) => count + 1),
+      error: rowList.error,
+      onRetry: async () => rowList.retry(),
     };
   } else if (snapshot === undefined) {
     state = { status: 'loading' };
-  } else if (rows.length === 0) {
+  } else if (rows.length === 0 && rowList.next === 'done') {
     state = {
       status: 'empty',
-      title: 'No orders in this range',
-      description: 'Show an earlier or later range, or widen the filter.',
+      title: 'No open orders',
+      description: 'Every order of this plant is finished or cancelled.',
     };
   }
 
@@ -732,7 +822,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         event.currentTarget.querySelector<HTMLElement>('[data-row-menu]')?.click();
         break;
       case 'Escape':
-        if (moveState !== undefined) moveActions?.cancel();
+        if (moveStore.get() !== undefined) moveActions?.cancel();
         else if (chain !== undefined) void setSearch(withChain(search, false));
         else handled = false;
         break;
@@ -745,8 +835,20 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     }
   };
 
-  const gridName = `${plant} order Gantt, ${rangeLabel(chosenRange, zoom, timeZone)}`;
-  const rowCount = flatRows.length + 2;
+  const gridName = [
+    `${plant} order Gantt`,
+    ...(buffer.settled === undefined ? [] : [spanLabel(buffer.settled, zoom, timeZone)]),
+  ].join(', ');
+  // Go to date shows the date of the visible start, which the URL holds once scrolling stops; a
+  // date the planner picks opens at its level's start.
+  const goToDate = (search.from ?? plantDateOf(committed?.nowMs ?? Date.now(), timeZone)).slice(
+    0,
+    10,
+  );
+  // The row count is unknown while pages of the row list are still to load (WAI-ARIA: -1).
+  const rowCount = rowList.next === 'done' ? flatRows.length + 2 : -1;
+  // The chunks of the buffer without their job orders, which the bands and the status line show.
+  const unloaded = unloadedChunks(chunks.chunks, range);
   const focusedId =
     focusedRowId !== undefined && flatRows.some((row) => row.id === focusedRowId)
       ? focusedRowId
@@ -759,15 +861,25 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       toolbar={
         <GanttToolbar
           zoom={zoom}
-          onZoomChange={(next) => void setSearch(withZoom(search, next))}
-          from={from}
-          onFromChange={(next) => void setSearch(withFrom(search, next))}
-          onEarlier={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'earlier')))}
-          onNow={() =>
-            void setSearch(withFrom(search, plantDateOf(snapshot?.nowMs ?? Date.now(), timeZone)))
+          onZoomChange={timelineZoom.setLevel}
+          onZoomToFit={() => {
+            // The row in the Details drawer, else the selected order or its run, else every
+            // loaded row.
+            const selected = search.order === undefined ? undefined : rowById.get(search.order);
+            const target = fitTargetOf(detailRow ?? selectionRowOf(selected, rowById), rows);
+            timelineZoom.fit(target.span, target.name);
+          }}
+          from={goToDate}
+          onFromChange={(next) =>
+            buffer.goTo(zoom, {
+              ms: startOfFrom(next, zoom, timeZone, productionDayStart),
+              viewportX: paneWidth,
+            })
           }
-          onLater={() => void setSearch(withFrom(search, shiftedFrom(from, zoom, 'later')))}
-          rangeLabel={rangeLabel(chosenRange, zoom, timeZone)}
+          onEarlier={() => buffer.page('earlier')}
+          onNow={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
+          onLater={() => buffer.page('later')}
+          rangeLabel={<VisibleSpanText visible={buffer.visible} zoom={zoom} timeZone={timeZone} />}
           options={options}
           onOptionsChange={setOptions}
           draftCount={draftChangeCount(draft)}
@@ -786,7 +898,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
           .filter((part) => part !== undefined)
           .join(' ')}
       </p>
-      {view !== undefined && snapshot !== undefined && (
+      <ChunkStatus chunks={unloaded} timeZone={timeZone} onRetry={chunks.retry} />
+      {view !== undefined && snapshot !== undefined && scale !== undefined && (
         <GanttViewProvider value={view}>
           <div
             ref={fillRef}
@@ -794,103 +907,183 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             className="flex min-w-0 flex-col gap-3"
             style={fillHeight === undefined ? undefined : { height: `${fillHeight}px` }}
           >
-            <div
-              ref={(node) => {
-                gridElement.current = node;
-                gridRef(node);
-              }}
-              role="treegrid"
-              aria-label={gridName}
-              aria-rowcount={rowCount}
-              aria-busy={state.status === 'loading' || undefined}
-              onKeyDown={(event) => {
-                // The Escape stack: move mode ends first, then the chain highlight.
-                if (event.key === 'Escape' && moveState !== undefined) {
-                  event.stopPropagation();
-                  moveActions?.cancel();
-                } else if (event.key === 'Escape' && chain !== undefined) {
-                  event.stopPropagation();
-                  void setSearch(withChain(search, false));
-                }
-              }}
-              onScroll={(event) => onGridScroll(event.currentTarget)}
-              className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
-              style={{
-                scrollPaddingTop: `${timeHeaderHeightRem}rem`,
-                scrollPaddingInlineStart: `${stickyTree ? treeWidth : nameWidth}px`,
-              }}
-            >
+            {/* The splitter sits over the grid's edge, outside the treegrid (#943). */}
+            <div className="relative flex min-h-0 flex-1 flex-col">
               <div
-                role="row"
-                aria-rowindex={1}
-                className="sticky top-0 z-20 grid border-b border-border bg-muted"
-                style={{ gridTemplateColumns, height: `${timeHeaderHeightRem}rem` }}
+                ref={ganttGridRef}
+                id={gridId}
+                role="treegrid"
+                aria-label={gridName}
+                aria-rowcount={rowCount}
+                // Busy while a chunk of the buffer or a page of the row list loads (ADR 0089).
+                aria-busy={
+                  state.status === 'loading' ||
+                  unloaded.some((chunk) => chunk.status === 'loading') ||
+                  rowList.next === 'loading' ||
+                  undefined
+                }
+                onKeyDown={(event) => {
+                  // Minus and plus step a level around the centre of the view (ADR 0089).
+                  if (timelineZoom.onKeyDown(event)) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return;
+                  }
+                  // The Escape stack: move mode ends first, then the chain highlight.
+                  // The move is read from its store, so a move that begins renders no rows.
+                  if (event.key === 'Escape' && moveStore.get() !== undefined) {
+                    event.stopPropagation();
+                    moveActions?.cancel();
+                  } else if (event.key === 'Escape' && chain !== undefined) {
+                    event.stopPropagation();
+                    void setSearch(withChain(search, false));
+                  }
+                }}
+                onFocus={treeScroll.onFocus}
+                onScroll={(event) => {
+                  buffer.onScroll();
+                  followGrid();
+                  loadMoreRows(event.currentTarget);
+                }}
+                className="min-h-0 flex-1 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
+                style={{
+                  scrollPaddingTop: `${timeHeaderHeightRem + notPlacedHeightRem}rem`,
+                  scrollPaddingInlineStart: `${paneWidth}px`,
+                  // The pane's scrollbar sticks at the bottom, so focus stays clear of it (2.4.11).
+                  ...(paneScrolls && { scrollPaddingBottom: 'var(--nm-target-min)' }),
+                  // One finger scrolls; a pinch zooms the timeline, not the page (ADR 0089).
+                  touchAction: 'pan-x pan-y',
+                }}
               >
-                <GanttTreeHeaderCells
-                  columns={columns}
-                  cellLefts={cellLefts}
-                  stickyTree={stickyTree}
-                  sort={sort}
-                  onSortChange={setSort}
-                />
-                <GanttTimeHeader scale={scale} nowMs={snapshot.nowMs} />
-              </div>
-              <GanttNotPlacedRow
-                rows={unplaced}
-                gridTemplateColumns={gridTemplateColumns}
-                columnCount={columns.length}
-              />
-              <div className="relative">
-                {flatRows.map((row, index) => {
-                  const parent = row.getParentRow();
-                  const siblings = parent === undefined ? rows.length : parent.subRows.length;
-                  return (
-                    <GanttRowView
-                      key={row.id}
-                      row={row}
-                      columns={columns}
-                      gridTemplateColumns={gridTemplateColumns}
-                      cellLefts={cellLefts}
-                      stickyTree={stickyTree}
-                      rowIndex={index + 3}
-                      setSize={siblings}
-                      posInSet={row.index + 1}
-                      focused={row.id === focusedId}
-                      onFocus={() => setFocusedRowId(row.id)}
-                      onKeyDown={(event) => onRowKeyDown(event, row, index)}
-                      onSelect={(extend) => {
-                        if (extend === true) {
-                          extendSelection(row.original.order.id);
-                          return;
-                        }
-                        selectUnlessSelected(row.original.order.id);
-                      }}
-                      onOpen={() => openDetails(row)}
-                      onToggle={() => row.toggleExpanded()}
-                    />
-                  );
-                })}
                 <div
-                  aria-hidden
-                  data-overlay
-                  className="pointer-events-none absolute top-0"
-                  style={{
-                    left: `${treeWidth}px`,
-                    width: `${timeWidth}px`,
-                    height: `${totalHeight}px`,
-                  }}
+                  role="row"
+                  aria-rowindex={1}
+                  // As wide as its tracks, as GanttRowView's rows are (#890).
+                  className="sticky top-0 z-20 grid w-max min-w-full border-b border-border bg-muted"
+                  style={{ gridTemplateColumns, height: `${timeHeaderHeightRem}rem` }}
                 >
-                  <GanttMarkerLayer markers={overlayMarkers(snapshot)} scale={scale} />
-                  <GanttLinks links={links} width={timeWidth} height={totalHeight} />
+                  <GanttTreeHeaderCells
+                    columns={columns}
+                    layout={pane}
+                    sort={sort}
+                    onSortChange={setSort}
+                    onColumnWidthChange={changeColumnWidth}
+                  />
+                  <GanttTimeHeader scale={scale} nowMs={snapshot.nowMs} />
                 </div>
+                <GanttNotPlacedRow rows={unplaced} gridTemplateColumns={gridTemplateColumns} />
+                <div className="relative">
+                  {flatRows.map((row, index) => {
+                    const parent = row.getParentRow();
+                    // Order rows count every order of the row list, loaded or not.
+                    const siblings =
+                      parent === undefined
+                        ? Math.max(rows.length, rowList.totalCount ?? 0)
+                        : parent.subRows.length;
+                    return (
+                      <GanttRowView
+                        key={row.id}
+                        row={row}
+                        columns={columns}
+                        gridTemplateColumns={gridTemplateColumns}
+                        pane={pane}
+                        rowIndex={index + 3}
+                        setSize={siblings}
+                        posInSet={row.index + 1}
+                        focused={row.id === focusedId}
+                        onFocus={() => setFocusedRowId(row.id)}
+                        onKeyDown={(event) => onRowKeyDown(event, row, index)}
+                        onSelect={(extend) => {
+                          if (extend === true) {
+                            extendSelection(row.original.order.id);
+                            return;
+                          }
+                          selectUnlessSelected(row.original.order.id);
+                        }}
+                        onOpen={() => openDetails(row)}
+                        onToggle={() => row.toggleExpanded()}
+                      />
+                    );
+                  })}
+                  {rowList.next !== 'done' && (
+                    <GanttMoreRows
+                      rowIndex={flatRows.length + 3}
+                      state={rowList.next}
+                      loaded={rowList.orders.length}
+                      total={rowList.totalCount}
+                      gridTemplateColumns={gridTemplateColumns}
+                      onRetry={rowList.retry}
+                    />
+                  )}
+                  {/* A stacking context of its own under the tree panes (z-10), so no layer it
+                    draws reaches over them (#943). */}
+                  <div
+                    aria-hidden
+                    data-overlay
+                    className="pointer-events-none absolute top-0 z-0"
+                    style={{
+                      left: `${paneWidth}px`,
+                      width: `${timeWidth}px`,
+                      height: `${totalHeight}px`,
+                    }}
+                  >
+                    <ChunkBands
+                      chunks={unloaded}
+                      scale={scale}
+                      labelTop={`${timeHeaderHeightRem + notPlacedHeightRem}rem`}
+                    />
+                    <GanttMarkerLayer markers={overlayMarkers(snapshot)} scale={scale} />
+                    <GanttLinks links={links} width={timeWidth} height={totalHeight} />
+                  </div>
+                </div>
+                {paneScrolls && (
+                  // The tree pane's own scrollbar, which the browser draws, in a strip under the rows
+                  // at the pane's width. It is for the pointer: the keyboard reaches every column by
+                  // its header, which scrolls into the pane on focus, so the bar takes no Tab stop
+                  // (#943).
+                  <div
+                    ref={treeScroll.scrollerRef}
+                    aria-hidden
+                    tabIndex={-1}
+                    data-tree-scroller
+                    onScroll={treeScroll.onScrollerScroll}
+                    className="sticky start-0 bottom-0 z-10 flex min-h-(--nm-target-min) items-end overflow-x-auto overflow-y-hidden border-e border-t border-border bg-muted"
+                    style={{ width: `${paneWidth}px` }}
+                  >
+                    <div className="h-px shrink-0" style={{ width: `${pane.contentWidth}px` }} />
+                  </div>
+                )}
               </div>
+              <GanttSplitter
+                layout={pane}
+                viewWidth={width}
+                gridId={gridId}
+                gripHeightRem={timeHeaderHeightRem}
+                onShareChange={(treePaneShare) => setOptions({ treePaneShare })}
+              />
             </div>
             {options.workload && (
               <GanttWorkloadPanel
                 snapshot={snapshot}
                 scale={scale}
-                treeWidth={treeWidth}
+                treeWidth={paneWidth}
+                stickyWidth={paneWidth}
                 timeWidth={timeWidth}
+                moveStore={moveStore}
+                {...(buffer.settled !== undefined && { visible: buffer.settled })}
+                scrollerRef={workloadRef}
+                pending={
+                  // Every bucket waits while pages of the row list still load.
+                  rowList.next === 'done' || range === undefined
+                    ? unloaded
+                    : [...unloaded, { ...range, status: 'loading' as const }]
+                }
+                onScroll={(left) => {
+                  const grid = gridElement.current;
+                  if (grid === null || grid.scrollLeft === left) return;
+                  grid.scrollLeft = left;
+                  buffer.onScroll();
+                }}
               />
             )}
           </div>

@@ -9,10 +9,14 @@ import { useGanttView } from './gantt-context.ts';
 export const timeHeaderHeightRem = 3;
 
 /**
- * The time header (plan 18, Shared pieces): the top tier with a tick per day or week, the bottom
- * tier with the preset's finer ticks, and the now label on the bottom tier when now is in range.
- * The label is the clock alone, since the top tier names the day and the now marker's accessible
- * text carries the date and the time (#885).
+ * The time header (plan 18, Shared pieces): the top tier with the coarser cells of the zoom level,
+ * the bottom tier with its finer cells (ADR 0089, Zoom levels), and the now label on the bottom
+ * tier when now is in range.
+ * Each cell starts at its first open segment and holds the longest label that fits it (ADR 0089,
+ * Header tiers); the gaps are drawn first, so no gap covers a label. Each cell reads as its full
+ * date to a screen reader, whichever label it shows (#902). The now label is the clock
+ * alone, since the top tier names the day and the now marker's accessible text carries the date
+ * and the time (#885).
  */
 export function GanttTimeHeader({
   scale,
@@ -22,17 +26,7 @@ export function GanttTimeHeader({
   readonly nowMs: number;
 }) {
   const { timeZone } = useGanttView();
-  const ticks = scale.ticks();
   const nowVisible = nowMs >= scale.range.fromMs && nowMs < scale.range.toMs;
-  // Hour labels keep their minutes while the ticks are at least 48 px apart; closer, they show the
-  // hour alone, as the Week preset of D3 does.
-  const bottom = ticks.filter((tick) => tick.tier === 'bottom');
-  const spacing =
-    bottom.length > 1 ? (bottom[1]?.x ?? 0) - (bottom[0]?.x ?? 0) : Number.POSITIVE_INFINITY;
-  const label = (tick: (typeof ticks)[number]) =>
-    tick.tier === 'bottom' && spacing < 48 && /^\d{2}:00$/.test(tick.label)
-      ? tick.label.slice(0, 2)
-      : tick.label;
   return (
     <div
       role="columnheader"
@@ -40,28 +34,34 @@ export function GanttTimeHeader({
       className="relative overflow-hidden"
       style={{ height: `${timeHeaderHeightRem}rem` }}
     >
-      {ticks.map((tick) => (
-        <div
-          key={`${tick.tier}-${tick.ms}`}
-          aria-hidden
-          className={cn(
-            'absolute border-s border-border whitespace-nowrap',
-            tick.tier === 'top'
-              ? 'top-0 h-6 px-1.5 py-0.5 text-xs font-medium'
-              : 'top-6 h-6 px-1 py-1 font-mono text-tick text-muted-foreground',
-          )}
-          style={{ left: `${tick.x}px` }}
-        >
-          {label(tick)}
-        </div>
-      ))}
       {scale.gaps.map((gap) => (
         <div
           key={gap.fromMs}
           aria-hidden
+          data-header-gap
           className="absolute top-0 bottom-0 bg-off-time"
           style={{ left: `${gap.x}px`, width: `${gap.widthPx}px` }}
         />
+      ))}
+      {scale.ticks().map((tick) => (
+        <div
+          key={`${tick.tier}-${tick.ms}`}
+          data-tier={tick.tier}
+          // A plain join: the class merge of cn reads text-tick as a text color and would drop it
+          // for text-muted-foreground, and the time scale fits each label at the tick size.
+          className={`absolute border-s border-border whitespace-nowrap ${
+            tick.tier === 'top'
+              ? 'top-0 h-6 px-1.5 py-0.5 text-xs font-medium'
+              : 'top-6 h-6 px-1 py-1 font-mono text-tick text-muted-foreground'
+          }`}
+          style={{ left: `${tick.x}px` }}
+        >
+          {/* The label that fits is for sight; a screen reader reads the full date (#902). */}
+          <span aria-hidden data-tick-label>
+            {tick.label}
+          </span>
+          <span className="sr-only">{tick.name}</span>
+        </div>
       ))}
       {nowVisible && (
         <div
@@ -78,25 +78,44 @@ export function GanttTimeHeader({
 
 /**
  * The closed time of a row's calendar in the off-time token (plan 18, Shading and the shift
- * strip), each compressed window as a hatched gap when closed time is hidden. Decorative: the
- * row's name and the hover card carry the words.
+ * strip), each compressed window as a hatched gap when closed time is hidden, over the flat past
+ * tone of the time before now (ADR 0089, Time before now). Decorative: the row's name and the
+ * hover card carry the words, and the now marker names now.
  */
 export function TimeCellShading({
   windows,
   scale,
+  nowMs,
 }: {
   readonly windows: readonly ClosedWindow[];
   readonly scale: TimeScale;
+  /** Now, from the snapshot's clock: the time before it takes the past tone. */
+  readonly nowMs: number;
 }) {
+  const pastWidth =
+    nowMs <= scale.range.fromMs
+      ? 0
+      : scale.x(Math.min(nowMs, scale.range.toMs)) - scale.x(scale.range.fromMs);
   return (
     <>
+      {pastWidth > 0 && (
+        <div
+          aria-hidden
+          data-past
+          data-to-ms={nowMs}
+          className="gantt-past absolute top-0 bottom-0"
+          style={{ left: `${scale.x(scale.range.fromMs)}px`, width: `${pastWidth}px` }}
+        />
+      )}
       {windows.map((window) => {
-        const left = scale.x(Math.max(window.fromMs, scale.range.fromMs));
-        const right = scale.x(Math.min(window.toMs, scale.range.toMs));
-        if (right <= left) return null;
-        const gap = scale.gaps.some(
-          (each) => each.fromMs <= window.fromMs && each.toMs >= window.toMs,
-        );
+        const fromMs = Math.max(window.fromMs, scale.range.fromMs);
+        const toMs = Math.min(window.toMs, scale.range.toMs);
+        const left = scale.x(fromMs);
+        const right = scale.x(toMs);
+        // A window under a pixel at the level, a break at Quarter, is not drawn (ADR 0089).
+        if (right - left < 1) return null;
+        // The gaps are clipped to the range, so the window is compared as the range cuts it.
+        const gap = scale.gaps.some((each) => each.fromMs <= fromMs && each.toMs >= toMs);
         return (
           <div
             key={window.fromMs}

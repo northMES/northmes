@@ -746,11 +746,12 @@ A conflict is a broken planning rule that NorthMES reports and never repairs on 
 | `FROZEN_WINDOW` | `judgeMove`, `validate()` | Save, proposals | confirmable on Save; a proposal item inside the window is blocked |
 | `LOCKED_IN_PAST` | `plan()` | autoplan | listed in the run result and on the board |
 | `PINNED`, `LOCKED`, `STARTED` | `judgeMove` | move, Save, proposals | refusal, not confirmable |
+| `PAST` | the move preview, keyboard move mode and the Move dialog; `validate()` | move; Save; proposals (review panel, through `validate()`) | refusal at the move; at Save a setup start that passed while the move waited in the draft is listed, and Save needs confirmation with a reason ([ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md)) |
 | `STALE`, `LOCK_LOST`, `ROW_GONE`, `PENDING_ERP_CHANGE` | draft row status | Save | refusal for that row; discard or rebase |
 | Import conflict | connector import recomputes an untouched order | each poll | marked on the board and in the import log |
 | Report conflict | production-start | a report on another machine or on a finished or cancelled job order | Conflict state on the block |
 
-The reason codes above are a plan proposal except `OVERLAP` and `STALE`, which come from the stress-tested design. Late orders and material shortages are warnings, not conflicts.
+The reason codes above are a plan proposal except `OVERLAP` and `STALE`, which come from the stress-tested design, and `PAST`, which [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) decides. Late orders and material shortages are warnings, not conflicts.
 
 ## Material warnings
 
@@ -813,10 +814,10 @@ The full rules are in [08-pyramid-connector.md](08-pyramid-connector.md) and [AD
 ### In release 1
 
 - Machine rows grouped by equipment group with group colors and collapse; row virtualization; sticky time header and machine column.
-- A linear axis with four zoom presets from hours to weeks, in plant time with a zone label.
+- A linear axis with four zoom presets from hours to weeks, in plant time with a zone label. [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) replaces the presets with a ladder of zoom levels that keeps the four.
 - Non-working shading per machine from the availability query.
 - Blocks with settings-driven fields and a hover card that includes ERP free fields; the fill is the order color.
-- Move in time and between allowed machines with snapping: first to the zoom preset's step, then forward to the next working instant on the target machine. Snap steps per preset are set in the board design task.
+- Move in time and between allowed machines with snapping: first to the zoom preset's step, then forward to the next working instant on the target machine. Snap steps per preset are set in the board design task, and per zoom level in [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md).
 - The block states listed below.
 - Break lock with a confirmation dialog that requires a reason.
 - Realtime updates and "Pause live updates".
@@ -824,7 +825,7 @@ The full rules are in [08-pyramid-connector.md](08-pyramid-connector.md) and [AD
 - Dark mode.
 - The board field slot `planning/board/block-fields/v1` that core, the connector and plugins fill, and the header slot `planning/board/header/v1` (both ids proposed in [ADR 0037](../adr/0037-plugins-drop-in-packages-command-validators-and-ui-slots.md)). Both are slots of the `field` kind ([ADR 0068](../adr/0068-extension-points-declared-by-their-owners-contributions-as-manifest-data-with-code-by-id-and-a-plugin-inventory.md)), which takes the place of `BoardFieldSlot`: a contribution's synchronous, cheap `render` returns text, an optional icon and `accessibleText`, and its hover renderer may fetch.
 - `BoardBlock` carries explicit fields for draft (`none`, `mine`, `proposal`), late, conflict, material shortage and progress.
-- The board URL keeps the view a planner shares: `view=table` for the job order table view, `zoom=<preset id>`, `from=<plant-local date>` for the start of the visible range, and `order=<production order id>` for the selected order, which opens its detail panel. Collapsed machine groups, move mode and paused live updates stay local. The defaults (board view, the default preset, the current production day) are stripped. Design task D3 names the preset ids.
+- The board URL keeps the view a planner shares: `view=table` for the job order table view, `zoom=<preset id>`, `from=<plant-local date>` for the start of the visible range, and `order=<production order id>` for the selected order, which opens its detail panel. Collapsed machine groups, move mode and paused live updates stay local. The defaults (board view, the default preset, the current production day) are stripped. Design task D3 names the preset ids. Under [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) `zoom` holds a zoom level id and `from` the visible start as a plant-local date-time. The job order table view keeps the four presets as its Range, and a link at another level opens it at the nearest preset.
 
 ### Cut from release 1
 
@@ -852,7 +853,7 @@ At bar density icons do not fit; the state then lives in the cluster popover row
 
 ### Data loading
 
-- The board loads the visible range plus a margin. The range resolver limits days and rows and fails with `planning.board.range_too_large` above the limits; the limits are set from the board spike's measured volumes.
+- The board loads the visible range plus a margin. The range resolver limits days and rows and fails with `planning.board.range_too_large` above the limits; the limits are set from the board spike's measured volumes. [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) replaces the range with an endless axis that loads job orders by time chunk; the limit applies per time chunk, and a refused chunk shows a band in its rows' time cells that says to narrow the filter or zoom in, with a polite status message.
 - Blocks come through Apollo's normalized cache, with `@unmask` where the board needs raw speed. Instants stay ISO strings in the cache and become epoch milliseconds once at the data edge.
 - Availability for shading comes from core's availability query for the visible range, memoized per calendar version in the browser.
 - The board header shows "Pyramid data as of <time>".
@@ -874,24 +875,30 @@ Board settings choose which fields show on a block and which on hover, including
 
 [ADR 0021](../adr/0021-accessibility-target-wcag-2-2-aa.md). Accepted: the web app, the board included, targets WCAG 2.2 AA. Whether "Pause live updates" is wanted at all is open for the product owner.
 
+### Details
+
+- Details is a Sheet from the right over the board and the order Gantt, 320 px wide, as Krister chose on 2026-10-17; it does not dock or narrow the grid. It is modal: Escape or its close button closes it and focus returns to the block or row it opened from. Plan 18 describes its content (#917): a header with the status, at most one exception line and an actions menu, At a glance, and the sections Constraints, Float and timing, Material and Setup and run, which start closed.
+- Its machine select lists the allowed machines. While the plan server is missing, the select is disabled and the reason is its description.
+
 ### Moving without dragging
 
-- The detail panel has a machine select limited to allowed machines, a start field in the plant zone labelled with the zone, Earlier and Later buttons that step one snap slot, and Apply. Apply goes through the same draft move as a drag.
+- Move in the actions menu of Details starts a move of the job order in the drawer: Earlier and Later step one snap slot, Previous machine and Next machine step through the allowed machines, Apply goes through the same draft move as a drag, and Cancel ends the move. A job order that cannot move keeps Move, disabled and described by the reason.
 - The block menu (click, context-menu key, Shift+F10) lists Move, Lock or unlock, Break lock and Open order. Its Move dialog lists every allowed machine.
 - Keyboard move mode: M on a focused block enters move mode; Left and Right step one snap slot; Up and Down step through allowed machines and skip collapsed groups; Enter commits to the draft; Escape cancels. Focus stays on the moving block, with polite step messages ("CNC2, Tue 3 Nov 07:30 to 11:45. Not saved."), debounced to about 300 ms.
-- Range extension follows the move preview, not focus. After a commit, focus returns to the block by id, because the block remounts under another row.
+- While a move runs (a pointer drag, keyboard move mode or Move in Details), every machine row that the job order's operation does not allow is greyed out: a veil in the muted text token with a hatch, so the cue does not rest on colour alone, and "not allowed for Turn" after the machine's name in the row header's accessible name. The allowed rows keep their look, and so does the row the job order is on, also when its operation no longer allows that machine. With the pointer over a greyed row the preview stays on the last allowed machine, the cursor shows `not-allowed`, and the drop is refused with "Cannot move 1001.10: not allowed on Mill 1. This operation runs on CNC 1 and CNC 2." The greying ends with the move: on a drop, Enter, Escape, a cancelled drag or focus leaving the block (#944).
+- Range extension follows the move preview, not focus; under [ADR 0089](../adr/0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) the buffer moves instead of the range growing. After a commit, focus returns to the block by id, because the block remounts under another row.
 - Drag-to-pan has alternatives: visible scrollbars, toolbar buttons Earlier, Later, Now and Go to date, and zoom buttons beside Ctrl+wheel.
 
 ### Grid semantics and focus
 
 - The board is `role="grid"` named after plant and range. Each machine is a row with a row header and one cell per block in time order; a machine with no blocks in range gets one focusable "No jobs in this range" cell. Group rows hold a collapse button with `aria-expanded`.
-- Roving tabindex, not `aria-activedescendant`. Tab enters at the selected block and leaves the grid. Left and Right move along a row, Up and Down go to the block nearest in time on the adjacent row, Home and End go to the row's first and last block, Page Up and Page Down move a screenful, Enter opens the detail panel.
+- Roving tabindex, not `aria-activedescendant`. Tab enters at the selected block and leaves the grid. Left and Right move along a row, Up and Down go to the block nearest in time on the adjacent row, Home and End go to the row's first and last block, Page Up and Page Down move a screenful, Enter opens Details.
 - Virtualized rows set `aria-rowcount` and `aria-rowindex`. The range extractor keeps the focused row and the move preview's row mounted.
 - Each block's accessible name is built through `aria-labelledby` from visible spans that carry `lang` plus visually hidden spans for times and states, so an article name in another language keeps its language.
 - Blocks hold no interactive elements; plugin block fields render text and icons only.
-- Selection is separate from focus (`aria-selected`); selecting a block outlines the other blocks of the same order.
-- One Escape stack: hover card, popover, move mode, docked panel; each press closes one layer, and modal dialogs sit on top.
-- `scroll-padding` on the scroller and `scrollPaddingStart` on the virtualizers keep a focused block from hiding under the sticky header or column (2.4.11). The detail panel docks and narrows the board instead of covering it.
+- Selection is separate from focus (`aria-selected`); selecting a block outlines the other blocks of the same order. A single click on a block or a Not placed chip only selects; a double click opens Details, and Enter is its keyboard path, as on the order Gantt (#886).
+- One Escape stack: hover card, popover, move mode, the Details drawer; each press closes one layer, and modal dialogs sit on top.
+- `scroll-padding` on the scroller and `scrollPaddingStart` on the virtualizers keep a focused block from hiding under the sticky header or column (2.4.11). Details covers the board as a modal Sheet, so no focused block sits under it.
 
 ### Targets and density
 
@@ -905,11 +912,11 @@ Board settings choose which fields show on a block and which on hover, including
 - Realtime announcements cover only what concerns this planner: the focused block moved by someone else, a lock this planner holds was broken (assertive), a draft row now conflicts.
 - Autoplan status comes as polite messages backed by a visible status line: started; finished with moved and late counts; failed with a reason.
 - "Pause live updates" stays inside planning. While paused, the board and the table view render from a frozen block model taken at pause time; the planner's own draft operations and own autoplan results apply by id; a counter reads "12 changes waiting"; Resume rebuilds the model and refetches the visible range. The `planning/board/side/v1` slot props carry `paused`. A broken lock or draft conflict still announces while paused.
-- The hover card opens on focus as well as hover, closes on Escape without moving focus, holds no interactive content, and every hover field is also in the detail panel.
+- The hover card opens on focus as well as hover, closes on Escape without moving focus, holds no interactive content, and every hover field is also in Details: in its header, At a glance or Setup and run, and a field with no place there under At a glance.
 
 ### Reflow, zoom and color
 
-- The board grid is the 1.4.10 excepted section: it scrolls in both directions inside its own container; the page around it does not. The machine column is capped at about 40 percent of the board width.
+- The board grid is the 1.4.10 excepted section: it scrolls in both directions inside its own container; the page around it does not. The machine column starts at 200 px or 40 percent of the board width, whichever is less, but at least 140 px, and the planner resizes it by its header edge or with Alt+Left and Alt+Right anywhere in the board, from 140 px to what leaves the time area 160 px, as [18](18-gantt-timeline.md#tree-columns) describes.
 - Row height and block font size use `rem`, so 200 percent text zoom grows the rows.
 - Under `prefers-reduced-motion`, scrolling and block moves do not animate.
 - In Windows contrast themes the border, icon and line-style cues keep states readable; `forced-color-adjust: none` is used only on color swatches.

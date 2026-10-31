@@ -3,7 +3,13 @@
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { detailsOpen, findDetails, findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
+import {
+  chooseDetailsAction,
+  detailsOpen,
+  findDetails,
+  findGantt,
+  renderGanttRoute,
+} from './gantt-fixtures.tsx';
 
 afterEach(() => {
   cleanup();
@@ -75,8 +81,8 @@ describe('keyboard move mode on the order Gantt (plan 18, Tree grid semantics)',
       ).toBe(String(Date.UTC(2026, 10, 4, 5)));
     });
 
-    // Wed 06:00 less 4 h is Wed 02:00, which snaps forward to Wed 06:00 again; the step keeps
-    // going back until the preview is earlier: Tue 14:00.
+    // Wed 06:00 less 4 h is Wed 02:00, which snaps forward to Wed 06:00 again; the step jumps
+    // over the closed night to the last step before it closed: Tue 14:00.
     await userEvent.keyboard('{ArrowLeft}');
 
     await waitFor(() => {
@@ -137,7 +143,7 @@ describe('keyboard move mode on the order Gantt (plan 18, Tree grid semantics)',
     await userEvent.dblClick(gantt.querySelector('[data-block="jo-1001-10"]') as HTMLElement);
     const panel = await findDetails();
 
-    await userEvent.click(within(panel).getByRole('button', { name: 'Move' }));
+    await chooseDetailsAction(panel, 'Move');
 
     const controls = within(panel).getByRole('group', { name: 'Move 1001.10' });
     await userEvent.click(within(controls).getByRole('button', { name: 'Later' }));
@@ -169,9 +175,13 @@ describe('keyboard move mode on the order Gantt (plan 18, Tree grid semantics)',
     await userEvent.dblClick(gantt.querySelector('[data-block="jo-1002-10"]') as HTMLElement);
     const panel = await findDetails();
 
-    const move = within(panel).getByRole('button', { name: 'Move' });
+    await userEvent.click(within(panel).getByRole('button', { name: 'Actions for 1002.10' }));
+    const menu = await screen.findByRole('menu', { name: 'Actions for 1002.10' });
+    const move = within(menu).getByRole('menuitem', { name: 'Move' });
     expect(move.getAttribute('aria-disabled')).toBe('true');
-    expect(within(panel).getByText('Cannot move 1002.10: locked.')).toBeTruthy();
+    expect(document.getElementById(move.getAttribute('aria-describedby') ?? '')?.textContent).toBe(
+      'Cannot move 1002.10: locked.',
+    );
   });
 
   it('Escape cancels move mode and says so; a locked row refuses move mode with the reason', async () => {

@@ -639,7 +639,7 @@ The shell, every remote, the board and the station target WCAG 2.2 AA, plus EN 3
 
 A keyboard path alone does not meet 2.5.7; a single pointer must also be able to move a block without dragging. These ship in the same increment as dragging ([0021](../adr/0021-accessibility-target-wcag-2-2-aa.md), [07-production-planning.md](07-production-planning.md)):
 
-- Detail panel: clicking a block opens a docked panel with a machine select limited to allowed machines, a start date and time field in the plant zone (labelled with the zone), "Earlier" and "Later" buttons that step one snap slot, and Apply, which goes through the same draft move as a drag.
+- Details: a double click or Enter on a block opens Details, a modal Sheet over the board (Krister, 2026-10-17; plan 18 describes its content). Move in its actions menu starts move controls in the drawer: "Earlier" and "Later" step one snap slot, "Previous machine" and "Next machine" step through the allowed machines, and Apply goes through the same draft move as a drag.
 - Block menu: reachable by click, by the context-menu key and by Shift+F10. It lists Move, Lock or unlock, Break lock and Open order. Every keyboard command on the board also appears there, so letter keys are never the only path. Move opens a dialog that lists every allowed machine; the job order table view uses the same Move dialog.
 - Keyboard move mode: `M` on a focused block enters move mode; Left and Right step one snap slot, Up and Down step through allowed machines and skip collapsed groups, Enter commits to the draft, Escape cancels. Focus stays on the moving block. After a commit, focus returns to the block by id.
 - Panning and zoom: native scrollbars stay visible; the toolbar has "Earlier", "Later", "Now" and "Go to date"; zoom has buttons next to Ctrl+wheel.
@@ -699,9 +699,9 @@ The board and the job order table view have a "Pause live updates" control insid
 
 - Dialogs return focus to their trigger. Opening the chat panel moves focus to its input; Escape or Close returns focus to the trigger.
 - If the focused block is moved away by another planner, focus goes to the nearest block in the same row and an announcement says why.
-- One Escape stack on the board: hover card, popover, move mode, docked panel; each press closes one layer, and modal dialogs sit on top.
+- One Escape stack on the board: hover card, popover, move mode, the Details drawer; each press closes one layer, and modal dialogs sit on top.
 - The hover card opens after a short delay on hover and at once on focus, closes on Escape without moving focus, stays open while the pointer is over it, and holds no interactive content. Every hover field is also in the detail panel (1.4.13).
-- Focus not obscured: the board scroller sets `scroll-padding-top` and `scroll-padding-left` to the sticky header height and machine column width and passes the same values to the virtualizers; the page scroller sets `scroll-padding-top` for the top bar. The detail panel docks beside the board instead of covering it, and toasts sit away from the board and form areas.
+- Focus not obscured: the board scroller sets `scroll-padding-top` and `scroll-padding-left` to the sticky header height and machine column width and passes the same values to the virtualizers; the page scroller sets `scroll-padding-top` for the top bar. Details covers the board as a modal Sheet, so no focused block sits under it, and toasts sit away from the board and form areas.
 - Focusing a block scrolls it into view and does nothing else (3.2.1); panels open on Enter or click.
 
 ### Forms and sign-in (3.3.x)

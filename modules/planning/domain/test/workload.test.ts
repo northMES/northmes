@@ -7,6 +7,7 @@ import {
   g1Expected,
   g1PlanContext,
   isoWeekBuckets,
+  monthBuckets,
   type PlanContext,
   type PlanOrder,
   productionDayBuckets,
@@ -290,5 +291,23 @@ describe('workload (plan 18, Workload)', () => {
     expect(totalsOf(byShift)).toEqual(totalsOf(byDay));
     expect(totalsOf(byWeek)).toEqual(totalsOf(byDay));
     expect(totalsOf(byDay)).toEqual({ availableS: 3 * 5 * 29_700, loadedS: 160_800, setupS: 3600 });
+  });
+});
+
+describe('monthBuckets (ADR 0089, the Year level)', () => {
+  it('gives one bucket per calendar month from the first at midnight on the plant clock, clipped to the range', () => {
+    const timeZone = 'Europe/Stockholm';
+    const buckets = monthBuckets({
+      timeZone,
+      fromMs: Date.UTC(2026, 9, 14, 22),
+      toMs: Date.UTC(2026, 11, 31, 23),
+    });
+
+    expect(buckets).toEqual([
+      // October starts in summer time, so its first is 22:00 UTC; the range cuts it at the 15th.
+      { label: '2026-10', fromMs: Date.UTC(2026, 9, 14, 22), toMs: Date.UTC(2026, 9, 31, 23) },
+      { label: '2026-11', fromMs: Date.UTC(2026, 9, 31, 23), toMs: Date.UTC(2026, 10, 30, 23) },
+      { label: '2026-12', fromMs: Date.UTC(2026, 10, 30, 23), toMs: Date.UTC(2026, 11, 31, 23) },
+    ]);
   });
 });

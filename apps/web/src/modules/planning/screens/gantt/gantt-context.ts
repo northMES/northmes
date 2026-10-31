@@ -5,13 +5,14 @@ import type { BoardFieldLists } from '../../board-fields.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { InventorySnapshot } from '../../inventory-data.ts';
 import type { MaterialShortage } from '../../material-projection.ts';
+import type { MoveStore } from '../../move-store.ts';
 import type { ClosedWindow, TimeScale } from '../../timeline/time-scale.ts';
-import type { MovePreview, MoveState } from './gantt-move.ts';
+import type { MoveState } from './gantt-move.ts';
 
 /** The move in progress and the actions of a block on it (plan 18, Moves on the order Gantt). */
 export interface GanttMoveActions {
-  readonly state: MoveState | undefined;
-  readonly preview: MovePreview | undefined;
+  /** The move in progress and its preview, which the parts that draw it read with useMoveOf. */
+  readonly store: MoveStore;
   /** Starts a move of a row; false, with the refusal announced, when the row cannot move. */
   readonly begin: (jobOrderId: string, source: MoveState['source']) => boolean;
   /** Holds the moving row at a setup start, on another allowed machine when one is named. */

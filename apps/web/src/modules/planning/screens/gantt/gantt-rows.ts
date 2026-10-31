@@ -13,6 +13,7 @@ import type {
   SavedSetup,
 } from '../../gantt-data.ts';
 import { orderNumbersText } from '../../gantt-draft.ts';
+import { isNotPlaced } from '../../gantt-loaded.ts';
 
 /** The levels of the order Gantt tree (plan 18, Rows and the tree): a run above its orders, then operations and job orders. */
 export type GanttRow = RunRow | OrderRow | OperationRow | JobOrderRow;
@@ -133,7 +134,7 @@ function orderRowOf(snapshot: GanttSnapshot, order: GanttOrder, run: Run | undef
           id: rowIds.operation(operation),
           order,
           operation,
-          notPlaced: jobOrders.filter((jobOrder) => jobOrder.placement === undefined).length,
+          notPlaced: jobOrders.filter(isNotPlaced).length,
           subRows: jobOrders.map((jobOrder) => ({
             kind: 'jobOrder',
             id: rowIds.jobOrder(jobOrder),
@@ -202,9 +203,7 @@ export function buildGanttRows(snapshot: GanttSnapshot): Level1Row[] {
 
 /** Every job order of a snapshot without a placement, for the Not placed row. */
 export function notPlacedRows(rows: readonly Level1Row[]): JobOrderRow[] {
-  return rows.flatMap((row) =>
-    jobOrderRowsOf(row).filter((each) => each.jobOrder.placement === undefined),
-  );
+  return rows.flatMap((row) => jobOrderRowsOf(row).filter((each) => isNotPlaced(each.jobOrder)));
 }
 
 /** The setup a run saves on a row, if any (ADR 0083 rule 4). */
@@ -231,21 +230,37 @@ export function earlyText(early: EarlyOrder): string {
   return `early by ${formatDuration(early.earlyByS)}`;
 }
 
-/** The span of a summary row: from the earliest setup start to the latest end of its placed rows. */
+/**
+ * The span of a summary row: from the earliest setup start to the latest end of its placed rows.
+ * A row whose placement awaits its time chunk counts its order's span from the row list, so a
+ * summary bar shows before its job orders load (ADR 0089); an operation's span leaves it out, as
+ * the order's span would stretch it over the whole order.
+ */
 export function summarySpan(
   rows: readonly JobOrderRow[],
+  withOrderSpans = true,
 ): { readonly fromMs: number; readonly toMs: number } | undefined {
   let fromMs: number | undefined;
   let toMs: number | undefined;
-  for (const { jobOrder } of rows) {
-    if (jobOrder.placement === undefined) continue;
-    fromMs =
-      fromMs === undefined
-        ? jobOrder.placement.setupStartMs
-        : Math.min(fromMs, jobOrder.placement.setupStartMs);
-    toMs = toMs === undefined ? jobOrder.placement.endMs : Math.max(toMs, jobOrder.placement.endMs);
+  for (const { jobOrder, order } of rows) {
+    const span =
+      jobOrder.placement !== undefined
+        ? { fromMs: jobOrder.placement.setupStartMs, toMs: jobOrder.placement.endMs }
+        : jobOrder.awaitingPlacement === true && withOrderSpans
+          ? order.span
+          : undefined;
+    if (span === undefined) continue;
+    fromMs = fromMs === undefined ? span.fromMs : Math.min(fromMs, span.fromMs);
+    toMs = toMs === undefined ? span.toMs : Math.max(toMs, span.toMs);
   }
   return fromMs === undefined || toMs === undefined ? undefined : { fromMs, toMs };
+}
+
+/** The span of a run, an order or an operation row's summary bar. */
+export function rowSpan(
+  row: RunRow | OrderRow | OperationRow,
+): { readonly fromMs: number; readonly toMs: number } | undefined {
+  return summarySpan(jobOrderRowsOf(row), row.kind !== 'operation');
 }
 
 /** The job order rows under a run, an order or an operation. */
@@ -254,6 +269,55 @@ export function jobOrderRowsOf(row: RunRow | OrderRow | OperationRow): JobOrderR
   return row.kind === 'order'
     ? row.subRows.flatMap((operation) => operation.subRows)
     : [...row.subRows];
+}
+
+/**
+ * The row a selected order stands for: its run when it is in one, since a click on a run row
+ * selects the run's first order, else the order itself.
+ */
+export function selectionRowOf(
+  row: GanttRow | undefined,
+  rowById: ReadonlyMap<string, GanttRow>,
+): GanttRow | undefined {
+  if (row?.kind !== 'order' || row.runId === undefined) return row;
+  return rowById.get(row.runId) ?? row;
+}
+
+/**
+ * What Zoom to fit fits on the Gantt (ADR 0089, Zoom levels): a row's span, which for a run, an
+ * order or an operation runs from its first setup start to its last end, and its name; with no
+ * row, every loaded row. A row with nothing placed has no span.
+ */
+export function fitTargetOf(
+  row: GanttRow | undefined,
+  rows: readonly Level1Row[],
+): {
+  readonly span: { readonly fromMs: number; readonly toMs: number } | undefined;
+  readonly name: string;
+} {
+  if (row === undefined) {
+    return {
+      span: summarySpan(rows.flatMap((each) => jobOrderRowsOf(each))),
+      name: 'every loaded row',
+    };
+  }
+  if (row.kind === 'jobOrder') {
+    const { placement } = row.jobOrder;
+    return {
+      span:
+        placement === undefined
+          ? undefined
+          : { fromMs: placement.setupStartMs, toMs: placement.endMs },
+      name: `job order ${row.jobOrder.displayNumber}`,
+    };
+  }
+  const name =
+    row.kind === 'run'
+      ? `the run of ${row.run.article}`
+      : row.kind === 'order'
+        ? `order ${row.order.number}`
+        : `operation ${row.operation.displayNumber}`;
+  return { span: rowSpan(row), name };
 }
 
 /** The planned seconds of a row, or the sum over a summary row's job orders. */
@@ -277,7 +341,7 @@ export function latenessText(analysis: OrderAnalysis | undefined): string {
  * 10:45, on time".
  */
 export function summaryName(row: RunRow | OrderRow | OperationRow, timeZone: string): string {
-  const span = summarySpan(jobOrderRowsOf(row));
+  const span = rowSpan(row);
   const spanText = span === undefined ? 'not placed' : formatSpan(span.fromMs, span.toMs, timeZone);
   if (row.kind === 'run') {
     return `${runTitle(row.run)}, ${orderNumbersText(row.run.orderNumbers)}, ${spanText}, ${runLatenessText(row.analysis)}`;

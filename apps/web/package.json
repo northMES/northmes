@@ -58,6 +58,7 @@
     "@types/react-dom": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "culori": "catalog:",
+    "fast-check": "catalog:",
     "shadcn": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

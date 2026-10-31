@@ -14,6 +14,7 @@ import {
   runPreview,
   splitRunInDraft,
 } from '../../../src/modules/planning/gantt-draft.ts';
+import { g1At } from './past-fixtures.ts';
 
 const wed = (hour: number, minute = 0) => Date.UTC(2026, 10, 4, hour, minute);
 const thu = (hour: number, minute = 0) => Date.UTC(2026, 10, 5, hour, minute);
@@ -208,6 +209,57 @@ describe('the in-memory draft of the order Gantt (plan 18, Resolving a break in 
 
     expect(result.refused).toBe('PINNED');
     expect(draft).toBe(emptyDraft);
+  });
+});
+
+describe('a draft row whose setup start passed while it waited (ADR 0089, Time before now)', () => {
+  it('ADR0089 My draft lists a PAST conflict for it first, which Move back resolves', () => {
+    const { draft } = moveInDraft(
+      g1Snapshot(),
+      emptyDraft,
+      { jobOrderId: 'jo-1003-10', setupStartMs: wed(8) },
+      { cascade: true },
+    );
+    // Now has moved on to Wed 4 Nov 10:00 plant time, past the draft's 09:00 start of 1003.10.
+    const later = g1At('2026-11-04T09:00:00Z');
+
+    const conflicts = draftConflicts(applyDraft(later, draft), draft);
+
+    expect(conflicts[0]?.code).toBe('PAST');
+    const past = conflicts.filter((conflict) => conflict.code === 'PAST');
+    expect(past).toEqual([
+      {
+        code: 'PAST',
+        orderId: 'po-1003',
+        rows: ['1003.10', '1003.10'],
+        draftRow: 'jo-1003-10',
+        laterRow: 'jo-1003-10',
+        text: '1003.10 starts at Wed 4 Nov 09:00, before now',
+      },
+    ]);
+    const [line] = past;
+    // 1003.20, which the cascade moved after it, stays in the draft.
+    expect(
+      (line === undefined ? [] : moveBack(draft, line).changes).map(
+        (change) => change.displayNumber,
+      ),
+    ).toEqual(['1003.20']);
+  });
+
+  it('ADR0089 lists no PAST conflict while the draft start is now or later', () => {
+    const { draft } = moveInDraft(
+      g1Snapshot(),
+      emptyDraft,
+      { jobOrderId: 'jo-1003-10', setupStartMs: wed(8) },
+      { cascade: true },
+    );
+    const atStart = g1At('2026-11-04T08:00:00Z');
+
+    expect(
+      draftConflicts(applyDraft(atStart, draft), draft).filter(
+        (conflict) => conflict.code === 'PAST',
+      ),
+    ).toEqual([]);
   });
 });
 

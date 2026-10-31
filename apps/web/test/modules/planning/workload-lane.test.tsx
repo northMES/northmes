@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+  type GanttDataSource,
+  type GanttOrder,
+  type GanttSnapshot,
+  g1DataSource,
+} from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { PlanningRefusal } from '../../../src/modules/planning/planning-preview.ts';
 import { findGantt, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
@@ -19,7 +26,115 @@ afterEach(() => {
   window.localStorage.removeItem('northmes.planning.gantt.options');
 });
 
+/**
+ * G1 with GT6's extra row (g1.expected.json, GT6_overload_definition): 1007.10 of 3 600 s on CNC2
+ * at Thu 5 Nov 12:00 plant time, over the locked 1002.10, which loads CNC2 with 32 400 s against
+ * 29 700 s available on that production day.
+ */
+function withGt6Row(snapshot: GanttSnapshot): GanttSnapshot {
+  const template = snapshot.productionOrders.find((order) => order.number === '1002');
+  const row = template?.jobOrders[0];
+  if (template === undefined || row === undefined) throw new Error('G1 has 1002.10');
+  const startMs = Date.UTC(2026, 10, 5, 11);
+  const endMs = startMs + 3_600_000;
+  const order: GanttOrder = {
+    ...template,
+    id: 'po-1007',
+    number: '1007',
+    jobOrders: [
+      {
+        ...row,
+        id: 'jo-1007-10',
+        orderId: 'po-1007',
+        displayNumber: '1007.10',
+        status: 'planned',
+        plannedSetupS: 0,
+        plannedRunS: 3600,
+        placement: {
+          setupStartMs: startMs,
+          runStartMs: startMs,
+          endMs,
+          segments: [{ fromMs: startMs, toMs: endMs }],
+        },
+      },
+    ],
+  };
+  return { ...snapshot, productionOrders: [...snapshot.productionOrders, order] };
+}
+
 describe('the workload lane (plan 18, The workload lane)', () => {
+  it('ADR0089 shows a bucket that touches a time chunk still loading as loading, never as a partial sum', async () => {
+    const never = new Promise<never>(() => {});
+    const source: GanttDataSource = {
+      ...g1DataSource,
+      loadChunk: (from, to, filter, options) =>
+        from.startsWith('2026-11-01T23')
+          ? never
+          : g1DataSource.loadChunk(from, to, filter, options),
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, source);
+    // The chunk keeps loading, so the grid is found without waiting for its chunks.
+    await screen.findByRole('treegrid', { name: /order Gantt/ });
+
+    const lane = screen
+      .getByRole('region', { name: 'Workload' })
+      .querySelector('[data-lane="CNC1"]');
+    await waitFor(() =>
+      expect(lane?.querySelector('[data-bucket="2026-11-05"]')?.getAttribute('data-pending')).toBe(
+        'loading',
+      ),
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 1' }));
+    const table = within(screen.getByRole('dialog')).getByRole('table');
+    const thursday = within(table).getByRole('rowheader', { name: 'Thu 5 Nov' }).closest('tr');
+    expect(thursday?.textContent).toBe('Thu 5 Novloading');
+    const total = within(table).getByRole('rowheader', { name: 'Visible range' }).closest('tr');
+    expect(total?.textContent).toBe('Visible rangeloading');
+  });
+
+  it('ADR0089 the lanes scroll with the time area, both ways, so a lane stays under its time', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const lanes = screen.getByRole('region', { name: 'Workload' }).querySelector('[data-lane]')
+      ?.parentElement?.parentElement as HTMLElement;
+
+    // The view opens one viewport width into the time buffer.
+    expect(gantt.scrollLeft).toBeGreaterThan(0);
+    expect(lanes.scrollLeft).toBe(gantt.scrollLeft);
+
+    gantt.scrollLeft += 120;
+    fireEvent.scroll(gantt);
+    expect(lanes.scrollLeft).toBe(gantt.scrollLeft);
+
+    lanes.scrollLeft -= 50;
+    fireEvent.scroll(lanes);
+    expect(gantt.scrollLeft).toBe(lanes.scrollLeft);
+  });
+
+  it('ADR0089 names a bucket that touches a refused time chunk with the refusal, in the bucket and in the range', async () => {
+    const source: GanttDataSource = {
+      ...g1DataSource,
+      loadChunk: async (from, to, filter, options) => {
+        if (from.startsWith('2026-11-01T23')) {
+          throw new PlanningRefusal('planning.board.range_too_large');
+        }
+        return g1DataSource.loadChunk(from, to, filter, options);
+      },
+    };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, source);
+    await screen.findByRole('treegrid', { name: /order Gantt/ });
+    await waitFor(() =>
+      expect(document.querySelector('[data-chunk-band="refused"]')).not.toBeNull(),
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 1' }));
+    const table = within(screen.getByRole('dialog')).getByRole('table');
+    const thursday = within(table).getByRole('rowheader', { name: 'Thu 5 Nov' }).closest('tr');
+    expect(thursday?.textContent).toBe('Thu 5 Novtoo many job orders');
+    const total = within(table).getByRole('rowheader', { name: 'Visible range' }).closest('tr');
+    expect(total?.textContent).toBe('Visible rangetoo many job orders');
+  });
+
   it('GT5 shows a lane per machine, aria-hidden, under the time area when the option is on', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     await findGantt();
@@ -54,24 +169,7 @@ describe('the workload lane (plan 18, The workload lane)', () => {
   it('GT6 draws the overload of CNC2 on Thu 5 Nov above the bar, inside the lane', async () => {
     // GT6: a row of 3 600 s at Thu 12:00 over the locked 1002.10 gives 32 400 s loaded against
     // 29 700 s available on CNC2 and 2 700 s of overload.
-    const snapshot = g1Snapshot();
-    const overloaded = {
-      ...snapshot,
-      analysis: {
-        ...snapshot.analysis,
-        workload: snapshot.analysis.workload.map((bucket) =>
-          bucket.equipment === 'CNC2' && bucket.label === '2026-11-05'
-            ? {
-                ...bucket,
-                loadedS: 32_400,
-                runS: 32_400,
-                utilizationPermille: 1091,
-                overloadS: 2_700,
-              }
-            : bucket,
-        ),
-      },
-    };
+    const overloaded = withGt6Row(g1Snapshot());
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(overloaded));
     await findGantt();
 
@@ -107,7 +205,25 @@ describe('the workload lane (plan 18, The workload lane)', () => {
     ).toBe('false');
   });
 
-  it('GT5 the lane header button opens the text table: the seven production days of week 45 and the visible range, with the GT5 values of Thu 5 Nov, a closed Saturday and the range', async () => {
+  it('GT5 names a closed production day in view closed in the text table, with no load', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-06' });
+    await findGantt();
+    // With closed time shown, the view from Fri 6 Nov holds the Saturday.
+    await userEvent.click(screen.getByRole('button', { name: 'Hide closed time' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 1' }));
+
+    const table = within(screen.getByRole('dialog', { name: 'Workload on CNC 1' })).getByRole(
+      'table',
+      { name: 'Workload on CNC 1' },
+    );
+    const saturday = within(table).getByRole('rowheader', { name: 'Sat 7 Nov' }).closest('tr');
+
+    expect(
+      Array.from(saturday?.querySelectorAll('th, td') ?? []).map((cell) => cell.textContent),
+    ).toEqual(['Sat 7 Nov', '0 min', '0 min', '0 min', '0 min', '0 min', 'closed', '0 min']);
+  });
+
+  it('GT5 the lane header button opens the text table: the production days that start in view and the visible range, with the GT5 values of Thu 5 Nov and the range', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     await findGantt();
 
@@ -123,31 +239,18 @@ describe('the workload lane (plan 18, The workload lane)', () => {
       .getAllByRole('row')
       .slice(1)
       .map((row) => Array.from(row.querySelectorAll('th, td')).map((cell) => cell.textContent));
-    // Mon 2 Nov to Sun 8 Nov, then the visible range; the GT5 values of g1.expected.json are
-    // compared whole in gantt-analysis.test.ts.
-    expect(rows).toHaveLength(8);
+    // The view starts at Mon 2 Nov 00:00 and holds about 41 open hours at Week with closed time
+    // hidden, so the days that start in it are Mon 2 Nov to Fri 6 Nov (ADR 0089); the GT5 values
+    // of g1.expected.json are compared whole in gantt-analysis.test.ts.
     expect(rows.map((row) => row[0])).toEqual([
       'Mon 2 Nov',
       'Tue 3 Nov',
       'Wed 4 Nov',
       'Thu 5 Nov',
       'Fri 6 Nov',
-      'Sat 7 Nov',
-      'Sun 8 Nov',
       'Visible range',
     ]);
-    // The weekend's production days are closed buckets, drawn as nothing and named closed.
     expect(rows[5]).toEqual([
-      'Sat 7 Nov',
-      '0 min',
-      '0 min',
-      '0 min',
-      '0 min',
-      '0 min',
-      'closed',
-      '0 min',
-    ]);
-    expect(rows[7]).toEqual([
       'Visible range',
       '41 h 15 min',
       '20 h',
@@ -172,5 +275,117 @@ describe('the workload lane (plan 18, The workload lane)', () => {
 
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(document.activeElement).toBe(button);
+  });
+
+  it('#901 the heading names the bucket and the plan the panel shows', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    await findGantt();
+
+    expect(
+      within(screen.getByRole('region', { name: 'Workload' })).getByRole('heading').textContent,
+    ).toBe('Workload by production day, the plan with my draft');
+  });
+
+  it('#901 at Day zoom the lanes and the table hold one bucket per shift', async () => {
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
+    await findGantt();
+    const panel = screen.getByRole('region', { name: 'Workload' });
+    expect(within(panel).getByRole('heading').textContent).toBe(
+      'Workload by shift, the plan with my draft',
+    );
+    expect(
+      panel.querySelector('[data-lane="CNC1"] [data-bucket="2026-11-05 06:00 to 15:00"]'),
+    ).not.toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 1' }));
+
+    const table = within(screen.getByRole('dialog')).getByRole('table');
+    expect(within(table).getAllByRole('columnheader')[0]?.textContent).toBe('Shift');
+    expect(within(table).getByRole('rowheader', { name: 'Thu 5 Nov 06:00 to 15:00' })).toBeTruthy();
+  });
+
+  it('#901 at 4 weeks zoom the table holds one bucket per ISO week', async () => {
+    renderGanttRoute({ zoom: '4weeks', from: '2026-11-02' });
+    await findGantt();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 1' }));
+
+    const table = within(screen.getByRole('dialog')).getByRole('table');
+    expect(within(table).getAllByRole('columnheader')[0]?.textContent).toBe('ISO week');
+    expect(within(table).getByRole('rowheader', { name: 'W45, Mon 2 Nov' })).toBeTruthy();
+  });
+
+  it('#901 during a drag the buckets of the machines it touches show the preview, an overloaded bucket draws thicker, and Escape restores them', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const lane = () =>
+      screen.getByRole('region', { name: 'Workload' }).querySelector('[data-lane="CNC1"]');
+    const thursday = () => lane()?.querySelector<HTMLElement>('[data-bucket="2026-11-05"]');
+    const wednesday = () => lane()?.querySelector<HTMLElement>('[data-bucket="2026-11-04"]');
+    expect(thursday()?.getAttribute('data-overloaded')).toBeNull();
+    const fullWednesday = Number.parseFloat(wednesday()?.style.height ?? '0');
+    // 1003.10 starts Wed 08:00 and 1004.10 Thu 06:00, both on CNC1: dragging the first to where
+    // the second starts loads CNC1 above its Thursday's availability.
+    const block = (id: string) => gantt.querySelector<HTMLElement>(`[data-block="${id}"]`);
+    const leftOf = (id: string) => Number.parseFloat(block(id)?.style.left ?? '0');
+    const dx = leftOf('jo-1004-10') - leftOf('jo-1003-10');
+    const dragged = block('jo-1003-10');
+    if (dragged === null) throw new Error('No block 1003.10');
+    const pointer = { pointerId: 1, button: 0, isPrimary: true, clientY: 10 };
+    fireEvent.pointerDown(dragged, { ...pointer, clientX: 100 });
+    fireEvent.pointerMove(dragged, { ...pointer, clientX: 100 + dx / 2 });
+    fireEvent.pointerMove(dragged, { ...pointer, clientX: 100 + dx });
+
+    await waitFor(() => expect(thursday()?.getAttribute('data-overloaded')).toBe('true'));
+    expect(Number.parseFloat(wednesday()?.style.height ?? '0')).toBeLessThan(fullWednesday);
+    // Overloaded, the bar takes the bucket's whole width; a bar within its availability, on a
+    // bucket of the same width, is narrower.
+    expect(Number.parseFloat(thursday()?.style.width ?? '0')).toBeGreaterThan(
+      Number.parseFloat(wednesday()?.style.width ?? '0'),
+    );
+
+    fireEvent.keyDown(dragged, { key: 'Escape' });
+    await waitFor(() => expect(thursday()?.getAttribute('data-overloaded')).toBeNull());
+  });
+
+  it('#944 during a drag the lanes of the machines the operation may not use are greyed out and their buttons say so, until Escape', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const panel = screen.getByRole('region', { name: 'Workload' });
+    const greyed = () =>
+      [...panel.querySelectorAll<HTMLElement>('[data-lane][data-not-allowed]')].map(
+        (lane) => lane.dataset.lane,
+      );
+    expect(greyed()).toEqual([]);
+    // 1003.10 is Turn, which runs on CNC1 only.
+    const dragged = gantt.querySelector<HTMLElement>('[data-block="jo-1003-10"]');
+    if (dragged === null) throw new Error('No block 1003.10');
+    const pointer = { pointerId: 1, button: 0, isPrimary: true, clientY: 10 };
+    fireEvent.pointerDown(dragged, { ...pointer, clientX: 100 });
+    fireEvent.pointerMove(dragged, { ...pointer, clientX: 140 });
+
+    await waitFor(() => expect(greyed()).toEqual(['CNC2', 'MILL1']));
+    expect(panel.querySelector('[data-lane="MILL1"] [data-not-allowed-hatch]')).not.toBeNull();
+    expect(
+      within(panel).getByRole('button', { name: 'Workload on Mill 1, not allowed for Turn' }),
+    ).toBeTruthy();
+    expect(within(panel).getByRole('button', { name: 'Workload on CNC 1' })).toBeTruthy();
+
+    fireEvent.keyDown(dragged, { key: 'Escape' });
+    await waitFor(() => expect(greyed()).toEqual([]));
+    expect(within(panel).getByRole('button', { name: 'Workload on Mill 1' })).toBeTruthy();
+  });
+
+  it('#901 the table says an overloaded bucket is over capacity in words', async () => {
+    const overloaded = withGt6Row(g1Snapshot());
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(overloaded));
+    await findGantt();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 2' }));
+
+    const row = within(screen.getByRole('dialog'))
+      .getByRole('rowheader', { name: 'Thu 5 Nov' })
+      .closest('tr');
+    expect(row?.textContent).toContain('109 %, over capacity');
   });
 });

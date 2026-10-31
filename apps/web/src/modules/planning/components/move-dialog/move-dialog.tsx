@@ -16,7 +16,12 @@ import {
 } from '../../../../ui/primitives/dialog.tsx';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/primitives/radio-group.tsx';
 import type { GanttSnapshot } from '../../gantt-data.ts';
-import { type MovePreview, previewOf } from '../../screens/gantt/gantt-move.ts';
+import {
+  type MovePreview,
+  previewOf,
+  refusalMessage,
+  stepLaterStart,
+} from '../../screens/gantt/gantt-move.ts';
 import type { JobOrderRow } from '../../screens/gantt/gantt-rows.ts';
 import { startOf, startText } from './move-dialog-start.ts';
 
@@ -65,6 +70,11 @@ function overlapsOf(
   return names.length === 0 ? 'none' : names.join(', ');
 }
 
+/** The first whole minute at or after an instant: the Start field takes whole minutes. */
+function firstMinuteFrom(ms: number): number {
+  return Math.ceil(ms / 60_000) * 60_000;
+}
+
 /**
  * The body of the Move dialog for one job order: its state starts from the row each time the
  * dialog opens, so a dialog closed without Move leaves nothing behind.
@@ -94,7 +104,6 @@ function MoveForm({
     const instant = startOf(next, timeZone);
     if (instant !== undefined) setSetupStartMs(instant);
   };
-  const showError = submits > 0 && parsed === undefined;
   const ids = useId();
   const startId = `${ids}-start`;
   const zone = formatPlantTime(setupStartMs, timeZone, { zoneLabel: true }).split(' ').at(-1);
@@ -116,6 +125,13 @@ function MoveForm({
   );
   const chosen = previews.get(equipment);
   const frozen = chosen?.conflicts.some((conflict) => conflict.kind === 'FROZEN_WINDOW') === true;
+  // A start before now is refused with PAST as a drag's would be (ADR 0089): Move keeps the
+  // dialog open with the refusal on the field.
+  const past = parsed !== undefined && chosen?.refused === 'PAST';
+  const showError = submits > 0 && (parsed === undefined || past);
+  const fieldError = past
+    ? `${refusalMessage(row.jobOrder.displayNumber, 'PAST')} Enter a start at or after ${formatPlantDateTime(firstMinuteFrom(snapshot.nowMs), timeZone)}.`
+    : 'Enter a date and time like 2026-11-03 11:30.';
   const stepText = formatDuration(stepMs / 1000);
   // A step moves the start one snap from the snapped start the preview shows and writes the
   // snapped start. Backwards, the forward snap of the calendar can land on the same instant again,
@@ -129,7 +145,8 @@ function MoveForm({
     )?.span.setupStartMs ?? atMs;
   const step = (direction: -1 | 1) => {
     const from = chosen?.span.setupStartMs ?? setupStartMs;
-    let atMs = from + direction * stepMs;
+    // Later from a start before now goes to the first step at or after now, as move mode does.
+    let atMs = direction > 0 ? stepLaterStart(from, stepMs, snapshot.nowMs) : from - stepMs;
     for (let count = 0; direction < 0 && count < 500 && snappedAt(atMs) >= from; count += 1) {
       atMs -= stepMs;
     }
@@ -155,7 +172,7 @@ function MoveForm({
         onSubmit={(event) => {
           event.preventDefault();
           setSubmits((count) => count + 1);
-          if (parsed !== undefined) onMove(equipment, parsed);
+          if (parsed !== undefined && !past) onMove(equipment, parsed);
         }}
       >
         <ErrorSummary
@@ -243,7 +260,7 @@ function MoveForm({
             value={text}
             onChange={(event) => edit(event.target.value)}
             className="font-mono"
-            {...(showError && { error: 'Enter a date and time like 2026-11-03 11:30.' })}
+            {...(showError && { error: fieldError })}
             hint={`${
               frozen
                 ? `Starts in the frozen window, which ends at ${formatPlantTime(snapshot.fenceMs, timeZone)}, so Save asks for a reason. `

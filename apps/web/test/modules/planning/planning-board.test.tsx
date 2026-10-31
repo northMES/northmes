@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { GanttDataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
+import { detailsOpen, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(cleanup);
 
@@ -94,7 +94,8 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
 
-    expect(board.getAttribute('aria-label')).toBe('plant-a board, W45, Mon 2 Nov to Sun 8 Nov');
+    // The grid names the span in view, which starts at Mon 2 Nov (ADR 0089).
+    expect(board.getAttribute('aria-label')).toMatch(/^plant-a board, W45, Mon 2 Nov to /);
     expect(
       within(board)
         .getByRole('button', { name: 'Collapse Machining' })
@@ -193,15 +194,21 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     };
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
     const board = await findBoard();
-    const firstClosed = (machine: string) => {
-      const shading = machineRow(board, machine).querySelector('[data-shading]');
-      return [shading?.getAttribute('data-from-ms'), shading?.getAttribute('data-to-ms')].map(
-        (value) => new Date(Number(value)).toISOString(),
+    // The closed time that holds Mon 2 Nov 04:00 ends where each machine opens again.
+    const closedEnd = (machine: string) => {
+      const at = Date.parse('2026-11-02T03:00:00Z');
+      const shading = Array.from(
+        machineRow(board, machine).querySelectorAll<HTMLElement>('[data-shading]'),
+      ).find(
+        (each) =>
+          Number(each.getAttribute('data-from-ms')) <= at &&
+          Number(each.getAttribute('data-to-ms')) > at,
       );
+      return new Date(Number(shading?.getAttribute('data-to-ms'))).toISOString();
     };
 
-    expect(firstClosed('CNC 1')).toEqual(['2026-11-01T23:00:00.000Z', '2026-11-02T05:00:00.000Z']);
-    expect(firstClosed('Mill 1')).toEqual(['2026-11-01T23:00:00.000Z', '2026-11-03T05:00:00.000Z']);
+    expect(closedEnd('CNC 1')).toBe('2026-11-02T05:00:00.000Z');
+    expect(closedEnd('Mill 1')).toBe('2026-11-03T05:00:00.000Z');
   });
 
   it('DR18 gives each machine without job orders in the range one cell that says so', async () => {
@@ -250,17 +257,20 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     const router = renderGanttRoute({}, undefined, 'board');
     const board = await findBoard();
 
-    expect(board.getAttribute('aria-label')).toBe('plant-a board, W45, Mon 2 Nov to Sun 8 Nov');
+    // The grid names the span in view, which starts at Mon 2 Nov (ADR 0089).
+    expect(board.getAttribute('aria-label')).toMatch(/^plant-a board, W45, Mon 2 Nov to /);
     expect(screen.getByRole('heading', { level: 1, name: 'Planning board' })).toBeTruthy();
     expect(screen.getByText('Showing fixture G1.')).toBeTruthy();
     expect(screen.getByText('ERP data as of Mon 2 Nov 06:40')).toBeTruthy();
     expect(router.state.location.search).toEqual({});
 
+    // Later shows the view one viewport width on, and its start goes to the URL.
     await user.click(screen.getByRole('button', { name: 'Show later range' }));
-    expect(
-      await screen.findByRole('grid', { name: 'plant-a board, W46, Mon 9 Nov to Sun 15 Nov' }),
-    ).toBeTruthy();
-    expect(router.state.location.search).toEqual({ from: '2026-11-09' });
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-11-0[3-6]T/));
+    expect(Object.keys(router.state.location.search)).toEqual(['from']);
+    await waitFor(() =>
+      expect(board.getAttribute('aria-label')).not.toMatch(/^plant-a board, W45, Mon 2 Nov/),
+    );
   });
 
   it('BO12 draws the states of G1 in shape and in the name: a locked job order and the late ones', async () => {
@@ -350,13 +360,10 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(block('1003.10').getAttribute('aria-selected')).toBe('false');
     expect(block('1003.10').querySelector('[data-selection-bar]')).toBeNull();
 
-    // A click opens Details too. One Escape closes one layer (plan 07): Details, then the hover
-    // card that focus on the block opens again, then the selection.
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(document.activeElement).toBe(block('1001.10')));
-    await screen.findByRole('tooltip');
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
+    // A click only selects (#886): Details stays closed, and the next Escape clears the
+    // selection (plan 07).
+    expect(detailsOpen()).toBe(false);
+    expect(document.activeElement).toBe(block('1001.10'));
     await user.keyboard('{Escape}');
     expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
     expect(block('1001.10').getAttribute('aria-selected')).toBe('false');
@@ -429,7 +436,8 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     const board = await findBoard();
     const row = machineRow(board, 'CNC 1');
     const cluster = within(row).getByRole('gridcell', {
-      name: named('2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 late, 1 locked'),
+      // The move makes 1002.10 overlap 1003.10, which the analysis of the loaded plan finds.
+      name: named('2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 late, 1 locked, 1 in conflict'),
     });
 
     expect(within(row).getAllByRole('gridcell')).toHaveLength(4);
@@ -477,26 +485,34 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(document.activeElement).toBe(first);
   });
 
-  it('DR20 shows the error state when a later range fails to load, not the range before', async () => {
+  it('ADR0089 a time chunk that fails to load shows its error band and Try again, and the board stays', async () => {
     const user = userEvent.setup();
-    let loads = 0;
+    // The chunks from W47 on fail until the planner tries again.
+    let failing = true;
     const failingLater: GanttDataSource = {
-      load: async (input) => {
-        loads += 1;
-        if (loads > 1 && input.from.startsWith('2026-11-08')) {
+      ...g1DataSource,
+      loadChunk: async (from, to, filter, options) => {
+        if (failing && from >= '2026-11-15T23:00:00.000Z') {
           throw new Error('The plan server did not answer');
         }
-        return g1DataSource.load(input);
+        return g1DataSource.loadChunk(from, to, filter, options);
       },
     };
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, failingLater, 'board');
-    await findBoard();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-16' }, failingLater, 'board');
+    const board = await findBoard();
 
-    await user.click(screen.getByRole('button', { name: 'Show later range' }));
-    expect(
-      await screen.findByRole('heading', { level: 2, name: 'The board could not be loaded' }),
-    ).toBeTruthy();
-    expect(screen.queryByRole('grid')).toBeNull();
+    await waitFor(() =>
+      expect(
+        board.querySelector('[data-chunk-band="failed"][data-chunk="2026-W47"]'),
+      ).not.toBeNull(),
+    );
+    expect(document.querySelector('[data-chunk-status]')?.textContent).toContain(
+      'The job orders of W47, Mon 16 Nov to Sun 22 Nov could not be loaded.',
+    );
+
+    failing = false;
+    await user.click(screen.getByRole('button', { name: 'Try again: job orders' }));
+    await waitFor(() => expect(board.querySelector('[data-chunk-band]')).toBeNull());
   });
 
   it('plan 07 one Escape closes the hover card, and the next clears the selection', async () => {
@@ -528,7 +544,7 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(
       within(machineRow(board, 'CNC 1')).getByRole('gridcell', {
         name: named(
-          '2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 late, 1 being edited by another planner, 1 locked',
+          '2 jobs, Wed 4 Nov 08:00 to Wed 4 Nov 16:15, 1 late, 1 being edited by another planner, 1 locked, 1 in conflict',
         ),
       }),
     ).toBeTruthy();
@@ -635,30 +651,33 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
       '1005.10',
     ]);
   });
-  it('BO1 marks the board busy while a later range loads, and not once it has loaded', async () => {
-    const user = userEvent.setup();
+  it('BO1 marks the board busy while a time chunk in its buffer loads, with its loading band, and not once it has loaded', async () => {
+    // The chunks from W47 on wait until the test releases them.
     let release: () => void = () => {};
+    const waiting = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     const slowLater: GanttDataSource = {
-      load: async (input) => {
-        if (input.from.startsWith('2026-11-08')) {
-          await new Promise<void>((resolve) => {
-            release = resolve;
-          });
-        }
-        return g1DataSource.load(input);
+      ...g1DataSource,
+      loadChunk: async (from, to, filter, options) => {
+        if (from >= '2026-11-15T23:00:00.000Z') await waiting;
+        return g1DataSource.loadChunk(from, to, filter, options);
       },
     };
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, slowLater, 'board');
-    expect((await findBoard()).getAttribute('aria-busy')).toBeNull();
-
-    await user.click(screen.getByRole('button', { name: 'Show later range' }));
-    const board = await screen.findByRole('grid', {
-      name: 'plant-a board, W46, Mon 9 Nov to Sun 15 Nov',
-    });
+    renderGanttRoute({ zoom: 'week', from: '2026-11-16' }, slowLater, 'board');
+    // The grid is drawn once the rows have loaded, while the chunk still loads.
+    await waitFor(() =>
+      expect(document.querySelector('[role="grid"] [data-chunk-band="loading"]')).not.toBeNull(),
+    );
+    const board = screen.getByRole('grid', { name: /board/ });
     expect(board.getAttribute('aria-busy')).toBe('true');
+    expect(document.querySelector('[data-chunk-status]')?.textContent).toContain(
+      'Loading the job orders of W47, Mon 16 Nov to Sun 22 Nov.',
+    );
 
     release();
     await waitFor(() => expect(board.getAttribute('aria-busy')).toBeNull());
+    expect(board.querySelector('[data-chunk-band]')).toBeNull();
   });
 
   // The D1 block text in pure black in both themes, and the group button's target height (WCAG

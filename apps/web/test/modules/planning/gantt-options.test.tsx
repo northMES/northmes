@@ -20,7 +20,24 @@ describe('useGanttOptions', () => {
       hiddenColumns: defaultHiddenColumns,
       workload: false,
       cascade: true,
+      treePaneShare: 0.4,
+      columnWidths: {},
     });
+  });
+
+  it('#943 keeps any tree pane share between 0 and 1 and reads anything else as 40 percent', () => {
+    // An 1800 px grid stores 160 / 1800 at the least width and 1640 / 1800 at the most.
+    window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: 0.0889 }));
+    expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.0889);
+    cleanup();
+    window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: 0.9111 }));
+    expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.9111);
+    cleanup();
+    for (const kept of [0, 1, 3, 'wide', null]) {
+      window.localStorage.setItem(storageKey, JSON.stringify({ treePaneShare: kept }));
+      expect(renderHook(() => useGanttOptions()).result.current[0].treePaneShare).toBe(0.4);
+      cleanup();
+    }
   });
 
   it('keeps a browser that turned Hide closed time off', () => {

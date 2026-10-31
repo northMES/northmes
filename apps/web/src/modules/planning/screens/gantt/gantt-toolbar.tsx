@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cn } from 'cn';
 import { Ellipsis, FoldHorizontal, Pencil } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import {
@@ -10,23 +11,37 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
-import { RangeControls } from '../../components/range-controls/index.ts';
-import type { ZoomPreset } from '../../gantt-data.ts';
+import { RangeControls, ZoomControls } from '../../components/range-controls/index.ts';
+import type { ZoomLevel } from '../../gantt-data.ts';
 import { changesText } from './gantt-draft-drawer.tsx';
 import type { GanttOptions } from './gantt-options.ts';
 import { ganttColumnChoices } from './gantt-tree-pane.tsx';
 
+/**
+ * The tree pane widths Board options offers, the one-click alternative to dragging the splitter
+ * (WCAG 2.5.7, #943), as shares of the view.
+ */
+const paneWidths = [
+  { label: 'Narrow tree pane', share: 0.25 },
+  { label: 'Medium tree pane', share: 0.4 },
+  { label: 'Wide tree pane', share: 0.6 },
+] as const;
+
 export interface GanttToolbarProps {
-  readonly zoom: ZoomPreset;
-  readonly onZoomChange: (zoom: ZoomPreset) => void;
+  readonly zoom: ZoomLevel;
+  readonly onZoomChange: (zoom: ZoomLevel) => void;
+  readonly onZoomToFit: () => void;
   readonly from: string;
   readonly onFromChange: (from: string) => void;
   readonly onEarlier: () => void;
   readonly onNow: () => void;
   readonly onLater: () => void;
-  readonly rangeLabel: string;
+  readonly rangeLabel: ReactNode;
   readonly options: GanttOptions;
   readonly onOptionsChange: (change: Partial<GanttOptions>) => void;
   /** The changes in the planner's draft, which the My draft button names. */
@@ -35,13 +50,14 @@ export interface GanttToolbarProps {
 }
 
 /**
- * The Gantt toolbar of D5: the Zoom group, Earlier, Now and Later, Go to date, the range, the
+ * The Gantt toolbar of D5: the zoom of ADR 0089, Earlier, Now and Later, Go to date, the range, the
  * Hide closed time toggle, My draft, Columns and Board options. Zoom and from go to the URL; the
  * toggle, the columns and the options stay local.
  */
 export function GanttToolbar({
   zoom,
   onZoomChange,
+  onZoomToFit,
   from,
   onFromChange,
   onEarlier,
@@ -56,9 +72,9 @@ export function GanttToolbar({
   return (
     <div role="toolbar" aria-label="Gantt" className="flex flex-wrap items-center gap-2">
       <RangeControls
-        presetLabel="Zoom"
-        zoom={zoom}
-        onZoomChange={onZoomChange}
+        zoomControls={
+          <ZoomControls zoom={zoom} onZoomChange={onZoomChange} onZoomToFit={onZoomToFit} />
+        }
         from={from}
         onFromChange={onFromChange}
         onEarlier={onEarlier}
@@ -108,6 +124,25 @@ export function GanttToolbar({
             >
               Cascade
             </DropdownMenuCheckboxItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Tree pane width</DropdownMenuLabel>
+            {/* A width the splitter set between these leaves none of them checked. */}
+            <DropdownMenuRadioGroup
+              value={String(options.treePaneShare)}
+              onValueChange={(value: string) => onOptionsChange({ treePaneShare: Number(value) })}
+            >
+              {paneWidths.map((each) => (
+                <DropdownMenuRadioItem
+                  key={each.share}
+                  value={String(each.share)}
+                  closeOnClick={false}
+                >
+                  {each.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>

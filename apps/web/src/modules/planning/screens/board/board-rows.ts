@@ -3,8 +3,14 @@
 import { availabilityOf, subtractWindows } from '@northmes/planning-domain';
 import { workingCalendarOf } from '../../gantt-analysis.ts';
 import type { GanttEquipment, GanttSnapshot } from '../../gantt-data.ts';
+import { isNotPlaced } from '../../gantt-loaded.ts';
 import type { ClosedWindow, TimeRange } from '../../timeline/time-scale.ts';
-import { buildGanttRows, type JobOrderRow, jobOrderRowsOf } from '../gantt/gantt-rows.ts';
+import {
+  buildGanttRows,
+  type JobOrderRow,
+  jobOrderRowsOf,
+  summarySpan,
+} from '../gantt/gantt-rows.ts';
 
 /** A machine row of the board: the machine and its job orders in the range, in time order. */
 export interface BoardMachine {
@@ -82,7 +88,21 @@ export function boardModelOf(snapshot: GanttSnapshot, range: TimeRange): BoardMo
   return {
     groups,
     notPlaced: rows
-      .filter((row) => row.jobOrder.placement === undefined || row.jobOrder.equipment === undefined)
+      .filter((row) => isNotPlaced(row.jobOrder) || row.jobOrder.equipment === undefined)
       .sort(byStart),
   };
+}
+
+/**
+ * What Zoom to fit fits on the board (ADR 0089, Zoom levels): the job orders of the selected order
+ * from the first setup start to the last end, or with no order selected every loaded job order.
+ */
+export function boardFitTargetOf(
+  snapshot: GanttSnapshot,
+  orderId: string | undefined,
+): { readonly span: TimeRange | undefined; readonly name: string } {
+  const rows = buildGanttRows(snapshot).flatMap((row) => jobOrderRowsOf(row));
+  if (orderId === undefined) return { span: summarySpan(rows), name: 'every loaded job order' };
+  const own = rows.filter((row) => row.order.id === orderId);
+  return { span: summarySpan(own), name: `order ${own[0]?.order.number ?? orderId}` };
 }

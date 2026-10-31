@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { planningLinks } from '@northmes/planning-contracts';
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
+import { expect, vi } from 'vitest';
 import {
   type BoardFieldsStore,
   BoardFieldsStoreProvider,
@@ -14,7 +16,7 @@ import {
   EnteredOrdersStoreProvider,
 } from '../../../src/modules/planning/entered-orders-store.ts';
 import type { GanttDataSource, GanttSnapshot } from '../../../src/modules/planning/gantt-data.ts';
-import { g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
+import { g1DataSource, snapshotSource } from '../../../src/modules/planning/gantt-data.ts';
 import { GanttSourceProvider } from '../../../src/modules/planning/gantt-source-context.ts';
 import {
   createG1PlanningRulesStore,
@@ -99,12 +101,37 @@ export function renderPlanningAt(
  * sheet, keeps the page behind it inert.
  */
 export async function findGantt(): Promise<HTMLElement> {
-  return screen.findByRole('treegrid', { name: /order Gantt/, hidden: true });
+  const gantt = await screen.findByRole('treegrid', { name: /order Gantt/, hidden: true });
+  // The rows draw before the time chunks bring their blocks (ADR 0089); a test that holds a chunk
+  // loading on purpose finds the grid by its role instead.
+  await waitFor(() => expect(document.querySelector('[data-chunk-band="loading"]')).toBeNull(), {
+    timeout: 3000,
+  });
+  return gantt;
+}
+
+/**
+ * Makes every grid measure a width, as a ResizeObserver reports it, since the test browser lays
+ * nothing out; the time area's buffer takes its width from it (ADR 0089). Undo it with
+ * vi.unstubAllGlobals.
+ */
+export function measureGridsAt(widthPx: number) {
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor(private readonly report: ResizeObserverCallback) {}
+      observe() {
+        this.report([{ contentRect: { width: widthPx } } as ResizeObserverEntry], this);
+      }
+      disconnect() {}
+      unobserve() {}
+    },
+  );
 }
 
 /** A data source that answers every load with one snapshot, for a test with changed data. */
 export function sourceOf(snapshot: GanttSnapshot): GanttDataSource {
-  return { load: async () => snapshot };
+  return snapshotSource(async () => snapshot);
 }
 
 /** The accessible text of the markers of a kind inside an element, as the layer records it. */
@@ -126,4 +153,21 @@ export async function findDetails(): Promise<HTMLElement> {
 /** Whether the Details drawer is open. */
 export function detailsOpen(): boolean {
   return document.querySelector('[role="dialog"][data-details-drawer]') !== null;
+}
+
+/**
+ * Picks an action from the actions menu in the Details drawer's heading (#917); the menu is named
+ * "Actions for" the row.
+ */
+export async function chooseDetailsAction(panel: HTMLElement, action: string): Promise<void> {
+  await userEvent.click(within(panel).getByRole('button', { name: /^Actions for / }));
+  const menu = await screen.findByRole('menu', { name: /^Actions for / });
+  await userEvent.click(within(menu).getByRole('menuitem', { name: action }));
+}
+
+/** Opens a closed section of the Details drawer by its title and returns its toggle (#917). */
+export async function openDetailsSection(panel: HTMLElement, title: string): Promise<HTMLElement> {
+  const toggle = within(panel).getByRole('button', { name: new RegExp(`^${title}, `) });
+  if (toggle.getAttribute('aria-expanded') !== 'true') await userEvent.click(toggle);
+  return toggle;
 }

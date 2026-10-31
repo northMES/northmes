@@ -4,7 +4,13 @@ import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/re
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
-import { findGantt, planningHref, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
+import {
+  detailsOpen,
+  findGantt,
+  planningHref,
+  renderGanttRoute,
+  sourceOf,
+} from './gantt-fixtures.tsx';
 
 afterEach(() => {
   cleanup();
@@ -53,11 +59,22 @@ function rowsUnderPointer(board: HTMLElement, rowAt: (clientY: number) => string
   Object.defineProperty(document, 'elementsFromPoint', {
     configurable: true,
     value: (_x: number, y: number) => {
-      const header = within(board).getByRole('rowheader', { name: rowAt(y) });
+      // During a move, a machine the operation may not use says so after its name (#944).
+      const machine = rowAt(y);
+      const header = within(board).getByRole('rowheader', {
+        name: (name) => name === machine || name.startsWith(`${machine},`),
+      });
       const row = header.closest('[role="row"]');
       return row === null ? [] : [row];
     },
   });
+}
+
+/** The machine rows greyed out as not allowed for the job order that moves, by machine name. */
+function greyedRows(board: HTMLElement): string[] {
+  return [...board.querySelectorAll<HTMLElement>('[role="row"][data-not-allowed]')].map(
+    (row) => row.querySelector('[data-machine-name]')?.textContent ?? '',
+  );
 }
 
 describe('moves on the planning board (plan 07, Moving without dragging; design D3, IN6)', () => {
@@ -278,6 +295,35 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     await waitFor(() => expect(document.activeElement).toBe(block(board, '1001.10')));
     expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
   });
+  it('ADR0089 Move with a start before now keeps the dialog open with the PAST refusal and writes nothing', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+    await user.keyboard('{Shift>}{F10}{/Shift}');
+    await user.click(await screen.findByRole('menuitem', { name: 'Move' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Move 1001.10 Bracket L' });
+    const start = within(dialog).getByRole('textbox', { name: 'Start, plant time (CET)' });
+
+    // G1's now is Mon 2 Nov 09:40.
+    await user.clear(start);
+    await user.type(start, '2026-11-02 09:00');
+    await user.click(within(dialog).getByRole('button', { name: 'Move' }));
+
+    const summary = within(dialog).getByRole('group', { name: '1 field needs attention' });
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    expect(start.getAttribute('aria-invalid')).toBe('true');
+    expect(
+      within(dialog).getByText(
+        'Cannot move 1001.10: it would start before now. Enter a start at or after Mon 2 Nov 09:40.',
+      ),
+    ).toBeTruthy();
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+  });
+
   it('plan 07 a move that lands after the range moves the range with it and keeps focus on the block', async () => {
     const user = userEvent.setup();
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
@@ -287,7 +333,9 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     // Fri 13:00 plus the 4 h step is Fri 17:00, closed, so the move lands on Mon 9 Nov 06:00.
     await user.keyboard('m{ArrowRight}{Enter}');
     await waitFor(() => expect(spoken()).toContain('1006.10 moved to Mill 1, Mon 9 Nov 06:00'));
-    await waitFor(() => expect(router.state.location.search).toMatchObject({ from: '2026-11-09' }));
+    // The buffer is rebuilt with the block at the centre of the view, so from is the visible
+    // start before it (ADR 0089).
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-11-0[789]T/));
     await waitFor(() =>
       expect(document.activeElement?.getAttribute('data-job-order')).toBe('1006.10'),
     );
@@ -456,6 +504,115 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
   });
 
+  it('#944 IN5 a drag greys out the rows of the machines the operation may not use, with a hatch and "not allowed for Turn" in the row header\'s name', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    rowsUnderPointer(board, () => 'CNC 1');
+    const cell = block(board, '1001.10');
+    expect(greyedRows(board)).toEqual([]);
+
+    // 1001.10 is Turn, which runs on CNC 1 and CNC 2 only.
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 100, clientY: 40, pointerId: 1 });
+    await waitFor(() => expect(greyedRows(board)).toEqual(['Mill 1']));
+    const mill = within(board).getByRole('rowheader', { name: 'Mill 1, not allowed for Turn' });
+    expect(mill.closest('[role="row"]')?.querySelector('[data-not-allowed-hatch]')).not.toBeNull();
+    expect(within(board).getByRole('rowheader', { name: 'CNC 1' })).toBeTruthy();
+    expect(within(board).getByRole('rowheader', { name: 'CNC 2' })).toBeTruthy();
+  });
+
+  it("#944 IN5 over a greyed row the preview stays on the current machine and the block's cursor says not allowed, until the pointer leaves it", async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    rowsUnderPointer(board, (y) => (y < 50 ? 'CNC 1' : 'Mill 1'));
+    const cell = block(board, '1001.10');
+
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 100, clientY: 90, pointerId: 1 });
+    await waitFor(() => expect(cell.style.cursor).toBe('not-allowed'));
+    const preview = board.querySelector<HTMLElement>('[data-move-preview="jo-1001-10"]');
+    expect(preview === null ? '' : machineOf(preview)).toBe('CNC 1');
+
+    fireEvent.pointerMove(cell, { clientX: 100, clientY: 40, pointerId: 1 });
+    expect(cell.style.cursor).toBe('');
+  });
+
+  it('#944 IN5 a release over a greyed row is refused and says why, and the greying and the cursor end with it', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    rowsUnderPointer(board, () => 'Mill 1');
+    const cell = block(board, '1001.10');
+
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 100, clientY: 90, pointerId: 1 });
+    await waitFor(() => expect(greyedRows(board)).toEqual(['Mill 1']));
+    fireEvent.pointerUp(cell, { clientX: 100, clientY: 90, pointerId: 1, button: 0 });
+    await waitFor(() =>
+      expect(spoken()).toBe(
+        'Cannot move 1001.10: not allowed on Mill 1. This operation runs on CNC 1 and CNC 2.',
+      ),
+    );
+    expect(machineOf(block(board, '1001.10'))).toBe('CNC 1');
+    expect(greyedRows(board)).toEqual([]);
+    expect(block(board, '1001.10').style.cursor).toBe('');
+    expect(within(board).getByRole('rowheader', { name: 'Mill 1' })).toBeTruthy();
+  });
+
+  it('#944 Escape during a drag ends the greying', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    rowsUnderPointer(board, () => 'Mill 1');
+    const cell = block(board, '1001.10');
+
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 164, clientY: 10, pointerId: 1 });
+    await waitFor(() => expect(greyedRows(board)).toEqual(['Mill 1']));
+    fireEvent.keyDown(cell, { key: 'Escape' });
+    await waitFor(() => expect(greyedRows(board)).toEqual([]));
+    expect(cell.style.cursor).toBe('');
+  });
+
+  it('#944 a cancelled drag ends the greying', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    rowsUnderPointer(board, () => 'Mill 1');
+    const cell = block(board, '1001.10');
+
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 164, clientY: 10, pointerId: 1 });
+    await waitFor(() => expect(greyedRows(board)).toEqual(['Mill 1']));
+    fireEvent.pointerCancel(cell, { pointerId: 1 });
+    await waitFor(() => expect(greyedRows(board)).toEqual([]));
+    expect(cell.style.cursor).toBe('');
+  });
+
+  it('#944 IN6 keyboard move mode greys out the machines the operation may not use until Escape or Enter ends it', async () => {
+    const user = userEvent.setup();
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+
+    await user.keyboard('m');
+    await waitFor(() => expect(greyedRows(board)).toEqual(['Mill 1']));
+    expect(
+      within(board).getByRole('rowheader', { name: 'Mill 1, not allowed for Turn' }),
+    ).toBeTruthy();
+    // Down steps to CNC 2 and stops there: Mill 1 is never a step.
+    await user.keyboard('{ArrowDown}{ArrowDown}');
+    await waitFor(() => expect(spoken()).toContain('CNC 2'));
+    expect(greyedRows(board)).toEqual(['Mill 1']);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(spoken()).toBe('Move cancelled.'));
+    expect(greyedRows(board)).toEqual([]);
+
+    block(board, '1001.10').focus();
+    await user.keyboard('m');
+    await waitFor(() => expect(greyedRows(board)).toEqual(['Mill 1']));
+    await user.keyboard('{ArrowDown}{Enter}');
+    await waitFor(() => expect(spoken()).toContain('1001.10 moved to CNC 2'));
+    expect(greyedRows(board)).toEqual([]);
+  });
+
   it('IN4 Escape during a drag, then letting go, selects nothing', async () => {
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
@@ -468,6 +625,24 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     fireEvent.pointerUp(cell, { clientX: 164, clientY: 10, pointerId: 1, button: 0 });
     fireEvent.click(cell);
     expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
+  });
+
+  it('#886 a drag on the second press of a double click moves the block and leaves Details closed', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    const cell = block(board, '1001.10');
+    fireEvent.click(cell, { detail: 1 });
+
+    // The browser counts the drag's press as the second click and fires dblclick after its click.
+    fireEvent.pointerDown(cell, { button: 0, clientX: 100, clientY: 10, pointerId: 1 });
+    fireEvent.pointerMove(cell, { clientX: 164, clientY: 10, pointerId: 1 });
+    await waitFor(() => expect(board.querySelector('[data-move-preview]')).not.toBeNull());
+    fireEvent.pointerUp(cell, { clientX: 164, clientY: 10, pointerId: 1, button: 0 });
+    fireEvent.click(cell, { detail: 2 });
+    fireEvent.dblClick(cell, { detail: 2 });
+
+    await waitFor(() => expect(spoken()).toContain('1001.10 moved to'));
+    expect(detailsOpen()).toBe(false);
   });
 
   it('IN8 the step buttons step from the snapped start and write it', async () => {
@@ -489,6 +664,46 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     expect((start as HTMLInputElement).value).toBe('2026-11-04 06:00');
   });
 
+  it('ADR0089 the PAST refusal names the first whole minute at or after now', async () => {
+    const user = userEvent.setup();
+    // Mon 2 Nov 09:40:30 plant time: a clock with seconds.
+    const snapshot = { ...g1Snapshot(), nowMs: g1Snapshot().nowMs + 30_000 };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+    await user.keyboard('{Shift>}{F10}{/Shift}');
+    await user.click(await screen.findByRole('menuitem', { name: 'Move' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Move 1001.10 Bracket L' });
+    const start = within(dialog).getByRole('textbox', { name: 'Start, plant time (CET)' });
+
+    await user.clear(start);
+    await user.type(start, '2026-11-02 09:40');
+    await user.click(within(dialog).getByRole('button', { name: 'Move' }));
+
+    expect(
+      within(dialog).getByText(
+        'Cannot move 1001.10: it would start before now. Enter a start at or after Mon 2 Nov 09:41.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('ADR0089 the later step of an overdue row lands at now or later in one press', async () => {
+    const user = userEvent.setup();
+    // Wed 4 Nov 11:00 plant time: 1001.10, planned for Tue 3 Nov 11:30, is overdue by a day.
+    const snapshot = { ...g1Snapshot(), nowMs: Date.UTC(2026, 10, 4, 10) };
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(snapshot), 'board');
+    const board = await findBoard();
+    block(board, '1001.10').focus();
+    await user.keyboard('{Shift>}{F10}{/Shift}');
+    await user.click(await screen.findByRole('menuitem', { name: 'Move' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Move 1001.10 Bracket L' });
+    const start = within(dialog).getByRole('textbox', { name: 'Start, plant time (CET)' });
+
+    await user.click(within(dialog).getByRole('button', { name: 'Start 4 h later' }));
+
+    expect((start as HTMLInputElement).value).toBe('2026-11-04 11:30');
+  });
+
   it('IN8 a Move from the dialog past the range moves the range and focuses the block', async () => {
     const user = userEvent.setup();
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
@@ -502,7 +717,7 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     await user.clear(start);
     await user.type(start, '2026-11-16 06:00');
     await user.click(within(dialog).getByRole('button', { name: 'Move' }));
-    await waitFor(() => expect(router.state.location.search).toMatchObject({ from: '2026-11-16' }));
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-11-1[456]T/));
     await waitFor(() =>
       expect(document.activeElement?.getAttribute('data-job-order')).toBe('1001.10'),
     );
