@@ -1,16 +1,7 @@
 // SPDX-License-Identifier: MIT
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { defineMasterData } from '@northmes/contracts';
+import { defineMasterData, paletteColor } from '@northmes/contracts';
 import { z } from 'zod';
-
-/** The colors of the planning palette, palette-1 to palette-20, which a group's band takes. */
-export const paletteColors = Array.from({ length: 20 }, (_, index) => `palette-${index + 1}`) as [
-  string,
-  ...string[],
-];
-
-/** One color of the planning palette. */
-export const paletteColor = z.enum(paletteColors);
 
 /**
  * Where a group's color came from: the ERP named it, a person set it, or the create took the first
@@ -29,6 +20,7 @@ export const equipmentGroups = defineMasterData({
   entity: 'EquipmentGroup',
   resource: 'equipment-groups',
   label: 'equipment group',
+  article: 'an',
   permission: 'core.equipmentGroup',
   scopes: ['company', 'plant'],
   fields: z.object({

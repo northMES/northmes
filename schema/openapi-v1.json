@@ -1090,7 +1090,7 @@
     },
     "/api/v1/core/commands/archive-equipment-group": {
       "post": {
-        "description": "Archives an equipment group: lists hide it, and it keeps its code. Needs core.equipmentGroup:archive where it sits.",
+        "description": "Archives an equipment group: lists hide it, and it keeps its code. Needs core.equipmentGroup:archive where it sits; an archived equipment group is refused with core.archived.",
         "operationId": "coreArchiveEquipmentGroup",
         "parameters": [
           {

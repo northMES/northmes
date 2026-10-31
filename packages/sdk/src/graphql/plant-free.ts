@@ -11,7 +11,8 @@ export const PLANT_FREE = 'northmesPlantFree';
 /**
  * Marks a Query or Mutation field plant-free: it takes a company id, or reads only the companies
  * where the principal's check passed, so an operation from company settings may select it without
- * x-northmes-plant (ADR 0066). Only core declares plant-free fields in release 1.
+ * x-northmes-plant (ADR 0066). Only core declares plant-free fields in release 1, its own and those of
+ * its registers, which the master-data kit builds.
  */
 export function PlantFree(): MethodDecorator {
   return Extensions({ [PLANT_FREE]: true });

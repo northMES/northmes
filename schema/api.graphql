@@ -1098,7 +1098,7 @@ type Mutation {
   ): ArticleGroup!
 
   """
-  Archives an equipment group: lists hide it, and it keeps its code. Needs core.equipmentGroup:archive where it sits.
+  Archives an equipment group: lists hide it, and it keeps its code. Needs core.equipmentGroup:archive where it sits; an archived equipment group is refused with core.archived.
   """
   coreArchiveEquipmentGroup(
     """The input of the command core.archiveEquipmentGroup."""
@@ -1607,7 +1607,7 @@ type Query {
   ): EquipmentGroup
 
   """
-  One page of the equipment groups the request reads: at a plant the plant's and the company's, in company settings the company's. Needs core.equipmentGroup:read.
+  One page of the equipment groups the request reads: at a plant the plant's and the company's, in company settings every one of the company. Needs core.equipmentGroup:read.
   """
   coreEquipmentGroups(
     """

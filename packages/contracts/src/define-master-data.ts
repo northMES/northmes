@@ -14,7 +14,7 @@ type ObjectSchema = z.ZodObject<z.core.$ZodShape, z.core.$ZodObjectConfig>;
 /** Where a register's row sits (ADR 0007): at the company's node, or at one plant's. */
 export type MasterDataScope = 'company' | 'plant';
 
-/** The scope levels a register allows: company and plant, or plant only. */
+/** The scopes a register allows: company and plant, or plant only. */
 export type MasterDataScopes = readonly ['company', 'plant'] | readonly ['plant'];
 
 /** The message of a text over its limit: the field, the allowed range and the length typed. */
@@ -46,8 +46,8 @@ const kitFields = z.object({
     .optional(),
 });
 
-/** The scope level a create writes at, and that a row of a company and plant register answers. */
-const scopeLevel = z
+/** The scope a create writes at, and that a row of a company and plant register answers. */
+export const scopeLevel = z
   .enum(['company', 'plant'])
   .describe(
     "Where the row sits: at the company, which every plant of it sees, or at the request's plant.",
@@ -86,8 +86,14 @@ export interface MasterDataOptions<
   readonly entity: string;
   /** The REST resource, such as equipment-groups (ADR 0073). */
   readonly resource: string;
+  /** The entity's plural in PascalCase, Entity with an s unless given: coreEquipmentGroups. */
+  readonly plural?: string;
   /** The entity in words for descriptions, such as equipment group. */
   readonly label: string;
+  /** The label's plural, the label with an s unless given. */
+  readonly pluralLabel?: string;
+  /** The label's indefinite article, a unless given. */
+  readonly article?: 'a' | 'an';
   /** The permission resource, such as core.equipmentGroup, with the actions read, create, update and archive. */
   readonly permission: string;
   readonly scopes: Scopes;
@@ -105,7 +111,7 @@ type CreateShape<Scopes extends MasterDataScopes> = Scopes extends readonly ['pl
   ? Record<never, never>
   : { scope: typeof scopeLevel; companyId: typeof settingsCompanyId };
 
-/** What a row answers besides its own output fields: the kit's, and its scope level if it has two. */
+/** What a row answers besides its own output fields: the kit's, and its scope if it allows both. */
 type NodeShape<Scopes extends MasterDataScopes> = {
   id: z.ZodUUID;
   code: ReturnType<typeof outsideText>;
@@ -131,11 +137,6 @@ function kebab(entity: string): string {
   );
 }
 
-/** The label with its indefinite article: an equipment group, a machine. */
-function withArticle(label: string): string {
-  return `${/^[aeiou]/i.test(label) ? 'an' : 'a'} ${label}`;
-}
-
 /**
  * Declares a register (ADR 0022): an entity with a code, a name, a few fields of its own and no
  * state beyond archive, at the company or a plant (ADR 0007). It yields the fields a form
@@ -149,6 +150,8 @@ export function defineMasterData<
   const Scopes extends MasterDataScopes,
 >(options: MasterDataOptions<Own, Output, Scopes>) {
   const { module, entity, resource, label, permission, scopes } = options;
+  const plural = options.plural ?? `${entity}s`;
+  const pluralLabel = options.pluralLabel ?? `${label}s`;
   const register = `${module}.${entity}`;
   for (const field of [...Object.keys(options.fields.shape), ...Object.keys(options.output)]) {
     if (kitNames.includes(field)) {
@@ -156,7 +159,7 @@ export function defineMasterData<
     }
   }
   const atCompany = scopes.includes('company' as never);
-  const a = withArticle(label);
+  const a = `${options.article ?? 'a'} ${label}`;
   const where = atCompany ? "at the company or at the request's plant" : "at the request's plant";
 
   const fields = kitFields.extend(options.fields.shape) as FieldsOf<Own>;
@@ -180,7 +183,7 @@ export function defineMasterData<
   });
   const archive = defineCommandContract({
     name: `${module}.archive${entity}`,
-    description: `Archives ${a}: lists hide it, and it keeps its code. Needs ${permission}:archive where it sits.`,
+    description: `Archives ${a}: lists hide it, and it keeps its code. Needs ${permission}:archive where it sits; an archived ${label} is refused with core.archived.`,
     target: 'existing',
     fields: z.object({}),
     permission: `${permission}:archive`,
@@ -222,7 +225,7 @@ export function defineMasterData<
     archivable: true,
   });
   const find = defineListQueryContract({
-    name: `${module}.find${entity}s`,
+    name: `${module}.find${plural}`,
     list,
     permission: `${permission}:read`,
   });
@@ -279,7 +282,9 @@ export function defineMasterData<
   return {
     module,
     entity,
+    plural,
     label,
+    pluralLabel,
     permission,
     scopes,
     fields,

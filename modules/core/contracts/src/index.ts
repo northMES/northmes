@@ -52,7 +52,7 @@ export {
   dashboardWidgetTypes,
   saveDashboardTab,
 } from './dashboard.ts';
-export { colorFrom, equipmentGroups, paletteColor, paletteColors } from './equipment-group.ts';
+export { colorFrom, equipmentGroups } from './equipment-group.ts';
 export {
   createIntegrationToken,
   integrationTokenDefaultDays,

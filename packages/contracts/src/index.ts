@@ -28,6 +28,7 @@ export {
   type MasterDataOptions,
   type MasterDataScope,
   type MasterDataScopes,
+  scopeLevel,
 } from './define-master-data.ts';
 export {
   defineCoreLinks,
@@ -67,6 +68,7 @@ export {
   translations,
 } from './localized-text.ts';
 export { isOutsideText, outsideText } from './outside-text.ts';
+export { paletteColor, paletteColors } from './palette.ts';
 export { fieldError, problem } from './problem.ts';
 export {
   DEFAULT_STOCK_UNIT,

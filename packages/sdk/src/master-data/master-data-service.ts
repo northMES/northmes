@@ -8,19 +8,15 @@ import {
   NotFoundException,
   type Type,
 } from '@nestjs/common';
-import { Args, ID, Mutation, Query, Resolver } from '@nestjs/graphql';
 import type { MasterDataDefinition, MasterDataScope, Translation } from '@northmes/contracts';
 import { type Selectable, type SelectQueryBuilder, sql, type Transaction } from 'kysely';
 import type { z } from 'zod';
 import { COMMAND_BUS, type CommandBus, type HandlerContext } from '../commands/command-bus.ts';
 import { registerCommand } from '../commands/define-command.ts';
-import { commandInputArg } from '../commands/mutation-field.ts';
 import { parseCommandInput } from '../commands/parse-input.ts';
 import { DATABASE, type ScopedDatabase } from '../data/database.ts';
 import { DomainError } from '../errors/domain-error.ts';
-import { PlantFree } from '../graphql/plant-free.ts';
-import { type Connection, defineList, type ListArgs, type ListPage } from '../lists/define-list.ts';
-import { bindOperations, type OperationHandlers } from '../operations/bind-operations.ts';
+import type { Connection, ListArgs, ListKit, ListPage } from '../lists/define-list.ts';
 import { noteCreated } from '../operations/outcome.ts';
 import type { MasterDataAccess, MasterDataRequestScope } from './access.ts';
 import type { MasterDataColumns } from './table.ts';
@@ -43,7 +39,7 @@ type OwnOutput<Definition extends MasterDataDefinition> = Exclude<
 /** The locked row a command on an existing register row acts on. */
 export type MasterDataRow = Selectable<MasterDataColumns> & Record<string, unknown>;
 
-/** What a register's own write hooks get besides the parsed input. */
+/** What a register's create hook gets besides the parsed input. */
 export interface MasterDataCreateContext {
   readonly tx: Transaction<unknown>;
   readonly companyId: string;
@@ -51,58 +47,89 @@ export interface MasterDataCreateContext {
   readonly scopeId: string;
 }
 
-export interface MasterDataServerOptions<
+/** What a register's update hook gets besides the parsed input. */
+export interface MasterDataUpdateContext {
+  readonly tx: Transaction<unknown>;
+  /** The row as the command locked it, before the change. */
+  readonly target: MasterDataRow;
+}
+
+/** The values of a register's own columns, which a write hook returns. */
+type OwnColumns = Readonly<Record<string, unknown>>;
+
+export interface MasterDataServiceOptions<
   Definition extends MasterDataDefinition,
   Scope extends MasterDataRequestScope,
 > {
   /** The register's table, schema-qualified, such as core.equipment_group. */
   readonly table: string;
-  /** The register's GraphQL object type, written by hand (ADR 0022). */
-  readonly type: () => Type;
+  /** The register's list, defineList of the definition's list with the GraphQL type, in api/. */
+  readonly list: ListKit<string>;
   readonly access: MasterDataAccess<Scope>;
   /** The column behind each own output field, such as colorFrom: color_from. */
   readonly columns: { readonly [Field in OwnOutput<Definition>]: string };
-  /** The values of the register's own columns that a create and an update write. */
+  /**
+   * The values of the register's own columns that a create and an update write. A key of the
+   * kit's own columns, such as scope_id, is refused, so a hook cannot move a row the bus checked.
+   */
   readonly write: {
     create(
       input: z.output<Definition['create']['input']>,
       context: MasterDataCreateContext,
-    ): Promise<Record<string, unknown>> | Record<string, unknown>;
+    ): Promise<OwnColumns> | OwnColumns;
     update(
       input: z.output<Definition['update']['input']>,
-      target: MasterDataRow,
-    ): Record<string, unknown>;
+      context: MasterDataUpdateContext,
+    ): Promise<OwnColumns> | OwnColumns;
   };
 }
 
 /** A register's service, which every surface calls (ADR 0073). */
-export interface MasterDataService<Record> {
+export interface MasterDataService<Row> {
   /** The row with this id among those the request reads, or null. */
-  byId(id: string, companyId?: string): Promise<Record | null>;
+  byId(id: string, companyId?: string): Promise<Row | null>;
   /**
    * The rows with these ids in one query, one entry per id in their order, or null where the
-   * request reads none. It checks no permission, because a field of another entity reads through it.
+   * request reads none. It checks no permission, because a field of another entity reads its
+   * reference through it, after that entity's own check.
    */
-  byIds(ids: readonly string[]): Promise<(Record | null)[]>;
+  byIds(ids: readonly string[]): Promise<(Row | null)[]>;
   /** The row with this id, as byId reads it, or core.not_found. */
-  byIdOrThrow(id: string): Promise<Record>;
+  byIdOrThrow(id: string): Promise<Row>;
   /** One page of the rows the request reads, as the list field's arguments ask. */
-  list(args: ListArgs<string>, companyId?: string): Promise<Connection<Record>>;
+  list(args: ListArgs<string>, companyId?: string): Promise<Connection<Row>>;
   /** One page of the rows the request reads, as the find operation asks. */
-  find(input: unknown): Promise<ListPage<Record>>;
-  create(input: unknown): Promise<Record>;
-  update(input: unknown): Promise<Record>;
-  archive(input: unknown): Promise<Record>;
-  restore(input: unknown): Promise<Record>;
+  find(input: unknown): Promise<ListPage<Row>>;
+  create(input: unknown): Promise<Row>;
+  update(input: unknown): Promise<Row>;
+  archive(input: unknown): Promise<Row>;
+  restore(input: unknown): Promise<Row>;
 }
 
-/** The companyId argument of a plant-free field (ADR 0066). */
-const companyIdArg = {
-  type: () => ID,
-  nullable: true,
-  description:
-    "The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.",
-} as const;
+/** The kit's columns, which a register's write hook may not set. */
+const kitColumns = new Set<string>([
+  'id',
+  'company_id',
+  'scope_id',
+  'scope_span',
+  'version',
+  'code',
+  'code_key',
+  'name',
+  'translations',
+  'archived_at',
+  'created_at',
+  'updated_at',
+]);
+
+/** The own columns a write hook returned, which may name none of the kit's. */
+function ownOnly(register: string, values: OwnColumns): OwnColumns {
+  const taken = Object.keys(values).filter((column) => kitColumns.has(column));
+  if (taken.length > 0) {
+    throw new Error(`Register ${register}: a write hook may not set ${taken.join(', ')}`);
+  }
+  return values;
+}
 
 /** The label with a capital first letter, for the start of a message. */
 function capitalized(label: string): string {
@@ -110,52 +137,55 @@ function capitalized(label: string): string {
 }
 
 /** Names a class for Nest's messages. */
-function named<Class extends Type>(Class: Class, name: string): Class {
+export function named<Class extends Type>(Class: Class, name: string): Class {
   Object.defineProperty(Class, 'name', { value: name });
   return Class;
 }
 
 /**
- * The server side of a register (ADR 0022): its four commands with their target, a service whose
- * reads go through the ScopedDatabase and whose writes go through the command bus (ADR 0012), its
- * list, the GraphQL queries and mutations on the hand-written type, and the binding of its
- * operations (ADR 0073). A row sits at the company's node or at the request's plant; a read at a
+ * The domain side of a register (ADR 0022), for the module's core/: its four commands with their
+ * target, and a service whose reads go through the ScopedDatabase and whose writes go through the
+ * command bus (ADR 0012). A row sits at the company's node or at the request's plant; a read at a
  * plant sees the plant's rows and the company's, and one in company settings every row of the
- * company. The table is one that pnpm gen:migration --register wrote.
+ * company. The table is one that pnpm gen:migration --register wrote. masterDataApi builds the
+ * GraphQL and operation surfaces on what it returns.
+ *
+ * @internal Until ADR 0022 settles whether plugins define registers: the kit trusts its access
+ * port for every read permission.
  */
-export function masterDataServer<
+export function masterDataService<
   const Definition extends MasterDataDefinition,
   Scope extends MasterDataRequestScope,
->(definition: Definition, options: MasterDataServerOptions<Definition, Scope>) {
-  type Record = MasterDataRecord<Definition>;
+>(definition: Definition, options: MasterDataServiceOptions<Definition, Scope>) {
+  type Row = MasterDataRecord<Definition>;
   const { module, entity, label, permission } = definition;
-  const { table, access } = options;
+  const { table, access, list } = options;
+  const register = `${module}.${entity}`;
   const atCompany = definition.scopes.includes('company' as never);
   const Label = capitalized(label);
 
   /** The rows of the table as the service hands them out, which row-level security limits. */
   function select(tx: Transaction<RegisterDb>) {
-    return tx
-      .selectFrom(table)
-      .select([
-        'id',
-        'code',
-        'name',
-        'translations',
-        'version',
-        'archived_at as archivedAt',
-        'updated_at as updatedAt',
-        ...(atCompany
-          ? [
-              sql<MasterDataScope>`case when scope_id = company_id then 'company' else 'plant' end`.as(
-                'scope',
-              ),
-            ]
-          : []),
-        ...Object.entries<string>(options.columns).map(([field, column]) =>
-          sql.ref(column).as(field),
-        ),
-      ]) as unknown as SelectQueryBuilder<RegisterDb, string, Record & { readonly id: string }>;
+    return tx.selectFrom(table).select([
+      'id',
+      'code',
+      'name',
+      'translations',
+      'version',
+      'archived_at as archivedAt',
+      'updated_at as updatedAt',
+      ...(atCompany
+        ? [
+            sql<MasterDataScope>`case when scope_id = company_id then 'company' else 'plant' end`.as(
+              'scope',
+            ),
+          ]
+        : []),
+      // The columns of the register's own definition, never input.
+      ...Object.entries<string>(options.columns).map(([field, column]) =>
+        sql.ref(column).as(field),
+      ),
+    ]) as unknown as SelectQueryBuilder<RegisterDb, string, Row & { readonly id: string }>;
   }
 
   /** The rows that `scope` reads: the plant's and the company's, or in settings the company's. */
@@ -167,21 +197,32 @@ export function masterDataServer<
   }
 
   /** The one row with this id, after a command changed it. */
-  function selectOne(tx: Transaction<unknown>, id: string): Promise<Record> {
+  function selectOne(tx: Transaction<unknown>, id: string): Promise<Row> {
     return select(tx as Transaction<RegisterDb>)
       .where('id', '=', id)
-      .executeTakeFirstOrThrow() as Promise<Record>;
+      .executeTakeFirstOrThrow() as Promise<Row>;
   }
 
-  /** The node a create writes at: the company's, or the request's plant's (ADR 0007). */
-  async function scopeOfCreate(
+  /** The company a create writes in and the node it writes at (ADR 0007), or undefined. */
+  async function placeOfCreate(
     input: unknown,
     context: Pick<HandlerContext, 'tx' | 'plantId'>,
-  ): Promise<string | undefined> {
+  ): Promise<{ readonly companyId: string; readonly scopeId: string } | undefined> {
     const companyId = await access.requestCompany(input, context);
     if (!companyId) return undefined;
     const level = (input as { readonly scope?: MasterDataScope }).scope ?? 'plant';
-    return level === 'company' ? companyId : context.plantId;
+    if (level === 'company') return { companyId, scopeId: companyId };
+    if (!context.plantId) {
+      // Company settings name no plant, so a plant row has nowhere to sit.
+      const message = 'Choose company: a row at a plant is made at that plant.';
+      throw new DomainError({
+        code: 'core.plant_scope_needs_plant',
+        status: HttpStatus.BAD_REQUEST,
+        message,
+        fieldErrors: [{ path: ['scope'], message, code: 'core.plant_scope_needs_plant' }],
+      });
+    }
+    return { companyId, scopeId: context.plantId };
   }
 
   const target = {
@@ -225,25 +266,27 @@ export function masterDataServer<
   type ExistingInput = { readonly id: string };
 
   const CreateCommand = registerCommand(definition.create, {
-    scope: scopeOfCreate,
-    async handle(input: CreateInput, context: HandlerContext): Promise<Record> {
+    scope: async (input, context) => (await placeOfCreate(input, context))?.scopeId,
+    async handle(input: CreateInput, context: HandlerContext): Promise<Row> {
       const tx = context.tx as Transaction<RegisterDb>;
-      const scopeId = await scopeOfCreate(input, context);
-      const companyId = await access.requestCompany(input, context);
+      const place = await placeOfCreate(input, context);
       // The scope hook found no scope, so the bus refused the command before the handler runs.
-      if (!scopeId || !companyId) throw new NotFoundException(`${Label} ${input.id} was not found`);
-      const own = await options.write.create(input, { tx: context.tx, companyId, scopeId });
+      if (!place) throw new NotFoundException(`${Label} ${input.id} was not found`);
+      const own = ownOnly(
+        register,
+        await options.write.create(input, { tx: context.tx, ...place }),
+      );
       const created = await tx
         .insertInto(table)
         .values({
+          ...own,
           id: input.id,
-          company_id: companyId,
-          scope_id: scopeId,
-          scope_span: sql<string>`(select span from core.scope where id = ${scopeId})`,
+          company_id: place.companyId,
+          scope_id: place.scopeId,
+          scope_span: sql<string>`(select span from core.scope where id = ${place.scopeId})`,
           code: input.code,
           name: input.name,
           translations: JSON.stringify(input.translations ?? []),
-          ...own,
         })
         .onConflict((conflict) => conflict.column('id').doNothing())
         .returning('id')
@@ -252,22 +295,26 @@ export function masterDataServer<
       const row = await select(tx).where('id', '=', input.id).executeTakeFirst();
       // The id is taken where the principal cannot read.
       if (!row) throw new NotFoundException(`${Label} ${input.id} was not found`);
-      return row as Record;
+      return row as Row;
     },
   });
 
   const UpdateCommand = registerCommand(definition.update, {
     target,
-    async handle(input: UpdateInput, context: HandlerContext<MasterDataRow>): Promise<Record> {
+    async handle(input: UpdateInput, context: HandlerContext<MasterDataRow>): Promise<Row> {
       refuseArchived(context.target);
       const { translations } = input;
+      const own = ownOnly(
+        register,
+        await options.write.update(input, { tx: context.tx, target: context.target }),
+      );
       await (context.tx as Transaction<RegisterDb>)
         .updateTable(table)
         .set({
+          ...own,
           code: input.code,
           name: input.name,
           ...(translations === undefined ? {} : { translations: JSON.stringify(translations) }),
-          ...options.write.update(input, context.target),
         })
         .where('id', '=', input.id)
         .execute();
@@ -277,7 +324,7 @@ export function masterDataServer<
 
   const ArchiveCommand = registerCommand(definition.archive, {
     target,
-    async handle({ id }: ExistingInput, context: HandlerContext<MasterDataRow>): Promise<Record> {
+    async handle({ id }: ExistingInput, context: HandlerContext<MasterDataRow>): Promise<Row> {
       refuseArchived(context.target);
       await (context.tx as Transaction<RegisterDb>)
         .updateTable(table)
@@ -290,7 +337,7 @@ export function masterDataServer<
 
   const RestoreCommand = registerCommand(definition.restore, {
     target,
-    async handle({ id }: ExistingInput, context: HandlerContext<MasterDataRow>): Promise<Record> {
+    async handle({ id }: ExistingInput, context: HandlerContext<MasterDataRow>): Promise<Row> {
       if (context.target.archived_at === null) {
         throw new DomainError({
           code: 'core.not_archived',
@@ -307,34 +354,33 @@ export function masterDataServer<
     },
   });
 
-  const list = defineList(definition.list, { node: options.type });
   const read = `${permission}:read`;
 
   @Injectable()
-  class Service implements MasterDataService<Record> {
+  class Service implements MasterDataService<Row> {
     constructor(
       @Inject(DATABASE) private readonly db: ScopedDatabase<RegisterDb>,
       @Inject(COMMAND_BUS) private readonly bus: CommandBus,
     ) {}
 
-    async byId(id: string, companyId?: string): Promise<Record | null> {
+    async byId(id: string, companyId?: string): Promise<Row | null> {
       const scope = access.requestScope(read, companyId);
       const row = await access.readIn(scope, () =>
         this.db.transaction((tx) => ofRequest(scope)(tx).where('id', '=', id).executeTakeFirst()),
       );
-      return (row as Record | undefined) ?? null;
+      return (row as Row | undefined) ?? null;
     }
 
-    async byIds(ids: readonly string[]): Promise<(Record | null)[]> {
+    async byIds(ids: readonly string[]): Promise<(Row | null)[]> {
       if (ids.length === 0) return [];
       const rows = await access.readAsRequest(() =>
         this.db.transaction((tx) => select(tx).where('id', 'in', ids).execute()),
       );
-      const byId = new Map(rows.map((row) => [row.id, row as Record]));
+      const byId = new Map(rows.map((row) => [row.id, row as Row]));
       return ids.map((id) => byId.get(id) ?? null);
     }
 
-    async byIdOrThrow(id: string): Promise<Record> {
+    async byIdOrThrow(id: string): Promise<Row> {
       const row = await this.byId(id);
       if (!row) {
         throw new DomainError({
@@ -346,124 +392,39 @@ export function masterDataServer<
       return row;
     }
 
-    async list(args: ListArgs<string>, companyId?: string): Promise<Connection<Record>> {
+    async list(args: ListArgs<string>, companyId?: string): Promise<Connection<Row>> {
       const scope = access.requestScope(read, companyId);
       const page = await access.readIn(scope, () => list.page(this.db, ofRequest(scope), args));
       return {
         ...page,
         count: () => access.readIn(scope, () => page.count()),
-      } as Connection<Record>;
+      } as Connection<Row>;
     }
 
-    async find(input: unknown): Promise<ListPage<Record>> {
+    async find(input: unknown): Promise<ListPage<Row>> {
       const scope = access.requestScope(read);
       return access.readIn(scope, () =>
         list.find(this.db, ofRequest(scope), input as Parameters<typeof list.find>[2]),
-      ) as Promise<ListPage<Record>>;
+      ) as Promise<ListPage<Row>>;
     }
 
-    create(input: unknown): Promise<Record> {
+    create(input: unknown): Promise<Row> {
       return this.bus.run(CreateCommand.command, parseCommandInput(definition.create, input));
     }
 
-    update(input: unknown): Promise<Record> {
+    update(input: unknown): Promise<Row> {
       return this.bus.run(UpdateCommand.command, parseCommandInput(definition.update, input));
     }
 
-    archive(input: unknown): Promise<Record> {
+    archive(input: unknown): Promise<Row> {
       return this.bus.run(ArchiveCommand.command, parseCommandInput(definition.archive, input));
     }
 
-    restore(input: unknown): Promise<Record> {
+    restore(input: unknown): Promise<Row> {
       return this.bus.run(RestoreCommand.command, parseCommandInput(definition.restore, input));
     }
   }
   named(Service, `${entity}Service`);
-
-  const field = `${module}${entity}`;
-
-  @Resolver(options.type)
-  class QueryResolver {
-    constructor(@Inject(Service) private readonly service: Service) {}
-
-    @Query(options.type, {
-      name: field,
-      nullable: true,
-      description: `The ${label} with this id among those the request reads, or null. Needs ${read}.`,
-    })
-    @PlantFree()
-    one(
-      @Args('id', { type: () => ID, description: `The ${label}'s id.` }) id: string,
-      @Args('companyId', companyIdArg) companyId?: string | null,
-    ): Promise<Record | null> {
-      return this.service.byId(id, companyId ?? undefined);
-    }
-
-    @Query(() => list.Connection, {
-      name: `${field}s`,
-      description: `One page of the ${label}s the request reads: at a plant the plant's and the company's, in company settings the company's. Needs ${read}.`,
-    })
-    @PlantFree()
-    many(
-      @Args({ type: () => list.Args }) args: ListArgs<string>,
-      @Args('companyId', companyIdArg) companyId?: string | null,
-    ): Promise<Connection<Record>> {
-      return this.service.list(args, companyId ?? undefined);
-    }
-  }
-  named(QueryResolver, `${entity}QueryResolver`);
-
-  @Resolver(options.type)
-  class MutationResolver {
-    constructor(@Inject(Service) private readonly service: Service) {}
-
-    @Mutation(options.type, {
-      name: `${module}Create${entity}`,
-      description: definition.create.description,
-    })
-    @PlantFree()
-    create(@Args('input', commandInputArg(definition.create)) input: unknown): Promise<Record> {
-      return this.service.create(input);
-    }
-
-    @Mutation(options.type, {
-      name: `${module}Update${entity}`,
-      description: definition.update.description,
-    })
-    @PlantFree()
-    update(@Args('input', commandInputArg(definition.update)) input: unknown): Promise<Record> {
-      return this.service.update(input);
-    }
-
-    @Mutation(options.type, {
-      name: `${module}Archive${entity}`,
-      description: definition.archive.description,
-    })
-    @PlantFree()
-    archive(@Args('input', commandInputArg(definition.archive)) input: unknown): Promise<Record> {
-      return this.service.archive(input);
-    }
-
-    @Mutation(options.type, {
-      name: `${module}Restore${entity}`,
-      description: definition.restore.description,
-    })
-    @PlantFree()
-    restore(@Args('input', commandInputArg(definition.restore)) input: unknown): Promise<Record> {
-      return this.service.restore(input);
-    }
-  }
-  named(MutationResolver, `${entity}MutationResolver`);
-
-  const handlers = {
-    find: (input, context) => context.get(Service).find(input),
-    get: (input, context) => context.get(Service).byIdOrThrow((input as ExistingInput).id),
-    create: (input, context) => context.get(Service).create(input),
-    update: (input, context) => context.get(Service).update(input),
-    archive: (input, context) => context.get(Service).archive(input),
-    restore: (input, context) => context.get(Service).restore(input),
-  } as OperationHandlers<Definition['operations']>;
-  const Operations = bindOperations(definition.operations, handlers);
 
   const commands = [CreateCommand, UpdateCommand, ArchiveCommand, RestoreCommand];
 
@@ -472,13 +433,17 @@ export function masterDataServer<
   named(ServiceModule, `${entity}ServiceModule`);
 
   return {
+    definition,
     /** The register's service, the Nest provider every surface calls. */
-    Service: Service as Type<MasterDataService<Record>>,
+    Service: Service as Type<MasterDataService<Row>>,
     /** Provides the service and registers the four commands, so boot checks their permissions. */
     ServiceModule,
-    /** The register's list, which the GraphQL list field and the find operation read. */
-    list,
-    /** The providers of the register's API module: its resolvers and its operations. */
-    providers: [QueryResolver, list.ConnectionResolver, MutationResolver, Operations] as Type[],
   };
 }
+
+/** What masterDataService returns, which masterDataApi builds the surfaces on. */
+export type MasterDataServiceKit<Definition extends MasterDataDefinition = MasterDataDefinition> = {
+  readonly definition: Definition;
+  readonly Service: Type<MasterDataService<MasterDataRecord<Definition>>>;
+  readonly ServiceModule: Type;
+};

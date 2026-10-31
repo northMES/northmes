@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { equipmentGroups, paletteColors } from '@northmes/core-contracts';
-import { type MasterDataRecord, masterDataServer } from '@northmes/sdk/master-data';
+import { paletteColors } from '@northmes/contracts';
+import { equipmentGroups } from '@northmes/core-contracts';
+import { type MasterDataRecord, masterDataService } from '@northmes/sdk/master-data';
 import type { Transaction } from 'kysely';
-import { EquipmentGroup } from '../api/equipment-group/types/equipment-group.type.ts';
+import { equipmentGroupList } from '../api/equipment-group/queries/equipment-group.list.ts';
 import type { CoreDatabase } from '../infrastructure/database.ts';
 import { masterDataAccess } from './access/master-data-access.ts';
 
@@ -12,7 +13,8 @@ export type EquipmentGroupRecord = MasterDataRecord<typeof equipmentGroups>;
 
 /**
  * The first palette color that no active group the request reads uses, or palette-1 when all
- * twenty are taken (#729). Row-level security limits the read to the request's plant and company.
+ * twenty are taken (#729). Row-level security limits the read to where the request reads: at a
+ * plant, the plant's groups and the company's.
  */
 async function firstFreeColor(tx: Transaction<CoreDatabase>, companyId: string): Promise<string> {
   const used = await tx
@@ -27,11 +29,11 @@ async function firstFreeColor(tx: Transaction<CoreDatabase>, companyId: string):
 
 /**
  * Core's equipment groups, built with the master-data kit (ADR 0022): a register at the company or
- * at a plant. A create without a color takes the first free palette color; a color given is set.
+ * at a plant. A create without a color takes the first free palette color; a new color is set.
  */
-export const equipmentGroupServer = masterDataServer(equipmentGroups, {
+export const equipmentGroupService = masterDataService(equipmentGroups, {
   table: 'core.equipment_group',
-  type: () => EquipmentGroup,
+  list: equipmentGroupList,
   access: masterDataAccess,
   columns: { color: 'color', colorFrom: 'color_from' },
   write: {
@@ -40,9 +42,8 @@ export const equipmentGroupServer = masterDataServer(equipmentGroups, {
       const free = await firstFreeColor(tx as Transaction<CoreDatabase>, companyId);
       return { color: free, color_from: 'palette' };
     },
-    update: ({ color }) => (color === undefined ? {} : { color, color_from: 'set' }),
+    // An update that sends the color the group has, as a form does, keeps where it came from.
+    update: ({ color }, { target }) =>
+      color === undefined || color === target.color ? {} : { color, color_from: 'set' },
   },
 });
-
-/** The equipment group service, which every surface calls. */
-export const EquipmentGroupService = equipmentGroupServer.Service;

@@ -159,4 +159,24 @@ describe('defineMasterData', () => {
       );
     },
   );
+
+  it('#66 a register whose plural is not its name with an s names its list after the plural it gives', () => {
+    const equipment = defineMasterData({
+      module: 'tools',
+      entity: 'Equipment',
+      plural: 'Equipment',
+      resource: 'equipment',
+      label: 'equipment',
+      pluralLabel: 'equipment',
+      article: 'an',
+      permission: 'tools.equipment',
+      scopes: ['plant'],
+      fields: z.object({}),
+      output: {},
+    });
+
+    expect(equipment.find.name).toBe('tools.findEquipment');
+    expect(equipment.plural).toBe('Equipment');
+    expect(equipment.create.description).toMatch(/^Creates an equipment at/);
+  });
 });
