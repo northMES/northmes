@@ -140,7 +140,11 @@ describe('ADR0090 the time chunks during a zoom gesture (Laying out a zoom)', ()
     new Date(Date.parse(from) + 3 * 3_600_000).getUTCDate() === 1;
 
   it('#941 a gesture from the Week band to the 4 weeks band loads the month chunks once, after it ends', async () => {
-    const { source, loads } = countingChunks();
+    const loadedAt: number[] = [];
+    const { source, loads } = countingChunks(() => {
+      loadedAt.push(performance.now());
+      return undefined;
+    });
     renderGanttRoute({ from: '2026-11-02' }, source);
     const gantt = await findGantt();
     await waitFor(() => expect(chunkStatus()).toBe(''));
@@ -149,15 +153,16 @@ describe('ADR0090 the time chunks during a zoom gesture (Laying out a zoom)', ()
 
     // Six events of 100 px take 16 px an hour to 16 * exp(-1.2), 4.8, in the 4 weeks band.
     for (let event = 0; event < 6; event += 1) ctrlWheel(gantt, 100);
+    const lastEventAt = performance.now();
     // The last frame's zoom is drawn: the header's top tier names ISO weeks, as 4 weeks does.
     await waitFor(() =>
       expect(gantt.querySelector('[data-tier="top"] .sr-only')?.textContent).toMatch(/^Week /),
     );
-    expect(loads).toHaveLength(before);
 
-    await new Promise((resolve) => setTimeout(resolve, 150));
     await waitFor(() => expect(loads.filter(monthChunk).length).toBeGreaterThan(0));
     await waitFor(() => expect(chunkStatus()).toBe(''));
+    // No chunk loaded while the gesture ran: every load after it waited for its end.
+    for (const at of loadedAt.slice(before)) expect(at - lastEventAt).toBeGreaterThanOrEqual(150);
     const months = loads.filter(monthChunk);
     expect(new Set(months).size).toBe(months.length);
   });
