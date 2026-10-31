@@ -41,6 +41,7 @@ import { loadedSnapshot } from '../../gantt-loaded.ts';
 import {
   type BoardSearch,
   boardSearch,
+  defaultZoom,
   startOfFrom,
   withFrom,
   withOrder,
@@ -52,7 +53,7 @@ import { plantTime } from '../../order-facts.ts';
 import { usePlanningDraft } from '../../planning-draft.tsx';
 import { PlanningForbidden } from '../../planning-preview.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
-import { plantDateOf, spanLabel, zoomLevels } from '../../timeline/time-scale.ts';
+import { plantDateOf, roundZoom, spanLabel, zoomLevels } from '../../timeline/time-scale.ts';
 import { useTimeBuffer } from '../../timeline/use-time-buffer.ts';
 import { useTimeChunks } from '../../timeline/use-time-chunks.ts';
 import { useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
@@ -75,9 +76,6 @@ import {
 import { type BoardLine, boardEntry, boardFocusAfter } from './board-navigation.ts';
 import { type BoardModel, boardFitTargetOf, boardModelOf } from './board-rows.ts';
 import { BoardSkeleton } from './board-skeleton.tsx';
-
-/** The board opens at Week, as the Gantt and the job order table do (D5; D3 open question 1). */
-const defaultZoom = 'week';
 
 /** The lines of the grid that the arrow keys move over, in the grid's order. */
 function linesOf(
@@ -231,15 +229,18 @@ export function BoardScreen() {
     grid: gridElement,
     columns: { treeWidth: machineWidth, stickyWidth: machineWidth },
     plant: zoomPlant,
-    // The level goes to the URL when it changes, so a default level stays out of it.
-    onNavigate: (level, start) =>
-      void setSearch(withFrom(level === urlZoom ? search : withZoom(search, level), start)),
+    // The zoom goes to the URL when it changes, so the default zoom stays out of it.
+    onNavigate: (next, start) =>
+      void setSearch(withFrom(next === urlZoom ? search : withZoom(search, next), start)),
     frozen: {
       get: () => moveStore.get()?.state.source === 'pointer',
       subscribe: (listener) => moveStore.subscribe(listener),
     },
   });
   const zoom = buffer.zoom;
+  const zoomNow = { band: zoom, pxPerHour: buffer.pxPerHour };
+  // The zoom as the URL holds it, which the links to the other pages carry.
+  const linkZoom = String(roundZoom(buffer.pxPerHour));
   const range = buffer.range;
   // The visible start, which the URL holds once scrolling stops and links to the other pages carry.
   const from = search.from ?? plantDateOf(frame?.nowMs ?? Date.now(), timeZone);
@@ -263,6 +264,7 @@ export function BoardScreen() {
     buffer: frame === undefined ? undefined : range,
     view: buffer.settled,
     keep,
+    paused: buffer.zooming,
   });
   // The chunks of the buffer without their job orders, which the bands and the status line show.
   const unloaded = unloadedChunks(chunks.chunks, range);
@@ -571,12 +573,12 @@ export function BoardScreen() {
       return;
     }
     // The buffer is rebuilt around the job order, which then draws and takes focus.
-    buffer.goTo(zoom, { ms: start, viewportX: machineWidth + (width - machineWidth) / 2 });
+    buffer.goTo(zoomNow, { ms: start, viewportX: machineWidth + (width - machineWidth) / 2 });
   });
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const key = (event.target as HTMLElement).getAttribute('data-board-focus');
     if (key === null) return;
-    // Minus and plus step a level around the centre of the view (ADR 0089); plus may need Shift.
+    // Minus and plus zoom by a factor of 2 at the focused block (ADR 0090); plus may need Shift.
     if (timelineZoom.onKeyDown(event)) {
       event.preventDefault();
       return;
@@ -657,7 +659,7 @@ export function BoardScreen() {
         }),
       action: (
         <Link
-          to={planningLinks.jobOrders({ plant }, { zoom, from }).href}
+          to={planningLinks.jobOrders({ plant }, { zoom: linkZoom, from }).href}
           className={buttonVariants({ variant: 'outline' })}
         >
           Open the job table
@@ -712,8 +714,9 @@ export function BoardScreen() {
             <RangeControls
               zoomControls={
                 <ZoomControls
-                  zoom={zoom}
+                  zoom={zoomNow}
                   onZoomChange={timelineZoom.setLevel}
+                  onZoomStep={timelineZoom.step}
                   onZoomToFit={() => {
                     if (snapshot === undefined) return;
                     const target = boardFitTargetOf(snapshot, search.order);
@@ -723,7 +726,7 @@ export function BoardScreen() {
               }
               from={from.slice(0, 10)}
               onFromChange={(next) =>
-                buffer.goTo(zoom, {
+                buffer.goTo(zoomNow, {
                   ms: startOfFrom(next, zoom, timeZone, productionDayStart),
                   viewportX: machineWidth,
                 })
@@ -874,8 +877,10 @@ export function BoardScreen() {
               // The board draws no chain: Show critical chain opens the order's chain on the Gantt.
               onToggleChain={(orderId) =>
                 void navigate({
-                  href: planningLinks.gantt({ plant }, { zoom, from, order: orderId, chain: '1' })
-                    .href,
+                  href: planningLinks.gantt(
+                    { plant },
+                    { zoom: linkZoom, from, order: orderId, chain: '1' },
+                  ).href,
                 })
               }
               onFocusRow={(jobOrderId) => {

@@ -43,6 +43,7 @@ import {
 } from '../../gantt-draft.ts';
 import { loadedSnapshot } from '../../gantt-loaded.ts';
 import {
+  defaultZoom,
   droppedKeyMessage,
   type GanttSearch,
   ganttSearch,
@@ -112,9 +113,6 @@ export interface GanttScreenProps {
   /** Where the Gantt reads from; the fixture G1 until the GraphQL source exists (plan 18). */
   readonly source?: GanttDataSource;
 }
-
-/** The Gantt opens at Week zoom (D5); the board's own default comes with the board. */
-const defaultZoom = 'week';
 
 /**
  * "Material short: 1004.10. No longer material short: 1005.20.", or nothing when no warning
@@ -273,9 +271,9 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     grid: gridElement,
     columns: { treeWidth: paneWidth, stickyWidth: paneWidth },
     plant: zoomPlant,
-    // The level goes to the URL when it changes, so a default level stays out of it.
-    onNavigate: (level, start) =>
-      void setSearch(withFrom(level === urlZoom ? search : withZoom(search, level), start)),
+    // The zoom goes to the URL when it changes, so the default zoom stays out of it.
+    onNavigate: (next, start) =>
+      void setSearch(withFrom(next === urlZoom ? search : withZoom(search, next), start)),
     frozen: {
       get: () => moveStore.get()?.state.source === 'pointer',
       subscribe: (listener) => moveStore.subscribe(listener),
@@ -307,6 +305,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     buffer: frame === undefined ? undefined : range,
     view: buffer.settled,
     keep,
+    paused: buffer.zooming,
   });
   // The plan of the loaded rows and chunks, analysed over the buffer.
   const committed = useMemo(
@@ -354,16 +353,18 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const scale = buffer.scale;
   const timeWidth = Math.ceil(scale?.widthPx ?? 0);
   const gridTemplateColumns = `${paneWidth}px ${timeWidth}px`;
+  // The workload lanes keep the time area's scroll position, also after a buffer move, which
+  // corrects the grid's position in a layout effect before this one runs; a gesture over them
+  // zooms the timeline (ADR 0090).
+  const workloadLanes = useRef<HTMLDivElement | null>(null);
   const timelineZoom = useTimelineZoom({
     buffer,
     grid: gridElement,
+    panels: [workloadLanes],
     plant: zoomPlant,
     dragging: () => moveStore.get()?.state.source === 'pointer',
   });
 
-  // The workload lanes keep the time area's scroll position, also after a buffer move, which
-  // corrects the grid's position in a layout effect before this one runs.
-  const workloadLanes = useRef<HTMLDivElement | null>(null);
   const followGrid = useCallback(() => {
     const lanes = workloadLanes.current;
     const left = gridElement.current?.scrollLeft;
@@ -860,8 +861,9 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       state={state}
       toolbar={
         <GanttToolbar
-          zoom={zoom}
+          zoom={{ band: zoom, pxPerHour: buffer.pxPerHour }}
           onZoomChange={timelineZoom.setLevel}
+          onZoomStep={timelineZoom.step}
           onZoomToFit={() => {
             // The row in the Details drawer, else the selected order or its run, else every
             // loaded row.
@@ -871,10 +873,13 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
           }}
           from={goToDate}
           onFromChange={(next) =>
-            buffer.goTo(zoom, {
-              ms: startOfFrom(next, zoom, timeZone, productionDayStart),
-              viewportX: paneWidth,
-            })
+            buffer.goTo(
+              { band: zoom, pxPerHour: buffer.pxPerHour },
+              {
+                ms: startOfFrom(next, zoom, timeZone, productionDayStart),
+                viewportX: paneWidth,
+              },
+            )
           }
           onEarlier={() => buffer.page('earlier')}
           onNow={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}

@@ -483,7 +483,7 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     fireEvent.click(cell);
     // The drop snaps to the Week step first: Tue 11:30 becomes Tue 12:00, on CNC 2.
     await waitFor(() => expect(spoken()).toContain('1001.10 moved to CNC 2, Tue 3 Nov 12:00'));
-    expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
+    expect(router.state.location.search).toEqual({ zoom: 16, from: '2026-11-02' });
   });
 
   it('IN5 a drop on a machine the operation may not use is refused and says why', async () => {
@@ -624,7 +624,7 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     fireEvent.keyDown(cell, { key: 'Escape' });
     fireEvent.pointerUp(cell, { clientX: 164, clientY: 10, pointerId: 1, button: 0 });
     fireEvent.click(cell);
-    expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
+    expect(router.state.location.search).toEqual({ zoom: 16, from: '2026-11-02' });
   });
 
   it('#886 a drag on the second press of a double click moves the block and leaves Details closed', async () => {

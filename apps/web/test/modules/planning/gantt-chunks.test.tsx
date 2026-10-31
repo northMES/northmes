@@ -2,11 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type GanttDataSource, g1DataSource } from '../../../src/modules/planning/gantt-data.ts';
-import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
+import { findGantt, measureGridsAt, renderGanttRoute } from './gantt-fixtures.tsx';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 /** A source that answers from G1 and counts the loads of each time chunk by its start. */
 function countingChunks(
@@ -114,5 +117,48 @@ describe('ADR0089 the time chunks of the order Gantt (Loading by time chunk)', (
     await waitFor(() => expect(gantt.querySelector('[data-block="jo-1003-10"]')).not.toBeNull());
     expect(gantt.querySelector('[data-chunk-band]')).toBeNull();
     expect(loads.filter((from) => from.startsWith('2026-11-01T23'))).toHaveLength(2);
+  });
+});
+
+describe('ADR0090 the time chunks during a zoom gesture (Laying out a zoom)', () => {
+  beforeEach(() => measureGridsAt(1400));
+
+  /** A Ctrl+wheel event in pixel mode over the time area. */
+  function ctrlWheel(gantt: HTMLElement, deltaY: number) {
+    const event = new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true });
+    Object.defineProperties(event, {
+      ctrlKey: { value: true },
+      clientX: { value: 1200 },
+      deltaMode: { value: 0 },
+    });
+    gantt.dispatchEvent(event);
+  }
+
+  /** Whether a load started at the first of a month in Stockholm: a month chunk's start. */
+  const monthChunk = (from: string) =>
+    /^\d{4}-\d{2}-(?:28|29|30|31)T2[23]:00/.test(from) &&
+    new Date(Date.parse(from) + 3 * 3_600_000).getUTCDate() === 1;
+
+  it('#941 a gesture from the Week band to the 4 weeks band loads the month chunks once, after it ends', async () => {
+    const { source, loads } = countingChunks();
+    renderGanttRoute({ from: '2026-11-02' }, source);
+    const gantt = await findGantt();
+    await waitFor(() => expect(chunkStatus()).toBe(''));
+    const before = loads.length;
+    expect(loads.filter(monthChunk)).toEqual([]);
+
+    // Six events of 100 px take 16 px an hour to 16 * exp(-1.2), 4.8, in the 4 weeks band.
+    for (let event = 0; event < 6; event += 1) ctrlWheel(gantt, 100);
+    // The last frame's zoom is drawn: the header's top tier names ISO weeks, as 4 weeks does.
+    await waitFor(() =>
+      expect(gantt.querySelector('[data-tier="top"] .sr-only')?.textContent).toMatch(/^Week /),
+    );
+    expect(loads).toHaveLength(before);
+
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await waitFor(() => expect(loads.filter(monthChunk).length).toBeGreaterThan(0));
+    await waitFor(() => expect(chunkStatus()).toBe(''));
+    const months = loads.filter(monthChunk);
+    expect(new Set(months).size).toBe(months.length);
   });
 });

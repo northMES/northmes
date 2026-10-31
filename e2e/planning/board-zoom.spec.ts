@@ -4,33 +4,33 @@ import { planningLinks } from '@northmes/planning-contracts';
 import type { Locator } from '@playwright/test';
 import { expect, plant, test } from '../fixtures.ts';
 
-// The zoom of the planning board (ADR 0089, Zoom levels; #896), the same as the Gantt's: Ctrl+wheel
-// over the time area steps one level and keeps the instant under the pointer at its x, the
-// toolbar steps, picks and fits a level, and minus and plus step a level with focus in the grid.
+// The smooth zoom of the planning board (ADR 0090, Gestures, buttons and keys; #941), the same as
+// the Gantt's: each Ctrl+wheel event over the time area zooms by exp(-deltaY * 0.002) and keeps the
+// instant under the pointer at its x, Zoom in and Zoom out double and halve the width per hour, and
+// minus and plus zoom with focus in the grid.
 
 /** The board page of the seed plant with its search. */
 function boardHref(search: Record<string, string>): string {
   return `${planningLinks.board({ plant }).href}?${new URLSearchParams(search).toString()}`;
 }
 
-/** The pixels per hour of the levels the specs step between (ADR 0089 ladder). */
-const pxPerHour = { day: 48, week: 16 } as const;
-
 test.use({ viewport: { width: 1440, height: 900 } });
 
-/** The left edge of a block in the viewport. */
-async function leftOf(block: Locator): Promise<number> {
+/** The box of a block in the viewport. */
+async function boxOf(
+  block: Locator,
+): Promise<{ x: number; y: number; width: number; height: number }> {
   const box = await block.boundingBox();
   if (box === null) throw new Error('The block is not drawn');
-  return box.x;
+  return box;
 }
 
-test.describe('the zoom of the planning board', () => {
-  test('#896 Ctrl+wheel over the time area steps one level and keeps the instant under the pointer within 1 px, and the page does not zoom', async ({
+test.describe('the smooth zoom of the planning board', () => {
+  test('#941 each Ctrl+wheel event of deltaY -4 zooms by a factor between 1.005 and 1.01, the instant under the pointer stays within 1 px, and the page does not zoom', async ({
     page,
     signIn,
   }) => {
-    await signIn(boardHref({ zoom: 'week', from: '2026-11-02' }));
+    await signIn(boardHref({ from: '2026-11-02' }));
     const board = page.getByRole('grid', { name: /board/ });
     await expect(board).toBeVisible();
     await expect(board).not.toHaveAttribute('aria-busy', 'true');
@@ -41,21 +41,31 @@ test.describe('the zoom of the planning board', () => {
       (window as unknown as { wheelPrevented: boolean[] }).wheelPrevented = seen;
       document.addEventListener('wheel', (event) => seen.push(event.defaultPrevented));
     });
+    const start = await boxOf(block);
+    const pointerX = Math.round(start.x + start.width / 2);
+    const share = (pointerX - start.x) / start.width;
+    await page.mouse.move(pointerX, Math.round(start.y + start.height / 2));
 
-    const box = await block.boundingBox();
-    if (box === null) throw new Error('The block is not drawn');
-    const pointerX = Math.round(box.x + box.width / 2);
-    const offsetPx = pointerX - box.x;
-    await page.mouse.move(pointerX, Math.round(box.y + box.height / 2));
     await page.keyboard.down('Control');
-    await page.mouse.wheel(0, -100);
+    let before = start;
+    for (let event = 0; event < 20; event += 1) {
+      await page.mouse.wheel(0, -4);
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+          ),
+      );
+      const after = await boxOf(block);
+      const factor = after.width / before.width;
+      expect(factor, `event ${event}`).toBeGreaterThanOrEqual(1.005);
+      expect(factor, `event ${event}`).toBeLessThanOrEqual(1.01);
+      expect(Math.abs(after.x + share * after.width - pointerX), `event ${event}`).toBeLessThan(1);
+      before = after;
+    }
     await page.keyboard.up('Control');
 
-    await expect(page).toHaveURL(/zoom=day/);
-    const expectedLeft = pointerX - (offsetPx * pxPerHour.day) / pxPerHour.week;
-    await expect
-      .poll(async () => Math.abs((await leftOf(block)) - expectedLeft))
-      .toBeLessThanOrEqual(1);
+    await expect(page).toHaveURL(/zoom=18\.8\b/);
     const prevented = await page.evaluate(
       () => (window as unknown as { wheelPrevented: boolean[] }).wheelPrevented,
     );
@@ -63,36 +73,42 @@ test.describe('the zoom of the planning board', () => {
     expect(prevented.every(Boolean)).toBe(true);
   });
 
-  test('#896 the toolbar steps, picks and fits a level, and minus and plus step a level from the grid, and each state passes axe', async ({
+  test('#941 Zoom in from 16 gives 32 and Zoom out gives 8, the menu and Zoom to fit set the zoom, and minus and plus zoom from the grid, and each state passes axe', async ({
     page,
     signIn,
     checkA11y,
   }) => {
-    await signIn(boardHref({ zoom: 'week', from: '2026-11-02' }));
+    await signIn(boardHref({ from: '2026-11-02' }));
     const board = page.getByRole('grid', { name: /board/ });
     await expect(board).not.toHaveAttribute('aria-busy', 'true');
     const zoom = page.getByRole('group', { name: 'Zoom' });
 
     await zoom.getByRole('button', { name: 'Zoom in' }).click();
-    await expect(page).toHaveURL(/zoom=day/);
+    await expect(page).toHaveURL(/zoom=32\b/);
     await zoom.getByRole('button', { name: 'Zoom out' }).click();
-    await expect(page).toHaveURL(/zoom=week/);
+    await expect(page).not.toHaveURL(/zoom=/);
+    await zoom.getByRole('button', { name: 'Zoom out' }).click();
+    await expect(page).toHaveURL(/zoom=8\b/);
 
     await zoom.getByRole('button', { name: 'Zoom level, Week' }).click();
     await checkA11y('the zoom level menu on the board');
     await page.getByRole('menuitemradio', { name: 'Quarter', exact: true }).click();
-    await expect(page).toHaveURL(/zoom=quarter(&|$)/);
+    await expect(page).toHaveURL(/zoom=0\.6\b/);
     await checkA11y('the board at Quarter');
 
     // Zoom to fit with nothing selected fits every loaded job order of G1, Tue 3 Nov to Tue 10 Nov.
     await zoom.getByRole('button', { name: 'Zoom to fit' }).click();
-    await expect(page).toHaveURL(/zoom=(week|4weeks)\b/);
+    await expect(page).not.toHaveURL(/zoom=0\.6\b/);
 
-    const level = page.url().match(/zoom=([a-z0-9-]+)/)?.[1];
+    const fitted = Number(new URL(page.url()).searchParams.get('zoom') ?? '16');
     await board.locator('[data-job-order]').first().focus();
     await page.keyboard.press('+');
-    await expect(page).not.toHaveURL(new RegExp(`zoom=${level}\\b`));
+    await expect
+      .poll(() => Number(new URL(page.url()).searchParams.get('zoom') ?? '16'))
+      .toBeCloseTo(fitted * 2, 0);
     await page.keyboard.press('-');
-    await expect(page).toHaveURL(new RegExp(`zoom=${level}\\b`));
+    await expect
+      .poll(() => Number(new URL(page.url()).searchParams.get('zoom') ?? '16'))
+      .toBeCloseTo(fitted, 0);
   });
 });

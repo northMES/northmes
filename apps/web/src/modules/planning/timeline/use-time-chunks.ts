@@ -9,6 +9,7 @@ import type { GanttChunk, GanttJobOrder, ZoomLevel } from '../gantt-data.ts';
 import { isPlanningRefusal } from '../planning-preview.ts';
 import {
   type ChunkUnit,
+  chunksCovering,
   chunkUnitOf,
   isFarChunk,
   type TimeChunk,
@@ -43,6 +44,11 @@ export interface TimeChunksInput {
   readonly view: TimeRange | undefined;
   /** The job orders the view keeps, the focused one and those of the selected order. */
   readonly keep?: ReadonlySet<string>;
+  /**
+   * A zoom gesture or animation under way: the chunk length, the loads and the drops wait for its
+   * end, and the time the buffer shows beyond the loaded chunks draws as loading (ADR 0090).
+   */
+  readonly paused?: boolean;
 }
 
 export interface TimeChunks {
@@ -131,11 +137,21 @@ export function useTimeChunks({
   load,
   zoom,
   timeZone,
-  buffer,
-  view,
+  buffer: drawnBuffer,
+  view: drawnView,
   keep,
+  paused = false,
 }: TimeChunksInput): TimeChunks {
-  const unit = chunkUnitOf(zoom);
+  // What the chunks load for: the zoom, the buffer and the view of the last frame outside a
+  // gesture, kept as React's rule for state from props says.
+  const [held, setHeld] = useState({ zoom, buffer: drawnBuffer, view: drawnView });
+  let loadFor = held;
+  if (!paused && (held.zoom !== zoom || held.buffer !== drawnBuffer || held.view !== drawnView)) {
+    loadFor = { zoom, buffer: drawnBuffer, view: drawnView };
+    setHeld(loadFor);
+  }
+  const { buffer, view } = loadFor;
+  const unit = chunkUnitOf(loadFor.zoom);
   const [stored, setCache] = useState<ChunkCache>(() => newCache(load, unit, timeZone));
   // A new plant zone starts an empty cache. A new chunk length starts one that draws the job orders
   // before until its chunks load, and a new source or filter one that loads its chunks again while
@@ -153,12 +169,13 @@ export function useTimeChunks({
     setCache(cache);
   }
 
+  const loadZoom = loadFor.zoom;
   const wanted = useMemo(
     () =>
       buffer === undefined || view === undefined
         ? []
-        : wantedChunks({ view, buffer, zoom, timeZone }),
-    [buffer, view, zoom, timeZone],
+        : wantedChunks({ view, buffer, zoom: loadZoom, timeZone }),
+    [buffer, view, loadZoom, timeZone],
   );
 
   /** Starts the load of a chunk, whose answer lands only in the cache it started in. */
@@ -260,9 +277,20 @@ export function useTimeChunks({
     [cache, start],
   );
 
+  // During a gesture, the chunks the drawn buffer reaches that are not requested yet show as
+  // loading, never as empty rows.
+  const unrequested = useMemo(
+    () =>
+      !paused || drawnBuffer === undefined
+        ? []
+        : chunksCovering(drawnBuffer, loadZoom, timeZone)
+            .filter((chunk) => !cache.entries.has(chunk.key))
+            .map((chunk): ChunkEntry => ({ ...chunk, status: 'loading', jobOrders: [] })),
+    [paused, drawnBuffer, loadZoom, timeZone, cache.entries],
+  );
   const chunks = useMemo(
-    () => [...cache.entries.values()].sort((a, b) => a.fromMs - b.fromMs),
-    [cache.entries],
+    () => [...cache.entries.values(), ...unrequested].sort((a, b) => a.fromMs - b.fromMs),
+    [cache.entries, unrequested],
   );
   const jobOrders = useMemo(() => {
     const byId = new Map<string, GanttJobOrder>();

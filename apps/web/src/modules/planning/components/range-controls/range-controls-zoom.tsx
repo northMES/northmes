@@ -11,32 +11,37 @@ import {
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
 import type { ZoomLevel } from '../../gantt-data.ts';
-import { steppedLevel, zoomLevelIds, zoomLevels } from '../../timeline/time-scale.ts';
+import { type Zoom, zoomClamp, zoomLevelIds, zoomLevels } from '../../timeline/time-scale.ts';
 
 export interface ZoomControlsProps {
-  readonly zoom: ZoomLevel;
+  /** The zoom drawn: its band names the menu, its width disables a step at the clamp. */
+  readonly zoom: Zoom;
+  /** A level from the menu, at its natural width. */
   readonly onZoomChange: (zoom: ZoomLevel) => void;
+  /** Zoom in or Zoom out by a factor of 2 (ADR 0090). */
+  readonly onZoomStep: (direction: 'in' | 'out') => void;
   readonly onZoomToFit: () => void;
 }
 
 /**
- * The zoom of the board and the Gantt (ADR 0089, Zoom levels): Zoom out, the level menu, Zoom in
- * and Zoom to fit. Each zooms around the centre of the view. At an end of the ladder its step is
- * disabled through aria-disabled, so a button the planner pressed to reach the end keeps focus.
+ * The zoom of the board and the Gantt (ADR 0090, Gestures, buttons and keys): Zoom out, the menu
+ * of bands, Zoom in and Zoom to fit. Each zooms around the centre of the view. At a clamp its step
+ * is disabled through aria-disabled, so a button the planner pressed to reach it keeps focus.
  */
-export function ZoomControls({ zoom, onZoomChange, onZoomToFit }: ZoomControlsProps) {
-  const coarser = steppedLevel(zoom, 'out');
-  const finer = steppedLevel(zoom, 'in');
+export function ZoomControls({ zoom, onZoomChange, onZoomStep, onZoomToFit }: ZoomControlsProps) {
+  const coarsest = zoom.pxPerHour <= zoomClamp.min;
+  const finest = zoom.pxPerHour >= zoomClamp.max;
+  const band = zoom.band;
   return (
     <fieldset aria-label="Zoom" className="flex items-center gap-1">
       <IconButton
         label="Zoom out"
         variant="outline"
         size="icon-sm"
-        aria-disabled={coarser === zoom || undefined}
+        aria-disabled={coarsest || undefined}
         className="aria-disabled:opacity-50"
         onClick={() => {
-          if (coarser !== zoom) onZoomChange(coarser);
+          if (!coarsest) onZoomStep('out');
         }}
       >
         <ZoomOut />
@@ -47,16 +52,16 @@ export function ZoomControls({ zoom, onZoomChange, onZoomToFit }: ZoomControlsPr
             <Button
               variant="outline"
               className="h-8 min-w-28 justify-between px-3"
-              aria-label={`Zoom level, ${zoomLevels[zoom].label}`}
+              aria-label={`Zoom level, ${zoomLevels[band].label}`}
             />
           }
         >
-          {zoomLevels[zoom].label}
+          {zoomLevels[band].label}
           <ChevronDown aria-hidden />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-40">
           <DropdownMenuRadioGroup
-            value={zoom}
+            value={band}
             onValueChange={(value: ZoomLevel) => onZoomChange(value)}
           >
             {zoomLevelIds.map((id) => (
@@ -71,10 +76,10 @@ export function ZoomControls({ zoom, onZoomChange, onZoomToFit }: ZoomControlsPr
         label="Zoom in"
         variant="outline"
         size="icon-sm"
-        aria-disabled={finer === zoom || undefined}
+        aria-disabled={finest || undefined}
         className="aria-disabled:opacity-50"
         onClick={() => {
-          if (finer !== zoom) onZoomChange(finer);
+          if (!finest) onZoomStep('in');
         }}
       >
         <ZoomIn />

@@ -134,7 +134,9 @@ describe('a smooth zoom keeps the instant under the pointer (ADR 0090, Gestures,
             zoom = zoomedBy(zoom, wheelFactor({ deltaY: -4, deltaMode: 0 }, 600));
             view = zoomedTo(zoom, anchor.ms, viewportX, hidden);
             const x = view.scale.x(anchor.ms) + layout.treeWidth - view.scrollLeft;
-            expect(Math.abs(x - viewportX), `event ${event} at ${viewportX}`).toBeLessThanOrEqual(1);
+            expect(Math.abs(x - viewportX), `event ${event} at ${viewportX}`).toBeLessThanOrEqual(
+              1,
+            );
           }
           // 50 events of exp(0.008) take Week to about 23.9 px an hour, still in the Week band.
           expect(zoom.pxPerHour).toBeCloseTo(16 * Math.exp(0.4), 6);
