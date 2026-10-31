@@ -101,7 +101,8 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
       /^Wed 4 Nov 15:00( CET)?$/,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Columns' }));
+    // The columns are in the View menu (ADR 0090).
+    await userEvent.click(screen.getByRole('button', { name: 'View' }));
     await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Late by' }));
 
     expect(within(gantt).getByRole('columnheader', { name: 'Late by' })).toBeTruthy();
@@ -306,12 +307,12 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     expect(window.localStorage.getItem('northmes.planning.gantt.options')).toBeNull();
   });
 
-  it('#943 Board options sets the tree pane width with one click, the alternative to the drag (WCAG 2.5.7)', async () => {
+  it('#943 the View menu sets the tree pane width with one click, the alternative to the drag (WCAG 2.5.7)', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
     const header = within(gantt).getAllByRole('row')[0] as HTMLElement;
 
-    await userEvent.click(screen.getByRole('button', { name: 'Board options' }));
+    await userEvent.click(screen.getByRole('button', { name: 'View' }));
     expect(
       screen.getByRole('menuitemradio', { name: 'Medium tree pane' }).getAttribute('aria-checked'),
     ).toBe('true');
@@ -351,7 +352,7 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     rowheader.dispatchEvent(down);
     expect(down.defaultPrevented).toBe(false);
 
-    await userEvent.click(screen.getByRole('button', { name: 'Columns' }));
+    await userEvent.click(screen.getByRole('button', { name: 'View' }));
     for (const name of ['Machine', 'Quantity', 'Start', 'End', 'Working time', 'Late by']) {
       await userEvent.click(screen.getByRole('menuitemcheckbox', { name }));
     }

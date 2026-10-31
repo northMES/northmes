@@ -114,10 +114,9 @@ test.describe('the smooth zoom of the order Gantt', () => {
     await zoom.getByRole('button', { name: 'Zoom out' }).click();
     await expect(page).toHaveURL(/zoom=8\b/);
 
-    await zoom.getByRole('button', { name: 'Zoom level, Week' }).click();
-    await checkA11y('the zoom level menu');
-    await page.getByRole('menuitemradio', { name: 'Year', exact: true }).click();
-    await expect(page).toHaveURL(/zoom=0\.15\b/);
+    await checkA11y('the Gantt with the zoom buttons over the time area');
+    // A link at Year opens at the coarsest clamp, 0.15 px an hour.
+    await page.goto(ganttHref({ zoom: 'year', from: '2026-11-01' }));
     await expect(zoom.getByRole('button', { name: 'Zoom out' })).toHaveAttribute(
       'aria-disabled',
       'true',

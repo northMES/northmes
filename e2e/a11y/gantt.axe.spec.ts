@@ -155,7 +155,7 @@ test.describe('the order Gantt', () => {
     await signIn(ganttHref({ zoom: 'week', from: '2026-11-02' }));
     await expect(page.getByRole('treegrid', { name: /order Gantt/ })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Board options' }).click();
+    await page.getByRole('button', { name: 'View' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Workload' }).click();
     await page.keyboard.press('Escape');
     // The menu fades out; axe must not read its text mid-transition.

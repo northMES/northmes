@@ -29,7 +29,8 @@ async function dragIntoPast(view: HTMLElement, block: HTMLElement) {
     expect(document.getElementById('announcer-polite')?.textContent).toBe(refusal),
   );
   expect(view.querySelector('[data-move-preview]')).toBeNull();
-  expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+  // My draft leaves the bar while the draft has no changes (ADR 0090).
+  expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
 }
 
 /** The board grid, once it has loaded. */

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cn } from 'cn';
-import { Ellipsis, FoldHorizontal, Pencil } from 'lucide-react';
-import type { ReactNode } from 'react';
-import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
+import { Pencil, SlidersHorizontal } from 'lucide-react';
+import type { Ref } from 'react';
+import { ColumnsMenuGroup } from '../../../../ui/components/columns-menu/index.ts';
+import { IconButton } from '../../../../ui/components/icon-button/index.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import {
   DropdownMenu,
@@ -16,15 +16,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
-import { RangeControls, ZoomControls } from '../../components/range-controls/index.ts';
-import type { ZoomLevel } from '../../gantt-data.ts';
-import type { Zoom } from '../../timeline/time-scale.ts';
 import { changesText } from './gantt-draft-drawer.tsx';
 import type { GanttOptions } from './gantt-options.ts';
 import { ganttColumnChoices } from './gantt-tree-pane.tsx';
 
 /**
- * The tree pane widths Board options offers, the one-click alternative to dragging the splitter
+ * The tree pane widths the View menu offers, the one-click alternative to dragging the splitter
  * (WCAG 2.5.7, #943), as shares of the view.
  */
 const paneWidths = [
@@ -34,39 +31,26 @@ const paneWidths = [
 ] as const;
 
 export interface GanttToolbarProps {
-  readonly zoom: Zoom;
-  readonly onZoomChange: (zoom: ZoomLevel) => void;
-  readonly onZoomStep: (direction: 'in' | 'out') => void;
-  readonly onZoomToFit: () => void;
-  readonly from: string;
-  readonly onFromChange: (from: string) => void;
-  readonly onEarlier: () => void;
-  readonly onNow: () => void;
-  readonly onLater: () => void;
-  readonly rangeLabel: ReactNode;
+  /** Go to now: the zoom kept, now at the centre of the view. */
+  readonly onGoToNow: () => void;
+  /** Go to now's button, where focus goes when My draft leaves the bar. */
+  readonly goToNowRef?: Ref<HTMLButtonElement>;
   readonly options: GanttOptions;
   readonly onOptionsChange: (change: Partial<GanttOptions>) => void;
-  /** The changes in the planner's draft, which the My draft button names. */
+  /** The changes in the planner's draft; My draft shows only while there are some. */
   readonly draftCount: number;
   readonly onOpenDraft: () => void;
 }
 
 /**
- * The Gantt toolbar of D5: the zoom of ADR 0090, Earlier, Now and Later, Go to date, the range, the
- * Hide closed time toggle, My draft, Columns and Board options. Zoom and from go to the URL; the
- * toggle, the columns and the options stay local.
+ * The slim bar above the order Gantt (ADR 0090, The bar above the timeline): Go to now, My draft
+ * while the draft has changes, and one View menu at the right end with the columns, Hide closed
+ * time, Workload, Cascade and the tree pane widths, which stay local. The zoom buttons sit over the
+ * time area instead.
  */
 export function GanttToolbar({
-  zoom,
-  onZoomChange,
-  onZoomStep,
-  onZoomToFit,
-  from,
-  onFromChange,
-  onEarlier,
-  onNow,
-  onLater,
-  rangeLabel,
+  onGoToNow,
+  goToNowRef,
   options,
   onOptionsChange,
   draftCount,
@@ -74,50 +58,34 @@ export function GanttToolbar({
 }: GanttToolbarProps) {
   return (
     <div role="toolbar" aria-label="Gantt" className="flex flex-wrap items-center gap-2">
-      <RangeControls
-        zoomControls={
-          <ZoomControls
-            zoom={zoom}
-            onZoomChange={onZoomChange}
-            onZoomStep={onZoomStep}
-            onZoomToFit={onZoomToFit}
-          />
-        }
-        from={from}
-        onFromChange={onFromChange}
-        onEarlier={onEarlier}
-        onNow={onNow}
-        onLater={onLater}
-        rangeLabel={rangeLabel}
-      />
-      <Button
-        variant="outline"
-        aria-pressed={options.hideClosed}
-        onClick={() => onOptionsChange({ hideClosed: !options.hideClosed })}
-        className={cn('h-8 px-3', options.hideClosed && 'border-foreground bg-accent')}
-      >
-        <FoldHorizontal aria-hidden />
-        Hide closed time
+      <Button ref={goToNowRef} variant="outline" className="h-8 px-3" onClick={onGoToNow}>
+        Go to now
       </Button>
       <span className="grow" />
-      <Button variant="outline" className="h-8 px-3" onClick={onOpenDraft} data-draft-button>
-        <Pencil aria-hidden />
-        {draftCount === 0 ? 'My draft' : `My draft, ${changesText(draftCount)}`}
-      </Button>
-      <ColumnsMenu
-        columns={ganttColumnChoices}
-        hidden={options.hiddenColumns}
-        onChange={(hiddenColumns) => onOptionsChange({ hiddenColumns })}
-      />
+      {draftCount > 0 && (
+        <Button variant="outline" className="h-8 px-3" onClick={onOpenDraft} data-draft-button>
+          <Pencil aria-hidden />
+          {`My draft, ${changesText(draftCount)}`}
+        </Button>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<Button variant="outline" size="icon-sm" aria-label="Board options" />}
-        >
-          <Ellipsis aria-hidden />
-        </DropdownMenuTrigger>
+          render={
+            <IconButton label="View" variant="outline" size="icon-sm">
+              <SlidersHorizontal aria-hidden />
+            </IconButton>
+          }
+        />
         <DropdownMenuContent align="end" className="min-w-56">
           <DropdownMenuGroup>
-            <DropdownMenuLabel>Board options</DropdownMenuLabel>
+            <DropdownMenuLabel>Options</DropdownMenuLabel>
+            <DropdownMenuCheckboxItem
+              checked={options.hideClosed}
+              closeOnClick={false}
+              onCheckedChange={(hideClosed: boolean) => onOptionsChange({ hideClosed })}
+            >
+              Hide closed time
+            </DropdownMenuCheckboxItem>
             <DropdownMenuCheckboxItem
               checked={options.workload}
               closeOnClick={false}
@@ -133,6 +101,13 @@ export function GanttToolbar({
               Cascade
             </DropdownMenuCheckboxItem>
           </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <ColumnsMenuGroup
+            label="Columns"
+            columns={ganttColumnChoices}
+            hidden={options.hiddenColumns}
+            onChange={(hiddenColumns) => onOptionsChange({ hiddenColumns })}
+          />
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuLabel>Tree pane width</DropdownMenuLabel>

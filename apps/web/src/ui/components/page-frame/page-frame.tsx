@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { classifyError } from '@northmes/web-sdk';
+import { cn } from 'cn';
 import { CircleAlert, Copy, type LucideIcon, RotateCw } from 'lucide-react';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -81,6 +82,12 @@ export interface PageFrameProps {
   readonly titleSection?: string;
   /** The list toolbar, which stays in every state. */
   readonly toolbar?: ReactNode;
+  /**
+   * The toolbar on the title row, after the title, wrapping under it at narrow widths: the slim bar
+   * above a timeline, so the timeline gets the height (ADR 0090). Without it the toolbar takes a
+   * row of its own.
+   */
+  readonly toolbarBesideTitle?: boolean;
   readonly state?: PageState;
   /**
    * The data region keeps what it shows, its rows or its empty state, while the next data loads,
@@ -231,6 +238,7 @@ export function PageFrame({
   currentCrumb = title,
   titleSection,
   toolbar,
+  toolbarBesideTitle = false,
   state = { status: 'ready' },
   busy = false,
   children,
@@ -289,7 +297,12 @@ export function PageFrame({
         topBar?.actions &&
         createPortal(<div className="flex items-center gap-2">{actions}</div>, topBar.actions)}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <div
+          className={cn(
+            'flex flex-wrap gap-x-4 gap-y-1',
+            toolbarBesideTitle ? 'min-w-0 flex-1 items-center' : 'items-baseline',
+          )}
+        >
           <h1 ref={heading} tabIndex={-1} className="text-title font-semibold">
             {title}
           </h1>
@@ -298,12 +311,14 @@ export function PageFrame({
               {meta}
             </div>
           )}
+          {/* It takes the rest of the row, and moves under the title when its controls do not fit. */}
+          {toolbarBesideTitle && <div className="flex-auto">{toolbar}</div>}
         </div>
         {actions !== undefined && topBar === null && (
           <div className="flex flex-wrap gap-2">{actions}</div>
         )}
       </div>
-      {toolbar}
+      {!toolbarBesideTitle && toolbar}
       {/* The region stacks its blocks, such as a record page's sections and footnote, 16 px apart. */}
       <div
         aria-busy={shown.status === 'loading' || busy || undefined}

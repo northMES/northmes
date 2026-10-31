@@ -18,15 +18,14 @@ async function findBoard(): Promise<HTMLElement> {
 }
 
 describe('the zoom of the planning board (ADR 0090, Gestures, buttons and keys)', () => {
-  it('#941 shares the Gantt zoom: Zoom in, the level menu, and plus and minus on a block zoom by a factor of 2', async () => {
+  it('#941 shares the Gantt zoom: Zoom in, Zoom out, and plus and minus on a block zoom by a factor of 2', async () => {
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
     const zoom = screen.getByRole('group', { name: 'Zoom' });
 
     await userEvent.click(within(zoom).getByRole('button', { name: 'Zoom in' }));
     await waitFor(() => expect(router.state.location.search.zoom).toBe(32));
-    await userEvent.click(within(zoom).getByRole('button', { name: 'Zoom level, Day' }));
-    await userEvent.click(await screen.findByRole('menuitemradio', { name: 'Week' }));
+    await userEvent.click(within(zoom).getByRole('button', { name: 'Zoom out' }));
     await waitFor(() => expect(router.state.location.search.zoom).toBeUndefined());
 
     (board.querySelector('[data-board-focus]') as HTMLElement).focus();
@@ -54,18 +53,15 @@ describe('the zoom of the planning board (ADR 0090, Gestures, buttons and keys)'
   });
 
   it('#941 opens zoom=37.5 in the Day band and zoom=26 in Week, and a zoom out on the board draws unloaded time as loading', async () => {
-    const level = () =>
-      within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {
-        name: /^Zoom level, /,
-      }).textContent;
+    const level = () => screen.getByRole('group', { name: 'Zoom' }).getAttribute('data-zoom-band');
     renderGanttRoute({ zoom: 37.5, from: '2026-11-02' }, undefined, 'board');
     await findBoard();
-    expect(level()).toBe('Day');
+    expect(level()).toBe('day');
     cleanup();
 
     renderGanttRoute({ zoom: 26, from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
-    expect(level()).toBe('Week');
+    expect(level()).toBe('week');
     await waitFor(() => expect(board.querySelector('[data-chunk-band]')).toBeNull());
 
     // Ten events of 100 px take 26 px an hour to 3.5, in the 4 weeks band.
