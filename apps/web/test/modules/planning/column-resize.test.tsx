@@ -98,7 +98,9 @@ describe('resizing the tree columns of the order Gantt (#943)', () => {
     });
     document.activeElement?.dispatchEvent(back);
     expect(back.defaultPrevented).toBe(true);
-    expect(treeTracks(gantt)[0]).toBe('215px');
+    expect(
+      JSON.parse(window.localStorage.getItem(ganttKey) ?? '{}').columnWidths,
+    ).not.toHaveProperty('name');
   });
 
   it('#943 a column never narrows past the least width that keeps its header readable', async () => {
@@ -151,13 +153,16 @@ describe('resizing the tree columns of the order Gantt (#943)', () => {
     });
   });
 
-  it('#943 a click on the handle shows Narrower and Wider buttons, the one-click alternative to the drag (WCAG 2.5.7)', async () => {
+  it('#943 a click on the handle shows Narrower and Wider buttons, the one-click alternative to the drag (WCAG 2.5.7), which change the column by 16 px and keep the width', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
     const handle = within(gantt).getByRole('separator', { name: 'Resize the Deadline column' });
 
+    // A press that moves under 3 px, as a tap does, is a click.
     fireEvent.pointerDown(handle, { pointerId: 1, clientX: 400, button: 0 });
-    fireEvent.pointerUp(handle, { pointerId: 1, clientX: 400 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 402, buttons: 1 });
+    fireEvent.pointerUp(handle, { pointerId: 1, clientX: 402 });
+    expect(treeTracks(gantt)[1]).toBe('128px');
     const stepper = await within(gantt).findByRole('group', { name: 'Deadline column width' });
     const wider = within(stepper).getByRole('button', { name: 'Widen the Deadline column' });
     expect(document.activeElement).toBe(wider);
@@ -167,21 +172,87 @@ describe('resizing the tree columns of the order Gantt (#943)', () => {
     await userEvent.click(
       within(stepper).getByRole('button', { name: 'Narrow the Deadline column' }),
     );
-    await userEvent.click(
-      within(stepper).getByRole('button', { name: 'Narrow the Deadline column' }),
-    );
-    expect(treeTracks(gantt)[1]).toBe('112px');
-    // At the least width Narrower stops, and keeps its focus.
+    expect(treeTracks(gantt)[1]).toBe('128px');
+    expect(JSON.parse(window.localStorage.getItem(ganttKey) ?? '{}')).toMatchObject({
+      columnWidths: { deadline: 128 },
+    });
+  });
+
+  it('#943 a press on a width button keeps focus where it is, as a browser that does not focus a clicked button would', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const handle = within(gantt).getByRole('separator', { name: 'Resize the Deadline column' });
+    fireEvent.pointerDown(handle, { pointerId: 1, clientX: 400, button: 0 });
+    fireEvent.pointerUp(handle, { pointerId: 1, clientX: 400 });
+    const stepper = await within(gantt).findByRole('group', { name: 'Deadline column width' });
+
+    const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    within(stepper)
+      .getByRole('button', { name: 'Narrow the Deadline column' })
+      .dispatchEvent(press);
+    expect(press.defaultPrevented).toBe(true);
+  });
+
+  it('#943 at the least width Narrower shows it is unavailable and keeps its focus, and Escape closes the buttons and puts focus back on the handle', async () => {
+    window.localStorage.setItem(ganttKey, JSON.stringify({ columnWidths: { deadline: 112 } }));
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const handle = within(gantt).getByRole('separator', { name: 'Resize the Deadline column' });
+    fireEvent.pointerDown(handle, { pointerId: 1, clientX: 400, button: 0 });
+    fireEvent.pointerUp(handle, { pointerId: 1, clientX: 400 });
+    const stepper = await within(gantt).findByRole('group', { name: 'Deadline column width' });
+
     const narrower = within(stepper).getByRole('button', { name: 'Narrow the Deadline column' });
     expect(narrower.getAttribute('aria-disabled')).toBe('true');
+    expect(narrower.className).toContain('aria-disabled:opacity-50');
     await userEvent.click(narrower);
     expect(treeTracks(gantt)[1]).toBe('112px');
-    expect(JSON.parse(window.localStorage.getItem(ganttKey) ?? '{}')).toMatchObject({
-      columnWidths: { deadline: 112 },
-    });
 
     await userEvent.keyboard('{Escape}');
     expect(within(gantt).queryByRole('group', { name: 'Deadline column width' })).toBeNull();
+    expect(document.activeElement).toBe(handle);
+  });
+
+  it('#943 focus leaving the width buttons closes them', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const handle = within(gantt).getByRole('separator', { name: 'Resize the Deadline column' });
+    fireEvent.pointerDown(handle, { pointerId: 1, clientX: 400, button: 0 });
+    fireEvent.pointerUp(handle, { pointerId: 1, clientX: 400 });
+    await within(gantt).findByRole('group', { name: 'Deadline column width' });
+
+    within(gantt).getByRole('button', { name: /^Name/ }).focus();
+    await waitFor(() => {
+      expect(within(gantt).queryByRole('group', { name: 'Deadline column width' })).toBeNull();
+    });
+  });
+
+  it('#943 a drag whose release went elsewhere, seen as a move with no button, keeps nothing', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const handle = within(gantt).getByRole('separator', { name: 'Resize the Deadline column' });
+
+    fireEvent.pointerDown(handle, { pointerId: 1, clientX: 400, button: 0 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 440, buttons: 1 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 460, buttons: 0 });
+
+    expect(treeTracks(gantt)[1]).toBe('128px');
+    expect(window.localStorage.getItem(ganttKey)).toBeNull();
+  });
+
+  it('#943 while the shown columns are narrower than the pane, the last one keeps its end border', async () => {
+    window.localStorage.setItem(ganttKey, JSON.stringify({ columnWidths: { float: 72 } }));
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const name = within(gantt).getAllByRole('columnheader')[0] as HTMLElement;
+    const columns = name.closest('[data-tree-pane]')?.firstElementChild as HTMLElement;
+    expect(columns.className).not.toContain('[&>:last-child]:border-e-0');
+    cleanup();
+    window.localStorage.removeItem(ganttKey);
+
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const fitted = (await findGantt()).querySelector('[data-tree-pane]')?.firstElementChild;
+    expect(fitted?.className).toContain('[&>:last-child]:border-e-0');
   });
 
   it('#943 a kept width comes back on a new page within the column bounds, and a kept value that is no width is ignored', async () => {
