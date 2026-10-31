@@ -5,7 +5,10 @@ import { widthWithin } from '../../components/column-resizer/index.ts';
 
 const storageKey = 'northmes.planning.board.machine-column';
 
-/** The machine column's width before the planner resizes it, never more than 40 percent of the grid (plan 07). */
+/**
+ * The machine column's width before the planner resizes it: 200 px or 40 percent of the grid,
+ * whichever is less (plan 07), and never under the least width.
+ */
 const defaultPx = 200;
 const defaultShare = 0.4;
 

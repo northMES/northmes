@@ -284,7 +284,7 @@ test.describe('the left pane of the timelines', () => {
     expect(Math.abs((await paneWidth()) - kept)).toBeLessThanOrEqual(1);
   });
 
-  test('#943 a Gantt column resizes by its header edge and the keys, keeps its least width, and keeps the width after a reload', async ({
+  test('#943 a Gantt column resizes by its header edge, the last one beside the splitter too, by the keys and by Narrower and Wider, keeps its least width, and keeps the width after a reload', async ({
     page,
     signIn,
     checkA11y,
@@ -298,6 +298,17 @@ test.describe('the left pane of the timelines', () => {
         .evaluate((header) => header.getBoundingClientRect().width);
     const handle = gantt.getByRole('separator', { name: 'Resize the Deadline column' });
     const start = await width('Deadline');
+
+    // While every column has its default width, Float, the last one, ends at the pane's edge
+    // beside the splitter's grip; its handle still takes a drag there.
+    const float = gantt.getByRole('separator', { name: 'Resize the Float column' });
+    const floatBox = (await float.boundingBox()) as { x: number; y: number; height: number };
+    const floatWidth = await width('Float');
+    await page.mouse.move(floatBox.x + 6, floatBox.y + floatBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(floatBox.x + 22, floatBox.y + floatBox.height / 2, { steps: 4 });
+    await page.mouse.up();
+    expect(Math.abs((await width('Float')) - (floatWidth + 16))).toBeLessThanOrEqual(1);
 
     const box = (await handle.boundingBox()) as {
       x: number;
@@ -320,17 +331,6 @@ test.describe('the left pane of the timelines', () => {
     await gantt.getByRole('button', { name: /^Deadline/ }).focus();
     await page.keyboard.press('Alt+ArrowRight');
     expect(Math.abs((await width('Deadline')) - (start + 48))).toBeLessThanOrEqual(1);
-
-    // Float, the last column, ends at the pane's edge beside the splitter's grip; its handle still
-    // takes a drag there.
-    const float = gantt.getByRole('separator', { name: 'Resize the Float column' });
-    const floatBox = (await float.boundingBox()) as { x: number; y: number; height: number };
-    const floatWidth = await width('Float');
-    await page.mouse.move(floatBox.x + 6, floatBox.y + floatBox.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(floatBox.x + 22, floatBox.y + floatBox.height / 2, { steps: 4 });
-    await page.mouse.up();
-    expect(Math.abs((await width('Float')) - (floatWidth + 16))).toBeLessThanOrEqual(1);
 
     // The least width, 72 px for Float, holds however often Left is pressed.
     const least = 72;

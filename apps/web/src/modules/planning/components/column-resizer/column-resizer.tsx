@@ -18,6 +18,9 @@ export const columnKeyStepPx = 8;
 /** One press of Narrower or Wider changes a column by this many pixels. */
 const buttonStepPx = 16;
 
+/** A press that moves less than this is a click, as a tap that wanders a pixel or two. */
+const dragThresholdPx = 3;
+
 /** A width within a column's bounds, in whole pixels. */
 export function widthWithin(width: number, minWidth: number, maxWidth: number): number {
   return Math.round(Math.min(maxWidth, Math.max(minWidth, width)));
@@ -128,7 +131,7 @@ export function ColumnResizer({
       endDrag(undefined);
       return;
     }
-    if (event.clientX === start.x && !start.moved) return;
+    if (!start.moved && Math.abs(event.clientX - start.x) < dragThresholdPx) return;
     start.moved = true;
     const next = clamp(start.width + event.clientX - start.x);
     if (preview === 'line') setLineWidth(next);
@@ -139,7 +142,7 @@ export function ColumnResizer({
     if (start === undefined || start.pointerId !== event.pointerId) return;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     // A click without a drag shows the buttons instead.
-    if (!start.moved && event.clientX === start.x) {
+    if (!start.moved && Math.abs(event.clientX - start.x) < dragThresholdPx) {
       drag.current = undefined;
       setStepping(true);
       return;
@@ -153,6 +156,7 @@ export function ColumnResizer({
   };
   // The buttons take focus when they show, so leaving them closes them.
   const wider = useCallback((node: HTMLButtonElement | null) => node?.focus(), []);
+  const handle = useRef<HTMLDivElement | null>(null);
   const onStepperBlur = (event: FocusEvent<HTMLDivElement>) => {
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setStepping(false);
   };
@@ -170,6 +174,7 @@ export function ColumnResizer({
         aria-keyshortcuts="Alt+ArrowLeft Alt+ArrowRight"
         tabIndex={focusable ? 0 : -1}
         data-column-resizer
+        ref={handle}
         onKeyDown={onKeyDown}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -201,18 +206,23 @@ export function ColumnResizer({
           aria-label={`${column} column width`}
           data-column-stepper
           onBlur={onStepperBlur}
+          // A press keeps focus on the button that has it: a browser that does not focus a clicked
+          // button, as Safari, would otherwise blur the group and close it before the click.
+          onMouseDown={(event) => event.preventDefault()}
           onKeyDown={(event) => {
             if (event.key !== 'Escape') return;
             event.preventDefault();
             event.stopPropagation();
             setStepping(false);
+            handle.current?.focus();
           }}
-          className="absolute inset-y-0 end-6 z-20 flex items-center gap-0.5 bg-muted ps-0.5"
+          className="absolute inset-y-0 end-(--nm-target-min) z-20 flex items-center gap-0.5 bg-muted ps-0.5"
         >
           <IconButton
             label={`Narrow the ${column} column`}
             size="icon-sm"
             variant="outline"
+            className="aria-disabled:opacity-50"
             tabIndex={-1}
             // Not disabled, which would drop the focus the Escape key needs.
             aria-disabled={width <= minWidth}
@@ -228,6 +238,7 @@ export function ColumnResizer({
             label={`Widen the ${column} column`}
             size="icon-sm"
             variant="outline"
+            className="aria-disabled:opacity-50"
             tabIndex={-1}
             aria-disabled={width >= maxWidth}
             onClick={(event) => {

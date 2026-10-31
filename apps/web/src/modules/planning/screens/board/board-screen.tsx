@@ -210,7 +210,7 @@ export function BoardScreen() {
     },
     [measureRef],
   );
-  // The machine column: 200 px, never more than 40 percent of the grid (plan 07), until the planner
+  // The machine column: 200 px or 40 percent of the grid, whichever is less, at least 140 px (plan 07), until the planner
   // resizes it by its header edge; the width stays in this browser (#943). D3 proposes fitting the
   // longest name between 168 and 272 px.
   const [keptMachineWidth, keepMachineWidth] = useMachineColumnWidth();

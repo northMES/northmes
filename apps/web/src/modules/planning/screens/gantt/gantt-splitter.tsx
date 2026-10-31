@@ -118,7 +118,7 @@ export function GanttSplitter({
         style={{ left, height: `${gripHeightRem}rem` }}
       >
         {/* The grip, which shows where the splitter is at rest. */}
-        <span aria-hidden className="h-6 w-1 rounded-full bg-muted-foreground/60" />
+        <span aria-hidden className="ms-0.75 h-6 w-1 rounded-full bg-muted-foreground/60" />
       </div>
       {/* The pane's edge as a line down the grid while the grip is hovered, focused or dragged. */}
       <span

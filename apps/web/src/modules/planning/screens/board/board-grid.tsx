@@ -465,7 +465,7 @@ export function BoardGrid({
         <div
           role="columnheader"
           aria-labelledby={`${headerId}-text`}
-          className="sticky start-0 z-10 flex flex-col justify-center border-e border-border bg-muted ps-3 pe-7"
+          className="sticky start-0 z-10 flex flex-col justify-center border-e border-border bg-muted ps-3 pe-[calc(var(--nm-target-min)+0.25rem)]"
         >
           <ColumnResizer
             column="Machines"
