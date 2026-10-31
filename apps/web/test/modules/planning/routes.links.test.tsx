@@ -3,8 +3,8 @@
 import { type LinkNode, linkEntry } from '@northmes/contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import { createShellRoutes } from '@northmes/web-sdk';
-import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
-import { cleanup, render, waitFor } from '@testing-library/react';
+import { createRouter } from '@tanstack/react-router';
+import { cleanup } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { planningModule } from '../../../src/modules/planning/index.ts';
 
@@ -36,8 +36,8 @@ afterEach(cleanup);
 
 describe('planning routes', () => {
   it('#876 every planningLinks entry, its settings section included, matches a route fullPath', () => {
-    // The shell's root route, its $plant route and its settings route with the landing, one route
-    // per link entry, and the route that leads the old settings URLs under the plant's settings.
+    // The shell's root route, its $plant route and its settings route with the landing, and one
+    // route per link entry, with no route that leads an old URL on.
     expect(routeFullPaths().sort()).toEqual(
       [
         ...new Set([
@@ -45,28 +45,8 @@ describe('planning routes', () => {
           '/$plant',
           '/$plant/settings',
           ...linkPatterns(planningLinks),
-          '/$plant/planning/settings/$',
         ]),
       ].sort(),
     );
   });
-
-  it.each([
-    ['/plant-a/planning/settings', '/plant-a/settings/planning'],
-    [
-      '/plant-a/planning/settings/board-fields?preview=loading',
-      '/plant-a/settings/planning/board-fields?preview=loading',
-    ],
-  ])(
-    "#876 the old planning settings URL %s leads to %s, under the plant's settings",
-    async (old, now) => {
-      const router = createRouter({
-        routeTree: createShellRoutes({ modules: [planningModule] }),
-        history: createMemoryHistory({ initialEntries: [old] }),
-      });
-      render(<RouterProvider router={router} />);
-
-      await waitFor(() => expect(router.state.location.href).toBe(now));
-    },
-  );
 });

@@ -130,7 +130,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
 
   it('ADR0021 Right on an unplaced job order row lands on its time cell, named "not placed"', async () => {
     renderGanttRoute(
-      { view: 'gantt', zoom: 'week', from: '2026-11-02' },
+      { zoom: 'week', from: '2026-11-02' },
       sourceOf(withUnplaced1006()),
     );
     const gantt = await findGantt();
