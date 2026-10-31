@@ -27,14 +27,21 @@ async function showEveryColumn(page: Page): Promise<void> {
 
 /**
  * Scrolls the grid until the marker sits under the left pane, then reads, at the marker's x and the
- * row's vertical centre and at the centre of the cell over the marker, what the browser hits. The
- * buffer may move under a scroll, so the marker is found again after each one.
+ * row's vertical centre, at the marker's x on the row's bottom border, and at the centre of the cell
+ * over the marker, what the browser hits. The buffer may move under a scroll, so the marker is
+ * found again after each one.
  */
 async function coverOf(
   grid: Locator,
   marker: string,
   row: string,
-): Promise<{ under: boolean; atMarker: boolean; atCentre: boolean; cell: string }> {
+): Promise<{
+  under: boolean;
+  atMarker: boolean;
+  atBorder: boolean;
+  atCentre: boolean;
+  cell: string;
+}> {
   return grid.evaluate(
     async (element, { marker, row }) => {
       const frames = () =>
@@ -64,13 +71,15 @@ async function coverOf(
       }) as HTMLElement;
       const rect = cell.getBoundingClientRect();
       const y = rect.top + rect.height / 2;
-      const hit = (px: number) => {
-        const at = document.elementFromPoint(px, y);
+      const hit = (px: number, py = y) => {
+        const at = document.elementFromPoint(px, py);
         return at !== null && cell.contains(at);
       };
       return {
         under: x > pane.left && x < pane.right,
         atMarker: hit(x),
+        // The row's 1 px bottom border, which the cell covers too.
+        atBorder: hit(x, line.getBoundingClientRect().bottom - 0.5),
         atCentre: hit(rect.left + rect.width / 2),
         cell: cell.getAttribute('role') ?? '',
       };
@@ -80,7 +89,7 @@ async function coverOf(
 }
 
 test.describe('the left pane of the timelines', () => {
-  test('#943 the Gantt tree pane covers the now line, the frozen window, a wait line and a deadline marker scrolled under it', async ({
+  test('#943 the Gantt tree pane covers the now line, the frozen window, a wait line and a deadline marker scrolled under it, on the bottom border of its rows too', async ({
     page,
     signIn,
   }) => {
@@ -108,13 +117,14 @@ test.describe('the left pane of the timelines', () => {
       expect(cover, marker).toEqual({
         under: true,
         atMarker: true,
+        atBorder: true,
         atCentre: true,
         cell: expect.any(String),
       });
     }
   });
 
-  test('#943 the board machine column covers the now line and the frozen window scrolled under it', async ({
+  test('#943 the board machine column covers the now line and the frozen window scrolled under it, on the bottom border of its rows too', async ({
     page,
     signIn,
   }) => {
@@ -128,6 +138,7 @@ test.describe('the left pane of the timelines', () => {
       expect(cover, marker).toEqual({
         under: true,
         atMarker: true,
+        atBorder: true,
         atCentre: true,
         cell: 'rowheader',
       });
