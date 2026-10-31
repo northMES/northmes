@@ -526,9 +526,11 @@ export function BoardGrid({
       </Row>
       <div className="relative">
         {bodyRows}
+        {/* A stacking context of its own under the machine column (z-20), so no layer it draws
+            reaches over it (#943). */}
         <div
           aria-hidden
-          className="pointer-events-none absolute top-0"
+          className="pointer-events-none absolute top-0 z-0"
           style={{ left: `${machineWidth}px`, width: `${timeWidth}px`, height: `${bodyRem}rem` }}
         >
           {bands}
