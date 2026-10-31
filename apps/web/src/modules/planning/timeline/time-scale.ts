@@ -171,10 +171,69 @@ export const zoomLevelIds = [
 /** The four presets of D3 in the job order table's Range group, finest first. */
 export const zoomPresetIds: readonly ZoomPreset[] = ['hours', 'day', 'week', '4weeks'];
 
-/** The next finer level, or the next coarser one; the ends of the ladder stay where they are. */
-export function steppedLevel(level: ZoomLevel, direction: 'in' | 'out'): ZoomLevel {
-  const index = zoomLevelIds.indexOf(level) + (direction === 'in' ? -1 : 1);
-  return zoomLevelIds[Math.max(0, Math.min(zoomLevelIds.length - 1, index))] ?? level;
+/**
+ * The zoom of the board and the Gantt (ADR 0090, Zoom as a width per hour): the width of one hour,
+ * and the band of the ladder it is drawn in, which sets the header tiers, the snap step, the
+ * workload bucket and the chunk length. A level id stands for its natural width in that band.
+ */
+export interface Zoom {
+  readonly band: ZoomLevel;
+  readonly pxPerHour: number;
+}
+
+/** A zoom, or a level id at its natural width. */
+export type ZoomLike = Zoom | ZoomLevel;
+
+/** The zoom a level id stands for. */
+export function zoomOf(zoom: ZoomLike): Zoom {
+  return typeof zoom === 'string' ? { band: zoom, pxPerHour: zoomLevels[zoom].pxPerHour } : zoom;
+}
+
+/** The widths the zoom keeps within: the natural widths of Year and Quarter hours. */
+export const zoomClamp = {
+  min: zoomLevels.year.pxPerHour,
+  max: zoomLevels['quarter-hours'].pxPerHour,
+} as const;
+
+/** A width per hour within the clamp. */
+export function clampZoom(pxPerHour: number): number {
+  return Math.min(zoomClamp.max, Math.max(zoomClamp.min, pxPerHour));
+}
+
+/**
+ * The lower edge of each band but the coarsest, finest first: the geometric mean of its natural
+ * width and the next coarser level's, so Day covers about 27.7 to 69.3 px per hour.
+ */
+const bandFloors = zoomLevelIds.slice(0, -1).map((id, index) => {
+  const coarser = zoomLevelIds[index + 1] as ZoomLevel;
+  return Math.sqrt(zoomLevels[id].pxPerHour * zoomLevels[coarser].pxPerHour);
+});
+
+/** The band a width lies in by the edges alone, as at the end of a gesture and in a URL. */
+export function bandOf(pxPerHour: number): ZoomLevel {
+  const index = bandFloors.findIndex((floor) => pxPerHour >= floor);
+  return zoomLevelIds[index === -1 ? zoomLevelIds.length - 1 : index] as ZoomLevel;
+}
+
+/** How far past a band edge a gesture goes before the band changes (ADR 0090). */
+const hysteresis = 1.1;
+
+/**
+ * The band during a gesture or an animation: the band it is in stays until the width is more than
+ * a factor of 1.1 past one of its edges, so a gesture that hovers at an edge does not swap tiers
+ * and snap steps back and forth.
+ */
+export function bandDuringGesture(pxPerHour: number, band: ZoomLevel): ZoomLevel {
+  const index = zoomLevelIds.indexOf(band);
+  const floor = bandFloors[index] ?? 0;
+  const ceiling = index === 0 ? Number.POSITIVE_INFINITY : (bandFloors[index - 1] as number);
+  if (pxPerHour * hysteresis >= floor && pxPerHour <= ceiling * hysteresis) return band;
+  return bandOf(pxPerHour);
+}
+
+/** A width to three significant digits, as the URL holds it (ADR 0090, The URL key zoom). */
+export function roundZoom(pxPerHour: number): number {
+  return Number(pxPerHour.toPrecision(3));
 }
 
 /** Whether plan 18's rules for Hours and Day zoom apply: at `day` and every finer level (ADR 0089). */
@@ -233,18 +292,18 @@ export function rangeOf(
 }
 
 /**
- * The natural width of a range at a level: its hours at the level's pixels per hour, or, with
+ * The natural width of a range at a zoom: its hours at the zoom's pixels per hour, or, with
  * closed time hidden, its open hours plus a gap per closed window. The time area takes this width
  * when the view is narrower, and scrolls sideways inside its container (plan 18, Reflow).
  */
 export function naturalWidthPx(
   range: TimeRange,
-  zoom: ZoomLevel,
+  zoom: ZoomLike,
   hideClosed?: { readonly closed: readonly ClosedWindow[]; readonly gapPx?: number },
 ): number {
-  const { pxPerHour } = zoomLevels[zoom];
+  const { pxPerHour } = zoomOf(zoom);
   if (hideClosed === undefined) return ((range.toMs - range.fromMs) / hour) * pxPerHour;
-  const windows = compressedWindows(hideClosed.closed, range, zoom, hideClosed.gapPx ?? 6);
+  const windows = compressedWindows(hideClosed.closed, range, pxPerHour, hideClosed.gapPx ?? 6);
   const closedMs = windows.reduce((sum, window) => sum + (window.toMs - window.fromMs), 0);
   return (
     ((range.toMs - range.fromMs - closedMs) / hour) * pxPerHour +
@@ -290,7 +349,13 @@ export interface TimeTick {
 
 export interface TimeScaleInput {
   readonly range: TimeRange;
+  /** The band, whose tiers and snap step the scale takes. */
   readonly zoom: ZoomLevel;
+  /**
+   * The width of an hour, which decides the closed windows Hide closed time compresses; the
+   * band's natural width without it. The scale itself spreads the range over `widthPx`.
+   */
+  readonly pxPerHour?: number;
   readonly timeZone: string;
   readonly widthPx: number;
   /**
@@ -319,7 +384,10 @@ export interface ScaleGap extends ClosedWindow {
 /** The time scale of a screen: every position goes through it (ADR 0030). */
 export interface TimeScale {
   readonly range: TimeRange;
+  /** The band the scale is drawn in. */
   readonly zoom: ZoomLevel;
+  /** The width of an hour the scale was laid out at. */
+  readonly pxPerHour: number;
   readonly timeZone: string;
   readonly widthPx: number;
   readonly stepMs: number;
@@ -336,6 +404,9 @@ export interface TimeScale {
   /** Whether an instant lies in a compressed closed window. */
   readonly inGap: (ms: number) => boolean;
 }
+
+/** The width of the gap a compressed closed window becomes, 6 px as the D5 frames draw it. */
+export const gapPx = 6;
 
 /** The closed windows clipped to the range, sorted and merged where they touch or overlap. */
 function clippedWindows(closed: readonly ClosedWindow[], range: TimeRange): ClosedWindow[] {
@@ -359,17 +430,16 @@ function clippedWindows(closed: readonly ClosedWindow[], range: TimeRange): Clos
 }
 
 /**
- * The closed windows that Hide closed time compresses: those whose natural width at the level is
- * wider than the gap they become, so the axis never widens at a coarse level, where a night is a
- * few pixels (ADR 0089, Header tiers).
+ * The closed windows that Hide closed time compresses: those whose width at the current zoom is
+ * wider than the gap they become, so the axis never widens at a coarse zoom, where a night is a
+ * few pixels (ADR 0089, Header tiers; ADR 0090).
  */
-function compressedWindows(
+export function compressedWindows(
   closed: readonly ClosedWindow[],
   range: TimeRange,
-  zoom: ZoomLevel,
+  pxPerHour: number,
   gapPx: number,
 ): ClosedWindow[] {
-  const { pxPerHour } = zoomLevels[zoom];
   return clippedWindows(closed, range).filter(
     (window) => ((window.toMs - window.fromMs) / hour) * pxPerHour > gapPx,
   );
@@ -441,6 +511,7 @@ function lastAtOrBefore(anchors: readonly Anchor[], value: number, key: keyof An
 export function createTimeScale({
   range,
   zoom,
+  pxPerHour = zoomLevels[zoom].pxPerHour,
   timeZone,
   widthPx,
   productionDayStart,
@@ -450,7 +521,7 @@ export function createTimeScale({
   const spanMs = range.toMs - range.fromMs;
   const gapPx = hideClosed?.gapPx ?? 6;
   const windows =
-    hideClosed === undefined ? [] : compressedWindows(hideClosed.closed, range, zoom, gapPx);
+    hideClosed === undefined ? [] : compressedWindows(hideClosed.closed, range, pxPerHour, gapPx);
   const closedMs = windows.reduce((sum, window) => sum + (window.toMs - window.fromMs), 0);
   const openMs = spanMs - closedMs;
   const openWidth = Math.max(0, widthPx - windows.length * gapPx);
@@ -671,7 +742,14 @@ export function createTimeScale({
           pushBottom(
             ms,
             nextMs,
-            (openFromMs) => clockFormats(formatPlantTime(openFromMs, timeZone)),
+            (openFromMs) => {
+              const clock = formatPlantTime(openFromMs, timeZone);
+              // A quarter hour also reads as its minutes alone, "15", where the cell is narrower
+              // than "06:15", at the coarse end of the Quarter hours band (ADR 0090).
+              return bottomUnit === 'minute'
+                ? [...clockFormats(clock), clock.slice(3)]
+                : clockFormats(clock);
+            },
             (openFromMs) => formatPlantDateTime(openFromMs, timeZone),
           );
         }
@@ -696,6 +774,7 @@ export function createTimeScale({
   return {
     range,
     zoom,
+    pxPerHour,
     timeZone,
     widthPx,
     stepMs: level.stepMs,

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import {
+  bandDuringGesture,
+  bandOf,
   createTimeScale,
   isCoarseLevel,
   isFineLevel,
@@ -9,7 +12,8 @@ import {
   rangeLabel,
   rangeOf,
   shiftedFrom,
-  steppedLevel,
+  roundZoom,
+  zoomClamp,
   zoomLevelIds,
   zoomLevels,
 } from './time-scale.ts';
@@ -635,12 +639,94 @@ describe('the ranges and header tiers of the new levels (ADR 0089, Zoom levels)'
   });
 });
 
-describe('stepping the ladder (ADR 0089, Zoom levels)', () => {
-  it('zooms in to the next finer level and out to the next coarser one, and stops at the ends', () => {
-    expect(steppedLevel('week', 'in')).toBe('day');
-    expect(steppedLevel('week', 'out')).toBe('4weeks');
-    expect(steppedLevel('quarter-hours', 'in')).toBe('quarter-hours');
-    expect(steppedLevel('year', 'out')).toBe('year');
+describe('the zoom as a width per hour (ADR 0090, Zoom as a width per hour)', () => {
+  it('#941 puts 0.15, 0.6, 3, 16, 48, 100 and 240 px per hour in the bands year to quarter-hours', () => {
+    expect([0.15, 0.6, 3, 16, 48, 100, 240].map(bandOf)).toEqual([
+      'year',
+      'quarter',
+      '4weeks',
+      'week',
+      'day',
+      'hours',
+      'quarter-hours',
+    ]);
+  });
+
+  it('#941 draws the band edges at the geometric mean of two natural widths, and clamps to 0.15 and 240', () => {
+    // Day covers about 27.7 to 69.3 px per hour.
+    expect(bandOf(27.8)).toBe('day');
+    expect(bandOf(27.6)).toBe('week');
+    expect(bandOf(69.2)).toBe('day');
+    expect(bandOf(69.4)).toBe('hours');
+    expect(zoomClamp).toEqual({ min: 0.15, max: 240 });
+    expect(bandOf(0.01)).toBe('year');
+    expect(bandOf(1000)).toBe('quarter-hours');
+  });
+
+  /** The edges between adjacent bands, finest first. */
+  const edges = zoomLevelIds.slice(1).map((coarser, index) => {
+    const finer = zoomLevelIds[index] as (typeof zoomLevelIds)[number];
+    return {
+      finer,
+      coarser,
+      px: Math.sqrt(zoomLevels[finer].pxPerHour * zoomLevels[coarser].pxPerHour),
+    };
+  });
+
+  it('#941 keeps the band during a gesture while the zoom stays within a factor of 1.09 of an edge', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...edges),
+        fc.constantFrom('finer', 'coarser'),
+        fc.array(fc.double({ min: 1 / 1.09, max: 1.09, noNaN: true }), { minLength: 1 }),
+        (edge, side, factors) => {
+          let band = edge[side as 'finer' | 'coarser'];
+          for (const factor of factors) band = bandDuringGesture(edge.px * factor, band);
+          expect(band).toBe(edge[side as 'finer' | 'coarser']);
+        },
+      ),
+    );
+  });
+
+  it('#941 changes the band during a gesture once the zoom is more than a factor of 1.1 past an edge', () => {
+    for (const edge of edges) {
+      expect(bandDuringGesture(edge.px * 1.11, edge.coarser)).toBe(edge.finer);
+      expect(bandDuringGesture(edge.px / 1.11, edge.finer)).toBe(edge.coarser);
+    }
+  });
+
+  it('#941 takes the band by the edges alone once the gesture ends', () => {
+    // 28 px per hour is Day by its edges, and stays Week during a gesture that came from Week.
+    expect(bandDuringGesture(28, 'week')).toBe('week');
+    expect(bandOf(28)).toBe('day');
+  });
+
+  it('#941 rounds a zoom to three significant digits', () => {
+    expect(roundZoom(37.54)).toBe(37.5);
+    expect(roundZoom(0.15234)).toBe(0.152);
+    expect(roundZoom(123.6)).toBe(124);
+    expect(roundZoom(16)).toBe(16);
+  });
+
+  it("#941 labels the quarter hours 15, 30 and 45 at 150 px per hour, where a cell is narrower than '06:15'", () => {
+    const range = { fromMs: Date.UTC(2026, 10, 4, 5), toMs: Date.UTC(2026, 10, 4, 7) };
+    const ticks = createTimeScale({
+      range,
+      zoom: 'quarter-hours',
+      pxPerHour: 150,
+      timeZone: stockholm,
+      productionDayStart: '06:00',
+      widthPx: naturalWidthPx(range, { band: 'quarter-hours', pxPerHour: 150 }),
+    }).ticks();
+
+    expect(ticks.filter((tick) => tick.tier === 'bottom').map((tick) => tick.label)).toEqual([
+      '15',
+      '30',
+      '45',
+      '15',
+      '30',
+      '45',
+    ]);
   });
 
   it("applies plan 18's Hours and Day rules at day and finer, and its Week and 4 weeks rules at week and coarser", () => {
@@ -682,6 +768,25 @@ describe('Hide closed time at the coarse levels (ADR 0089, Header tiers)', () =>
         hideClosed: hidden,
       }).gaps,
     ).toHaveLength(8);
+  });
+
+  it("#941 compresses by the width of a window at the current zoom, not at the band's natural width", () => {
+    const quarter = rangeOf('2026-11-01', 'quarter', stockholm, '06:00');
+    // At 1 px per hour, still in the Quarter band, an 8 h night is 8 px, wider than the gap.
+    const zoom = { band: 'quarter', pxPerHour: 1 } as const;
+    const hidden = { closed: nights };
+
+    expect(
+      createTimeScale({
+        range: quarter,
+        zoom: 'quarter',
+        pxPerHour: 1,
+        timeZone: stockholm,
+        widthPx: naturalWidthPx(quarter, zoom, hidden),
+        hideClosed: hidden,
+      }).gaps,
+    ).toHaveLength(30);
+    expect(naturalWidthPx(quarter, zoom, hidden)).toBeLessThan(naturalWidthPx(quarter, zoom));
   });
 });
 

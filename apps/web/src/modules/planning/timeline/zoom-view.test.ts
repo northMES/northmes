@@ -3,15 +3,24 @@
 import { describe, expect, it } from 'vitest';
 import type { ZoomLevel } from '../gantt-data.ts';
 import { bufferAround, bufferScale } from './time-buffer.ts';
-import { type ClosedWindow, type TimeRange, zoomLevelIds, zoomLevels } from './time-scale.ts';
+import {
+  bandOf,
+  type ClosedWindow,
+  naturalWidthPx,
+  type TimeRange,
+  type Zoom,
+  zoomLevelIds,
+  zoomLevels,
+} from './time-scale.ts';
 import {
   anchorAt,
   anchoredScrollLeft,
-  createPinchZoom,
-  createWheelZoom,
   fitView,
   type GridLayout,
+  steppedZoom,
+  wheelFactor,
   type ZoomPlant,
+  zoomedBy,
 } from './zoom-view.ts';
 
 const stockholm = 'Europe/Stockholm';
@@ -35,7 +44,7 @@ function nightsOf(range: TimeRange): ClosedWindow[] {
  * its viewport x (ADR 0089, The endless axis), its scale, and the scroll position the browser
  * clamps the anchored one to.
  */
-function zoomedTo(zoom: ZoomLevel, ms: number, viewportX: number, hidden: boolean) {
+function zoomedTo(zoom: ZoomLevel | Zoom, ms: number, viewportX: number, hidden: boolean) {
   const at = hidden ? { ...plant, closedOf: nightsOf } : plant;
   const viewportPx = layout.clientWidth - layout.stickyWidth;
   const range = bufferAround({
@@ -102,83 +111,116 @@ describe('a level step keeps the instant under the pointer (ADR 0089, Zoom level
   }
 });
 
-describe('Zoom to fit (ADR 0089, Zoom levels)', () => {
+describe('a smooth zoom keeps the instant under the pointer (ADR 0090, Gestures, buttons and keys)', () => {
+  it('#941 multiplies the zoom by exp(0.2) for a Ctrl+wheel deltaY of -100 in pixel mode', () => {
+    expect(wheelFactor({ deltaY: -100, deltaMode: 0 }, 600)).toBeCloseTo(Math.exp(0.2), 12);
+    // A line counts as 16 px and a page as the time area's height.
+    expect(wheelFactor({ deltaY: 3, deltaMode: 1 }, 600)).toBeCloseTo(Math.exp(-0.096), 12);
+    expect(wheelFactor({ deltaY: 1, deltaMode: 2 }, 600)).toBeCloseTo(Math.exp(-1.2), 12);
+  });
+
+  const days = [
+    ['2026-10-25', Date.UTC(2026, 9, 25, 11)],
+    ['2027-03-28', Date.UTC(2027, 2, 28, 10)],
+  ] as const;
+  for (const [day, noon] of days) {
+    for (const hidden of [false, true]) {
+      it(`#941 holds the pointer's instant within 1 px through 50 events of deltaY -4 on ${day}${hidden ? ' with closed time hidden' : ''}`, () => {
+        for (const viewportX of [430, 900, 1390]) {
+          let zoom: Zoom = { band: 'week', pxPerHour: 16 };
+          let view = zoomedTo(zoom, noon, viewportX, hidden);
+          for (let event = 0; event < 50; event += 1) {
+            const anchor = anchorAt(view.scale, view.scrollLeft, layout, viewportX);
+            zoom = zoomedBy(zoom, wheelFactor({ deltaY: -4, deltaMode: 0 }, 600));
+            view = zoomedTo(zoom, anchor.ms, viewportX, hidden);
+            const x = view.scale.x(anchor.ms) + layout.treeWidth - view.scrollLeft;
+            expect(Math.abs(x - viewportX), `event ${event} at ${viewportX}`).toBeLessThanOrEqual(1);
+          }
+          // 50 events of exp(0.008) take Week to about 23.9 px an hour, still in the Week band.
+          expect(zoom.pxPerHour).toBeCloseTo(16 * Math.exp(0.4), 6);
+        }
+      });
+    }
+  }
+
+  it('#941 Zoom in from 16 gives 32 and Zoom out gives 8, within the clamp', () => {
+    expect(steppedZoom(16, 'in')).toBe(32);
+    expect(steppedZoom(16, 'out')).toBe(8);
+    expect(steppedZoom(200, 'in')).toBe(240);
+    expect(steppedZoom(0.2, 'out')).toBe(0.15);
+  });
+
+  it('#941 keeps the band of a gesture until the zoom is a factor of 1.1 past its edge', () => {
+    // The Week to Day edge lies at about 27.7 px an hour.
+    expect(zoomedBy({ band: 'week', pxPerHour: 27 }, 1.05)).toEqual({
+      band: 'week',
+      pxPerHour: 28.35,
+    });
+    expect(zoomedBy({ band: 'week', pxPerHour: 28.35 }, 1.1).band).toBe('day');
+  });
+});
+
+describe('Zoom to fit (ADR 0090, Gestures, buttons and keys)', () => {
   // The visible time area is 980 px.
   const tue = Date.UTC(2026, 10, 3, 5);
+  const availablePx = 980;
 
-  it('#896 picks the finest level whose natural width holds the span and a snap step each side, and centres it', () => {
-    // 30 h: at Day 32 h of 48 px is 1 536 px, too wide; at Week 38 h of 16 px is 608 px.
-    const span = { fromMs: tue, toMs: tue + 30 * 3_600_000 };
+  /** Whether a fit lies in the band it was fitted for and fills the view with the padded span. */
+  function expectFitted(span: TimeRange, fitPlant: ZoomPlant) {
+    const { zoom, anchor } = fitView(span, layout, fitPlant);
+    expect(bandOf(zoom.pxPerHour)).toBe(zoom.band);
+    const { stepMs } = zoomLevels[zoom.band];
+    const padded = { fromMs: span.fromMs - stepMs, toMs: span.toMs + stepMs };
+    const closed = fitPlant.closedOf?.(padded);
+    const widthPx = naturalWidthPx(padded, zoom, closed === undefined ? undefined : { closed });
+    expect(Math.abs(widthPx - availablePx)).toBeLessThanOrEqual(1);
+    expect(anchor.ms).toBe(padded.fromMs);
+    expect(anchor.viewportX).toBeCloseTo(420, 6);
+    return zoom;
+  }
 
-    const { zoom, anchor } = fitView(span, layout, plant);
+  it('#941 fits a span and a snap step of its band on each side into the view, in the band it was fitted for', () => {
+    // 30 h: Quarter hours and Hours would need about 32 px an hour, which is Day; at Day, 32 h fit
+    // at 30.625 px an hour.
+    const zoom = expectFitted({ fromMs: tue, toMs: tue + 30 * 3_600_000 }, plant);
 
-    expect(zoom).toBe('week');
-    expect(anchor).toEqual({ ms: tue - 4 * 3_600_000, viewportX: 420 + (980 - 608) / 2 });
+    expect(zoom.band).toBe('day');
+    expect(zoom.pxPerHour).toBeCloseTo(30.625, 9);
   });
 
-  it('#896 picks Quarter hours for a job order of an hour', () => {
-    expect(fitView({ fromMs: tue, toMs: tue + 3_600_000 }, layout, plant).zoom).toBe(
-      'quarter-hours',
-    );
+  it('#941 fits a span of 4 h at Quarter hours, below the clamp', () => {
+    // 4 h and 5 min each side at 980 / (4 h 10 min), 235.2 px an hour.
+    const zoom = expectFitted({ fromMs: tue, toMs: tue + 4 * 3_600_000 }, plant);
+
+    expect(zoom.band).toBe('quarter-hours');
+    expect(zoom.pxPerHour).toBeCloseTo(235.2, 9);
   });
 
-  it('#896 counts the closed time Hide closed time compresses', () => {
-    // Two days and a night: 54 h at Day is 2 688 px plain; with the nights hidden it does not fit
-    // either, and at Week 70 h is 1 120 px plain, but 70 h less two 8 h nights is 54 h, 864 px
-    // and two 6 px gaps.
+  it('#941 counts the closed time Hide closed time compresses at the fitted zoom', () => {
     const span = { fromMs: tue, toMs: tue + 62 * 3_600_000 };
 
-    expect(fitView(span, layout, plant).zoom).toBe('4weeks');
-    expect(fitView(span, layout, { ...plant, closedOf: nightsOf }).zoom).toBe('week');
+    const plainFit = expectFitted(span, plant);
+    const hiddenFit = expectFitted(span, { ...plant, closedOf: nightsOf });
+
+    expect(hiddenFit.pxPerHour).toBeGreaterThan(plainFit.pxPerHour);
   });
 
-  it('#896 puts the start of a span no level holds at the centre of the coarsest level', () => {
+  it('#941 puts the start of a span no band holds at the centre of the coarsest clamp', () => {
     const span = { fromMs: tue, toMs: tue + 20 * 365 * 86_400_000 };
 
     expect(fitView(span, layout, plant)).toEqual({
-      zoom: 'year',
+      zoom: { band: 'year', pxPerHour: 0.15 },
       anchor: { ms: tue, viewportX: 420 + 490 },
     });
   });
-});
 
-describe('the Ctrl+wheel gesture (ADR 0089, Zoom levels)', () => {
-  it('#896 steps one level per gesture: in on a wheel up, out on a wheel down', () => {
-    const step = createWheelZoom(200);
+  it('#941 clamps a span shorter than the finest width fills to 240 px an hour, centred', () => {
+    // Five minutes and a step of five minutes each side, 15 min, is 60 px at 240 px an hour.
+    const span = { fromMs: tue, toMs: tue + 5 * 60_000 };
 
-    // A pinch of five events 16 ms apart steps once.
-    expect([0, 16, 32, 48, 64].map((at) => step(-4, at))).toEqual([
-      'in',
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-    ]);
-    // After a pause the next notch is a gesture of its own.
-    expect(step(100, 400)).toBe('out');
-    expect(step(100, 450)).toBeUndefined();
-  });
-
-  it('#896 waits for an event that moves before it steps', () => {
-    const step = createWheelZoom(200);
-
-    expect(step(0, 0)).toBeUndefined();
-    expect(step(-3, 10)).toBe('in');
-  });
-});
-
-describe('the pinch gesture (ADR 0089, Zoom levels)', () => {
-  it('#896 steps one level per pinch once the fingers spread or close by a quarter', () => {
-    const pinch = createPinchZoom();
-
-    pinch.start();
-    // Safari's gesture scale, or the distance between two touches over the distance at the start.
-    expect(pinch.move(1.1)).toBeUndefined();
-    expect(pinch.move(1.3)).toBe('in');
-    expect(pinch.move(2)).toBeUndefined();
-    pinch.start();
-    expect(pinch.move(0.9)).toBeUndefined();
-    expect(pinch.move(0.75)).toBe('out');
-    expect(pinch.move(0.5)).toBeUndefined();
+    expect(fitView(span, layout, plant)).toEqual({
+      zoom: { band: 'quarter-hours', pxPerHour: 240 },
+      anchor: { ms: tue - 5 * 60_000, viewportX: 420 + (980 - 60) / 2 },
+    });
   });
 });
