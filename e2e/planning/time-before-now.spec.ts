@@ -19,11 +19,13 @@ function planningHref(page: 'gantt' | 'board', search: Record<string, string>): 
  * waits for the color transitions it starts, so axe reads the theme's colors.
  */
 async function setTheme(locator: Locator, theme: 'light' | 'dark') {
-  await locator.evaluate(async (_, value) => {
+  await locator.evaluate((_, value) => {
     if (value === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
     else document.documentElement.removeAttribute('data-theme');
-    await Promise.all(document.getAnimations().map((animation) => animation.finished));
   }, theme);
+  // A color transition nested in another one, such as the order filter's controls in its field, is
+  // cancelled and started again while the theme changes, so the wait is for no animation left.
+  await expect.poll(() => locator.evaluate(() => document.getAnimations().length)).toBe(0);
 }
 
 /** The box of an element in the viewport. */
