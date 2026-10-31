@@ -87,7 +87,9 @@ async function coverOf(
         at === null
           ? 'nothing'
           : `${at.tagName.toLowerCase()}${at.getAttribute('role') === null ? '' : `[role=${at.getAttribute('role')}]`}.${String(at.getAttribute('class')).slice(0, 80)}`;
-      const atLine = document.elementFromPoint(x, lineBottom - 0.5);
+      // The top of the row line: the browser rounds the point to a device pixel, so at 1x the
+      // line's middle rounds onto the next row's first pixel.
+      const atLine = document.elementFromPoint(x, lineBottom - 1);
       const result = {
         under: x > pane.left && x < pane.right,
         atMarker: hit(x, y, cell),
