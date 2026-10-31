@@ -152,8 +152,7 @@ function reservedSegments(
   for (const segment of topSegments(shellRoutes)) {
     reserved.set(segment, { owner: 'shell', path: `/$plant/${segment}` });
   }
-  // Core's settings segments come last, so a segment that also leads an old plant root URL on to
-  // its page under the settings root, such as people, names the page itself.
+  // Core's plant root segments, then its settings segments, each at its own path.
   for (const segment of topSegments(coreRoutes)) {
     reserved.set(segment, { owner: 'core', path: `/$plant/${segment}` });
   }

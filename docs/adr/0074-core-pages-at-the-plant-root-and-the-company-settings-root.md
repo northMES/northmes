@@ -24,7 +24,7 @@ This ADR decides where core's web pages sit, what the breadcrumb shows for them,
 * A URL and a breadcrumb name what the user works with, not how the code is packaged.
 * Every other module keeps its id as its segment and its module crumb, so a module's pages stay grouped and a page never belongs to two modules.
 * A path is written once, in the link manifest ([ADR 0062][adr-0062]).
-* Bookmarks and links already shared keep working.
+* No one uses the system yet, so an old URL may stop working (Krister, 2026-10-31).
 * The host refuses a module that would collide with another part of the system at boot, as it refuses `web`, `station` and `auth` ([ADR 0003][adr-0003]).
 
 ## Considered options

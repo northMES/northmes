@@ -266,7 +266,7 @@ describe('URLs from before a page moved', () => {
     '/plant-a/machines?group=MACH',
     '/plant-a/core/articles',
     '/plant-a/planning/settings/board-fields',
-  ])('#876 %s leads nowhere: it stays and shows a not found page', async (old) => {
+  ])('#950 %s leads nowhere: it stays and shows a not found page', async (old) => {
     const { fetch } = companyAdmin();
     const router = renderShellAt(old, shellModules, { fetch });
 

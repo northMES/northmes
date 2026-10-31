@@ -42,10 +42,9 @@ function lazyScreen(name: keyof typeof import('./screens.ts')) {
  * The core module's routes under the shell's $plant route: the dashboard, the plant's landing page
  * (ADR 0078), the articles, the article groups, the customers, the routings and the tools. The top
  * route is pathless, so core's pages sit at the plant root, as /plant-a/articles (ADR 0074). Each
- * route takes its path from its entry in coreLinks, so a path is
- * written once, in the link manifest (ADR 0062); a list and a record's page are the index routes
- * of their entries. Each search definition sits on its route, never in the lazy screens.ts, from
- * which the screens load.
+ * route takes its path from its entry in coreLinks, so a path is written once, in the link
+ * manifest (ADR 0062); a list and a record's page are the index routes of their entries. Each
+ * search definition sits on its route, never in the lazy screens.ts, from which the screens load.
  */
 export function coreRoutes(plantRoute: PlantRoute) {
   const coreRoute = createRoute({ getParentRoute: () => plantRoute, id: coreModuleId });
