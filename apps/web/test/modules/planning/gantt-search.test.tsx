@@ -128,9 +128,8 @@ describe('ganttSearch (plan 18, URL state)', () => {
     expect(withChain(withChain(gantt, false), true)).toEqual(gantt);
   });
 
-  it('keeps view=gantt on the board route for the redirect and drops any other view', () => {
+  it('#950 drops any view on the board route, view=gantt included', () => {
     expect(boardSearch({ view: 'gantt', zoom: 'week', order: 'po-1003' })).toEqual({
-      view: 'gantt',
       zoom: 16,
       order: 'po-1003',
     });
@@ -190,33 +189,15 @@ describe('the Gantt page (plan 18, URL state)', () => {
     });
   });
 
-  it('a board link with view=gantt from before the Gantt page redirects to it with zoom, from and order', async () => {
-    const router = renderGanttRoute(
-      { view: 'gantt', zoom: 'week', from: '2026-11-02', order: 'po-1003' },
-      undefined,
-      'board',
-    );
-
-    await findGantt();
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe(planningLinks.gantt({ plant }).href);
-    });
-    expect(router.state.location.search).toEqual({
-      zoom: 16,
-      from: '2026-11-02',
-      order: 'po-1003',
-    });
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Gantt');
-  });
-
-  it('the board route without view=gantt shows the planning board and no view control', async () => {
-    renderGanttRoute({ zoom: 'week' }, undefined, 'board');
+  it('#950 a board link with view=gantt stays on the planning board, with its job orders and no view control', async () => {
+    const router = renderGanttRoute({ view: 'gantt', zoom: 'week' }, undefined, 'board');
 
     const board = await screen.findByRole('grid', { name: /^plant-a board, / });
     // The skeleton has the same role and name; the loaded grid holds the job orders.
     await waitFor(() =>
       expect(board.ownerDocument.querySelector('[data-job-order]')).not.toBeNull(),
     );
+    expect(router.state.location.pathname).toBe(planningLinks.board({ plant }).href);
     expect(screen.queryByRole('group', { name: 'View' })).toBeNull();
     expect(screen.queryByRole('treegrid')).toBeNull();
   });

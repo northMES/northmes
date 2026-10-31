@@ -165,7 +165,7 @@ test.describe('the order Gantt', () => {
     await checkA11y('the workload panel with the table of CNC 1 open');
   });
 
-  test('plan 18 view=gantt fits the viewport without a page scrollbar and the time area scrolls sideways', async ({
+  test('plan 18 the Gantt page fits the viewport without a page scrollbar and the time area scrolls sideways', async ({
     page,
     signIn,
   }) => {

@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import type { ApolloClient } from '@apollo/client';
-import { coreModuleId, type RootRoute, settingsHref } from '@northmes/web-sdk';
-import { createRoute, Navigate, type ParsedLocation, redirect } from '@tanstack/react-router';
+import { Navigate } from '@tanstack/react-router';
 import { createContext, useContext } from 'react';
 import { PageFrame, type PageState } from '../ui/components/page-frame/index.ts';
-import { CoreCompanies } from './companies.graphql.ts';
 
 /** Where the settings landing leads: the first settings page the user may open, once known. */
 export interface SettingsLandingState {
@@ -54,60 +51,4 @@ export function ShellSettingsLanding() {
       {null}
     </PageFrame>
   );
-}
-
-/** The href of /, where the user's plants are listed. */
-const rootHref = '/';
-
-export interface OldSettingsRouteOptions {
-  /** The client without a plant, which reads the user's companies and their plants. */
-  readonly client: ApolloClient;
-  /** Sends a viewer without a session to sign-in. */
-  readonly beforeLoad: (context: { readonly location: ParsedLocation }) => void;
-}
-
-/**
- * The company settings URLs from before #876, /settings/<company id>/... with or without core in
- * them (ADR 0074): each leads, with its search and hash, to the same page under the settings of
- * the company's first plant, as /settings/<id>/users/<user> leads to
- * /plant-a/settings/users/<user>. A company that is not one of the user's, or that has no plant,
- * leads to /, where the user's plants are, and so does an old URL whose companies could not be
- * read.
- */
-/**
- * The user's company with this id, or undefined for a company that is not one of the user's and
- * when the user's companies could not be read, so the old URL leads to / instead of an error.
- */
-async function companyOf(client: ApolloClient, companyId: string) {
-  try {
-    const { data } = await client.query({ query: CoreCompanies });
-    return data?.coreCompanies.find(({ id }) => id === companyId);
-  } catch {
-    return undefined;
-  }
-}
-
-export function createOldSettingsRoute(
-  rootRoute: RootRoute,
-  { client, beforeLoad }: OldSettingsRouteOptions,
-) {
-  return createRoute({
-    getParentRoute: () => rootRoute,
-    path: 'settings/$companyId/$',
-    beforeLoad,
-    loader: async ({ params, location }) => {
-      const company = await companyOf(client, params.companyId);
-      const [plant] = company?.plants ?? [];
-      if (plant === undefined) throw redirect({ href: rootHref, replace: true });
-      // The rest of the path as the URL spells it, so an encoded segment stays encoded; a core
-      // segment from before ADR 0074 drops out.
-      const rest = location.pathname
-        .split('/')
-        .slice(3)
-        .filter((segment, index) => segment !== '' && !(index === 0 && segment === coreModuleId));
-      const pathname = [settingsHref(plant.slug), ...rest].join('/');
-      const hash = location.hash === '' ? '' : `#${location.hash}`;
-      throw redirect({ href: `${pathname}${location.searchStr}${hash}`, replace: true });
-    },
-  });
 }
