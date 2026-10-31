@@ -43,14 +43,13 @@ Chosen option: "Core's pages at the plant root and at the company settings root,
 * Core's web routes are pathless routes under the `$plant` route and the `/$plant/settings` route. `createShellRoutes` checks that core's top routes have no path and that every other module's top route has its id as its path.
 * The shell treats a path whose first segment under the plant is not another module's id as core's. The breadcrumb leaves out the module crumb for core ("Plant A > Articles", "Plant A > Settings > People"), and the document title follows. An unknown path at the plant root is the plant's own page not found, with Go to Plant A. The way out of a core page that failed is Go to Articles, or See all pages on Articles itself.
 * Every other module keeps its id as its path segment and its module crumb: `/plant-a/planning/board` reads "Plant A > Planning > Planning board".
-* The old URLs `/<plant>/core/...` redirect, with their search and hash, to the same page without `core`. The old company settings URLs `/settings/<company id>/...`, with or without `core`, redirect to the same page under the settings of the company's first plant, and the old plant settings URLs, such as `/plant-a/people/...`, to the same page under `/plant-a/settings` ([ADR 0066][adr-0066]).
+* The old URLs `/<plant>/core/...` lead nowhere and show a not found page, as do the old settings URLs ([ADR 0066][adr-0066]). No one used the system yet, so Krister decided on 2026-10-31 that no old URL redirects.
 * The host refuses a module id equal to one of core's top-level web segments at the plant root, `/$plant/<segment>` (such as `articles`), or at the settings root, `/$plant/settings/<segment>` (today `people`, `plant`, `machines`, `equipment-groups`, `calendars`, `users`, `roles` and `warehouses`), or to one of the shell's own segments under the plant (`all-pages` and `settings`). `createShellRoutes` reads core's segments from its routes and the shell's from its plant routes; the backend catalog check reads core's from `coreLinks` and its settings section and lists the shell's.
 
 ### Consequences
 
 * Good, because a planner sees `/plant-a/articles` and "Plant A > Articles", which name the page and nothing else.
 * Good, because a new core page, such as plants or onboarding, reserves its segment without a change to the host, since both checks read core's segments from core's routes and links.
-* Good, because old bookmarks land on the new page.
 * Neutral, because core's sidebar group keeps its label Core.
 * Bad, because the plant root and the settings root are shared between core, the shell and the module ids, so a module id that a later core page takes must be renamed. In release 1 every module is in this repository, so the catalog check finds such a clash in CI.
 * Bad, because the shell has one rule more: a path whose first segment is no module id is core's.
@@ -62,8 +61,8 @@ Chosen option: "Core's pages at the plant root and at the company settings root,
 * `packages/web-sdk/test/shell-routes.test.tsx`: core's routes mount at the plant root and its settings routes at the settings root; a module other than core whose routes sit at another path than its id is rejected, and so is core with a path; a module whose id is a top-level path segment of core's or the shell's routes is rejected.
 * `apps/backend/test/catalog.test.ts`: the module ids `articles`, `people`, `users`, `roles`, `all-pages` and `settings`, at the plant root or the settings root, are refused as reserved, and the message names the id and its path.
 * `apps/web/test/shell-core.test.tsx`: the breadcrumb of a core page has no module crumb, an unknown path at the plant root is the plant's page not found, and the plant switcher leads from an article to the other plant's articles list.
-* `apps/web/test/modules/core/routes.links.test.tsx`: an old list, detail and settings URL each redirect to the new one.
-* `apps/web/test/settings-mount.test.tsx`: an old company settings URL leads to the same page under the settings of the company's first plant, and one of a company that is not the user's leads to `/`.
+* `apps/web/test/modules/core/routes.links.test.tsx`: the route tree holds one route per link entry and no route that leads an old URL on.
+* `apps/web/test/settings-mount.test.tsx`: an old URL with `core` in it, and an old settings URL, stays and shows a not found page.
 
 ## Pros and cons of the options
 

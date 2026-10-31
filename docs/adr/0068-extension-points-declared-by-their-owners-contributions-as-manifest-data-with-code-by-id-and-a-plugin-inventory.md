@@ -270,7 +270,7 @@ export function item<S extends SlotOfKind<"item">>(slot: S, impl: {
   Content: ComponentType;
 }): ItemImpl<S>;
 export function banner<S extends SlotOfKind<"banner">>(slot: S, impl: {
-  layouts: readonly ("plant" | "settings" | "station")[];   // settings: company settings at /settings/$companyId
+  layouts: readonly ("plant" | "settings" | "station")[];   // settings: settings pages at /$plant/settings
   useBanners(props: SlotProps[S]): readonly BannerSpec[];
 }): BannerImpl<S>;
 // later, with the action kind and planning/order/actions/v1

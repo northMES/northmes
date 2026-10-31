@@ -2,14 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { linkEntry } from '@northmes/contracts';
 import { coreLinks } from '@northmes/core-contracts';
-import { coreModuleId, type PlantRoute, type SettingsRoute, settingsPath } from '@northmes/web-sdk';
-import {
-  type AnyRoute,
-  createRoute,
-  lazyRouteComponent,
-  type ParsedLocation,
-  redirect,
-} from '@tanstack/react-router';
+import { coreModuleId, type PlantRoute, type SettingsRoute } from '@northmes/web-sdk';
+import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
 import { dashboardSearch, newRoleSearch, rolePageSearch, userPageSearch } from './access-search.ts';
 import { articleListSearch, urlSearchOf } from './article-list-search.ts';
 import {
@@ -45,59 +39,10 @@ function lazyScreen(name: keyof typeof import('./screens.ts')) {
 }
 
 /**
- * A route at `path` under its parent that leads a URL from before a move to the page's new path,
- * which `move` makes from the old path's segments, with its search and hash.
- */
-function leadsOn(parent: AnyRoute, path: string, move: (segments: string[]) => string[]) {
-  return createRoute({
-    getParentRoute: () => parent,
-    path,
-    beforeLoad: ({ location }: { readonly location: ParsedLocation }) => {
-      const pathname = move(location.pathname.split('/')).join('/');
-      const hash = location.hash === '' ? '' : `#${location.hash}`;
-      throw redirect({ href: `${pathname}${location.searchStr}${hash}`, replace: true });
-    },
-  });
-}
-
-/**
- * The route that leads a URL with core after the plant, as bookmarks from before ADR 0074 hold, to
- * the same page without it: /plant-a/core/articles?q=hinge leads to /plant-a/articles?q=hinge.
- */
-function withoutCoreSegment(plantRoot: AnyRoute) {
-  return leadsOn(plantRoot, `${coreModuleId}/$`, (segments) =>
-    segments.filter((_, index) => index !== 2),
-  );
-}
-
-/**
- * The route that leads a plant settings page's URL from before #876, at the plant root, to the
- * same page under the plant's settings: /plant-a/people/<user> leads to
- * /plant-a/settings/people/<user>.
- */
-function underSettings(plantRoot: AnyRoute, segment: string) {
-  return leadsOn(plantRoot, `${segment}/$`, (segments) => [
-    ...segments.slice(0, 2),
-    settingsPath,
-    ...segments.slice(2),
-  ]);
-}
-
-/** Core's plant settings pages, which sat at the plant root before #876. */
-const movedToSettings = [
-  coreLinks.settings.plant,
-  coreLinks.settings.people,
-  coreLinks.settings.machines,
-  coreLinks.settings.equipmentGroups,
-  coreLinks.settings.calendars,
-];
-
-/**
  * The core module's routes under the shell's $plant route: the dashboard, the plant's landing page
  * (ADR 0078), the articles, the article groups, the customers, the routings and the tools. The top
- * route is pathless, so core's pages sit at the plant root, as /plant-a/articles, and the old URLs
- * with core in them lead there (ADR 0074), as the old URLs of the plant settings pages lead under
- * the plant's settings (#876). Each route takes its path from its entry in coreLinks, so a path is
+ * route is pathless, so core's pages sit at the plant root, as /plant-a/articles (ADR 0074). Each
+ * route takes its path from its entry in coreLinks, so a path is
  * written once, in the link manifest (ADR 0062); a list and a record's page are the index routes
  * of their entries. Each search definition sits on its route, never in the lazy screens.ts, from
  * which the screens load.
@@ -228,8 +173,6 @@ export function coreRoutes(plantRoute: PlantRoute) {
     component: lazyScreen('ToolScreen'),
   });
   return coreRoute.addChildren([
-    withoutCoreSegment(coreRoute),
-    ...movedToSettings.map((entry) => underSettings(coreRoute, linkEntry(entry).path)),
     dashboardRoute,
     articlesRoute.addChildren([
       articleListRoute,

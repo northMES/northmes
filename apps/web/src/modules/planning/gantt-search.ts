@@ -63,28 +63,19 @@ export function ganttSearch(raw: Record<string, unknown>): GanttSearch {
   };
 }
 
-/**
- * The board route's search: the Gantt keys, which the board keeps for a link to the Gantt, and the
- * view key of the links from before the Gantt had its own page. `view=gantt` on the board route
- * redirects to the Gantt page with the other keys, so an old link keeps working; any other view
- * is dropped.
- */
+/** The board route's search: the Gantt keys, which the board keeps for a link to the Gantt. */
 export interface BoardSearch extends GanttSearch {
-  readonly view?: 'gantt';
   /** The page state the mock source answers with (design D3, DR17 to DR22). */
   readonly preview?: PlanningPreview;
 }
 
-const legacyView = z.literal('gantt').optional().catch(undefined);
 const previewKey = z.enum(planningPreviews).optional().catch(undefined);
 
 /** The board route's search, for its validateSearch; see BoardSearch. */
 export function boardSearch(raw: Record<string, unknown>): BoardSearch {
-  const view = legacyView.parse(raw.view);
   const preview = previewKey.parse(raw.preview);
   return {
     ...ganttSearch(raw),
-    ...(view !== undefined && { view }),
     ...(preview !== undefined && { preview }),
   };
 }

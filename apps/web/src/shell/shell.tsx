@@ -66,7 +66,6 @@ import {
 } from './shell-pages.ts';
 import { ShellRouteError } from './shell-route-error.tsx';
 import {
-  createOldSettingsRoute,
   SettingsLandingProvider,
   type SettingsLandingState,
   ShellSettingsLanding,
@@ -106,9 +105,7 @@ const nobody: ShellUser = { name: 'Not signed in', username: '' };
 /**
  * Creates the web's router, once at boot: each module's routes under /$plant, each module's
  * settingsRoutes under /$plant/settings with the settings landing (ADR 0066, #876), the landing at
- * /, which sends the user on or lists their plants (ADR 0066), the old company settings URLs at
- * /settings/<company id>, which lead to the same page under a plant of the company, and the
- * sign-in page at /sign-in. The $plant route renders the D2 shell, and ShellProvider and the Apollo
+ * /, which sends the user on or lists their plants (ADR 0066), and the sign-in page at /sign-in. The $plant route renders the D2 shell, and ShellProvider and the Apollo
  * client of the plant in the URL around the screen; the company's settings pages render in it with
  * the client that names no plant. A viewer without a session who opens a plant or settings page, or
  * the landing, goes to sign-in with the page as the return path, and so does one whose request the
@@ -209,10 +206,6 @@ export function createShellRouter(
         beforeLoad: signedIn,
         user: () => session.user() ?? nobody,
         onSignOut: signOut,
-      }),
-      createOldSettingsRoute(rootRoute, {
-        client: companiesClient,
-        beforeLoad: signedIn,
       }),
       createRoute({
         getParentRoute: () => rootRoute,
