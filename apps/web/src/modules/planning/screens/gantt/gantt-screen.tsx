@@ -147,9 +147,9 @@ function useStableCalendar(calendar: GanttCalendar | undefined): GanttCalendar |
 }
 
 /**
- * The order Gantt (plan 18, The order Gantt), the board route's view=gantt: the tree of orders,
- * operations and job orders on the left, the time area on the right, both inside one treegrid, the
- * pinned Not placed row under the time header, and the toolbar of D5. The URL holds the view, the
+ * The order Gantt (plan 18, The order Gantt), on its own page: the tree of orders, operations and
+ * job orders on the left, the time area on the right, both inside one treegrid, the pinned Not
+ * placed row under the time header, and the toolbar of D5. The URL holds the view, the
  * zoom, the range start and the selected order; the options stay local. The screen reads one data
  * source and never knows which; phase 1 reads the fixture G1 and says so.
  */

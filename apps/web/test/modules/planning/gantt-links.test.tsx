@@ -111,7 +111,7 @@ describe('the links of the order Gantt (plan 18, Blocks, links and the selection
   // gets three times the default timeout; alone it takes about four.
   it("GT1 above 200 links draws the selected order's links only and the toolbar says so", async () => {
     renderGanttRoute(
-      { view: 'gantt', zoom: 'week', from: '2026-11-02', order: 'po-1001-3' },
+      { zoom: 'week', from: '2026-11-02', order: 'po-1001-3' },
       sourceOf(manyOrdersSnapshot(70)),
     );
     const gantt = await findGantt();

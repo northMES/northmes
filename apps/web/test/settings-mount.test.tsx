@@ -258,60 +258,19 @@ describe('the settings landing', () => {
   });
 });
 
-describe('the company settings URLs from before #876', () => {
+describe('URLs from before a page moved', () => {
   it.each([
-    [`/settings/${companyId}/users`, '/plant-a/settings/users'],
-    [
-      `/settings/${companyId}/core/roles/new?from=r1#name`,
-      '/plant-a/settings/roles/new?from=r1#name',
-    ],
-    [`/settings/${companyId}/warehouses?q=north`, '/plant-a/settings/warehouses?q=north'],
-  ])("#876 %s leads to %s, under the settings of the company's first plant", async (old, now) => {
+    `/settings/${companyId}/users`,
+    `/settings/${companyId}`,
+    '/plant-a/people',
+    '/plant-a/machines?group=MACH',
+    '/plant-a/core/articles',
+    '/plant-a/planning/settings/board-fields',
+  ])('#950 %s leads nowhere: it stays and shows a not found page', async (old) => {
     const { fetch } = companyAdmin();
     const router = renderShellAt(old, shellModules, { fetch });
 
-    await waitFor(() => expect(router.state.location.href).toBe(now));
-  });
-
-  it("#876 a company's old landing leads to the settings landing of its first plant, which goes on to the first page", async () => {
-    const { fetch } = companyAdmin(['core.user:read']);
-    const router = renderShellAt(`/settings/${companyId}`, shellModules, { fetch });
-
-    await screen.findByRole('heading', { level: 1, name: 'Users' });
-    expect(router.state.location.pathname).toBe('/plant-a/settings/users');
-  });
-
-  it('#876 an old URL whose companies could not be read leads to /', async () => {
-    let reads = 0;
-    const { fetch } = fakeApi({
-      CoreCompanies: () => {
-        reads += 1;
-        return reads === 1 ? unreachable : companies();
-      },
-      CoreViewer: () => viewer([], []),
-    });
-    const router = renderShellAt(`/settings/${companyId}/users`, shellModules, { fetch });
-
-    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
-  });
-
-  it('#876 an old URL keeps an encoded segment encoded on the way to the new one', async () => {
-    const { fetch } = companyAdmin();
-    const router = renderShellAt(`/settings/${companyId}/users/a%2Fb`, shellModules, { fetch });
-
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe('/plant-a/settings/users/a%2Fb'),
-    );
-  });
-
-  it("#876 an old URL of a company that is not one of the user's leads to /", async () => {
-    const { fetch } = companyAdmin();
-    const router = renderShellAt(
-      '/settings/019a0000-0000-7000-8000-0000000f0e10/users',
-      shellModules,
-      { fetch },
-    );
-
-    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    await screen.findByRole('heading', { level: 1, name: /not found$/ });
+    expect(router.state.location.href).toBe(old);
   });
 });

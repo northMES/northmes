@@ -154,7 +154,7 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     expect(rowPane?.contains(within(row).getAllByRole('gridcell')[0] as HTMLElement)).toBe(true);
   });
 
-  it('plan 18 view=gantt fills the viewport height, so the rows scroll inside the grid', async () => {
+  it('plan 18 the Gantt page fills the viewport height, so the rows scroll inside the grid', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
