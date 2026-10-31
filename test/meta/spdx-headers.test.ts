@@ -113,6 +113,8 @@ describe('spdx-headers', () => {
         'apps/backend/src/modules/core/migrations/20261008125631_article.sql',
         'apps/backend/test/fixtures/migrations/core/20260105080000_article.sql',
         'scripts/templates/table.sql',
+        'scripts/templates/register.sql',
+        'scripts/fixtures/gen-migration/register.sql',
         'apps/web/src/ui/primitives/button.tsx',
         'apps/web/src/ui/lib/use-mobile.ts',
         'apps/backend/test/fixtures/web/shell/assets/index-7b3e9a1c.js',

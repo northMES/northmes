@@ -11,6 +11,8 @@ export interface RenderOptions {
   /** The table name, which also ends the file name. */
   readonly slug: string;
   readonly now: Date;
+  /** Renders the register template of the master-data kit instead of the table template. */
+  readonly register?: boolean;
 }
 
 export interface RenderedMigration {
@@ -29,5 +31,5 @@ export interface MainIo {
   now(): Date;
 }
 
-/** pnpm gen:migration <module> <slug>: writes the rendered file and returns the exit code. */
+/** pnpm gen:migration [--register] <module> <slug>: writes the rendered file and returns the exit code. */
 export function main(argv: readonly string[], io: MainIo): Promise<number>;

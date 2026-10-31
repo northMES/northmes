@@ -150,6 +150,8 @@ NorthMES can use a Postgres 18 server you already run, next to the other databas
     create role northmes_admin login createrole password '<the admin password>';
     create database northmes owner northmes_admin;
     ```
+
+    NorthMES needs the `btree_gist` extension, which ships with Postgres. A managed service that keeps a list of allowed extensions must have `btree_gist` on it, such as the `azure.extensions` parameter of Azure Database for PostgreSQL.
   </Step>
   <Step title="Point NorthMES at the server">
     In `.env`, select `compose.external-db.yaml`, which keeps `db` from starting, and name the server, the database and the admin:
@@ -170,6 +172,8 @@ NorthMES can use a Postgres 18 server you already run, next to the other databas
 </Steps>
 
 `bootstrap` logs in as the admin and creates the roles NorthMES runs as: `nm_owner` for migrations, `nm_app` and `nm_auth` for the app, and `nm_ext`. Their passwords come from the files in `secrets/`. `bootstrap` runs on every `docker compose up -d` and changes nothing once the roles exist, so keep the admin's password in its file.
+
+`migrate` creates the `btree_gist` extension as `nm_owner`, in a schema of its own named `northmes_extensions`, unless the database already has it. `btree_gist` is a trusted extension, so `nm_owner` needs no superuser for it.
 
 <Note>
   Role names are shared by every database on a Postgres server, so one server holds one NorthMES installation.

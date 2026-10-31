@@ -35,6 +35,26 @@ describe('gen:migration', () => {
       'apps/backend/src/modules/production-start/migrations/20261008190405_work_note.sql',
     );
   });
+
+  it('E06-S04 a register file has the scope span, the code exclusion constraint, the code order index, the touch trigger, four policies and the grants', async () => {
+    const { path, sql } = render({ module: 'production-start', slug: 'tool', now, register: true });
+
+    expect(path).toBe(
+      'apps/backend/src/modules/production-start/migrations/20261008190405_tool.sql',
+    );
+    await expect(sql).toMatchFileSnapshot('./fixtures/gen-migration/register.sql');
+  });
+
+  it('E06-S04 a register slug longer than 44 characters is refused, so every name the file gives fits in 63', () => {
+    const slug = 'a'.repeat(45);
+
+    expect(() => render({ module: 'core', slug, now, register: true })).toThrow(
+      `Invalid slug "${slug}": a register's slug names its constraints, so use at most 44 characters`,
+    );
+    expect(() =>
+      render({ module: 'core', slug: 'a'.repeat(44), now, register: true }),
+    ).not.toThrow();
+  });
 });
 
 describe('pnpm gen:migration', () => {
@@ -72,6 +92,35 @@ describe('pnpm gen:migration', () => {
     expect(errors).toEqual([]);
   });
 
+  it("E06-S04 pnpm gen:migration --register writes the register file into the module's migrations folder", async () => {
+    const exitCode = await main(['--register', 'production-start', 'tool'], io());
+
+    const path = 'apps/backend/src/modules/production-start/migrations/20261008190405_tool.sql';
+    expect(exitCode).toBe(0);
+    expect(readFileSync(join(root, path), 'utf8')).toBe(
+      render({ module: 'production-start', slug: 'tool', now, register: true }).sql,
+    );
+    expect(lines).toEqual([`Wrote ${path}`]);
+    expect(errors).toEqual([]);
+  });
+
+  it('E06-S04 pnpm gen:migration with an unknown flag or --register and one argument exits 1 and writes nothing', async () => {
+    const exitCodes = [
+      await main(['--registr', 'production-start', 'tool'], io()),
+      await main(['--register', 'production-start'], io()),
+      // Two arguments, so only the flag rule refuses a flag in the slug's place.
+      await main(['production-start', '--register'], io()),
+    ];
+
+    expect(exitCodes).toEqual([1, 1, 1]);
+    expect(errors).toEqual([
+      'Usage: pnpm gen:migration [--register] <module> <slug>',
+      'Usage: pnpm gen:migration [--register] <module> <slug>',
+      'Usage: pnpm gen:migration [--register] <module> <slug>',
+    ]);
+    expect(readdirSync(join(root, 'apps/backend/src/modules/production-start'))).toEqual([]);
+  });
+
   it("E02-S02 pnpm gen:migration without both arguments or without the module's folder exits 1 and writes nothing", async () => {
     const exitCodes = [
       await main(['production-start'], io()),
@@ -80,7 +129,7 @@ describe('pnpm gen:migration', () => {
 
     expect(exitCodes).toEqual([1, 1]);
     expect(errors).toEqual([
-      'Usage: pnpm gen:migration <module> <slug>',
+      'Usage: pnpm gen:migration [--register] <module> <slug>',
       'No module folder apps/backend/src/modules/production-stat',
     ]);
     expect(readdirSync(join(root, 'apps/backend/src/modules'))).toEqual(['production-start']);

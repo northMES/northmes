@@ -141,6 +141,28 @@ describe('migrate', () => {
     ]);
   });
 
+  it('E06-S04 migrate creates btree_gist as nm_owner in northmes_extensions before any file, so every module may declare a code exclusion constraint', async () => {
+    const extensions = await query(
+      db.ownerUrl,
+      `select e.extname as extension, n.nspname as schema, r.rolname as owner
+         from pg_extension e
+         join pg_namespace n on n.oid = e.extnamespace
+         join pg_roles r on r.oid = e.extowner
+        where e.extname <> 'plpgsql'`,
+    );
+    const schemaOwner = await query(
+      db.ownerUrl,
+      `select r.rolname as owner
+         from pg_namespace n join pg_roles r on r.oid = n.nspowner
+        where n.nspname = 'northmes_extensions'`,
+    );
+
+    expect(extensions).toEqual([
+      { extension: 'btree_gist', schema: 'northmes_extensions', owner: 'nm_owner' },
+    ]);
+    expect(schemaOwner).toEqual([{ owner: 'nm_owner' }]);
+  });
+
   it('E02-S04 nm_ext may use each module schema, so a module role can reach a table it references', async () => {
     const usage = await query(
       db.ownerUrl,
