@@ -101,16 +101,20 @@ describe('pnpm gen:migration', () => {
       render({ module: 'production-start', slug: 'tool', now, register: true }).sql,
     );
     expect(lines).toEqual([`Wrote ${path}`]);
+    expect(errors).toEqual([]);
   });
 
   it('E06-S04 pnpm gen:migration with an unknown flag or --register and one argument exits 1 and writes nothing', async () => {
     const exitCodes = [
       await main(['--registr', 'production-start', 'tool'], io()),
       await main(['--register', 'production-start'], io()),
+      // Two arguments, so only the flag rule refuses a flag in the slug's place.
+      await main(['production-start', '--register'], io()),
     ];
 
-    expect(exitCodes).toEqual([1, 1]);
+    expect(exitCodes).toEqual([1, 1, 1]);
     expect(errors).toEqual([
+      'Usage: pnpm gen:migration [--register] <module> <slug>',
       'Usage: pnpm gen:migration [--register] <module> <slug>',
       'Usage: pnpm gen:migration [--register] <module> <slug>',
     ]);

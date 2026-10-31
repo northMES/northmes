@@ -25,14 +25,16 @@ create table {{schema}}.{{table}} (
   updated_at timestamptz not null default now(),
   constraint {{table}}_scope_fkey foreign key (scope_id, company_id, scope_span)
     references core.scope (id, company_id, span) on update cascade,
-  -- Two rows of the company clash when their codes match and their spans overlap: a plant row
-  -- and a company row, never two plants. toDomainError maps a violation of a constraint whose name
-  -- ends in _code_excl to core.code_taken.
+  -- Two rows of the company clash when their codes match and their spans overlap: two rows at one
+  -- scope, or a plant row and a company row; two plants never clash. toDomainError maps a
+  -- violation of a constraint whose name ends in _code_excl to core.code_taken.
   constraint {{table}}_code_excl
     exclude using gist (company_id with =, code_key with =, scope_span with &&)
 );
 -- The default order of a register's list, by code with id as the tie-breaker (ADR 0016).
 create index {{table}}_scope_code_idx on {{schema}}.{{table}} (scope_id, code, id);
+-- A lookup by code, which stays index-backed under row-level security (ADR 0009).
+create index {{table}}_scope_code_key_idx on {{schema}}.{{table}} (scope_id, code_key);
 
 -- Every update bumps version and moves updated_at on, also one that plain SQL makes (ADR 0006).
 create function {{schema}}.{{table}}_touch() returns trigger

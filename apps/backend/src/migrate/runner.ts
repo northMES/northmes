@@ -42,10 +42,10 @@ interface ModuleFiles {
  * Applies the migration files of every catalog module in catalog order (ADR 0006). Each module's
  * schema is owned by the NOLOGIN role nm_mod_<sql name>, which nm_owner creates and may SET to,
  * and each file runs in a transaction of its own under SET LOCAL ROLE of that role. Applied files
- * are recorded in northmes_meta.migration. Before any file it creates the extensions the files may
- * use (createExtensions). A run holds the migration advisory lock of the database throughout, so
- * concurrent runs apply each file once. Last, it installs or migrates pg-boss's schema
- * (installJobQueue).
+ * are recorded in northmes_meta.migration. Once the checks pass, and before any file, it creates
+ * the extensions the files may use (createExtensions). A run holds the migration advisory lock of
+ * the database throughout, so concurrent runs apply each file once. Last, it installs or migrates
+ * pg-boss's schema (installJobQueue).
  *
  * The run checks the files of every module before it applies any, and throws a MigrationError
  * that lists every problem when an applied file's sha256 changed, two files of a module share a
@@ -57,13 +57,13 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
   try {
     await takeMigrationLock(client);
     await createMigrationTable(client);
-    await createExtensions(client);
     const modules = await readModuleFiles(client, catalog);
     const problems = modules.flatMap((module) => [
       ...changedFiles(module),
       ...fileProblems(module.names.id, module.files),
     ]);
     if (problems.length > 0) throw new MigrationError(problems);
+    await createExtensions(client);
     const applied: string[] = [];
     for (const { names, schemas, files, recorded } of modules) {
       const pending = files.filter((file) => !recorded.has(file.name));

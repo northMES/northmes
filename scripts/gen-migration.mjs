@@ -10,8 +10,8 @@ const repositoryRoot = fileURLToPath(new URL('..', import.meta.url));
 const tableTemplate = readFileSync(new URL('./templates/table.sql', import.meta.url), 'utf8');
 const registerTemplate = readFileSync(new URL('./templates/register.sql', import.meta.url), 'utf8');
 
-// Postgres cuts a name at 63 bytes, and the register template's longest suffix is
-// _translations_check (19), so a longer slug would cut _code_excl, which toDomainError reads.
+// Postgres cuts a name at 63 bytes with only a notice. The register template's longest suffixes are
+// _translations_check and _scope_code_key_idx (19 each), so every name it gives fits at this length.
 const registerSlugLength = 63 - '_translations_check'.length;
 
 const usage = 'Usage: pnpm gen:migration [--register] <module> <slug>';

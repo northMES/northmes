@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { givenCompany } from '@northmes/backend/testing';
 import { DomainError, toDomainError } from '@northmes/sdk/errors';
-import { query, useTestDatabase, withClient } from '@northmes/testing';
+import { useTestDatabase, withClient } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { render } from '../../../../scripts/gen-migration.mjs';
 import { checkCatalog } from '../../src/catalog/check-catalog.ts';
@@ -61,7 +61,9 @@ describe('the register template', () => {
          returning id`,
         [scope, code, span],
       );
-      return rows[0]?.id ?? '';
+      const id = rows[0]?.id;
+      if (id === undefined) throw new Error(`No scope node ${scope}`);
+      return id;
     });
   }
 
@@ -188,16 +190,26 @@ describe('the register template', () => {
         await plantSession.query(setScopes, [[hel]]);
         await plantSession.query(insert, [hel, 'W-1']);
 
+        const {
+          rows: [{ pid } = { pid: 0 }],
+        } = await companySession.query<{ pid: number }>('select pg_backend_pid() as pid');
         await companySession.query('begin');
         await companySession.query(setScopes, [[acme.company]]);
         const companyInsert = refusal(companySession.query(insert, [acme.company, 'w-1']));
         // The company insert waits on the plant session's transaction, which pg_locks shows as a
-        // lock that is not granted.
+        // lock of the company session's backend that is not granted. Other files share the
+        // server, so only that backend counts.
         await vi.waitFor(
           async () => {
-            const [waiting] = await query<{ count: number }>(
-              db.ownerUrl,
-              'select count(*)::int as count from pg_locks where not granted',
+            const waiting = await withClient(
+              { connectionString: db.ownerUrl },
+              async (client) =>
+                (
+                  await client.query<{ count: number }>(
+                    'select count(*)::int as count from pg_locks where pid = $1 and not granted',
+                    [pid],
+                  )
+                ).rows[0],
             );
             expect(waiting?.count).toBeGreaterThan(0);
           },

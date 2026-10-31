@@ -141,7 +141,7 @@ describe('migrate', () => {
     ]);
   });
 
-  it('E06-S04 migrate creates btree_gist as nm_owner in northmes_extensions, which a module role cannot do, so every module may declare a code exclusion constraint', async () => {
+  it('E06-S04 migrate creates btree_gist as nm_owner in northmes_extensions before any file, so every module may declare a code exclusion constraint', async () => {
     const extensions = await query(
       db.ownerUrl,
       `select e.extname as extension, n.nspname as schema, r.rolname as owner
