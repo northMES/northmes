@@ -101,7 +101,9 @@ test.describe('the smooth zoom of the planning board', () => {
 
     // Zoom to fit with nothing selected fits every loaded job order of G1, Tue 3 Nov to Tue 10 Nov.
     await zoom.getByRole('button', { name: 'Zoom to fit' }).click();
-    await expect(page).not.toHaveURL(/zoom=quarter\b/);
+    // The link's `quarter` reaches the URL as 0.6 before the fit, so the wait skips both.
+    await expect(page).toHaveURL(/zoom=\d/);
+    await expect(page).not.toHaveURL(/zoom=0\.6\b/);
 
     const fitted = Number(new URL(page.url()).searchParams.get('zoom') ?? '16');
     await board.locator('[data-job-order]').first().focus();

@@ -24,6 +24,12 @@ async function boxOf(locator: Locator) {
   return box;
 }
 
+/** The hours the URL's `from` lies after a start, both read as local times. */
+function hoursAfter(page: Page, start: string): number {
+  const from = new URL(page.url()).searchParams.get('from');
+  return from === null ? 0 : (Date.parse(from) - Date.parse(start)) / 3_600_000;
+}
+
 /** The grid starts no lower than one bar row under the title row, and fills the viewport. */
 async function expectGridUnderTitle(page: Page, grid: Locator, bar: Locator) {
   const heading = await boxOf(page.getByRole('heading', { level: 1 }));
@@ -181,12 +187,13 @@ test.describe('the slim bar above the timeline', () => {
     const block = board.locator('[data-job-order="1001.10"]');
     const machineRow = block.locator('xpath=ancestor::*[@role="row"][1]');
     const rowName = await machineRow.getAttribute('aria-rowindex');
+    // One viewport width of the time area at 16 px an hour, which is narrower than the grid.
+    const widestHours = (await boxOf(board)).width / 16;
     await block.focus();
     await page.keyboard.press('Alt+PageDown');
 
-    await expect
-      .poll(() => new URL(page.url()).searchParams.get('from'))
-      .toMatch(/^2026-11-0[4-9]T/);
+    await expect.poll(() => hoursAfter(page, '2026-11-02T00:00')).toBeGreaterThan(24);
+    expect(hoursAfter(page, '2026-11-02T00:00')).toBeLessThan(widestHours);
     const focusedRow = page.locator(':focus').locator('xpath=ancestor::*[@role="row"][1]');
     await expect(focusedRow).toHaveAttribute('aria-rowindex', rowName ?? '');
   });
