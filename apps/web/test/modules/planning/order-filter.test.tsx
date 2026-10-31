@@ -220,6 +220,38 @@ describe('the order filter on the order Gantt (ADR 0090)', () => {
     fireEvent.keyDown(block, { key: 'Escape' });
   });
 
+  it('#940 under a filter, Combine into a run waits for every order too', async () => {
+    const user = userEvent.setup();
+    const source: GanttDataSource = {
+      ...g1DataSource,
+      loadRows: (filter, page, options) =>
+        filter.search === undefined
+          ? Promise.reject(new PlanningRefusal('planning.gantt.too_many_orders'))
+          : g1DataSource.loadRows(filter, page, options),
+    };
+    // 100 matches 1001 and 1005, two orders of Bracket L that a run could combine.
+    renderGanttRoute({ from: '2026-11-02', q: '100' }, source);
+    const gantt = await findGantt();
+    await waitFor(() => expect(orderRows(gantt)).toContain('po-1005'));
+    const row = (id: string) => gantt.querySelector(`[data-row-id="${id}"]`) as HTMLElement;
+    await user.click(within(row('po-1001')).getByRole('rowheader'));
+    await user.keyboard('{Shift>}');
+    await user.click(within(row('po-1005')).getByRole('rowheader'));
+    await user.keyboard('{/Shift}');
+
+    await user.click(
+      within(row('po-1005')).getByRole('button', { name: 'Actions for order 1005' }),
+    );
+    const menu = await screen.findByRole('menu', { name: 'Actions for order 1005' });
+
+    expect(
+      within(menu)
+        .getByRole('menuitem', { name: 'Combine into a run' })
+        .getAttribute('aria-disabled'),
+    ).toBe('true');
+    await user.keyboard('{Escape}');
+  });
+
   it('#940 the grid is busy while the first page of the matching orders loads', async () => {
     const hold = new Promise<void>(() => {});
     const { source } = countingRows(hold);

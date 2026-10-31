@@ -631,8 +631,9 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       [...selectedOrderIds, orderId].filter((id, index, all) => all.indexOf(id) === index),
     [selectedOrderIds],
   );
+  // Under a filter a run waits for every order, as a move does: its review checks their machines.
   const runActions = useMemo<GanttRunActions | undefined>(() => {
-    if (snapshot === undefined || committed === undefined) return undefined;
+    if (snapshot === undefined || committed === undefined || !rulesComplete) return undefined;
     const orderOf = (id: string) => snapshot.productionOrders.find((order) => order.id === id);
     return {
       canCombine: (orderId) => {
@@ -675,16 +676,16 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         }
       },
     };
-  }, [snapshot, committed, draft, setDraft, detailRowId, runCandidates]);
+  }, [snapshot, committed, rulesComplete, draft, setDraft, detailRowId, runCandidates]);
   const runResult = useMemo(
     () =>
-      committed === undefined || runReview === undefined
+      committed === undefined || runReview === undefined || !rulesComplete
         ? undefined
         : runPreview(committed, draft, runReview),
-    [committed, draft, runReview],
+    [committed, rulesComplete, draft, runReview],
   );
   const combineRun = () => {
-    if (committed === undefined || runReview === undefined) return;
+    if (committed === undefined || runReview === undefined || !rulesComplete) return;
     const { draft: next, result } = combineInDraft(committed, draft, runReview);
     setRunReview(undefined);
     if (result.run === undefined) return;
