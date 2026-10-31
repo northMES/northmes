@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Search, X } from 'lucide-react';
-import { type KeyboardEvent, type Ref, useEffect, useRef, useState } from 'react';
+import { type KeyboardEvent, type Ref, useCallback, useEffect, useRef, useState } from 'react';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '../../primitives/input-group.tsx';
 import { IconButton } from '../icon-button/index.ts';
 
@@ -52,6 +52,15 @@ export function SearchField({
   const [outsideSearches, setOutsideSearches] = useState(0);
   const input = useRef<HTMLInputElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  // The field's own ref and the page's, kept as one callback so React does not call it anew on each key.
+  const setInput = useCallback(
+    (node: HTMLInputElement | null) => {
+      input.current = node;
+      if (typeof inputRef === 'function') inputRef(node);
+      else if (inputRef !== undefined && inputRef !== null) inputRef.current = node;
+    },
+    [inputRef],
+  );
 
   // A new search from outside, such as Clear filters, replaces the typed text.
   if (value !== shown) {
@@ -93,11 +102,7 @@ export function SearchField({
         <Search aria-hidden />
       </InputGroupAddon>
       <InputGroupInput
-        ref={(node: HTMLInputElement | null) => {
-          input.current = node;
-          if (typeof inputRef === 'function') inputRef(node);
-          else if (inputRef !== undefined && inputRef !== null) inputRef.current = node;
-        }}
+        ref={setInput}
         id={id}
         type="search"
         aria-label={label}

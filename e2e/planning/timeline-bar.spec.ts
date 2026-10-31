@@ -237,6 +237,7 @@ test.describe('the slim bar above the timeline', () => {
     await page.getByRole('button', { name: 'Clear filter' }).click();
     await expect(orderRows).toHaveCount(6);
     await expect(filter).toBeFocused();
+    await checkA11y('the Gantt with the filter cleared');
 
     await filter.fill('9999');
     await expect(

@@ -87,6 +87,7 @@ import {
   fitTargetOf,
   type GanttRow,
   type JobOrderRow,
+  type Level1Row,
   notPlacedRows,
   rowHeightRem,
   selectionRowOf,
@@ -177,10 +178,12 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   // of every open order, so the move rules, the cascade and the workload see the whole plan.
   const loadRows = useCallback((page: GanttPageRequest) => source.loadRows({}, page), [source]);
   // The workload sums every order, so with the panel open every page of the row list loads.
-  const rowList = useGanttRows({ load: loadRows, all: options.workload });
+  // The workload sums every order, and under a filter the move rules need every order too, so
+  // then every page of the row list loads.
+  const query = search.q ?? '';
+  const rowList = useGanttRows({ load: loadRows, all: options.workload || query !== '' });
   // The order filter decides what is drawn (ADR 0090): its own row list loads the matching orders
   // by page, while there is a filter, and the rows drawn are those whose number matches.
-  const query = search.q ?? '';
   const loadMatching = useCallback(
     (page: GanttPageRequest) => source.loadRows({ search: query }, page),
     [source, query],
@@ -192,7 +195,9 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     const ids = new Set(rowList.orders.map((order) => order.id));
     return [...rowList.orders, ...matchList.orders.filter((order) => !ids.has(order.id))];
   }, [query, rowList.orders, matchList.orders]);
-  const frame = rowList.frame;
+  // The plant's frame comes with either list, so a filter still draws while the full list is
+  // refused as too many orders.
+  const frame = rowList.frame ?? matchList.frame;
   const [expanded, setExpanded] = useState<ExpandedState>(true);
   const [sort, setSort] = useState<GanttSort | undefined>(undefined);
   const [focusedRowId, setFocusedRowId] = useState<string | undefined>(undefined);
@@ -337,7 +342,15 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
 
   // The order filter's field, where focus goes when My draft leaves the bar or the filter clears.
   const filterInput = useRef<HTMLInputElement | null>(null);
-  const setQuery = (next: string) => void setSearch(withQuery(search, next));
+  // The field writes after its pause, so it updates the URL as it then is, not as it was at the
+  // key: a selection made in the pause stays.
+  const setQuery = (next: string) =>
+    void navigate({
+      to: '.',
+      search: (previous: Record<string, unknown>) =>
+        withQuery(ganttSearch(previous), next) as Record<string, unknown>,
+      replace: true,
+    });
   const clearFilter = () => {
     setQuery('');
     filterInput.current?.focus();
@@ -364,16 +377,18 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     [snapshot],
   );
   // The rows of the orders the filter matches, by their number at once, so the rows of other
-  // orders go before the filtered page answers.
+  // orders go before the filtered page answers; a run keeps only its matching orders.
   const rows = useMemo(
     () =>
       query === ''
         ? allRows
-        : allRows.filter((row) =>
-            (row.kind === 'run' ? row.orders : [row.order]).some((order) =>
-              matchesOrderFilter(order.number, query),
-            ),
-          ),
+        : allRows.flatMap((row): typeof allRows => {
+            if (row.kind !== 'run') return matchesOrderFilter(row.order.number, query) ? [row] : [];
+            const subRows = row.subRows.filter((each) =>
+              matchesOrderFilter(each.order.number, query),
+            );
+            return subRows.length === 0 ? [] : [{ ...row, subRows }];
+          }),
     [allRows, query],
   );
 
@@ -407,29 +422,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     plant: zoomPlant,
     dragging: () => moveStore.get()?.state.source === 'pointer',
   });
-  // The time area scrolls to the span of the filter's first match that has one, only when that
-  // first match changes, not on every key (ADR 0090). A link that opens filtered keeps its start.
-  const firstMatch =
-    query === '' ? undefined : rows.find((row) => fitTargetOf(row, rows).span !== undefined);
-  const scrolledToMatch = useRef<string | null | undefined>(
-    search.q === undefined ? undefined : null,
-  );
-  useEffect(() => {
-    if (query === '') {
-      scrolledToMatch.current = undefined;
-      return;
-    }
-    if (firstMatch === undefined || firstMatch.id === scrolledToMatch.current) return;
-    const linked = scrolledToMatch.current === null;
-    scrolledToMatch.current = firstMatch.id;
-    const span = fitTargetOf(firstMatch, rows).span;
-    if (linked || span === undefined || moveStore.get() !== undefined) return;
-    timelineZoom.stop();
-    buffer.goTo(
-      { band: zoom, pxPerHour: buffer.pxPerHour },
-      { ms: span.fromMs, viewportX: paneWidth },
-    );
-  });
 
   const followGrid = useCallback(() => {
     const lanes = workloadLanes.current;
@@ -453,6 +445,65 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     onExpandedChange: setExpanded,
   });
   const flatRows = table.getRowModel().rows;
+  // The time area scrolls to the span of the filter's first match in the drawn order that has one,
+  // only when that first match changes, not on every key (ADR 0090). A link that opens filtered
+  // at a start keeps it until the filter changes; a move in progress puts the scroll off.
+  // A match's span: from its loaded job orders, else from the row list, which knows it also while
+  // its time chunks are not loaded.
+  const matchSpanOf = useCallback(
+    (row: Level1Row) =>
+      fitTargetOf(row, rows).span ??
+      (row.kind === 'run'
+        ? row.subRows.find((each) => each.order.span)?.order.span
+        : row.order.span),
+    [rows],
+  );
+  const firstMatch = useMemo(
+    () =>
+      query === ''
+        ? undefined
+        : flatRows
+            .filter((row) => row.depth === 0)
+            // A row at depth 0 is a level 1 row: an order or a run.
+            .map((row) => row.original as Level1Row)
+            .find((row) => matchSpanOf(row) !== undefined),
+    [query, flatRows, matchSpanOf],
+  );
+  const linkedQuery = useRef(search.from === undefined ? undefined : search.q);
+  const scrolledToMatch = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (query === '') {
+      scrolledToMatch.current = undefined;
+      linkedQuery.current = undefined;
+      return;
+    }
+    if (firstMatch === undefined || firstMatch.id === scrolledToMatch.current) return;
+    if (moveStore.get() !== undefined) return;
+    scrolledToMatch.current = firstMatch.id;
+    if (query === linkedQuery.current) return;
+    linkedQuery.current = undefined;
+    const span = matchSpanOf(firstMatch);
+    if (span === undefined) return;
+    timelineZoom.stop();
+    buffer.goTo(
+      { band: zoom, pxPerHour: buffer.pxPerHour },
+      { ms: span.fromMs, viewportX: paneWidth },
+    );
+  });
+  // The filter's result is said politely once its rows are in (WCAG 4.1.3).
+  const matchCount = rows.reduce(
+    (sum, row) => sum + (row.kind === 'run' ? row.subRows.length : 1),
+    0,
+  );
+  const matchesKnown = query !== '' && drawnList.status === 'ready' && drawnList.next === 'done';
+  useEffect(() => {
+    if (!matchesKnown) return;
+    announce(
+      matchCount === 0
+        ? `No orders match ${query}`
+        : `${matchCount} ${matchCount === 1 ? 'order matches' : 'orders match'} ${query}`,
+    );
+  }, [matchesKnown, matchCount, query]);
   const unplaced = useMemo(() => notPlacedRows(rows), [rows]);
   // The vertical centre of each visible job order row's block, for the links, from the row heights.
   const rem = remPx();
@@ -1038,6 +1089,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                   state.status === 'loading' ||
                   unloaded.some((chunk) => chunk.status === 'loading') ||
                   drawnList.next === 'loading' ||
+                  drawnList.status === 'loading' ||
                   undefined
                 }
                 onKeyDown={(event) => {
@@ -1143,7 +1195,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                       />
                     );
                   })}
-                  {drawnList.next !== 'done' && (
+                  {drawnList.next !== 'done' && drawnList.status === 'ready' && (
                     <GanttMoreRows
                       rowIndex={flatRows.length + 3}
                       state={drawnList.next}

@@ -49,12 +49,23 @@ export interface VisibleStore {
   readonly subscribe: (listener: () => void) => () => void;
 }
 
-function createVisibleStore(): VisibleStore & { readonly set: (span: TimeRange) => void } {
+function createVisibleStore(): VisibleStore & {
+  readonly set: (span: TimeRange) => void;
+  /** The anchor of a buffer built but not laid out yet, which the span in view does not hold. */
+  readonly awaiting: () => ViewAnchor | undefined;
+  readonly await: (anchor: ViewAnchor) => void;
+} {
   let span: TimeRange | undefined;
+  let awaited: ViewAnchor | undefined;
   const listeners = new Set<() => void>();
   return {
     get: () => span,
+    awaiting: () => awaited,
+    await: (anchor) => {
+      awaited = anchor;
+    },
     set: (next) => {
+      awaited = undefined;
       if (span !== undefined && span.fromMs === next.fromMs && span.toMs === next.toMs) return;
       span = next;
       for (const listener of listeners) listener();
@@ -224,8 +235,20 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
       current = { ...current, seen, written: seen === newest ? [] : current.written };
       setState(current);
     } else if (current.viewportPx !== viewportPx || current.closedOf !== closedOf) {
-      const anchor = { ms: visible.get()?.fromMs ?? current.range.fromMs, viewportX: stickyWidth };
-      current = build(current.zoom, anchor, { seen: current.seen, written: current.written });
+      // A buffer the view moved to and has not laid out yet, as a grid drawn anew measures its
+      // width, keeps where it was going; else the start in view keeps its place.
+      const awaited = visible.awaiting();
+      const anchor = awaited ?? {
+        ms: visible.get()?.fromMs ?? current.range.fromMs,
+        viewportX: stickyWidth,
+      };
+      // A move the view made goes to the URL once scrolling stops, as it would have.
+      current = build(
+        current.zoom,
+        anchor,
+        { seen: current.seen, written: current.written },
+        awaited !== undefined,
+      );
       setState(current);
     }
   }
@@ -387,6 +410,7 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
       onNavigate(roundZoom(target.pxPerHour), plantDateOf(anchor.ms, timeZone));
       return;
     }
+    visible.await(anchor);
     setState(build(target, anchor, { seen: current.seen, written: current.written }, true, during));
   };
 

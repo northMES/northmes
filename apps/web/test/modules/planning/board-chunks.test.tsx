@@ -62,7 +62,11 @@ describe('ADR0089 the time chunks of the planning board (Loading by time chunk, 
     expect(
       await screen.findByRole('heading', { level: 2, name: 'Too many orders for the board' }),
     ).toBeTruthy();
-    expect(screen.getByText('More than 1,250 orders match. Narrow the filter.')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'More than 1,250 orders are open at this plant, more than the board shows at once.',
+      ),
+    ).toBeTruthy();
   });
 
   it('ADR0089 a later page of the row list that fails says so with Try again, and the board stays busy until every page is in', async () => {

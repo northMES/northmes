@@ -304,7 +304,9 @@ export function BoardScreen() {
       ? 'Too many job orders to show'
       : unloaded.some((chunk) => chunk.status === 'failed')
         ? 'Job orders not loaded'
-        : 'No jobs in this range';
+        : query !== ''
+          ? 'No job orders of the filtered orders in this range'
+          : 'No jobs in this range';
   const committed = useMemo(
     () =>
       frame === undefined || range === undefined
@@ -347,13 +349,13 @@ export function BoardScreen() {
       notPlaced: fullModel.notPlaced.filter(matching),
     };
   }, [fullModel, query]);
+  // No match is the row list's answer, not the drawn time, which may hold none of a match's job
+  // orders.
   const noMatch =
     query !== '' &&
-    model !== undefined &&
-    model.notPlaced.length === 0 &&
-    model.groups.every((group) => group.machines.every((machine) => machine.blocks.length === 0)) &&
     matchList.status === 'ready' &&
-    matchList.next === 'done';
+    matchList.next === 'done' &&
+    matchList.orders.length === 0;
   const scale = buffer.scale;
   const timeWidth = Math.ceil(scale?.widthPx ?? 0);
   // The zoom buttons over the time area: a gesture over them zooms the timeline too.
@@ -365,7 +367,15 @@ export function BoardScreen() {
     plant: zoomPlant,
     dragging: () => moveStore.get()?.state.source === 'pointer',
   });
-  const setQuery = (next: string) => void setSearch(withQuery(search, next));
+  // The field writes after its pause, so it updates the URL as it then is, not as it was at the
+  // key: a selection made in the pause stays.
+  const setQuery = (next: string) =>
+    void navigate({
+      to: '.',
+      search: (previous: Record<string, unknown>) =>
+        withQuery(boardSearch(previous), next) as Record<string, unknown>,
+      replace: true,
+    });
   const clearFilter = () => {
     setQuery('');
     filterInput.current?.focus();
@@ -377,36 +387,44 @@ export function BoardScreen() {
     void setSearch(search);
     announce(droppedKeyMessage);
   }, [droppedQuery, search, setSearch]);
-  // The time area scrolls to the span of the filter's first match that has one, only when that
-  // first match changes, not on every key (ADR 0090). A link that opens filtered keeps its start.
-  const firstMatchStart = (() => {
-    if (query === '' || snapshot === undefined) return undefined;
-    const byId = new Map(snapshot.productionOrders.map((order) => [order.id, order]));
-    for (const listed of matchList.orders) {
-      const order = byId.get(listed.id);
-      if (order === undefined || !matchesOrderFilter(order.number, query)) continue;
-      const starts = order.jobOrders.flatMap((row) =>
-        row.placement === undefined ? [] : [row.placement.setupStartMs],
-      );
-      if (starts.length > 0) return { id: order.id, ms: Math.min(...starts) };
-    }
-    return undefined;
-  })();
-  const scrolledToMatch = useRef<string | null | undefined>(
-    search.q === undefined ? undefined : null,
-  );
+  // The time area scrolls to the span of the filter's first match, from the row list, which knows
+  // it also when its job orders lie outside the loaded time, only when that first match changes,
+  // not on every key (ADR 0090). A link that opens filtered at a start keeps it until the filter
+  // changes; a move in progress puts the scroll off.
+  const firstMatchStart = useMemo(() => {
+    if (query === '') return undefined;
+    const listed = matchList.orders.find(
+      (order) => order.span !== undefined && matchesOrderFilter(order.number, query),
+    );
+    return listed?.span === undefined ? undefined : { id: listed.id, ms: listed.span.fromMs };
+  }, [query, matchList.orders]);
+  const linkedQuery = useRef(search.from === undefined ? undefined : search.q);
+  const scrolledToMatch = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (query === '') {
       scrolledToMatch.current = undefined;
+      linkedQuery.current = undefined;
       return;
     }
     if (firstMatchStart === undefined || firstMatchStart.id === scrolledToMatch.current) return;
-    const linked = scrolledToMatch.current === null;
+    if (moveStore.get() !== undefined) return;
     scrolledToMatch.current = firstMatchStart.id;
-    if (linked || moveStore.get() !== undefined) return;
+    if (query === linkedQuery.current) return;
+    linkedQuery.current = undefined;
     timelineZoom.stop();
     buffer.goTo(zoomNow, { ms: firstMatchStart.ms, viewportX: machineWidth });
   });
+  // The filter's result is said politely once the matching orders are in (WCAG 4.1.3).
+  const matchesKnown = query !== '' && matchList.status === 'ready' && matchList.next === 'done';
+  const matchCount = matchList.orders.length;
+  useEffect(() => {
+    if (!matchesKnown) return;
+    announce(
+      matchCount === 0
+        ? `No orders match ${query}`
+        : `${matchCount} ${matchCount === 1 ? 'order matches' : 'orders match'} ${query}`,
+    );
+  }, [matchesKnown, matchCount, query]);
   const cells = useMemo(() => {
     const byMachine = new Map<string, readonly BoardCellItem[]>();
     if (scale === undefined) return byMachine;
@@ -758,7 +776,8 @@ export function BoardScreen() {
     state = {
       status: 'error',
       title: 'Too many orders for the board',
-      description: `More than ${ganttMaxOrders.toLocaleString('en-GB')} orders match. Narrow the filter.`,
+      // The board needs every open order for its move rules, so the order filter cannot narrow it.
+      description: `More than ${ganttMaxOrders.toLocaleString('en-GB')} orders are open at this plant, more than the board shows at once.`,
       error: rowList.error,
       onRetry: () =>
         new Promise<void>((resolve) => {
@@ -791,18 +810,12 @@ export function BoardScreen() {
     };
   } else if (snapshot === undefined) {
     state = { status: 'loading' };
-  } else if (noMatch) {
-    // The filter matches no order: the empty state names it, and Clear filter brings every order
-    // back (ADR 0090).
+  } else if (query !== '' && (matchList.status === 'failed' || matchList.status === 'refused')) {
     state = {
-      status: 'empty',
-      title: `No orders match ${query}`,
-      description: 'No open production order has this text in its number.',
-      action: (
-        <Button variant="outline" onClick={clearFilter}>
-          Clear filter
-        </Button>
-      ),
+      status: 'error',
+      title: 'The matching orders could not be loaded',
+      error: matchList.error,
+      onRetry: async () => matchList.retry(),
     };
   } else if (noMachines) {
     state = {
@@ -818,6 +831,19 @@ export function BoardScreen() {
         >
           Open Machines
         </Link>
+      ),
+    };
+  } else if (noMatch) {
+    // The filter matches no order: the empty state names it, and Clear filter brings every order
+    // back (ADR 0090).
+    state = {
+      status: 'empty',
+      title: `No orders match ${query}`,
+      description: 'No open production order has this text in its number.',
+      action: (
+        <Button variant="outline" onClick={clearFilter}>
+          Clear filter
+        </Button>
       ),
     };
   }

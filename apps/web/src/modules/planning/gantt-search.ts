@@ -84,7 +84,7 @@ const searchKeys = z.object({
   // The router reads an all-digit value as a number, as it reads `order`.
   q: z
     .union([z.string(), z.number()])
-    .transform(String)
+    .transform((value) => String(value).trim())
     .pipe(z.string().min(1).max(maxFilterLength))
     .optional()
     .catch(undefined),

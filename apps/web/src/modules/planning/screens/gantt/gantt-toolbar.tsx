@@ -48,10 +48,9 @@ export interface GanttToolbarProps {
 
 /**
  * The slim bar above the order Gantt (ADR 0090, The bar above the timeline): Go to now, the order
- * filter, My draft
- * while the draft has changes, and one View menu at the right end with the columns, Hide closed
- * time, Workload, Cascade and the tree pane widths, which stay local. The zoom buttons sit over the
- * time area instead.
+ * filter, My draft while the draft has changes, and one View menu at the right end with the
+ * columns, Hide closed time, Workload, Cascade and the tree pane widths, which stay local. The zoom
+ * buttons sit over the time area instead.
  */
 export function GanttToolbar({
   onGoToNow,

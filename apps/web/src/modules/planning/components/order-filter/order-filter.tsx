@@ -24,7 +24,7 @@ export function OrderFilterField({
       delayMs={250}
       clearLabel="Clear filter"
       inputRef={inputRef}
-      className="h-8 w-48"
+      className="w-48"
     />
   );
 }

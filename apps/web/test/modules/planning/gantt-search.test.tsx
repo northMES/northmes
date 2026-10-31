@@ -64,6 +64,9 @@ describe('ganttSearch (plan 18, URL state)', () => {
     expect(ganttSearch({ q: 'x'.repeat(100) })).toEqual({ q: 'x'.repeat(100) });
     expect(ganttSearch({ q: 'x'.repeat(101) })).toEqual({});
     expect(ganttSearch({ q: '' })).toEqual({});
+    // Spaces around the text are not part of it, as in ADR 0016's list search.
+    expect(ganttSearch({ q: '  1003 ' })).toEqual({ q: '1003' });
+    expect(ganttSearch({ q: '   ' })).toEqual({});
   });
 
   it('#940 writes the filter, and leaves an empty one out of the URL', () => {
