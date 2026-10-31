@@ -631,12 +631,14 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
       [...selectedOrderIds, orderId].filter((id, index, all) => all.indexOf(id) === index),
     [selectedOrderIds],
   );
-  // Under a filter a run waits for every order, as a move does: its review checks their machines.
   const runActions = useMemo<GanttRunActions | undefined>(() => {
-    if (snapshot === undefined || committed === undefined || !rulesComplete) return undefined;
+    if (snapshot === undefined || committed === undefined) return undefined;
     const orderOf = (id: string) => snapshot.productionOrders.find((order) => order.id === id);
     return {
       canCombine: (orderId) => {
+        // Under a filter a run waits for every order, as a move does: its review checks their
+        // machines (ADR 0090). A split only removes draft changes, so it never waits.
+        if (!rulesComplete) return { ok: false, reason: 'Waits until every order has loaded' };
         const candidates = runCandidates(orderId);
         // An order already in a run joins no other until that run is split (ADR 0083 rule 1).
         for (const id of candidates) {
@@ -1302,6 +1304,11 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             timeZone={timeZone}
             machineName={view.machineName}
             onCascadeFromHere={(conflict: DraftConflict) => {
+              // Under a filter the cascade waits for every order, as a move does (ADR 0090).
+              if (!rulesComplete) {
+                announce('Cascade from here waits until every order has loaded.');
+                return;
+              }
               const { draft: next, refused } = cascadeFromHere(
                 committed ?? snapshot,
                 draft,

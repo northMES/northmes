@@ -249,6 +249,7 @@ describe('the order filter on the order Gantt (ADR 0090)', () => {
         .getByRole('menuitem', { name: 'Combine into a run' })
         .getAttribute('aria-disabled'),
     ).toBe('true');
+    expect(menu.textContent).toContain('Waits until every order has loaded');
     await user.keyboard('{Escape}');
   });
 
