@@ -27,14 +27,23 @@ async function showEveryColumn(page: Page): Promise<void> {
 
 /**
  * Scrolls the grid until the marker sits under the left pane, then reads, at the marker's x and the
- * row's vertical centre and at the centre of the cell over the marker, what the browser hits. The
- * buffer may move under a scroll, so the marker is found again after each one.
+ * row's vertical centre and at the centre of the cell over the marker, what the browser hits, and
+ * on the row's bottom border at the marker's x what the browser hits, how wide the pane's own
+ * bottom border is and how far above the row's bottom the pane ends. The overlay takes the pointer
+ * while the probe reads, so a layer painted over the pane is what it hits. The buffer may move
+ * under a scroll, so the marker is found again after each one.
  */
 async function coverOf(
   grid: Locator,
   marker: string,
   row: string,
-): Promise<{ under: boolean; atMarker: boolean; atCentre: boolean; cell: string }> {
+): Promise<{
+  under: boolean;
+  atMarker: boolean;
+  border: { hit: string; width: string; gap: number };
+  atCentre: boolean;
+  cell: string;
+}> {
   return grid.evaluate(
     async (element, { marker, row }) => {
       const frames = () =>
@@ -64,23 +73,44 @@ async function coverOf(
       }) as HTMLElement;
       const rect = cell.getBoundingClientRect();
       const y = rect.top + rect.height / 2;
-      const hit = (px: number) => {
-        const at = document.elementFromPoint(px, y);
-        return at !== null && cell.contains(at);
+      // The Gantt's tree pane holds the cells and draws the border; the board's cell is its own.
+      const cover = cell.closest<HTMLElement>('[data-tree-pane]') ?? cell;
+      const lineBottom = line.getBoundingClientRect().bottom;
+      const overlay = element.querySelector<HTMLElement>('[data-overlay]') as HTMLElement;
+      overlay.style.pointerEvents = 'auto';
+      const hit = (px: number, py: number, inside: HTMLElement) => {
+        const at = document.elementFromPoint(px, py);
+        return at !== null && inside.contains(at);
       };
-      return {
+      // What the browser hits, named so a failure says what lies over the pane.
+      const named = (at: Element | null) =>
+        at === null
+          ? 'nothing'
+          : `${at.tagName.toLowerCase()}${at.getAttribute('role') === null ? '' : `[role=${at.getAttribute('role')}]`}.${String(at.getAttribute('class')).slice(0, 80)}`;
+      // The top of the row line: the browser rounds the point to a device pixel, so at 1x the
+      // line's middle rounds onto the next row's first pixel.
+      const atLine = document.elementFromPoint(x, lineBottom - 1);
+      const result = {
         under: x > pane.left && x < pane.right,
-        atMarker: hit(x),
-        atCentre: hit(rect.left + rect.width / 2),
+        atMarker: hit(x, y, cell),
+        // The row's 1 px bottom border is the pane's own border, so the row line stays drawn.
+        border: {
+          hit: atLine !== null && cover.contains(atLine) ? 'pane' : named(atLine),
+          width: getComputedStyle(cover).borderBottomWidth,
+          gap: Math.round((lineBottom - cover.getBoundingClientRect().bottom) * 100) / 100,
+        },
+        atCentre: hit(rect.left + rect.width / 2, y, cell),
         cell: cell.getAttribute('role') ?? '',
       };
+      overlay.style.pointerEvents = '';
+      return result;
     },
     { marker, row },
   );
 }
 
 test.describe('the left pane of the timelines', () => {
-  test('#943 the Gantt tree pane covers the now line, the frozen window, a wait line and a deadline marker scrolled under it', async ({
+  test('#943 the Gantt tree pane covers the now line, the frozen window, a wait line and a deadline marker scrolled under it, on the bottom border of its rows too', async ({
     page,
     signIn,
   }) => {
@@ -108,13 +138,14 @@ test.describe('the left pane of the timelines', () => {
       expect(cover, marker).toEqual({
         under: true,
         atMarker: true,
+        border: { hit: 'pane', width: '1px', gap: 0 },
         atCentre: true,
         cell: expect.any(String),
       });
     }
   });
 
-  test('#943 the board machine column covers the now line and the frozen window scrolled under it', async ({
+  test('#943 the board machine column covers the now line and the frozen window scrolled under it, on the bottom border of its machine rows and group bands too', async ({
     page,
     signIn,
   }) => {
@@ -123,11 +154,17 @@ test.describe('the left pane of the timelines', () => {
     await expect(board).toBeVisible();
     await expect(board).not.toHaveAttribute('aria-busy', 'true');
 
-    for (const marker of ['[data-marker="now"]', '[data-marker="frozen"]']) {
-      const cover = await coverOf(board, marker, '[role="row"][data-machine]');
-      expect(cover, marker).toEqual({
+    // A machine row and the first group band, the row after the pinned Not placed row.
+    for (const [marker, row] of [
+      ['[data-marker="now"]', '[role="row"][data-machine]'],
+      ['[data-marker="frozen"]', '[role="row"][data-machine]'],
+      ['[data-marker="now"]', '[aria-rowindex="3"]'],
+    ] as const) {
+      const cover = await coverOf(board, marker, row);
+      expect(cover, `${marker} ${row}`).toEqual({
         under: true,
         atMarker: true,
+        border: { hit: 'pane', width: '1px', gap: 0 },
         atCentre: true,
         cell: 'rowheader',
       });
