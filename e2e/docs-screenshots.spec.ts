@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { unitOf } from '@northmes/contracts';
 import { coreLinks } from '@northmes/core-contracts';
 import type { Locator, Page } from '@playwright/test';
-import { devUsers, seedCompany } from '../scripts/stack/seed.mjs';
+import { devUsers } from '../scripts/stack/seed.mjs';
 import { expect, plant, test } from './fixtures.ts';
 
 // The screenshots on the docs site come from the seeded demo data, so they show no customer data
@@ -14,9 +14,6 @@ import { expect, plant, test } from './fixtures.ts';
 
 const writeImages = process.env.NORTHMES_DOCS_SCREENSHOTS === '1';
 const images = fileURLToPath(new URL('../apps/docs/images/', import.meta.url));
-
-/** The seed company's settings, where the users and roles live (ADR 0066). */
-const companySettings = `/settings/${seedCompany.id}`;
 
 /**
  * Saves the page as apps/docs/images/<name>.png when the run takes the docs screenshots, once
@@ -79,22 +76,24 @@ test.describe('the docs screenshots', () => {
     signIn,
     checkA11y,
   }) => {
-    await signIn(`${companySettings}/users`);
+    await signIn(coreLinks.settings.users({ plant }).href);
     await expect(page.getByRole('row', { name: /Alex Lund/ })).toBeVisible();
     await checkA11y('the users of the company');
     await docsImage(page, 'use/users');
 
-    await page.goto(`${companySettings}/users/${devUsers.planner.id}?tab=access`);
+    await page.goto(
+      coreLinks.settings.users.user({ plant, userId: devUsers.planner.id }, { tab: 'access' }).href,
+    );
     await expect(page.getByRole('table', { name: 'Roles of Alex Lund' })).toBeVisible();
     await checkA11y("a user's Access tab");
     await docsImage(page, 'use/user-access');
 
-    await page.goto(`${companySettings}/roles`);
+    await page.goto(coreLinks.settings.roles({ plant }).href);
     await expect(page.getByRole('row', { name: /Plant admin/ })).toBeVisible();
     await checkA11y('the roles of the company');
     await docsImage(page, 'use/roles');
 
-    await page.goto(coreLinks.people({ plant }).href);
+    await page.goto(coreLinks.settings.people({ plant }).href);
     await expect(page.getByRole('table', { name: 'People at Plant A' })).toBeVisible();
     await checkA11y('People at a plant');
     await docsImage(page, 'use/people');

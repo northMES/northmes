@@ -7,6 +7,7 @@ import {
   createNorthmesClient,
   createShellRoutes,
   ShellProvider,
+  settingsHref,
 } from '@northmes/web-sdk';
 import {
   createRoute,
@@ -27,6 +28,7 @@ import { SignInScreen } from '../auth/sign-in-screen/index.ts';
 import type { ShellModule } from '../modules.ts';
 import {
   type Crumb,
+  PageFrame,
   PageFrameTopBar,
   type PageFrameTopBarValue,
 } from '../ui/components/page-frame/index.ts';
@@ -36,7 +38,6 @@ import { useIsMobile } from '../ui/lib/use-mobile.ts';
 import { SidebarInset, SidebarProvider } from '../ui/primitives/sidebar.tsx';
 import { CoreCompanies, type ShellCompany } from './companies.graphql.ts';
 import { type PageGroup, PageGroupsProvider, ShellAllPages } from './shell-all-pages.tsx';
-import { CompanySettingsLanding, CompanySettingsLayout } from './shell-company-settings.tsx';
 import { ShellHelpMenu } from './shell-help-menu.tsx';
 import { createLandingRoute } from './shell-landing.tsx';
 import { ShellNotFound } from './shell-not-found.tsx';
@@ -44,10 +45,13 @@ import {
   allPagesHref,
   allPagesPath,
   companySettingsEntries,
-  currentOf,
+  entryAt,
   firstHref,
   groupAt,
+  isCompanySettingsPage,
   isCore,
+  isSettingsLanding,
+  isSettingsPage,
   mainId,
   menuLinks,
   moduleOfPath,
@@ -61,6 +65,12 @@ import {
   useFocusPageHeading,
 } from './shell-pages.ts';
 import { ShellRouteError } from './shell-route-error.tsx';
+import {
+  createOldSettingsRoute,
+  SettingsLandingProvider,
+  type SettingsLandingState,
+  ShellSettingsLanding,
+} from './shell-settings-landing.tsx';
 import {
   type SettingsGroup,
   ShellSettingsLayout,
@@ -94,13 +104,15 @@ export interface ShellRouterOptions {
 const nobody: ShellUser = { name: 'Not signed in', username: '' };
 
 /**
- * Creates the web's router, once at boot: each module's routes under /$plant, company settings at
- * /settings/$companyId with each module's settingsRoutes (ADR 0066), the landing at /, which sends
- * the user on or lists their plants (ADR 0066), and the sign-in page at /sign-in. The $plant route renders the D2 shell, and ShellProvider and the Apollo client of the
- * plant in the URL around the screen; company settings render their own layout without a plant,
- * with the client that names no plant. A viewer without a session who opens a plant or settings
- * page, or the landing, goes to sign-in with the page as the return path, and so does one whose request the API
- * refuses with 401, or with core.password_change_required, whose session ends first.
+ * Creates the web's router, once at boot: each module's routes under /$plant, each module's
+ * settingsRoutes under /$plant/settings with the settings landing (ADR 0066, #876), the landing at
+ * /, which sends the user on or lists their plants (ADR 0066), the old company settings URLs at
+ * /settings/<company id>, which lead to the same page under a plant of the company, and the
+ * sign-in page at /sign-in. The $plant route renders the D2 shell, and ShellProvider and the Apollo
+ * client of the plant in the URL around the screen; the company's settings pages render in it with
+ * the client that names no plant. A viewer without a session who opens a plant or settings page, or
+ * the landing, goes to sign-in with the page as the return path, and so does one whose request the
+ * API refuses with 401, or with core.password_change_required, whose session ends first.
  */
 export function createShellRouter(
   modules: readonly ShellModule[],
@@ -147,8 +159,8 @@ export function createShellRouter(
     },
   };
   // The user's companies and plants are the same at every plant, so one client without a plant
-  // reads them, and its cache serves every plant switch. Company settings, which have no plant,
-  // read and write through it too (ADR 0066).
+  // reads them, and its cache serves every plant switch. The company's settings pages read and
+  // write through it too, with the company in their variables (ADR 0066).
   const companiesClient = createNorthmesClient({ apiUrl, fetch, auth });
   clients.set('', companiesClient);
   const clientFor = (plant: string): ApolloClient => {
@@ -160,10 +172,8 @@ export function createShellRouter(
     await session.signOut();
     await toSignIn({ signedOut: true });
   };
-  // The plant the user was at last, where company settings lead back to (ADR 0066).
-  let lastPlant: string | undefined;
-  // The user's own choice of the main sidebar, kept while company settings replace the plant's
-  // layout, so leaving them returns it (ADR 0066).
+  // The user's own choice of the main sidebar, kept while a page without a plant, such as the
+  // landing, replaces the plant's layout, so coming back returns it (ADR 0066).
   const sidebarChoice: SidebarChoice = { open: true };
   const ordered = [...modules].sort((a, b) => a.order - b.order);
   const signedIn = ({ location }: { readonly location: { readonly href: string } }) => {
@@ -180,24 +190,11 @@ export function createShellRouter(
         companiesClient={companiesClient}
         session={session}
         onSignOut={signOut}
-        onPlant={(plant) => {
-          lastPlant = plant;
-        }}
         sidebarChoice={sidebarChoice}
       />
     ),
     plantBeforeLoad: signedIn,
-    settingsComponent: () => (
-      <CompanySettingsLayout
-        modules={ordered}
-        companiesClient={companiesClient}
-        user={session.user() ?? nobody}
-        onSignOut={signOut}
-        lastPlant={lastPlant}
-      />
-    ),
-    settingsIndexComponent: CompanySettingsLanding,
-    settingsBeforeLoad: signedIn,
+    settingsIndexComponent: ShellSettingsLanding,
     plantShellRoutes: (plantRoute) => [
       createRoute({
         getParentRoute: () => plantRoute,
@@ -213,6 +210,10 @@ export function createShellRouter(
         user: () => session.user() ?? nobody,
         onSignOut: signOut,
       }),
+      createOldSettingsRoute(rootRoute, {
+        client: companiesClient,
+        beforeLoad: signedIn,
+      }),
       createRoute({
         getParentRoute: () => rootRoute,
         path: signInPath,
@@ -224,7 +225,7 @@ export function createShellRouter(
   const router = createRouter({
     routeTree,
     history,
-    // Both render in the nearest layout: the plant's or company settings' (shell-306, NF1, NF3).
+    // Both render in the nearest layout, the plant's, settings included (shell-306, NF1, NF3).
     defaultNotFoundComponent: () => <ShellNotFound modules={ordered} />,
     defaultErrorComponent: (props) => <ShellRouteError {...props} modules={ordered} />,
   });
@@ -282,17 +283,18 @@ function firstOpenPage(
  * The crumbs the shell puts before a page's own (ADR 0067): the company, as text, when the user's
  * plants span two or more companies; the plant by its name, or its slug until the plants load,
  * linked to the plant's first page; then the module of the page, linked to its first entry, or on
- * a plant settings page the Settings crumb, linked to the first plant settings entry (ADR 0066).
- * Core's pages sit at the plant root and have no module crumb (ADR 0074). A page in a nested group,
- * as Articles in Master data, adds the group's crumb, as text, since the group has no page. A crumb
- * whose page is the one on screen is plain text.
+ * a settings page the Settings crumb, linked to the settings landing, which leads on to the first
+ * settings page the user may open (ADR 0066, #876); the landing itself adds none, since its own
+ * crumb is Settings. Core's pages sit at the plant root and have no module crumb (ADR 0074). A
+ * page in a nested group, as Articles in Master data, adds the group's crumb, as text, since the
+ * group has no page. A crumb whose page is the one on screen is plain text.
  */
 function shellTrail(
   modules: readonly ShellModule[],
   plant: string,
   companies: readonly ShellCompany[],
   pathname: string,
-  settingsHome: string | undefined,
+  inSettings: boolean,
 ): readonly Crumb[] {
   const crumb = (label: string, href: string | undefined): Crumb =>
     href === undefined || href === pathname ? { label } : { label, href };
@@ -302,7 +304,11 @@ function shellTrail(
     ...(found !== undefined && spansCompanies ? [{ label: found.company.name }] : []),
     crumb(found?.plant.name ?? plant, plantHome(modules, plant)),
   ];
-  if (settingsHome !== undefined) return [...head, crumb('Settings', settingsHome)];
+  if (inSettings) {
+    return isSettingsLanding(plant, pathname)
+      ? head
+      : [...head, crumb('Settings', settingsHref(plant))];
+  }
   const current = moduleOfPath(modules, pathname);
   const group = groupAt(current, plant, pathname);
   return [
@@ -345,13 +351,14 @@ function useSidebarOpen(inSettings: boolean, choice: SidebarChoice) {
 interface PlantLayoutProps {
   readonly modules: readonly ShellModule[];
   readonly clientFor: (plant: string) => ApolloClient;
-  /** The client without a plant, which reads the user's companies and plants. */
+  /**
+   * The client without a plant, which reads the user's companies and plants, and which the
+   * company's settings pages read and write through (ADR 0066).
+   */
   readonly companiesClient: ApolloClient;
   readonly session: AuthSession;
   readonly onSignOut: () => void;
-  /** Hears the plant the user is at, which company settings lead back to. */
-  readonly onPlant: (plant: string) => void;
-  /** The user's own choice of the main sidebar, which outlives a visit to company settings. */
+  /** The user's own choice of the main sidebar, which outlives a visit to a page without a plant. */
   readonly sidebarChoice: SidebarChoice;
 }
 
@@ -359,8 +366,10 @@ interface PlantLayoutProps {
  * The $plant route's component, the D2 planner shell: the skip link, the sidebar, the top bar with
  * the breadcrumb, the page actions and the Settings button, and main with the route, inside the
  * shell state and Apollo client of the plant. The DOM order is the focus order: skip link, sidebar,
- * top bar, main. A route whose entry is in the plant settings navigation gets the settings layout
- * inside main, the sidebar collapsed to the rail and the Settings crumb (ADR 0066). Once the user's
+ * top bar, main. A page under /<plant>/settings gets the settings layout inside main, the sidebar
+ * collapsed to the rail and the Settings crumb (ADR 0066, #876); a page of the company's settings,
+ * such as Users, reads and writes through the client without a plant, with the plant's company in
+ * the shell state, so its requests name the company and no plant. Once the user's
  * plants have loaded, a slug that names none of them gets the page of an unknown plant (ADR 0007,
  * D2 ST29) instead of the shell; while they load, or when they fail to, the shell shows the slug.
  */
@@ -370,14 +379,16 @@ function PlantLayout({
   companiesClient,
   session,
   onSignOut,
-  onPlant,
   sidebarChoice,
 }: PlantLayoutProps) {
   const { plant } = useParams({ strict: false });
   const main = useFocusPageHeading();
   useEffect(applyStoredTheme, []);
-  useEffect(() => onPlant(plant), [onPlant, plant]);
-  const { data } = useQuery(CoreCompanies, { client: companiesClient });
+  const {
+    data,
+    error: companiesError,
+    refetch: refetchCompanies,
+  } = useQuery(CoreCompanies, { client: companiesClient });
   // The permissions at the plant and its company, read only when an entry needs one.
   const gated = modules.some(
     (module) =>
@@ -385,7 +396,11 @@ function PlantLayout({
       (module.settingsLinks ?? []).length > 0 ||
       (module.contributions ?? []).length > 0,
   );
-  const { data: viewer } = useQuery(CoreViewer, { client: clientFor(plant), skip: !gated });
+  const {
+    data: viewer,
+    error: viewerError,
+    refetch: refetchViewer,
+  } = useQuery(CoreViewer, { client: clientFor(plant), skip: !gated });
   const permissions = useMemo(
     () => (viewer === undefined ? undefined : new Set(viewer.coreViewer.plantPermissions)),
     [viewer],
@@ -402,11 +417,10 @@ function PlantLayout({
   const companies = loaded ?? [];
   const found = plantOf(companies, plant);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  // A page is a plant settings page when its entry is in the plant settings navigation, whether
-  // or not the permissions have loaded, so its layout does not change once they do.
-  const inSettings = modules
-    .flatMap(plantSettingsLinks)
-    .some(({ link }) => currentOf(link({ plant }).href, pathname) !== undefined);
+  // A page is a settings page by its path, whether or not the permissions have loaded, so its
+  // layout does not change once they do.
+  const inSettings = isSettingsPage(plant, pathname);
+  const companyPage = inSettings && isCompanySettingsPage(modules, plant, pathname);
   const shown = shownTo(permissions);
   // The contributions the user may see at the plant: the slots render these (ADR 0068).
   const contributions = useMemo(
@@ -430,7 +444,7 @@ function PlantLayout({
   const companyEntries =
     companyId === undefined
       ? []
-      : companySettingsEntries(modules, companyPermissions, companyId).flatMap(
+      : companySettingsEntries(modules, companyPermissions, plant).flatMap(
           ({ entries }) => entries,
         );
   const settingsNavGroups: SettingsGroup[] =
@@ -440,6 +454,25 @@ function PlantLayout({
   const settingsTarget = settingsHome ?? companyEntries[0]?.href;
   const settingsButton: SettingsButtonTarget | undefined =
     settingsTarget === undefined ? undefined : { href: settingsTarget, current: inSettings };
+  // What the settings landing at /<plant>/settings leads to, once the permissions and the user's
+  // companies say: the company's pages need both.
+  const viewerFailed = viewer === undefined ? viewerError : undefined;
+  const companiesFailed = loaded === undefined ? companiesError : undefined;
+  const failed = viewerFailed ?? companiesFailed;
+  const landing = useMemo<SettingsLandingState>(
+    () => ({
+      href: settingsTarget,
+      loading: failed === undefined && ((gated && viewer === undefined) || loaded === undefined),
+      failed,
+      retry: () => Promise.allSettled([refetchViewer(), refetchCompanies()]),
+    }),
+    [settingsTarget, failed, gated, viewer, loaded, refetchViewer, refetchCompanies],
+  );
+  // The shell state of a page of the company's settings: the plant's, with its company.
+  const companyShell = useMemo(
+    () => (companyId === undefined ? undefined : { ...shell, companyId }),
+    [shell, companyId],
+  );
   const sidebar = useSidebarOpen(inSettings, sidebarChoice);
   const [breadcrumb, setBreadcrumb] = useState<HTMLElement | null>(null);
   const [actions, setActions] = useState<HTMLElement | null>(null);
@@ -464,18 +497,12 @@ function PlantLayout({
   const help = <ShellHelpMenu modules={modules} allPagesHref={allPagesHref(plant)} />;
   const topBar = useMemo<PageFrameTopBarValue>(
     () => ({
-      trail: shellTrail(
-        modules,
-        plant,
-        companies,
-        pathname,
-        inSettings ? (settingsHome ?? pathname) : undefined,
-      ),
+      trail: shellTrail(modules, plant, companies, pathname, inSettings),
       titleContext: plantName,
       breadcrumb,
       actions,
     }),
-    [modules, plant, companies, pathname, inSettings, settingsHome, plantName, breadcrumb, actions],
+    [modules, plant, companies, pathname, inSettings, plantName, breadcrumb, actions],
   );
   if (loaded !== undefined && found === undefined) {
     return (
@@ -489,6 +516,35 @@ function PlantLayout({
       />
     );
   }
+  // A page of the company's settings reads through the client without a plant, with the company
+  // in the shell state, once the user's companies say which company the plant is in (ADR 0066).
+  // Until then it shows its loading state under its entry's name, or the failed read with Try
+  // again.
+  const settingsPage = !companyPage ? (
+    <Outlet />
+  ) : companyShell === undefined ? (
+    <PageFrame
+      title={entryAt(modules, { plant }, pathname)?.label ?? 'Settings'}
+      state={
+        companiesFailed === undefined
+          ? { status: 'loading' }
+          : {
+              status: 'error',
+              title: 'Could not load settings',
+              error: companiesFailed,
+              onRetry: () => refetchCompanies(),
+            }
+      }
+    >
+      {null}
+    </PageFrame>
+  ) : (
+    <ApolloProvider client={companiesClient}>
+      <ShellProvider value={companyShell}>
+        <Outlet />
+      </ShellProvider>
+    </ApolloProvider>
+  );
   const page = inSettings ? (
     <ShellSettingsLayout
       column={
@@ -500,7 +556,7 @@ function PlantLayout({
         />
       }
     >
-      <Outlet />
+      <SettingsLandingProvider value={landing}>{settingsPage}</SettingsLandingProvider>
     </ShellSettingsLayout>
   ) : (
     <Outlet />

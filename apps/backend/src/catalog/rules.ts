@@ -26,8 +26,8 @@ function topSegments(manifest: object): string[] {
 
 /**
  * The web path segments that core's pages and the shell's own pages take (ADR 0074), with the path
- * each stands at and its owner. Core's pages sit at the plant root and at the company settings
- * root, so a module with one of these ids would sit where a page of core or of the shell is.
+ * each stands at and its owner. Core's pages sit at the plant root and at the settings root under
+ * it (#876), so a module with one of these ids would sit where a page of core or of the shell is.
  */
 interface ReservedWebSegment {
   readonly path: string;
@@ -39,14 +39,14 @@ const RESERVED_WEB_SEGMENTS: ReadonlyMap<string, ReservedWebSegment> = new Map<
   ReservedWebSegment
 >([
   ['all-pages', { path: '/$plant/all-pages', owner: 'shell' }],
-  ['settings', { path: '/settings', owner: 'shell' }],
-  ...topSegments(coreLinks.settings).map((segment): [string, ReservedWebSegment] => [
-    segment,
-    { path: `/settings/$companyId/${segment}`, owner: 'core' },
-  ]),
+  ['settings', { path: '/$plant/settings', owner: 'shell' }],
   ...topSegments(coreLinks).map((segment): [string, ReservedWebSegment] => [
     segment,
     { path: `/$plant/${segment}`, owner: 'core' },
+  ]),
+  ...topSegments(coreLinks.settings).map((segment): [string, ReservedWebSegment] => [
+    segment,
+    { path: `/$plant/settings/${segment}`, owner: 'core' },
   ]),
 ]);
 

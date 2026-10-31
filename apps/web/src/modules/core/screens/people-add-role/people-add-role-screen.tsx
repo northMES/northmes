@@ -34,7 +34,7 @@ export function PeopleAddRoleScreen() {
   const roles = useQuery(CoreRoles);
   const held = useQuery(CorePlantRoleAssignments, { errorPolicy: 'all' });
   const plantName = places.plant?.name ?? plant;
-  const people = coreLinks.people({ plant }).href;
+  const people = coreLinks.settings.people({ plant }).href;
   const forbidden = viewer.loaded && !viewer.can('core.roleAssignment:manage');
   const failed =
     shownUsers === undefined && users.error !== undefined

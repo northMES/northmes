@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
+import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ChevronDown, Copy, Ellipsis, Pencil, Plus, SlidersHorizontal } from 'lucide-react';
 import { useId, useMemo } from 'react';
@@ -49,10 +50,10 @@ type RoleRow = CoreRolesQuery['coreRoles'][number];
 
 /** The role's name, the link to its page. */
 function RoleLink({ role }: { readonly role: RoleRow }) {
-  const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   return (
     <Link
-      to={coreLinks.settings.roles.role({ companyId, roleId: role.id }).href}
+      to={coreLinks.settings.roles.role({ plant, roleId: role.id }).href}
       className="text-link underline underline-offset-2 hover:no-underline"
     >
       {role.name}
@@ -143,7 +144,7 @@ const columns: readonly DataTableColumn<RoleRow>[] = [
  * role New role from it. Company admin gets none while question 34 is open.
  */
 function RoleActions({ role }: { readonly role: RoleRow }) {
-  const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   const navigate = useNavigate();
   if (isCompanyAdmin(role)) return null;
   return (
@@ -160,7 +161,7 @@ function RoleActions({ role }: { readonly role: RoleRow }) {
           <DropdownMenuItem
             onClick={() =>
               navigate({
-                to: coreLinks.settings.roles.role.edit({ companyId, roleId: role.id }).href,
+                to: coreLinks.settings.roles.role.edit({ plant, roleId: role.id }).href,
               })
             }
           >
@@ -170,7 +171,7 @@ function RoleActions({ role }: { readonly role: RoleRow }) {
         )}
         <DropdownMenuItem
           onClick={() =>
-            navigate({ to: coreLinks.settings.roles.new({ companyId }, { from: role.id }).href })
+            navigate({ to: coreLinks.settings.roles.new({ plant }, { from: role.id }).href })
           }
         >
           <Copy aria-hidden />
@@ -324,6 +325,7 @@ function countOf(roles: number): string {
  */
 export function RolesScreen() {
   const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   const view = roleListSearch(useSearch({ strict: false }));
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -416,7 +418,7 @@ export function RolesScreen() {
       title={forbidden ? 'No access to Roles' : 'Roles'}
       actions={
         canManage ? (
-          <Link to={coreLinks.settings.roles.new({ companyId }).href} className={buttonVariants()}>
+          <Link to={coreLinks.settings.roles.new({ plant }).href} className={buttonVariants()}>
             <Plus aria-hidden />
             New role
           </Link>

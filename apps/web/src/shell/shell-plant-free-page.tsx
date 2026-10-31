@@ -57,7 +57,7 @@ export function ShellPlantFreePage({
   );
 }
 
-/** A company in a plant list, with its company settings landing where the user has a page there. */
+/** A company in a plant list, with the first of its settings pages the user may open, if any. */
 export interface PlantListCompany {
   readonly company: ShellCompany;
   readonly settings?: string;
@@ -72,8 +72,8 @@ export interface ShellPlantListProps {
  * The user's plants by company on the unknown plant page (D2 ST29), under its h2 Your plants: an
  * h3 per company and a list of its plants named by that heading, each with the switcher's Factory
  * mark, the plant link, which opens the plant's first page or its root, and the plant's path. A
- * company with a settings landing gets the link "{company} settings" beside its heading (ADR
- * 0066). The landing at `/` draws the same companies as a picker of tiles (shell-landing.tsx).
+ * company with a settings page the user may open gets the link "{company} settings" beside its
+ * heading (ADR 0066). The landing at `/` draws the same companies as a picker of tiles (shell-landing.tsx).
  */
 export function ShellPlantList({ modules, companies }: ShellPlantListProps) {
   return companies.map(({ company, settings }) => (

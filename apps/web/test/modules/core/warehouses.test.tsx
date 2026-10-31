@@ -4,7 +4,6 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
-import { companyId } from './access-fixtures.ts';
 import { renderCoreAt } from './core-app.tsx';
 
 afterEach(cleanup);
@@ -23,7 +22,7 @@ function statusLine(): string {
   return document.querySelector('[data-list-status]')?.textContent ?? '';
 }
 
-const warehouses = coreLinks.settings.warehouses({ companyId }).href;
+const warehouses = coreLinks.settings.warehouses({ plant: 'plant-a' }).href;
 
 /** The warehouses href with a search. */
 function withSearch(search: Record<string, string>): string {

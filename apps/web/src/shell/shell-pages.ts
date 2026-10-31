@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { companySettingsHref, coreModuleId } from '@northmes/web-sdk';
+import { coreModuleId, settingsHref, settingsPath } from '@northmes/web-sdk';
 import { useRouterState } from '@tanstack/react-router';
 import { useEffect, useRef } from 'react';
 import type { MenuGroup, MenuItem, MenuLink, SettingsLink, ShellModule } from '../modules.ts';
@@ -133,14 +133,15 @@ export function plantLinkHref(modules: readonly ShellModule[], plant: string): s
 
 /**
  * The module a path under a plant lies in: the module other than core whose id is the path's first
- * segment under the plant, or else core, whose pages sit at the plant root (ADR 0074), when it is
- * loaded.
+ * segment under the plant, or under the plant's settings, or else core, whose pages sit at the
+ * plant root and the settings root (ADR 0074, #876), when it is loaded.
  */
 export function moduleOfPath(
   modules: readonly ShellModule[],
   pathname: string,
 ): ShellModule | undefined {
-  const segment = pathname.split('/')[2];
+  const segments = pathname.split('/');
+  const segment = segments[2] === settingsPath ? segments[3] : segments[2];
   return (
     modules.find(({ module }) => module.id !== coreModuleId && module.id === segment) ??
     modules.find(({ module }) => module.id === coreModuleId)
@@ -163,20 +164,54 @@ export function plantOf(companies: readonly ShellCompany[], slug: string) {
 
 /**
  * The company settings entries of the modules that a user with these permissions at the company
- * may open, for a company: core's first, then the other modules' (ADR 0066).
+ * may open, under a plant of the company: core's first, then the other modules' (ADR 0066, #876).
  */
 export function companySettingsEntries(
   modules: readonly ShellModule[],
   permissions: ReadonlySet<string> | undefined,
-  companyId: string,
+  plant: string,
 ) {
   const shown = shownTo(permissions);
   return modules.map(({ module, settingsLinks = [] }) => ({
     moduleId: module.id,
     entries: settingsLinks
       .filter(shown)
-      .map(({ label, icon, link }) => ({ label, icon, href: link({ companyId }).href })),
+      .map(({ label, icon, link }) => ({ label, icon, href: link({ plant }).href })),
   }));
+}
+
+/**
+ * Whether a page is a plant's settings page: one under /<plant>/settings, the company's pages
+ * included (ADR 0066, #876).
+ */
+export function isSettingsPage(plant: string, pathname: string): boolean {
+  return currentOf(settingsHref(plant), pathname) !== undefined;
+}
+
+/** Whether a page is the settings landing itself, /<plant>/settings. */
+export function isSettingsLanding(plant: string, pathname: string): boolean {
+  return currentOf(settingsHref(plant), pathname) === 'page';
+}
+
+/** Go to Settings, the settings landing, from a page under it, or nothing on the landing itself. */
+export function settingsWayOut(plant: string, pathname: string): WayOut | undefined {
+  return isSettingsLanding(plant, pathname)
+    ? undefined
+    : { label: 'Go to Settings', href: settingsHref(plant) };
+}
+
+/**
+ * Whether a page is one of the company's settings pages under a plant, such as Users: its entry
+ * is a company settings entry, or the nearest one above it is (#876).
+ */
+export function isCompanySettingsPage(
+  modules: readonly ShellModule[],
+  plant: string,
+  pathname: string,
+): boolean {
+  return modules.some(({ settingsLinks = [] }) =>
+    settingsLinks.some(({ link }) => currentOf(link({ plant }).href, pathname) !== undefined),
+  );
 }
 
 /** An entry of a navigation as a page: its label and its href. */
@@ -185,25 +220,24 @@ export interface PageEntry {
   readonly href: string;
 }
 
-/** Where a page lives: a plant, by its slug, or company settings, by the company id. */
+/** Where a page lives: a plant, by its slug, or no plant. */
 export interface PagePlace {
   readonly plant?: string;
-  readonly companyId?: string;
 }
 
-/** Every entry of the modules at a place: the sidebar and plant settings, or company settings. */
-function entriesAt(modules: readonly ShellModule[], { plant, companyId }: PagePlace): PageEntry[] {
-  if (plant !== undefined) {
-    return modules.flatMap((module) =>
-      menuLinks(module).map(({ label, link }) => ({ label, href: link({ plant }).href })),
-    );
-  }
-  if (companyId !== undefined) {
-    return modules.flatMap(({ settingsLinks = [] }) =>
-      settingsLinks.map(({ label, link }) => ({ label, href: link({ companyId }).href })),
-    );
-  }
-  return [];
+/**
+ * Every entry of the modules at a place: the sidebar, plant settings and the company's settings
+ * pages under the plant.
+ */
+function entriesAt(modules: readonly ShellModule[], { plant }: PagePlace): PageEntry[] {
+  if (plant === undefined) return [];
+  return modules.flatMap((module) => [
+    ...menuLinks(module).map(({ label, link }) => ({ label, href: link({ plant }).href })),
+    ...(module.settingsLinks ?? []).map(({ label, link }) => ({
+      label,
+      href: link({ plant }).href,
+    })),
+  ]);
 }
 
 /**
@@ -238,25 +272,17 @@ function goTo(entry: MenuLink | undefined, plant: string, pathname: string): Way
 /**
  * The way out of a page that failed (D2 ST6, shell-306 SE): Go to the first sidebar entry of its
  * module, or See all pages when the page is that entry or the module has none (shell-306 LS3). A
- * page at the plant root is core's (ADR 0074). Outside a module, Go to the plant's first page; in
- * company settings, Go to the first company settings entry other than the page. Never the page
- * itself.
+ * page at the plant root is core's (ADR 0074). Outside a module, Go to the plant's first page.
+ * Under the plant's settings, Go to Settings, the landing that leads on to the first settings page
+ * the user may open (#876). Never the page itself.
  */
 export function wayOutOf(
   modules: readonly ShellModule[],
-  { plant, companyId }: PagePlace,
+  { plant }: PagePlace,
   pathname: string,
 ): WayOut | undefined {
-  if (companyId !== undefined) {
-    // The company landing goes on to the first page the user may open (#876), so the way out is
-    // the first company settings entry other than the page itself; a page the user may not open
-    // says so there. Without such an entry, the landing, which says what the user may open.
-    const entry = entriesAt(modules, { companyId }).find(({ href }) => href !== pathname);
-    if (entry !== undefined) return { label: `Go to ${entry.label}`, href: entry.href };
-    const landing = companySettingsHref(companyId);
-    return landing === pathname ? undefined : { label: 'Go to Company settings', href: landing };
-  }
   if (plant === undefined) return undefined;
+  if (isSettingsPage(plant, pathname)) return settingsWayOut(plant, pathname);
   const module = moduleOfPath(modules, pathname);
   if (module === undefined) return goTo(modules.flatMap(sidebarLinks)[0], plant, pathname);
   return (

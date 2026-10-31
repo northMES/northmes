@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { coreLinks } from '@northmes/core-contracts';
-import { companySettingsHref } from '@northmes/web-sdk';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -96,7 +95,7 @@ describe('the landing at /', () => {
     ]);
   });
 
-  it("ADR0066 the plant list links each company's settings where the user has a company settings page", async () => {
+  it("#876 the plant list links each company's settings, its first page the user may open under its first plant, where the user has one", async () => {
     const { fetch } = api(() => companiesWith(['plant-a'], [nordic]), companyAdmin);
     renderShellAt('/', shellModules, { fetch });
 
@@ -104,7 +103,7 @@ describe('the landing at /', () => {
     await within(main).findByRole('list', { name: 'Acme AB' });
     expect(
       (await within(main).findByRole('link', { name: 'Acme AB settings' })).getAttribute('href'),
-    ).toBe(companySettingsHref(companyId));
+    ).toBe(coreLinks.settings.users({ plant: 'plant-a' }).href);
     expect(within(main).queryByRole('link', { name: 'Nordic Steel settings' })).toBeNull();
   });
 
@@ -113,6 +112,18 @@ describe('the landing at /', () => {
 
   it('ADR0066 one plant and no company settings page redirects / to that plant', async () => {
     const { fetch } = api(() => companiesWith(['plant-a']));
+    const router = renderShellAt('/', shellModules, { fetch });
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(coreLinks.dashboard({ plant: 'plant-a' }).href),
+    );
+  });
+
+  it("#876 one plant redirects / to that plant without reading the company's permissions, so a failed read of them cannot hold the user back", async () => {
+    const { fetch } = fakeApi({
+      CoreCompanies: () => companiesWith(['plant-a']),
+      CoreViewer: () => unreachable,
+    });
     const router = renderShellAt('/', shellModules, { fetch });
 
     await waitFor(() =>
@@ -129,31 +140,16 @@ describe('the landing at /', () => {
     );
   });
 
-  it('ADR0066 one plant at Acme AB and a company settings page at Nordic Steel show the picker, so the page stays reachable (#872)', async () => {
+  it("#876 one plant at Acme AB and a company settings page at Nordic Steel, which has no plant, redirects / to the plant: the company's pages sit under its plants", async () => {
     const { fetch } = fakeApi({
       CoreCompanies: () => companiesWith(['plant-a'], [{ ...nordic, plants: [] }]),
       CoreViewer: ({ companyId: asked }) => viewer([], asked === nordicId ? companyAdmin : []),
     });
-    renderShellAt('/', shellModules, { fetch });
+    const router = renderShellAt('/', shellModules, { fetch });
 
-    const main = await screen.findByRole('main');
-    await within(main).findByRole('heading', { level: 1, name: 'Your plants' });
-    expect(await within(main).findByRole('link', { name: 'Nordic Steel settings' })).toBeDefined();
-    expect(within(main).getByRole('link', { name: 'Plant A' })).toBeDefined();
-  });
-
-  it('ADR0066 no plant and company settings pages at two companies show their settings links without the line that asks for a plant (#872)', async () => {
-    const { fetch } = fakeApi({
-      CoreCompanies: () => companiesWith([], [{ ...nordic, plants: [] }]),
-      CoreViewer: () => viewer([], companyAdmin),
-    });
-    renderShellAt('/', shellModules, { fetch });
-
-    const main = await screen.findByRole('main');
-    await within(main).findByRole('link', { name: 'Acme AB settings' });
-    await within(main).findByRole('link', { name: 'Nordic Steel settings' });
-    expect(within(main).queryByText('Pick the plant to work in.')).toBeNull();
-    expect(within(main).queryByRole('list')).toBeNull();
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe(coreLinks.dashboard({ plant: 'plant-a' }).href),
+    );
   });
 
   it('ADR0066 with several plants the landing asks the user to pick the plant to work in (#872)', async () => {
@@ -165,14 +161,16 @@ describe('the landing at /', () => {
     expect(within(main).getByText('Pick the plant to work in.')).toBeDefined();
   });
 
-  it('ADR0066 no plant and a company settings page in one company redirects / to the first page of /settings/<company id>', async () => {
-    const { fetch } = api(() => companiesWith([]), companyAdmin);
-    const router = renderShellAt('/', shellModules, { fetch });
+  it("#876 no plant and a company settings page says that no plant is assigned yet: the company's pages sit under its plants", async () => {
+    const { fetch } = fakeApi({
+      CoreCompanies: () => companiesWith([], [{ ...nordic, plants: [] }]),
+      CoreViewer: () => viewer([], companyAdmin),
+    });
+    renderShellAt('/', shellModules, { fetch });
 
-    // The company landing goes on to the first entry the user may open (#876).
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe(`${companySettingsHref(companyId)}/users`),
-    );
+    const main = await screen.findByRole('main');
+    expect(await within(main).findByText('No plant is assigned to you yet.')).toBeDefined();
+    expect(within(main).queryByRole('link')).toBeNull();
   });
 
   it('ADR0066 no plant and no company settings page says that no plant is assigned yet', async () => {

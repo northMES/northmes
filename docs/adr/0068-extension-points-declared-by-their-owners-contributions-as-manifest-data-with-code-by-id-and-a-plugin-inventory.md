@@ -236,7 +236,7 @@ Block fields and list columns share one kind. Both are a value per item, loaded 
 
 | Slot id | Kind | Owner | Props (frozen) | Wide | Narrow (below about 640 px) | When |
 |---|---|---|---|---|---|---|
-| `/$plant/<id>/*`, `/station/$stationId`, `/settings/$companyId/<id>/*` | route | each module | route params | the module's own pages | the same | decided; `settingsRoutes` only for core in release 1 ([ADR 0066][adr-0066]) |
+| `/$plant/<id>/*`, `/station/$stationId`, `/$plant/settings/<id>/*` | route | each module | route params | the module's own pages | the same | decided; `settingsRoutes` for core and planning in release 1 ([ADR 0066][adr-0066]) |
 | `core/shell/aside/v1` | region, one docked | core | `{ plantId }` | docked beside `main` | modal sheet | release 1, the AI chat panel; M-39 decides whether the shell or core's remote supplies it |
 | `planning/board/side/v1` | region | planning | `{ plantId, paused }` | docked beside the board | D3 decides | release 1, `example-widget` |
 | `planning/board/header/v1` | field | planning | `{ plantId }`; one item, the plant | one line in the header | wraps; the full text stays in the accessible name | release 1, the Pyramid connector, if M-31 gives it a remote |

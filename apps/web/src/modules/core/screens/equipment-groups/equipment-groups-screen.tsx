@@ -67,7 +67,7 @@ function columnsOf(plant: string, plantName: string): DataTableColumn<GroupRow>[
       header: 'Code',
       cell: (row) => (
         <Link
-          to={coreLinks.equipmentGroups.group({ plant, groupCode: row.group.code }).href}
+          to={coreLinks.settings.equipmentGroups.group({ plant, groupCode: row.group.code }).href}
           className={`font-mono ${link}`}
         >
           {row.group.code}
@@ -100,7 +100,10 @@ function columnsOf(plant: string, plantName: string): DataTableColumn<GroupRow>[
       cell: (row) => (
         <span className="flex justify-end">
           <Link
-            to={coreLinks.equipmentGroups.group.edit({ plant, groupCode: row.group.code }).href}
+            to={
+              coreLinks.settings.equipmentGroups.group.edit({ plant, groupCode: row.group.code })
+                .href
+            }
             aria-label={`Edit ${row.group.code}`}
             className={`${buttonVariants({ variant: 'outline' })} h-8 px-2.5`}
           >

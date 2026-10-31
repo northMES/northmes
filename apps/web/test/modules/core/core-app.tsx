@@ -16,6 +16,7 @@ import {
   Outlet,
   RouterProvider,
   useParams,
+  useRouterState,
 } from '@tanstack/react-router';
 import { render, within } from '@testing-library/react';
 import { from, mergeMap, tap } from 'rxjs';
@@ -37,19 +38,29 @@ import { ToolsSourceProvider } from '../../../src/modules/core/tools-source-cont
 import type { WarehousesSource } from '../../../src/modules/core/warehouses-data.ts';
 import { g1WarehousesSource } from '../../../src/modules/core/warehouses-data-g1.ts';
 import { WarehousesSourceProvider } from '../../../src/modules/core/warehouses-source-context.ts';
+import { shellModules } from '../../../src/modules.ts';
+import { isCompanySettingsPage } from '../../../src/shell/shell-pages.ts';
+import { companyId } from './access-fixtures.ts';
 
 /** The plant of every test, as the $plant segment names it. */
 export const plant = 'plant-a';
 
 /**
  * The $plant route's component of the tests: the shell state of the plant in the URL, whose first
- * page the user may open is Articles.
+ * page the user may open is Articles, with the company of the access fixtures on a page of the
+ * company's settings, as the shell gives it (#876).
  */
 function PlantStub() {
   const { plant } = useParams({ strict: false });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const company = isCompanySettingsPage(shellModules, plant, pathname) ? { companyId } : {};
   return (
     <ShellProvider
-      value={{ plant, home: { label: 'Articles', href: coreLinks.articles({ plant }).href } }}
+      value={{
+        plant,
+        home: { label: 'Articles', href: coreLinks.articles({ plant }).href },
+        ...company,
+      }}
     >
       <main>
         <Outlet />
@@ -58,17 +69,8 @@ function PlantStub() {
   );
 }
 
-/** The company settings route's component of the tests: the page alone, without a plant. */
-function SettingsStub() {
-  return (
-    <main>
-      <Outlet />
-    </main>
-  );
-}
-
 /**
- * Renders the core module's routes at href, at a plant or in company settings, with a
+ * Renders the core module's routes at href, at a plant or in its settings, with a
  * MockedProvider that answers each of mocks once and the contributions the shell would give the
  * slots, and returns the router, whose state.location shows the URL. A hold from holdRequests
  * keeps its requests from the mocks until the test releases them. The plant settings pages read
@@ -100,7 +102,6 @@ export function renderCoreAt(
     routeTree: createShellRoutes({
       modules: [coreModule],
       plantComponent: PlantStub,
-      settingsComponent: SettingsStub,
     }),
     history: createMemoryHistory({ initialEntries: [href] }),
   });

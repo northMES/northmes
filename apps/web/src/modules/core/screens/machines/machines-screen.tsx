@@ -63,7 +63,12 @@ function columnsOf(view: CellView): readonly DataTableColumn<MachineRow>[] {
       header: 'Code',
       cell: (row) => (
         <Link
-          to={coreLinks.machines.machine({ plant: view.plant, equipmentId: row.machine.code }).href}
+          to={
+            coreLinks.settings.machines.machine({
+              plant: view.plant,
+              equipmentId: row.machine.code,
+            }).href
+          }
           className="font-mono text-link underline underline-offset-2 hover:no-underline"
           data-machine={row.machine.code}
         >
@@ -112,8 +117,10 @@ function columnsOf(view: CellView): readonly DataTableColumn<MachineRow>[] {
         ) : (
           <Link
             to={
-              coreLinks.calendars.calendar({ plant: view.plant, calendarId: row.machine.calendar })
-                .href
+              coreLinks.settings.calendars.calendar({
+                plant: view.plant,
+                calendarId: row.machine.calendar,
+              }).href
             }
             className="font-mono text-link underline underline-offset-2 hover:no-underline"
           >
@@ -131,7 +138,7 @@ function columnsOf(view: CellView): readonly DataTableColumn<MachineRow>[] {
       header: 'Actions',
       headerHidden: true,
       cell: (row) => {
-        const edit = coreLinks.machines.machine.edit({
+        const edit = coreLinks.settings.machines.machine.edit({
           plant: view.plant,
           equipmentId: row.machine.code,
         }).href;
@@ -249,7 +256,7 @@ function EquipmentGroups({
           return (
             <Link
               key={group.code}
-              to={coreLinks.machines({ plant }, { group: group.code }).href}
+              to={coreLinks.settings.machines({ plant }, { group: group.code }).href}
               className={`${buttonVariants({ variant: 'outline' })} h-8 gap-2 px-2.5 font-normal`}
             >
               <GroupColor color={group.color} shape="dot" />

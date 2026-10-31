@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
+import { useShell } from '@northmes/web-sdk';
 import { useNavigate } from '@tanstack/react-router';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { type AssignPlace, AssignRoleForm } from '../../components/assign-role-form/index.ts';
@@ -20,6 +21,7 @@ import { CoreUser } from '../../user.graphql.ts';
  */
 export function AddRoleScreen() {
   const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   const navigate = useNavigate();
   const { user, state: userState } = useUser();
   const places = usePlaces();
@@ -49,11 +51,11 @@ export function AddRoleScreen() {
   ) {
     state = { status: 'loading' };
   }
-  const users = { label: 'Users', href: coreLinks.settings.users({ companyId }).href };
+  const users = { label: 'Users', href: coreLinks.settings.users({ plant }).href };
   const access =
     user === undefined
       ? undefined
-      : coreLinks.settings.users.user({ companyId, userId: user.id }, { tab: 'access' }).href;
+      : coreLinks.settings.users.user({ plant, userId: user.id }, { tab: 'access' }).href;
   const where: AssignPlace[] = [
     ...places.plants.map((plant) => ({ ...plant, kind: 'PLANT' as const })),
     ...(places.company === undefined ? [] : [{ ...places.company, kind: 'COMPANY' as const }]),

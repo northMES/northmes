@@ -675,7 +675,7 @@ export function BoardScreen() {
         'The board shows the machines marked as plannable. A plant admin adds machines in Machines and marks them there.',
       action: (
         <Link
-          to={coreLinks.machines({ plant }).href}
+          to={coreLinks.settings.machines({ plant }).href}
           className={buttonVariants({ variant: 'outline' })}
         >
           Open Machines

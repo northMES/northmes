@@ -81,7 +81,7 @@ const uuidv7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 
 describe('People in plant settings', () => {
   it('E04-S02 People lists who holds a role at the plant, by name, with Remove at this plant where the plant admin may remove it, and Add role', async () => {
-    renderCoreAt(coreLinks.people({ plant }).href, [
+    renderCoreAt(coreLinks.settings.people({ plant }).href, [
       viewerQuery(plantAdmin),
       companiesQuery(),
       peopleQuery([annaViewer, saraLead]),
@@ -99,7 +99,7 @@ describe('People in plant settings', () => {
       screen.getByRole('button', { name: 'Remove Shift lead at Plant A from Sara Nyberg' }),
     ).toBeDefined();
     expect((await screen.findByRole('link', { name: 'Add role' })).getAttribute('href')).toBe(
-      coreLinks.people.addRole({ plant }).href,
+      coreLinks.settings.people.addRole({ plant }).href,
     );
     expect(
       screen.getByText(
@@ -109,7 +109,7 @@ describe('People in plant settings', () => {
   });
 
   it('E04-S02 a role whose permissions the plant admin does not hold at the plant has no Remove', async () => {
-    renderCoreAt(coreLinks.people({ plant }).href, [
+    renderCoreAt(coreLinks.settings.people({ plant }).href, [
       viewerQuery(['core.user:read', 'core.role:read', 'core.roleAssignment:manage']),
       companiesQuery(),
       peopleQuery([saraLead]),
@@ -123,7 +123,7 @@ describe('People in plant settings', () => {
 
   it('E04-S02 Remove at this plant asks with an optional reason, removes the role, announces it and moves focus to the next row', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.people({ plant }).href, [
+    renderCoreAt(coreLinks.settings.people({ plant }).href, [
       viewerQuery(plantAdmin),
       companiesQuery(),
       peopleQuery([annaViewer, saraLead]),
@@ -180,7 +180,7 @@ describe('People in plant settings', () => {
 
   it("E04-S02 Remove at this plant names what the person loses there and what the person's other roles keep, read from the person's roles", async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.people({ plant }).href, [
+    renderCoreAt(coreLinks.settings.people({ plant }).href, [
       viewerQuery(plantAdmin),
       companiesQuery(),
       peopleQuery([annaViewer, saraLead]),
@@ -213,7 +213,7 @@ describe('People in plant settings', () => {
   it('E04-S02 Add role gives a person of the company a role at the plant, locks the roles the plant admin cannot give there, and returns to People', async () => {
     const user = userEvent.setup();
     const given = { ...heldAtPlant(planner, anna), id: '019a0000-0000-7000-8000-0000000000a9' };
-    const router = renderCoreAt(coreLinks.people.addRole({ plant }).href, [
+    const router = renderCoreAt(coreLinks.settings.people.addRole({ plant }).href, [
       viewerQuery(plantAdmin),
       companiesQuery(),
       companyUsersQuery([anna, sara]),
@@ -257,7 +257,7 @@ describe('People in plant settings', () => {
     await user.click(screen.getByRole('button', { name: 'Add role' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'People' })).toBeDefined();
-    expect(router.state.location.pathname).toBe(coreLinks.people({ plant }).href);
+    expect(router.state.location.pathname).toBe(coreLinks.settings.people({ plant }).href);
     await waitFor(() =>
       expect(spoken()).toBe(
         "Planner at Plant A added for Anna Berg. It applies from Anna Berg's next action.",
@@ -269,7 +269,7 @@ describe('People in plant settings', () => {
     const user = userEvent.setup();
     const erik = person('Erik Lind', 'e.lind');
     const annaTwo = { ...person('Anna Berg', 'a.berg2'), blocked: true };
-    renderCoreAt(coreLinks.people.addRole({ plant }).href, [
+    renderCoreAt(coreLinks.settings.people.addRole({ plant }).href, [
       viewerQuery(plantAdmin),
       companiesQuery(),
       companyUsersQuery([anna, annaTwo, sara]),
@@ -299,7 +299,7 @@ describe('People in plant settings', () => {
 
   it('E04-S02 Add role without a person lands on Person in the summary and sends nothing', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.people.addRole({ plant }).href, [
+    renderCoreAt(coreLinks.settings.people.addRole({ plant }).href, [
       viewerQuery(plantAdmin),
       companiesQuery(),
       companyUsersQuery([anna, sara]),
@@ -316,7 +316,7 @@ describe('People in plant settings', () => {
 
   it("E04-S02 a Plant admin opens a person from People and sees the person's roles per place, Remove only at the plant, and what the person can do at the plant", async () => {
     const user = userEvent.setup();
-    const router = renderCoreAt(coreLinks.people({ plant }).href, [
+    const router = renderCoreAt(coreLinks.settings.people({ plant }).href, [
       viewerQuery(plantAdmin),
       companiesQuery(),
       peopleQuery([annaViewer, saraLead]),
@@ -367,7 +367,7 @@ describe('People in plant settings', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Sara Nyberg' })).toBeDefined();
     expect(router.state.location.pathname).toBe(
-      coreLinks.people.person({ plant, userId: sara.id }).href,
+      coreLinks.settings.people.person({ plant, userId: sara.id }).href,
     );
     const roles = await screen.findByRole('table', { name: 'Roles of Sara Nyberg' });
     await waitFor(() =>
@@ -394,7 +394,7 @@ describe('People in plant settings', () => {
     const user = userEvent.setup();
     const given = { ...heldAtPlant(planner, sara), id: '019a0000-0000-7000-8000-0000000000b1' };
     const saraAtPlant = userOf(sara, [assignment(shiftLead, plantA, saraLead.id)]);
-    const router = renderCoreAt(coreLinks.people.person({ plant, userId: sara.id }).href, [
+    const router = renderCoreAt(coreLinks.settings.people.person({ plant, userId: sara.id }).href, [
       viewerQuery(plantAdmin),
       companiesQuery(),
       {
@@ -429,7 +429,7 @@ describe('People in plant settings', () => {
 
     const add = await screen.findByRole('link', { name: 'Add role' });
     expect(add.getAttribute('href')).toBe(
-      coreLinks.people.person.addRole({ plant, userId: sara.id }).href,
+      coreLinks.settings.people.person.addRole({ plant, userId: sara.id }).href,
     );
     await user.click(add);
 
@@ -437,7 +437,7 @@ describe('People in plant settings', () => {
       await screen.findByRole('heading', { level: 1, name: 'Add role for Sara Nyberg' }),
     ).toBeDefined();
     expect((await screen.findByRole('link', { name: 'Cancel' })).getAttribute('href')).toBe(
-      coreLinks.people.person({ plant, userId: sara.id }).href,
+      coreLinks.settings.people.person({ plant, userId: sara.id }).href,
     );
     expect(screen.queryByRole('combobox', { name: 'Person' })).toBeNull();
     await user.click(screen.getByRole('combobox', { name: 'Role' }));
@@ -453,7 +453,7 @@ describe('People in plant settings', () => {
     // The shell moves focus to the h1 on the path change (shell-pages), outside this harness.
     expect(await screen.findByRole('heading', { level: 1, name: 'Sara Nyberg' })).toBeDefined();
     expect(router.state.location.pathname).toBe(
-      coreLinks.people.person({ plant, userId: sara.id }).href,
+      coreLinks.settings.people.person({ plant, userId: sara.id }).href,
     );
     await waitFor(() =>
       expect(spoken()).toBe(
@@ -465,7 +465,7 @@ describe('People in plant settings', () => {
   });
 
   it('E04-S02 a reader without core.user:read at the plant gets the page No access to People', async () => {
-    renderCoreAt(coreLinks.people({ plant }).href, [
+    renderCoreAt(coreLinks.settings.people({ plant }).href, [
       viewerQuery(['core.article:read']),
       companiesQuery(),
       {

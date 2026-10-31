@@ -9,11 +9,12 @@ import { buttonVariants } from '../ui/primitives/button.tsx';
 import {
   allPagesHref,
   isCore,
+  isSettingsPage,
   mainId,
   moduleOfPath,
   plantHome,
+  settingsWayOut,
   sidebarLinks,
-  wayOutOf,
 } from './shell-pages.ts';
 
 /** The h1 and the title part of every not-found page (shell-306, doc copy). */
@@ -45,26 +46,27 @@ function moduleAt(modules: readonly ShellModule[], plant: string, pathname: stri
  * layout with no current sidebar entry: "Plant A has no page at /plant-a/reports. The link may be
  * out of date.", Go to Plant A, the plant's first page, and See all pages. Under a loaded module it
  * is D2's module page not found (ST5): "Equipment has no page at /plant-a/equipment/gauges",
- * Go to the module's first entry, See all pages, and the module in the document title. In company
- * settings, which replaced the admin frame of NF3 (ADR 0066), it renders in the settings layout with
- * Go to the first company settings entry, such as Users (#876). The path shows in Plex Mono.
+ * Go to the module's first entry, See all pages, and the module in the document title. Under the
+ * plant's settings, which replaced the admin frame of NF3 (ADR 0066), it renders in the settings
+ * layout with Go to Settings, the settings landing (#876). The path shows in Plex Mono.
  * The shell moves focus to the h1 as on any path change.
  */
 export function ShellNotFound({ modules }: { readonly modules: readonly ShellModule[] }) {
-  const { plant, companyId } = useParams({ strict: false });
+  const { plant } = useParams({ strict: false });
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const shellPlace = usePageFrameTopBar()?.titleContext ?? plant ?? 'NorthMES';
-  const module = plant === undefined ? undefined : moduleAt(modules, plant, pathname);
+  // Under the plant's settings the page belongs to Settings, whose landing is the way on (#876).
+  const inSettings = plant !== undefined && isSettingsPage(plant, pathname);
+  const module = plant === undefined || inSettings ? undefined : moduleAt(modules, plant, pathname);
   const place = module?.label ?? shellPlace;
   const home = plant === undefined ? undefined : plantHome(modules, plant);
-  const wayOn: WayOn | undefined =
-    companyId !== undefined
-      ? wayOutOf(modules, { companyId }, pathname)
-      : module !== undefined
-        ? { label: `Go to ${module.first.label}`, href: module.first.href }
-        : home !== undefined
-          ? { label: `Go to ${place}`, href: home }
-          : undefined;
+  const wayOn: WayOn | undefined = inSettings
+    ? settingsWayOut(plant, pathname)
+    : module !== undefined
+      ? { label: `Go to ${module.first.label}`, href: module.first.href }
+      : home !== undefined
+        ? { label: `Go to ${place}`, href: home }
+        : undefined;
   const page = (
     <PageFrame title={pageNotFound} titleSection={module?.label}>
       <StatePanel
@@ -93,8 +95,8 @@ export function ShellNotFound({ modules }: { readonly modules: readonly ShellMod
       />
     </PageFrame>
   );
-  // Outside a plant and company settings no layout holds main, so the page brings its own.
-  if (plant !== undefined || companyId !== undefined) return page;
+  // Outside a plant no layout holds main, so the page brings its own.
+  if (plant !== undefined) return page;
   return (
     <main id={mainId} tabIndex={-1} className="px-4 py-6 md:px-7">
       {page}

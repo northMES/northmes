@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { linkEntry } from '@northmes/contracts';
 import { coreLinks } from '@northmes/core-contracts';
-import { coreModuleId, type PlantRoute, type SettingsRoute } from '@northmes/web-sdk';
+import { coreModuleId, type PlantRoute, type SettingsRoute, settingsPath } from '@northmes/web-sdk';
 import {
   type AnyRoute,
   createRoute,
@@ -45,20 +45,15 @@ function lazyScreen(name: keyof typeof import('./screens.ts')) {
 }
 
 /**
- * The route that leads a URL with core after its parent's path, as bookmarks from before ADR 0074
- * hold, to the same page without it, with its search and hash: /plant-a/core/articles?q=hinge
- * leads to /plant-a/articles?q=hinge. `at` is the index of the core segment in the path's
- * segments, 2 under /$plant and 3 under /settings/$companyId.
+ * A route at `path` under its parent that leads a URL from before a move to the page's new path,
+ * which `move` makes from the old path's segments, with its search and hash.
  */
-function withoutCoreSegment(parent: AnyRoute, at: number) {
+function leadsOn(parent: AnyRoute, path: string, move: (segments: string[]) => string[]) {
   return createRoute({
     getParentRoute: () => parent,
-    path: `${coreModuleId}/$`,
+    path,
     beforeLoad: ({ location }: { readonly location: ParsedLocation }) => {
-      const pathname = location.pathname
-        .split('/')
-        .filter((_, index) => index !== at)
-        .join('/');
+      const pathname = move(location.pathname.split('/')).join('/');
       const hash = location.hash === '' ? '' : `#${location.hash}`;
       throw redirect({ href: `${pathname}${location.searchStr}${hash}`, replace: true });
     },
@@ -66,13 +61,46 @@ function withoutCoreSegment(parent: AnyRoute, at: number) {
 }
 
 /**
+ * The route that leads a URL with core after the plant, as bookmarks from before ADR 0074 hold, to
+ * the same page without it: /plant-a/core/articles?q=hinge leads to /plant-a/articles?q=hinge.
+ */
+function withoutCoreSegment(plantRoot: AnyRoute) {
+  return leadsOn(plantRoot, `${coreModuleId}/$`, (segments) =>
+    segments.filter((_, index) => index !== 2),
+  );
+}
+
+/**
+ * The route that leads a plant settings page's URL from before #876, at the plant root, to the
+ * same page under the plant's settings: /plant-a/people/<user> leads to
+ * /plant-a/settings/people/<user>.
+ */
+function underSettings(plantRoot: AnyRoute, segment: string) {
+  return leadsOn(plantRoot, `${segment}/$`, (segments) => [
+    ...segments.slice(0, 2),
+    settingsPath,
+    ...segments.slice(2),
+  ]);
+}
+
+/** Core's plant settings pages, which sat at the plant root before #876. */
+const movedToSettings = [
+  coreLinks.settings.plant,
+  coreLinks.settings.people,
+  coreLinks.settings.machines,
+  coreLinks.settings.equipmentGroups,
+  coreLinks.settings.calendars,
+];
+
+/**
  * The core module's routes under the shell's $plant route: the dashboard, the plant's landing page
- * (ADR 0078), the articles, the article groups, the customers, and People, the machines and the
- * calendars in plant settings (ADR 0066). The top route is pathless, so core's pages sit at the plant
- * root, as /plant-a/articles, and the old URLs with core in them lead there (ADR 0074). Each route
- * takes its path from its entry in coreLinks, so a path is written once, in the link manifest (ADR
- * 0062); a list and a record's page are the index routes of their entries. Each search definition
- * sits on its route, never in the lazy screens.ts, from which the screens load.
+ * (ADR 0078), the articles, the article groups, the customers, the routings and the tools. The top
+ * route is pathless, so core's pages sit at the plant root, as /plant-a/articles, and the old URLs
+ * with core in them lead there (ADR 0074), as the old URLs of the plant settings pages lead under
+ * the plant's settings (#876). Each route takes its path from its entry in coreLinks, so a path is
+ * written once, in the link manifest (ADR 0062); a list and a record's page are the index routes
+ * of their entries. Each search definition sits on its route, never in the lazy screens.ts, from
+ * which the screens load.
  */
 export function coreRoutes(plantRoute: PlantRoute) {
   const coreRoute = createRoute({ getParentRoute: () => plantRoute, id: coreModuleId });
@@ -134,115 +162,6 @@ export function coreRoutes(plantRoute: PlantRoute) {
     getParentRoute: () => articleGroupsRoute,
     path: linkEntry(coreLinks.articleGroups.articleGroup).path,
     component: lazyScreen('ArticleGroupScreen'),
-  });
-  const peopleRoute = createRoute({
-    getParentRoute: () => coreRoute,
-    path: linkEntry(coreLinks.people).path,
-  });
-  const peopleListRoute = createRoute({
-    getParentRoute: () => peopleRoute,
-    path: '/',
-    component: lazyScreen('PeopleScreen'),
-  });
-  const peopleAddRoleRoute = createRoute({
-    getParentRoute: () => peopleRoute,
-    path: linkEntry(coreLinks.people.addRole).path,
-    component: lazyScreen('PeopleAddRoleScreen'),
-  });
-  const personRoute = createRoute({
-    getParentRoute: () => peopleRoute,
-    path: linkEntry(coreLinks.people.person).path,
-  });
-  const personDetailRoute = createRoute({
-    getParentRoute: () => personRoute,
-    path: '/',
-    component: lazyScreen('PersonScreen'),
-  });
-  const personAddRoleRoute = createRoute({
-    getParentRoute: () => personRoute,
-    path: linkEntry(coreLinks.people.person.addRole).path,
-    component: lazyScreen('PersonAddRoleScreen'),
-  });
-  // Plant settings (ADR 0066; designs #688 and #729): the machines with each machine's page and its
-  // edit page, the equipment groups with each group's page and its edit page, and the calendars
-  // with each calendar's page. The list and the forms take the page state
-  // the mock source previews from the URL; a calendar's page keeps the week its week view shows.
-  const machinesRoute = createRoute({
-    getParentRoute: () => coreRoute,
-    path: linkEntry(coreLinks.machines).path,
-  });
-  const machineListRoute = createRoute({
-    getParentRoute: () => machinesRoute,
-    path: '/',
-    validateSearch: (raw: Record<string, unknown>) =>
-      urlSearchOfPlantSettingsList(machineListSearch(raw)),
-    component: lazyScreen('MachinesScreen'),
-  });
-  const machineRoute = createRoute({
-    getParentRoute: () => machinesRoute,
-    path: linkEntry(coreLinks.machines.machine).path,
-  });
-  const machineDetailRoute = createRoute({
-    getParentRoute: () => machineRoute,
-    path: '/',
-    validateSearch: machinePageSearch,
-    component: lazyScreen('MachineScreen'),
-  });
-  const editMachineRoute = createRoute({
-    getParentRoute: () => machineRoute,
-    path: linkEntry(coreLinks.machines.machine.edit).path,
-    validateSearch: machinePageSearch,
-    component: lazyScreen('EditMachineScreen'),
-  });
-  const equipmentGroupsRoute = createRoute({
-    getParentRoute: () => coreRoute,
-    path: linkEntry(coreLinks.equipmentGroups).path,
-  });
-  const equipmentGroupListRoute = createRoute({
-    getParentRoute: () => equipmentGroupsRoute,
-    path: '/',
-    validateSearch: (raw: Record<string, unknown>) =>
-      urlSearchOfPlantSettingsList(equipmentGroupListSearch(raw)),
-    component: lazyScreen('EquipmentGroupsScreen'),
-  });
-  const equipmentGroupRoute = createRoute({
-    getParentRoute: () => equipmentGroupsRoute,
-    path: linkEntry(coreLinks.equipmentGroups.group).path,
-  });
-  const equipmentGroupDetailRoute = createRoute({
-    getParentRoute: () => equipmentGroupRoute,
-    path: '/',
-    validateSearch: equipmentGroupPageSearch,
-    component: lazyScreen('EquipmentGroupScreen'),
-  });
-  const editEquipmentGroupRoute = createRoute({
-    getParentRoute: () => equipmentGroupRoute,
-    path: linkEntry(coreLinks.equipmentGroups.group.edit).path,
-    validateSearch: equipmentGroupPageSearch,
-    component: lazyScreen('EditEquipmentGroupScreen'),
-  });
-  // The plant's own page in plant settings (design #767), on the fixture G1 until the plant API.
-  const plantPageRoute = createRoute({
-    getParentRoute: () => coreRoute,
-    path: linkEntry(coreLinks.plant).path,
-    validateSearch: plantPageSearch,
-    component: lazyScreen('PlantScreen'),
-  });
-  const calendarsRoute = createRoute({
-    getParentRoute: () => coreRoute,
-    path: linkEntry(coreLinks.calendars).path,
-  });
-  const calendarListRoute = createRoute({
-    getParentRoute: () => calendarsRoute,
-    path: '/',
-    validateSearch: calendarPageSearch,
-    component: lazyScreen('CalendarsScreen'),
-  });
-  const calendarRoute = createRoute({
-    getParentRoute: () => calendarsRoute,
-    path: linkEntry(coreLinks.calendars.calendar).path,
-    validateSearch: calendarPageSearch,
-    component: lazyScreen('CalendarScreen'),
   });
   // The customers register under Master data (design #728), on the fixture G1 until customers have
   // their API.
@@ -309,7 +228,8 @@ export function coreRoutes(plantRoute: PlantRoute) {
     component: lazyScreen('ToolScreen'),
   });
   return coreRoute.addChildren([
-    withoutCoreSegment(coreRoute, 2),
+    withoutCoreSegment(coreRoute),
+    ...movedToSettings.map((entry) => underSettings(coreRoute, linkEntry(entry).path)),
     dashboardRoute,
     articlesRoute.addChildren([
       articleListRoute,
@@ -321,21 +241,6 @@ export function coreRoutes(plantRoute: PlantRoute) {
       newArticleGroupRoute,
       articleGroupRoute,
     ]),
-    plantPageRoute,
-    peopleRoute.addChildren([
-      peopleListRoute,
-      peopleAddRoleRoute,
-      personRoute.addChildren([personDetailRoute, personAddRoleRoute]),
-    ]),
-    machinesRoute.addChildren([
-      machineListRoute,
-      machineRoute.addChildren([machineDetailRoute, editMachineRoute]),
-    ]),
-    equipmentGroupsRoute.addChildren([
-      equipmentGroupListRoute,
-      equipmentGroupRoute.addChildren([equipmentGroupDetailRoute, editEquipmentGroupRoute]),
-    ]),
-    calendarsRoute.addChildren([calendarListRoute, calendarRoute]),
     customersRoute.addChildren([customerListRoute, customerRoute]),
     toolsRoute.addChildren([toolListRoute, toolRoute]),
     routingsRoute.addChildren([
@@ -346,14 +251,124 @@ export function coreRoutes(plantRoute: PlantRoute) {
 }
 
 /**
- * The core module's company settings routes under the shell's /settings/$companyId route (ADR
- * 0066): the users with a user's page and Add role, the roles with a role's page and its editor,
- * and the warehouses. Their paths come from the settings section of coreLinks. The top route is
- * pathless, so the users sit at /settings/<company id>/users, and the old URLs with core in them
- * lead there (ADR 0074).
+ * The core module's settings routes under the shell's /$plant/settings route (ADR 0066, #876):
+ * People with Add role and a person's page, the plant's own page, the machines, the equipment
+ * groups and the calendars of the plant; and the company's pages: the users with a user's page and
+ * Add role, the roles with a role's page and its editor, and the warehouses. Their paths come from
+ * the settings section of coreLinks. The top route is pathless, so People sits at
+ * /plant-a/settings/people and the users at /plant-a/settings/users (ADR 0074).
  */
 export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
   const coreRoute = createRoute({ getParentRoute: () => settingsRoute, id: coreModuleId });
+  const peopleRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.settings.people).path,
+  });
+  const peopleListRoute = createRoute({
+    getParentRoute: () => peopleRoute,
+    path: '/',
+    component: lazyScreen('PeopleScreen'),
+  });
+  const peopleAddRoleRoute = createRoute({
+    getParentRoute: () => peopleRoute,
+    path: linkEntry(coreLinks.settings.people.addRole).path,
+    component: lazyScreen('PeopleAddRoleScreen'),
+  });
+  const personRoute = createRoute({
+    getParentRoute: () => peopleRoute,
+    path: linkEntry(coreLinks.settings.people.person).path,
+  });
+  const personDetailRoute = createRoute({
+    getParentRoute: () => personRoute,
+    path: '/',
+    component: lazyScreen('PersonScreen'),
+  });
+  const personAddRoleRoute = createRoute({
+    getParentRoute: () => personRoute,
+    path: linkEntry(coreLinks.settings.people.person.addRole).path,
+    component: lazyScreen('PersonAddRoleScreen'),
+  });
+  // The machines with each machine's page and its edit page, the equipment groups with each
+  // group's page and its edit page, and the calendars with each calendar's page (designs #688 and
+  // #729). The list and the forms take the page state the mock source previews from the URL; a
+  // calendar's page keeps the week its week view shows.
+  const machinesRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.settings.machines).path,
+  });
+  const machineListRoute = createRoute({
+    getParentRoute: () => machinesRoute,
+    path: '/',
+    validateSearch: (raw: Record<string, unknown>) =>
+      urlSearchOfPlantSettingsList(machineListSearch(raw)),
+    component: lazyScreen('MachinesScreen'),
+  });
+  const machineRoute = createRoute({
+    getParentRoute: () => machinesRoute,
+    path: linkEntry(coreLinks.settings.machines.machine).path,
+  });
+  const machineDetailRoute = createRoute({
+    getParentRoute: () => machineRoute,
+    path: '/',
+    validateSearch: machinePageSearch,
+    component: lazyScreen('MachineScreen'),
+  });
+  const editMachineRoute = createRoute({
+    getParentRoute: () => machineRoute,
+    path: linkEntry(coreLinks.settings.machines.machine.edit).path,
+    validateSearch: machinePageSearch,
+    component: lazyScreen('EditMachineScreen'),
+  });
+  const equipmentGroupsRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.settings.equipmentGroups).path,
+  });
+  const equipmentGroupListRoute = createRoute({
+    getParentRoute: () => equipmentGroupsRoute,
+    path: '/',
+    validateSearch: (raw: Record<string, unknown>) =>
+      urlSearchOfPlantSettingsList(equipmentGroupListSearch(raw)),
+    component: lazyScreen('EquipmentGroupsScreen'),
+  });
+  const equipmentGroupRoute = createRoute({
+    getParentRoute: () => equipmentGroupsRoute,
+    path: linkEntry(coreLinks.settings.equipmentGroups.group).path,
+  });
+  const equipmentGroupDetailRoute = createRoute({
+    getParentRoute: () => equipmentGroupRoute,
+    path: '/',
+    validateSearch: equipmentGroupPageSearch,
+    component: lazyScreen('EquipmentGroupScreen'),
+  });
+  const editEquipmentGroupRoute = createRoute({
+    getParentRoute: () => equipmentGroupRoute,
+    path: linkEntry(coreLinks.settings.equipmentGroups.group.edit).path,
+    validateSearch: equipmentGroupPageSearch,
+    component: lazyScreen('EditEquipmentGroupScreen'),
+  });
+  // The plant's own page in plant settings (design #767), on the fixture G1 until the plant API.
+  const plantPageRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.settings.plant).path,
+    validateSearch: plantPageSearch,
+    component: lazyScreen('PlantScreen'),
+  });
+  const calendarsRoute = createRoute({
+    getParentRoute: () => coreRoute,
+    path: linkEntry(coreLinks.settings.calendars).path,
+  });
+  const calendarListRoute = createRoute({
+    getParentRoute: () => calendarsRoute,
+    path: '/',
+    validateSearch: calendarPageSearch,
+    component: lazyScreen('CalendarsScreen'),
+  });
+  const calendarRoute = createRoute({
+    getParentRoute: () => calendarsRoute,
+    path: linkEntry(coreLinks.settings.calendars.calendar).path,
+    validateSearch: calendarPageSearch,
+    component: lazyScreen('CalendarScreen'),
+  });
   const usersRoute = createRoute({
     getParentRoute: () => coreRoute,
     path: linkEntry(coreLinks.settings.users).path,
@@ -425,7 +440,21 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
     component: lazyScreen('WarehousesScreen'),
   });
   return coreRoute.addChildren([
-    withoutCoreSegment(coreRoute, 3),
+    plantPageRoute,
+    peopleRoute.addChildren([
+      peopleListRoute,
+      peopleAddRoleRoute,
+      personRoute.addChildren([personDetailRoute, personAddRoleRoute]),
+    ]),
+    machinesRoute.addChildren([
+      machineListRoute,
+      machineRoute.addChildren([machineDetailRoute, editMachineRoute]),
+    ]),
+    equipmentGroupsRoute.addChildren([
+      equipmentGroupListRoute,
+      equipmentGroupRoute.addChildren([equipmentGroupDetailRoute, editEquipmentGroupRoute]),
+    ]),
+    calendarsRoute.addChildren([calendarListRoute, calendarRoute]),
     warehousesRoute,
     usersRoute.addChildren([
       userListRoute,

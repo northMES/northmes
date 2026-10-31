@@ -56,27 +56,30 @@ describe('the role editor', () => {
    * orders".
    */
   function renderNewRoleFromPlanner() {
-    return renderCoreAt(coreLinks.settings.roles.new({ companyId }, { from: planner.id }).href, [
-      settingsViewerQuery(jonas),
-      companiesQuery(),
-      rolesQuery([shiftLead, planner, viewerRole]),
-      catalogQuery(),
-      {
-        request: {
-          query: CoreCreateRole,
-          variables: ({
-            input,
-          }: {
-            input: { id: string; name: string; permissions: string[]; reason?: string };
-          }) =>
-            uuidv7.test(input.id) &&
-            input.name === 'Night planner' &&
-            input.permissions.join() === 'planning.productionOrder:read' &&
-            input.reason === 'Night shift plans its own orders',
-        },
-        result: { data: { coreCreateRole: nightPlanner } },
-      } as MockLink.MockedResponse,
-    ]);
+    return renderCoreAt(
+      coreLinks.settings.roles.new({ plant: 'plant-a' }, { from: planner.id }).href,
+      [
+        settingsViewerQuery(jonas),
+        companiesQuery(),
+        rolesQuery([shiftLead, planner, viewerRole]),
+        catalogQuery(),
+        {
+          request: {
+            query: CoreCreateRole,
+            variables: ({
+              input,
+            }: {
+              input: { id: string; name: string; permissions: string[]; reason?: string };
+            }) =>
+              uuidv7.test(input.id) &&
+              input.name === 'Night planner' &&
+              input.permissions.join() === 'planning.productionOrder:read' &&
+              input.reason === 'Night shift plans its own orders',
+          },
+          result: { data: { coreCreateRole: nightPlanner } },
+        } as MockLink.MockedResponse,
+      ],
+    );
   }
 
   /** Unticks Run autoplan and Release production orders to the floor, so Read alone is left. */
@@ -200,14 +203,14 @@ describe('the role editor', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Night planner' })).toBeDefined();
     expect(router.state.location.pathname).toBe(
-      coreLinks.settings.roles.role({ companyId, roleId: nightPlanner.id }).href,
+      coreLinks.settings.roles.role({ plant: 'plant-a', roleId: nightPlanner.id }).href,
     );
     await waitFor(() => expect(spoken()).toBe('Night planner created.'));
   });
 
   it('E05-S06 Start from lists No role, then the custom roles and the default roles, each with its kind, and choosing one copies its permissions once and opens the modules it ticks', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.settings.roles.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.roles.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(karin),
       companiesQuery(),
       rolesQuery([shiftLead, planner, viewerRole]),
@@ -247,7 +250,7 @@ describe('the role editor', () => {
   it('E05-S06 a role created after the roles list was read shows on the list when the user returns to it', async () => {
     const user = userEvent.setup();
     const created = role('Night planner', []);
-    const router = renderCoreAt(coreLinks.settings.roles({ companyId }).href, [
+    const router = renderCoreAt(coreLinks.settings.roles({ plant: 'plant-a' }).href, [
       settingsViewerQuery(jonas),
       companiesQuery(),
       rolesQuery([shiftLead, planner, viewerRole]),
@@ -267,7 +270,7 @@ describe('the role editor', () => {
     await user.click(screen.getByRole('button', { name: 'Create role' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Night planner' })).toBeDefined();
 
-    await router.navigate({ to: coreLinks.settings.roles({ companyId }).href });
+    await router.navigate({ to: coreLinks.settings.roles({ plant: 'plant-a' }).href });
 
     expect(await screen.findByText('4 roles at Acme AB')).toBeDefined();
     expect(
@@ -277,12 +280,19 @@ describe('the role editor', () => {
 
   it('E05-S06 Edit role lets the editor untick a permission of the role he does not hold and tick it again, since the role holds it already', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.settings.roles.role.edit({ companyId, roleId: shiftLead.id }).href, [
-      settingsViewerQuery(['core.role:read', 'core.role:manage', 'planning.productionOrder:read']),
-      companiesQuery(),
-      roleQuery(shiftLead),
-      catalogQuery(),
-    ]);
+    renderCoreAt(
+      coreLinks.settings.roles.role.edit({ plant: 'plant-a', roleId: shiftLead.id }).href,
+      [
+        settingsViewerQuery([
+          'core.role:read',
+          'core.role:manage',
+          'planning.productionOrder:read',
+        ]),
+        companiesQuery(),
+        roleQuery(shiftLead),
+        catalogQuery(),
+      ],
+    );
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Edit Shift lead' })).toBeDefined();
     const release = await screen.findByRole('checkbox', {
@@ -298,12 +308,10 @@ describe('the role editor', () => {
   });
 
   it('E05-S06 Edit role locks adding a permission the editor does not hold where the role is assigned, says where, and the note above the checklist says why', async () => {
-    renderCoreAt(coreLinks.settings.roles.role.edit({ companyId, roleId: shiftLead.id }).href, [
-      settingsViewerQuery(jonas),
-      companiesQuery(),
-      roleQuery(shiftLead),
-      catalogQuery(),
-    ]);
+    renderCoreAt(
+      coreLinks.settings.roles.role.edit({ plant: 'plant-a', roleId: shiftLead.id }).href,
+      [settingsViewerQuery(jonas), companiesQuery(), roleQuery(shiftLead), catalogQuery()],
+    );
 
     const autoplan = await screen.findByRole('checkbox', { name: 'Run autoplan' });
     expect(autoplan.hasAttribute('disabled')).toBe(true);
@@ -319,12 +327,10 @@ describe('the role editor', () => {
 
   it('E05-S06 Edit role of a role nobody holds locks nothing, since adding a permission there needs none', async () => {
     const nightPlanner = role('Night planner', ['planning.productionOrder:read']);
-    renderCoreAt(coreLinks.settings.roles.role.edit({ companyId, roleId: nightPlanner.id }).href, [
-      settingsViewerQuery(jonas),
-      companiesQuery(),
-      roleQuery(nightPlanner),
-      catalogQuery(),
-    ]);
+    renderCoreAt(
+      coreLinks.settings.roles.role.edit({ plant: 'plant-a', roleId: nightPlanner.id }).href,
+      [settingsViewerQuery(jonas), companiesQuery(), roleQuery(nightPlanner), catalogQuery()],
+    );
 
     const autoplan = await screen.findByRole('checkbox', { name: 'Run autoplan' });
     expect(autoplan.hasAttribute('disabled')).toBe(false);
@@ -333,7 +339,7 @@ describe('the role editor', () => {
 
   it('E05-S06 a module with nothing ticked starts closed, and Enter on its button opens and closes it with focus kept', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.settings.roles.new({ companyId }).href, [
+    renderCoreAt(coreLinks.settings.roles.new({ plant: 'plant-a' }).href, [
       settingsViewerQuery(karin),
       companiesQuery(),
       rolesQuery([shiftLead]),
@@ -363,27 +369,30 @@ describe('the role editor', () => {
       version: 2,
       permissions: [...shiftLead.permissions, 'planning.autoplan:run'],
     };
-    renderCoreAt(coreLinks.settings.roles.role.edit({ companyId, roleId: shiftLead.id }).href, [
-      settingsViewerQuery(karin),
-      companiesQuery(),
-      roleQuery(shiftLead),
-      catalogQuery(),
-      {
-        request: {
-          query: CoreUpdateRole,
-          variables: {
-            input: {
-              id: shiftLead.id,
-              expectedVersion: 1,
-              name: 'Shift lead',
-              permissions: [...shiftLead.permissions, 'planning.autoplan:run'],
-              reason: 'Night shift plans too',
+    renderCoreAt(
+      coreLinks.settings.roles.role.edit({ plant: 'plant-a', roleId: shiftLead.id }).href,
+      [
+        settingsViewerQuery(karin),
+        companiesQuery(),
+        roleQuery(shiftLead),
+        catalogQuery(),
+        {
+          request: {
+            query: CoreUpdateRole,
+            variables: {
+              input: {
+                id: shiftLead.id,
+                expectedVersion: 1,
+                name: 'Shift lead',
+                permissions: [...shiftLead.permissions, 'planning.autoplan:run'],
+                reason: 'Night shift plans too',
+              },
             },
           },
+          result: { data: { coreUpdateRole: saved } },
         },
-        result: { data: { coreUpdateRole: saved } },
-      },
-    ]);
+      ],
+    );
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Edit Shift lead' })).toBeDefined();
     expect(await screen.findByText('Custom role, Acme AB')).toBeDefined();
@@ -445,7 +454,7 @@ describe('the role editor', () => {
       result: { data: { coreUpdateRole: { ...of, version: 2 } } },
     });
     const router = renderCoreAt(
-      coreLinks.settings.roles.role.edit({ companyId, roleId: both.id }).href,
+      coreLinks.settings.roles.role.edit({ plant: 'plant-a', roleId: both.id }).href,
       [
         settingsViewerQuery(karin),
         companiesQuery(),
@@ -464,7 +473,7 @@ describe('the role editor', () => {
     );
 
     await router.navigate({
-      to: coreLinks.settings.roles.role.edit({ companyId, roleId: nobody.id }).href,
+      to: coreLinks.settings.roles.role.edit({ plant: 'plant-a', roleId: nobody.id }).href,
     });
     await user.click(await screen.findByRole('checkbox', { name: 'Run autoplan' }));
     await user.click(screen.getByRole('button', { name: 'Save role' }));
@@ -475,28 +484,31 @@ describe('the role editor', () => {
 
   it('E05-S06 a Save refused without core.role:manage at the company says who can make the change (RO39)', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.settings.roles.role.edit({ companyId, roleId: shiftLead.id }).href, [
-      settingsViewerQuery(karin),
-      companiesQuery(),
-      roleQuery(shiftLead),
-      catalogQuery(),
-      {
-        request: {
-          query: CoreUpdateRole,
-          variables: (variables: Record<string, unknown>) => variables.input !== undefined,
-        },
-        result: {
-          data: null,
-          errors: [
-            {
-              message: 'x',
-              path: ['coreUpdateRole'],
-              extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
-            },
-          ],
-        },
-      } as MockLink.MockedResponse,
-    ]);
+    renderCoreAt(
+      coreLinks.settings.roles.role.edit({ plant: 'plant-a', roleId: shiftLead.id }).href,
+      [
+        settingsViewerQuery(karin),
+        companiesQuery(),
+        roleQuery(shiftLead),
+        catalogQuery(),
+        {
+          request: {
+            query: CoreUpdateRole,
+            variables: (variables: Record<string, unknown>) => variables.input !== undefined,
+          },
+          result: {
+            data: null,
+            errors: [
+              {
+                message: 'x',
+                path: ['coreUpdateRole'],
+                extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
+              },
+            ],
+          },
+        } as MockLink.MockedResponse,
+      ],
+    );
 
     expect(await screen.findByText('Unique within Acme AB.')).toBeDefined();
     await user.click(await screen.findByRole('checkbox', { name: 'Run autoplan' }));
@@ -510,40 +522,43 @@ describe('the role editor', () => {
 
   it('E05-S06 a Save the API refuses by the grant rule keeps every tick and the reason, and the summary takes focus and names the permission and who can act', async () => {
     const user = userEvent.setup();
-    renderCoreAt(coreLinks.settings.roles.role.edit({ companyId, roleId: shiftLead.id }).href, [
-      settingsViewerQuery(karin),
-      companiesQuery(),
-      roleQuery(shiftLead),
-      catalogQuery(),
-      {
-        request: {
-          query: CoreUpdateRole,
-          variables: {
-            input: {
-              id: shiftLead.id,
-              expectedVersion: 1,
-              name: 'Shift lead',
-              permissions: [...shiftLead.permissions, 'planning.autoplan:run'],
-              reason: 'Night shift',
-            },
-          },
-        },
-        result: {
-          data: null,
-          errors: [
-            {
-              message: 'You do not hold planning.autoplan:run at scope x',
-              path: ['coreUpdateRole'],
-              extensions: {
-                code: 'FORBIDDEN',
-                errorCode: 'core.role_not_held',
-                details: { scopeId: plantA.id, missingPermissions: ['planning.autoplan:run'] },
+    renderCoreAt(
+      coreLinks.settings.roles.role.edit({ plant: 'plant-a', roleId: shiftLead.id }).href,
+      [
+        settingsViewerQuery(karin),
+        companiesQuery(),
+        roleQuery(shiftLead),
+        catalogQuery(),
+        {
+          request: {
+            query: CoreUpdateRole,
+            variables: {
+              input: {
+                id: shiftLead.id,
+                expectedVersion: 1,
+                name: 'Shift lead',
+                permissions: [...shiftLead.permissions, 'planning.autoplan:run'],
+                reason: 'Night shift',
               },
             },
-          ],
+          },
+          result: {
+            data: null,
+            errors: [
+              {
+                message: 'You do not hold planning.autoplan:run at scope x',
+                path: ['coreUpdateRole'],
+                extensions: {
+                  code: 'FORBIDDEN',
+                  errorCode: 'core.role_not_held',
+                  details: { scopeId: plantA.id, missingPermissions: ['planning.autoplan:run'] },
+                },
+              },
+            ],
+          },
         },
-      },
-    ]);
+      ],
+    );
 
     // The refusal names the company, so the places load first.
     expect(await screen.findByText('Unique within Acme AB.')).toBeDefined();
@@ -579,32 +594,35 @@ describe('the role editor', () => {
   it('E05-S06 a Save refused because the role changed offers Reload role, which fills the saved role and moves focus to Role name', async () => {
     const user = userEvent.setup();
     const renamed = { ...shiftLead, name: 'Shift leader', version: 2 };
-    renderCoreAt(coreLinks.settings.roles.role.edit({ companyId, roleId: shiftLead.id }).href, [
-      settingsViewerQuery(karin),
-      companiesQuery(),
-      roleQuery(shiftLead),
-      catalogQuery(),
-      {
-        request: {
-          query: CoreUpdateRole,
-          variables: (variables: Record<string, unknown>) => variables.input !== undefined,
+    renderCoreAt(
+      coreLinks.settings.roles.role.edit({ plant: 'plant-a', roleId: shiftLead.id }).href,
+      [
+        settingsViewerQuery(karin),
+        companiesQuery(),
+        roleQuery(shiftLead),
+        catalogQuery(),
+        {
+          request: {
+            query: CoreUpdateRole,
+            variables: (variables: Record<string, unknown>) => variables.input !== undefined,
+          },
+          result: {
+            data: null,
+            errors: [
+              {
+                message: 'The role changed',
+                path: ['coreUpdateRole'],
+                extensions: { code: 'CONFLICT', errorCode: 'core.version_conflict' },
+              },
+            ],
+          },
+        } as MockLink.MockedResponse,
+        {
+          request: { query: CoreRole, variables: { id: shiftLead.id, companyId } },
+          result: { data: { coreRole: renamed } },
         },
-        result: {
-          data: null,
-          errors: [
-            {
-              message: 'The role changed',
-              path: ['coreUpdateRole'],
-              extensions: { code: 'CONFLICT', errorCode: 'core.version_conflict' },
-            },
-          ],
-        },
-      } as MockLink.MockedResponse,
-      {
-        request: { query: CoreRole, variables: { id: shiftLead.id, companyId } },
-        result: { data: { coreRole: renamed } },
-      },
-    ]);
+      ],
+    );
 
     await user.click(await screen.findByRole('checkbox', { name: 'Run autoplan' }));
     await user.click(screen.getByRole('button', { name: 'Save role' }));
@@ -621,11 +639,10 @@ describe('the role editor', () => {
   });
 
   it('E05-S06 the edit route without core.role:manage at Acme AB is the page No access to Edit role', async () => {
-    renderCoreAt(coreLinks.settings.roles.role.edit({ companyId, roleId: shiftLead.id }).href, [
-      settingsViewerQuery(['core.role:read']),
-      companiesQuery(),
-      roleQuery(shiftLead),
-    ]);
+    renderCoreAt(
+      coreLinks.settings.roles.role.edit({ plant: 'plant-a', roleId: shiftLead.id }).href,
+      [settingsViewerQuery(['core.role:read']), companiesQuery(), roleQuery(shiftLead)],
+    );
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'No access to Edit role' }),

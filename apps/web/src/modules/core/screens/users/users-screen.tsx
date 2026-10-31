@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
+import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import {
   Ban,
@@ -60,10 +61,10 @@ const searchFieldId = 'users-search';
 
 /** The user's name, the link to the user's page. */
 function UserLink({ user }: { readonly user: UserRow }) {
-  const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   return (
     <Link
-      to={coreLinks.settings.users.user({ companyId, userId: user.id }).href}
+      to={coreLinks.settings.users.user({ plant, userId: user.id }).href}
       className="text-link underline underline-offset-2 hover:no-underline"
     >
       {user.name}
@@ -271,6 +272,7 @@ const statusChoices: readonly FilterChoice<UserStatusFilter>[] = [
  */
 export function UsersScreen() {
   const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   const places = usePlaces();
   const viewer = useViewer();
   const view = userListSearch(useSearch({ strict: false }));
@@ -309,7 +311,7 @@ export function UsersScreen() {
   const forbidden = page === undefined && isForbidden(error);
   // The API checks core.user:create at the company (its scope hook).
   const newUser = viewer.canAtCompany('core.user:create') ? (
-    <Link to={coreLinks.settings.users.new({ companyId }).href} className={buttonVariants()}>
+    <Link to={coreLinks.settings.users.new({ plant }).href} className={buttonVariants()}>
       <Plus aria-hidden />
       New user
     </Link>

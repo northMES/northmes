@@ -65,7 +65,11 @@ export function PeopleScreen() {
   const canAdd = viewer.can('core.roleAssignment:manage') && viewer.can('core.role:read');
   const addRoleLink = (id?: string) =>
     canAdd ? (
-      <Link id={id} to={coreLinks.people.addRole({ plant }).href} className={buttonVariants()}>
+      <Link
+        id={id}
+        to={coreLinks.settings.people.addRole({ plant }).href}
+        className={buttonVariants()}
+      >
         <Plus aria-hidden />
         Add role
       </Link>
@@ -125,7 +129,7 @@ export function PeopleScreen() {
               <TableRow key={assignment.id}>
                 <TableCell>
                   <Link
-                    to={coreLinks.people.person({ plant, userId: user.id }).href}
+                    to={coreLinks.settings.people.person({ plant, userId: user.id }).href}
                     className="text-link underline underline-offset-2 hover:no-underline"
                   >
                     {user.name}

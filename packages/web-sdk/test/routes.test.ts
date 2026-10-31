@@ -21,7 +21,7 @@ const quality = defineWebModule({
 });
 
 describe('createShellRoutes', () => {
-  it("E02-S05 createShellRoutes mounts a module's routes under /$plant/<id>, beside company settings and their landing", () => {
+  it("#876 createShellRoutes mounts a module's routes under /$plant/<id>, beside the settings landing at /$plant/settings", () => {
     const router = createRouter({
       routeTree: createShellRoutes({ modules: [planning, quality] }),
       history: createMemoryHistory(),
@@ -33,8 +33,8 @@ describe('createShellRoutes', () => {
       '/$plant/planning',
       '/$plant/planning/board',
       '/$plant/quality',
-      // The landing, the index route of /settings/$companyId, has its parent's path.
-      '/settings/$companyId',
+      // The landing, the index route of /$plant/settings, has its parent's path.
+      '/$plant/settings',
     ]);
   });
 });

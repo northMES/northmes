@@ -64,7 +64,7 @@ export function EquipmentGroupScreen() {
   const search = equipmentGroupPageSearch(useSearch({ strict: false }));
   const { snapshot, error, retry } = usePlantSettings(search.preview);
   const group = snapshot?.equipmentGroups.find((each) => each.code === groupCode);
-  const back = coreLinks.equipmentGroups({ plant }).href;
+  const back = coreLinks.settings.equipmentGroups({ plant }).href;
 
   const state = equipmentGroupPageState({
     plant,
@@ -83,7 +83,9 @@ export function EquipmentGroupScreen() {
       actions={
         group === undefined ? undefined : (
           <Link
-            to={coreLinks.equipmentGroups.group.edit({ plant, groupCode: group.code }).href}
+            to={
+              coreLinks.settings.equipmentGroups.group.edit({ plant, groupCode: group.code }).href
+            }
             className={buttonVariants({ variant: 'outline' })}
           >
             <Pencil aria-hidden />
@@ -150,7 +152,10 @@ export function EquipmentGroupScreen() {
                         <TableCell className={cell}>
                           <Link
                             to={
-                              coreLinks.machines.machine({ plant, equipmentId: machine.code }).href
+                              coreLinks.settings.machines.machine({
+                                plant,
+                                equipmentId: machine.code,
+                              }).href
                             }
                             className={`font-mono ${link}`}
                           >
