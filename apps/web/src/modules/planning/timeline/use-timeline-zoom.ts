@@ -23,7 +23,6 @@ import {
   type Zoom,
   zoomClamp,
   zoomLevels,
-  zoomOf,
 } from './time-scale.ts';
 import type { TimeBuffer } from './use-time-buffer.ts';
 import {
@@ -57,8 +56,6 @@ export interface TimelineZoomInput {
 }
 
 export interface TimelineZoom {
-  /** A level from the level menu, at its natural width, around the centre of the view. */
-  readonly setLevel: (zoom: ZoomLevel) => void;
   /** Zoom in or Zoom out, around the centre of the view. */
   readonly step: (direction: 'in' | 'out') => void;
   /** Zoom to fit a span, or nothing when there is none. */
@@ -176,15 +173,6 @@ export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
   };
 
   return {
-    setLevel: (level) => {
-      if (dragging?.() === true) return;
-      motion.stop();
-      const zoom = zoomOf(level);
-      buffer.goTo(zoom, centre());
-      if (level !== current.band || zoom.pxPerHour !== current.pxPerHour) {
-        announce(`Zoom: ${zoomLevels[level].label}`);
-      }
-    },
     step: (direction) => stepAt(direction, centre),
     fit: (span, name) => {
       // With no rows drawn there is nothing to fit, nor a view to fit it in.

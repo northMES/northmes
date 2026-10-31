@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
 
@@ -24,9 +24,13 @@ function geometry(gantt: HTMLElement) {
   };
 }
 
-/** The toolbar's range text, which names the span in view. */
+/**
+ * The span in view, as the grid's name says it once scrolling stops: the bar above the timeline has
+ * no range text (ADR 0090).
+ */
 function rangeText(): string {
-  return (document.querySelector('[data-range-text]')?.textContent ?? '').trim();
+  const name = document.querySelector('[role="treegrid"]')?.getAttribute('aria-label') ?? '';
+  return name.replace(/^plant-a order Gantt, /, '');
 }
 
 function timeHeaderText(gantt: HTMLElement): string {
@@ -50,7 +54,8 @@ describe('the endless axis of the order Gantt (ADR 0089, #883)', () => {
     // The view starts one viewport width into the buffer, at Wed 4 Nov 06:00.
     expect(gantt.scrollLeft).toBeGreaterThan(0.75 * viewport);
     expect(rangeText()).toMatch(/^Wed 4 Nov to /);
-    expect(gantt.getAttribute('aria-label')).toBe(`plant-a order Gantt, ${rangeText()}`);
+    // The header's top tier names the dates in view, and the buffer's day before.
+    expect(timeHeaderText(gantt)).toContain('Wed 4 Nov');
     expect(timeHeaderText(gantt)).toContain('Tue 3 Nov');
   });
 
@@ -75,28 +80,27 @@ describe('the endless axis of the order Gantt (ADR 0089, #883)', () => {
     expect(Math.abs(geometry(gantt).bufferWidth - 3 * viewport)).toBeLessThanOrEqual(7);
   });
 
-  it('#883 keeps the range text with the view however often the planner scrolls to the right edge', async () => {
+  it('#883 keeps the header with the view however often the planner scrolls to the right edge', async () => {
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
     const { viewport } = geometry(gantt);
-    const texts: string[] = [];
+    const starts: string[] = [];
 
     for (let step = 0; step < 6; step += 1) {
       const { bufferWidth } = geometry(gantt);
       scrollTo(gantt, bufferWidth - viewport);
-      texts.push(rangeText());
+      starts.push(bufferStart(gantt));
       // The buffer keeps three viewport widths; it never grows with the scrolls.
       expect(Math.abs(geometry(gantt).bufferWidth - 3 * viewport)).toBeLessThanOrEqual(7);
     }
 
-    // Each scroll shows a later span than the one before, so the text follows the view.
-    expect(new Set(texts).size).toBe(6);
-    expect(texts[0]).not.toMatch(/^W45, Mon 2 Nov/);
+    // Each scroll moves the buffer later, so the header's dates follow the view.
+    expect(new Set(starts).size).toBe(6);
     // Once scrolling stops, the visible start goes to the URL and names the grid.
     await waitFor(() =>
       expect(router.state.location.search.from).toMatch(/^2026-1[12]-\d\dT\d\d:\d\d$/),
     );
-    expect(gantt.getAttribute('aria-label')).toBe(`plant-a order Gantt, ${rangeText()}`);
+    await waitFor(() => expect(rangeText()).not.toMatch(/^W45, Mon 2 Nov/));
   });
 
   it('ADR0089 writes the visible start to the URL with replace when scrolling stops', async () => {
@@ -127,17 +131,18 @@ describe('the endless axis of the order Gantt (ADR 0089, #883)', () => {
     expect(bufferStart(gantt)).toBe(before);
   });
 
-  it('ADR0089 Earlier and Later show the view one viewport width before or after', async () => {
+  it('#939 Alt+Page Down and Alt+Page Up show the view one viewport width after or before', async () => {
     const router = renderGanttRoute({ zoom: 'day', from: '2026-11-04' });
-    await findGantt();
+    const gantt = await findGantt();
+    const row = () => gantt.querySelector<HTMLElement>('[data-row-id="po-1003"]') as HTMLElement;
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show later range' }));
+    fireEvent.keyDown(row(), { key: 'PageDown', altKey: true });
     // One viewport width of drawn axis: closed time is hidden by default, so the night of Wed 4
     // Nov takes a few pixels and the view lands on Thursday.
     await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-11-05T/));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Show earlier range' }));
+    fireEvent.keyDown(row(), { key: 'PageUp', altKey: true });
     await waitFor(() => expect(router.state.location.search.from).toBe('2026-11-04T06:00'));
-    expect(rangeText()).toMatch(/^Wed 4 Nov to /);
+    await waitFor(() => expect(rangeText()).toMatch(/^Wed 4 Nov to /));
   });
 });

@@ -111,16 +111,16 @@ test.describe('the time scroller of the order Gantt', () => {
     // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
     await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     await expect(page.locator('[data-block="jo-1003-10"]')).toBeVisible();
-    const rangeText = page.locator('[data-range-text]');
-    await expect(rangeText).toHaveText(/^W45, Mon 2 Nov to /);
-    const first = await rangeText.textContent();
+    // The grid names the span in view once scrolling stops; the bar has no range text (ADR 0090).
+    await expect(gantt).toHaveAttribute('aria-label', /order Gantt, W45, Mon 2 Nov to /);
+    const first = await gantt.getAttribute('aria-label');
 
     // Forty steps of a fifth of the view each way: the buffer moves every few steps, and each
     // header cell in view moves by exactly the step, so no move shifts the view.
     const far = await scrollSteps(gantt, 40, 1);
     expect(far.moves).toBeGreaterThan(5);
     expect(far.worst).toBeLessThanOrEqual(1);
-    await expect(rangeText).not.toHaveText(/^W4[56], /);
+    await expect(gantt).not.toHaveAttribute('aria-label', /order Gantt, W4[56], /);
     await expect
       .poll(() => new URL(page.url()).searchParams.get('from'))
       .toMatch(/^2026-1[12]-\d\dT/);
@@ -129,12 +129,12 @@ test.describe('the time scroller of the order Gantt', () => {
     const back = await scrollSteps(gantt, 40, -1);
     expect(back.moves).toBeGreaterThan(5);
     expect(back.worst).toBeLessThanOrEqual(1);
-    await expect(rangeText).toHaveText(first ?? '');
+    await expect(gantt).toHaveAttribute('aria-label', first ?? '');
     await expect(page.locator('[data-block="jo-1003-10"]')).toBeVisible();
   });
 
   for (const zoom of ['quarter-hours', 'hours', 'day', 'week', '4weeks', 'quarter', 'year']) {
-    test(`ADR0089 at ${zoom}, after the view reaches both edges three times, the Name column stays at the grid's edge, no header labels overlap or start in a gap, and the range text names the start in the URL`, async ({
+    test(`ADR0089 at ${zoom}, after the view reaches both edges three times, the Name column stays at the grid's edge, no header labels overlap or start in a gap, and the grid's name names the start in the URL`, async ({
       page,
       signIn,
     }) => {
@@ -202,7 +202,7 @@ test.describe('the time scroller of the order Gantt', () => {
           ).toBe(false);
         }
       }
-      // The range text names the date of the start in the URL: its day and month, or its month at
+      // The grid's name gives the date of the start in the URL: its day and month, or its month at
       // the levels that span months.
       const from = new URL(page.url()).searchParams.get('from') ?? '';
       const [year, month, day] = from.slice(0, 10).split('-').map(Number);
@@ -214,7 +214,7 @@ test.describe('the time scroller of the order Gantt', () => {
         zoom === 'quarter' || zoom === 'year'
           ? `${monthName} ${year}`
           : `${day} ${monthName.slice(0, 3)}`;
-      await expect(page.locator('[data-range-text]')).toContainText(expected);
+      await expect(gantt).toHaveAttribute('aria-label', new RegExp(expected));
     });
   }
 
@@ -331,7 +331,7 @@ test.describe('the time scroller of the order Gantt', () => {
     await expect(gantt).toBeVisible();
     // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
     await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
-    await page.getByRole('button', { name: 'Board options' }).click();
+    await page.getByRole('button', { name: 'View' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Workload' }).click();
     await page.keyboard.press('Escape');
     const label = page.getByRole('button', { name: 'Workload on CNC 1' });
@@ -380,7 +380,7 @@ test.describe('the time scroller of the order Gantt', () => {
     await expect(gantt).toBeVisible();
     // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
     await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
-    await page.getByRole('button', { name: 'Board options' }).click();
+    await page.getByRole('button', { name: 'View' }).click();
     await page.getByRole('menuitemcheckbox', { name: 'Workload' }).click();
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);

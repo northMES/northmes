@@ -252,7 +252,7 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     ).toBeTruthy();
   });
 
-  it('BO1 opens at the week of now with the defaults out of the URL, and Later replaces from', async () => {
+  it('BO1 opens at the week of now with the defaults out of the URL, and Alt+Page Down replaces from', async () => {
     const user = userEvent.setup();
     const router = renderGanttRoute({}, undefined, 'board');
     const board = await findBoard();
@@ -264,8 +264,9 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(screen.getByText('ERP data as of Mon 2 Nov 06:40')).toBeTruthy();
     expect(router.state.location.search).toEqual({});
 
-    // Later shows the view one viewport width on, and its start goes to the URL.
-    await user.click(screen.getByRole('button', { name: 'Show later range' }));
+    // Alt+Page Down shows the view one viewport width on, and its start goes to the URL.
+    (board.querySelector('[data-board-focus][tabindex="0"]') as HTMLElement).focus();
+    await user.keyboard('{Alt>}{PageDown}{/Alt}');
     await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-11-0[3-6]T/));
     expect(Object.keys(router.state.location.search)).toEqual(['from']);
     await waitFor(() =>

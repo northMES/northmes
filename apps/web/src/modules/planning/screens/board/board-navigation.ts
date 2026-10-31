@@ -144,6 +144,28 @@ export function boardFocusAfter(
 }
 
 /**
+ * Where focus goes after Alt+Page Up or Alt+Page Down moved the view in time (ADR 0090): the first
+ * job order of the focused target's line in the new view, else the line's row header, so focus
+ * never stays on a job order that culling unmounts.
+ */
+export function boardFocusInView(
+  lines: readonly BoardLine[],
+  current: string,
+  view: { readonly fromMs: number; readonly toMs: number },
+): string | undefined {
+  const at = locate(lines, current);
+  const line = at === undefined ? undefined : lines[at.line];
+  if (line === undefined) return undefined;
+  const inView = line.cells.find(
+    (cell) =>
+      cell.fromMs !== undefined &&
+      cell.fromMs < view.toMs &&
+      (cell.toMs ?? cell.fromMs) > view.fromMs,
+  );
+  return inView?.key ?? line.header ?? line.cells[0]?.key;
+}
+
+/**
  * Where Tab enters the grid when no job order is selected (design D3, Keyboard model and DR32,
  * proposed): the job order of the first machine row with job orders that runs at now, else the one
  * nearest to now; with no job order on any machine, the Not placed row's first cell.

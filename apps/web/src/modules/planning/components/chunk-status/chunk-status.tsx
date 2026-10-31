@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cn } from 'cn';
-import { useEffect } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
 import { chunkName } from '../../timeline/time-chunks.ts';
@@ -97,10 +97,13 @@ export function ChunkStatus({
   chunks,
   timeZone,
   onRetry,
+  leading,
 }: {
   readonly chunks: readonly ChunkEntry[];
   readonly timeZone: string;
   readonly onRetry: (keys: readonly string[]) => void;
+  /** The page's own notes, such as the fixture's, on the same line before the chunks' text. */
+  readonly leading?: ReactNode;
 }) {
   const of = (status: ChunkEntry['status']) => chunks.filter((chunk) => chunk.status === status);
   const loading = of('loading');
@@ -122,6 +125,7 @@ export function ChunkStatus({
   }, [text]);
   return (
     <div className="flex min-h-6 flex-wrap items-center gap-2">
+      {leading}
       <p data-chunk-status className="text-xs text-muted-foreground">
         {text}
       </p>

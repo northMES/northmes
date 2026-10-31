@@ -17,7 +17,7 @@ import { PageFrame, type PageState } from '../../../../ui/components/page-frame/
 import { announce } from '../../../../ui/lib/announce.ts';
 import { useBoardFields } from '../../board-fields-store.ts';
 import { ChunkBands, ChunkStatus, unloadedChunks } from '../../components/chunk-status/index.ts';
-import { VisibleSpanText } from '../../components/range-controls/index.ts';
+import { ZoomOverlay, zoomOverlayReserve } from '../../components/range-controls/index.ts';
 import {
   type GanttCalendar,
   type GanttDataSource,
@@ -47,7 +47,6 @@ import {
   droppedKeyMessage,
   type GanttSearch,
   ganttSearch,
-  startOfFrom,
   withChain,
   withFrom,
   withOrder,
@@ -61,12 +60,7 @@ import {
 } from '../../material-projection.ts';
 import { usePlanningDraft } from '../../planning-draft.tsx';
 import { closedWindows } from '../../timeline/availability-shading.ts';
-import {
-  type ClosedWindow,
-  plantDateOf,
-  spanLabel,
-  type TimeRange,
-} from '../../timeline/time-scale.ts';
+import { type ClosedWindow, spanLabel, type TimeRange } from '../../timeline/time-scale.ts';
 import { useTimeBuffer } from '../../timeline/use-time-buffer.ts';
 import { useTimeChunks } from '../../timeline/use-time-chunks.ts';
 import { useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
@@ -175,6 +169,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const [runReview, setRunReview] = useState<readonly string[] | undefined>(undefined);
   /** The element that opened the My draft drawer, which takes focus back when it closes. */
   const draftOpener = useRef<HTMLElement | undefined>(undefined);
+  // Where focus goes when the draft drawer closes with no changes left and My draft leaves the bar.
+  const goToNowButton = useRef<HTMLButtonElement>(null);
   const [options, setOptions] = useGanttOptions();
   // The row list by page and the job orders by time chunk (ADR 0089, Loading by time chunk); the
   // Gantt has no filter of its own yet, so both read every open order.
@@ -716,6 +712,23 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     const target = flatRows[Math.max(0, Math.min(flatRows.length - 1, index))];
     if (target !== undefined) focusRow(target.id);
   };
+  /**
+   * One viewport width earlier or later. Focus stays on a focused block that is still in view,
+   * else it moves to the row, so it never stays on a block that culling unmounts.
+   */
+  const pageInTime = (direction: 'earlier' | 'later', row: GanttTableRow, onRow: boolean) => {
+    timelineZoom.stop();
+    const span = buffer.page(direction);
+    const placement =
+      row.original.kind === 'jobOrder' ? row.original.jobOrder.placement : undefined;
+    const blockInView =
+      !onRow &&
+      span !== undefined &&
+      placement !== undefined &&
+      placement.setupStartMs < span.toMs &&
+      placement.endMs > span.fromMs;
+    if (!blockInView) focusRow(row.id);
+  };
   const openDetails = (row: GanttTableRow) => {
     selectUnlessSelected(row.original.order.id);
     setDetailRowId(row.id);
@@ -758,6 +771,14 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   ) => {
     const onRow = event.target === event.currentTarget;
     const cell = event.currentTarget.querySelector<HTMLElement>('[data-cell-focus]');
+    // Alt+Page Up and Alt+Page Down move in time, one viewport width (ADR 0090), and the row keys
+    // Page Up and Page Down ignore a press with Alt.
+    if (event.altKey && (event.key === 'PageDown' || event.key === 'PageUp')) {
+      event.preventDefault();
+      event.stopPropagation();
+      pageInTime(event.key === 'PageDown' ? 'later' : 'earlier', row, onRow);
+      return;
+    }
     let handled = true;
     switch (event.key) {
       case 'ArrowDown':
@@ -839,12 +860,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     `${plant} order Gantt`,
     ...(buffer.settled === undefined ? [] : [spanLabel(buffer.settled, zoom, timeZone)]),
   ].join(', ');
-  // Go to date shows the date of the visible start, which the URL holds once scrolling stops; a
-  // date the planner picks opens at its level's start.
-  const goToDate = (search.from ?? plantDateOf(committed?.nowMs ?? Date.now(), timeZone)).slice(
-    0,
-    10,
-  );
   // The row count is unknown while pages of the row list are still to load (WAI-ARIA: -1).
   const rowCount = rowList.next === 'done' ? flatRows.length + 2 : -1;
   // The chunks of the buffer without their job orders, which the bands and the status line show.
@@ -860,39 +875,34 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     <PageFrame
       title="Gantt"
       state={state}
+      // One status line on the title row: the fixture and link notes while they have text, and
+      // the chunks, so the grid starts right under the bar (ADR 0090).
+      meta={
+        <ChunkStatus
+          chunks={unloaded}
+          timeZone={timeZone}
+          onRetry={chunks.retry}
+          leading={
+            snapshot?.fixture !== undefined || limited ? (
+              <p className="text-xs text-muted-foreground" data-testid="gantt-status">
+                {[
+                  snapshot?.fixture !== undefined
+                    ? `Showing fixture ${snapshot.fixture}.`
+                    : undefined,
+                  limited ? 'Links shown for the selected order.' : undefined,
+                ]
+                  .filter((part) => part !== undefined)
+                  .join(' ')}
+              </p>
+            ) : undefined
+          }
+        />
+      }
+      toolbarBesideTitle
       toolbar={
         <GanttToolbar
-          zoom={{ band: zoom, pxPerHour: buffer.pxPerHour }}
-          onZoomChange={timelineZoom.setLevel}
-          onZoomStep={timelineZoom.step}
-          onZoomToFit={() => {
-            // The row in the Details drawer, else the selected order or its run, else every
-            // loaded row.
-            const selected = search.order === undefined ? undefined : rowById.get(search.order);
-            const target = fitTargetOf(detailRow ?? selectionRowOf(selected, rowById), rows);
-            timelineZoom.fit(target.span, target.name);
-          }}
-          from={goToDate}
-          onFromChange={(next) => {
-            timelineZoom.stop();
-            buffer.goTo(
-              { band: zoom, pxPerHour: buffer.pxPerHour },
-              {
-                ms: startOfFrom(next, zoom, timeZone, productionDayStart),
-                viewportX: paneWidth,
-              },
-            );
-          }}
-          onEarlier={() => {
-            timelineZoom.stop();
-            buffer.page('earlier');
-          }}
-          onNow={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
-          onLater={() => {
-            timelineZoom.stop();
-            buffer.page('later');
-          }}
-          rangeLabel={<VisibleSpanText visible={buffer.visible} zoom={zoom} timeZone={timeZone} />}
+          onGoToNow={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
+          goToNowRef={goToNowButton}
           options={options}
           onOptionsChange={setOptions}
           draftCount={draftChangeCount(draft)}
@@ -903,15 +913,6 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
         />
       }
     >
-      <p className="text-xs text-muted-foreground" data-testid="gantt-status">
-        {[
-          snapshot?.fixture !== undefined ? `Showing fixture ${snapshot.fixture}.` : undefined,
-          limited ? 'Links shown for the selected order.' : undefined,
-        ]
-          .filter((part) => part !== undefined)
-          .join(' ')}
-      </p>
-      <ChunkStatus chunks={unloaded} timeZone={timeZone} onRetry={chunks.retry} />
       {view !== undefined && snapshot !== undefined && scale !== undefined && (
         <GanttViewProvider value={view}>
           <div
@@ -962,8 +963,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 style={{
                   scrollPaddingTop: `${timeHeaderHeightRem + notPlacedHeightRem}rem`,
                   scrollPaddingInlineStart: `${paneWidth}px`,
-                  // The pane's scrollbar sticks at the bottom, so focus stays clear of it (2.4.11).
-                  ...(paneScrolls && { scrollPaddingBottom: 'var(--nm-target-min)' }),
+                  // The zoom buttons sit over the lower right corner, and the pane's scrollbar
+                  // sticks at the bottom, so focus stays clear of both (WCAG 2.4.11).
+                  scrollPaddingBottom: zoomOverlayReserve.bottom,
+                  scrollPaddingInlineEnd: zoomOverlayReserve.end,
                   // One finger scrolls; a pinch zooms the timeline, not the page (ADR 0089).
                   touchAction: 'pan-x pan-y',
                 }}
@@ -1074,6 +1077,19 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 gripHeightRem={timeHeaderHeightRem}
                 onShareChange={(treePaneShare) => setOptions({ treePaneShare })}
               />
+              <ZoomOverlay
+                zoom={{ band: zoom, pxPerHour: buffer.pxPerHour }}
+                onZoomStep={timelineZoom.step}
+                onZoomToFit={() => {
+                  // The row in the Details drawer, else the selected order or its run, else
+                  // every loaded row.
+                  const selected =
+                    search.order === undefined ? undefined : rowById.get(search.order);
+                  const target = fitTargetOf(detailRow ?? selectionRowOf(selected, rowById), rows);
+                  timelineZoom.fit(target.span, target.name);
+                }}
+                className="absolute end-3 bottom-4 z-30"
+              />
             </div>
             {options.workload && (
               <GanttWorkloadPanel
@@ -1120,7 +1136,10 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             onDiscardChange={(jobOrderId) => setDraft(discardChange(draft, jobOrderId))}
             onSplitRun={(runId) => runActions?.split(runId)}
             onDiscardDraft={() => setDraft(emptyDraft)}
-            finalFocus={() => draftOpener.current ?? null}
+            // With no changes left, My draft has left the bar, so focus goes to the bar.
+            finalFocus={() =>
+              draftChangeCount(draft) === 0 ? goToNowButton.current : (draftOpener.current ?? null)
+            }
           />
           <GanttRunDialog
             open={runReview !== undefined}

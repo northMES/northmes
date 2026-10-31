@@ -650,3 +650,7 @@ The header lists open questions 1 to 27, and TA19 adds four from its part (T1 to
 | T2 | Should 320 open the job table by default without rewriting `view`, as option B did? | TA5 keeps the board and offers Show job table |
 | T3 | Rule 13.6 as amended puts Collapse panel before the tab list, while rule 19.6 puts it after the tab list in the same row. Which holds? | The frames follow 19.6: Collapse panel follows the tab list in DOM and Tab order |
 | T4 | Do the job table's sort fields follow the GraphQL SortField names, such as plannedEnd and lateBy? | The URL table uses those names as proposals; the codegen SortField enum fixes them |
+
+## Built since the design: the slim bar (ADR 0090)
+
+The board and the order Gantt no longer have the toolbar of D3 and D5 (#939, [ADR 0090](../../adr/0090-a-smooth-zoom-and-a-slim-bar-above-the-timeline-on-the-planning-board-and-the-order-gantt.md), proposed). The page title and a slim bar share one row: Go to now, My draft while the draft has changes, and on the Gantt one View menu (Hide closed time, Workload, Cascade, the columns and the tree pane widths). The status line sits on the same row. Zoom out, Zoom in and Zoom to fit are icon buttons over the lower right corner of the time area. The zoom presets, Earlier, Later, Go to date and the range text left both views; Alt+Page Up and Alt+Page Down move one viewport width in time with focus in the grid. The job order table keeps the D3 toolbar with its Range.

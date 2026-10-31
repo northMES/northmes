@@ -128,7 +128,8 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     await waitFor(() => expect(spoken()).toBe('Move cancelled.'));
     expect(board.querySelector('[data-move-preview]')).toBeNull();
     expect(machineOf(block(board, '1001.10'))).toBe('CNC 1');
-    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+    // My draft leaves the bar while the draft has no changes (ADR 0090).
+    expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
   });
 
   it('IN6 a locked job order refuses move mode and says why', async () => {
@@ -209,7 +210,8 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     await waitFor(() => expect(spoken()).toBe('Move cancelled.'));
     fireEvent.pointerUp(cell, { clientX: 164, clientY: 10, pointerId: 1, button: 0 });
     expect(board.querySelector('[data-move-preview]')).toBeNull();
-    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+    // My draft leaves the bar while the draft has no changes (ADR 0090).
+    expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
   });
 
   it('IN7 IN8 Shift+F10 opens the block menu, and Move opens the Move dialog with every allowed machine and a start', async () => {
@@ -293,7 +295,8 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(block(board, '1001.10')));
-    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+    // My draft leaves the bar while the draft has no changes (ADR 0090).
+    expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
   });
   it('ADR0089 Move with a start before now keeps the dialog open with the PAST refusal and writes nothing', async () => {
     const user = userEvent.setup();
@@ -321,7 +324,8 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
 
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+    // My draft leaves the bar while the draft has no changes (ADR 0090).
+    expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
   });
 
   it('plan 07 a move that lands after the range moves the range with it and keeps focus on the block', async () => {
@@ -367,7 +371,8 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     await user.tab();
     await waitFor(() => expect(board.querySelector('[data-move-preview]')).toBeNull());
     expect(board.contains(document.activeElement)).toBe(false);
-    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+    // My draft leaves the bar while the draft has no changes (ADR 0090).
+    expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
   });
 
   it('IN6 Down in move mode skips the machines of a collapsed group', async () => {
@@ -501,7 +506,8 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
       ),
     );
     expect(machineOf(block(board, '1001.10'))).toBe('CNC 1');
-    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+    // My draft leaves the bar while the draft has no changes (ADR 0090).
+    expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
   });
 
   it('#944 IN5 a drag greys out the rows of the machines the operation may not use, with a hatch and "not allowed for Turn" in the row header\'s name', async () => {

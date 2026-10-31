@@ -209,7 +209,9 @@ describe('the workload lane (plan 18, The workload lane)', () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-06' });
     await findGantt();
     // With closed time shown, the view from Fri 6 Nov holds the Saturday.
-    await userEvent.click(screen.getByRole('button', { name: 'Hide closed time' }));
+    await userEvent.click(screen.getByRole('button', { name: 'View' }));
+    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Hide closed time' }));
+    await userEvent.keyboard('{Escape}');
     await userEvent.click(screen.getByRole('button', { name: 'Workload on CNC 1' }));
 
     const table = within(screen.getByRole('dialog', { name: 'Workload on CNC 1' })).getByRole(

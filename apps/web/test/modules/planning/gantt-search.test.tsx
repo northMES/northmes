@@ -204,10 +204,7 @@ describe('the Gantt page (plan 18, URL state)', () => {
   });
 
   it('#941 opens a zoom at its width per hour in its band: 37.5 in Day, 26 in Week, abc at 16, a level id at its natural width and 1000 at the clamp', async () => {
-    const level = () =>
-      within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {
-        name: /^Zoom level, /,
-      }).textContent;
+    const level = () => screen.getByRole('group', { name: 'Zoom' }).getAttribute('data-zoom-band');
     /** The drawn width of job order 1001.10. */
     const blockWidth = (gantt: HTMLElement) =>
       Number.parseFloat(
@@ -215,14 +212,14 @@ describe('the Gantt page (plan 18, URL state)', () => {
       );
     // The first case, an unknown value at the default 16, measures the block the others scale.
     const cases = [
-      ['abc', 'Week', 16],
-      [37.5, 'Day', 37.5],
-      [26, 'Week', 26],
+      ['abc', 'week', 16],
+      [37.5, 'day', 37.5],
+      [26, 'week', 26],
       // Just under the Week to Day edge at about 27.713, as a gesture that ended at 27.72 writes it.
-      [27.7, 'Week', 27.7],
-      ['day', 'Day', 48],
-      ['quarter', 'Quarter', 0.6],
-      [1000, 'Quarter hours', 240],
+      [27.7, 'week', 27.7],
+      ['day', 'day', 48],
+      ['quarter', 'quarter', 0.6],
+      [1000, 'quarter-hours', 240],
     ] as const;
     let atDefault = 0;
     // With closed time shown, a block's width is its hours at the width per hour.
@@ -250,10 +247,6 @@ describe('the Gantt page (plan 18, URL state)', () => {
     // The grid names the span in view, which starts at Mon 2 Nov (ADR 0089, The endless axis).
     expect(gantt.getAttribute('aria-label')).toMatch(/^plant-a order Gantt, W45, Mon 2 Nov to /);
     expect(router.state.location.search).toEqual({});
-    expect(
-      within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {
-        name: 'Zoom level, Week',
-      }),
-    ).toBeTruthy();
+    expect(screen.getByRole('group', { name: 'Zoom' }).getAttribute('data-zoom-band')).toBe('week');
   });
 });

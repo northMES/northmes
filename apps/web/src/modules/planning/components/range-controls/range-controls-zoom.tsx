@@ -1,42 +1,42 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { ChevronDown, Scan, ZoomIn, ZoomOut } from 'lucide-react';
+import { cn } from 'cn';
+import { Scan, ZoomIn, ZoomOut } from 'lucide-react';
 import { IconButton } from '../../../../ui/components/icon-button/index.ts';
-import { Button } from '../../../../ui/primitives/button.tsx';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from '../../../../ui/primitives/dropdown-menu.tsx';
-import type { ZoomLevel } from '../../gantt-data.ts';
-import { type Zoom, zoomClamp, zoomLevelIds, zoomLevels } from '../../timeline/time-scale.ts';
+import { type Zoom, zoomClamp } from '../../timeline/time-scale.ts';
 
-export interface ZoomControlsProps {
-  /** The zoom drawn: its band names the menu, its width disables a step at the clamp. */
+export interface ZoomOverlayProps {
+  /** The zoom drawn: its width disables a step at the clamp, and its band names the group. */
   readonly zoom: Zoom;
-  /** A level from the menu, at its natural width. */
-  readonly onZoomChange: (zoom: ZoomLevel) => void;
   /** Zoom in or Zoom out by a factor of 2 (ADR 0090). */
   readonly onZoomStep: (direction: 'in' | 'out') => void;
   readonly onZoomToFit: () => void;
+  /** Where the overlay sits over the time area, such as its lower right corner. */
+  readonly className?: string;
 }
 
 /**
- * The zoom of the board and the Gantt (ADR 0090, Gestures, buttons and keys): Zoom out, the menu
- * of bands, Zoom in and Zoom to fit. Each zooms around the centre of the view. At a clamp its step
- * is disabled through aria-disabled, so a button the planner pressed to reach it keeps focus.
+ * The zoom buttons over the time area of the board and the Gantt (ADR 0090, Gestures, buttons and
+ * keys): Zoom out, Zoom in and Zoom to fit as small icon buttons. They sit outside the grid and
+ * after it in the tab order, so the grid's rows stay whole. At a clamp a step is disabled through
+ * aria-disabled, so the button the planner pressed to reach it keeps focus. The band is on the
+ * group as data, for the specs.
  */
-export function ZoomControls({ zoom, onZoomChange, onZoomStep, onZoomToFit }: ZoomControlsProps) {
+export function ZoomOverlay({ zoom, onZoomStep, onZoomToFit, className }: ZoomOverlayProps) {
   const coarsest = zoom.pxPerHour <= zoomClamp.min;
   const finest = zoom.pxPerHour >= zoomClamp.max;
-  const band = zoom.band;
   return (
-    <fieldset aria-label="Zoom" className="flex items-center gap-1">
+    <fieldset
+      aria-label="Zoom"
+      data-zoom-band={zoom.band}
+      className={cn(
+        'flex items-center gap-1 rounded-md border border-border bg-card p-0.5 shadow-sm',
+        className,
+      )}
+    >
       <IconButton
         label="Zoom out"
-        variant="outline"
+        variant="ghost"
         size="icon-sm"
         aria-disabled={coarsest || undefined}
         className="aria-disabled:opacity-50"
@@ -46,35 +46,9 @@ export function ZoomControls({ zoom, onZoomChange, onZoomStep, onZoomToFit }: Zo
       >
         <ZoomOut />
       </IconButton>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="outline"
-              className="h-8 min-w-28 justify-between px-3"
-              aria-label={`Zoom level, ${zoomLevels[band].label}`}
-            />
-          }
-        >
-          {zoomLevels[band].label}
-          <ChevronDown aria-hidden />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-40">
-          <DropdownMenuRadioGroup
-            value={band}
-            onValueChange={(value: ZoomLevel) => onZoomChange(value)}
-          >
-            {zoomLevelIds.map((id) => (
-              <DropdownMenuRadioItem key={id} value={id} closeOnClick>
-                {zoomLevels[id].label}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
       <IconButton
         label="Zoom in"
-        variant="outline"
+        variant="ghost"
         size="icon-sm"
         aria-disabled={finest || undefined}
         className="aria-disabled:opacity-50"
@@ -84,10 +58,16 @@ export function ZoomControls({ zoom, onZoomChange, onZoomStep, onZoomToFit }: Zo
       >
         <ZoomIn />
       </IconButton>
-      <Button variant="outline" className="h-8 px-3" onClick={onZoomToFit}>
-        <Scan aria-hidden />
-        Zoom to fit
-      </Button>
+      <IconButton label="Zoom to fit" variant="ghost" size="icon-sm" onClick={onZoomToFit}>
+        <Scan />
+      </IconButton>
     </fieldset>
   );
 }
+
+/**
+ * The space the overlay takes in the time scroller's corner, which `scroll-padding` reserves at
+ * the scroller's bottom and end, so a focused block scrolled into view is never under it (WCAG
+ * 2.4.11): three 32 px buttons, their gaps and the frame, and the 12 px it sits from the edges.
+ */
+export const zoomOverlayReserve = { bottom: '3.5rem', end: '8.5rem' } as const;

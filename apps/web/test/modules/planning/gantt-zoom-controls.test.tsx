@@ -256,7 +256,7 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
     const gantt = await findGantt();
     Object.defineProperty(gantt, 'scrollLeft', { value: 0, configurable: true, writable: true });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Now' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Go to now' }));
 
     // G1's now is Mon 2 Nov 09:40, 3 h 40 min into the range at 240 px an hour: the grid scrolls
     // so now sits at the centre of the time area instead of the range's start at its left edge.
@@ -265,33 +265,17 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
     await waitFor(() => expect(gantt.scrollLeft).toBeGreaterThan(0));
   });
 
-  it('#941 the level menu names the band and opens a level at its natural width', async () => {
-    const router = renderGanttRoute({ zoom: 26, from: '2026-11-02' });
-    await findGantt();
-    const zoom = screen.getByRole('group', { name: 'Zoom' });
-
-    // 26 px an hour lies in the Week band.
-    await userEvent.click(within(zoom).getByRole('button', { name: 'Zoom level, Week' }));
-    await userEvent.click(await screen.findByRole('menuitemradio', { name: 'Day' }));
-
-    await waitFor(() => expect(router.state.location.search.zoom).toBe(48));
-    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
-  });
-
-  it('#941 with no rows to draw, the zoom controls and Go to now still set the zoom and the start', async () => {
+  it('#941 with no rows to draw, Go to now still sets the start', async () => {
     const router = renderGanttRoute(
       { from: '2026-11-09' },
       sourceOf({ ...g1Snapshot(), productionOrders: [] }),
     );
     await screen.findByText('No open orders');
-    const zoom = screen.getByRole('group', { name: 'Zoom' });
+    // No time area is drawn, so the zoom buttons over it are not either.
+    expect(screen.queryByRole('group', { name: 'Zoom' })).toBeNull();
 
-    await userEvent.click(within(zoom).getByRole('button', { name: 'Zoom in' }));
-    await waitFor(() => expect(router.state.location.search.zoom).toBe(32));
-    // With no grid drawn the zoom still keeps the centre of the view, so the start stays on the
-    // week the URL named.
-    expect(router.state.location.search.from).toMatch(/^2026-11-(09|1\d)T/);
-    await userEvent.click(screen.getByRole('button', { name: 'Now' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Go to now' }));
+
     await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-1[01]-/));
   });
 
@@ -362,7 +346,7 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
     const router = renderGanttRoute({ zoom: 'week', from: '2026-11-09' });
     await findGantt();
 
-    await userEvent.click(screen.getByRole('button', { name: 'Now' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Go to now' }));
 
     await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-10-2\dT/));
     expect('zoom' in router.state.location.search).toBe(false);
@@ -379,20 +363,6 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
 
     // 16 * exp(0.2) is 19.54; twice that is 39.1.
     await waitFor(() => expect(router.state.location.search.zoom).toBe(39.1));
-  });
-
-  it('#941 the level menu opens the band it names at its natural width, also when the zoom lies in that band', async () => {
-    const router = renderGanttRoute({ zoom: 26, from: '2026-11-02' });
-    await findGantt();
-
-    await userEvent.click(
-      within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {
-        name: 'Zoom level, Week',
-      }),
-    );
-    await userEvent.click(await screen.findByRole('menuitemradio', { name: 'Week' }));
-
-    await waitFor(() => expect('zoom' in router.state.location.search).toBe(false));
   });
 
   it('#941 a zoom out draws the time not loaded yet as loading and announces no chunk while the gesture runs', async () => {
