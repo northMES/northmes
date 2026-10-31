@@ -274,7 +274,8 @@ export function BoardGrid({
         <div
           role="rowheader"
           data-sticky-column
-          className="sticky start-0 z-20 flex items-center bg-muted px-1"
+          // Down over the row's bottom border, as the machine row headers do.
+          className="sticky start-0 z-20 -mb-px flex items-center border-b border-border bg-muted px-1"
         >
           <button
             type="button"
@@ -335,7 +336,10 @@ export function BoardGrid({
             }
             onFocus={() => onFocusTarget(focusKeys.header(code))}
             data-sticky-column
-            className="sticky start-0 z-20 flex items-center border-e border-border bg-card px-3 text-sm"
+            // Down over the row's bottom border with one of its own, so the time area's layers
+            // never show through that line either. Focused, it rises over the next row's header,
+            // which would hide its focus ring's lower edge, and stays under the pinned rows (z-30).
+            className="sticky start-0 z-20 -mb-px flex items-center border-e border-b border-border bg-card px-3 text-sm focus-visible:z-25"
             style={{
               boxShadow:
                 group.color === undefined ? undefined : `inset 6px 0 0 var(--${group.color})`,
@@ -571,6 +575,7 @@ export function BoardGrid({
             reaches over it (#943). */}
         <div
           aria-hidden
+          data-overlay
           className="pointer-events-none absolute top-0 z-0"
           style={{ left: `${machineWidth}px`, width: `${timeWidth}px`, height: `${bodyRem}rem` }}
         >
