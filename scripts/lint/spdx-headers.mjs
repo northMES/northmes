@@ -50,7 +50,9 @@ const skippedPaths = [
   /^docs\/design\//,
   /\.gen\.[^/]+$/,
   /(?:^|\/)migrations\/(?:[^/]+\/)*[^/]+\.sql$/,
-  /^scripts\/templates\/table\.sql$/,
+  // The migration templates and the files gen:migration renders from them, which are migrations.
+  /^scripts\/templates\/[^/]+\.sql$/,
+  /^scripts\/fixtures\/gen-migration\/[^/]+\.sql$/,
   /^apps\/web\/src\/ui\/primitives\//,
   /^apps\/web\/src\/ui\/lib\/use-mobile\.ts$/,
   /^apps\/backend\/test\/fixtures\/web\//,
