@@ -53,6 +53,35 @@ describe('the zoom of the planning board (ADR 0090, Gestures, buttons and keys)'
     await waitFor(() => expect(router.state.location.search.zoom).toBe(19.5));
   });
 
+  it('#941 opens zoom=37.5 in the Day band and zoom=26 in Week, and a zoom out on the board draws unloaded time as loading', async () => {
+    const level = () =>
+      within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {
+        name: /^Zoom level, /,
+      }).textContent;
+    renderGanttRoute({ zoom: 37.5, from: '2026-11-02' }, undefined, 'board');
+    await findBoard();
+    expect(level()).toBe('Day');
+    cleanup();
+
+    renderGanttRoute({ zoom: 26, from: '2026-11-02' }, undefined, 'board');
+    const board = await findBoard();
+    expect(level()).toBe('Week');
+    await waitFor(() => expect(board.querySelector('[data-chunk-band]')).toBeNull());
+
+    // Ten events of 100 px take 26 px an hour to 3.5, in the 4 weeks band.
+    for (let event = 0; event < 10; event += 1) {
+      const wheel = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true });
+      Object.defineProperties(wheel, {
+        ctrlKey: { value: true },
+        clientX: { value: 1000 },
+        deltaMode: { value: 0 },
+      });
+      board.dispatchEvent(wheel);
+    }
+
+    await waitFor(() => expect(board.querySelector('[data-chunk-band="loading"]')).not.toBeNull());
+  });
+
   it('#941 Zoom to fit with nothing selected fits every loaded job order, and says so', async () => {
     const router = renderGanttRoute({ zoom: 'hours', from: '2026-11-04' }, undefined, 'board');
     const board = await findBoard();

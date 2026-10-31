@@ -14,10 +14,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/**
- * A Ctrl+wheel event over the grid at a viewport x, and whether its default was prevented. The
- * time stamp, in milliseconds, says which events belong to one gesture.
- */
+/** A Ctrl+wheel event in pixel mode over an element at a viewport x, and whether its default was prevented. */
 function ctrlWheel(gantt: HTMLElement, deltaY: number, clientX: number, ctrlKey = true): boolean {
   const event = new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true });
   // The test browser's WheelEvent keeps neither the modifier nor the pointer's position.
@@ -127,8 +124,9 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
 
     const browserZoom = fireEvent.keyDown(row, { key: '+', ctrlKey: true });
     expect(browserZoom).toBe(true);
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    expect(router.state.location.search.zoom).toBe(32);
+    // Had Ctrl+plus zoomed to 64, minus would land at 32.
+    await userEvent.keyboard('-');
+    await waitFor(() => expect(router.state.location.search.zoom).toBeUndefined());
   });
 
   it('#941 Ctrl+wheel over the time area zooms by exp(-deltaY * 0.002) and keeps the page from zooming; a plain wheel and a Ctrl+wheel over the tree columns are left to the browser', async () => {
@@ -174,6 +172,8 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
       );
 
       expect(ctrlWheel(lanes, -100, 1200)).toBe(true);
+      // A touch pinch over the lanes zooms the timeline, so the browser must not zoom the page.
+      expect(lanes.style.touchAction).toBe('pan-x pan-y');
 
       // exp(0.2) of 16 is 19.5 px an hour.
       await waitFor(() => expect(router.state.location.search.zoom).toBe(19.5));
@@ -315,9 +315,10 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
     const row = gantt.querySelector<HTMLElement>('[data-row-id]') as HTMLElement;
 
     fireEvent.keyDown(row, { key: '+', repeat: true });
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    fireEvent.keyDown(row, { key: '-' });
 
-    expect(router.state.location.search.zoom).toBeUndefined();
+    // Had the repeat zoomed in, minus would land at 16 and leave the URL as it is.
+    await waitFor(() => expect(router.state.location.search.zoom).toBe(8));
   });
 
   it('#941 zooms nothing while a block is dragged, so the drop stays under the pointer', async () => {
@@ -332,11 +333,14 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
 
     ctrlWheel(gantt, -40, 1200);
     fireEvent.keyDown(block, { key: '+' });
-    await new Promise((resolve) => setTimeout(resolve, 400));
-
     expect(blockWidth(gantt)).toBe(before);
-    expect(router.state.location.search.zoom).toBeUndefined();
     fireEvent.pointerUp(block, { ...pointer, clientX: 910 });
+
+    // After the drag, Zoom in starts from 16: neither the wheel nor plus zoomed during it.
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', { name: 'Zoom in' }),
+    );
+    await waitFor(() => expect(router.state.location.search.zoom).toBe(32));
   });
 
   it('#941 a link at zoom=week leaves the default zoom out of the URL once the view writes it', async () => {
@@ -347,6 +351,56 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
 
     await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-10-2\dT/));
     expect('zoom' in router.state.location.search).toBe(false);
+  });
+
+  it('#941 Zoom in right after a wheel gesture zooms from where the gesture left the view', async () => {
+    const router = renderGanttRoute({ from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    ctrlWheel(gantt, -100, 1200);
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', { name: 'Zoom in' }),
+    );
+
+    // 16 * exp(0.2) is 19.54; twice that is 39.1.
+    await waitFor(() => expect(router.state.location.search.zoom).toBe(39.1));
+  });
+
+  it('#941 the level menu opens the band it names at its natural width, also when the zoom lies in that band', async () => {
+    const router = renderGanttRoute({ zoom: 26, from: '2026-11-02' });
+    await findGantt();
+
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {
+        name: 'Zoom level, Week',
+      }),
+    );
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: 'Week' }));
+
+    await waitFor(() => expect('zoom' in router.state.location.search).toBe(false));
+  });
+
+  it('#941 a zoom out draws the time not loaded yet as loading and announces no chunk while the gesture runs', async () => {
+    renderGanttRoute({ from: '2026-11-02' });
+    const gantt = await findGantt();
+    // The first chunks' message comes through the polite queue after the page has loaded.
+    await waitFor(() => expect(polite()).toMatch(/^Loading the job orders of W43/));
+    const said: string[] = [];
+    const region = document.getElementById(politeRegionId) as HTMLElement;
+    const watch = new MutationObserver(() => said.push(region.textContent ?? ''));
+    watch.observe(region, { childList: true, characterData: true, subtree: true });
+
+    // One event per frame or two, each well within the 150 ms that end a gesture.
+    for (let event = 0; event < 6; event += 1) {
+      ctrlWheel(gantt, 100, 1200);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      expect(gantt.getAttribute('aria-busy')).not.toBe('true');
+    }
+    expect(gantt.querySelector('[data-chunk-band="loading"]')).not.toBeNull();
+    watch.disconnect();
+
+    expect(said.filter((text) => text.startsWith('Loading the job orders'))).toEqual([]);
+    await waitFor(() => expect(polite()).toBe('Zoom: 4 weeks'));
   });
 
   it('#896 the row menu has no disabled Zoom to order, which Zoom to fit replaces', async () => {

@@ -42,12 +42,16 @@ describe('ganttSearch (plan 18, URL state)', () => {
       [1000, 240],
       ['0.01', 0.15],
       [37.5432, 37.5],
+      // A number outside the range is clamped to it (ADR 0090).
+      [0, 0.15],
+      [-3, 0.15],
+      ['-3', 0.15],
     ] as const;
     for (const [zoom, expected] of cases) {
       expect(ganttSearch({ zoom }), String(zoom)).toEqual({ zoom: expected });
       expect(boardSearch({ zoom }), String(zoom)).toEqual({ zoom: expected });
     }
-    for (const zoom of ['abc', 'decade', '-3', 0, Number.NaN, '1e3']) {
+    for (const zoom of ['abc', 'decade', Number.NaN, '']) {
       expect(ganttSearch({ zoom }), String(zoom)).toEqual({});
     }
   });
@@ -56,6 +60,8 @@ describe('ganttSearch (plan 18, URL state)', () => {
     expect(withZoom({ from: '2026-11-02' }, 32)).toEqual({ zoom: 32, from: '2026-11-02' });
     expect(withZoom({ zoom: 32, from: '2026-11-02' }, 16)).toEqual({ from: '2026-11-02' });
     expect(withZoom({}, 23.94)).toEqual({ zoom: 23.9 });
+    // 16.004 is 16 to three significant digits, so the key stays out.
+    expect(withZoom({ zoom: 32 }, 16.004)).toEqual({});
   });
 
   it('ADR0089 reads from as a plant date or as the plant-local date-time of the visible start, without an offset', () => {
@@ -197,7 +203,7 @@ describe('the Gantt page (plan 18, URL state)', () => {
     expect(screen.queryByRole('treegrid')).toBeNull();
   });
 
-  it('#941 opens zoom=37.5 at 37.5 px an hour in the Day band, zoom=26 in Week, zoom=abc at 16 and a level id at its natural width', async () => {
+  it('#941 opens a zoom at its width per hour in its band: 37.5 in Day, 26 in Week, abc at 16, a level id at its natural width and 1000 at the clamp', async () => {
     const level = () =>
       within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {
         name: /^Zoom level, /,

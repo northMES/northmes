@@ -158,6 +158,8 @@ test.describe('the smooth zoom of the order Gantt', () => {
       .getByRole('group', { name: 'Zoom' })
       .getByRole('button', { name: 'Zoom to fit' })
       .click();
+    // The fitted zoom reaches the URL as a number once the view has settled.
+    await expect(page).toHaveURL(/zoom=\d/);
     await expect(page).not.toHaveURL(/zoom=0\.15\b/);
     await expect(gantt.locator('[data-block="jo-1003-10"]')).toBeInViewport();
     await expect(gantt.locator('[data-block="jo-1003-20"]')).toBeInViewport();

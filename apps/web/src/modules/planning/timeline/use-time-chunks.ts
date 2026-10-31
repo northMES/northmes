@@ -54,6 +54,12 @@ export interface TimeChunksInput {
 export interface TimeChunks {
   /** The chunks in the cache, in time order. */
   readonly chunks: readonly ChunkEntry[];
+  /**
+   * During a zoom gesture, the chunks of the drawn buffer that are not requested yet, as loading
+   * entries: drawn as the loading band, never as empty rows, and neither announced nor counted as
+   * busy, since they load once the gesture ends.
+   */
+  readonly pending: readonly ChunkEntry[];
   /** The job orders of the loaded chunks, each once. */
   readonly jobOrders: readonly GanttJobOrder[];
   /** Loads failed chunks again, Try again's action. */
@@ -84,6 +90,7 @@ interface ChunkCache {
 }
 
 const noKeys: ReadonlySet<string> = new Set();
+const noChunks: readonly ChunkEntry[] = [];
 
 function newCache(
   load: LoadChunk,
@@ -277,20 +284,19 @@ export function useTimeChunks({
     [cache, start],
   );
 
-  // During a gesture, the chunks the drawn buffer reaches that are not requested yet show as
-  // loading, never as empty rows.
-  const unrequested = useMemo(
+  // During a gesture, the chunks the drawn buffer reaches that are not requested yet.
+  const pending = useMemo(
     () =>
       !paused || drawnBuffer === undefined
-        ? []
+        ? noChunks
         : chunksCovering(drawnBuffer, loadZoom, timeZone)
             .filter((chunk) => !cache.entries.has(chunk.key))
             .map((chunk): ChunkEntry => ({ ...chunk, status: 'loading', jobOrders: [] })),
     [paused, drawnBuffer, loadZoom, timeZone, cache.entries],
   );
   const chunks = useMemo(
-    () => [...cache.entries.values(), ...unrequested].sort((a, b) => a.fromMs - b.fromMs),
-    [cache.entries, unrequested],
+    () => [...cache.entries.values()].sort((a, b) => a.fromMs - b.fromMs),
+    [cache.entries],
   );
   const jobOrders = useMemo(() => {
     const byId = new Map<string, GanttJobOrder>();
@@ -298,5 +304,5 @@ export function useTimeChunks({
     for (const entry of chunks) for (const row of entry.jobOrders) byId.set(row.id, row);
     return [...byId.values()];
   }, [chunks, cache.carried]);
-  return { chunks, jobOrders, retry };
+  return { chunks, pending, jobOrders, retry };
 }

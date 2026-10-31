@@ -106,7 +106,7 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
 
     await screen.findByRole('heading', { level: 2, name: 'The board could not be loaded' });
     expect(screen.getByRole('link', { name: 'Open the job table' }).getAttribute('href')).toBe(
-      `${planningLinks.jobOrders({ plant }).href}?zoom=16&from=2026-11-02`,
+      `${planningLinks.jobOrders({ plant }).href}?from=2026-11-02`,
     );
   });
 

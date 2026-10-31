@@ -60,7 +60,7 @@ async function gesture(page: Page, x: number, y: number): Promise<void> {
 }
 
 for (const view of ['board', 'gantt'] as const) {
-  test(`ADR0090 a zoom gesture across the hours to 4 weeks bands keeps the SP3 frame budget on the ${view}`, async ({
+  test(`ADR0090 a zoom gesture across the hours to 4 weeks bands draws its frames on the ${view}, within the SP3 frame budget on the planner PC class`, async ({
     page,
     signIn,
   }) => {

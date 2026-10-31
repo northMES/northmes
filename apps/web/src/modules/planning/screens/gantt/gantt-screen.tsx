@@ -849,6 +849,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
   const rowCount = rowList.next === 'done' ? flatRows.length + 2 : -1;
   // The chunks of the buffer without their job orders, which the bands and the status line show.
   const unloaded = unloadedChunks(chunks.chunks, range);
+  // The bands also cover the time a zoom gesture shows before its chunks are requested.
+  const banded = chunks.pending.length === 0 ? unloaded : [...unloaded, ...chunks.pending];
   const focusedId =
     focusedRowId !== undefined && flatRows.some((row) => row.id === focusedRowId)
       ? focusedRowId
@@ -871,18 +873,25 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
             timelineZoom.fit(target.span, target.name);
           }}
           from={goToDate}
-          onFromChange={(next) =>
+          onFromChange={(next) => {
+            timelineZoom.stop();
             buffer.goTo(
               { band: zoom, pxPerHour: buffer.pxPerHour },
               {
                 ms: startOfFrom(next, zoom, timeZone, productionDayStart),
                 viewportX: paneWidth,
               },
-            )
-          }
-          onEarlier={() => buffer.page('earlier')}
+            );
+          }}
+          onEarlier={() => {
+            timelineZoom.stop();
+            buffer.page('earlier');
+          }}
           onNow={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
-          onLater={() => buffer.page('later')}
+          onLater={() => {
+            timelineZoom.stop();
+            buffer.page('later');
+          }}
           rangeLabel={<VisibleSpanText visible={buffer.visible} zoom={zoom} timeZone={timeZone} />}
           options={options}
           onOptionsChange={setOptions}
@@ -927,7 +936,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                   undefined
                 }
                 onKeyDown={(event) => {
-                  // Minus and plus step a level around the centre of the view (ADR 0089).
+                  // Minus and plus zoom by a factor of 2 at the focused block (ADR 0090).
                   if (timelineZoom.onKeyDown(event)) {
                     event.preventDefault();
                     event.stopPropagation();
@@ -1032,7 +1041,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                     }}
                   >
                     <ChunkBands
-                      chunks={unloaded}
+                      chunks={banded}
                       scale={scale}
                       labelTop={`${timeHeaderHeightRem + notPlacedHeightRem}rem`}
                     />
@@ -1079,8 +1088,8 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
                 pending={
                   // Every bucket waits while pages of the row list still load.
                   rowList.next === 'done' || range === undefined
-                    ? unloaded
-                    : [...unloaded, { ...range, status: 'loading' as const }]
+                    ? banded
+                    : [...banded, { ...range, status: 'loading' as const }]
                 }
                 onScroll={(left) => {
                   const grid = gridElement.current;

@@ -383,8 +383,11 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
 
   const goTo = (target: Zoom, anchor: ViewAnchor, during = false) => {
     if (viewportPx <= 0 || current === undefined) {
-      // No time area to lay out: the zoom and the anchor's date go to the URL alone, at the end.
-      if (!during) onNavigate(roundZoom(target.pxPerHour), plantDateOf(anchor.ms, timeZone));
+      // No time area to lay out: the zoom and the anchor's date go to the URL alone, at the end,
+      // and a gesture that a frame began ends.
+      if (during) return;
+      if (current?.zooming === true) setState({ ...current, zooming: false });
+      onNavigate(roundZoom(target.pxPerHour), plantDateOf(anchor.ms, timeZone));
       return;
     }
     setState(build(target, anchor, { seen: current.seen, written: current.written }, true, during));

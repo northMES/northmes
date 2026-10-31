@@ -43,18 +43,19 @@ export const defaultZoom = zoomLevels.week.pxPerHour;
 
 /**
  * The URL key zoom: a width per hour, as a number or the text of one, or a level id at its
- * natural width; clamped, and to three significant digits as the view writes it.
+ * natural width; a number outside 0.15 to 240 is clamped, and the width is kept to three
+ * significant digits as the view writes it.
  */
 export const zoomKey = z
   .union([
     z.number(),
     z
       .string()
-      .regex(/^\d+(\.\d+)?$/)
+      .regex(/^-?\d+(\.\d+)?$/)
       .transform(Number),
     z.enum(zoomLevelIds).transform((id) => zoomLevels[id].pxPerHour),
   ])
-  .pipe(z.number().positive())
+  .pipe(z.number())
   .transform((pxPerHour) => roundZoom(clampZoom(pxPerHour)));
 
 /** The URL keys, each of which falls back to its default on its own (ADR 0062). */
@@ -139,7 +140,8 @@ export function fromAt(epochMs: number, timeZone: string): string {
 /** The view at a zoom; the default zoom leaves the key out (ADR 0090, The URL key zoom). */
 export function withZoom<T extends GanttSearch>(search: T, zoom: number): T {
   const { zoom: _, ...rest } = search;
-  return (zoom === defaultZoom ? rest : { ...rest, zoom: roundZoom(zoom) }) as T;
+  const rounded = roundZoom(zoom);
+  return (rounded === defaultZoom ? rest : { ...rest, zoom: rounded }) as T;
 }
 
 export function withFrom<T extends GanttSearch>(search: T, from: string): T {

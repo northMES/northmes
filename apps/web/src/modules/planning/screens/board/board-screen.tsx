@@ -53,7 +53,7 @@ import { plantTime } from '../../order-facts.ts';
 import { usePlanningDraft } from '../../planning-draft.tsx';
 import { PlanningForbidden } from '../../planning-preview.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
-import { plantDateOf, roundZoom, spanLabel, zoomLevels } from '../../timeline/time-scale.ts';
+import { plantDateOf, spanLabel, zoomLevels } from '../../timeline/time-scale.ts';
 import { useTimeBuffer } from '../../timeline/use-time-buffer.ts';
 import { useTimeChunks } from '../../timeline/use-time-chunks.ts';
 import { useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
@@ -238,8 +238,10 @@ export function BoardScreen() {
   });
   const zoom = buffer.zoom;
   const zoomNow = { band: zoom, pxPerHour: buffer.pxPerHour };
-  // The zoom as the URL holds it, which the links to the other pages carry.
-  const linkZoom = String(roundZoom(buffer.pxPerHour));
+  // The zoom as the URL holds it, which the links to the other pages carry; the default stays out.
+  const urlZoomNow = withZoom<BoardSearch>({}, buffer.pxPerHour).zoom;
+  const linkZoom: Readonly<Record<string, string>> =
+    urlZoomNow === undefined ? {} : { zoom: String(urlZoomNow) };
   const range = buffer.range;
   // The visible start, which the URL holds once scrolling stops and links to the other pages carry.
   const from = search.from ?? plantDateOf(frame?.nowMs ?? Date.now(), timeZone);
@@ -267,6 +269,8 @@ export function BoardScreen() {
   });
   // The chunks of the buffer without their job orders, which the bands and the status line show.
   const unloaded = unloadedChunks(chunks.chunks, range);
+  // The bands also cover the time a zoom gesture shows before its chunks are requested.
+  const banded = chunks.pending.length === 0 ? unloaded : [...unloaded, ...chunks.pending];
   // The board is busy while a chunk of its buffer or a page of its row list loads: the job orders
   // of an order on a page still to come draw once it is in.
   const chunksLoading =
@@ -572,6 +576,7 @@ export function BoardScreen() {
       return;
     }
     // The buffer is rebuilt around the job order, which then draws and takes focus.
+    timelineZoom.stop();
     buffer.goTo(zoomNow, { ms: start, viewportX: machineWidth + (width - machineWidth) / 2 });
   });
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -658,7 +663,7 @@ export function BoardScreen() {
         }),
       action: (
         <Link
-          to={planningLinks.jobOrders({ plant }, { zoom: linkZoom, from }).href}
+          to={planningLinks.jobOrders({ plant }, { ...linkZoom, from }).href}
           className={buttonVariants({ variant: 'outline' })}
         >
           Open the job table
@@ -724,15 +729,22 @@ export function BoardScreen() {
                 />
               }
               from={from.slice(0, 10)}
-              onFromChange={(next) =>
+              onFromChange={(next) => {
+                timelineZoom.stop();
                 buffer.goTo(zoomNow, {
                   ms: startOfFrom(next, zoom, timeZone, productionDayStart),
                   viewportX: machineWidth,
-                })
-              }
-              onEarlier={() => buffer.page('earlier')}
+                });
+              }}
+              onEarlier={() => {
+                timelineZoom.stop();
+                buffer.page('earlier');
+              }}
               onNow={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
-              onLater={() => buffer.page('later')}
+              onLater={() => {
+                timelineZoom.stop();
+                buffer.page('later');
+              }}
               rangeLabel={
                 <VisibleSpanText visible={buffer.visible} zoom={zoom} timeZone={timeZone} />
               }
@@ -822,7 +834,7 @@ export function BoardScreen() {
                 busy={chunksLoading}
                 bands={
                   <ChunkBands
-                    chunks={unloaded}
+                    chunks={banded}
                     scale={scale}
                     labelTop={`${timeHeaderHeightRem + boardRowRem.notPlaced}rem`}
                   />
@@ -878,7 +890,7 @@ export function BoardScreen() {
                 void navigate({
                   href: planningLinks.gantt(
                     { plant },
-                    { zoom: linkZoom, from, order: orderId, chain: '1' },
+                    { ...linkZoom, from, order: orderId, chain: '1' },
                   ).href,
                 })
               }

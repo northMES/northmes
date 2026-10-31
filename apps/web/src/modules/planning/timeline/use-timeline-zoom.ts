@@ -17,6 +17,7 @@ import type { ZoomLevel } from '../gantt-data.ts';
 import {
   bandDuringGesture,
   bandOf,
+  roundZoom,
   type TimeRange,
   type TimeScale,
   type Zoom,
@@ -66,6 +67,11 @@ export interface TimelineZoom {
   readonly onKeyDown: (event: KeyboardEvent<HTMLElement>) => boolean;
   /** Go to now: the zoom kept, now at the centre of the view, the buffer rebuilt around it. */
   readonly goTo: (ms: number) => void;
+  /**
+   * Ends a running zoom without a frame more, before something else moves the buffer, such as
+   * Earlier, Later or Go to date.
+   */
+  readonly stop: () => void;
 }
 
 /** How long a gesture rests before it counts as ended, and how long a button's zoom takes. */
@@ -82,9 +88,14 @@ function reducedMotion(): boolean {
   return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 }
 
-/** The zoom at the end of a gesture or an animation: the band by the edges alone (ADR 0090). */
+/**
+ * The zoom at the end of a gesture, an animation or Zoom to fit: the width to three significant
+ * digits, as the URL holds it, in the band it lies in by the edges alone, so a reload opens the band
+ * the planner saw (ADR 0090).
+ */
 function settledZoom(pxPerHour: number): Zoom {
-  return { band: bandOf(pxPerHour), pxPerHour };
+  const rounded = roundZoom(pxPerHour);
+  return { band: bandOf(rounded), pxPerHour: rounded };
 }
 
 /**
@@ -210,8 +221,9 @@ export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
       }
       motion.stop();
       const fitted = fitView(span, layoutOf(), plant);
-      buffer.goTo(fitted.zoom, fitted.anchor);
-      announce(`Zoomed to fit ${name}. Zoom: ${zoomLevels[fitted.zoom.band].label}`);
+      const zoom = settledZoom(fitted.zoom.pxPerHour);
+      buffer.goTo(zoom, fitted.anchor);
+      announce(`Zoomed to fit ${name}. Zoom: ${zoomLevels[zoom.band].label}`);
     },
     onKeyDown: (event) => {
       if (event.ctrlKey || event.metaKey || event.altKey) return false;
@@ -229,8 +241,12 @@ export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
     goTo: (ms) => {
       motion.stop();
       const { clientWidth, stickyWidth } = layoutOf();
-      buffer.goTo(current, { ms, viewportX: stickyWidth + (clientWidth - stickyWidth) / 2 });
+      buffer.goTo(settledZoom(current.pxPerHour), {
+        ms,
+        viewportX: stickyWidth + (clientWidth - stickyWidth) / 2,
+      });
     },
+    stop: motion.stop,
   };
 }
 
@@ -258,7 +274,7 @@ interface ZoomMotion {
   readonly gesture: (factor: number, viewportX: number) => void;
   /** An animation to a width per hour around an anchor, read once when it starts. */
   readonly animate: (pxPerHour: number, anchor: () => ViewAnchor) => void;
-  /** The width an animation runs to, which a press during it compounds from. */
+  /** The width a gesture or an animation runs to, which a press during it compounds from. */
   readonly target: () => number | undefined;
   /** Ends what runs without a frame more. */
   readonly stop: () => void;
@@ -279,7 +295,8 @@ function nextFrame(callback: () => void): () => void {
  * and lays the buffer out once per frame at the instant under the pointer; it ends 150 ms after
  * its last event, in the band the zoom lies in by the edges alone. An animation runs from the zoom
  * drawn to its target over 150 ms on an ease-out curve, immediate under reduced motion; a timer
- * ends it where frames do not run, as in a hidden tab.
+ * ends it where frames do not run, as in a hidden tab. While a pointer drag runs, which reads the
+ * scale it began at, no frame is laid out and the end waits for the drag to end.
  */
 function zoomMotion(latest: RefObject<LatestView>): ZoomMotion {
   let gesture: { zoom: Zoom; viewportX: number } | undefined;
@@ -306,32 +323,48 @@ function zoomMotion(latest: RefObject<LatestView>): ZoomMotion {
       viewportX,
     );
   };
-  const finish = (pxPerHour: number, anchor: ViewAnchor | undefined) => {
+  const dragging = () => latest.current.dragging?.() === true;
+  const finish = (pxPerHour: number, anchor: ViewAnchor | undefined, say = true) => {
     const view = latest.current;
     const zoom = settledZoom(pxPerHour);
-    if (anchor !== undefined) view.buffer.goTo(zoom, anchor);
-    announce(`Zoom: ${zoomLevels[zoom.band].label}`);
+    // Without a drawn time area, the start in view keeps its place, and the URL takes the zoom.
+    view.buffer.goTo(
+      zoom,
+      anchor ?? {
+        ms: view.buffer.visible.get()?.fromMs ?? Date.now(),
+        viewportX: view.layoutOf().stickyWidth,
+      },
+    );
+    if (say) announce(`Zoom: ${zoomLevels[zoom.band].label}`);
   };
 
   const gestureFrame = () => {
     cancelFrame = undefined;
-    if (gesture === undefined) return;
+    if (gesture === undefined || dragging()) return;
     const anchor = anchorOfGesture(gesture.viewportX);
     if (anchor !== undefined) latest.current.buffer.goTo(gesture.zoom, anchor, true);
   };
-  const endGesture = () => {
+  const endGesture = (say = true) => {
     endTimer = undefined;
+    if (dragging()) {
+      endTimer = setTimeout(endGesture, gestureEndMs);
+      return;
+    }
     cancelFrame?.();
     cancelFrame = undefined;
     const ended = gesture;
     gesture = undefined;
-    if (ended !== undefined) finish(ended.zoom.pxPerHour, anchorOfGesture(ended.viewportX));
+    if (ended !== undefined) finish(ended.zoom.pxPerHour, anchorOfGesture(ended.viewportX), say);
   };
 
   const animationFrame = () => {
     cancelFrame = undefined;
     const running = animation;
     if (running === undefined) return;
+    if (dragging()) {
+      cancelFrame = nextFrame(animationFrame);
+      return;
+    }
     const t = Math.min(1, (performance.now() - running.startedAt) / animationMs);
     if (t >= 1) {
       endAnimation();
@@ -344,6 +377,11 @@ function zoomMotion(latest: RefObject<LatestView>): ZoomMotion {
     cancelFrame = nextFrame(animationFrame);
   };
   const endAnimation = () => {
+    if (dragging()) {
+      clearTimeout(endTimer);
+      endTimer = setTimeout(endAnimation, animationMs);
+      return;
+    }
     const running = animation;
     animation = undefined;
     cancel();
@@ -363,8 +401,14 @@ function zoomMotion(latest: RefObject<LatestView>): ZoomMotion {
       endTimer = setTimeout(endGesture, gestureEndMs);
     },
     animate: (pxPerHour, anchorOf) => {
-      if (gesture !== undefined) return;
       const view = latest.current;
+      let from = view.current.pxPerHour;
+      if (gesture !== undefined) {
+        // A press ends the gesture where it is, and zooms on from there.
+        from = roundZoom(gesture.zoom.pxPerHour);
+        clearTimeout(endTimer);
+        endGesture(false);
+      }
       const anchor = animation?.anchor ?? anchorOf();
       if (reducedMotion()) {
         animation = undefined;
@@ -373,7 +417,7 @@ function zoomMotion(latest: RefObject<LatestView>): ZoomMotion {
         return;
       }
       animation = {
-        from: view.current.pxPerHour,
+        from: animation === undefined ? from : view.current.pxPerHour,
         to: pxPerHour,
         anchor,
         startedAt: performance.now(),
@@ -383,7 +427,7 @@ function zoomMotion(latest: RefObject<LatestView>): ZoomMotion {
       cancelFrame = nextFrame(animationFrame);
       endTimer = setTimeout(endAnimation, animationMs + 50);
     },
-    target: () => animation?.to,
+    target: () => animation?.to ?? gesture?.zoom.pxPerHour,
     stop: () => {
       gesture = undefined;
       animation = undefined;
@@ -465,14 +509,21 @@ function gestureListeners(
         const element = event.currentTarget as HTMLElement;
         if (!zooms(element, wheelEvent.clientX)) return;
         event.preventDefault();
-        zoom(element, wheelFactor(wheelEvent, element.clientHeight), wheelEvent.clientX);
+        // A page counts as the time area's height, also over a panel.
+        const pageHeight = latest.current.grid.current?.clientHeight ?? element.clientHeight;
+        zoom(element, wheelFactor(wheelEvent, pageHeight), wheelEvent.clientX);
       },
       touchstart: (event: Event) => {
         lastDistance = twoTouches(event as TouchEvent)?.distance ?? 0;
       },
       touchmove: (event: Event) => {
         const touches = twoTouches(event as TouchEvent);
-        if (touches === undefined || lastDistance === 0) return;
+        if (touches === undefined) return;
+        // Two fingers left of three, or two that met, start the pinch from where they are.
+        if (lastDistance === 0) {
+          lastDistance = touches.distance;
+          return;
+        }
         const factor = touches.distance / lastDistance;
         lastDistance = touches.distance;
         zoom(event.currentTarget as HTMLElement, factor, touches.clientX);

@@ -128,8 +128,8 @@ function fittingWidth(span: TimeRange, widthPx: number, plant: ZoomPlant): numbe
 }
 
 /**
- * The factor of a Ctrl+wheel or Cmd+wheel event (ADR 0090): `exp(-deltaY * 0.002)`, with a line
- * counted as 16 px and a page as the time area's height, as d3-zoom reads a wheel.
+ * The factor of a Ctrl+wheel or Cmd+wheel event (ADR 0090): `exp(-deltaY * 0.002)` with `deltaY`
+ * in pixels, a line counted as 16 px and a page as the time area's height.
  */
 export function wheelFactor(
   event: { readonly deltaY: number; readonly deltaMode: number },
