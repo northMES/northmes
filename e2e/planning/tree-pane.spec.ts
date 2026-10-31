@@ -28,9 +28,10 @@ async function showEveryColumn(page: Page): Promise<void> {
 /**
  * Scrolls the grid until the marker sits under the left pane, then reads, at the marker's x and the
  * row's vertical centre and at the centre of the cell over the marker, what the browser hits, and
- * whether the row's bottom border at the marker's x is the pane's own border line. The overlay takes
- * the pointer while the probe reads, so a layer painted over the pane is what it hits. The buffer
- * may move under a scroll, so the marker is found again after each one.
+ * on the row's bottom border at the marker's x what the browser hits, how wide the pane's own
+ * bottom border is and how far above the row's bottom the pane ends. The overlay takes the pointer
+ * while the probe reads, so a layer painted over the pane is what it hits. The buffer may move
+ * under a scroll, so the marker is found again after each one.
  */
 async function coverOf(
   grid: Locator,
@@ -39,7 +40,7 @@ async function coverOf(
 ): Promise<{
   under: boolean;
   atMarker: boolean;
-  atBorder: boolean;
+  border: { hit: string; width: string; gap: number };
   atCentre: boolean;
   cell: string;
 }> {
@@ -81,14 +82,21 @@ async function coverOf(
         const at = document.elementFromPoint(px, py);
         return at !== null && inside.contains(at);
       };
+      // What the browser hits, named so a failure says what lies over the pane.
+      const named = (at: Element | null) =>
+        at === null
+          ? 'nothing'
+          : `${at.tagName.toLowerCase()}${at.getAttribute('role') === null ? '' : `[role=${at.getAttribute('role')}]`}.${String(at.getAttribute('class')).slice(0, 80)}`;
+      const atLine = document.elementFromPoint(x, lineBottom - 0.5);
       const result = {
         under: x > pane.left && x < pane.right,
         atMarker: hit(x, y, cell),
         // The row's 1 px bottom border is the pane's own border, so the row line stays drawn.
-        atBorder:
-          hit(x, lineBottom - 0.5, cover) &&
-          getComputedStyle(cover).borderBottomWidth === '1px' &&
-          Math.abs(cover.getBoundingClientRect().bottom - lineBottom) < 0.5,
+        border: {
+          hit: atLine !== null && cover.contains(atLine) ? 'pane' : named(atLine),
+          width: getComputedStyle(cover).borderBottomWidth,
+          gap: Math.round((lineBottom - cover.getBoundingClientRect().bottom) * 100) / 100,
+        },
         atCentre: hit(rect.left + rect.width / 2, y, cell),
         cell: cell.getAttribute('role') ?? '',
       };
@@ -128,7 +136,7 @@ test.describe('the left pane of the timelines', () => {
       expect(cover, marker).toEqual({
         under: true,
         atMarker: true,
-        atBorder: true,
+        border: { hit: 'pane', width: '1px', gap: 0 },
         atCentre: true,
         cell: expect.any(String),
       });
@@ -154,7 +162,7 @@ test.describe('the left pane of the timelines', () => {
       expect(cover, `${marker} ${row}`).toEqual({
         under: true,
         atMarker: true,
-        atBorder: true,
+        border: { hit: 'pane', width: '1px', gap: 0 },
         atCentre: true,
         cell: 'rowheader',
       });
