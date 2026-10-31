@@ -86,12 +86,12 @@ describe('the register template', () => {
     await insertAt(acme.company, 'C-100');
     await insertAt(other.company, 'C-100');
 
-    const rows = await query(
-      db.ownerUrl,
-      `select count(*)::int as count from ${table} where company_id = any ($1::uuid[])`,
-      [[acme.company, other.company]],
+    const rows = await db.command(
+      { principal, scopes: [hel, sto, acme.company, other.company], reason: 'read' },
+      async (tx) =>
+        (await tx.query<{ code: string }>(`select code from ${table} order by code`)).rows,
     );
-    expect(rows).toEqual([{ count: 4 }]);
+    expect(rows.map(({ code }) => code)).toEqual(['C-100', 'C-100', 'T-100', 'T-100']);
   });
 
   it('E06-S04 a company t-100 is refused while a plant holds T-100, as core.code_taken that names no plant, code or id', async () => {

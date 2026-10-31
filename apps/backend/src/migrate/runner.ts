@@ -42,9 +42,10 @@ interface ModuleFiles {
  * Applies the migration files of every catalog module in catalog order (ADR 0006). Each module's
  * schema is owned by the NOLOGIN role nm_mod_<sql name>, which nm_owner creates and may SET to,
  * and each file runs in a transaction of its own under SET LOCAL ROLE of that role. Applied files
- * are recorded in northmes_meta.migration. A run holds the migration advisory lock of the
- * database throughout, so concurrent runs apply each file once. Last, it installs or migrates
- * pg-boss's schema (installJobQueue).
+ * are recorded in northmes_meta.migration. Before any file it creates the extensions the files may
+ * use (createExtensions). A run holds the migration advisory lock of the database throughout, so
+ * concurrent runs apply each file once. Last, it installs or migrates pg-boss's schema
+ * (installJobQueue).
  *
  * The run checks the files of every module before it applies any, and throws a MigrationError
  * that lists every problem when an applied file's sha256 changed, two files of a module share a
@@ -56,6 +57,7 @@ export async function migrate({ ownerUrl, catalog }: MigrateOptions): Promise<Mi
   try {
     await takeMigrationLock(client);
     await createMigrationTable(client);
+    await createExtensions(client);
     const modules = await readModuleFiles(client, catalog);
     const problems = modules.flatMap((module) => [
       ...changedFiles(module),
@@ -134,6 +136,17 @@ async function createMigrationTable(client: Client): Promise<void> {
   // Boot step 5 reads the records as nm_app (ADR 0002).
   await client.query('grant usage on schema northmes_meta to nm_app');
   await client.query('grant select on northmes_meta.migration to nm_app');
+}
+
+/**
+ * Creates btree_gist, which a register's code exclusion constraint needs for its uuid and text
+ * columns (ADR 0009), in northmes_extensions unless it exists. It is a trusted extension, so
+ * nm_owner, which holds CREATE on the database, may create it; a module's owner role may not, so
+ * migrate creates it before any module's files.
+ */
+async function createExtensions(client: Client): Promise<void> {
+  await client.query('create schema if not exists northmes_extensions');
+  await client.query('create extension if not exists btree_gist with schema northmes_extensions');
 }
 
 /**
