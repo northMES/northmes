@@ -28,6 +28,11 @@ export interface GanttSearch {
   readonly order?: string;
   /** 1 highlights the selected order's critical chain. */
   readonly chain?: 1;
+  /**
+   * The order filter (ADR 0090, The order filter): the order number text the view draws the
+   * matching orders of, at most 100 characters as ADR 0016's list search.
+   */
+  readonly q?: string;
 }
 
 /**
@@ -58,6 +63,9 @@ export const zoomKey = z
   .pipe(z.number())
   .transform((pxPerHour) => roundZoom(clampZoom(pxPerHour)));
 
+/** The longest order filter, as ADR 0016's list search (ADR 0090). */
+export const maxFilterLength = 100;
+
 /** The URL keys, each of which falls back to its default on its own (ADR 0062). */
 const searchKeys = z.object({
   zoom: zoomKey.optional().catch(undefined),
@@ -73,16 +81,24 @@ const searchKeys = z.object({
     .transform(() => 1 as const)
     .optional()
     .catch(undefined),
+  // The router reads an all-digit value as a number, as it reads `order`.
+  q: z
+    .union([z.string(), z.number()])
+    .transform((value) => String(value).trim())
+    .pipe(z.string().min(1).max(maxFilterLength))
+    .optional()
+    .catch(undefined),
 });
 
 /** The view state that a URL's search describes, for the Gantt route's validateSearch. */
 export function ganttSearch(raw: Record<string, unknown>): GanttSearch {
-  const { zoom, from, order, chain } = searchKeys.parse(raw);
+  const { zoom, from, order, chain, q } = searchKeys.parse(raw);
   return {
     ...(zoom !== undefined && { zoom }),
     ...(from !== undefined && { from }),
     ...(order !== undefined && { order }),
     ...(chain !== undefined && { chain }),
+    ...(q !== undefined && { q }),
   };
 }
 
@@ -137,6 +153,21 @@ export function withZoom<T extends GanttSearch>(search: T, zoom: number): T {
 
 export function withFrom<T extends GanttSearch>(search: T, from: string): T {
   return { ...search, from };
+}
+
+/** The view with an order filter, or none: an empty filter leaves the URL (ADR 0090). */
+export function withQuery<T extends GanttSearch>(search: T, q: string): T {
+  const { q: _, ...rest } = search;
+  return (q === '' ? rest : { ...rest, q }) as T;
+}
+
+/**
+ * Whether an order number matches the order filter: it holds the filter's text, in any case, as
+ * the list search of ADR 0016 matches a number. An empty filter matches every order.
+ */
+export function matchesOrderFilter(number: string, q: string | undefined): boolean {
+  const text = q?.trim().toLowerCase() ?? '';
+  return text === '' || number.toLowerCase().includes(text);
 }
 
 /** The view with an order selected, or none; a change of order ends the chain highlight. */

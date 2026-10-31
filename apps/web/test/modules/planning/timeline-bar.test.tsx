@@ -216,7 +216,7 @@ describe('the slim bar above the order Gantt (ADR 0090)', () => {
     expect(document.querySelector('[data-chunk-status]')).toBeNull();
   });
 
-  it('#939 My draft goes when the drawer closes with no changes left, and focus moves to the bar', async () => {
+  it('#940 My draft goes when the drawer closes with no changes left, and focus moves to the order filter', async () => {
     window.localStorage.setItem(
       'northmes.planning.gantt.options',
       JSON.stringify({ cascade: false }),
@@ -236,7 +236,7 @@ describe('the slim bar above the order Gantt (ADR 0090)', () => {
     await waitFor(() => expect(screen.queryByRole('dialog', { name: /My draft/ })).toBeNull());
     expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
     await waitFor(() =>
-      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Go to now' })),
+      expect(document.activeElement).toBe(screen.getByRole('searchbox', { name: 'Filter orders' })),
     );
   });
 });
@@ -258,7 +258,7 @@ describe('the slim bar above the planning board (ADR 0090)', () => {
     expect(board.style.scrollPaddingBottom).not.toBe('');
   });
 
-  it('#939 My draft on the board goes when the drawer closes with no changes left, and focus moves to Go to now', async () => {
+  it('#940 My draft on the board goes when the drawer closes with no changes left, and focus moves to the order filter', async () => {
     const user = userEvent.setup();
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'board');
     const board = await findBoard();
@@ -277,7 +277,7 @@ describe('the slim bar above the planning board (ADR 0090)', () => {
     await user.keyboard('{Escape}');
 
     await waitFor(() =>
-      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Go to now' })),
+      expect(document.activeElement).toBe(screen.getByRole('searchbox', { name: 'Filter orders' })),
     );
     expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
   });
