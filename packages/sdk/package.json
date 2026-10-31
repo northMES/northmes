@@ -43,6 +43,10 @@
     "./operations": {
       "@northmes/source": "./src/operations/index.ts",
       "default": "./dist/operations/index.js"
+    },
+    "./master-data": {
+      "@northmes/source": "./src/master-data/index.ts",
+      "default": "./dist/master-data/index.js"
     }
   },
   "scripts": {
