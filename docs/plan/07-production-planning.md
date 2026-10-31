@@ -25,7 +25,7 @@ Release 1 holds the full planning scope under option B ([ADR 0055](../adr/0055-r
 - Operator progress from the minimal station, which reports through planning's API ([09-operator-station.md](09-operator-station.md)).
 - Agent proposals reviewed into the planner's draft ([10-ai-and-agents.md](10-ai-and-agents.md)).
 
-Not in release 1: BOM explosion into new child orders, automatic parent and child links for imported orders, a solver, block resize, a compressed off-hours axis, multi-select and multi-drag, continuous zoom, undo beyond discarding the draft, a conflict navigator, a minimap, storage locations, crew rotation, a setup matrix, a generic CSV or Excel import, company-wide multi-plant planning screens and the reporting schema.
+Not in release 1: BOM explosion into new child orders, automatic parent and child links for imported orders, a solver, block resize, a compressed off-hours axis, multi-select and multi-drag, undo beyond discarding the draft, a conflict navigator, a minimap, storage locations, crew rotation, a setup matrix, a generic CSV or Excel import, company-wide multi-plant planning screens and the reporting schema.
 
 ## Module boundaries
 
@@ -829,7 +829,7 @@ The full rules are in [08-pyramid-connector.md](08-pyramid-connector.md) and [AD
 
 ### Cut from release 1
 
-Resize (block length follows from quantity, rates and the calendar), the compressed off-hours axis, multi-select and multi-drag, continuous zoom (proposed for release 1 in [ADR 0090](../adr/0090-a-smooth-zoom-and-a-slim-bar-above-the-timeline-on-the-planning-board-and-the-order-gantt.md)), undo beyond discarding the draft, the conflict navigator and the minimap. Click-to-place (about 1.5 days) and the ghost outlines of other planners' drafts are cut candidates if velocity is low.
+Resize (block length follows from quantity, rates and the calendar), the compressed off-hours axis, multi-select and multi-drag, undo beyond discarding the draft, the conflict navigator and the minimap. Click-to-place (about 1.5 days) and the ghost outlines of other planners' drafts are cut candidates if velocity is low.
 
 ### Block states
 
