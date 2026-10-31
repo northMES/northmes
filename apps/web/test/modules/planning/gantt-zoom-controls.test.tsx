@@ -143,6 +143,21 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
     await waitFor(() => expect(polite()).toBe('Zoom: Week'));
   });
 
+  it('#941 a gesture that ends at 27.72 px an hour settles at 27.7, in the Week band its rounded width lies in', async () => {
+    const router = renderGanttRoute({ from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    // 16 * exp(-deltaY * 0.002) = 27.72: just past the Week to Day edge at about 27.713.
+    ctrlWheel(gantt, -Math.log(27.72 / 16) / 0.002, 1200);
+
+    await waitFor(() => expect(router.state.location.search.zoom).toBe(27.7));
+    expect(
+      within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {
+        name: 'Zoom level, Week',
+      }),
+    ).toBeTruthy();
+  });
+
   it('#941 the instant under the pointer stays at its x through a Ctrl+wheel gesture', async () => {
     renderGanttRoute({ from: '2026-11-02' });
     const gantt = await findGantt();

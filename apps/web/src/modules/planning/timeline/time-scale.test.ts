@@ -663,6 +663,16 @@ describe('the zoom as a width per hour (ADR 0090, Zoom as a width per hour)', ()
     expect(bandOf(1000)).toBe('quarter-hours');
   });
 
+  it('#941 puts a width exactly on a band edge in the finer band', () => {
+    const levels = zoomLevelIds;
+    for (let index = 1; index < levels.length; index += 1) {
+      const finer = levels[index - 1] as (typeof zoomLevelIds)[number];
+      const coarser = levels[index] as (typeof zoomLevelIds)[number];
+      const edge = Math.sqrt(zoomLevels[finer].pxPerHour * zoomLevels[coarser].pxPerHour);
+      expect(bandOf(edge), `${finer} and ${coarser}`).toBe(finer);
+    }
+  });
+
   /** The edges between adjacent bands, finest first. */
   const edges = zoomLevelIds.slice(1).map((coarser, index) => {
     const finer = zoomLevelIds[index] as (typeof zoomLevelIds)[number];

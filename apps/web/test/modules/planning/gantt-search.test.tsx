@@ -218,6 +218,8 @@ describe('the Gantt page (plan 18, URL state)', () => {
       ['abc', 'Week', 16],
       [37.5, 'Day', 37.5],
       [26, 'Week', 26],
+      // Just under the Week to Day edge at about 27.713, as a gesture that ended at 27.72 writes it.
+      [27.7, 'Week', 27.7],
       ['day', 'Day', 48],
       ['quarter', 'Quarter', 0.6],
       [1000, 'Quarter hours', 240],
