@@ -275,9 +275,9 @@ describe('runs of orders of one article on the order Gantt (ADR 0083, plan 18 Ru
     expect(rowOf(gantt, 'po-1005').getAttribute('aria-level')).toBe('1');
     expect(within(drawer).getByRole('heading', { level: 2 }).textContent).toBe('My draft');
     await user.keyboard('{Escape}');
-    // With no changes left, My draft leaves the bar and focus moves to it (ADR 0090).
+    // With no changes left, My draft leaves the bar and focus moves to the order filter (ADR 0090).
     await waitFor(() =>
-      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Go to now' })),
+      expect(document.activeElement).toBe(screen.getByRole('searchbox', { name: 'Filter orders' })),
     );
     expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
   });

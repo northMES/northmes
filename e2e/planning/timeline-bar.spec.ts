@@ -78,7 +78,7 @@ test.describe('the slim bar above the timeline', () => {
     await expect(view).toBeFocused();
   });
 
-  test('#939 My draft shows with a change, passes axe, and leaves the bar with focus on Go to now once the draft is discarded', async ({
+  test('#940 My draft shows with a change, passes axe, and leaves the bar with focus on the order filter once the draft is discarded', async ({
     page,
     signIn,
     checkA11y,
@@ -109,7 +109,7 @@ test.describe('the slim bar above the timeline', () => {
     await page.keyboard.press('Escape');
 
     await expect(page.getByRole('button', { name: /^My draft/ })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Go to now' })).toBeFocused();
+    await expect(page.getByRole('searchbox', { name: 'Filter orders' })).toBeFocused();
   });
 
   test('#939 the zoom buttons over the time area keep focus, and a focused block scrolled into view is never under them', async ({
@@ -216,5 +216,47 @@ test.describe('the slim bar above the timeline', () => {
       page.getByRole('toolbar', { name: 'Board' }).getByRole('button', { name: /^My draft, / }),
     ).toBeVisible();
     await checkA11y('the board with My draft in the bar');
+  });
+
+  test('#940 the order filter shows only the matching order, Clear filter brings the rest back, and each state passes axe', async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
+    await signIn(href('gantt', { from: '2026-11-02' }));
+    const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
+    await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
+    const filter = page.getByRole('searchbox', { name: 'Filter orders' });
+    const orderRows = gantt.locator('[data-row-id^="po-"]');
+
+    await filter.fill('1003');
+    await expect(orderRows).toHaveCount(1);
+    await expect(page).toHaveURL(/[?&]q=/);
+    await checkA11y('the Gantt with a filter');
+
+    await page.getByRole('button', { name: 'Clear filter' }).click();
+    await expect(orderRows).toHaveCount(6);
+    await expect(filter).toBeFocused();
+    await checkA11y('the Gantt with the filter cleared');
+
+    await filter.fill('9999');
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'No orders match 9999' }),
+    ).toBeVisible();
+    await checkA11y('the Gantt with a filter that matches no order');
+  });
+
+  test('#940 on the board the filter leaves the machine rows and shows only the matching job orders', async ({
+    page,
+    signIn,
+    checkA11y,
+  }) => {
+    await signIn(href('board', { from: '2026-11-02', q: '1003' }));
+    const board = page.getByRole('grid', { name: /board/ });
+    await expect(board).not.toHaveAttribute('aria-busy', 'true');
+
+    await expect(board.locator('[role="gridcell"][data-job-order]')).toHaveCount(2);
+    await expect(page.getByRole('searchbox', { name: 'Filter orders' })).toHaveValue('1003');
+    await checkA11y('the board with a filter');
   });
 });
