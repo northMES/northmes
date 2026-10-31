@@ -4,11 +4,17 @@
 import type { JobOrderSpan } from '@northmes/planning-domain';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import type { KeyboardEvent, ReactNode } from 'react';
+import { type KeyboardEvent, type ReactNode, useId } from 'react';
+import {
+  ColumnResizer,
+  type ColumnWidthChange,
+  keyedWidth,
+  widthWithin,
+} from '../../components/column-resizer/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { TimeScale } from '../../timeline/time-scale.ts';
 import { GanttMarkerLayer, overlayMarkers } from '../gantt/gantt-marker-layer.tsx';
-import { type MovePreview, tooltipText } from '../gantt/gantt-move.ts';
+import { type MovePreview, type NotAllowed, tooltipText } from '../gantt/gantt-move.ts';
 import { quantityText } from '../gantt/gantt-rows.ts';
 import {
   GanttTimeHeader,
@@ -40,6 +46,10 @@ export interface BoardGridProps {
   readonly cellsOf: (machine: string) => readonly BoardCellItem[];
   readonly scale: TimeScale;
   readonly machineWidth: number;
+  /** What a resize of the machine column may make it (#943). */
+  readonly machineBounds: { readonly min: number; readonly max: number };
+  /** A change of the machine column's width (see ColumnResizer). */
+  readonly onMachineWidthChange: ColumnWidthChange;
   readonly timeWidth: number;
   readonly collapsed: ReadonlySet<string>;
   readonly onToggleGroup: (code: string) => void;
@@ -47,6 +57,8 @@ export interface BoardGridProps {
   readonly tabStop: string | undefined;
   /** The move in progress, which draws its outline in the row of its target machine. */
   readonly preview?: MovePreview;
+  /** The machines the job order in a move may not go to, whose rows are greyed out (#944). */
+  readonly notAllowed?: NotAllowed;
   /** The selected order, by id, whose job orders carry aria-selected. */
   readonly selectedOrderId: string | undefined;
   readonly onSelectOrder: (orderId: string) => void;
@@ -156,6 +168,7 @@ function Row({
   className,
   top,
   machine,
+  notAllowed,
   children,
 }: {
   readonly index: number;
@@ -166,6 +179,8 @@ function Row({
   readonly top?: number;
   /** The machine of a machine row, which a pointer drag reads to find its target. */
   readonly machine?: string;
+  /** Whether the job order in a move may not go to the row's machine, which greys it out. */
+  readonly notAllowed?: boolean;
   readonly children: ReactNode;
 }) {
   return (
@@ -173,6 +188,7 @@ function Row({
       role="row"
       aria-rowindex={index}
       data-machine={machine}
+      data-not-allowed={notAllowed || undefined}
       // As wide as its tracks: a sticky cell cannot leave its row, so a row only as wide as the
       // grid would take the machine cells with it once the scroll passes the row's width (#910).
       className={cn('grid w-max min-w-full border-b border-border', className)}
@@ -202,11 +218,14 @@ export function BoardGrid({
   cellsOf,
   scale,
   machineWidth,
+  machineBounds,
+  onMachineWidthChange,
   timeWidth,
   collapsed,
   onToggleGroup,
   tabStop,
   preview,
+  notAllowed,
   selectedOrderId,
   onSelectOrder,
   onOpenDetails,
@@ -221,6 +240,7 @@ export function BoardGrid({
   emptyText = 'No jobs in this range',
 }: BoardGridProps) {
   const columns = `${machineWidth}px ${timeWidth}px`;
+  const headerId = useId();
   const machineCount = model.groups.reduce((sum, group) => sum + group.machines.length, 0);
   const tab = (key: string) => (key === tabStop ? 0 : -1);
   // The rows the move in progress carries with it, on their machines, also from outside the range.
@@ -291,6 +311,9 @@ export function BoardGrid({
       bodyRem += boardRowRem.machine;
       const code = machine.equipment.code;
       const cells = cellsOf(code);
+      // A machine the moving job order may not go to is greyed out with a hatch, so the cue does
+      // not rest on colour alone, and its row header says so (#944).
+      const greyed = notAllowed?.machines.has(code) === true;
       bodyRows.push(
         <Row
           key={code}
@@ -298,11 +321,17 @@ export function BoardGrid({
           heightRem={boardRowRem.machine}
           columns={columns}
           machine={code}
+          notAllowed={greyed}
         >
           <div
             role="rowheader"
             tabIndex={tab(focusKeys.header(code))}
             data-board-focus={focusKeys.header(code)}
+            aria-label={
+              greyed
+                ? `${machine.equipment.name}, not allowed for ${notAllowed?.operation}`
+                : undefined
+            }
             onFocus={() => onFocusTarget(focusKeys.header(code))}
             data-sticky-column
             className="sticky start-0 z-20 flex items-center border-e border-border bg-card px-3 text-sm"
@@ -311,10 +340,26 @@ export function BoardGrid({
                 group.color === undefined ? undefined : `inset 6px 0 0 var(--${group.color})`,
             }}
           >
-            {machine.equipment.name}
+            {greyed && (
+              // From the group colour's 6 px edge on, so the edge keeps its tint.
+              <span
+                aria-hidden
+                className="planning-not-allowed pointer-events-none absolute inset-y-0 start-1.5 end-0"
+              />
+            )}
+            <span data-machine-name className="relative">
+              {machine.equipment.name}
+            </span>
           </div>
           <div className="relative bg-lane">
             <TimeCellShading windows={machine.closed} scale={scale} nowMs={snapshot.nowMs} />
+            {greyed && (
+              <span
+                aria-hidden
+                data-not-allowed-hatch
+                className="planning-not-allowed pointer-events-none absolute inset-0"
+              />
+            )}
             {preview !== undefined && preview.equipment === code && (
               <MoveOutline preview={preview} scale={scale} timeZone={snapshot.plant.timeZone} />
             )}
@@ -336,7 +381,11 @@ export function BoardGrid({
                 data-board-focus={focusKeys.empty(code)}
                 data-sticky-column
                 onFocus={() => onFocusTarget(focusKeys.empty(code))}
-                className="sticky start-0 inline-flex h-full items-center px-3 text-xs text-muted-foreground"
+                className={cn(
+                  'sticky start-0 inline-flex h-full items-center px-3 text-xs text-muted-foreground',
+                  // Its text keeps its contrast over a greyed row's hatch (WCAG 1.4.3).
+                  greyed && 'bg-lane',
+                )}
                 style={{ insetInlineStart: `${machineWidth}px` }}
               >
                 {emptyText}
@@ -391,7 +440,17 @@ export function BoardGrid({
       aria-multiselectable="true"
       aria-rowcount={rowIndex}
       aria-busy={busy || undefined}
-      onKeyDown={onKeyDown}
+      onKeyDown={(event) => {
+        // Alt+Left and Alt+Right anywhere in the grid resize the machine column: the grid keeps
+        // one Tab stop, so its header's handle is for the pointer (#943).
+        const next = keyedWidth(event, machineWidth, { alt: true });
+        if (next !== undefined) {
+          event.preventDefault();
+          onMachineWidthChange(widthWithin(next, machineBounds.min, machineBounds.max), true);
+          return;
+        }
+        onKeyDown(event);
+      }}
       onScroll={onScroll}
       className="min-h-0 overflow-auto overscroll-contain rounded-lg border border-border bg-card text-sm"
       style={{
@@ -405,13 +464,27 @@ export function BoardGrid({
       <Row index={1} heightRem={headerRem} columns={columns} className="sticky top-0 z-40 bg-muted">
         <div
           role="columnheader"
-          className="sticky start-0 z-10 flex flex-col justify-center border-e border-border bg-muted px-3"
+          aria-labelledby={`${headerId}-text`}
+          className="sticky start-0 z-10 flex flex-col justify-center border-e border-border bg-muted ps-3 pe-[calc(var(--nm-target-min)+0.25rem)]"
         >
-          <span className="text-xs font-medium">Machines</span>
-          <span className="text-xs text-muted-foreground">
-            <span className="sr-only">, </span>
-            {machineCount} in{' '}
-            {model.groups.length === 1 ? '1 group' : `${model.groups.length} groups`}
+          <ColumnResizer
+            column="Machines"
+            width={machineWidth}
+            minWidth={machineBounds.min}
+            maxWidth={machineBounds.max}
+            focusable={false}
+            // A new width rebuilds the time buffer, so a drag draws a line and resizes on release.
+            preview="line"
+            onWidthChange={onMachineWidthChange}
+          />
+          {/* The header's name, without the resize handle's. */}
+          <span id={`${headerId}-text`} className="flex flex-col">
+            <span className="text-xs font-medium">Machines</span>
+            <span className="text-xs text-muted-foreground">
+              <span className="sr-only">, </span>
+              {machineCount} in{' '}
+              {model.groups.length === 1 ? '1 group' : `${model.groups.length} groups`}
+            </span>
           </span>
         </div>
         <GanttTimeHeader scale={scale} nowMs={snapshot.nowMs} />
@@ -490,9 +563,11 @@ export function BoardGrid({
       </Row>
       <div className="relative">
         {bodyRows}
+        {/* A stacking context of its own under the machine column (z-20), so no layer it draws
+            reaches over it (#943). */}
         <div
           aria-hidden
-          className="pointer-events-none absolute top-0"
+          className="pointer-events-none absolute top-0 z-0"
           style={{ left: `${machineWidth}px`, width: `${timeWidth}px`, height: `${bodyRem}rem` }}
         >
           {bands}

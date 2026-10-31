@@ -11,6 +11,9 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
 import { RangeControls, ZoomControls } from '../../components/range-controls/index.ts';
@@ -18,6 +21,16 @@ import type { ZoomLevel } from '../../gantt-data.ts';
 import { changesText } from './gantt-draft-drawer.tsx';
 import type { GanttOptions } from './gantt-options.ts';
 import { ganttColumnChoices } from './gantt-tree-pane.tsx';
+
+/**
+ * The tree pane widths Board options offers, the one-click alternative to dragging the splitter
+ * (WCAG 2.5.7, #943), as shares of the view.
+ */
+const paneWidths = [
+  { label: 'Narrow tree pane', share: 0.25 },
+  { label: 'Medium tree pane', share: 0.4 },
+  { label: 'Wide tree pane', share: 0.6 },
+] as const;
 
 export interface GanttToolbarProps {
   readonly zoom: ZoomLevel;
@@ -111,6 +124,25 @@ export function GanttToolbar({
             >
               Cascade
             </DropdownMenuCheckboxItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuLabel>Tree pane width</DropdownMenuLabel>
+            {/* A width the splitter set between these leaves none of them checked. */}
+            <DropdownMenuRadioGroup
+              value={String(options.treePaneShare)}
+              onValueChange={(value: string) => onOptionsChange({ treePaneShare: Number(value) })}
+            >
+              {paneWidths.map((each) => (
+                <DropdownMenuRadioItem
+                  key={each.share}
+                  value={String(each.share)}
+                  closeOnClick={false}
+                >
+                  {each.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>

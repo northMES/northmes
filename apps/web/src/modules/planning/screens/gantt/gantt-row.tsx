@@ -8,20 +8,21 @@ import { useGanttView } from './gantt-context.ts';
 import { GanttMarkerLayer, rowMarkers } from './gantt-marker-layer.tsx';
 import { rowHeightRem, rowSpan, summaryName } from './gantt-rows.ts';
 import { SummaryBar, TimeCellShading } from './gantt-time-area.tsx';
-import { type GanttColumn, GanttRowHeader, type GanttTableRow } from './gantt-tree-pane.tsx';
+import {
+  type GanttColumn,
+  GanttRowHeader,
+  type GanttTableRow,
+  TreePane,
+  type TreePaneLayout,
+} from './gantt-tree-pane.tsx';
 
 export interface GanttRowProps {
   readonly row: GanttTableRow;
   readonly columns: readonly GanttColumn[];
-  /** The CSS grid template the header row shares, one track per tree column and one for time. */
+  /** The CSS grid template the header row shares, one track for the tree pane and one for time. */
   readonly gridTemplateColumns: string;
-  /** The left offset of each tree column, where its cell sticks while the time column scrolls. */
-  readonly cellLefts: readonly number[];
-  /**
-   * Whether every tree cell sticks: only while the pane fits its cap, so a narrow grid (320 px
-   * reflow, 400 percent zoom) keeps the time area reachable with the Name column alone pinned.
-   */
-  readonly stickyTree: boolean;
+  /** The tree pane's width and its columns' tracks (#943). */
+  readonly pane: TreePaneLayout;
   readonly rowIndex: number;
   readonly setSize: number;
   readonly posInSet: number;
@@ -40,14 +41,14 @@ export interface GanttRowProps {
  * One row of the treegrid (plan 18, Tree grid semantics): aria-level, aria-setsize, aria-posinset
  * and, at levels 1 and 2, aria-expanded; the rowheader, the tree columns as gridcells and one
  * gridcell for the time area, which holds the summary bar or the block. A row is a tab stop under
- * the roving tabindex; the keys of row focus mode arrive through onKeyDown.
+ * the roving tabindex; the keys of row focus mode arrive through onKeyDown. The tree cells sit in
+ * the tree pane, which covers the time cell where they meet (#943).
  */
 export function GanttRowView({
   row,
   columns,
   gridTemplateColumns,
-  cellLefts,
-  stickyTree,
+  pane,
   rowIndex,
   setSize,
   posInSet,
@@ -135,36 +136,38 @@ export function GanttRowView({
         ...(original.kind === 'run' && { borderInlineStartStyle: 'double' }),
       }}
     >
-      {columns.map((column, index) =>
-        index === 0 ? (
-          <div
-            key={column.id}
-            role="rowheader"
-            className={cn(
-              'sticky z-10 flex min-w-0 items-center gap-1.5 overflow-hidden border-e border-border pe-2',
-              background,
-              selected && 'shadow-[inset_3px_0_0_var(--foreground)]',
-            )}
-            style={{ paddingInlineStart: `${0.5 + (level - 1)}rem`, insetInlineStart: 0 }}
-          >
-            <GanttRowHeader row={row} expanded={expanded} onToggle={onToggle} />
-          </div>
-        ) : (
-          <div
-            key={column.id}
-            role="gridcell"
-            className={cn(
-              'flex min-w-0 items-center overflow-hidden border-e border-border px-2 font-mono text-xs whitespace-nowrap',
-              stickyTree && 'sticky z-10',
-              background,
-              column.numeric && 'justify-end tabular-nums',
-            )}
-            style={stickyTree ? { insetInlineStart: `${cellLefts[index] ?? 0}px` } : undefined}
-          >
-            {column.cell(original, { timeZone, zoneLabel, machineName })}
-          </div>
-        ),
-      )}
+      <TreePane layout={pane} className={background} selected={selected}>
+        {columns.map((column, index) =>
+          index === 0 ? (
+            <div
+              key={column.id}
+              role="rowheader"
+              className={cn(
+                'flex min-w-0 items-center gap-1.5 overflow-hidden border-e border-border pe-2',
+                background,
+              )}
+              style={{ paddingInlineStart: `${0.5 + (level - 1)}rem` }}
+            >
+              <GanttRowHeader row={row} expanded={expanded} onToggle={onToggle} />
+            </div>
+          ) : (
+            <div
+              key={column.id}
+              role="gridcell"
+              className={cn(
+                'flex min-w-0 items-center overflow-hidden border-e border-border px-2 font-mono text-xs whitespace-nowrap',
+                background,
+                column.numeric && 'justify-end tabular-nums',
+              )}
+            >
+              {/* A value cut short by a narrow column ends in an ellipsis. */}
+              <span className="min-w-0 truncate">
+                {column.cell(original, { timeZone, zoneLabel, machineName })}
+              </span>
+            </div>
+          ),
+        )}
+      </TreePane>
       {summary ? (
         <div
           role="gridcell"

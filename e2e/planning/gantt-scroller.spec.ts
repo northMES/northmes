@@ -169,7 +169,7 @@ test.describe('the time scroller of the order Gantt', () => {
         return {
           grid: grid.getBoundingClientRect().left + grid.clientLeft,
           name: (
-            grid.querySelector('[aria-rowindex="1"] > [role="columnheader"]') as HTMLElement
+            grid.querySelector('[aria-rowindex="1"] [role="columnheader"]') as HTMLElement
           ).getBoundingClientRect().left,
           gaps: [...header.querySelectorAll('[data-header-gap]')].map(box),
           labels: [...header.querySelectorAll('[data-tier]')]
@@ -244,7 +244,8 @@ test.describe('the time scroller of the order Gantt', () => {
   });
 
   // A sticky cell cannot leave its row, so a row only as wide as the grid let the tree columns
-  // scroll away once the scroll position passed the row's width (#890).
+  // scroll away once the scroll position passed the row's width (#890). The tree pane sticks as one
+  // block since #943.
   test('#890 the Name and Deadline columns stay in view after the buffer moves and the grid scrolls to the far right', async ({
     page,
     signIn,
@@ -267,13 +268,14 @@ test.describe('the time scroller of the order Gantt', () => {
         scrolled: grid.scrollLeft,
         client: grid.clientWidth,
         grid: grid.getBoundingClientRect().left + grid.clientLeft,
-        header: rect('[aria-rowindex="1"] > [role="columnheader"]').left,
-        nameEnd: rect('[aria-rowindex="1"] > [role="columnheader"]').right,
-        deadline: rect('[aria-rowindex="1"] > [role="columnheader"]:nth-child(2)').left,
+        header: rect('[aria-rowindex="1"] [role="columnheader"]').left,
+        nameEnd: rect('[aria-rowindex="1"] [role="columnheader"]').right,
+        deadline: rect('[aria-rowindex="1"] [data-tree-pane] [role="columnheader"]:nth-child(2)')
+          .left,
         notPlaced: rect('[aria-rowindex="2"] > [role="rowheader"]').left,
-        order: rect('[data-row-kind="order"] > [role="rowheader"]').left,
-        jobOrder: rect('[data-row-kind="jobOrder"] > [role="rowheader"]').left,
-        orderDeadline: rect('[data-row-kind="order"] > [role="gridcell"]').left,
+        order: rect('[data-row-kind="order"] [role="rowheader"]').left,
+        jobOrder: rect('[data-row-kind="jobOrder"] [role="rowheader"]').left,
+        orderDeadline: rect('[data-row-kind="order"] [data-tree-pane] [role="gridcell"]').left,
       };
     });
     // The position passed a row as wide as the grid, where the bug showed.
@@ -282,14 +284,14 @@ test.describe('the time scroller of the order Gantt', () => {
     expect(edges.notPlaced).toBeCloseTo(edges.grid, 0);
     expect(edges.order).toBeCloseTo(edges.grid, 0);
     expect(edges.jobOrder).toBeCloseTo(edges.grid, 0);
-    // The grid is wide enough for every tree cell to stick, so the Deadline column stays beside Name.
+    // The tree pane holds every shown column, so the Deadline column stays beside Name.
     expect(edges.deadline).toBeCloseTo(edges.nameEnd, 0);
     expect(edges.orderDeadline).toBeCloseTo(edges.nameEnd, 0);
   });
 
-  // On a narrow grid only the Name column sticks (WCAG 1.4.10), and the Not placed row follows the
-  // same rule, so its list comes into view beside the Name column once the other tree columns
-  // have scrolled away (#890).
+  // On a narrow grid the tree pane keeps its least width, as wide as the Name column, and its other
+  // columns scroll inside it (#943), so the Not placed list starts beside the Name column and the
+  // time area stays reachable (WCAG 1.4.10, #890).
   test('#890 on a narrow grid the Not placed list comes into view beside the Name column', async ({
     page,
     signIn,
@@ -302,7 +304,7 @@ test.describe('the time scroller of the order Gantt', () => {
     await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
 
     const hit = await gantt.evaluate((grid) => {
-      const name = grid.querySelector('[aria-rowindex="1"] > [role="columnheader"]') as HTMLElement;
+      const name = grid.querySelector('[aria-rowindex="1"] [role="columnheader"]') as HTMLElement;
       const list = grid.querySelector('[aria-rowindex="2"] > [role="gridcell"]') as HTMLElement;
       // Scroll until the list's start meets the Name column's end, from where the view opened.
       grid.scrollLeft += list.getBoundingClientRect().left - name.getBoundingClientRect().right;
@@ -338,16 +340,13 @@ test.describe('the time scroller of the order Gantt', () => {
     // Move the buffer as the #890 test does; the lanes are three views wide.
     await toRightEdge(gantt, 3);
 
-    // The grid is wide enough for every tree column to stick, so the tree headers sit side by side
-    // at the grid's start edge: the label sticks as wide as all of them.
-    const tree = await gantt.evaluate((grid) => {
-      const headers = [
-        ...grid.querySelectorAll<HTMLElement>('[aria-rowindex="1"] > [role="columnheader"]'),
-      ].slice(0, -1);
-      const first = headers[0] as HTMLElement;
-      const last = headers.at(-1) as HTMLElement;
-      return last.getBoundingClientRect().right - first.getBoundingClientRect().left;
-    });
+    // The label sticks as wide as the tree pane at the grid's start edge (#943).
+    const tree = await gantt.evaluate(
+      (grid) =>
+        (
+          grid.querySelector('[aria-rowindex="1"] [data-tree-pane]') as HTMLElement
+        ).getBoundingClientRect().width,
+    );
     const edges = await label.evaluate((button) => {
       const cell = button.parentElement as HTMLElement;
       // The lanes' scroller is the lane's parent.
@@ -367,10 +366,10 @@ test.describe('the time scroller of the order Gantt', () => {
     expect(edges.width).toBeCloseTo(tree, 0);
   });
 
-  // On a narrow grid only the treegrid's Name column sticks (WCAG 1.4.10); the workload label
-  // follows the same rule, so it never covers more of the lane than the Name column does, and the
-  // lane's bars still start under the time column (#910).
-  test('#910 on a narrow grid the workload label sticks only the Name column wide, clips a long name and keeps the bars under the time column', async ({
+  // On a narrow grid the tree pane keeps its least width (WCAG 1.4.10, #943); the workload label is
+  // as wide as the pane, so it never covers more of the lane than the pane does, and the lane's bars
+  // still start under the time column (#910).
+  test('#910 on a narrow grid the workload label sticks as wide as the tree pane, clips a long name and keeps the bars under the time column', async ({
     page,
     signIn,
     checkA11y,
@@ -392,8 +391,8 @@ test.describe('the time scroller of the order Gantt', () => {
       const header = (selector: string) =>
         (element.querySelector(selector) as HTMLElement).getBoundingClientRect();
       return {
-        name: header('[aria-rowindex="1"] > [role="columnheader"]').width,
-        time: header('[aria-rowindex="1"] > [role="columnheader"]:last-child').left,
+        name: header('[aria-rowindex="1"] [data-tree-pane]').width,
+        time: header('[role="columnheader"][aria-label="Time"]').left,
       };
     });
     const lane = await page
@@ -406,7 +405,7 @@ test.describe('the time scroller of the order Gantt', () => {
       const cell = button.parentElement as HTMLElement;
       const panel = (cell.parentElement as HTMLElement).parentElement as HTMLElement;
       panel.scrollLeft = panel.scrollWidth;
-      // A machine name far wider than the Name column stays inside the label.
+      // A machine name far wider than the tree pane stays inside the label.
       const text = button.querySelector('span') as HTMLElement;
       text.textContent = 'Workload on Horizontal machining center with pallet changer 2';
       return {

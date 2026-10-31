@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { useSyncExternalStore } from 'react';
-import type { MovePreview, MoveState } from './screens/gantt/gantt-move.ts';
+import { useMemo, useSyncExternalStore } from 'react';
+import type { GanttSnapshot } from './gantt-data.ts';
+import {
+  type MovePreview,
+  type MoveState,
+  type NotAllowed,
+  notAllowedOf,
+} from './screens/gantt/gantt-move.ts';
 
 /** The move in progress and its preview, as the store holds them. */
 export interface MoveSnapshot {
@@ -121,4 +127,16 @@ export function useMoveOf<T>(
   select: (move: MoveSnapshot | undefined) => T,
 ): T {
   return useSyncExternalStore(store?.subscribe ?? noSubscription, () => select(store?.get()));
+}
+
+/**
+ * The machines the job order in a move may not go to, which every timeline greys out until the
+ * move ends (#944). It renders its component again only when a move starts or ends.
+ */
+export function useNotAllowed(
+  store: MoveStore | undefined,
+  snapshot: GanttSnapshot | undefined,
+): NotAllowed | undefined {
+  const movingId = useMoveOf(store, (move) => move?.state.jobOrderId);
+  return useMemo(() => notAllowedOf(snapshot, movingId), [snapshot, movingId]);
 }
