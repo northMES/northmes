@@ -7,10 +7,11 @@ import { expect, plant, test } from '../fixtures.ts';
 // The frame budget of a zoom gesture (ADR 0090, Laying out a zoom; ADR 0030's SP3 criteria): a
 // Ctrl+wheel gesture across the hours to 4 weeks bands keeps p95 frame time at most 33 ms and no
 // long task over 50 ms, on the board and on the Gantt. The numbers mean something only on the
-// planner PC class, so the spec runs only with NORTHMES_PERF=1, by hand on such a PC; the CI
-// runners skip it. It measures the fixture G1 until the SP3 and SP3b volumes have a fixture.
+// planner PC class, so the budget is checked only with NORTHMES_PERF=1, by hand on such a PC; in
+// every other run the spec checks that the gesture runs and draws frames. It measures the fixture
+// G1 until the SP3 and SP3b volumes have a fixture.
 
-test.skip(process.env.NORTHMES_PERF !== '1', 'runs by hand on the planner PC class');
+const checkBudget = process.env.NORTHMES_PERF === '1';
 test.use({ viewport: { width: 1440, height: 900 } });
 
 /** Starts recording frame times and long tasks in the page. */
@@ -77,7 +78,9 @@ for (const view of ['board', 'gantt'] as const) {
     const { p95, longest, frames } = await measured(page);
 
     expect(frames).toBeGreaterThan(30);
-    expect(p95, 'p95 frame time in ms').toBeLessThanOrEqual(33);
-    expect(longest, 'longest task in ms').toBeLessThanOrEqual(50);
+    if (checkBudget) {
+      expect(p95, 'p95 frame time in ms').toBeLessThanOrEqual(33);
+      expect(longest, 'longest task in ms').toBeLessThanOrEqual(50);
+    }
   });
 }
