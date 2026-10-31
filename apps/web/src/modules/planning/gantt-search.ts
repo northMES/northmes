@@ -4,17 +4,20 @@ import { Temporal } from 'temporal-polyfill';
 import { z } from 'zod';
 import type { ZoomLevel } from './gantt-data.ts';
 import { type PlanningPreview, planningPreviews } from './planning-preview.ts';
-import { zoomLevelIds, zoomLevels } from './timeline/time-scale.ts';
+import { clampZoom, roundZoom, zoomLevelIds, zoomLevels } from './timeline/time-scale.ts';
 
 /**
- * The view state of the Gantt page in the URL (ADR 0062, plan 18): the zoom level, the first
+ * The view state of the Gantt page in the URL (ADR 0062, plan 18): the zoom, the first
  * plant date of the range, the selected order and the chain highlight. zoom, from and order mean
  * the same on the board, so a link between the pages carries them. chain needs order, and the
  * screen drops it with the polite status message when the order is missing.
  */
 export interface GanttSearch {
-  /** The level of the zoom ladder (ADR 0089); an unknown id falls back to the screen's default. */
-  readonly zoom?: ZoomLevel;
+  /**
+   * The width of an hour in pixels (ADR 0090, The URL key zoom), clamped to 0.15 to 240; a level
+   * id of ADR 0089 opens at its natural width, and anything else falls back to the default.
+   */
+  readonly zoom?: number;
   /**
    * The visible start (ADR 0089): the plant-local date-time the view wrote when scrolling stopped,
    * "2026-11-03T13:20", or a plant date, "2026-11-02", which opens at the start of that date at
@@ -35,9 +38,29 @@ export const plantDateTime = z.iso
   .datetime({ local: true, precision: -1 })
   .refine((value) => /T\d{2}:\d{2}$/.test(value));
 
+/** The default zoom, the Week level's natural width, which the URL leaves out (ADR 0090). */
+export const defaultZoom = zoomLevels.week.pxPerHour;
+
+/**
+ * The URL key zoom: a width per hour, as a number or the text of one, or a level id at its
+ * natural width; a number outside 0.15 to 240 is clamped, and the width is kept to three
+ * significant digits as the view writes it.
+ */
+export const zoomKey = z
+  .union([
+    z.number(),
+    z
+      .string()
+      .regex(/^-?\d+(\.\d+)?$/)
+      .transform(Number),
+    z.enum(zoomLevelIds).transform((id) => zoomLevels[id].pxPerHour),
+  ])
+  .pipe(z.number())
+  .transform((pxPerHour) => roundZoom(clampZoom(pxPerHour)));
+
 /** The URL keys, each of which falls back to its default on its own (ADR 0062). */
 const searchKeys = z.object({
-  zoom: z.enum(zoomLevelIds).optional().catch(undefined),
+  zoom: zoomKey.optional().catch(undefined),
   from: z.union([z.iso.date(), plantDateTime]).optional().catch(undefined),
   order: z
     .union([z.string(), z.number()])
@@ -114,8 +137,11 @@ export function fromAt(epochMs: number, timeZone: string): string {
     .toString({ smallestUnit: 'minute', roundingMode: 'trunc' });
 }
 
-export function withZoom<T extends GanttSearch>(search: T, zoom: ZoomLevel): T {
-  return { ...search, zoom };
+/** The view at a zoom; the default zoom leaves the key out (ADR 0090, The URL key zoom). */
+export function withZoom<T extends GanttSearch>(search: T, zoom: number): T {
+  const { zoom: _, ...rest } = search;
+  const rounded = roundZoom(zoom);
+  return (rounded === defaultZoom ? rest : { ...rest, zoom: rounded }) as T;
 }
 
 export function withFrom<T extends GanttSearch>(search: T, from: string): T {

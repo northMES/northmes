@@ -5,13 +5,13 @@
 // scroll position corrected by the moved pixels, as DayPilot's infinite scrolling does. Three
 // widths against the viewport, both margins and one move (two and a half) mean one move never
 // triggers another.
-import type { ZoomLevel } from '../gantt-data.ts';
 import {
   createTimeScale,
   naturalWidthPx,
   type TimeRange,
   type TimeScale,
-  zoomLevels,
+  type ZoomLike,
+  zoomOf,
 } from './time-scale.ts';
 import type { ZoomPlant } from './zoom-view.ts';
 
@@ -23,13 +23,18 @@ const edgeMargin = 1 / 4;
 
 const hour = 3_600_000;
 
-/** The time scale of a range at its natural width, with closed time hidden when the plant says so. */
-export function bufferScale(range: TimeRange, zoom: ZoomLevel, plant: ZoomPlant): TimeScale {
+/**
+ * The time scale of a range at the zoom's width per hour, with closed time hidden when the plant
+ * says so.
+ */
+export function bufferScale(range: TimeRange, zoom: ZoomLike, plant: ZoomPlant): TimeScale {
   const closed = plant.closedOf?.(range);
   const hideClosed = closed === undefined ? undefined : { closed };
+  const { band, pxPerHour } = zoomOf(zoom);
   return createTimeScale({
     range,
-    zoom,
+    zoom: band,
+    pxPerHour,
     timeZone: plant.timeZone,
     productionDayStart: plant.productionDayStart,
     widthPx: naturalWidthPx(range, zoom, hideClosed),
@@ -38,19 +43,19 @@ export function bufferScale(range: TimeRange, zoom: ZoomLevel, plant: ZoomPlant)
 }
 
 /**
- * The instant a drawn distance before or after another at a level: the span grows until its
- * natural width holds the distance, and the scale of that span reads the instant, gaps included.
+ * The instant a drawn distance before or after another at a zoom: the span grows until its width
+ * holds the distance, and the scale of that span reads the instant, gaps included.
  */
 export function instantAtDistance(
   fromMs: number,
   distancePx: number,
   direction: 'before' | 'after',
-  zoom: ZoomLevel,
+  zoom: ZoomLike,
   plant: ZoomPlant,
 ): number {
   if (distancePx <= 0) return fromMs;
   // Whole milliseconds, as the plant clock reads only those (ADR 0024).
-  let spanMs = Math.ceil((distancePx / zoomLevels[zoom].pxPerHour) * hour);
+  let spanMs = Math.ceil((distancePx / zoomOf(zoom).pxPerHour) * hour);
   // Hidden closed time is at most a few times the open time, so a few doublings suffice; the
   // bound only guards a calendar with no open time at all.
   for (let step = 0; step < 16; step += 1) {
@@ -71,7 +76,7 @@ export function instantAtDistance(
   return direction === 'after' ? fromMs + spanMs : fromMs - spanMs;
 }
 
-/** The buffer of a level that holds an instant at an x: three viewport widths of drawn axis. */
+/** The buffer of a zoom that holds an instant at an x: three viewport widths of drawn axis. */
 export function bufferAround({
   anchorMs,
   anchorX,
@@ -83,7 +88,7 @@ export function bufferAround({
   /** The x in the buffer where the anchor lies, from 0 to three viewport widths. */
   readonly anchorX: number;
   readonly viewportPx: number;
-  readonly zoom: ZoomLevel;
+  readonly zoom: ZoomLike;
   readonly plant: ZoomPlant;
 }): TimeRange {
   const widthPx = bufferViewports * viewportPx;
@@ -130,8 +135,9 @@ export function movedBuffer({
   else if (viewStartX + viewportPx > scale.widthPx - margin) anchorX = viewStartX - viewportPx;
   else return undefined;
   const anchorMs = Math.round(scale.instant(viewStartX));
-  const range = bufferAround({ anchorMs, anchorX, viewportPx, zoom: scale.zoom, plant });
-  const correctionPx = bufferScale(range, scale.zoom, plant).x(anchorMs) - viewStartX;
+  const zoom = { band: scale.zoom, pxPerHour: scale.pxPerHour };
+  const range = bufferAround({ anchorMs, anchorX, viewportPx, zoom, plant });
+  const correctionPx = bufferScale(range, zoom, plant).x(anchorMs) - viewStartX;
   return { range, anchorMs, correctionPx };
 }
 

@@ -350,7 +350,7 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
 
     await user.click(block('1001.10'));
     expect(router.state.location.search).toEqual({
-      zoom: 'week',
+      zoom: 16,
       from: '2026-11-02',
       order: 'po-1001',
     });
@@ -365,7 +365,7 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     expect(detailsOpen()).toBe(false);
     expect(document.activeElement).toBe(block('1001.10'));
     await user.keyboard('{Escape}');
-    expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
+    expect(router.state.location.search).toEqual({ zoom: 16, from: '2026-11-02' });
     expect(block('1001.10').getAttribute('aria-selected')).toBe('false');
     expect(document.activeElement).toBe(block('1001.10'));
   });
@@ -529,7 +529,7 @@ describe('the planning board (plan 07, Planning board in release 1; design D3)',
     await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
     expect(router.state.location.search).toMatchObject({ order: 'po-1003' });
     await user.keyboard('{Escape}');
-    expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
+    expect(router.state.location.search).toEqual({ zoom: 16, from: '2026-11-02' });
     expect(document.activeElement).toBe(block);
   });
 
