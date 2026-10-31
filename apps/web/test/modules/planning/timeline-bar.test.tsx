@@ -301,4 +301,25 @@ describe('the slim bar above the planning board (ADR 0090)', () => {
       expect(focused.closest('[role="row"]')).toBe(machineRow);
     });
   });
+
+  it('#939 Alt+Page Down on the board does nothing during a keyboard move, whose keys these are', async () => {
+    const user = userEvent.setup();
+    const router = renderGanttRoute({ from: '2026-11-02T00:00' }, undefined, 'board');
+    const board = await findBoard();
+    const block = board.querySelector<HTMLElement>(
+      '[role="gridcell"][data-job-order="1001.10"]',
+    ) as HTMLElement;
+    block.focus();
+    await user.keyboard('m');
+    await waitFor(() => expect(block.getAttribute('data-move-mode')).toBe('true'));
+
+    fireEvent.keyDown(block, { key: 'PageDown', altKey: true });
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(block.getAttribute('data-move-mode')).toBeNull());
+    // The visible start the view settles at, which a move in time would have changed.
+    fireEvent.keyDown(block, { key: 'PageDown', altKey: true });
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-11-0[4-9]T/));
+    const once = router.state.location.search.from;
+    expect(once?.localeCompare('2026-11-06')).toBeLessThan(0);
+  });
 });
