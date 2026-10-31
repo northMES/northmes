@@ -44,8 +44,8 @@ export interface TimelineZoomInput {
   /** The grid that scrolls the time area sideways. */
   readonly grid: RefObject<HTMLElement | null>;
   /**
-   * Other scrollers that keep the time area's scroll position, such as the Gantt's workload
-   * lanes: a gesture over them zooms the timeline too, not the page.
+   * Up to two other elements over the time area, such as the Gantt's workload lanes: a gesture
+   * over them zooms the timeline too, not the page.
    */
   readonly panels?: readonly RefObject<HTMLElement | null>[];
   readonly plant: ZoomPlant;
@@ -155,37 +155,10 @@ export function useTimelineZoom(input: TimelineZoomInput): TimelineZoom {
   const [listeners] = useState(() => gestureListeners(latest, motion));
   useEffect(() => motion.stop, [motion]);
   // Attached to the grid and the panels in view, again when they change (the page's states draw
-  // them anew), and removed on unmount. The wheel and Safari's gesture listeners are not passive,
-  // so preventDefault keeps the page from zooming; touch-action on the grid already does that for
-  // touches, so a one-finger scroll never waits for the touch listeners.
-  useEffect(() => {
-    const targets = [
-      { element: grid.current, panel: false },
-      ...(panels ?? []).map((panel) => ({ element: panel.current, panel: true })),
-    ];
-    const active = { passive: false };
-    const passive = { passive: true };
-    const attached = targets.map(({ element, panel }) => {
-      const own = panel ? listeners.panel : listeners.grid;
-      element?.addEventListener('wheel', own.wheel, active);
-      element?.addEventListener('touchstart', own.touchstart, passive);
-      element?.addEventListener('touchmove', own.touchmove, passive);
-      element?.addEventListener('touchend', own.touchend, passive);
-      element?.addEventListener('gesturestart', own.gesturestart, active);
-      element?.addEventListener('gesturechange', own.gesturechange, active);
-      return { element, own };
-    });
-    return () => {
-      for (const { element, own } of attached) {
-        element?.removeEventListener('wheel', own.wheel);
-        element?.removeEventListener('touchstart', own.touchstart);
-        element?.removeEventListener('touchmove', own.touchmove);
-        element?.removeEventListener('touchend', own.touchend);
-        element?.removeEventListener('gesturestart', own.gesturestart);
-        element?.removeEventListener('gesturechange', own.gesturechange);
-      }
-    };
-  });
+  // them anew), and removed on unmount.
+  useGestureListeners(grid, listeners.grid);
+  useGestureListeners(panels?.[0], listeners.panel);
+  useGestureListeners(panels?.[1], listeners.panel);
 
   /** Zoom in or out by a factor of 2 around an anchor; at a clamp, says so when `sayEnd` asks. */
   const stepAt = (direction: 'in' | 'out', anchor: () => ViewAnchor, sayEnd = false) => {
@@ -434,6 +407,36 @@ function zoomMotion(latest: RefObject<LatestView>): ZoomMotion {
       cancel();
     },
   };
+}
+
+/**
+ * The gesture listeners on one element, attached after each render to the element in view and
+ * removed before the next and on unmount. The wheel and Safari's gesture listeners are not
+ * passive, so preventDefault keeps the page from zooming; touch-action on the grid already does
+ * that for touches, so a one-finger scroll never waits for the touch listeners.
+ */
+function useGestureListeners(
+  target: RefObject<HTMLElement | null> | undefined,
+  own: GestureListeners,
+): void {
+  useEffect(() => {
+    const element = target?.current;
+    if (element === null || element === undefined) return undefined;
+    element.addEventListener('wheel', own.wheel, { passive: false });
+    element.addEventListener('touchstart', own.touchstart, { passive: true });
+    element.addEventListener('touchmove', own.touchmove, { passive: true });
+    element.addEventListener('touchend', own.touchend, { passive: true });
+    element.addEventListener('gesturestart', own.gesturestart, { passive: false });
+    element.addEventListener('gesturechange', own.gesturechange, { passive: false });
+    return () => {
+      element.removeEventListener('wheel', own.wheel);
+      element.removeEventListener('touchstart', own.touchstart);
+      element.removeEventListener('touchmove', own.touchmove);
+      element.removeEventListener('touchend', own.touchend);
+      element.removeEventListener('gesturestart', own.gesturestart);
+      element.removeEventListener('gesturechange', own.gesturechange);
+    };
+  });
 }
 
 /** The listener of each gesture event the grid or a panel takes. */

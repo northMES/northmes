@@ -418,6 +418,30 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
     await waitFor(() => expect(polite()).toBe('Zoom: 4 weeks'));
   });
 
+  it('#941 unmounting the Gantt removes its gesture listeners from the grid and the workload lanes', async () => {
+    window.localStorage.setItem(
+      'northmes.planning.gantt.options',
+      JSON.stringify({ workload: true }),
+    );
+    try {
+      renderGanttRoute({ from: '2026-11-02' });
+      const gantt = await findGantt();
+      const lanes = await waitFor(
+        () => document.querySelector<HTMLElement>('[data-workload-lanes]') as HTMLElement,
+      );
+      expect(ctrlWheel(gantt, -40, 1200)).toBe(true);
+      expect(ctrlWheel(lanes, -40, 1200)).toBe(true);
+
+      cleanup();
+
+      // Detached, neither element keeps a listener that would still take the wheel.
+      expect(ctrlWheel(gantt, -40, 1200)).toBe(false);
+      expect(ctrlWheel(lanes, -40, 1200)).toBe(false);
+    } finally {
+      window.localStorage.removeItem('northmes.planning.gantt.options');
+    }
+  });
+
   it('#896 the row menu has no disabled Zoom to order, which Zoom to fit replaces', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     await findGantt();
