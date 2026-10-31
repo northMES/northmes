@@ -39,14 +39,7 @@ describe('planning routes', () => {
     // The shell's root route, its $plant route and its settings route with the landing, and one
     // route per link entry, with no route that leads an old URL on.
     expect(routeFullPaths().sort()).toEqual(
-      [
-        ...new Set([
-          '/',
-          '/$plant',
-          '/$plant/settings',
-          ...linkPatterns(planningLinks),
-        ]),
-      ].sort(),
+      [...new Set(['/', '/$plant', '/$plant/settings', ...linkPatterns(planningLinks)])].sort(),
     );
   });
 });
