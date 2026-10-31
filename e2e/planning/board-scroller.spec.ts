@@ -82,14 +82,14 @@ test.describe('the time scroller of the planning board', () => {
     await expect(board).toBeVisible();
     await expect(board).not.toHaveAttribute('aria-busy', 'true');
     await expect(page.locator('[data-job-order="1003.20"]')).toBeVisible();
-    const rangeText = page.locator('[data-range-text]');
-    await expect(rangeText).toHaveText(/^W45, Wed 4 Nov to /);
-    const first = await rangeText.textContent();
+    // The grid names the span in view once scrolling stops; the bar has no range text (ADR 0090).
+    await expect(board).toHaveAttribute('aria-label', /board, W45, Wed 4 Nov to /);
+    const first = await board.getAttribute('aria-label');
 
     const far = await scrollSteps(board, 40, 1);
     expect(far.moves).toBeGreaterThan(5);
     expect(far.worst).toBeLessThanOrEqual(1);
-    await expect(rangeText).not.toHaveText(/^W4[56], /);
+    await expect(board).not.toHaveAttribute('aria-label', /board, W4[56], /);
     await expect
       .poll(() => new URL(page.url()).searchParams.get('from'))
       .toMatch(/^2026-1[12]-\d\dT/);
@@ -99,7 +99,7 @@ test.describe('the time scroller of the planning board', () => {
     const back = await scrollSteps(board, 40, -1);
     expect(back.moves).toBeGreaterThan(5);
     expect(back.worst).toBeLessThanOrEqual(1);
-    await expect(rangeText).toHaveText(first ?? '');
+    await expect(board).toHaveAttribute('aria-label', first ?? '');
     await expect(page.locator('[data-job-order="1003.20"]')).toBeVisible();
   });
 

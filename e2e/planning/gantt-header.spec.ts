@@ -42,10 +42,13 @@ test.describe('the time header of the order Gantt', () => {
         await expect(gantt).toBeVisible();
         // The blocks come with their time chunks (ADR 0089); the grid is busy until they are in.
         await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
-        const toggle = page.getByRole('button', { name: 'Hide closed time' });
-        // Hide closed time is on by default.
+        // Hide closed time is on by default, in the View menu (ADR 0090).
+        await page.getByRole('button', { name: 'View' }).click();
+        const toggle = page.getByRole('menuitemcheckbox', { name: 'Hide closed time' });
         if (!hideClosed) await toggle.click();
-        await expect(toggle).toHaveAttribute('aria-pressed', String(hideClosed));
+        await expect(toggle).toHaveAttribute('aria-checked', String(hideClosed));
+        await page.keyboard.press('Escape');
+        await expect(page.getByRole('menu')).toHaveCount(0);
         const header = gantt.getByRole('columnheader', { name: 'Time' });
         await expect(header.locator('[data-tier="top"]').first()).toBeVisible();
 

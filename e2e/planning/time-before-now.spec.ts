@@ -89,7 +89,8 @@ test.describe('the time before now', () => {
 
     await expect(page.locator('#announcer-polite')).toHaveText(refusal);
     await expect(tooltip).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'My draft', exact: true })).toBeVisible();
+    // My draft stays out of the bar: the refused drop left the draft without changes (ADR 0090).
+    await expect(page.getByRole('button', { name: /^My draft/ })).toHaveCount(0);
   });
 
   test('#894 the planning board tones the time before now in both themes, and a drag into it is refused with PAST', async ({
@@ -122,6 +123,7 @@ test.describe('the time before now', () => {
 
     await expect(page.locator('#announcer-polite')).toHaveText(refusal);
     await expect(tooltip).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'My draft', exact: true })).toBeVisible();
+    // My draft stays out of the bar: the refused drop left the draft without changes (ADR 0090).
+    await expect(page.getByRole('button', { name: /^My draft/ })).toHaveCount(0);
   });
 });

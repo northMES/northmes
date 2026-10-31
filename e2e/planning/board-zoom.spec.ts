@@ -94,14 +94,15 @@ test.describe('the smooth zoom of the planning board', () => {
     await zoom.getByRole('button', { name: 'Zoom out' }).click();
     await expect(page).toHaveURL(/zoom=8\b/);
 
-    await zoom.getByRole('button', { name: 'Zoom level, Week' }).click();
-    await checkA11y('the zoom level menu on the board');
-    await page.getByRole('menuitemradio', { name: 'Quarter', exact: true }).click();
-    await expect(page).toHaveURL(/zoom=0\.6\b/);
+    await checkA11y('the board with the zoom buttons over the time area');
+    await page.goto(boardHref({ zoom: 'quarter', from: '2026-11-02' }));
+    await expect(board).not.toHaveAttribute('aria-busy', 'true');
     await checkA11y('the board at Quarter');
 
     // Zoom to fit with nothing selected fits every loaded job order of G1, Tue 3 Nov to Tue 10 Nov.
     await zoom.getByRole('button', { name: 'Zoom to fit' }).click();
+    // The link's `quarter` reaches the URL as 0.6 before the fit, so the wait skips both.
+    await expect(page).toHaveURL(/zoom=\d/);
     await expect(page).not.toHaveURL(/zoom=0\.6\b/);
 
     const fitted = Number(new URL(page.url()).searchParams.get('zoom') ?? '16');

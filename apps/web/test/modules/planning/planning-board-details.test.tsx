@@ -213,7 +213,8 @@ describe('Details on the planning board (Krister, 2026-10-21: the Gantt drawer)'
     await waitFor(() => expect(detailsOpen()).toBe(false));
     expect(board.querySelector('[data-move-preview]')).toBeNull();
     expect(block(board, '1001.10').getAttribute('data-move-mode')).toBeNull();
-    expect(screen.getByRole('button', { name: 'My draft' })).toBeTruthy();
+    // My draft leaves the bar while the draft has no changes (ADR 0090).
+    expect(screen.queryByRole('button', { name: /^My draft/ })).toBeNull();
   });
 
   it('IN27 a job order of a cluster opens its Details from the popover, and closing returns focus to the cluster', async () => {

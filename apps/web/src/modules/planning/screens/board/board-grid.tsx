@@ -11,6 +11,7 @@ import {
   keyedWidth,
   widthWithin,
 } from '../../components/column-resizer/index.ts';
+import { zoomOverlayReserve } from '../../components/range-controls/index.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { TimeScale } from '../../timeline/time-scale.ts';
 import { GanttMarkerLayer, overlayMarkers } from '../gantt/gantt-marker-layer.tsx';
@@ -457,6 +458,9 @@ export function BoardGrid({
         ...(height !== undefined && { height: `${height}px` }),
         scrollPaddingTop: `calc(${headerRem + boardRowRem.notPlaced}rem + 8px)`,
         scrollPaddingInlineStart: `${machineWidth + 8}px`,
+        // The zoom buttons sit over the lower right corner, so focus stays clear of them (2.4.11).
+        scrollPaddingBottom: zoomOverlayReserve.bottom,
+        scrollPaddingInlineEnd: zoomOverlayReserve.end,
         // One finger scrolls; a pinch zooms the timeline, not the page (ADR 0089).
         touchAction: 'pan-x pan-y',
       }}

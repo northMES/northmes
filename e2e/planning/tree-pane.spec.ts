@@ -272,10 +272,10 @@ test.describe('the left pane of the timelines', () => {
     expect(await paneWidth()).toBeLessThan(narrowed);
     await checkA11y('the Gantt with the tree pane narrowed');
 
-    // Board options offers the widths in one click (WCAG 2.5.7).
-    await page.getByRole('button', { name: 'Board options' }).click();
+    // The View menu offers the widths in one click (WCAG 2.5.7).
+    await page.getByRole('button', { name: 'View' }).click();
     await expect(page.getByRole('menuitemradio', { name: 'Wide tree pane' })).toBeVisible();
-    await checkA11y('the Gantt Board options with the tree pane widths');
+    await checkA11y('the Gantt View menu with the tree pane widths');
     await page.keyboard.press('Escape');
 
     const kept = await paneWidth();

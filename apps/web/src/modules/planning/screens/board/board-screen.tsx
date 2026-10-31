@@ -17,11 +17,7 @@ import {
   unloadedChunks,
 } from '../../components/chunk-status/index.ts';
 import { MoveDialog } from '../../components/move-dialog/index.ts';
-import {
-  RangeControls,
-  VisibleSpanText,
-  ZoomControls,
-} from '../../components/range-controls/index.ts';
+import { ZoomOverlay } from '../../components/range-controls/index.ts';
 import { type GanttPageRequest, ganttMaxOrders } from '../../gantt-data.ts';
 import {
   applyDraft,
@@ -42,7 +38,6 @@ import {
   type BoardSearch,
   boardSearch,
   defaultZoom,
-  startOfFrom,
   withFrom,
   withOrder,
   withZoom,
@@ -53,7 +48,7 @@ import { plantTime } from '../../order-facts.ts';
 import { usePlanningDraft } from '../../planning-draft.tsx';
 import { PlanningForbidden } from '../../planning-preview.ts';
 import { closedWindows } from '../../timeline/availability-shading.ts';
-import { plantDateOf, spanLabel, zoomLevels } from '../../timeline/time-scale.ts';
+import { plantDateOf, spanLabel, type TimeRange, zoomLevels } from '../../timeline/time-scale.ts';
 import { useTimeBuffer } from '../../timeline/use-time-buffer.ts';
 import { useTimeChunks } from '../../timeline/use-time-chunks.ts';
 import { useTimelineZoom } from '../../timeline/use-timeline-zoom.ts';
@@ -73,7 +68,12 @@ import {
   machineColumnWidth,
   useMachineColumnWidth,
 } from './board-machine-column.ts';
-import { type BoardLine, boardEntry, boardFocusAfter } from './board-navigation.ts';
+import {
+  type BoardLine,
+  boardEntry,
+  boardFocusAfter,
+  boardFocusInView,
+} from './board-navigation.ts';
 import { type BoardModel, boardFitTargetOf, boardModelOf } from './board-rows.ts';
 import { BoardSkeleton } from './board-skeleton.tsx';
 
@@ -126,7 +126,8 @@ function linesOf(
 /**
  * The planning board (plan 07, Planning board in release 1; design D3): the machines of the plant
  * grouped by equipment group on a time axis in plant time, each machine's job orders as blocks in
- * the order color, the pinned Not placed row and the range controls the timeline pages share. The
+ * the order color, the pinned Not placed row, the slim bar and the zoom buttons over the time area
+ * (ADR 0090). The
  * board, the order Gantt and the job order table are pages of their own (Krister, 2026-10-17), so
  * the page has no view control. zoom and from live in the URL; collapsed groups stay local. The
  * page reads one data source and never knows which; phase 1 reads the fixture G1 and says so.
@@ -172,6 +173,8 @@ export function BoardScreen() {
   const [draftOpen, setDraftOpen] = useState(false);
   /** The element that opened the My draft drawer, which takes focus back when it closes. */
   const draftOpener = useRef<HTMLElement | undefined>(undefined);
+  // Where focus goes when the draft drawer closes with no changes left and My draft leaves the bar.
+  const goToNowButton = useRef<HTMLButtonElement>(null);
   // The block menu at its block, and the job order the Move dialog moves (design D3, IN7 and IN8).
   const [menu, setMenu] = useState<{ jobOrderId: string; anchor: HTMLElement } | undefined>(
     undefined,
@@ -311,9 +314,12 @@ export function BoardScreen() {
   );
   const scale = buffer.scale;
   const timeWidth = Math.ceil(scale?.widthPx ?? 0);
+  // The zoom buttons over the time area: a gesture over them zooms the timeline too.
+  const zoomOverlay = useRef<HTMLFieldSetElement | null>(null);
   const timelineZoom = useTimelineZoom({
     buffer,
     grid: gridElement,
+    panels: [zoomOverlay],
     plant: zoomPlant,
     dragging: () => moveStore.get()?.state.source === 'pointer',
   });
@@ -446,6 +452,11 @@ export function BoardScreen() {
   // A job order that takes focus after a move but is not drawn yet: it may lie outside the range
   // or inside a cluster (plan 07: range extension follows the move, and focus returns by id).
   const [pendingFocus, setPendingFocus] = useState<string | undefined>(undefined);
+  // Alt+Page Up or Alt+Page Down moved the view in time from a focus target: focus moves on once
+  // the new buffer's lines are drawn, which hold the job orders of the new view.
+  const [pendingPage, setPendingPage] = useState<
+    { readonly from: string; readonly view: TimeRange } | undefined
+  >(undefined);
   const { actions: moveActions, store: moveStore } = useMoveActions({
     committed,
     snapshot,
@@ -533,12 +544,16 @@ export function BoardScreen() {
   // A target takes focus and scrolls into view past the sticky axes, which the scroll padding keeps
   // clear (WCAG 2.4.11). A target in the sticky machine column or the pinned Not placed row is in
   // view along that axis already, so the grid keeps its position there.
-  /** Moves focus to a target of the grid; false when it is not drawn. */
-  function focusTarget(key: string): boolean {
+  /**
+   * Moves focus to a target of the grid; false when it is not drawn. A move in time has already put
+   * the view where it goes, so its target takes focus without scrolling.
+   */
+  function focusTarget(key: string, scroll = true): boolean {
     const element = document.querySelector<HTMLElement>(`[data-board-focus="${CSS.escape(key)}"]`);
     if (element === null) return false;
     setFocused(key);
     element.focus({ preventScroll: true });
+    if (!scroll) return true;
     const grid = element.closest<HTMLElement>('[role="grid"]');
     const kept = { left: grid?.scrollLeft ?? 0, top: grid?.scrollTop ?? 0 };
     element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -547,6 +562,12 @@ export function BoardScreen() {
     if (element.closest('[data-pinned-row]') !== null) grid.scrollTop = kept.top;
     return true;
   }
+  useEffect(() => {
+    if (pendingPage === undefined) return;
+    const next = boardFocusInView(lines, pendingPage.from, pendingPage.view);
+    // Drawn now, or nothing left to focus: the grid went, or the target with it.
+    if (next === undefined || focusTarget(next, false)) setPendingPage(undefined);
+  });
   useEffect(() => {
     if (pendingFocus === undefined || snapshot === undefined) return;
     if (focusTarget(focusKeys.block(pendingFocus))) {
@@ -585,6 +606,20 @@ export function BoardScreen() {
     // Minus and plus zoom by a factor of 2 at the focused block (ADR 0090); plus may need Shift.
     if (timelineZoom.onKeyDown(event)) {
       event.preventDefault();
+      return;
+    }
+    // Alt+Page Up and Alt+Page Down move in time, one viewport width (ADR 0090); focus goes to
+    // the line's first job order in the new view, else its row header, once it is drawn.
+    if (
+      event.altKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      (event.key === 'PageDown' || event.key === 'PageUp')
+    ) {
+      event.preventDefault();
+      timelineZoom.stop();
+      const view = buffer.page(event.key === 'PageDown' ? 'later' : 'earlier');
+      if (view !== undefined) setPendingPage({ from: key, view });
       return;
     }
     // A key with a modifier belongs to the browser and to the commands of later stories.
@@ -701,56 +736,57 @@ export function BoardScreen() {
     !noMachines &&
     loadError === undefined;
 
+  const erpNote =
+    snapshot?.erp === undefined || noMachines ? undefined : (
+      <span className="text-sm text-muted-foreground">
+        ERP data as of {plantTime(snapshot, snapshot.erp.importedAtMs)}
+      </span>
+    );
+  // The chunks' status shows with the drawn board, not on its empty or error states.
+  const chunksShown = gridShown && state.status === 'ready';
+  const fixtureNote =
+    snapshot?.fixture === undefined ? undefined : (
+      <p className="text-xs text-muted-foreground">Showing fixture {snapshot.fixture}.</p>
+    );
+
   return (
     <PageFrame
       title="Planning board"
+      // The title row holds the ERP time and one status line, the fixture's note while there is
+      // one and the chunks while the board is drawn, so the grid starts right under the bar
+      // (ADR 0090).
       meta={
-        snapshot?.erp === undefined || noMachines ? undefined : (
-          <span className="text-sm text-muted-foreground">
-            ERP data as of {plantTime(snapshot, snapshot.erp.importedAtMs)}
-          </span>
+        erpNote === undefined && fixtureNote === undefined && !chunksShown ? undefined : (
+          <>
+            {erpNote}
+            {chunksShown ? (
+              <ChunkStatus
+                chunks={unloaded}
+                timeZone={timeZone}
+                onRetry={chunks.retry}
+                leading={fixtureNote}
+              />
+            ) : (
+              fixtureNote
+            )}
+          </>
         )
       }
       state={state}
+      toolbarBesideTitle
       toolbar={
         forbidden || noMachines ? undefined : (
           <div role="toolbar" aria-label="Board" className="flex flex-wrap items-center gap-2">
-            <RangeControls
-              zoomControls={
-                <ZoomControls
-                  zoom={zoomNow}
-                  onZoomChange={timelineZoom.setLevel}
-                  onZoomStep={timelineZoom.step}
-                  onZoomToFit={() => {
-                    if (snapshot === undefined) return;
-                    const target = boardFitTargetOf(snapshot, search.order);
-                    timelineZoom.fit(target.span, target.name);
-                  }}
-                />
-              }
-              from={from.slice(0, 10)}
-              onFromChange={(next) => {
-                timelineZoom.stop();
-                buffer.goTo(zoomNow, {
-                  ms: startOfFrom(next, zoom, timeZone, productionDayStart),
-                  viewportX: machineWidth,
-                });
-              }}
-              onEarlier={() => {
-                timelineZoom.stop();
-                buffer.page('earlier');
-              }}
-              onNow={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
-              onLater={() => {
-                timelineZoom.stop();
-                buffer.page('later');
-              }}
-              rangeLabel={
-                <VisibleSpanText visible={buffer.visible} zoom={zoom} timeZone={timeZone} />
-              }
-            />
+            <Button
+              ref={goToNowButton}
+              variant="outline"
+              className="h-8 px-3"
+              onClick={() => timelineZoom.goTo(snapshot?.nowMs ?? Date.now())}
+            >
+              Go to now
+            </Button>
             <span className="grow" />
-            {gridShown && (
+            {gridShown && draftChangeCount(draft) > 0 && (
               <Button
                 variant="outline"
                 className="h-8 px-3"
@@ -761,19 +797,13 @@ export function BoardScreen() {
                 }}
               >
                 <Pencil aria-hidden />
-                {draftChangeCount(draft) === 0
-                  ? 'My draft'
-                  : `My draft, ${changesText(draftChangeCount(draft))}`}
+                {`My draft, ${changesText(draftChangeCount(draft))}`}
               </Button>
             )}
           </div>
         )
       }
     >
-      {snapshot?.fixture !== undefined && (
-        <p className="text-xs text-muted-foreground">Showing fixture {snapshot.fixture}.</p>
-      )}
-      {gridShown && <ChunkStatus chunks={unloaded} timeZone={timeZone} onRetry={chunks.retry} />}
       {gridShown && rowList.next === 'failed' && (
         <RowsStatus
           loaded={rowList.orders.length}
@@ -790,7 +820,7 @@ export function BoardScreen() {
         model !== undefined &&
         scale !== undefined && (
           <GanttViewProvider value={view}>
-            <div ref={fillRef} className="flex min-w-0 flex-col">
+            <div ref={fillRef} className="relative flex min-w-0 flex-col">
               <BoardGrid
                 name={gridName}
                 snapshot={snapshot}
@@ -841,6 +871,15 @@ export function BoardScreen() {
                 }
                 emptyText={emptyText}
                 onScroll={buffer.onScroll}
+              />
+              <ZoomOverlay
+                zoom={zoomNow}
+                onZoomStep={timelineZoom.step}
+                onZoomToFit={() => {
+                  const target = boardFitTargetOf(snapshot, search.order);
+                  timelineZoom.fit(target.span, target.name);
+                }}
+                ref={zoomOverlay}
               />
             </div>
             <BlockMenu
@@ -931,7 +970,12 @@ export function BoardScreen() {
                 }
               }}
               onDiscardDraft={() => setDraft(emptyDraft)}
-              finalFocus={() => draftOpener.current ?? null}
+              // With no changes left, My draft has left the bar, so focus goes to the bar.
+              finalFocus={() =>
+                draftChangeCount(draft) === 0
+                  ? goToNowButton.current
+                  : (draftOpener.current ?? null)
+              }
             />
           </GanttViewProvider>
         )}

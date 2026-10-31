@@ -40,10 +40,14 @@ export function useViewportFill(
       observer.current?.disconnect();
       observer.current = undefined;
       measure();
-      // The toolbar above wraps its controls, so the parent's height changes move the grid's top.
-      if (node?.parentElement && typeof ResizeObserver !== 'undefined') {
+      // What sits above the grid moves its top: the region's own content, and the page frame's
+      // title row, which holds the bar and the status line and wraps at narrow widths (ADR 0090).
+      // The page frame around both grows with either.
+      const region = node?.parentElement;
+      if (region && typeof ResizeObserver !== 'undefined') {
         observer.current = new ResizeObserver(() => measure());
-        observer.current.observe(node.parentElement);
+        observer.current.observe(region);
+        if (region.parentElement) observer.current.observe(region.parentElement);
       }
     },
     [measure],
@@ -52,7 +56,7 @@ export function useViewportFill(
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
   }, [measure]);
-  // A zoom or range change redraws the toolbar's range label, which may wrap or unwrap.
+  // A change of the page's view state may redraw what sits above the grid.
   useEffect(() => {
     measure();
   }, [measure, layoutKey]);

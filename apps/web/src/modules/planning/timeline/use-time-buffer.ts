@@ -11,7 +11,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
 } from 'react';
 import { flushSync } from 'react-dom';
 import type { ZoomLevel } from '../gantt-data.ts';
@@ -69,11 +68,6 @@ function createVisibleStore(): VisibleStore & { readonly set: (span: TimeRange) 
   };
 }
 
-/** The span in view, read live, so a scroll redraws only the component that reads it. */
-export function useVisibleSpan(store: VisibleStore): TimeRange | undefined {
-  return useSyncExternalStore(store.subscribe, store.get, store.get);
-}
-
 export interface TimeBufferInput {
   /** The width per hour in the URL (ADR 0090, The URL key zoom). */
   readonly zoom: number;
@@ -125,8 +119,11 @@ export interface TimeBuffer {
    * scrolling stops; `during` marks a frame of a gesture or an animation, whose end comes after.
    */
   readonly goTo: (zoom: Zoom, anchor: ViewAnchor, during?: boolean) => void;
-  /** Earlier and Later: the view one viewport width before or after where it is. */
-  readonly page: (direction: 'earlier' | 'later') => void;
+  /**
+   * Alt+Page Up and Alt+Page Down: the view one viewport width before or after where it is, and
+   * the span it then shows, or none while no time area is drawn.
+   */
+  readonly page: (direction: 'earlier' | 'later') => TimeRange | undefined;
   /** The x in the buffer where the view starts. */
   readonly viewStartX: () => number;
   /** The grid's scroll position, or the one it takes once it is drawn. */
@@ -394,11 +391,12 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
   };
 
   /**
-   * Earlier and Later: the buffer rebuilt around the instant one viewport width of drawn axis
-   * before or after the view's start, wherever in the buffer the view is.
+   * Alt+Page Up and Alt+Page Down: the buffer rebuilt around the instant one viewport width of
+   * drawn axis before or after the view's start, wherever in the buffer the view is.
    */
-  const page = (direction: 'earlier' | 'later') => {
-    if (scale === undefined || current === undefined) return;
+  const page = (direction: 'earlier' | 'later'): TimeRange | undefined => {
+    // A pointer drag reads its moves in this buffer's pixels, so the view stays until it ends.
+    if (scale === undefined || current === undefined || frozen?.get() === true) return undefined;
     const startMs = Math.round(scale.instant(viewStartX()));
     const ms = instantAtDistance(
       startMs,
@@ -408,6 +406,7 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
       plant,
     );
     goTo(current.zoom, { ms, viewportX: stickyWidth });
+    return { fromMs: ms, toMs: instantAtDistance(ms, viewportPx, 'after', current.zoom, plant) };
   };
 
   return {

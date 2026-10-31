@@ -9,7 +9,7 @@ import { zoomLevels, zoomPresetIds } from '../../timeline/time-scale.ts';
 import { PressedGroup } from './range-controls-pressed-group.tsx';
 
 export interface RangeControlsProps {
-  /** The zoom group first: the ladder's ZoomControls on the board and the Gantt, PresetControls on the job order table. */
+  /** The zoom group first: the job order table's PresetControls. */
   readonly zoomControls: ReactNode;
   /** The plant date of the range's start or of the visible start, which Go to date edits. */
   readonly from: string;
@@ -25,8 +25,9 @@ export interface RangeControlsProps {
 }
 
 /**
- * The range controls the timeline pages share (plan 18, Shared pieces; D5): the zoom group,
- * Earlier, Now and Later, Go to date and the range as text. Zoom and from go to the URL, so a link
+ * The range controls of the job order table (plan 18, Shared pieces; D5): the zoom group,
+ * Earlier, Now and Later, Go to date and the range as text. The board and the Gantt have the slim
+ * bar and the zoom buttons over the time area instead (ADR 0090). Zoom and from go to the URL, so a link
  * from one page to another carries them (Krister, 2026-10-17).
  */
 export function RangeControls({
