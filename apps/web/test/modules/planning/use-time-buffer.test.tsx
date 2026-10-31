@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GanttCalendar, ZoomLevel } from '../../../src/modules/planning/gantt-data.ts';
 import { closedWindows } from '../../../src/modules/planning/timeline/availability-shading.ts';
 import { bufferScale } from '../../../src/modules/planning/timeline/time-buffer.ts';
-import type { TimeRange } from '../../../src/modules/planning/timeline/time-scale.ts';
+import { type TimeRange, zoomLevels } from '../../../src/modules/planning/timeline/time-scale.ts';
 import {
   type TimeBufferInput,
   useTimeBuffer,
@@ -61,9 +61,9 @@ function renderBuffer(
   element: HTMLElement | null = document.createElement('div'),
 ) {
   const grid: { current: HTMLElement | null } = { current: element };
-  const onNavigate = vi.fn<(zoom: ZoomLevel, from: string) => void>();
+  const onNavigate = vi.fn<(zoom: number, from: string) => void>();
   const base: TimeBufferInput = {
-    zoom,
+    zoom: zoomLevels[zoom].pxPerHour,
     from,
     nowMs: Date.UTC(2026, 10, 2, 8, 40),
     widthPx: 1000,
@@ -105,7 +105,7 @@ describe('useTimeBuffer (ADR 0089, The endless axis)', () => {
     // Two hours later at 48 px an hour.
     scrollBy(96);
 
-    expect(onNavigate).toHaveBeenLastCalledWith('day', '2026-11-04T08:00');
+    expect(onNavigate).toHaveBeenLastCalledWith(48, '2026-11-04T08:00');
     view.rerender({ ...base, from: '2026-11-04T08:00' });
     expect(view.result.current.range).toBe(range);
     expect(grid.current?.scrollLeft).toBeCloseTo(896, 0);

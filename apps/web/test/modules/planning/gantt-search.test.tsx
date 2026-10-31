@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { planningLinks } from '@northmes/planning-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, onTestFinished } from 'vitest';
 import {
   boardSearch,
   fromAt,
@@ -10,6 +10,7 @@ import {
   startOfFrom,
   withChain,
   withOrder,
+  withZoom,
 } from '../../../src/modules/planning/gantt-search.ts';
 import { politeRegionId } from '../../../src/ui/lib/announce.ts';
 import { findGantt, plant, renderGanttRoute } from './gantt-fixtures.tsx';
@@ -19,7 +20,7 @@ afterEach(cleanup);
 describe('ganttSearch (plan 18, URL state)', () => {
   it('reads zoom, from, order and chain, and drops a key that does not apply', () => {
     expect(ganttSearch({ zoom: 'week', from: '2026-11-02', order: 'po-1003', chain: 1 })).toEqual({
-      zoom: 'week',
+      zoom: 16,
       from: '2026-11-02',
       order: 'po-1003',
       chain: 1,
@@ -30,12 +31,37 @@ describe('ganttSearch (plan 18, URL state)', () => {
     expect(ganttSearch({ order: 1003, chain: '1' })).toEqual({ order: '1003', chain: 1 });
   });
 
-  it('reads every level of the zoom ladder from zoom, and drops an unknown one (ADR 0089)', () => {
-    for (const zoom of ['quarter-hours', 'hours', 'day', 'week', '4weeks', 'quarter', 'year']) {
-      expect(ganttSearch({ zoom })).toEqual({ zoom });
-      expect(boardSearch({ zoom })).toEqual({ zoom });
+  it('#941 reads zoom as a width per hour, a level id at its natural width, clamped, and drops anything else (ADR 0090)', () => {
+    const cases = [
+      [37.5, 37.5],
+      ['37.5', 37.5],
+      ['week', 16],
+      ['day', 48],
+      ['quarter-hours', 240],
+      ['year', 0.15],
+      [1000, 240],
+      ['0.01', 0.15],
+      [37.5432, 37.5],
+      // A number outside the range is clamped to it (ADR 0090).
+      [0, 0.15],
+      [-3, 0.15],
+      ['-3', 0.15],
+    ] as const;
+    for (const [zoom, expected] of cases) {
+      expect(ganttSearch({ zoom }), String(zoom)).toEqual({ zoom: expected });
+      expect(boardSearch({ zoom }), String(zoom)).toEqual({ zoom: expected });
     }
-    expect(ganttSearch({ zoom: 'decade' })).toEqual({});
+    for (const zoom of ['abc', 'decade', Number.NaN, '']) {
+      expect(ganttSearch({ zoom }), String(zoom)).toEqual({});
+    }
+  });
+
+  it('#941 leaves the default zoom, 16, out of the URL', () => {
+    expect(withZoom({ from: '2026-11-02' }, 32)).toEqual({ zoom: 32, from: '2026-11-02' });
+    expect(withZoom({ zoom: 32, from: '2026-11-02' }, 16)).toEqual({ from: '2026-11-02' });
+    expect(withZoom({}, 23.94)).toEqual({ zoom: 23.9 });
+    // 16.004 is 16 to three significant digits, so the key stays out.
+    expect(withZoom({ zoom: 32 }, 16.004)).toEqual({});
   });
 
   it('ADR0089 reads from as a plant date or as the plant-local date-time of the visible start, without an offset', () => {
@@ -72,13 +98,13 @@ describe('ganttSearch (plan 18, URL state)', () => {
     const gantt = ganttSearch({ zoom: 'week', from: '2026-11-02', order: 'po-1003', chain: 1 });
 
     expect(withOrder(gantt, 'po-1001')).toEqual({
-      zoom: 'week',
+      zoom: 16,
       from: '2026-11-02',
       order: 'po-1001',
     });
-    expect(withOrder(gantt, undefined)).toEqual({ zoom: 'week', from: '2026-11-02' });
+    expect(withOrder(gantt, undefined)).toEqual({ zoom: 16, from: '2026-11-02' });
     expect(withChain(withOrder(gantt, undefined), true)).toEqual({
-      zoom: 'week',
+      zoom: 16,
       from: '2026-11-02',
     });
     expect(withChain(withChain(gantt, false), true)).toEqual(gantt);
@@ -86,10 +112,10 @@ describe('ganttSearch (plan 18, URL state)', () => {
 
   it('#950 drops any view on the board route, view=gantt included', () => {
     expect(boardSearch({ view: 'gantt', zoom: 'week', order: 'po-1003' })).toEqual({
-      zoom: 'week',
+      zoom: 16,
       order: 'po-1003',
     });
-    expect(boardSearch({ view: 'table', zoom: 'week' })).toEqual({ zoom: 'week' });
+    expect(boardSearch({ view: 'table', zoom: 'week' })).toEqual({ zoom: 16 });
     expect(boardSearch({ view: 'board' })).toEqual({});
   });
 });
@@ -115,7 +141,7 @@ describe('the Gantt page (plan 18, URL state)', () => {
         .getAttribute('aria-selected'),
     ).toBe('false');
     expect(router.state.location.search).toEqual({
-      zoom: 'week',
+      zoom: 16,
       from: '2026-11-02',
       order: 'po-1003',
       chain: 1,
@@ -136,7 +162,7 @@ describe('the Gantt page (plan 18, URL state)', () => {
 
     await findGantt();
     await waitFor(() => {
-      expect(router.state.location.search).toEqual({ zoom: 'week', from: '2026-11-02' });
+      expect(router.state.location.search).toEqual({ zoom: 16, from: '2026-11-02' });
     });
     await waitFor(() => {
       expect(document.getElementById(politeRegionId)?.textContent).toBe(
@@ -158,19 +184,44 @@ describe('the Gantt page (plan 18, URL state)', () => {
     expect(screen.queryByRole('treegrid')).toBeNull();
   });
 
-  it('ADR0089 opens an unknown zoom at Week, and names the level of the URL', async () => {
+  it('#941 opens a zoom at its width per hour in its band: 37.5 in Day, 26 in Week, abc at 16, a level id at its natural width and 1000 at the clamp', async () => {
     const level = () =>
       within(screen.getByRole('group', { name: 'Zoom' })).getByRole('button', {
         name: /^Zoom level, /,
       }).textContent;
-    renderGanttRoute({ zoom: 'decade', from: '2026-11-02' });
-    await findGantt();
-    expect(level()).toBe('Week');
-    cleanup();
-
-    renderGanttRoute({ zoom: 'quarter', from: '2026-11-01' });
-    await findGantt();
-    expect(level()).toBe('Quarter');
+    /** The drawn width of job order 1001.10. */
+    const blockWidth = (gantt: HTMLElement) =>
+      Number.parseFloat(
+        (gantt.querySelector('[data-block="jo-1001-10"]') as HTMLElement).style.width,
+      );
+    // The first case, an unknown value at the default 16, measures the block the others scale.
+    const cases = [
+      ['abc', 'Week', 16],
+      [37.5, 'Day', 37.5],
+      [26, 'Week', 26],
+      // Just under the Week to Day edge at about 27.713, as a gesture that ended at 27.72 writes it.
+      [27.7, 'Week', 27.7],
+      ['day', 'Day', 48],
+      ['quarter', 'Quarter', 0.6],
+      [1000, 'Quarter hours', 240],
+    ] as const;
+    let atDefault = 0;
+    // With closed time shown, a block's width is its hours at the width per hour.
+    window.localStorage.setItem(
+      'northmes.planning.gantt.options',
+      JSON.stringify({ hideClosed: false }),
+    );
+    onTestFinished(() => window.localStorage.removeItem('northmes.planning.gantt.options'));
+    for (const [zoom, band, width] of cases) {
+      renderGanttRoute({ zoom, from: '2026-11-02' });
+      const gantt = await findGantt();
+      expect(level(), String(zoom)).toBe(band);
+      if (zoom === 'abc') atDefault = blockWidth(gantt);
+      else if (width >= 16) {
+        expect((blockWidth(gantt) / atDefault) * 16, String(zoom)).toBeCloseTo(width, 1);
+      }
+      cleanup();
+    }
   });
 
   it('opens the Gantt at Week zoom from the fixture week when the URL names no zoom and no date', async () => {

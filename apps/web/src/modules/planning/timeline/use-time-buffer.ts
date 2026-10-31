@@ -23,7 +23,14 @@ import {
   movedBuffer,
   visibleSpan,
 } from './time-buffer.ts';
-import { plantDateOf, type TimeRange, type TimeScale } from './time-scale.ts';
+import {
+  bandOf,
+  plantDateOf,
+  roundZoom,
+  type TimeRange,
+  type TimeScale,
+  type Zoom,
+} from './time-scale.ts';
 import {
   anchoredScrollLeft,
   type GridLayout,
@@ -68,8 +75,8 @@ export function useVisibleSpan(store: VisibleStore): TimeRange | undefined {
 }
 
 export interface TimeBufferInput {
-  /** The level in the URL. */
-  readonly zoom: ZoomLevel;
+  /** The width per hour in the URL (ADR 0090, The URL key zoom). */
+  readonly zoom: number;
   /** The visible start in the URL, a plant date or date-time. */
   readonly from: string | undefined;
   /** Now, whose plant date the view opens at when the URL names no start. */
@@ -80,8 +87,8 @@ export interface TimeBufferInput {
   /** Where the time column starts in the grid, and how much of it the sticky columns cover. */
   readonly columns: Omit<GridLayout, 'clientWidth'>;
   readonly plant: ZoomPlant;
-  /** Writes the level and the visible start to the URL, replacing the entry. */
-  readonly onNavigate: (zoom: ZoomLevel, from: string) => void;
+  /** Writes the width per hour, to three significant digits, and the visible start to the URL. */
+  readonly onNavigate: (zoom: number, from: string) => void;
   /**
    * A pointer drag in progress, which holds the buffer where it is, since the drag reads its moves
    * in this buffer's pixels; when it ends, the view checks the edges as a scroll there would.
@@ -93,8 +100,15 @@ export interface TimeBufferInput {
 }
 
 export interface TimeBuffer {
-  /** The level the buffer is drawn at, which the URL follows once scrolling stops. */
+  /** The band the buffer is drawn in. */
   readonly zoom: ZoomLevel;
+  /** The width per hour the buffer is drawn at, which the URL follows once scrolling stops. */
+  readonly pxPerHour: number;
+  /**
+   * Whether a zoom gesture or animation is under way: chunk loads, drops and the URL wait for its
+   * end (ADR 0090, Laying out a zoom).
+   */
+  readonly zooming: boolean;
   /** The buffer's span, or none while the time area has no width. */
   readonly range: TimeRange | undefined;
   readonly scale: TimeScale | undefined;
@@ -106,8 +120,11 @@ export interface TimeBuffer {
   readonly settled: TimeRange | undefined;
   /** The grid's scroll listener. */
   readonly onScroll: () => void;
-  /** Builds the buffer of a level around an instant at a viewport x, and writes the URL. */
-  readonly goTo: (zoom: ZoomLevel, anchor: ViewAnchor) => void;
+  /**
+   * Builds the buffer of a zoom around an instant at a viewport x, and writes the URL once
+   * scrolling stops; `during` marks a frame of a gesture or an animation, whose end comes after.
+   */
+  readonly goTo: (zoom: Zoom, anchor: ViewAnchor, during?: boolean) => void;
   /** Earlier and Later: the view one viewport width before or after where it is. */
   readonly page: (direction: 'earlier' | 'later') => void;
   /** The x in the buffer where the view starts. */
@@ -117,9 +134,11 @@ export interface TimeBuffer {
 }
 
 interface BufferState {
-  readonly zoom: ZoomLevel;
+  readonly zoom: Zoom;
+  /** Whether the buffer is a frame of a zoom gesture or animation. */
+  readonly zooming: boolean;
   readonly range: TimeRange;
-  /** The URL and plant clock the buffer agrees with: level, start, zone and production day start. */
+  /** The URL and plant clock the buffer agrees with: zoom, start, zone and production day start. */
   readonly seen: string;
   /**
    * What the view last wrote to the URL, newest last, so the URL catching up rebuilds nothing, also
@@ -132,14 +151,14 @@ interface BufferState {
   readonly pending?: { readonly anchor: ViewAnchor; readonly write: boolean };
 }
 
-/** The level of a key of what a buffer agrees with. */
-function zoomOf(seen: string): string {
+/** The zoom of a key of what a buffer agrees with. */
+function zoomKeyOf(seen: string): string {
   return seen.slice(0, seen.indexOf('|'));
 }
 
 /** The key of what a buffer agrees with in the URL and the plant clock. */
-function seenKey(zoom: ZoomLevel, start: string, plant: ZoomPlant): string {
-  return `${zoom}|${start}|${plant.timeZone}|${plant.productionDayStart}`;
+function seenKey(pxPerHour: number, start: string, plant: ZoomPlant): string {
+  return `${roundZoom(pxPerHour)}|${start}|${plant.timeZone}|${plant.productionDayStart}`;
 }
 
 /**
@@ -164,14 +183,16 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
   const [visible] = useState(createVisibleStore);
   const [settled, setSettled] = useState<TimeRange | undefined>(undefined);
 
-  /** The buffer of a level with an anchor at its viewport x and the view one width inside it. */
+  /** The buffer of a zoom with an anchor at its viewport x and the view one width inside it. */
   const build = (
-    level: ZoomLevel,
+    level: Zoom,
     anchor: ViewAnchor,
     agreed: { readonly seen: string; readonly written: readonly string[] },
     write = false,
+    zooming = false,
   ): BufferState => ({
     zoom: level,
+    zooming,
     range: bufferAround({
       anchorMs: anchor.ms,
       anchorX: viewportPx + anchor.viewportX - stickyWidth,
@@ -194,10 +215,10 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
   if (viewportPx > 0) {
     if (current === undefined || (current.seen !== seen && !current.written.includes(seen))) {
       const anchor = {
-        ms: startOfFrom(urlStart, zoom, timeZone, productionDayStart),
+        ms: startOfFrom(urlStart, bandOf(zoom), timeZone, productionDayStart),
         viewportX: stickyWidth,
       };
-      current = build(zoom, anchor, { seen, written: [] });
+      current = build({ band: bandOf(zoom), pxPerHour: zoom }, anchor, { seen, written: [] });
       setState(current);
     } else if (current.seen !== seen) {
       // Once the URL holds the newest write, the older ones are history: Back to one of them is a
@@ -236,7 +257,10 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
 
   // The latest values for the listeners and the timer, which outlive the render they were made in.
   // Where the URL's start opens, to the minute, so a view that rests there writes nothing.
-  const urlStartAt = fromAt(startOfFrom(urlStart, zoom, timeZone, productionDayStart), timeZone);
+  const urlStartAt = fromAt(
+    startOfFrom(urlStart, bandOf(zoom), timeZone, productionDayStart),
+    timeZone,
+  );
   const latest = useRef({
     scale,
     current,
@@ -266,7 +290,8 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
     clearTimeout(settleTimer.current);
     settleTimer.current = setTimeout(() => {
       const view = latest.current;
-      if (view.frozen?.get() === true) {
+      // A drag or a zoom gesture under way writes once it ends.
+      if (view.frozen?.get() === true || view.current?.zooming === true) {
         settle();
         return;
       }
@@ -275,10 +300,10 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
       if (span === undefined || buffer === undefined) return;
       setSettled(span);
       const start = fromAt(span.fromMs, view.plant.timeZone);
-      const key = seenKey(buffer.zoom, start, view.plant);
+      const key = seenKey(buffer.zoom.pxPerHour, start, view.plant);
       if (
         key === buffer.seen ||
-        (buffer.zoom === zoomOf(buffer.seen) && start === view.urlStartAt)
+        (zoomKeyOf(key) === zoomKeyOf(buffer.seen) && start === view.urlStartAt)
       ) {
         return;
       }
@@ -287,7 +312,7 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
           ? previous
           : { ...previous, written: [...previous.written.slice(1 - keptWrites), key] },
       );
-      view.onNavigate(buffer.zoom, start);
+      view.onNavigate(roundZoom(buffer.zoom.pxPerHour), start);
     }, settleMs);
   }, [visible]);
   useEffect(() => () => clearTimeout(settleTimer.current), []);
@@ -356,13 +381,16 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
     });
   }, [onScroll]);
 
-  const goTo = (target: ZoomLevel, anchor: ViewAnchor) => {
+  const goTo = (target: Zoom, anchor: ViewAnchor, during = false) => {
     if (viewportPx <= 0 || current === undefined) {
-      // No time area to lay out: the level and the anchor's date go to the URL alone.
-      onNavigate(target, plantDateOf(anchor.ms, timeZone));
+      // No time area to lay out: the zoom and the anchor's date go to the URL alone, at the end,
+      // and a gesture that a frame began ends.
+      if (during) return;
+      if (current?.zooming === true) setState({ ...current, zooming: false });
+      onNavigate(roundZoom(target.pxPerHour), plantDateOf(anchor.ms, timeZone));
       return;
     }
-    setState(build(target, anchor, { seen: current.seen, written: current.written }, true));
+    setState(build(target, anchor, { seen: current.seen, written: current.written }, true, during));
   };
 
   /**
@@ -383,7 +411,9 @@ export function useTimeBuffer(input: TimeBufferInput): TimeBuffer {
   };
 
   return {
-    zoom: current?.zoom ?? zoom,
+    zoom: current?.zoom.band ?? bandOf(zoom),
+    pxPerHour: current?.zoom.pxPerHour ?? zoom,
+    zooming: current?.zooming === true,
     range,
     scale,
     layout,

@@ -302,7 +302,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
 
     await waitFor(() => {
       expect(router.state.location.search).toEqual({
-        zoom: 'week',
+        zoom: 16,
         from: '2026-11-02',
         order: 'po-1003',
       });

@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { z } from 'zod';
 import type { ZoomPreset } from './gantt-data.ts';
-import { plantDateTime } from './gantt-search.ts';
-import { presetOfLevel, zoomLevelIds } from './timeline/time-scale.ts';
+import { plantDateTime, zoomKey } from './gantt-search.ts';
+import { bandOf, presetOfLevel } from './timeline/time-scale.ts';
 
 /** The sortable columns of the job order table, by their column ids. */
 export const jobOrdersSortIds = [
@@ -23,8 +23,8 @@ export type JobOrdersSort = JobOrdersSortId | `-${JobOrdersSortId}`;
 
 /**
  * The view state of the job orders page in the URL (ADR 0062, plan 18): the zoom preset and the
- * first plant date of the range, which mean the same on the board and the Gantt (a level of the
- * ladder opens at its nearest preset, ADR 0089), Late only in
+ * first plant date of the range, which mean the same on the board and the Gantt (the zoom of a
+ * link from them opens at the preset of its band, ADR 0090), Late only in
  * late=1 (the filter the Gantt shares, plan 18), and the sort. The default sort, machine then
  * start, stays out of the URL.
  */
@@ -44,7 +44,10 @@ const sortValues = [
 
 /** The URL keys, each of which falls back to its default on its own (ADR 0062). */
 const searchKeys = z.object({
-  zoom: z.enum(zoomLevelIds).transform(presetOfLevel).optional().catch(undefined),
+  zoom: zoomKey
+    .transform((pxPerHour) => presetOfLevel(bandOf(pxPerHour)))
+    .optional()
+    .catch(undefined),
   // A link from the board or the Gantt names their visible start, which opens at its date.
   from: z
     .union([z.iso.date(), plantDateTime.transform((value) => value.slice(0, 10))])

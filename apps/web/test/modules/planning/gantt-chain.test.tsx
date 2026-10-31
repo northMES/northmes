@@ -65,7 +65,7 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
 
     await waitFor(() => {
       expect(router.state.location.search).toEqual({
-        zoom: 'week',
+        zoom: 16,
         from: '2026-11-02',
         order: 'po-1003',
         chain: 1,
@@ -121,7 +121,7 @@ describe('the critical chain highlight (plan 18, Float and the critical chain)',
 
     await waitFor(() => {
       expect(router.state.location.search).toEqual({
-        zoom: 'week',
+        zoom: 16,
         from: '2026-11-02',
         order: 'po-1003',
       });

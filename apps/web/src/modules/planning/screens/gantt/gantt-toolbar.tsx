@@ -18,6 +18,7 @@ import {
 } from '../../../../ui/primitives/dropdown-menu.tsx';
 import { RangeControls, ZoomControls } from '../../components/range-controls/index.ts';
 import type { ZoomLevel } from '../../gantt-data.ts';
+import type { Zoom } from '../../timeline/time-scale.ts';
 import { changesText } from './gantt-draft-drawer.tsx';
 import type { GanttOptions } from './gantt-options.ts';
 import { ganttColumnChoices } from './gantt-tree-pane.tsx';
@@ -33,8 +34,9 @@ const paneWidths = [
 ] as const;
 
 export interface GanttToolbarProps {
-  readonly zoom: ZoomLevel;
+  readonly zoom: Zoom;
   readonly onZoomChange: (zoom: ZoomLevel) => void;
+  readonly onZoomStep: (direction: 'in' | 'out') => void;
   readonly onZoomToFit: () => void;
   readonly from: string;
   readonly onFromChange: (from: string) => void;
@@ -50,13 +52,14 @@ export interface GanttToolbarProps {
 }
 
 /**
- * The Gantt toolbar of D5: the zoom of ADR 0089, Earlier, Now and Later, Go to date, the range, the
+ * The Gantt toolbar of D5: the zoom of ADR 0090, Earlier, Now and Later, Go to date, the range, the
  * Hide closed time toggle, My draft, Columns and Board options. Zoom and from go to the URL; the
  * toggle, the columns and the options stay local.
  */
 export function GanttToolbar({
   zoom,
   onZoomChange,
+  onZoomStep,
   onZoomToFit,
   from,
   onFromChange,
@@ -73,7 +76,12 @@ export function GanttToolbar({
     <div role="toolbar" aria-label="Gantt" className="flex flex-wrap items-center gap-2">
       <RangeControls
         zoomControls={
-          <ZoomControls zoom={zoom} onZoomChange={onZoomChange} onZoomToFit={onZoomToFit} />
+          <ZoomControls
+            zoom={zoom}
+            onZoomChange={onZoomChange}
+            onZoomStep={onZoomStep}
+            onZoomToFit={onZoomToFit}
+          />
         }
         from={from}
         onFromChange={onFromChange}
