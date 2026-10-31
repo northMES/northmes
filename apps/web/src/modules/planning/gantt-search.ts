@@ -54,7 +54,7 @@ export const zoomKey = z
       .transform(Number),
     z.enum(zoomLevelIds).transform((id) => zoomLevels[id].pxPerHour),
   ])
-  .pipe(z.number().positive().finite())
+  .pipe(z.number().positive())
   .transform((pxPerHour) => roundZoom(clampZoom(pxPerHour)));
 
 /** The URL keys, each of which falls back to its default on its own (ADR 0062). */

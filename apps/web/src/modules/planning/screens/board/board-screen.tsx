@@ -229,9 +229,8 @@ export function BoardScreen() {
     grid: gridElement,
     columns: { treeWidth: machineWidth, stickyWidth: machineWidth },
     plant: zoomPlant,
-    // The zoom goes to the URL when it changes, so the default zoom stays out of it.
-    onNavigate: (next, start) =>
-      void setSearch(withFrom(next === urlZoom ? search : withZoom(search, next), start)),
+    // The zoom goes to the URL with the start, and the default zoom stays out of it.
+    onNavigate: (next, start) => void setSearch(withFrom(withZoom(search, next), start)),
     frozen: {
       get: () => moveStore.get()?.state.source === 'pointer',
       subscribe: (listener) => moveStore.subscribe(listener),

@@ -339,6 +339,16 @@ describe('the smooth zoom of the order Gantt (ADR 0090, Gestures, buttons and ke
     fireEvent.pointerUp(block, { ...pointer, clientX: 910 });
   });
 
+  it('#941 a link at zoom=week leaves the default zoom out of the URL once the view writes it', async () => {
+    const router = renderGanttRoute({ zoom: 'week', from: '2026-11-09' });
+    await findGantt();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Now' }));
+
+    await waitFor(() => expect(router.state.location.search.from).toMatch(/^2026-10-2\dT/));
+    expect('zoom' in router.state.location.search).toBe(false);
+  });
+
   it('#896 the row menu has no disabled Zoom to order, which Zoom to fit replaces', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     await findGantt();
