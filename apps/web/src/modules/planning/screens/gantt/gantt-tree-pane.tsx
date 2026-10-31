@@ -448,8 +448,8 @@ export function TreePane({
   return (
     <div
       data-tree-pane
-      // Down over the row's bottom border with one of its own, so the time area's layers never
-      // show through that line either.
+      // Down over the row's bottom border with one of its own, so the time area's layers, which
+      // pass under the body rows' panes, never show through that line either.
       className={cn(
         'sticky start-0 z-10 -mb-px overflow-clip border-e border-b border-border',
         className,
