@@ -274,7 +274,8 @@ export function BoardGrid({
         <div
           role="rowheader"
           data-sticky-column
-          className="sticky start-0 z-20 flex items-center bg-muted px-1"
+          // Down over the row's bottom border, as the machine cells.
+          className="sticky start-0 z-20 -mb-px flex items-center border-b border-border bg-muted px-1"
         >
           <button
             type="button"
@@ -335,7 +336,9 @@ export function BoardGrid({
             }
             onFocus={() => onFocusTarget(focusKeys.header(code))}
             data-sticky-column
-            className="sticky start-0 z-20 flex items-center border-e border-border bg-card px-3 text-sm"
+            // Down over the row's bottom border with one of its own, so the time area's layers
+            // never show through that line either.
+            className="sticky start-0 z-20 -mb-px flex items-center border-e border-b border-border bg-card px-3 text-sm"
             style={{
               boxShadow:
                 group.color === undefined ? undefined : `inset 6px 0 0 var(--${group.color})`,
