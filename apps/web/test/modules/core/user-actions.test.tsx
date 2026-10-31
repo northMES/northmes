@@ -9,7 +9,6 @@ import {
   anna,
   assignment,
   companiesQuery,
-  companyId,
   person,
   plantA,
   sara,
@@ -28,7 +27,7 @@ const saraOfPage = user(sara, [assignment(viewerRole, acme), assignment(shiftLea
 
 /** The user's page in company settings. */
 function pageOf(of: { readonly id: string }) {
-  return coreLinks.settings.users.user({ companyId, userId: of.id }).href;
+  return coreLinks.settings.users.user({ plant: 'plant-a', userId: of.id }).href;
 }
 
 /** The names of the page's top bar buttons, in order, once the user's name shows. */

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useMutation, useQuery } from '@apollo/client/react';
 import { coreLinks, createUser } from '@northmes/core-contracts';
+import { useShell } from '@northmes/web-sdk';
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
 import { v7 as uuidv7 } from 'uuid';
@@ -101,6 +102,7 @@ function NewUserForm({
   readonly firstRole: FirstRoleChoices | undefined;
 }) {
   const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   const navigate = useNavigate();
   const [id] = useState(() => uuidv7());
   const [createdBefore, setCreatedBefore] = useState<CreatedBefore>();
@@ -146,7 +148,7 @@ function NewUserForm({
       const { user, temporaryPassword } = data.coreCreateUser;
       handOverTemporaryPassword(user.id, temporaryPassword);
       await navigate({
-        to: coreLinks.settings.users.user({ companyId, userId: user.id }).href,
+        to: coreLinks.settings.users.user({ plant, userId: user.id }).href,
         replace: true,
       });
     } catch (error) {
@@ -209,7 +211,7 @@ function NewUserForm({
             label="Open user"
             onAction={() =>
               navigate({
-                to: coreLinks.settings.users.user({ companyId, userId: createdBefore.userId }).href,
+                to: coreLinks.settings.users.user({ plant, userId: createdBefore.userId }).href,
                 replace: true,
               })
             }
@@ -279,7 +281,7 @@ function NewUserForm({
       <FormActions
         saveLabel="Create user"
         saving={isSubmitting}
-        cancelHref={coreLinks.settings.users({ companyId }).href}
+        cancelHref={coreLinks.settings.users({ plant }).href}
         dirty={isDirty}
       />
       <UnsavedChangesGuard when={isDirty && !isSubmitting && createdBefore === undefined} />
@@ -298,6 +300,7 @@ function NewUserForm({
  */
 export function NewUserScreen() {
   const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   const places = usePlaces();
   const viewer = useViewer();
   // The API checks core.user:create at the company (its scope hook).
@@ -332,7 +335,7 @@ export function NewUserScreen() {
   return (
     <PageFrame
       title={forbidden ? 'No access to New user' : 'New user'}
-      crumbs={[{ label: 'Users', href: coreLinks.settings.users({ companyId }).href }]}
+      crumbs={[{ label: 'Users', href: coreLinks.settings.users({ plant }).href }]}
       state={state}
     >
       {viewer.loaded && !forbidden && (

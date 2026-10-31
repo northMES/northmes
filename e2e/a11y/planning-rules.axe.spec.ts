@@ -11,7 +11,7 @@ import { expect, plant, test } from '../fixtures.ts';
 
 /** The planning rules href of the seed plant with a search. */
 function planningRules(search: Record<string, string> = {}): string {
-  const href = planningLinks.settings({ plant }).href;
+  const href = planningLinks.settings.rules({ plant }).href;
   const query = new URLSearchParams(search).toString();
   return query === '' ? href : `${href}?${query}`;
 }

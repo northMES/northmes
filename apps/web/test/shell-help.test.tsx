@@ -9,7 +9,6 @@ import type { ShellModule } from '../src/modules.ts';
 import { PageFrame } from '../src/ui/components/page-frame/index.ts';
 import {
   companies,
-  companyId,
   equipment,
   fakeApi,
   focusedName,
@@ -129,7 +128,7 @@ describe('the Help menu', () => {
     ).toEqual([
       ['Equipment', [['Tools', '/plant-a/equipment/tools']]],
       ['Quality', [['Inspections', '/plant-a/quality/inspections']]],
-      ['Plant A settings', [['Machines', '/plant-a/equipment/machines']]],
+      ['Plant A settings', [['Machines', '/plant-a/settings/equipment/machines']]],
     ]);
   });
 
@@ -174,7 +173,7 @@ describe('the Help menu', () => {
     await waitFor(() => expect(document.activeElement).toBe(heading));
   });
 
-  it('E04-S02 the unknown plant page and company settings have Help before the account menu, without All pages', async () => {
+  it('E04-S02 the unknown plant page has Help before the account menu, without All pages', async () => {
     const user = userEvent.setup();
     renderAt('/plant-x/equipment/tools');
     await screen.findByRole('heading', { level: 1, name: 'Page not found' });
@@ -187,11 +186,5 @@ describe('the Help menu', () => {
     ).toBe(true);
     const { menu } = await openHelp(user, banner);
     expect(within(menu).queryByRole('menuitem', { name: 'All pages' })).toBeNull();
-
-    cleanup();
-    // Without a permission the landing keeps a page of its own, which says so (#876).
-    renderAt(`/settings/${companyId}`);
-    await screen.findByRole('heading', { level: 1, name: 'Company settings' });
-    expect(within(screen.getByRole('banner')).getByRole('button', { name: 'Help' })).toBeDefined();
   });
 });

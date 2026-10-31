@@ -69,8 +69,8 @@ export interface PageFrameProps {
    */
   readonly crumbs?: readonly Crumb[];
   /**
-   * The last crumb, the current page, when the trail names it apart from its title: the company
-   * landing is "Company settings", and its trail ends with the company (design shell-313, C5).
+   * The last crumb, the current page, when the trail names it apart from its title: an edit page
+   * titled "Edit machine CNC1" ends its trail with Edit.
    */
   readonly currentCrumb?: string;
   /**

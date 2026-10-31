@@ -26,13 +26,16 @@ export interface MenuLink {
   readonly area?: 'settings';
 }
 
-/** One entry of the company settings navigation, a page under /settings/$companyId (ADR 0066). */
+/**
+ * One of the company's settings pages, such as Users, which the plant settings navigation lists as
+ * its last group and which opens under /<plant>/settings (ADR 0066, #876).
+ */
 export interface SettingsLink {
   readonly label: string;
   /** The entry's icon, by its lucide name (ADR 0067). */
   readonly icon: NavIconName;
-  /** Builds the link for a company, such as the entry coreLinks.settings.users. */
-  readonly link: (params: { readonly companyId: string }) => { readonly href: string };
+  /** Builds the link under a plant of the company, such as the entry coreLinks.settings.users. */
+  readonly link: (params: { readonly plant: string }) => { readonly href: string };
   /** The permission the page reads with: the entry shows only to a user who holds it at the company. */
   readonly permission?: string;
 }
@@ -66,7 +69,7 @@ export interface ShellModule {
    * item can be a nested group of sidebar entries.
    */
   readonly links?: readonly MenuItem[];
-  /** The module's entries in the company settings navigation, in their order. */
+  /** The module's entries among the company's settings pages, in their order. */
   readonly settingsLinks?: readonly SettingsLink[];
   /** The module's contributions to slots, each shown only to a user who holds its permission. */
   readonly contributions?: readonly ShellContribution[];
@@ -105,7 +108,7 @@ export const shellModules: readonly ShellModule[] = [
       {
         label: 'People',
         icon: 'Users',
-        link: coreLinks.people,
+        link: coreLinks.settings.people,
         permission: 'core.user:read',
         area: 'settings',
       },
@@ -116,7 +119,7 @@ export const shellModules: readonly ShellModule[] = [
       {
         label: 'Plant',
         icon: 'Factory',
-        link: coreLinks.plant,
+        link: coreLinks.settings.plant,
         permission: 'core.roleAssignment:manage',
         area: 'settings',
       },
@@ -128,21 +131,21 @@ export const shellModules: readonly ShellModule[] = [
       {
         label: 'Machines',
         icon: 'Drill',
-        link: coreLinks.machines,
+        link: coreLinks.settings.machines,
         permission: 'core.roleAssignment:manage',
         area: 'settings',
       },
       {
         label: 'Equipment groups',
         icon: 'Layers',
-        link: coreLinks.equipmentGroups,
+        link: coreLinks.settings.equipmentGroups,
         permission: 'core.roleAssignment:manage',
         area: 'settings',
       },
       {
         label: 'Calendars',
         icon: 'CalendarDays',
-        link: coreLinks.calendars,
+        link: coreLinks.settings.calendars,
         permission: 'core.roleAssignment:manage',
         area: 'settings',
       },
@@ -193,7 +196,7 @@ export const shellModules: readonly ShellModule[] = [
       {
         label: 'Planning rules',
         icon: 'SlidersHorizontal',
-        link: planningLinks.settings,
+        link: planningLinks.settings.rules,
         permission: 'core.roleAssignment:manage',
         area: 'settings',
       },

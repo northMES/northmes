@@ -3,8 +3,9 @@
 import { type LinkNode, linkEntry } from '@northmes/contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import { createShellRoutes } from '@northmes/web-sdk';
-import { createRouter } from '@tanstack/react-router';
-import { describe, expect, it } from 'vitest';
+import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
+import { cleanup, render, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it } from 'vitest';
 import { planningModule } from '../../../src/modules/planning/index.ts';
 
 /**
@@ -25,26 +26,47 @@ function routeFullPaths(): string[] {
   return [
     ...new Set(
       Object.values(router.routesById).map((route) =>
-        route.fullPath === '/' || route.fullPath === '/settings/$companyId/'
-          ? route.fullPath
-          : route.fullPath.replace(/\/$/, ''),
+        route.fullPath === '/' ? route.fullPath : route.fullPath.replace(/\/$/, ''),
       ),
     ),
   ];
 }
 
+afterEach(cleanup);
+
 describe('planning routes', () => {
-  it('E02-S05 every planningLinks entry matches a route fullPath', () => {
-    // The shell's root route, its $plant route and company settings with their landing, then one
-    // route per link entry and no other.
+  it('#876 every planningLinks entry, its settings section included, matches a route fullPath', () => {
+    // The shell's root route, its $plant route and its settings route with the landing, one route
+    // per link entry, and the route that leads the old settings URLs under the plant's settings.
     expect(routeFullPaths().sort()).toEqual(
       [
-        '/',
-        '/$plant',
-        '/settings/$companyId',
-        '/settings/$companyId/',
-        ...linkPatterns(planningLinks),
+        ...new Set([
+          '/',
+          '/$plant',
+          '/$plant/settings',
+          ...linkPatterns(planningLinks),
+          '/$plant/planning/settings/$',
+        ]),
       ].sort(),
     );
   });
+
+  it.each([
+    ['/plant-a/planning/settings', '/plant-a/settings/planning'],
+    [
+      '/plant-a/planning/settings/board-fields?preview=loading',
+      '/plant-a/settings/planning/board-fields?preview=loading',
+    ],
+  ])(
+    "#876 the old planning settings URL %s leads to %s, under the plant's settings",
+    async (old, now) => {
+      const router = createRouter({
+        routeTree: createShellRoutes({ modules: [planningModule] }),
+        history: createMemoryHistory({ initialEntries: [old] }),
+      });
+      render(<RouterProvider router={router} />);
+
+      await waitFor(() => expect(router.state.location.href).toBe(now));
+    },
+  );
 });

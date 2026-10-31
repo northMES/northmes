@@ -46,14 +46,14 @@ export type LinkBuilder<Pattern extends string> = (
 export interface LinkEntry<Pattern extends string = string> {
   /**
    * The entry's path below its parent entry, as the manifest declares it. A manifest's path is its
-   * module id, below /$plant, and so is its settings section's, below /settings/$companyId. Core's
+   * module id, below /$plant, and so is its settings section's, below /$plant/settings. Core's
    * manifest and its settings section have an empty path (ADR 0074).
    */
   readonly path: string;
   /**
    * The entry's route pattern, which starts with /$plant/<moduleId>, or with
-   * /settings/$companyId/<moduleId> in the settings section. Core's start with /$plant and
-   * /settings/$companyId.
+   * /$plant/settings/<moduleId> in the settings section. Core's start with /$plant and
+   * /$plant/settings.
    */
   readonly pattern: Pattern;
 }
@@ -108,8 +108,8 @@ export type ModuleLinks<Parent extends string, Entries extends LinkEntryDefiniti
 /** The sections of a link manifest beside its plant pages. */
 export interface ModuleLinkSections<Settings extends LinkEntryDefinitions | undefined> {
   /**
-   * The module's company settings pages, below /settings/$companyId/<moduleId>, whose builders take
-   * a company id and no plant (ADR 0066).
+   * The module's settings pages, below /$plant/settings/<moduleId>: those of the plant and those of
+   * its company, which the plant's settings navigation lists together (ADR 0066, #876).
    */
   readonly settings: Settings;
 }
@@ -132,7 +132,7 @@ function manifest(path: string, pattern: string, entries: LinkEntryDefinitions) 
 
 /** Where a manifest's pages sit: its plant pages and its settings section. */
 interface ManifestRoots {
-  /** The manifest's path below /$plant, and below /settings/$companyId for its settings. */
+  /** The manifest's path below /$plant, and below /$plant/settings for its settings. */
   readonly path: string;
   readonly plant: string;
   readonly settings: string;
@@ -160,8 +160,8 @@ function linksAt(
  * from the patterns, so a missing or unknown param is a type error. The builders are plain
  * functions, so code without a router (server code, MCP tools, end-to-end specs) can call them.
  * A settings section becomes the manifest's `settings`, whose builders start with
- * /settings/$companyId/<moduleId> and take a company id instead of a plant (ADR 0066). An entry
- * named settings beside a settings section throws. Core's manifest comes from defineCoreLinks.
+ * /$plant/settings/<moduleId> (ADR 0066, #876). An entry named settings beside a settings section
+ * throws. Core's manifest comes from defineCoreLinks.
  */
 export function defineModuleLinks<
   const ModuleId extends string,
@@ -173,19 +173,19 @@ export function defineModuleLinks<
   sections?: ModuleLinkSections<Settings>,
 ): ModuleLinks<`/$plant/${ModuleId}`, Entries> &
   LinkNode<`/$plant/${ModuleId}`> &
-  SettingsLinks<`/settings/$companyId/${ModuleId}`, Settings> {
+  SettingsLinks<`/$plant/settings/${ModuleId}`, Settings> {
   const roots = {
     path: moduleId,
     plant: `/$plant/${moduleId}`,
-    settings: `/settings/$companyId/${moduleId}`,
+    settings: `/$plant/settings/${moduleId}`,
   };
   return linksAt(moduleId, roots, entries, sections) as never;
 }
 
 /**
  * Core's link manifest (ADR 0074). Core is the platform's own module, so its pages sit at the plant
- * root, /$plant/<entry>, and its settings section at the company settings root,
- * /settings/$companyId/<entry>, without the module id. linkEntry reads an empty path for the
+ * root, /$plant/<entry>, and its settings section at the settings root, /$plant/settings/<entry>,
+ * without the module id. linkEntry reads an empty path for the
  * manifest and for its settings section. Otherwise it builds as defineModuleLinks does.
  */
 export function defineCoreLinks<
@@ -196,8 +196,8 @@ export function defineCoreLinks<
   sections?: ModuleLinkSections<Settings>,
 ): ModuleLinks<'/$plant', Entries> &
   LinkNode<'/$plant'> &
-  SettingsLinks<'/settings/$companyId', Settings> {
-  const roots = { path: '', plant: '/$plant', settings: '/settings/$companyId' };
+  SettingsLinks<'/$plant/settings', Settings> {
+  const roots = { path: '', plant: '/$plant', settings: '/$plant/settings' };
   return linksAt('core', roots, entries, sections) as never;
 }
 

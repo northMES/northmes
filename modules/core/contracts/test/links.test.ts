@@ -22,29 +22,29 @@ describe('coreLinks', () => {
     );
   });
 
-  it("E04-S02 coreLinks' settings section builds the hrefs of a company's users, a user's access and Add role, and the roles and the role editor", () => {
-    const companyId = '01920000-0000-7000-8000-0000000ac3e0';
+  it("#876 coreLinks' settings section builds the hrefs of the company's users, a user's access and Add role, and the roles and the role editor under the plant's settings", () => {
+    const plant = 'plant-a';
     const userId = '01920000-0000-7000-8000-0000000b0001';
     const roleId = '01920000-0000-7000-8000-0000000c0001';
-    const users = `/settings/${companyId}/users`;
-    const roles = `/settings/${companyId}/roles`;
+    const users = '/plant-a/settings/users';
+    const roles = '/plant-a/settings/roles';
 
-    expect(coreLinks.settings.users({ companyId }).href).toBe(users);
-    expect(coreLinks.settings.users.new({ companyId }).href).toBe(`${users}/new`);
-    expect(coreLinks.settings.users.user({ companyId, userId }, { tab: 'access' }).href).toBe(
+    expect(coreLinks.settings.users({ plant }).href).toBe(users);
+    expect(coreLinks.settings.users.new({ plant }).href).toBe(`${users}/new`);
+    expect(coreLinks.settings.users.user({ plant, userId }, { tab: 'access' }).href).toBe(
       `${users}/${userId}?tab=access`,
     );
-    expect(coreLinks.settings.users.user.addRole({ companyId, userId }).href).toBe(
+    expect(coreLinks.settings.users.user.addRole({ plant, userId }).href).toBe(
       `${users}/${userId}/roles/new`,
     );
-    expect(coreLinks.settings.roles({ companyId }).href).toBe(roles);
-    expect(coreLinks.settings.roles.new({ companyId }, { from: roleId }).href).toBe(
+    expect(coreLinks.settings.roles({ plant }).href).toBe(roles);
+    expect(coreLinks.settings.roles.new({ plant }, { from: roleId }).href).toBe(
       `${roles}/new?from=${roleId}`,
     );
-    expect(coreLinks.settings.roles.role({ companyId, roleId }, { tab: 'holders' }).href).toBe(
+    expect(coreLinks.settings.roles.role({ plant, roleId }, { tab: 'holders' }).href).toBe(
       `${roles}/${roleId}?tab=holders`,
     );
-    expect(coreLinks.settings.roles.role.edit({ companyId, roleId }).href).toBe(
+    expect(coreLinks.settings.roles.role.edit({ plant, roleId }).href).toBe(
       `${roles}/${roleId}/edit`,
     );
   });
@@ -54,35 +54,38 @@ describe('coreLinks', () => {
     expect(coreLinks.dashboard({ plant: 'plant-a' }, { tab: 't1' }).href).toBe('/plant-a?tab=t1');
   });
 
-  it('E04-S02 coreLinks builds the hrefs of the people of a plant and their Add role, and has no plant users or roles', () => {
-    expect(coreLinks.people({ plant: 'plant-a' }).href).toBe('/plant-a/people');
-    expect(coreLinks.people.addRole({ plant: 'plant-a' }).href).toBe('/plant-a/people/roles/new');
-    expect(coreLinks.people.person.addRole({ plant: 'plant-a', userId: 'u1' }).href).toBe(
-      '/plant-a/people/u1/roles/new',
+  it("#876 coreLinks builds the hrefs of the people of a plant and their Add role under the plant's settings, and has no plant pages for people, users or roles", () => {
+    expect(coreLinks.settings.people({ plant: 'plant-a' }).href).toBe('/plant-a/settings/people');
+    expect(coreLinks.settings.people.addRole({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/settings/people/roles/new',
     );
+    expect(coreLinks.settings.people.person.addRole({ plant: 'plant-a', userId: 'u1' }).href).toBe(
+      '/plant-a/settings/people/u1/roles/new',
+    );
+    expect(coreLinks).not.toHaveProperty('people');
     expect(coreLinks).not.toHaveProperty('users');
     expect(coreLinks).not.toHaveProperty('roles');
   });
 
-  it('E06 coreLinks builds the hrefs of the machines and the calendars of a plant at the plant root', () => {
-    expect(coreLinks.machines({ plant: 'plant-a' }, { group: 'MACH' }).href).toBe(
-      '/plant-a/machines?group=MACH',
+  it("#876 coreLinks builds the hrefs of the machines and the calendars of a plant under the plant's settings", () => {
+    expect(coreLinks.settings.machines({ plant: 'plant-a' }, { group: 'MACH' }).href).toBe(
+      '/plant-a/settings/machines?group=MACH',
     );
-    expect(coreLinks.machines.machine({ plant: 'plant-a', equipmentId: 'CNC1' }).href).toBe(
-      '/plant-a/machines/CNC1',
-    );
-    expect(coreLinks.machines.machine.edit({ plant: 'plant-a', equipmentId: 'CNC1' }).href).toBe(
-      '/plant-a/machines/CNC1/edit',
-    );
-    expect(coreLinks.calendars.calendar({ plant: 'plant-a', calendarId: 'A1' }).href).toBe(
-      '/plant-a/calendars/A1',
+    expect(
+      coreLinks.settings.machines.machine({ plant: 'plant-a', equipmentId: 'CNC1' }).href,
+    ).toBe('/plant-a/settings/machines/CNC1');
+    expect(
+      coreLinks.settings.machines.machine.edit({ plant: 'plant-a', equipmentId: 'CNC1' }).href,
+    ).toBe('/plant-a/settings/machines/CNC1/edit');
+    expect(coreLinks.settings.calendars.calendar({ plant: 'plant-a', calendarId: 'A1' }).href).toBe(
+      '/plant-a/settings/calendars/A1',
     );
   });
 
-  it('#767 coreLinks builds the href of the plant page in plant settings at the plant root', () => {
-    expect(coreLinks.plant({ plant: 'plant-a' }).href).toBe('/plant-a/plant');
-    expect(coreLinks.plant({ plant: 'plant-a' }, { preview: 'noCalendar' }).href).toBe(
-      '/plant-a/plant?preview=noCalendar',
+  it("#876 coreLinks builds the href of the plant page under the plant's settings", () => {
+    expect(coreLinks.settings.plant({ plant: 'plant-a' }).href).toBe('/plant-a/settings/plant');
+    expect(coreLinks.settings.plant({ plant: 'plant-a' }, { preview: 'noCalendar' }).href).toBe(
+      '/plant-a/settings/plant?preview=noCalendar',
     );
   });
 
@@ -95,9 +98,9 @@ describe('coreLinks', () => {
     );
   });
 
-  it('#729 coreLinks builds the href of the warehouses in company settings', () => {
-    expect(coreLinks.settings.warehouses({ companyId: 'acme' }).href).toBe(
-      '/settings/acme/warehouses',
+  it("#876 coreLinks builds the href of the company's warehouses under the plant's settings", () => {
+    expect(coreLinks.settings.warehouses({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/settings/warehouses',
     );
   });
 
@@ -124,15 +127,15 @@ describe('coreLinks', () => {
     );
   });
 
-  it("#729 coreLinks builds the hrefs of the equipment groups, a group's page and its edit form at the plant root", () => {
-    expect(coreLinks.equipmentGroups({ plant: 'plant-a' }, { scope: 'company' }).href).toBe(
-      '/plant-a/equipment-groups?scope=company',
-    );
-    expect(coreLinks.equipmentGroups.group({ plant: 'plant-a', groupCode: 'MACH' }).href).toBe(
-      '/plant-a/equipment-groups/MACH',
-    );
-    expect(coreLinks.equipmentGroups.group.edit({ plant: 'plant-a', groupCode: 'MACH' }).href).toBe(
-      '/plant-a/equipment-groups/MACH/edit',
-    );
+  it("#876 coreLinks builds the hrefs of the equipment groups, a group's page and its edit form under the plant's settings", () => {
+    expect(
+      coreLinks.settings.equipmentGroups({ plant: 'plant-a' }, { scope: 'company' }).href,
+    ).toBe('/plant-a/settings/equipment-groups?scope=company');
+    expect(
+      coreLinks.settings.equipmentGroups.group({ plant: 'plant-a', groupCode: 'MACH' }).href,
+    ).toBe('/plant-a/settings/equipment-groups/MACH');
+    expect(
+      coreLinks.settings.equipmentGroups.group.edit({ plant: 'plant-a', groupCode: 'MACH' }).href,
+    ).toBe('/plant-a/settings/equipment-groups/MACH/edit');
   });
 });

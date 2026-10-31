@@ -35,9 +35,9 @@ function withSearch(href: string, search: Record<string, string>): string {
   return `${href}?${new URLSearchParams(search).toString()}`;
 }
 
-const groups = coreLinks.equipmentGroups({ plant }).href;
-const mach = coreLinks.equipmentGroups.group({ plant, groupCode: 'MACH' }).href;
-const editMach = coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'MACH' }).href;
+const groups = coreLinks.settings.equipmentGroups({ plant }).href;
+const mach = coreLinks.settings.equipmentGroups.group({ plant, groupCode: 'MACH' }).href;
+const editMach = coreLinks.settings.equipmentGroups.group.edit({ plant, groupCode: 'MACH' }).href;
 
 describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () => {
   it('#729 EG1 lists the groups by code with their color, scope, machines, where the color came from and the source', async () => {
@@ -193,7 +193,7 @@ describe("an equipment group's page (design #729, EG4)", () => {
       ['MILL1', 'Mill 1', 'Yes', 'A1'],
     ]);
     expect(within(machines).getByRole('link', { name: 'CNC1' }).getAttribute('href')).toBe(
-      coreLinks.machines.machine({ plant, equipmentId: 'CNC1' }).href,
+      coreLinks.settings.machines.machine({ plant, equipmentId: 'CNC1' }).href,
     );
     expect(screen.getByRole('figure', { name: 'Machining on the board' }).textContent).toBe(
       'Machining3 machinesCNC 1CNC 2Mill 1',
@@ -209,7 +209,7 @@ describe("an equipment group's page (design #729, EG4)", () => {
   });
 
   it('#729 EG4 says the company group HEAT took the first free palette color and has no machines here', async () => {
-    renderCoreAt(coreLinks.equipmentGroups.group({ plant, groupCode: 'HEAT' }).href, []);
+    renderCoreAt(coreLinks.settings.equipmentGroups.group({ plant, groupCode: 'HEAT' }).href, []);
     await screen.findByRole('heading', { level: 1, name: 'Equipment group HEAT' });
 
     expect(definition('Scope')).toBe('Acme ABA company group: every plant of Acme AB may use it.');
@@ -223,7 +223,7 @@ describe("an equipment group's page (design #729, EG4)", () => {
   });
 
   it('#729 EG4 says the board draws no band for a group whose machines are not plannable', async () => {
-    renderCoreAt(coreLinks.equipmentGroups.group({ plant, groupCode: 'ASM' }).href, []);
+    renderCoreAt(coreLinks.settings.equipmentGroups.group({ plant, groupCode: 'ASM' }).href, []);
     await screen.findByRole('heading', { level: 1, name: 'Equipment group ASM' });
     expect(screen.getByRole('figure', { name: 'Assembly on the board' }).textContent).toBe(
       'AssemblyNo plannable machinesThe board draws no band for this group until a plannable machine joins it.',
@@ -236,7 +236,7 @@ describe("an equipment group's page (design #729, EG4)", () => {
   });
 
   it('#729 EG4 says a group does not exist, with the way back, and shows the failed and no-access states', async () => {
-    renderCoreAt(coreLinks.equipmentGroups.group({ plant, groupCode: 'NOPE' }).href, []);
+    renderCoreAt(coreLinks.settings.equipmentGroups.group({ plant, groupCode: 'NOPE' }).href, []);
     await screen.findByRole('heading', {
       level: 2,
       name: 'This equipment group does not exist or you cannot see it',
@@ -296,7 +296,10 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
   });
 
   it('#729 EG5 lets a plant admin rename a group created in NorthMES', async () => {
-    renderCoreAt(coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'ASM' }).href, []);
+    renderCoreAt(
+      coreLinks.settings.equipmentGroups.group.edit({ plant, groupCode: 'ASM' }).href,
+      [],
+    );
     await screen.findByRole('heading', { level: 1, name: 'Edit equipment group ASM' });
     const name = screen.getByRole('textbox', { name: 'Name' }) as HTMLInputElement;
     expect(name.value).toBe('Assembly');
@@ -304,7 +307,10 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
   });
 
   it('#729 EG5 keeps the stored name in the preview while the Name field is blank', async () => {
-    renderCoreAt(coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'ASM' }).href, []);
+    renderCoreAt(
+      coreLinks.settings.equipmentGroups.group.edit({ plant, groupCode: 'ASM' }).href,
+      [],
+    );
     const name = await screen.findByRole('textbox', { name: 'Name' });
     await userEvent.clear(name);
     expect(screen.getByRole('figure', { name: 'Assembly on the board' })).toBeTruthy();
@@ -335,7 +341,10 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
   });
 
   it('#729 EG5 previews the name a plant admin types for a group created in NorthMES', async () => {
-    renderCoreAt(coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'ASM' }).href, []);
+    renderCoreAt(
+      coreLinks.settings.equipmentGroups.group.edit({ plant, groupCode: 'ASM' }).href,
+      [],
+    );
     const name = await screen.findByRole('textbox', { name: 'Name' });
     await userEvent.clear(name);
     await userEvent.type(name, 'Final assembly');
@@ -343,7 +352,10 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
   });
 
   it('#729 EG5 says a change to a company group reaches every plant of the company', async () => {
-    renderCoreAt(coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'HEAT' }).href, []);
+    renderCoreAt(
+      coreLinks.settings.equipmentGroups.group.edit({ plant, groupCode: 'HEAT' }).href,
+      [],
+    );
     await screen.findByRole('heading', { level: 1, name: 'Edit equipment group HEAT' });
     expect(
       screen.getByText('HEAT is a company group: a change here applies at every plant of Acme AB.'),
@@ -360,7 +372,10 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
     await screen.findByRole('heading', { level: 2, name: 'Could not load the equipment group' });
 
     cleanup();
-    renderCoreAt(coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'NOPE' }).href, []);
+    renderCoreAt(
+      coreLinks.settings.equipmentGroups.group.edit({ plant, groupCode: 'NOPE' }).href,
+      [],
+    );
     await screen.findByRole('heading', {
       level: 2,
       name: 'This equipment group does not exist or you cannot see it',

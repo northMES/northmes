@@ -20,7 +20,7 @@ test.describe('the plant settings pages', () => {
     signIn,
     checkA11y,
   }) => {
-    const machines = coreLinks.machines({ plant }).href;
+    const machines = coreLinks.settings.machines({ plant }).href;
     await signIn(machines);
     const table = page.getByRole('table', { name: 'Machines' });
     await expect(table).toBeVisible();
@@ -71,14 +71,14 @@ test.describe('the plant settings pages', () => {
     signIn,
     checkA11y,
   }) => {
-    await signIn(coreLinks.machines.machine({ plant, equipmentId: 'CNC1' }).href);
+    await signIn(coreLinks.settings.machines.machine({ plant, equipmentId: 'CNC1' }).href);
     await expect(page.getByRole('heading', { level: 1, name: 'Machine CNC1' })).toBeVisible();
     await expect(
       page.getByRole('table', { name: 'Routing operations that may run on CNC 1' }),
     ).toBeVisible();
     await checkA11y('a machine');
 
-    const edit = coreLinks.machines.machine.edit({ plant, equipmentId: 'CNC1' }).href;
+    const edit = coreLinks.settings.machines.machine.edit({ plant, equipmentId: 'CNC1' }).href;
     await page.getByRole('link', { name: 'Edit' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Edit machine CNC1' })).toBeVisible();
     await checkA11y('the edit form of a machine');
@@ -100,7 +100,7 @@ test.describe('the plant settings pages', () => {
     ).toBeVisible();
     await checkA11y('the edit form without access');
 
-    await page.goto(coreLinks.machines.machine({ plant, equipmentId: 'ROBOT9' }).href);
+    await page.goto(coreLinks.settings.machines.machine({ plant, equipmentId: 'ROBOT9' }).href);
     await expect(
       page.getByRole('heading', {
         level: 2,
@@ -115,7 +115,7 @@ test.describe('the plant settings pages', () => {
     signIn,
     checkA11y,
   }) => {
-    await signIn(coreLinks.calendars({ plant }).href);
+    await signIn(coreLinks.settings.calendars({ plant }).href);
     await expect(page.getByRole('table', { name: 'Calendars' })).toBeVisible();
     await checkA11y('the calendars list');
 
@@ -139,7 +139,7 @@ test.describe('the plant settings pages', () => {
     // A calendar with three shifts: each shift in its own color, with the legend above the view
     // (#770), and at 320 the view scrolling sideways in its focusable region.
     await page.goto(
-      withSearch(coreLinks.calendars.calendar({ plant, calendarId: 'B3' }).href, {
+      withSearch(coreLinks.settings.calendars.calendar({ plant, calendarId: 'B3' }).href, {
         week: '2026-11-09',
       }),
     );
@@ -152,12 +152,14 @@ test.describe('the plant settings pages', () => {
     await page.setViewportSize({ width: 1280, height: 800 });
 
     const noAccess = 'You need the permission to read calendars at this plant';
-    await page.goto(withSearch(coreLinks.calendars({ plant }).href, { preview: 'forbidden' }));
+    await page.goto(
+      withSearch(coreLinks.settings.calendars({ plant }).href, { preview: 'forbidden' }),
+    );
     await expect(page.getByRole('heading', { level: 2, name: noAccess })).toBeVisible();
     await checkA11y('the calendars list without access');
 
     await page.goto(
-      withSearch(coreLinks.calendars.calendar({ plant, calendarId: 'A1' }).href, {
+      withSearch(coreLinks.settings.calendars.calendar({ plant, calendarId: 'A1' }).href, {
         preview: 'forbidden',
       }),
     );
@@ -170,7 +172,7 @@ test.describe('the plant settings pages', () => {
     signIn,
     checkA11y,
   }) => {
-    const plantPage = coreLinks.plant({ plant }).href;
+    const plantPage = coreLinks.settings.plant({ plant }).href;
     await signIn(plantPage);
     // The h1 is the page, Plant; the plant's name and slug stand beside it (#767).
     await expect(page.getByRole('heading', { level: 1, name: 'Plant' })).toBeVisible();

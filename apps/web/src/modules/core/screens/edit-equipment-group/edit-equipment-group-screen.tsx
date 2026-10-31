@@ -152,7 +152,7 @@ function GroupForm({
           Save equipment group
         </Button>
         <Link
-          to={coreLinks.equipmentGroups.group({ plant, groupCode: group.code }).href}
+          to={coreLinks.settings.equipmentGroups.group({ plant, groupCode: group.code }).href}
           className={buttonVariants({ variant: 'outline' })}
         >
           Cancel
@@ -201,7 +201,7 @@ export function EditEquipmentGroupScreen() {
   const search = equipmentGroupPageSearch(useSearch({ strict: false }));
   const { snapshot, error, retry } = usePlantSettings(search.preview);
   const group = snapshot?.equipmentGroups.find((each) => each.code === groupCode);
-  const groupPage = coreLinks.equipmentGroups.group({ plant, groupCode }).href;
+  const groupPage = coreLinks.settings.equipmentGroups.group({ plant, groupCode }).href;
   const state = equipmentGroupPageState({
     plant,
     loaded: snapshot !== undefined,
@@ -218,7 +218,7 @@ export function EditEquipmentGroupScreen() {
     <PageFrame
       title={`Edit equipment group ${group?.code ?? groupCode}`}
       crumbs={[
-        { label: 'Equipment groups', href: coreLinks.equipmentGroups({ plant }).href },
+        { label: 'Equipment groups', href: coreLinks.settings.equipmentGroups({ plant }).href },
         { label: `Equipment group ${group?.code ?? groupCode}`, href: groupPage },
       ]}
       currentCrumb="Edit"

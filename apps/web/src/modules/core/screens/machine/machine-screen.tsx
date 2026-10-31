@@ -125,7 +125,9 @@ function MachineSection({
               <span className="text-muted-foreground">None</span>
             ) : (
               <Link
-                to={coreLinks.calendars.calendar({ plant, calendarId: calendar.name }).href}
+                to={
+                  coreLinks.settings.calendars.calendar({ plant, calendarId: calendar.name }).href
+                }
                 className="font-mono text-link underline underline-offset-2 hover:no-underline"
               >
                 {calendar.name}
@@ -305,7 +307,7 @@ export function MachineScreen() {
   const search = machinePageSearch(useSearch({ strict: false }));
   const { snapshot, error, retry } = usePlantSettings(search.preview);
   const machine = snapshot?.equipment.find((each) => each.code === equipmentId);
-  const back = coreLinks.machines({ plant }).href;
+  const back = coreLinks.settings.machines({ plant }).href;
   let state: PageState = { status: 'ready' };
   if (snapshot === undefined && error instanceof PlantSettingsForbidden) {
     state = {
@@ -348,7 +350,9 @@ export function MachineScreen() {
         loaded ? (
           <>
             <Link
-              to={coreLinks.machines.machine.edit({ plant, equipmentId: machine.code }).href}
+              to={
+                coreLinks.settings.machines.machine.edit({ plant, equipmentId: machine.code }).href
+              }
               className={buttonVariants({ variant: 'outline' })}
             >
               <Pencil aria-hidden />

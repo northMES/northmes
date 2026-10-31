@@ -27,7 +27,7 @@ describe('defineModuleLinks', () => {
     links.orders.lines({ plant: 'plant-a' });
   });
 
-  it('E04-S02 a settings section builder takes a company id and no plant', () => {
+  it('#876 a settings section builder takes the plant', () => {
     const quality = defineModuleLinks(
       'quality',
       { inspections: { path: 'inspections' } },
@@ -35,15 +35,15 @@ describe('defineModuleLinks', () => {
     );
 
     expectTypeOf(quality.settings.plans).parameter(0).toEqualTypeOf<{
-      readonly companyId: string;
+      readonly plant: string;
     }>();
-    // @ts-expect-error a settings page takes no plant
-    quality.settings.plans({ plant: 'plant-a' });
+    // @ts-expect-error a settings page takes no company id
+    quality.settings.plans({ companyId: 'c' });
     // @ts-expect-error a manifest without a settings section has none
     links.settings;
   });
 
-  it("E04-S02 defineCoreLinks' patterns have no module segment, and its settings builders take a company id", () => {
+  it("#876 defineCoreLinks' patterns have no module segment, and its settings builders take the plant", () => {
     const core = defineCoreLinks(
       { articles: { path: 'articles', children: { article: { path: '$articleId' } } } },
       { settings: { users: { path: 'users' } } },
@@ -53,10 +53,10 @@ describe('defineModuleLinks', () => {
       core.articles.article({ plant: 'plant-a', articleId: '1' }).to,
     ).toEqualTypeOf<'/$plant/articles/$articleId'>();
     expectTypeOf(
-      core.settings.users({ companyId: 'c' }).to,
-    ).toEqualTypeOf<'/settings/$companyId/users'>();
-    // @ts-expect-error a settings page takes no plant
-    core.settings.users({ plant: 'plant-a' });
+      core.settings.users({ plant: 'plant-a' }).to,
+    ).toEqualTypeOf<'/$plant/settings/users'>();
+    // @ts-expect-error a settings page takes no company id
+    core.settings.users({ companyId: 'c' });
   });
 
   it("ADR0078 an entry with an empty path builds its parent's own pattern", () => {

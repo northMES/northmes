@@ -2,12 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
+import { useShell } from '@northmes/web-sdk';
 import { Link, useParams } from '@tanstack/react-router';
 import type { PageState } from '../../ui/components/page-frame/index.ts';
 import { isForbidden } from '../../ui/lib/graphql-errors.ts';
 import { buttonVariants } from '../../ui/primitives/button.tsx';
 import { noAccessState } from './no-access.tsx';
-import { usePlaces } from './use-places.ts';
+import { useCompanyId, usePlaces } from './use-places.ts';
 import { CoreUser, type CoreUserQuery } from './user.graphql.ts';
 
 /** A user with the roles they hold at the company and at its plants. */
@@ -29,13 +30,16 @@ export interface UserOfPage {
 }
 
 /**
- * Reads the user that the $userId segment of the URL names, in the company of company settings
- * (ADR 0066), or at the plant of plant settings with their roles at the plant and its company. A role the reader may not read comes as null beside a FORBIDDEN error, so the answer
- * keeps its data (errorPolicy all).
+ * Reads the user that the $userId segment of the URL names: on the company's Users pages in the
+ * company (ADR 0066), or on People at the plant with their roles at the plant and its company. A
+ * role the reader may not read comes as null beside a FORBIDDEN error, so the answer keeps its
+ * data (errorPolicy all).
  */
 export function useUser(): UserOfPage {
   const places = usePlaces();
-  const { userId, companyId, plant } = useParams({ strict: false });
+  const { userId } = useParams({ strict: false });
+  const { plant } = useShell();
+  const companyId = useCompanyId();
   const { data, error, refetch } = useQuery(CoreUser, {
     variables: { id: userId ?? '', ...(companyId !== undefined && { companyId }) },
     errorPolicy: 'all',
@@ -43,7 +47,7 @@ export function useUser(): UserOfPage {
   const user = data?.coreUser ?? undefined;
   const forbidden = user === undefined && isForbidden(error);
   let state: PageState = { status: 'ready' };
-  if (forbidden && plant !== undefined) {
+  if (forbidden && companyId === undefined) {
     state = noAccessState('People', 'core.user:read', places.plant?.name ?? plant);
   } else if (forbidden) {
     const company = places.company?.name ?? 'the company';
@@ -63,16 +67,16 @@ export function useUser(): UserOfPage {
       title: 'This user does not exist or you cannot see it',
       description: 'The link may be out of date, or the user belongs to another company.',
       action:
-        plant !== undefined ? (
+        companyId === undefined ? (
           <Link
-            to={coreLinks.people({ plant }).href}
+            to={coreLinks.settings.people({ plant }).href}
             className={buttonVariants({ variant: 'outline' })}
           >
             Back to People
           </Link>
         ) : (
           <Link
-            to={coreLinks.settings.users({ companyId: companyId ?? '' }).href}
+            to={coreLinks.settings.users({ plant }).href}
             className={buttonVariants({ variant: 'outline' })}
           >
             Back to Users

@@ -49,9 +49,11 @@ export function PersonAddRoleScreen() {
   ) {
     state = { status: 'loading' };
   }
-  const people = { label: 'People', href: coreLinks.people({ plant }).href };
+  const people = { label: 'People', href: coreLinks.settings.people({ plant }).href };
   const personHref =
-    user === undefined ? undefined : coreLinks.people.person({ plant, userId: user.id }).href;
+    user === undefined
+      ? undefined
+      : coreLinks.settings.people.person({ plant, userId: user.id }).href;
   return (
     <PageFrame
       title={

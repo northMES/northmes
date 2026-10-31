@@ -10,44 +10,39 @@ import {
 import type { WebModule } from './web-module.ts';
 
 /**
- * Runs before a path under /$plant or /settings/$companyId loads, with the location asked for. It
+ * Runs before a path under /$plant loads, settings pages included, with the location asked for. It
  * may throw TanStack Router's redirect, such as to the sign-in page when nobody is signed in.
  */
 export type PlantBeforeLoad = (context: { readonly location: ParsedLocation }) => void;
 
-/** The path of the company settings mount, beside /$plant (ADR 0066). */
-export const settingsPath = 'settings/$companyId';
+/** The path segment of a plant's settings, /$plant/settings, where every settings page sits (#876). */
+export const settingsPath = 'settings';
 
-/** The href of a company's settings landing, /settings/<company id> (ADR 0066). */
-export function companySettingsHref(companyId: string): string {
-  return `/${settingsPath.replace('$companyId', encodeURIComponent(companyId))}`;
+/** The href of a plant's settings landing, /<plant>/settings (ADR 0066, #876). */
+export function settingsHref(plant: string): string {
+  return `/${encodeURIComponent(plant)}/${settingsPath}`;
 }
 
 /**
- * The components of the root route, the $plant route and the company settings route, and its
- * landing. Without one, a route renders its child.
+ * The components of the root route and the $plant route, and the settings landing. Without one, a
+ * route renders its child.
  */
 interface MountComponents {
   readonly rootComponent?: RouteComponent;
   readonly plantComponent?: RouteComponent;
   readonly plantBeforeLoad?: PlantBeforeLoad;
-  /** The layout of company settings, a page without a plant (ADR 0066). */
-  readonly settingsComponent?: RouteComponent;
-  /** The company landing at /settings/$companyId, which leads on to the company's settings pages. */
+  /** The settings landing at /$plant/settings, which leads on to the first settings page. */
   readonly settingsIndexComponent?: RouteComponent;
-  readonly settingsBeforeLoad?: PlantBeforeLoad;
 }
 
 /**
- * Creates a root route and, under it, the $plant route that every module mounts under and the
- * /settings/$companyId route of company settings.
+ * Creates a root route, under it the $plant route that every module mounts under, and under that
+ * the /$plant/settings route of the plant's settings, the company's pages included (#876).
  */
 function createMountRoutes({
   rootComponent,
   plantComponent,
   plantBeforeLoad,
-  settingsComponent,
-  settingsBeforeLoad,
 }: MountComponents = {}) {
   const rootRoute = createRootRoute({ component: rootComponent });
   const plantRoute = createRoute({
@@ -56,12 +51,7 @@ function createMountRoutes({
     component: plantComponent,
     beforeLoad: plantBeforeLoad,
   });
-  const settingsRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: settingsPath,
-    component: settingsComponent,
-    beforeLoad: settingsBeforeLoad,
-  });
+  const settingsRoute = createRoute({ getParentRoute: () => plantRoute, path: settingsPath });
   return { rootRoute, plantRoute, settingsRoute };
 }
 
@@ -72,8 +62,8 @@ export type RootRoute = ReturnType<typeof createMountRoutes>['rootRoute'];
 export type PlantRoute = ReturnType<typeof createMountRoutes>['plantRoute'];
 
 /**
- * The /settings/$companyId route, the parent that a module's settingsRoutes(settingsRoute) builds
- * its company settings subtree under (ADR 0066).
+ * The /$plant/settings route, the parent that a module's settingsRoutes(settingsRoute) builds its
+ * settings subtree under (ADR 0066, #876).
  */
 export type SettingsRoute = ReturnType<typeof createMountRoutes>['settingsRoute'];
 
@@ -87,8 +77,8 @@ export interface ShellRoutesOptions extends MountComponents {
 }
 
 /**
- * The id of core, the platform's own module. Its routes and its company settings routes are
- * pathless, so its pages sit at the plant root and at the company settings root (ADR 0074).
+ * The id of core, the platform's own module. Its routes and its settings routes are pathless, so
+ * its pages sit at the plant root and at the settings root (ADR 0074).
  */
 export const coreModuleId = 'core';
 
@@ -149,8 +139,8 @@ interface ReservedSegment {
 
 /**
  * The path segments no other module may take as its id (ADR 0074): the top-level segments of core's
- * routes at the plant root and at the company settings root, the shell's own routes in every plant
- * such as All pages, and settings.
+ * routes at the plant root and at the settings root, the shell's own routes in every plant such as
+ * All pages, and settings.
  */
 function reservedSegments(
   coreRoutes: readonly AnyRoute[],
@@ -158,16 +148,17 @@ function reservedSegments(
   shellRoutes: readonly AnyRoute[],
 ): Map<string, ReservedSegment> {
   const reserved = new Map<string, ReservedSegment>();
-  const settings = settingsPath.split('/')[0] ?? 'settings';
-  reserved.set(settings, { owner: 'shell', path: `/${settings}` });
+  reserved.set(settingsPath, { owner: 'shell', path: `/$plant/${settingsPath}` });
   for (const segment of topSegments(shellRoutes)) {
     reserved.set(segment, { owner: 'shell', path: `/$plant/${segment}` });
   }
-  for (const segment of topSegments(coreSettingsRoutes)) {
-    reserved.set(segment, { owner: 'core', path: `/${settingsPath}/${segment}` });
-  }
+  // Core's settings segments come last, so a segment that also leads an old plant root URL on to
+  // its page under the settings root, such as people, names the page itself.
   for (const segment of topSegments(coreRoutes)) {
     reserved.set(segment, { owner: 'core', path: `/$plant/${segment}` });
+  }
+  for (const segment of topSegments(coreSettingsRoutes)) {
+    reserved.set(segment, { owner: 'core', path: `/$plant/${settingsPath}/${segment}` });
   }
   return reserved;
 }
@@ -175,16 +166,15 @@ function reservedSegments(
 /**
  * Builds the shell's route tree: the root route, the $plant route under it, each module's
  * routes(plantRoute) under the $plant route, so a module's screens live at /$plant/<id>, the
- * company settings route /settings/$companyId with the shell's landing and each module's
- * settingsRoutes(settingsRoute) at /settings/$companyId/<id> (ADR 0066), and the shell's own routes
- * outside any plant beside them. Core's routes are pathless, so its screens live at
- * /$plant/<page> and /settings/$companyId/<page> (ADR 0074). A module whose routes or settings
+ * settings route /$plant/settings with the shell's landing and each module's
+ * settingsRoutes(settingsRoute) at /$plant/settings/<id> (ADR 0066, #876), and the shell's own
+ * routes outside any plant beside the $plant route. Core's routes are pathless, so its screens live
+ * at /$plant/<page> and /$plant/settings/<page> (ADR 0074). A module whose routes or settings
  * routes sit at another path than its id throws, so does core with a path, and so does a module
  * whose id is a top-level path segment of core's routes or of the shell's. plantBeforeLoad guards
- * every path under /$plant, and settingsBeforeLoad every path under /settings/$companyId. The
- * shell's own plant routes go beside the modules'. The root, $plant and settings components render
- * their child route through Outlet; the shell's $plant component renders ShellProvider for the
- * plant in the URL.
+ * every path under /$plant, settings pages included. The shell's own plant routes go beside the
+ * modules'. The root and $plant components render their child route through Outlet; the shell's
+ * $plant component renders ShellProvider for the plant in the URL.
  */
 export function createShellRoutes({
   modules,
@@ -224,8 +214,11 @@ export function createShellRoutes({
     }
   }
   return rootRoute.addChildren([
-    plantRoute.addChildren([...plantRoutes.map(({ route }) => route), ...shellRoutes]),
-    settingsRoute.addChildren([landing, ...settingsRoutes.flatMap(({ routes }) => routes)]),
+    plantRoute.addChildren([
+      ...plantRoutes.map(({ route }) => route),
+      ...shellRoutes,
+      settingsRoute.addChildren([landing, ...settingsRoutes.flatMap(({ routes }) => routes)]),
+    ]),
     ...(outsidePlantRoutes?.(rootRoute) ?? []),
   ]);
 }

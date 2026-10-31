@@ -34,9 +34,12 @@ describe('planningLinks', () => {
     );
   });
 
-  it("#762 planningLinks.settings.boardFields builds the href of a plant's board fields page", () => {
+  it("#876 planningLinks' settings section builds the hrefs of a plant's planning rules and board fields under the plant's settings", () => {
+    expect(planningLinks.settings.rules({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/settings/planning',
+    );
     expect(planningLinks.settings.boardFields({ plant: 'plant-a' }).href).toBe(
-      '/plant-a/planning/settings/board-fields',
+      '/plant-a/settings/planning/board-fields',
     );
   });
 

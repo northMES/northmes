@@ -108,35 +108,35 @@ describe('defineModuleLinks', () => {
     });
   });
 
-  it('E04-S02 a settings section builder builds /settings/<company id>/<module id>/plans without a plant', () => {
-    const companyId = '01920000-0000-7000-8000-0000000ac3e0';
+  it('#876 a settings section builder builds /<plant>/settings/<module id>/plans from the plant', () => {
     const quality = defineModuleLinks(
       'quality',
       { inspections: { path: 'inspections' } },
       { settings: { plans: { path: 'plans', children: { plan: { path: '$planId' } } } } },
     );
 
-    expect(quality.settings.plans({ companyId }).href).toBe(`/settings/${companyId}/quality/plans`);
-    expect(quality.settings.plans.plan({ companyId, planId: 'p/1' })).toEqual({
-      to: '/settings/$companyId/quality/plans/$planId',
-      params: { companyId, planId: 'p/1' },
+    expect(quality.settings.plans({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/settings/quality/plans',
+    );
+    expect(quality.settings.plans.plan({ plant: 'plant-a', planId: 'p/1' })).toEqual({
+      to: '/$plant/settings/quality/plans/$planId',
+      params: { plant: 'plant-a', planId: 'p/1' },
       search: {},
-      href: `/settings/${companyId}/quality/plans/p%2F1`,
+      href: '/plant-a/settings/quality/plans/p%2F1',
     });
     expect(linkEntry(quality.settings)).toEqual({
       path: 'quality',
-      pattern: '/settings/$companyId/quality',
+      pattern: '/$plant/settings/quality',
     });
     expect(linkEntry(quality.settings.plans)).toEqual({
       path: 'plans',
-      pattern: '/settings/$companyId/quality/plans',
+      pattern: '/$plant/settings/quality/plans',
     });
     expect(Object.keys(quality.settings)).toEqual(['plans']);
     expect(quality.inspections({ plant: 'plant-a' }).href).toBe('/plant-a/quality/inspections');
   });
 
-  it("E04-S02 defineCoreLinks builds core's pages at the plant root and its settings pages at the company settings root, without a module segment (ADR 0074)", () => {
-    const companyId = '01920000-0000-7000-8000-0000000ac3e0';
+  it("#876 defineCoreLinks builds core's pages at the plant root and its settings pages at the settings root, without a module segment (ADR 0074)", () => {
     const core = defineCoreLinks(
       { articles: { path: 'articles', children: { article: { path: '$articleId' } } } },
       { settings: { users: { path: 'users' } } },
@@ -151,12 +151,12 @@ describe('defineModuleLinks', () => {
       search: {},
       href: '/plant-a/articles/a%2Fb',
     });
-    expect(core.settings.users({ companyId }).href).toBe(`/settings/${companyId}/users`);
+    expect(core.settings.users({ plant: 'plant-a' }).href).toBe('/plant-a/settings/users');
     expect(linkEntry(core)).toEqual({ path: '', pattern: '/$plant' });
-    expect(linkEntry(core.settings)).toEqual({ path: '', pattern: '/settings/$companyId' });
+    expect(linkEntry(core.settings)).toEqual({ path: '', pattern: '/$plant/settings' });
     expect(linkEntry(core.settings.users)).toEqual({
       path: 'users',
-      pattern: '/settings/$companyId/users',
+      pattern: '/$plant/settings/users',
     });
     expect(Object.keys(core)).toEqual(['articles', 'settings']);
   });

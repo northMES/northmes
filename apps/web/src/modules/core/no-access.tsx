@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { companySettingsHref, useShell } from '@northmes/web-sdk';
-import { Link } from '@tanstack/react-router';
+import { settingsHref, useShell } from '@northmes/web-sdk';
+import { Link, useRouterState } from '@tanstack/react-router';
 import { Lock } from 'lucide-react';
 import type { PageState } from '../../ui/components/page-frame/index.ts';
 import { buttonVariants } from '../../ui/primitives/button.tsx';
@@ -13,7 +13,6 @@ import {
   EmptyTitle,
 } from '../../ui/primitives/empty.tsx';
 import { permissionLine } from './permission-names.ts';
-import { useCompanyId } from './use-places.ts';
 
 /** "the permission to read roles (core.role:read)", as a refusal names what it needs. */
 export function permissionPhrase(key: string): string {
@@ -33,16 +32,19 @@ function GoToPlantHome() {
 }
 
 /**
- * The way out of a page the user may not open (design core-304, NO1): at a plant, a link to the
- * plant's first page they may open; in company settings, to the company landing (ADR 0066). A page
- * opened by URL may have no page before it, so the way out is never a step back in the history.
+ * The way out of a page the user may not open (design core-304, NO1): the settings landing on a
+ * settings page, which leads on to the first settings page the user may open (#876), else the
+ * plant's first page they may open. A page opened by URL may have no page before it, so the way
+ * out is never a step back in the history.
  */
 function GoToFirstPage() {
-  const companyId = useCompanyId();
-  if (companyId === undefined) return <GoToPlantHome />;
+  const { plant } = useShell();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const settings = settingsHref(plant);
+  if (!pathname.startsWith(`${settings}/`)) return <GoToPlantHome />;
   return (
-    <Link to={companySettingsHref(companyId)} className={buttonVariants({ variant: 'outline' })}>
-      Go to Company settings
+    <Link to={settings} className={buttonVariants({ variant: 'outline' })}>
+      Go to Settings
     </Link>
   );
 }

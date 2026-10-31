@@ -21,9 +21,12 @@ test.describe('the equipment groups pages', () => {
     signIn,
     checkA11y,
   }) => {
-    const groups = coreLinks.equipmentGroups({ plant }).href;
-    const mach = coreLinks.equipmentGroups.group({ plant, groupCode: 'MACH' }).href;
-    const editMach = coreLinks.equipmentGroups.group.edit({ plant, groupCode: 'MACH' }).href;
+    const groups = coreLinks.settings.equipmentGroups({ plant }).href;
+    const mach = coreLinks.settings.equipmentGroups.group({ plant, groupCode: 'MACH' }).href;
+    const editMach = coreLinks.settings.equipmentGroups.group.edit({
+      plant,
+      groupCode: 'MACH',
+    }).href;
     await signIn(groups);
     await expect(page.getByRole('table', { name: 'Equipment groups of Plant A' })).toBeVisible();
     await checkA11y('the equipment groups list');
@@ -132,7 +135,7 @@ test.describe('the equipment groups pages', () => {
     ).toBeVisible();
     await checkA11y('an equipment group without access');
 
-    await page.goto(coreLinks.equipmentGroups.group({ plant, groupCode: 'NOPE' }).href);
+    await page.goto(coreLinks.settings.equipmentGroups.group({ plant, groupCode: 'NOPE' }).href);
     await expect(
       page.getByRole('heading', {
         level: 2,

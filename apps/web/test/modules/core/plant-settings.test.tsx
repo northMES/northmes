@@ -60,7 +60,7 @@ async function weekOfA1(change: (a1: PlantCalendar) => PlantCalendar) {
       calendars: snapshot.calendars.map((each) => (each.name === 'A1' ? change(each) : each)),
     }),
   };
-  renderCoreAt(coreLinks.calendars.calendar({ plant, calendarId: 'A1' }).href, [], {
+  renderCoreAt(coreLinks.settings.calendars.calendar({ plant, calendarId: 'A1' }).href, [], {
     plantSettingsSource,
   });
   await screen.findByRole('heading', { level: 1, name: 'Calendar A1' });
@@ -74,7 +74,7 @@ function heightsOf(labels: readonly HTMLElement[]): number[] {
 
 describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', () => {
   it('MA1 lists the machines by code with their group, plannable flag, calendar and the operations that allow them, under the equipment groups', async () => {
-    renderCoreAt(coreLinks.machines({ plant }).href, []);
+    renderCoreAt(coreLinks.settings.machines({ plant }).href, []);
     await screen.findByRole('table', { name: 'Machines' });
 
     expect(machineRows()).toEqual(['ASM1', 'CNC1', 'CNC2', 'LATHE1', 'LATHE2', 'MILL1']);
@@ -127,10 +127,10 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
       'No operations',
     ]);
     expect(within(table).getByRole('link', { name: 'CNC1' }).getAttribute('href')).toBe(
-      '/plant-a/machines/CNC1',
+      '/plant-a/settings/machines/CNC1',
     );
     expect(within(table).getAllByRole('link', { name: 'A1' })[0]?.getAttribute('href')).toBe(
-      '/plant-a/calendars/A1',
+      '/plant-a/settings/calendars/A1',
     );
     expect(screen.getByRole('button', { name: 'New machine' }).hasAttribute('disabled')).toBe(true);
     expect(
@@ -141,7 +141,7 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
   it('LI3 a picked group that no row has keeps its name in the chip and its checked item in the menu', async () => {
     // The assembly bench is the only machine of Assembly and is not plannable.
     renderCoreAt(
-      withSearch(coreLinks.machines({ plant }).href, { group: 'ASM', plannable: '1' }),
+      withSearch(coreLinks.settings.machines({ plant }).href, { group: 'ASM', plannable: '1' }),
       [],
     );
     await screen.findByRole('heading', { level: 2, name: 'No machines match these filters' });
@@ -153,7 +153,7 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
   });
 
   it('MA1 Plannable only, the Group filter and the search live in the URL', async () => {
-    const router = renderCoreAt(coreLinks.machines({ plant }).href, []);
+    const router = renderCoreAt(coreLinks.settings.machines({ plant }).href, []);
     await screen.findByRole('table', { name: 'Machines' });
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Plannable only' }));
@@ -175,12 +175,15 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
   });
 
   it('MA5 to MA8 the preview key opens the loading, empty, failed and no-access states on mock data', async () => {
-    renderCoreAt(withSearch(coreLinks.machines({ plant }).href, { preview: 'loading' }), []);
+    renderCoreAt(
+      withSearch(coreLinks.settings.machines({ plant }).href, { preview: 'loading' }),
+      [],
+    );
     const table = await screen.findByRole('table', { name: 'Machines' });
     expect(table.getAttribute('aria-busy')).toBe('true');
     cleanup();
 
-    renderCoreAt(withSearch(coreLinks.machines({ plant }).href, { preview: 'empty' }), []);
+    renderCoreAt(withSearch(coreLinks.settings.machines({ plant }).href, { preview: 'empty' }), []);
     expect(await screen.findByRole('heading', { level: 2, name: 'No machines yet' })).toBeTruthy();
     expect(
       screen.getByText(
@@ -189,14 +192,17 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
     ).toBeTruthy();
     cleanup();
 
-    renderCoreAt(withSearch(coreLinks.machines({ plant }).href, { preview: 'error' }), []);
+    renderCoreAt(withSearch(coreLinks.settings.machines({ plant }).href, { preview: 'error' }), []);
     expect(
       await screen.findByRole('heading', { level: 2, name: 'Could not load machines' }),
     ).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
     cleanup();
 
-    renderCoreAt(withSearch(coreLinks.machines({ plant }).href, { preview: 'forbidden' }), []);
+    renderCoreAt(
+      withSearch(coreLinks.settings.machines({ plant }).href, { preview: 'forbidden' }),
+      [],
+    );
     expect(
       await screen.findByRole('heading', {
         level: 2,
@@ -209,7 +215,7 @@ describe('the machines list in plant settings (E06; design #688, MA1 to MA9)', (
 
 describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)', () => {
   it('MA3 shows the machine, the routing operations that allow it and its job orders this week', async () => {
-    renderCoreAt(coreLinks.machines.machine({ plant, equipmentId: 'CNC1' }).href, []);
+    renderCoreAt(coreLinks.settings.machines.machine({ plant, equipmentId: 'CNC1' }).href, []);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Machine CNC1' })).toBeTruthy();
     expect(screen.getByText('CNC 1, Machining')).toBeTruthy();
@@ -258,13 +264,13 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
       '/plant-a/planning/board?zoom=week&from=2026-11-02',
     );
     expect(screen.getByRole('link', { name: 'Edit' }).getAttribute('href')).toBe(
-      '/plant-a/machines/CNC1/edit',
+      '/plant-a/settings/machines/CNC1/edit',
     );
     expect(screen.getByRole('button', { name: 'Archive' }).hasAttribute('disabled')).toBe(true);
   });
 
   it('MA3 a machine on a calendar with several shifts names each shift with its breaks (#770)', async () => {
-    renderCoreAt(coreLinks.machines.machine({ plant, equipmentId: 'LATHE1' }).href, []);
+    renderCoreAt(coreLinks.settings.machines.machine({ plant, equipmentId: 'LATHE1' }).href, []);
     await screen.findByRole('heading', { level: 1, name: 'Machine LATHE1' });
 
     expect(definition('Calendar')).toBe(
@@ -273,7 +279,7 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
   });
 
   it('MA3 a machine that is not on the board says so, and an unknown code shows the not-found state', async () => {
-    renderCoreAt(coreLinks.machines.machine({ plant, equipmentId: 'ASM1' }).href, []);
+    renderCoreAt(coreLinks.settings.machines.machine({ plant, equipmentId: 'ASM1' }).href, []);
     await screen.findByRole('heading', { level: 1, name: 'Machine ASM1' });
     expect(definition('Plannable')).toContain('No');
     expect(definition('Calendar')).toContain('None');
@@ -281,7 +287,7 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
     expect(screen.getByText('No routing operation names this machine.')).toBeTruthy();
     cleanup();
 
-    renderCoreAt(coreLinks.machines.machine({ plant, equipmentId: 'ROBOT9' }).href, []);
+    renderCoreAt(coreLinks.settings.machines.machine({ plant, equipmentId: 'ROBOT9' }).href, []);
     expect(
       await screen.findByRole('heading', {
         level: 2,
@@ -289,12 +295,12 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
       }),
     ).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Back to Machines' }).getAttribute('href')).toBe(
-      '/plant-a/machines',
+      '/plant-a/settings/machines',
     );
   });
 
   it("MA4 the edit form shows the ERP's code and plannable flag read-only and the plant's fields editable, with Save disabled", async () => {
-    renderCoreAt(coreLinks.machines.machine.edit({ plant, equipmentId: 'CNC1' }).href, []);
+    renderCoreAt(coreLinks.settings.machines.machine.edit({ plant, equipmentId: 'CNC1' }).href, []);
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Edit machine CNC1' }),
@@ -324,19 +330,19 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
     );
     expect(screen.getByText(machineSaveReason)).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Cancel' }).getAttribute('href')).toBe(
-      '/plant-a/machines/CNC1',
+      '/plant-a/settings/machines/CNC1',
     );
   });
 
   it('MA4 the plannable flag the ERP sent is read-only, and the flag of a NorthMES machine is editable', async () => {
-    renderCoreAt(coreLinks.machines.machine.edit({ plant, equipmentId: 'CNC1' }).href, []);
+    renderCoreAt(coreLinks.settings.machines.machine.edit({ plant, equipmentId: 'CNC1' }).href, []);
     await screen.findByRole('heading', { level: 1, name: 'Edit machine CNC1' });
     expect(screen.getByRole('checkbox', { name: /^Plannable/ }).getAttribute('aria-readonly')).toBe(
       'true',
     );
     cleanup();
 
-    renderCoreAt(coreLinks.machines.machine.edit({ plant, equipmentId: 'ASM1' }).href, []);
+    renderCoreAt(coreLinks.settings.machines.machine.edit({ plant, equipmentId: 'ASM1' }).href, []);
     await screen.findByRole('heading', { level: 1, name: 'Edit machine ASM1' });
     expect(
       screen.getByRole('checkbox', { name: /^Plannable/ }).getAttribute('aria-readonly'),
@@ -344,7 +350,7 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
   });
 
   it('MF1 to MF4 the preview key opens the loading, failed-save and no-access states of the form', async () => {
-    const edit = coreLinks.machines.machine.edit({ plant, equipmentId: 'CNC1' }).href;
+    const edit = coreLinks.settings.machines.machine.edit({ plant, equipmentId: 'CNC1' }).href;
     renderCoreAt(withSearch(edit, { preview: 'loading' }), []);
     expect(await screen.findByRole('heading', { level: 1, name: 'Edit machine' })).toBeTruthy();
     expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
@@ -364,14 +370,17 @@ describe('the machine page and its edit form (design #688, MA3, MA4, MF1 to MF4)
       }),
     ).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Back to machine CNC1' }).getAttribute('href')).toBe(
-      '/plant-a/machines/CNC1',
+      '/plant-a/settings/machines/CNC1',
     );
   });
 });
 
 describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and CA2)', () => {
   it("the calendars list's loading state draws the table's columns while the snapshot loads", async () => {
-    renderCoreAt(withSearch(coreLinks.calendars({ plant }).href, { preview: 'loading' }), []);
+    renderCoreAt(
+      withSearch(coreLinks.settings.calendars({ plant }).href, { preview: 'loading' }),
+      [],
+    );
     const table = await screen.findByRole('table', { name: 'Calendars' });
     expect(table.getAttribute('aria-busy')).toBe('true');
     expect(
@@ -382,7 +391,10 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
   });
 
   it('MA8 the preview key opens the no-access state of the calendars list and of a calendar', async () => {
-    renderCoreAt(withSearch(coreLinks.calendars({ plant }).href, { preview: 'forbidden' }), []);
+    renderCoreAt(
+      withSearch(coreLinks.settings.calendars({ plant }).href, { preview: 'forbidden' }),
+      [],
+    );
     expect(
       await screen.findByRole('heading', {
         level: 2,
@@ -393,7 +405,7 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
     cleanup();
 
     renderCoreAt(
-      withSearch(coreLinks.calendars.calendar({ plant, calendarId: 'A1' }).href, {
+      withSearch(coreLinks.settings.calendars.calendar({ plant, calendarId: 'A1' }).href, {
         preview: 'forbidden',
       }),
       [],
@@ -407,7 +419,7 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
   });
 
   it('lists the calendars with their machines, shift and working time per week', async () => {
-    renderCoreAt(coreLinks.calendars({ plant }).href, []);
+    renderCoreAt(coreLinks.settings.calendars({ plant }).href, []);
     const table = await screen.findByRole('table', { name: 'Calendars' });
 
     expect(bodyRows(table)).toEqual([
@@ -420,7 +432,7 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
       ],
     ]);
     expect(within(table).getByRole('link', { name: 'A1' }).getAttribute('href')).toBe(
-      '/plant-a/calendars/A1',
+      '/plant-a/settings/calendars/A1',
     );
     expect(screen.getByRole('button', { name: 'New calendar' }).hasAttribute('disabled')).toBe(
       true,
@@ -428,7 +440,7 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
   });
 
   it('CA1 shows the shift pattern, the deviations and the week view of W45', async () => {
-    renderCoreAt(coreLinks.calendars.calendar({ plant, calendarId: 'A1' }).href, []);
+    renderCoreAt(coreLinks.settings.calendars.calendar({ plant, calendarId: 'A1' }).href, []);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Calendar A1' })).toBeTruthy();
     expect(
@@ -469,7 +481,10 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
   });
 
   it('CA1 the week view moves by week in the URL and filters its deviations by machine', async () => {
-    const router = renderCoreAt(coreLinks.calendars.calendar({ plant, calendarId: 'A1' }).href, []);
+    const router = renderCoreAt(
+      coreLinks.settings.calendars.calendar({ plant, calendarId: 'A1' }).href,
+      [],
+    );
     await screen.findByRole('heading', { level: 1, name: 'Calendar A1' });
 
     await userEvent.click(screen.getByRole('button', { name: 'Show the later week' }));
@@ -561,7 +576,7 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
 
   it('CS1 a calendar with three shifts lists each shift by name and color in the pattern and above the week view (#770)', async () => {
     renderCoreAt(
-      withSearch(coreLinks.calendars.calendar({ plant, calendarId: 'B3' }).href, {
+      withSearch(coreLinks.settings.calendars.calendar({ plant, calendarId: 'B3' }).href, {
         week: '2026-11-09',
       }),
       [],
@@ -608,7 +623,7 @@ describe('the calendar pages in plant settings (ADR 0025; design #688, CA1 and C
 
   it('CS1 each shift keeps its own color number on every day, its legend key included, the part after midnight too (#770)', async () => {
     renderCoreAt(
-      withSearch(coreLinks.calendars.calendar({ plant, calendarId: 'B3' }).href, {
+      withSearch(coreLinks.settings.calendars.calendar({ plant, calendarId: 'B3' }).href, {
         week: '2026-11-09',
       }),
       [],

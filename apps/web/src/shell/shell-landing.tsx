@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { ApolloClient } from '@apollo/client';
-import { companySettingsHref, type RootRoute } from '@northmes/web-sdk';
+import type { RootRoute } from '@northmes/web-sdk';
 import { createRoute, Link, type ParsedLocation, redirect } from '@tanstack/react-router';
 import { Factory } from 'lucide-react';
 import { type ReactNode, useEffect } from 'react';
@@ -9,7 +9,7 @@ import type { ShellModule } from '../modules.ts';
 import { isForbidden } from '../ui/lib/graphql-errors.ts';
 import { applyStoredTheme } from '../ui/lib/theme.ts';
 import { Card } from '../ui/primitives/card.tsx';
-import { CoreCompanies } from './companies.graphql.ts';
+import { CoreCompanies, type ShellCompany } from './companies.graphql.ts';
 import { ShellHelpMenu } from './shell-help-menu.tsx';
 import { companySettingsEntries, plantLinkHref, useFocusPageHeading } from './shell-pages.ts';
 import { type PlantListCompany, ShellPlantFreePage } from './shell-plant-free-page.tsx';
@@ -26,22 +26,26 @@ export type Landing =
   | { readonly companies: readonly PlantListCompany[] };
 
 /**
- * The company settings landing of a company where the user has a company settings page, or
- * undefined. A company the API refuses to answer for gives none.
+ * The first of the company's settings pages the user may open, under the company's first plant
+ * (#876), or undefined: for a company without a plant, where the pages have no place, and for a
+ * company the API refuses to answer for.
  */
 async function settingsOf(
   modules: readonly ShellModule[],
   client: ApolloClient,
-  companyId: string,
+  company: ShellCompany,
 ): Promise<string | undefined> {
+  const [plant] = company.plants;
+  if (plant === undefined) return undefined;
   try {
-    const { data } = await client.query({ query: CoreViewer, variables: { companyId } });
+    const { data } = await client.query({
+      query: CoreViewer,
+      variables: { companyId: company.id },
+    });
     const permissions = new Set(data?.coreViewer.companyPermissions);
-    return companySettingsEntries(modules, permissions, companyId).some(
-      ({ entries }) => entries.length > 0,
-    )
-      ? companySettingsHref(companyId)
-      : undefined;
+    return companySettingsEntries(modules, permissions, plant.slug).flatMap(
+      ({ entries }) => entries,
+    )[0]?.href;
   } catch (error) {
     if (isForbidden(error)) return undefined;
     throw error;
@@ -50,43 +54,32 @@ async function settingsOf(
 
 /**
  * Where `/` leads a signed-in user (ADR 0066, Where a signed-in user starts): a user with exactly
- * one plant goes to that plant, also with a company settings page at the plant's company (#872),
- * and a user with no plant and a company settings page in one company goes to its landing. Every
- * other user gets the plant picker: each company with a plant or a company settings page, which
- * may be none. The shell never picks a default plant (ADR 0007). The onboarding cases wait for the
- * onboarding wizard (E06-S14).
+ * one plant goes to that plant (#872). Every other user gets the plant picker: each company with a
+ * plant, which may be none, with a link to the first of its settings pages the user may open. The
+ * company's settings pages sit under its plants (#876), so a user without a plant has none to open.
+ * The shell never picks a default plant (ADR 0007). The onboarding cases wait for the onboarding
+ * wizard (E06-S14).
  */
 export async function landingOf(
   modules: readonly ShellModule[],
   client: ApolloClient,
 ): Promise<Landing> {
   const { data } = await client.query({ query: CoreCompanies });
+  const plants = (data?.coreCompanies ?? []).flatMap((company) => company.plants);
+  const [one] = plants;
+  if (plants.length === 1 && one !== undefined) {
+    return { href: plantLinkHref(modules, one.slug) };
+  }
+  // The permissions decide only the settings links of the picker, so they are read after.
   const companies = await Promise.all(
     (data?.coreCompanies ?? []).map(async (company) => ({
       company,
-      settings: await settingsOf(modules, client, company.id),
+      settings: await settingsOf(modules, client, company),
     })),
   );
-  const plants = companies.flatMap(({ company }) =>
-    company.plants.map((plant) => ({ plant, company })),
-  );
-  const settings = companies.flatMap(({ settings: href }) => (href === undefined ? [] : [href]));
-  const [one] = plants;
-  // The plant's own company settings are reachable from the plant; another company's are not.
-  if (
-    plants.length === 1 &&
-    one !== undefined &&
-    settings.every((href) => href === companySettingsHref(one.company.id))
-  ) {
-    return { href: plantLinkHref(modules, one.plant.slug) };
-  }
-  const [landing] = settings;
-  if (plants.length === 0 && settings.length === 1 && landing !== undefined) {
-    return { href: landing };
-  }
   return {
     companies: companies
-      .filter(({ company, settings: href }) => company.plants.length > 0 || href !== undefined)
+      .filter(({ company }) => company.plants.length > 0)
       .map(({ company, settings: href }) =>
         href === undefined ? { company } : { company, settings: href },
       ),
@@ -232,7 +225,7 @@ function ShellPlantPicker({
 /**
  * The plant picker at `/` (D2 ST38, ST39; #872): the h1 Your plants, the line that asks the user
  * to pick a plant where there is one to pick, and each company's plants as tiles. A user with no
- * plant and no company settings page reads "No plant is assigned to you yet." (ADR 0066).
+ * plant reads "No plant is assigned to you yet." (ADR 0066).
  */
 function ShellLanding({ modules, companies, user, onSignOut }: ShellLandingProps) {
   useEffect(() => {

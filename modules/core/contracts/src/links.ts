@@ -7,16 +7,16 @@ import { defineCoreLinks } from '@northmes/contracts';
  * plant's landing page with its open tab in `tab` (ADR 0078); the articles list, its new article
  * page, and each article's page with its edit page; the article groups, the new group page and each
  * group's page, which is its form; the customers and each customer's page; the routings, each
- * article's routing and the edit form of an operation; the tools and each tool's page; and in plant
- * settings the plant's own page, the people of the plant with Add role and each person's page with
- * Add role for that person, the machines, the equipment groups and the calendars. Its settings
- * section holds core's company settings pages (ADR 0066): the users, the new user page, each user's
- * page (its tab in `tab`) with Add role; the roles, the new role page (Start from in `from`), and
- * each role's page (its tab in `tab`) with its edit page (design core-304); and the warehouses
- * (design #729). Core's pages sit at the plant root and at the company settings root, without the
- * module id, so the articles list is /plant-a/articles and the users /settings/<company id>/users
- * (ADR 0074). The web's routes take their paths from it, and other modules, server code and
- * end-to-end specs build core's URLs with it.
+ * article's routing and the edit form of an operation; and the tools and each tool's page. Its
+ * settings section holds core's settings pages under the plant's settings (ADR 0066, #876): the
+ * plant's own page, the people of the plant with Add role and each person's page with Add role for
+ * that person, the machines, the equipment groups and the calendars; and the company's pages: the
+ * users, the new user page, each user's page (its tab in `tab`) with Add role; the roles, the new
+ * role page (Start from in `from`), and each role's page (its tab in `tab`) with its edit page
+ * (design core-304); and the warehouses (design #729). Core's pages sit at the plant root and at
+ * the settings root, without the module id, so the articles list is /plant-a/articles and the users
+ * /plant-a/settings/users (ADR 0074). The web's routes take their paths from it, and other modules,
+ * server code and end-to-end specs build core's URLs with it.
  */
 export const coreLinks = defineCoreLinks(
   {
@@ -34,33 +34,6 @@ export const coreLinks = defineCoreLinks(
         new: { path: 'new' },
         articleGroup: { path: '$articleGroupId' },
       },
-    },
-    /** The plant's own page in plant settings (design #767): name, slug, zone and production day start. */
-    plant: { path: 'plant' },
-    people: {
-      path: 'people',
-      children: {
-        addRole: { path: 'roles/new' },
-        person: { path: '$userId', children: { addRole: { path: 'roles/new' } } },
-      },
-    },
-    /** The machines of the plant in plant settings (design #688): the list, each machine's page and its edit page. */
-    machines: {
-      path: 'machines',
-      children: { machine: { path: '$equipmentId', children: { edit: { path: 'edit' } } } },
-    },
-    /**
-     * The equipment groups in plant settings (design #729): the list, each group's page by its
-     * code and its edit form.
-     */
-    equipmentGroups: {
-      path: 'equipment-groups',
-      children: { group: { path: '$groupCode', children: { edit: { path: 'edit' } } } },
-    },
-    /** The plant's working-time calendars in plant settings (ADR 0025; design #688): the list and each calendar's page. */
-    calendars: {
-      path: 'calendars',
-      children: { calendar: { path: '$calendarId' } },
     },
     /** The customers register under Master data (design #728): the list and each customer's page, by customer number. */
     customers: {
@@ -85,6 +58,33 @@ export const coreLinks = defineCoreLinks(
   },
   {
     settings: {
+      /** The plant's own page in plant settings (design #767): name, slug, zone and production day start. */
+      plant: { path: 'plant' },
+      people: {
+        path: 'people',
+        children: {
+          addRole: { path: 'roles/new' },
+          person: { path: '$userId', children: { addRole: { path: 'roles/new' } } },
+        },
+      },
+      /** The machines of the plant in plant settings (design #688): the list, each machine's page and its edit page. */
+      machines: {
+        path: 'machines',
+        children: { machine: { path: '$equipmentId', children: { edit: { path: 'edit' } } } },
+      },
+      /**
+       * The equipment groups in plant settings (design #729): the list, each group's page by its
+       * code and its edit form.
+       */
+      equipmentGroups: {
+        path: 'equipment-groups',
+        children: { group: { path: '$groupCode', children: { edit: { path: 'edit' } } } },
+      },
+      /** The plant's working-time calendars in plant settings (ADR 0025; design #688): the list and each calendar's page. */
+      calendars: {
+        path: 'calendars',
+        children: { calendar: { path: '$calendarId' } },
+      },
       users: {
         path: 'users',
         children: {

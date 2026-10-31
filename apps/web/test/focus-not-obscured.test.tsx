@@ -2,14 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { cleanup, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  companies,
-  companyId,
-  equipment,
-  fakeApi,
-  renderShellAt,
-  viewer,
-} from './settings-fixtures.tsx';
+import { companies, equipment, fakeApi, renderShellAt, viewer } from './settings-fixtures.tsx';
 
 /** The ResizeObservers the page made, with the elements each observes. */
 const observers: { callback: ResizeObserverCallback; targets: Element[] }[] = [];
@@ -70,15 +63,5 @@ describe('focus not obscured', () => {
 
     cleanup();
     expect(document.documentElement.style.scrollPaddingTop).toBe('');
-  });
-
-  it('E04-S02 company settings measure their top bar too', async () => {
-    // Without a permission the landing keeps a page of its own, which says so (#876).
-    renderAt(`/settings/${companyId}`);
-    await screen.findByRole('heading', { level: 1, name: 'Company settings' });
-
-    resize(screen.getByRole('banner'), 56);
-
-    expect(document.documentElement.style.scrollPaddingTop).toBe('64px');
   });
 });

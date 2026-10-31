@@ -31,7 +31,7 @@ export const plantA = {
   name: 'Plant A',
 } as const;
 
-/** The company of company settings in the tests, as /settings/$companyId names it. */
+/** The company of the tests, whose settings pages the shell gives its id (#876). */
 export const companyId = acme.id;
 
 /** The variables that name the company in a read of company settings. */

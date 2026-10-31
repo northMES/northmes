@@ -25,7 +25,7 @@ export function PersonScreen() {
   return (
     <PageFrame
       title={forbidden ? 'No access to People' : (user?.name ?? 'Person')}
-      crumbs={[{ label: 'People', href: coreLinks.people({ plant }).href }]}
+      crumbs={[{ label: 'People', href: coreLinks.settings.people({ plant }).href }]}
       meta={
         user === undefined ? undefined : (
           <>

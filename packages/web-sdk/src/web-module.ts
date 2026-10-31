@@ -32,9 +32,9 @@ export interface WebModule {
    */
   routes?(plantRoute: PlantRoute): AnyRoute;
   /**
-   * Returns the module's company settings subtree under /settings/$companyId, whose top route has
-   * the module id as its path (ADR 0066), or for core no path (ADR 0074). Only core has one in
-   * release 1.
+   * Returns the module's settings subtree under /$plant/settings, whose top route has the module id
+   * as its path (ADR 0066, #876), or for core no path (ADR 0074): the module's plant settings pages
+   * and its company's pages, which the plant's settings navigation lists together.
    */
   settingsRoutes?(settingsRoute: SettingsRoute): AnyRoute;
   /** The module's entries in the help menu; a module never adds a help menu of its own. */

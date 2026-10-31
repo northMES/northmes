@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { coreLinks } from '@northmes/core-contracts';
+import { useShell } from '@northmes/web-sdk';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useState } from 'react';
 import { DetailTabs } from '../../../../ui/components/detail-tabs/index.ts';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
 import { userPageSearch } from '../../access-search.ts';
 import { forgetTemporaryPassword, temporaryPasswordOf } from '../../temporary-password.ts';
-import { useCompanyId, usePlaces } from '../../use-places.ts';
+import { usePlaces } from '../../use-places.ts';
 import { type User, useUser } from '../../use-user.tsx';
 import { useViewer } from '../../use-viewer.ts';
 import { UserStatus } from '../../user-status.tsx';
@@ -68,7 +69,7 @@ function useTemporaryPassword(userId: string | undefined) {
  * trail.
  */
 export function UserScreen() {
-  const companyId = useCompanyId() ?? '';
+  const { plant } = useShell();
   const navigate = useNavigate();
   const { userId } = useParams({ strict: false });
   const search = userPageSearch(useSearch({ strict: false }));
@@ -84,7 +85,7 @@ export function UserScreen() {
   return (
     <PageFrame
       title={forbidden ? 'No access to Users' : (user?.name ?? 'User')}
-      crumbs={[{ label: 'Users', href: coreLinks.settings.users({ companyId }).href }]}
+      crumbs={[{ label: 'Users', href: coreLinks.settings.users({ plant }).href }]}
       actions={
         user !== undefined && (canBlock || canReset) ? (
           <UserActions user={user} canBlock={canBlock} canReset={canReset} />

@@ -123,7 +123,7 @@ function page(title: string) {
 
 /**
  * A module with Tools in the main sidebar and Machines and Calendars in the plant settings
- * navigation, as core's machines and calendars registers will sit (ADR 0066).
+ * navigation, under /<plant>/settings/equipment (ADR 0066, #876).
  */
 export const equipment: ShellModule = {
   label: 'Equipment',
@@ -138,14 +138,14 @@ export const equipment: ShellModule = {
       label: 'Machines',
       icon: 'Drill',
       area: 'settings',
-      link: ({ plant }) => ({ href: `/${plant}/equipment/machines` }),
+      link: ({ plant }) => ({ href: `/${plant}/settings/equipment/machines` }),
     },
     {
       label: 'Calendars',
       icon: 'CalendarDays',
       area: 'settings',
       permission: 'equipment.calendar:read',
-      link: ({ plant }) => ({ href: `/${plant}/equipment/calendars` }),
+      link: ({ plant }) => ({ href: `/${plant}/settings/equipment/calendars` }),
     },
   ],
   module: defineWebModule({
@@ -153,8 +153,21 @@ export const equipment: ShellModule = {
     version: '0.4.0',
     routes: (plantRoute) => {
       const equipmentRoute = createRoute({ getParentRoute: () => plantRoute, path: 'equipment' });
+      return equipmentRoute.addChildren([
+        createRoute({
+          getParentRoute: () => equipmentRoute,
+          path: 'tools',
+          component: page('Tools'),
+        }),
+      ]);
+    },
+    settingsRoutes: (settingsRoute) => {
+      const equipmentRoute = createRoute({
+        getParentRoute: () => settingsRoute,
+        path: 'equipment',
+      });
       return equipmentRoute.addChildren(
-        ['Tools', 'Machines', 'Calendars'].map((title) =>
+        ['Machines', 'Calendars'].map((title) =>
           createRoute({
             getParentRoute: () => equipmentRoute,
             path: title.toLowerCase(),
@@ -168,7 +181,7 @@ export const equipment: ShellModule = {
 
 /**
  * A module with one plant settings entry and one company settings entry, so that two of them
- * show how the settings navigations group the entries of the modules other than core.
+ * show how the settings navigation groups the entries of the modules other than core.
  */
 export function settingsModule(id: string, label: string, order: number): ShellModule {
   return {
@@ -179,26 +192,31 @@ export function settingsModule(id: string, label: string, order: number): ShellM
         label: `${label} plans`,
         icon: 'ClipboardList',
         area: 'settings',
-        link: ({ plant }) => ({ href: `/${plant}/${id}/plans` }),
+        link: ({ plant }) => ({ href: `/${plant}/settings/${id}/plans` }),
       },
     ],
     settingsLinks: [
       {
         label: `${label} rules`,
         icon: 'ListChecks',
-        link: ({ companyId: company }) => ({ href: `/settings/${company}/${id}/rules` }),
+        link: ({ plant }) => ({ href: `/${plant}/settings/${id}/rules` }),
       },
     ],
     module: defineWebModule({
       id,
       version: '0.1.0',
-      routes: (plantRoute) => {
-        const moduleRoute = createRoute({ getParentRoute: () => plantRoute, path: id });
+      settingsRoutes: (settingsRoute) => {
+        const moduleRoute = createRoute({ getParentRoute: () => settingsRoute, path: id });
         return moduleRoute.addChildren([
           createRoute({
             getParentRoute: () => moduleRoute,
             path: 'plans',
             component: page(`${label} plans`),
+          }),
+          createRoute({
+            getParentRoute: () => moduleRoute,
+            path: 'rules',
+            component: page(`${label} rules`),
           }),
         ]);
       },

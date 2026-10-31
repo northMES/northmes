@@ -33,24 +33,31 @@ function routeFullPaths(): string[] {
 }
 
 describe('core routes', () => {
-  it('E06-S06 every coreLinks entry, its settings section included, matches a route fullPath', () => {
-    // The shell's root route, its $plant route and its company settings route, which are also the
-    // patterns of core's manifest and of its settings section, one route per link entry, and the
-    // routes that lead the old URLs with core in them to the new ones (ADR 0074).
+  it('#876 every coreLinks entry, its settings section included, matches a route fullPath', () => {
+    // The shell's root route, its $plant route and its settings route, which are also the patterns
+    // of core's manifest and of its settings section, one route per link entry, the route that
+    // leads the old URLs with core in them to the new ones (ADR 0074), and the routes that lead
+    // the old plant settings URLs under the plant's settings (#876).
     const expected = new Set([
       '/',
       ...linkPatterns(coreLinks),
       '/$plant/core/$',
-      '/settings/$companyId/core/$',
+      '/$plant/plant/$',
+      '/$plant/people/$',
+      '/$plant/machines/$',
+      '/$plant/equipment-groups/$',
+      '/$plant/calendars/$',
     ]);
     expect(routeFullPaths().sort()).toEqual([...expected].sort());
   });
 
-  it("E04-S02 a person's page in plant settings sits under People", () => {
+  it("#876 a person's page in plant settings sits under People, under the plant's settings", () => {
     expect(
-      coreLinks.people.person({ plant: 'plant-a', userId: '01920000-0000-7000-8000-00000000a001' })
-        .href,
-    ).toBe('/plant-a/people/01920000-0000-7000-8000-00000000a001');
+      coreLinks.settings.people.person({
+        plant: 'plant-a',
+        userId: '01920000-0000-7000-8000-00000000a001',
+      }).href,
+    ).toBe('/plant-a/settings/people/01920000-0000-7000-8000-00000000a001');
   });
 
   it.each([
@@ -59,12 +66,27 @@ describe('core routes', () => {
       '/plant-a/core/articles/01920000-0000-7000-8000-0000000a0001',
       '/plant-a/articles/01920000-0000-7000-8000-0000000a0001',
     ],
-    [
-      '/settings/01920000-0000-7000-8000-0000000ac3e0/core/users',
-      '/settings/01920000-0000-7000-8000-0000000ac3e0/users',
-    ],
   ])(
     'E04-S02 the old URL %s leads to %s, so bookmarks keep working (ADR 0074)',
+    async (old, now) => {
+      const router = renderCoreAt(old, []);
+
+      await waitFor(() => expect(router.state.location.href).toBe(now));
+    },
+  );
+
+  it.each([
+    ['/plant-a/people', '/plant-a/settings/people'],
+    [
+      '/plant-a/people/01920000-0000-7000-8000-00000000a001/roles/new',
+      '/plant-a/settings/people/01920000-0000-7000-8000-00000000a001/roles/new',
+    ],
+    ['/plant-a/machines?group=MACH', '/plant-a/settings/machines?group=MACH'],
+    ['/plant-a/equipment-groups/MACH/edit', '/plant-a/settings/equipment-groups/MACH/edit'],
+    ['/plant-a/calendars/A1', '/plant-a/settings/calendars/A1'],
+    ['/plant-a/plant', '/plant-a/settings/plant'],
+  ])(
+    "#876 the old plant settings URL %s leads to %s, under the plant's settings",
     async (old, now) => {
       const router = renderCoreAt(old, []);
 

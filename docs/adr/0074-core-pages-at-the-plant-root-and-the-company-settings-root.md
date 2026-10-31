@@ -37,14 +37,14 @@ This ADR decides where core's web pages sit, what the breadcrumb shows for them,
 
 Chosen option: "Core's pages at the plant root and at the company settings root, without the module id", because it is the only option that removes core from both the URL and the breadcrumb, and the host can keep the rest of the URL space safe by refusing the few ids core and the shell take.
 
-* Core's web pages sit at the plant root, `/$plant/<page>`, such as `/plant-a/articles`, `/plant-a/articles/<id>`, `/plant-a/articles/new` and `/plant-a/people` for People in plant settings.
-* Core's company settings pages sit at the company settings root, `/settings/$companyId/<page>`, such as `/settings/<company id>/users` and `/settings/<company id>/roles`.
-* Core's link manifest comes from `defineCoreLinks(entries, { settings })` in `@northmes/contracts`, which builds the same builders as `defineModuleLinks` with the patterns `/$plant/...` and `/settings/$companyId/...`. Every other module keeps `defineModuleLinks('<id>', ...)`.
-* Core's web routes are pathless routes under the `$plant` route and the company settings route. `createShellRoutes` checks that core's top routes have no path and that every other module's top route has its id as its path.
+* Core's web pages sit at the plant root, `/$plant/<page>`, such as `/plant-a/articles`, `/plant-a/articles/<id>` and `/plant-a/articles/new`.
+* Core's settings pages sit at the settings root under the plant, `/$plant/settings/<page>`: the plant's, such as `/plant-a/settings/people`, and the company's, such as `/plant-a/settings/users` and `/plant-a/settings/roles` ([ADR 0066][adr-0066]). Until 2026-10-29 core's company settings pages sat at the company settings root, `/settings/$companyId/<page>`, and its plant settings pages at the plant root, such as `/plant-a/people`; Krister Johansson's trial of the built pages asked on 2026-10-29 for every settings page to open in the plant layout under `/<plant>/settings`, a follow-up to [#876](https://github.com/northMES/northmes/issues/876).
+* Core's link manifest comes from `defineCoreLinks(entries, { settings })` in `@northmes/contracts`, which builds the same builders as `defineModuleLinks` with the patterns `/$plant/...` and `/$plant/settings/...`, both from `plant`. Every other module keeps `defineModuleLinks('<id>', ...)`.
+* Core's web routes are pathless routes under the `$plant` route and the `/$plant/settings` route. `createShellRoutes` checks that core's top routes have no path and that every other module's top route has its id as its path.
 * The shell treats a path whose first segment under the plant is not another module's id as core's. The breadcrumb leaves out the module crumb for core ("Plant A > Articles", "Plant A > Settings > People"), and the document title follows. An unknown path at the plant root is the plant's own page not found, with Go to Plant A. The way out of a core page that failed is Go to Articles, or See all pages on Articles itself.
 * Every other module keeps its id as its path segment and its module crumb: `/plant-a/planning/board` reads "Plant A > Planning > Planning board".
-* The old URLs `/<plant>/core/...` and `/settings/<company id>/core/...` redirect, with their search and hash, to the same page without `core`.
-* The host refuses a module id equal to one of core's top-level web segments (today `articles`, `people`, `users` and `roles`) or the shell's own segments (`all-pages` and `settings`). `createShellRoutes` reads core's segments from its routes and the shell's from its plant routes; the backend catalog check reads core's from `coreLinks` and lists the shell's.
+* The old URLs `/<plant>/core/...` redirect, with their search and hash, to the same page without `core`. The old company settings URLs `/settings/<company id>/...`, with or without `core`, redirect to the same page under the settings of the company's first plant, and the old plant settings URLs, such as `/plant-a/people/...`, to the same page under `/plant-a/settings` ([ADR 0066][adr-0066]).
+* The host refuses a module id equal to one of core's top-level web segments at the plant root, `/$plant/<segment>` (such as `articles`), or at the settings root, `/$plant/settings/<segment>` (today `people`, `plant`, `machines`, `equipment-groups`, `calendars`, `users`, `roles` and `warehouses`), or to one of the shell's own segments under the plant (`all-pages` and `settings`). `createShellRoutes` reads core's segments from its routes and the shell's from its plant routes; the backend catalog check reads core's from `coreLinks` and its settings section and lists the shell's.
 
 ### Consequences
 
@@ -52,17 +52,18 @@ Chosen option: "Core's pages at the plant root and at the company settings root,
 * Good, because a new core page, such as plants or onboarding, reserves its segment without a change to the host, since both checks read core's segments from core's routes and links.
 * Good, because old bookmarks land on the new page.
 * Neutral, because core's sidebar group keeps its label Core.
-* Bad, because the plant root and the company settings root are shared between core, the shell and the module ids, so a module id that a later core page takes must be renamed. In release 1 every module is in this repository, so the catalog check finds such a clash in CI.
+* Bad, because the plant root and the settings root are shared between core, the shell and the module ids, so a module id that a later core page takes must be renamed. In release 1 every module is in this repository, so the catalog check finds such a clash in CI.
 * Bad, because the shell has one rule more: a path whose first segment is no module id is core's.
 
 ### Confirmation
 
-* `packages/contracts/test/define-module-links.test.ts`: "defineCoreLinks builds core's pages at the plant root and its settings pages at the company settings root, without a module segment (ADR 0074)".
-* `modules/core/contracts/test/links.test.ts`: coreLinks builds `/plant-a/articles` and `/settings/<company id>/users`.
-* `packages/web-sdk/test/shell-routes.test.tsx`: core's routes mount at the plant root and the company settings root; a module other than core whose routes sit at another path than its id is rejected, and so is core with a path; a module whose id is a top-level path segment of core's or the shell's routes is rejected.
-* `apps/backend/test/catalog.test.ts`: the module ids `articles`, `people`, `users`, `roles`, `all-pages` and `settings` are refused as reserved, and the message names the id.
+* `packages/contracts/test/define-module-links.test.ts`: "defineCoreLinks builds core's pages at the plant root and its settings pages at the settings root, without a module segment (ADR 0074)".
+* `modules/core/contracts/test/links.test.ts`: coreLinks builds `/plant-a/articles`, `/plant-a/settings/people` and `/plant-a/settings/users`.
+* `packages/web-sdk/test/shell-routes.test.tsx`: core's routes mount at the plant root and its settings routes at the settings root; a module other than core whose routes sit at another path than its id is rejected, and so is core with a path; a module whose id is a top-level path segment of core's or the shell's routes is rejected.
+* `apps/backend/test/catalog.test.ts`: the module ids `articles`, `people`, `users`, `roles`, `all-pages` and `settings`, at the plant root or the settings root, are refused as reserved, and the message names the id and its path.
 * `apps/web/test/shell-core.test.tsx`: the breadcrumb of a core page has no module crumb, an unknown path at the plant root is the plant's page not found, and the plant switcher leads from an article to the other plant's articles list.
 * `apps/web/test/modules/core/routes.links.test.tsx`: an old list, detail and settings URL each redirect to the new one.
+* `apps/web/test/settings-mount.test.tsx`: an old company settings URL leads to the same page under the settings of the company's first plant, and one of a company that is not the user's leads to `/`.
 
 ## Pros and cons of the options
 
@@ -87,15 +88,15 @@ Chosen option: "Core's pages at the plant root and at the company settings root,
 
 ### Changes to ADR 0003
 
-Under "One id, derived names", the id is the URL segment `/$plant/<id>` of every module except core, whose web routes sit at the plant root and at the company settings root without a segment. Beside `web`, `station` and `auth`, the host refuses a module id equal to one of core's top-level web segments or the shell's own segments, such as `articles`, `people`, `users`, `roles`, `all-pages` and `settings`. The catalog test gains the case for these ids.
+Under "One id, derived names", the id is the URL segment `/$plant/<id>` of every module except core, whose web routes sit at the plant root and at the settings root `/$plant/settings` without a segment. Beside `web`, `station` and `auth`, the host refuses a module id equal to one of core's top-level web segments or the shell's own segments, such as `articles`, `people`, `users`, `roles`, `all-pages` and `settings`. The catalog test gains the case for these ids.
 
 ### Changes to ADR 0066
 
-Core's company settings pages sit at `/settings/$companyId/<page>` instead of `/settings/$companyId/core/<page>`, and core's plant settings pages at `/$plant/<page>`, so the planned plants page and wizards are `/settings/$companyId/plants`, `/settings/$companyId/onboarding` and `/$plant/onboarding`. A module other than core keeps `/settings/$companyId/<id>`.
+Core's settings pages, the plant's and the company's, sit at `/$plant/settings/<page>` instead of `/settings/$companyId/core/<page>`, so the planned plants page is `/$plant/settings/plants` and the plant wizard `/$plant/onboarding`. The company wizard's route is open, because a new company has no plant ([ADR 0066][adr-0066]). A module other than core has `/$plant/settings/<id>`.
 
 ### Changes to ADR 0062
 
-A link manifest's root is `/$plant/<id>` for every module except core, whose manifest comes from `defineCoreLinks` and has the roots `/$plant` and `/settings/$companyId`.
+A link manifest's root is `/$plant/<id>` for every module except core, whose manifest comes from `defineCoreLinks` and has the roots `/$plant` and `/$plant/settings`.
 
 The plan states core's URLs in [06 web and UX](../plan/06-web-and-ux.md), [03 modules and extensibility](../plan/03-modules-and-extensibility.md) and [14 roadmap](../plan/14-roadmap.md). Revisit this decision if plugins outside the repository start to ship web pages, since a plugin built before core takes a new segment could then hold that id.
 
