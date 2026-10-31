@@ -555,8 +555,11 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     block?.focus({ preventScroll: true });
     block?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   };
+  // Under a filter the move rules need every order, so moves wait for every page of the full row
+  // list, and a refused or failed one leaves the view to look at (ADR 0090).
+  const rulesComplete = query === '' || (rowList.status === 'ready' && rowList.next === 'done');
   const { actions: moveActions, store: moveStore } = useMoveActions({
-    committed,
+    committed: rulesComplete ? committed : undefined,
     snapshot,
     draft,
     setDraft,

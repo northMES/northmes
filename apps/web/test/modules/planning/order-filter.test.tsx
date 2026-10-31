@@ -184,6 +184,42 @@ describe('the order filter on the order Gantt (ADR 0090)', () => {
     await waitFor(() => expect(orderRows(gantt)).toEqual(['po-1003']));
   });
 
+  it('#940 under a filter, a move waits for every order: with the full row list refused, M starts no move', async () => {
+    const source: GanttDataSource = {
+      ...g1DataSource,
+      loadRows: (filter, page, options) =>
+        filter.search === undefined
+          ? Promise.reject(new PlanningRefusal('planning.gantt.too_many_orders'))
+          : g1DataSource.loadRows(filter, page, options),
+    };
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04', q: '1003' }, source);
+    const gantt = await findGantt();
+    await waitFor(() => expect(orderRows(gantt)).toEqual(['po-1003']));
+    const block = gantt.querySelector<HTMLElement>('[data-block="jo-1003-10"]') as HTMLElement;
+    block.focus();
+
+    fireEvent.keyDown(block, { key: 'm' });
+
+    // The move rules would miss the job orders of the orders not loaded, so no move begins.
+    await waitFor(() =>
+      expect(document.getElementById(politeRegionId)?.textContent).toMatch(/^1 order matches 1003/),
+    );
+    expect(block.getAttribute('data-move-mode')).toBeNull();
+  });
+
+  it('#940 under a filter, a move starts once every order has loaded', async () => {
+    renderGanttRoute({ zoom: 'day', from: '2026-11-04', q: '1003' });
+    const gantt = await findGantt();
+    await waitFor(() => expect(orderRows(gantt)).toEqual(['po-1003']));
+    const block = gantt.querySelector<HTMLElement>('[data-block="jo-1003-10"]') as HTMLElement;
+    block.focus();
+
+    fireEvent.keyDown(block, { key: 'm' });
+
+    await waitFor(() => expect(block.getAttribute('data-move-mode')).toBe('true'));
+    fireEvent.keyDown(block, { key: 'Escape' });
+  });
+
   it('#940 the grid is busy while the first page of the matching orders loads', async () => {
     const hold = new Promise<void>(() => {});
     const { source } = countingRows(hold);
