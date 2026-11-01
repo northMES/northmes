@@ -62,11 +62,17 @@ function declaredTier(body) {
   return tiers.includes('low') ? 'low' : undefined;
 }
 
+/**
+ * The maintainer's latest deciding review, or undefined without one.
+ * @param {readonly { userId: number, state: string, commitId: string }[]} reviews in the order GitHub lists them
+ */
+export function latestMaintainerReview(reviews) {
+  return reviews.filter(({ userId, state }) => userId === maintainer && deciding.has(state)).at(-1);
+}
+
 /** Whether the maintainer's latest deciding review approves the head commit. */
-function maintainerApproved(reviews, headSha) {
-  const latest = reviews
-    .filter(({ userId, state }) => userId === maintainer && deciding.has(state))
-    .at(-1);
+export function maintainerApproved(reviews, headSha) {
+  const latest = latestMaintainerReview(reviews);
   return latest?.state === 'APPROVED' && latest.commitId === headSha;
 }
 

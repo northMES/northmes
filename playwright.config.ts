@@ -10,15 +10,18 @@ export default defineConfig({
   testDir: 'e2e',
   globalSetup: './e2e/global-setup.ts',
   forbidOnly: true,
-  retries: 0,
+  // One retry in CI, so a spec that fails on timing does not stop a session; the list reporter marks
+  // a spec that passed on its retry as flaky, and the job keeps the report with the first attempt's
+  // trace. Locally the first failure is the one to read (#974).
+  retries: process.env.CI === 'true' ? 1 : 0,
   // Each worker runs its own server, so CI keeps to two of them.
-  workers: process.env.CI ? 2 : undefined,
+  workers: process.env.CI === 'true' ? 2 : undefined,
   timeout: 60_000,
   // Argos takes the screenshots in every run and uploads them only from CI with ARGOS_TOKEN, which a
   // fork's pull request does not get (ADR 0077).
   reporter: [
     ['list'],
-    ...(process.env.CI ? [['html', { open: 'never' }] as const] : []),
+    ...(process.env.CI === 'true' ? [['html', { open: 'never' }] as const] : []),
     [
       '@argos-ci/playwright/reporter',
       {

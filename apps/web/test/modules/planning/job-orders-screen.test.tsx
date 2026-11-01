@@ -60,7 +60,7 @@ describe('the job orders page (plan 18, the job order table; design #660, T1)', 
     expect(screen.getByText('Rows 1 to 8 of 8')).toBeTruthy();
     // The job order number opens the Gantt with the order selected and its start in view.
     expect(within(late).getByRole('link', { name: '1003.20' }).getAttribute('href')).toBe(
-      '/plant-a/planning/gantt?zoom=week&from=2026-11-04&order=po-1003',
+      '/plant-a/planning/order-gantt?zoom=week&from=2026-11-04&order=po-1003',
     );
   });
 
@@ -176,7 +176,7 @@ describe('the job orders page (plan 18, the job order table; design #660, T1)', 
     await userEvent.click(within(row).getByRole('button', { name: 'Actions for 1001.10' }));
 
     expect(screen.getByRole('menuitem', { name: 'Open on Gantt' }).getAttribute('href')).toBe(
-      '/plant-a/planning/gantt?zoom=week&from=2026-11-03&order=po-1001',
+      '/plant-a/planning/order-gantt?zoom=week&from=2026-11-03&order=po-1001',
     );
     expect(screen.getByRole('menuitem', { name: 'Show on board' }).getAttribute('href')).toBe(
       '/plant-a/planning/board?zoom=week&from=2026-11-03&order=po-1001',

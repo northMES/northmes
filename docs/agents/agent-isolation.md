@@ -9,8 +9,8 @@ In the `main` branch ruleset, turn on "Require review from Code Owners", set the
 ## 2. The machine user and its token
 
 1. Create the GitHub account `northmes-agent` with two-factor sign-in, and give it the write role on `northMES/northmes` only.
-2. As `northmes-agent`, create a fine-grained token with resource owner `northMES`, repository `northMES/northmes` only, an expiry of 90 days, and these repository permissions: Contents, Pull requests and Issues read and write; Metadata read. Leave every other permission at no access, Workflows, Actions, Administration and Secrets included.
-3. Record the expiry. A new token replaces the old one before it expires, and a token is revoked at once after a suspected leak ([project credentials](../security/project-credentials.md)).
+2. As `northmes-agent`, create a fine-grained token with resource owner `northMES`, repository `northMES/northmes` only, no expiration date, and these repository permissions: Contents, Pull requests, Issues and Actions read and write; Metadata read. Leave every other permission at no access, Workflows, Administration and Secrets included. Actions is for `gh run rerun` (ADR 0084 rule 4). The token's resource owner is the organization, so a later change to its permissions is a request that an organization owner approves under the organization's settings, Personal access tokens, Pending requests.
+3. A token is revoked and regenerated at once after a suspected leak ([project credentials](../security/project-credentials.md)); the new value goes into the local settings file of step 4.
 
 ## 3. Your own GitHub credentials out of the keychain
 
@@ -141,3 +141,4 @@ Start a session in a worktree and ask it to run these commands and report each o
 - `pnpm exec vitest run --project integration apps/backend/test/migrate.int.test.ts` passes.
 - In a new worktree, `echo "$pnpm_config_virtual_store_dir"` names its folder under `/private/tmp/claude-501/pnpm-vstore`, `pnpm install --frozen-lockfile` finishes, `readlink node_modules/typescript` points into that folder, and `pnpm check` passes.
 - `gh run view <id> --log-failed` prints a failed run's log.
+- `gh run rerun <id> --failed` on a failed run of a pull request the session opened is accepted, and `gh run view <id> --json attempt` then shows a higher attempt.

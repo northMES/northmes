@@ -1038,7 +1038,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
 
   return (
     <PageFrame
-      title="Gantt"
+      title="Order Gantt"
       state={state}
       // One status line on the title row: the fixture and link notes while they have text, and
       // the chunks while the time area is drawn, so the grid starts right under the bar (ADR 0090).

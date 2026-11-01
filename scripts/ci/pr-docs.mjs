@@ -11,6 +11,7 @@ import { readFileSync } from 'node:fs';
 import { errorAnnotation } from './annotation.mjs';
 import { entryLines, pathMatcher } from './path-patterns.mjs';
 import {
+  changedPaths,
   escapeRegExp,
   givesNoReason,
   isBotPullRequest,
@@ -97,7 +98,7 @@ export function checkPrDocs({ body, author, headRef, fromFork, changes, docsPath
     };
   }
   // A file moved out of a surface changes that surface too, so a rename counts under both paths.
-  const paths = changes.flatMap(({ path, from }) => (from === undefined ? [path] : [path, from]));
+  const paths = changedPaths(changes);
   if (saysNone.test(docs)) {
     // Every mapped surface the change touches, deleted and renamed files included, that the reason
     // does not name.
