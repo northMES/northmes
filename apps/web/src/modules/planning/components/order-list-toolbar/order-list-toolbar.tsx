@@ -37,10 +37,10 @@ export interface OrderListToolbarProps {
 }
 
 /**
- * The toolbar the planning lists share (design ui-222, LI1 and LI3; #687; ADR 0091): the search, Late only, a
- * filter menu per field with the counts of its values, and under them the chips of the filters
- * that apply with Clear filters, which keeps the search, Late only and the grouping. Group by and
- * Columns sit in the table's header row (#875).
+ * The toolbar the planning lists share (design ui-222, LI1 and LI3; #687; ADR 0091): the search,
+ * Late only, a filter menu per field with the counts of its values, and under them the chips of
+ * the filters that apply with Clear filters, which keeps the search, Late only and the grouping.
+ * Group by and Columns sit in the table's header row (#875).
  */
 export function OrderListToolbar({
   searchId,

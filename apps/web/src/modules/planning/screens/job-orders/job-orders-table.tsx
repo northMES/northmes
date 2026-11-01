@@ -27,6 +27,7 @@ import { type ReactNode, useMemo } from 'react';
 import type { ColumnChoice } from '../../../../ui/components/columns-menu/index.ts';
 import {
   type DataTableGroup,
+  DataTableGroupHeader,
   DataTableMenuCell,
   DataTableMenuHead,
 } from '../../../../ui/components/data-table/index.ts';
@@ -473,33 +474,7 @@ export function JobOrdersTable({
             const groupRows = tableRows.filter((row) => ids.has(row.id));
             return (
               <TableBody key={group.id}>
-                <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
-                  <th
-                    scope="rowgroup"
-                    colSpan={cellCount}
-                    className="px-3 py-1 text-start text-sm font-semibold"
-                  >
-                    <Button
-                      variant="ghost"
-                      aria-expanded={group.expanded}
-                      onClick={() => group.onExpandedChange?.(!group.expanded)}
-                      className="h-auto min-h-(--nm-target-min) gap-1.5 px-1 text-sm font-semibold"
-                    >
-                      <ChevronRight
-                        aria-hidden
-                        className={cn(
-                          'size-4 transition-transform motion-reduce:transition-none',
-                          group.expanded && 'rotate-90',
-                        )}
-                      />
-                      {/* The button's name reads "CNC 1 4 job orders", with the space. */}
-                      {group.label}{' '}
-                      <span className="ms-1 font-mono text-xs font-normal text-muted-foreground">
-                        {group.count}
-                      </span>
-                    </Button>
-                  </th>
-                </TableRow>
+                <DataTableGroupHeader group={group} cellCount={cellCount} />
                 {group.expanded === false ? null : groupRows.flatMap((row) => renderRow(row, view))}
               </TableBody>
             );

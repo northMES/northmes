@@ -39,11 +39,11 @@ export const jobOrderStatusValues = [
 /** The statuses the table lists while the Status filter picks none: the open job orders. */
 export const openJobOrderStatuses: readonly JobOrderStatus[] = ['planned', 'started'];
 
-/** The token of the Machine filter for a job order without a machine, Not placed. */
+/** The token of the Machine filter and group for a job order that is not placed. */
 export const notPlaced = 'none';
 
 /** The fields the job order table groups by (ADR 0091). */
-export const jobOrderGroupKeys = ['machine', 'startDay'] as const;
+export const jobOrderGroupKeys = ['equipment', 'startDay'] as const;
 export type JobOrderGroupKey = (typeof jobOrderGroupKeys)[number];
 
 /** The default sort, Start ascending, which stays out of the URL. */
@@ -51,15 +51,16 @@ const defaultSort: JobOrdersSortId = 'start';
 
 /**
  * The view state of the job orders page in the URL (ADR 0091, ADR 0062): the search in q, Late
- * only in late=1, one key per filter field with a comma list of the picked values, Group by in
- * group, and the sort. The page has no range, so zoom and from are dropped.
+ * only in late=1, one key per filter field, named as the planningJobOrders filter, with a comma
+ * list of the picked values, Group by in group, and the sort. The page has no range, so zoom and
+ * from are dropped.
  */
 export interface JobOrdersSearch {
   readonly q?: string;
   /** 1 keeps the job orders of orders that are late at now. */
   readonly late?: 1;
   /** The picked machines by code, and none for Not placed. */
-  readonly machine?: readonly string[];
+  readonly equipment?: readonly string[];
   readonly status?: readonly JobOrderStatus[];
   readonly article?: readonly string[];
   readonly group?: JobOrderGroupKey;
@@ -70,7 +71,7 @@ export interface JobOrdersSearch {
 const searchKeys = z.object({
   q: searchText,
   late: lateOnlyKey,
-  machine: commaList(z.string().min(1).max(64)),
+  equipment: commaList(z.string().min(1).max(64)),
   status: commaList(z.enum(jobOrderStatusValues)),
   article: commaList(z.string().min(1).max(100)),
   group: z.enum(jobOrderGroupKeys).optional().catch(undefined),
@@ -96,13 +97,4 @@ export function sortedBy(
   sort: { readonly id: string; readonly desc: boolean },
 ): JobOrdersSearch {
   return sortedListBy<JobOrdersSearch, JobOrdersSortId>(search, sort, defaultSort);
-}
-
-/** The view grouped by a field, or not grouped. */
-export function groupedBy(
-  search: JobOrdersSearch,
-  group: JobOrderGroupKey | undefined,
-): JobOrdersSearch {
-  const { group: _, ...rest } = search;
-  return group === undefined ? rest : { ...rest, group };
 }

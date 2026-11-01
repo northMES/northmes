@@ -23,7 +23,6 @@ import {
 } from '../../components/order-list-toolbar/index.ts';
 import { applyDraft, draftRowIds } from '../../gantt-draft.ts';
 import {
-  groupedBy,
   type JobOrderGroupKey,
   type JobOrdersSearch,
   jobOrdersSearch,
@@ -34,6 +33,7 @@ import {
 import { phase1Reason } from '../../mock-reasons.ts';
 import {
   filteredBy,
+  groupedBy,
   searchedFor,
   unfiltered,
   urlSearchOf,
@@ -50,6 +50,7 @@ import {
   jobOrderFacets,
   jobOrderRowMatches,
   jobOrderTableRows,
+  narrowsRows,
   notPlacedLabel,
   sortedJobOrderRows,
 } from './job-orders-rows.ts';
@@ -59,8 +60,12 @@ import { JobOrdersTable, jobOrdersColumnChoices, jobOrdersColumns } from './job-
 const searchFieldId = 'job-orders-search';
 
 /** The choices of Group by, by their URL values. */
-const groupChoices: readonly { readonly value: JobOrderGroupKey; readonly label: string }[] = [
-  { value: 'machine', label: 'Machine' },
+const groupChoices: readonly {
+  readonly value: JobOrderGroupKey | undefined;
+  readonly label: string;
+}[] = [
+  { value: undefined, label: 'No grouping' },
+  { value: 'equipment', label: 'Machine' },
   { value: 'startDay', label: 'Start day' },
 ];
 
@@ -82,7 +87,8 @@ function sortText(sort: ReturnType<typeof sortOf>): string {
  */
 export function JobOrdersScreen() {
   const { plant } = useShell();
-  const view = jobOrdersSearch(useSearch({ strict: false }));
+  const search = useSearch({ strict: false });
+  const view = useMemo(() => jobOrdersSearch(search), [search]);
   const navigate = useNavigate();
   const show = (next: JobOrdersSearch) =>
     navigate({ to: '.', search: urlSearchOf(next), replace: true });
@@ -102,7 +108,7 @@ export function JobOrdersScreen() {
     () => (applied === undefined ? [] : jobOrderTableRows(applied, draftRowIds(draft))),
     [applied, draft],
   );
-  const sort = sortOf(view);
+  const sort = useMemo(() => sortOf(view), [view]);
   const rows = useMemo(
     () =>
       sortedJobOrderRows(
@@ -122,10 +128,10 @@ export function JobOrdersScreen() {
       ? notPlacedLabel
       : (applied?.equipment.find((machine) => machine.code === code)?.name ?? code);
   const labelOf = (key: JobOrderFilterKey) =>
-    key === 'machine' ? machineName : key === 'status' ? statusLabel : (value: string) => value;
+    key === 'equipment' ? machineName : key === 'status' ? statusLabel : (value: string) => value;
   const fields: ListFilterField[] = (
     [
-      ['machine', 'Machine', 'Show job orders on these machines', 'Remove the machine filter'],
+      ['equipment', 'Machine', 'Show job orders on these machines', 'Remove the machine filter'],
       ['status', 'Status', 'Show job orders with these statuses', 'Remove the status filter'],
       ['article', 'Article', 'Show job orders of these articles', 'Remove the article filter'],
     ] as const
@@ -139,7 +145,7 @@ export function JobOrdersScreen() {
   }));
 
   const lateCount = rows.filter((row) => row.analysis?.late).length;
-  const notPlacedCount = rows.filter((row) => row.jobOrder.equipment === undefined).length;
+  const notPlacedCount = rows.filter((row) => !row.placed).length;
   const counts = [
     jobOrderCountText(rows.length),
     lateCount > 0 ? `${lateCount} late` : undefined,
@@ -149,11 +155,17 @@ export function JobOrdersScreen() {
     .filter((part) => part !== undefined)
     .join(', ');
   const groupLabel = groupChoices.find((choice) => choice.value === view.group)?.label ?? '';
-  const statusLine = `${counts}. ${
-    groups === undefined
-      ? sortText(sort)
-      : `${groups.length} group${groups.length === 1 ? '' : 's'} by ${groupLabel.toLowerCase()}, job orders ${sortText(sort).charAt(0).toLowerCase()}${sortText(sort).slice(1)}`
-  }`;
+  // While nothing is loaded, the line says so rather than counting no rows.
+  const statusLine =
+    snapshot === undefined
+      ? error === undefined
+        ? 'Loading the job orders.'
+        : 'Could not load the job orders.'
+      : `${counts}. ${
+          groups === undefined
+            ? sortText(sort)
+            : `${groups.length} group${groups.length === 1 ? '' : 's'} by ${groupLabel.toLowerCase()}, job orders ${sortText(sort).charAt(0).toLowerCase()}${sortText(sort).slice(1)}`
+        }`;
   // A change of the rows after a user action is announced once through the app's helper; the
   // first rows are not.
   const announced = useRef<string | undefined>(undefined);
@@ -163,7 +175,6 @@ export function JobOrdersScreen() {
     announced.current = statusLine;
   }, [snapshot, statusLine]);
 
-  const openRows = allRows.filter((row) => jobOrderRowMatches(row, {}));
   let state: PageState = { status: 'ready' };
   if (snapshot === undefined && error !== undefined) {
     state = { status: 'error', title: 'Could not load the job orders', error, onRetry: retry };
@@ -176,7 +187,7 @@ export function JobOrdersScreen() {
       description:
         'Job orders come with the production orders, from the ERP or created here. They show here once an order has its operations.',
     };
-  } else if (rows.length === 0 && openRows.length === 0 && Object.keys(view).length === 0) {
+  } else if (rows.length === 0 && !narrowsRows(view)) {
     state = {
       status: 'empty',
       title: 'No open job orders',
@@ -200,23 +211,24 @@ export function JobOrdersScreen() {
       ),
     };
   }
-  const tableGroups: DataTableGroup<JobOrderTableRow>[] | undefined = groups?.map((group) => ({
-    id: group.id,
-    label: group.label,
-    count: jobOrderCountText(group.rows.length),
-    rows: group.rows,
-    expanded: !collapsed.has(group.id),
-    onExpandedChange: (open) =>
-      setCollapsed((current) => {
-        const next = new Set(current);
-        if (open) next.delete(group.id);
-        else next.add(group.id);
-        return next;
-      }),
-  }));
-  // The board and the Gantt take the page's search as their order filter.
-  const timelineSearch: Readonly<Record<string, string>> =
-    view.q === undefined ? {} : { q: view.q };
+  // A collapsed group is kept per grouping, so Not placed under Machine and under Start day are two.
+  const tableGroups: DataTableGroup<JobOrderTableRow>[] | undefined = groups?.map((group) => {
+    const key = `${view.group}:${group.id}`;
+    return {
+      id: group.id,
+      label: group.label,
+      count: jobOrderCountText(group.rows.length),
+      rows: group.rows,
+      expanded: !collapsed.has(key),
+      onExpandedChange: (open) =>
+        setCollapsed((current) => {
+          const next = new Set(current);
+          if (open) next.delete(key);
+          else next.add(key);
+          return next;
+        }),
+    };
+  });
   return (
     <PageFrame
       title="Job orders"
@@ -244,14 +256,10 @@ export function JobOrdersScreen() {
                 <Ellipsis aria-hidden />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-56">
-                <DropdownMenuItem
-                  render={<Link to={planningLinks.gantt({ plant }, timelineSearch).href} />}
-                >
+                <DropdownMenuItem render={<Link to={planningLinks.gantt({ plant }).href} />}>
                   Open the Gantt
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  render={<Link to={planningLinks.board({ plant }, timelineSearch).href} />}
-                >
+                <DropdownMenuItem render={<Link to={planningLinks.board({ plant }).href} />}>
                   Open the planning board
                 </DropdownMenuItem>
               </DropdownMenuContent>

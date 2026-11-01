@@ -5,9 +5,10 @@ import { expect, plant, test } from '../fixtures.ts';
 
 // The axe check of ADR 0021 over the states of the job orders page (plan 07, Job order table view;
 // ADR 0091): the populated table, the late facts of a row open, a sort, Late only, a filter menu
-// open, the rows grouped by machine, no row that matches, the Columns menu open and the row menu
-// open. The page reads the fixture G1, so every state is the same in every run. The empty states
-// without job orders need a snapshot the fixture never answers; the web test covers them.
+// open, the Group by menu open, the rows grouped by machine, no row that matches, the Columns menu
+// open and the row menu open. The page reads the fixture G1, so every state is the same in every
+// run. The empty states without job orders need a snapshot the fixture never answers; the web test
+// covers them.
 
 /** The job orders page of the seed plant with its search. */
 function jobOrdersHref(search: Record<string, string> = {}): string {
@@ -58,6 +59,9 @@ test.describe('the job orders page', () => {
     await expect(page.getByRole('menu')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Group by' }).click();
+    await expect(page.getByRole('menuitemradio', { name: 'No grouping' })).toBeVisible();
+    await expect(page.getByRole('menu')).toHaveCSS('opacity', '1');
+    await checkA11y('the Group by menu open');
     await page.getByRole('menuitemradio', { name: 'Machine' }).click();
     await expect(page.getByRole('button', { name: /^CNC 1 / })).toHaveAttribute(
       'aria-expanded',

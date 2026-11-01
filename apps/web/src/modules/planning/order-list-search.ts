@@ -29,8 +29,8 @@ export type LineSortId = (typeof lineSortIds)[number];
 /** The filter fields the order lists share: the status, the article and the customer. */
 export type ListFilterKey = 'status' | 'article' | 'customer';
 
-/** The filter fields of every planning list, the job orders' machine included (ADR 0091). */
-export type AnyListFilterKey = ListFilterKey | 'machine';
+/** The filter fields of every planning list, the job orders' equipment included (ADR 0091). */
+export type AnyListFilterKey = ListFilterKey | 'equipment';
 
 /** A sort in the URL: a column id, with a leading minus for descending. */
 export type SortKey<Id extends string> = Id | `-${Id}`;
@@ -58,12 +58,23 @@ export interface CustomerOrderListSearch {
   readonly sort?: SortKey<LineSortId>;
 }
 
-/** A filter key's comma list of picked values, or a validated view's list, each value once. */
+/**
+ * A filter key's comma list of picked values, or a validated view's list, each value once. The
+ * router parses a lone numeric value, such as an article number, as a number, which reads as its
+ * text.
+ */
 export function commaList<Value extends string>(value: z.ZodType<Value>) {
   return z
     .unknown()
     .transform((raw): Value[] | undefined => {
-      const values = typeof raw === 'string' ? raw.split(',') : Array.isArray(raw) ? raw : [];
+      const values =
+        typeof raw === 'string'
+          ? raw.split(',')
+          : typeof raw === 'number'
+            ? [String(raw)]
+            : Array.isArray(raw)
+              ? raw
+              : [];
       const picked = [...new Set(values.map(String))].filter(
         (each): each is Value => value.safeParse(each).success,
       );
@@ -170,7 +181,7 @@ export function unfiltered<View extends object>(view: View): View {
     status: _s,
     article: _a,
     customer: _c,
-    machine: _m,
+    equipment: _e,
     ...rest
   } = view as Record<string, unknown>;
   return rest as View;
@@ -181,12 +192,12 @@ export function isFiltered(view: OrderListSearch | CustomerOrderListSearch): boo
 }
 
 /** The production orders view grouped by a field, or not grouped. */
-export function groupedBy(
-  view: OrderListSearch,
-  group: OrderGroupKey | undefined,
-): OrderListSearch {
+export function groupedBy<View extends { readonly group?: string }>(
+  view: View,
+  group: View['group'] | undefined,
+): View {
   const { group: _, ...rest } = view;
-  return group === undefined ? rest : { ...rest, group };
+  return (group === undefined ? rest : { ...rest, group }) as View;
 }
 
 /** The column and direction of a view's sort, or the list's default without a key. */

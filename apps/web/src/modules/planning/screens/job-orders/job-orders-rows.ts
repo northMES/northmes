@@ -25,9 +25,14 @@ export interface JobOrderTableRow {
   readonly operation: GanttOperation;
   readonly order: GanttOrder;
   readonly analysis: OrderAnalysis | undefined;
-  /** The machine's name, or "Not placed" for a row without one. */
+  /**
+   * Whether the job order has both a machine and a placement. One without either is Not placed,
+   * as in the Gantt's and the board's Not placed row (ADR 0091).
+   */
+  readonly placed: boolean;
+  /** The machine's name, or "Not placed". */
   readonly machine: string;
-  /** The machine's position among the plant's machines, which the default sort reads. */
+  /** The machine's position among the plant's machines, which the Machine sort reads. */
   readonly machineIndex: number;
   /** Whether the planner's draft moved the row, which its status names. */
   readonly inDraft?: boolean;
@@ -39,10 +44,10 @@ export interface JobOrdersSort {
   readonly desc: boolean;
 }
 
-/** The filter fields of the job order table (ADR 0091). */
-export type JobOrderFilterKey = 'machine' | 'status' | 'article';
+/** The filter fields of the job order table, named as the planningJobOrders filter (ADR 0091). */
+export type JobOrderFilterKey = 'equipment' | 'status' | 'article';
 
-const filterKeys: readonly JobOrderFilterKey[] = ['machine', 'status', 'article'];
+const filterKeys: readonly JobOrderFilterKey[] = ['equipment', 'status', 'article'];
 
 /** The label of Not placed, in Machine, its filter and its group. */
 export const notPlacedLabel = 'Not placed';
@@ -60,20 +65,20 @@ export function jobOrderTableRows(
     for (const jobOrder of order.jobOrders) {
       const operation = order.operations.find((each) => each.id === jobOrder.operationId);
       if (operation === undefined) continue;
+      const equipment = jobOrder.placement === undefined ? undefined : jobOrder.equipment;
       rows.push({
         id: jobOrder.id,
         jobOrder,
         operation,
         order,
         analysis,
+        placed: equipment !== undefined,
         machine:
-          jobOrder.equipment === undefined
-            ? notPlacedLabel
-            : (machineName.get(jobOrder.equipment) ?? jobOrder.equipment),
+          equipment === undefined ? notPlacedLabel : (machineName.get(equipment) ?? equipment),
         machineIndex:
-          jobOrder.equipment === undefined
+          equipment === undefined
             ? Number.MAX_SAFE_INTEGER
-            : (machineIndex.get(jobOrder.equipment) ?? Number.MAX_SAFE_INTEGER),
+            : (machineIndex.get(equipment) ?? Number.MAX_SAFE_INTEGER - 1),
         ...(draftRowIds.has(jobOrder.id) && { inDraft: true }),
       });
     }
@@ -81,16 +86,25 @@ export function jobOrderTableRows(
   return rows;
 }
 
-/** The values of a filter field on a row; a row without a machine has Not placed's token. */
+/** The values of a filter field on a row; a row that is not placed has Not placed's token. */
 function fieldValues(row: JobOrderTableRow, key: JobOrderFilterKey): readonly string[] {
   switch (key) {
-    case 'machine':
-      return [row.jobOrder.equipment ?? notPlaced];
+    case 'equipment':
+      return [row.placed ? (row.jobOrder.equipment ?? notPlaced) : notPlaced];
     case 'status':
       return [row.jobOrder.status];
     case 'article':
       return [row.order.article];
   }
+}
+
+/** Whether a view narrows the rows: a search, Late only or a filter, not a sort or a grouping. */
+export function narrowsRows(view: JobOrdersSearch): boolean {
+  return (
+    view.q !== undefined ||
+    view.late !== undefined ||
+    filterKeys.some((key) => view[key] !== undefined)
+  );
 }
 
 /**
@@ -137,39 +151,48 @@ export function jobOrderFacets(
   );
 }
 
-/** The sort key of a row under a column; a row without a placement sorts after the rest. */
-function sortKey(row: JobOrderTableRow, id: JobOrdersSortId): number | string {
+/** The sort key of a row under a column; a row without a value has none, which sorts last. */
+function sortKey(row: JobOrderTableRow, id: JobOrdersSortId): number | string | undefined {
   switch (id) {
     case 'jobOrder':
       return row.jobOrder.displayNumber;
     case 'machine':
-      return row.machineIndex;
+      return row.placed ? row.machineIndex : undefined;
     case 'start':
-      return row.jobOrder.placement?.setupStartMs ?? Number.MAX_SAFE_INTEGER;
+      return row.placed ? row.jobOrder.placement?.setupStartMs : undefined;
     case 'end':
-      return row.jobOrder.placement?.endMs ?? Number.MAX_SAFE_INTEGER;
+      return row.placed ? row.jobOrder.placement?.endMs : undefined;
     case 'deadline':
       return row.order.deadlineMs;
     case 'plannedEnd':
-      return row.analysis?.plannedEndMs ?? Number.MAX_SAFE_INTEGER;
+      return row.analysis?.plannedEndMs;
     case 'lateBy':
       return row.analysis?.late ? -row.analysis.slackElapsedS : 0;
   }
 }
 
-/** The rows sorted on a column, with the start and then the display number breaking ties. */
+/**
+ * The rows sorted on a column (ADR 0091): rows without a value under it, such as the Not placed
+ * rows under Start, last in both directions, then the start and the display number breaking ties.
+ */
 export function sortedJobOrderRows(
   rows: readonly JobOrderTableRow[],
   sort: JobOrdersSort,
 ): JobOrderTableRow[] {
   const direction = sort.desc ? -1 : 1;
+  /** Ascending, with a missing value after every value. */
   const compare = (a: JobOrderTableRow, b: JobOrderTableRow, id: JobOrdersSortId) => {
     const left = sortKey(a, id);
     const right = sortKey(b, id);
     if (left === right) return 0;
+    if (left === undefined) return 1;
+    if (right === undefined) return -1;
     return left < right ? -1 : 1;
   };
   return [...rows].sort((a, b) => {
+    const missing = Number(sortKey(a, sort.id) === undefined);
+    const other = Number(sortKey(b, sort.id) === undefined);
+    if (missing !== other) return missing - other;
     const primary = compare(a, b, sort.id) * direction;
     if (primary !== 0) return primary;
     const byStart = compare(a, b, 'start');
@@ -187,7 +210,7 @@ export interface JobOrderGroup {
 
 /**
  * The sorted rows in groups (ADR 0091): by machine in the plant's machine order, or by the plant
- * date of the setup start in date order, with Not placed last in both.
+ * calendar date of the setup start in date order, with Not placed last in both.
  */
 export function groupedJobOrderRows(
   rows: readonly JobOrderTableRow[],
@@ -199,31 +222,31 @@ export function groupedJobOrderRows(
     { label: string; order: number | string; rows: JobOrderTableRow[] }
   >();
   for (const row of rows) {
-    const start = row.jobOrder.placement?.setupStartMs;
-    const placed = key === 'machine' ? row.jobOrder.equipment !== undefined : start !== undefined;
-    const id = !placed
+    const start = row.jobOrder.placement?.setupStartMs ?? 0;
+    const id = !row.placed
       ? notPlaced
-      : key === 'machine'
+      : key === 'equipment'
         ? (row.jobOrder.equipment ?? notPlaced)
-        : plantDateOf(start ?? 0, timeZone);
+        : plantDateOf(start, timeZone);
     const group = groups.get(id) ?? {
-      label: !placed
+      label: !row.placed
         ? notPlacedLabel
-        : key === 'machine'
+        : key === 'equipment'
           ? row.machine
-          : formatPlantDate(start ?? 0, timeZone),
-      order: !placed ? Number.MAX_SAFE_INTEGER : key === 'machine' ? row.machineIndex : id,
+          : formatPlantDate(start, timeZone),
+      order: key === 'equipment' ? row.machineIndex : id,
       rows: [],
     };
     group.rows.push(row);
     groups.set(id, group);
   }
   return [...groups.entries()]
-    .sort(([, a], [, b]) => {
+    .sort(([aId, a], [bId, b]) => {
+      // Not placed comes last, after an unknown machine and after every date.
+      if (aId === notPlaced || bId === notPlaced) {
+        return Number(aId === notPlaced) - Number(bId === notPlaced);
+      }
       if (a.order === b.order) return 0;
-      // Not placed sorts last against a date too.
-      if (a.order === Number.MAX_SAFE_INTEGER) return 1;
-      if (b.order === Number.MAX_SAFE_INTEGER) return -1;
       return a.order < b.order ? -1 : 1;
     })
     .map(([id, { label, rows: members }]) => ({ id, label, rows: members }));

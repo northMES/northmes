@@ -35,7 +35,7 @@ Chosen option: "A work list of open job orders, without a range", because it is 
 
 ### The rows
 
-* By default the table lists every open job order of the plant: planned and started, placed or not. A job order without a machine shows Not placed in Machine and has no start or end.
+* By default the table lists every open job order of the plant: planned and started, placed or not. A job order without a machine or without a placement is Not placed, as in the Gantt's and the board's Not placed row: Machine shows Not placed, it has no start or end, and the status line counts it.
 * Finished job orders show only when the Status filter picks Finished. Cancelled job orders join that filter once the snapshot carries them, as plan 18 says.
 * The rows read the plan with the planner's draft applied, as before.
 
@@ -44,15 +44,15 @@ Chosen option: "A work list of open job orders, without a range", because it is 
 * The toolbar is the order lists' toolbar: a search field named "Search job orders", Late only, and filter menus with counts for Machine, Status and Article, with their chips and Clear filters under them.
 * The search matches the job order number, the production order number and the article, as a case-insensitive part of the text.
 * The Machine filter offers each machine of the plant that a row has, and Not placed.
-* Group by and Columns sit in the table's header row (#875). Group by offers Machine and Start day. Machine groups follow the plant's machine order with Not placed last; Start day groups are the plant date of each job order's setup start, in date order, with Not placed last. Each group's header names it and counts its job orders.
+* Group by and Columns sit in the table's header row (#875). Group by offers No grouping, Machine and Start day. Machine groups follow the plant's machine order with Not placed last; Start day groups are the plant calendar date of each job order's setup start, not its production day, in date order, with Not placed last. Each group's header names it, counts its job orders and opens or closes it; a closed group stays closed per grouping.
 * The range controls leave the page: the Range presets, Earlier, Now, Later, Go to date, the range text and the empty state's "Show the next range".
-* The default sort is Start, ascending, with job orders without a start last and the job order number breaking ties. Every sortable column keeps its sort.
+* The default sort is Start, ascending, with the job order number breaking ties. A row without a value under the sorted column, such as a Not placed row under Start, End or Machine, sorts last in both directions. Every sortable column keeps its sort.
 
 ### URL keys
 
-* The page keeps its view in `q`, `late`, `machine`, `status`, `article`, `group` and `sort`, each with its default stripped and each falling back on its own ([ADR 0062](0062-web-form-contracts-url-view-state-and-module-link-manifests.md)). `machine`, `status` and `article` hold comma lists, as on the order lists, and `machine` uses `none` for Not placed.
+* The page keeps its view in `q`, `late`, `equipment`, `status`, `article`, `group` and `sort`, each with its default stripped and each falling back on its own ([ADR 0062](0062-web-form-contracts-url-view-state-and-module-link-manifests.md)). Each filter key is the name of the `planningJobOrders` filter field, as ADR 0062 asks, so the Machine filter is `equipment`. `equipment`, `status` and `article` hold comma lists, as on the order lists, and `equipment` uses `none` for Not placed. `group` is `equipment` or `startDay`.
 * `zoom` and `from` mean nothing on this page. A link that still carries them opens the default view, with no redirect.
-* The board's "Open the job table" on its error state carries the board's order filter `q` instead of the range. The page's own menu leads to the Gantt and the board with its search as their order filter, and each row's menu leads to them at the row's start with its order selected.
+* The board's "Open the job table" on its error state carries the board's order filter `q` instead of the range; the table's search matches an order number too. The page's own menu leads to the Gantt and the board without its search, because their order filter matches the order number only, and each row's menu leads to them at the row's start with its order selected.
 
 ### Data
 
@@ -77,6 +77,8 @@ Chosen option: "A work list of open job orders, without a range", because it is 
 |---|---|---|
 | The bar above the timeline | "The job order table view keeps its Range presets, Earlier, Now, Later and Go to date" | The job order table view has none of them ([The toolbar](#the-toolbar)) |
 | The URL key zoom | "A link to the job order table view opens it at the preset of the zoom's band" | A link to the job order table view carries no zoom |
+| Changes to ADR 0089, Zoom levels | A link to the job order table "opens the table at the preset of the zoom's band" | A link to the job order table carries no zoom |
+| Consequences | "Neutral, because the job order table view keeps its presets and its range controls" | The job order table view has neither |
 | Confirmation | `job-orders-search.test.tsx`: `zoom=37.5` opens the table at `day`, `zoom=200` at `hours` and `zoom=0.5` at `4weeks` | `job-orders-search.test.tsx` checks this ADR's keys |
 
 ### Consequences
@@ -90,10 +92,10 @@ Chosen option: "A work list of open job orders, without a range", because it is 
 
 ### Confirmation
 
-* `job-orders-search.test.tsx`: each key parses and falls back on its own; `machine`, `status` and `article` read comma lists; `zoom` and `from` are dropped; the default sort leaves `sort` out.
-* `job-orders-screen.test.tsx`, on the fixture G1 and on snapshots built from it: the table lists every open job order sorted by start; a finished job order shows only with Status Finished; a job order without a machine shows Not placed and sorts last; the search, Late only and the Machine filter narrow the rows and write the URL; Clear filters clears the filter menus and keeps the search and Late only, as on the order lists; Group by Machine and Group by Start day put the rows under their headers; and the page has no Range, Earlier, Now, Later or Go to date.
+* `job-orders-search.test.tsx`: each key parses and falls back on its own; `equipment`, `status` and `article` read comma lists, a numeric value included; `zoom` and `from` are dropped; the default sort leaves `sort` out.
+* `job-orders-screen.test.tsx`, on the fixture G1 and on snapshots built from it: the table lists every open job order sorted by start; a finished job order shows only with Status Finished; a job order without a machine or without a placement shows Not placed and sorts last in both directions; the search, Late only and the Machine filter narrow the rows and write the URL; Clear filters clears the filter menus and keeps the search and Late only, as on the order lists; Group by Machine and Group by Start day put the rows under their headers, and No grouping takes them out; the status line names loading and a failed load; a plant whose job orders are all finished shows No open job orders, also with a sort or a grouping in the URL; and the page has no Range, Earlier, Now, Later or Go to date.
 * `planning-board-states.test.tsx`: the board's "Open the job table" link carries `q` and no `zoom` or `from`.
-* `e2e/a11y/job-orders.axe.spec.ts`: `checkA11y` passes on the job orders page with its rows, a row's late facts open, a sort, Late only, the Machine filter menu open, the rows grouped by machine, the Columns menu and a row menu open, and with no row that matches. The web test covers the error and empty states, which the fixture G1 never reaches in a browser.
+* `e2e/a11y/job-orders.axe.spec.ts`: `checkA11y` passes on the job orders page with its rows, a row's late facts open, a sort, Late only, the Machine filter menu open, the Group by menu open, the rows grouped by machine, the Columns menu and a row menu open, and with no row that matches. The web test covers the error and empty states, which the fixture G1 never reaches in a browser.
 
 ## Pros and cons of the options
 
