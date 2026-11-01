@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import type { StockUnitCode, Translation } from '@northmes/contracts';
+import type { MasterDataTable } from '@northmes/sdk/master-data';
 import type { ColumnType, Generated, GeneratedAlways } from 'kysely';
 
 /** core.article, as its migrations shape it: an article of a company (ADR 0073). */
@@ -60,6 +61,14 @@ export interface ArticleGroupTable {
   /** When the group last changed, its creation included; an update trigger moves it on. */
   updated_at: Generated<Date>;
 }
+
+/** core.equipment_group: an equipment group, a register at the company or at a plant. */
+export type EquipmentGroupTable = MasterDataTable<{
+  /** A palette color, palette-1 to palette-20. */
+  color: string;
+  /** Where the color came from. */
+  color_from: 'erp' | 'set' | 'palette';
+}>;
 
 /** core.article_plant: a plant an article is assigned to (ADR 0073). */
 export interface ArticlePlantTable {
@@ -208,6 +217,7 @@ export interface CoreDatabase {
   'core.article': ArticleTable;
   'core.article_plant': ArticlePlantTable;
   'core.article_group': ArticleGroupTable;
+  'core.equipment_group': EquipmentGroupTable;
   'core.scope': ScopeTable;
   'core.company': CompanyTable;
   'core.plant': PlantTable;

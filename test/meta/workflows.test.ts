@@ -1351,9 +1351,11 @@ describe('workflows', () => {
 
   // The end-to-end specs run against the built server in role all, with Postgres from
   // Testcontainers (docs/adr/0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md).
-  // pnpm e2e builds, installs Chromium and runs Playwright; after a failed run the job keeps
-  // Playwright's report with the traces of the failed tests.
-  it('E02-S08 the e2e job installs and runs pnpm e2e, and keeps the report after a failure', () => {
+  // pnpm e2e builds, installs Chromium and runs Playwright; the job keeps Playwright's report with
+  // the traces of the failed attempts, also when a spec passed on its retry and the job is green,
+  // so a flaky spec stays diagnosable (#974). The report is empty after a clean run, and the upload
+  // ignores that.
+  it('E02-S08 the e2e job installs and runs pnpm e2e, and keeps the report unless the run was cancelled', () => {
     const { id, job } = jobNamed('e2e');
     const steps = job.steps ?? [];
 
@@ -1364,8 +1366,9 @@ describe('workflows', () => {
     expect(e2e).toBeGreaterThan(install);
     expect(steps.length - 1).toBeGreaterThan(e2e);
     expect(steps.at(-1)?.uses).toMatch(/^actions\/upload-artifact@/);
-    expect(steps.at(-1)?.if).toBe('failure()');
+    expect(steps.at(-1)?.if).toBe('!cancelled()');
     expect(steps.at(-1)?.with?.path).toBe('playwright-report/');
+    expect(steps.at(-1)?.with?.['if-no-files-found']).toBe('ignore');
   });
 
   // The docs images come from a run that a maintainer starts by hand on a branch. The job only reads

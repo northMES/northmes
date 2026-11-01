@@ -109,7 +109,7 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     expect(screen.getByText('Rows 1 to 10 of 10')).toBeTruthy();
     // The job order number opens the Gantt with the order selected and its start in view.
     expect(within(late).getByRole('link', { name: '1003.20' }).getAttribute('href')).toBe(
-      '/plant-a/planning/gantt?from=2026-11-04&order=po-1003',
+      '/plant-a/planning/order-gantt?from=2026-11-04&order=po-1003',
     );
     for (const name of ['Now', 'Show earlier range', 'Show later range', 'Hours', '4 weeks']) {
       expect(screen.queryByRole('button', { name })).toBeNull();
@@ -395,7 +395,7 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     await userEvent.click(within(row).getByRole('button', { name: 'Actions for 1001.10' }));
 
     expect(screen.getByRole('menuitem', { name: 'Open on Gantt' }).getAttribute('href')).toBe(
-      '/plant-a/planning/gantt?from=2026-11-03&order=po-1001',
+      '/plant-a/planning/order-gantt?from=2026-11-03&order=po-1001',
     );
     expect(screen.getByRole('menuitem', { name: 'Show on board' }).getAttribute('href')).toBe(
       '/plant-a/planning/board?from=2026-11-03&order=po-1001',
@@ -409,7 +409,7 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     await userEvent.click(screen.getByRole('button', { name: 'Table options' }));
 
     expect(screen.getByRole('menuitem', { name: 'Open the Gantt' }).getAttribute('href')).toBe(
-      '/plant-a/planning/gantt',
+      '/plant-a/planning/order-gantt',
     );
     expect(
       screen.getByRole('menuitem', { name: 'Open the planning board' }).getAttribute('href'),

@@ -350,7 +350,7 @@ describe('risk gate', () => {
   // meta tests or the agents' settings and instructions is high, and the default branch's copy judges
   // it (ADR 0086 rule 1). test/meta/agent-sandbox.test.ts holds the list against CODEOWNERS; this
   // test holds that the gate reads the repository's own list the way it reads the fixture above.
-  it("ADR0086 the repository's risk paths make a change to the gate, the workflows, the meta tests and the agent files high, and a module change low", () => {
+  it("ADR0086 the repository's risk paths make a change to the gate, the workflows, the guarding meta tests and the agent files high, and a module change, a naming-rule meta test and a docs change low", () => {
     const repositoryRiskPaths = readFileSync(
       new URL('../../.github/risk-paths', import.meta.url),
       'utf8',
@@ -363,18 +363,34 @@ describe('risk gate', () => {
       '.github/risk-paths',
       '.github/workflows/ci.yml',
       'test/meta/workflows.test.ts',
+      'test/meta/agent-sandbox.test.ts',
+      'test/meta/security-docs.test.ts',
+      'test/meta/collection.test.ts',
+      'test/meta/docs.ts',
+      'test/meta/workspace.test.ts',
+      'test/meta/react-doctor.test.ts',
       'scripts/agents/auto-merge.mjs',
       '.claude/agents/blast-radius.md',
+      '.claude/settings.json',
+      '.claude/skills/web-module/SKILL.md',
+      '.claude/launch.json',
       'CLAUDE.md',
       'AGENTS.md',
       'skills-lock.json',
     ]) {
       expect(tierOf(file), file).toBe('high');
     }
+    // A meta test of a naming, layout or docs rule is judged by the blast-radius review, not by
+    // the list (#977).
     for (const file of [
       'apps/backend/src/modules/core/permissions.ts',
       'modules/planning/domain/src/index.ts',
       'docs/adr/0086-risk-tiered-review-and-merge-of-agent-pull-requests.md',
+      'test/meta/no-global-prefix.test.ts',
+      'test/meta/spdx-headers.test.ts',
+      'test/meta/doc-links.test.ts',
+      'test/meta/docs.test.ts',
+      'test/meta/docs-paths/x.ts',
     ]) {
       expect(tierOf(file), file).toBe('low');
     }
@@ -382,7 +398,7 @@ describe('risk gate', () => {
 
   // The path list is a reviewed security boundary (ADR 0086 rule 1), so its whole content is pinned
   // on purpose: every edit to it is a two-place edit that a reviewer sees.
-  it("ADR0086 the repository's risk paths are pinned as the reviewed boundary: exactly .github, scripts/ci, scripts/agents, test/meta, .claude, CLAUDE.md, AGENTS.md and skills-lock.json", () => {
+  it("ADR0086 the repository's risk paths are pinned as the reviewed boundary: exactly .github, scripts/ci, scripts/agents, the guarding meta tests the body lists, .claude, CLAUDE.md, AGENTS.md and skills-lock.json", () => {
     const patterns = readFileSync(new URL('../../.github/risk-paths', import.meta.url), 'utf8')
       .split(/\r?\n/)
       .map((line) => line.trim())
@@ -392,7 +408,28 @@ describe('risk gate', () => {
       '/.github/',
       '/scripts/ci/',
       '/scripts/agents/',
-      '/test/meta/',
+      '/test/meta/agent-sandbox.test.ts',
+      '/test/meta/agent-files.test.ts',
+      '/test/meta/workflows.test.ts',
+      '/test/meta/coderabbit.test.ts',
+      '/test/meta/gates.test.ts',
+      '/test/meta/collection.test.ts',
+      '/test/meta/docs-paths.test.ts',
+      '/test/meta/security-docs.test.ts',
+      '/test/meta/security-policy.test.ts',
+      '/test/meta/renovate.test.ts',
+      '/test/meta/workspace.test.ts',
+      '/test/meta/tooling.test.ts',
+      '/test/meta/no-truncate.test.ts',
+      '/test/meta/mit-imports.test.ts',
+      '/test/meta/no-customer-data.test.ts',
+      '/test/meta/compose.test.ts',
+      '/test/meta/image.test.ts',
+      '/test/meta/react-doctor.test.ts',
+      '/test/meta/launch.test.ts',
+      '/test/meta/integration-project.test.ts',
+      '/test/meta/e2e.test.ts',
+      '/test/meta/docs.ts',
       '/.claude/',
       '/CLAUDE.md',
       '/AGENTS.md',

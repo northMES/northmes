@@ -52,6 +52,7 @@ export {
   dashboardWidgetTypes,
   saveDashboardTab,
 } from './dashboard.ts';
+export { colorFrom, equipmentGroups } from './equipment-group.ts';
 export {
   createIntegrationToken,
   integrationTokenDefaultDays,

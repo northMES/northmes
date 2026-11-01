@@ -88,12 +88,36 @@ The tests of the slice:
 6. List the mutation in the providers of the entity's Nest module.
 7. Test through the GraphQL API with fixtures from `db.command`, and read the result back through a query field.
 
+## A register with the master-data kit
+
+A register (ADR 0022) is an entity with a code, a name, a few own fields and no state beyond archive, at the company or at a plant. Equipment groups are the reference. Hand-edited files:
+
+1. `modules/core/contracts/src/equipment-group.ts`: `defineMasterData({ module, entity, resource, label, permission, scopes, fields, output })` from `@northmes/contracts`, with `plural`, `pluralLabel` and `article` when the defaults (an s, and the article a) read wrong. `scopes` is `['company', 'plant']` or `['plant']`; `fields` holds the own fields that create and update take, `output` the own fields every surface answers. It yields the contracts, the output schema, the list, the queries and the operations block.
+2. `apps/backend/src/modules/core/migrations/<ts>_equipment_group.sql`: `pnpm gen:migration --register core equipment_group`, with the own columns added after `translations`.
+3. `apps/backend/src/modules/core/infrastructure/database.ts`: `MasterDataTable<{ own columns }>` from `@northmes/sdk/master-data`.
+4. `apps/backend/src/modules/core/api/equipment-group/types/equipment-group.type.ts`: the GraphQL object type, by hand, with the kit's fields, `scope` for a company and plant register, and the own fields. `queries/equipment-group.list.ts`: `defineList(definition.list, { node: () => Type })`.
+5. `apps/backend/src/modules/core/core/equipment-group.service.ts`: `masterDataService(definition, { table, list, access: masterDataAccess, columns, write })`. `columns` maps each own output field to its column; `write.create(input, { tx, companyId, scopeId })` and `write.update(input, { tx, target })` return the own columns to write, and may be async. It returns `Service` and `ServiceModule`.
+6. `apps/backend/src/modules/core/api/equipment-group/equipment-group.module.ts`: imports `ServiceModule` and lists `masterDataApi(service, { type, list }).providers`, the resolvers and the operations; the module joins `core.module.ts`. The permission resource joins `permissions.ts` and the web's `permission-names.ts`.
+
+The test file runs `masterDataContract(definition, { story, given })` from `@northmes/testing` with a place of two plants, a company admin at a plant and in company settings, the two plant admins, a reader and another company, as `apps/backend/test/modules/core/equipment-groups.int.test.ts` does, plus the register's own rules. Every register also changes these hand-kept lists:
+
+- `apps/backend/test/operations/conformance.int.test.ts`: an entry for its operations.
+- `apps/backend/test/graphql/schema-sdl.test.ts` and `apps/backend/test/testing/create-test-app.int.test.ts`: its root fields.
+- `apps/backend/test/modules/core/plant-free.int.test.ts`: its six plant-free fields.
+- `apps/backend/test/modules/core/roles.int.test.ts`: its permission resource.
+- `apps/docs/use/users-and-roles.mdx`: its permissions; `apps/docs/api.mdx`, Choose the plant: its fields.
+- `pnpm gen`, which refreshes `schema/api.graphql` and `schema/openapi-v1.json`.
+
 ## Errors and their meaning
 
 - `Unknown type "PlanningReleaseProductionOrderInput"`: the schema has no such mutation. The mutation is missing from the providers of the entity's Nest module, that module is missing from the imports of `<id>.module.ts`, or `createTestApp` did not boot the module.
 - `lint/style/noRestrictedImports` on a file in `core/` naming `@nestjs/graphql`: a GraphQL type or decorator reached the domain code. Move the type to `api/<entity>/types/` and the GraphQL half of a command to its mutation file.
 - `lint/style/noRestrictedImports` on a file in `api/` naming `@northmes/sdk/data`, `kysely`, `pg`, `infrastructure/` or `db/`: a resolver reads the database. Add a method to the service in `core/` and call it.
 - `module-boundaries` in `pnpm check` naming `<file>:<line> imports ../core/...`: a module imported another module's file other than its `public-api.ts`. Export what it needs from the owner's `public-api.ts` and import that.
+- `Register <module>.<Entity>: field <field> is the kit's own`: `defineMasterData` got an own field or output field named like one of the kit's (`id`, `code`, `name`, `translations`, `scope`, `companyId`, `version`, `archivedAt`, `updatedAt`, `expectedVersion`). Rename the own field.
+- `ID <Module><Entity> already exists in the registry`: `defineMasterData` ran twice for one register, so its output schema registered its component twice. Define each register once, in its contracts package.
+- `Register <module>.<Entity>: a write hook may not set <columns>`: a register's `write.create` or `write.update` returned a column of the kit's, such as `scope_id`, which would move the row away from the scope the bus checked. Return the own columns only.
+- `Choose company: a row at a plant is made at that plant.` with `BAD_USER_INPUT` and `core.plant_scope_needs_plant` on `scope`: a create from company settings, without `x-northmes-plant`, asked for `scope: plant`.
 - `Validator <name> of module <id> is on <command>, which no module declares validatable`: no booted module lists that command's mutation with a contract that says `validatable: true`. A plugin's own copy of the contract does not count.
 - `Command <name>: input field <field> is not a required ID, string, number, boolean, 32-bit integer or list of strings, an optional string, boolean, 32-bit integer or list of strings, or a list of translations, the kinds a generated mutation input supports so far`: `defineCommand` threw while the server entry loaded, for a contract field that the generated input type cannot carry yet. An integer field needs `z.int32()` bounds to become `Int`. A list of translations is `translations` from `@northmes/contracts`, which becomes the shared `[TranslationInput!]`. An optional string becomes a nullable `String`, and the mutation leaves out a null the client sends for it, so the contract sees the field as absent.
 - `Command <name> changes an existing entity, so its definition needs target, which the command bus loads to check expectedVersion (ADR 0012)`: a command whose contract has `target: 'existing'` lacks `target: { entity, scopeOf, load }` in `defineCommand`. `scopeOf` reads the row's `scope_id` and `load` reads the row with `forUpdate()`; the bus refuses a missing row with `NotFoundException` and a stale `expectedVersion` with `core.version_conflict`, then hands the row to `buildPayload` and `handle` as `target`.

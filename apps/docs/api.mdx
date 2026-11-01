@@ -49,7 +49,7 @@ A request carries a short-lived JWT of the signed-in person as a bearer token. T
 
 Most fields work at one plant. Name it by its slug in the `x-northmes-plant` header. The user must be able to open the plant, else the request fails with `FORBIDDEN` and `core.plant_forbidden`, and no field runs.
 
-A request without the header runs only the fields that company settings use: `coreCompanies`, `coreViewer`, and the queries and mutations on articles, article groups, roles and users. Those name the company in their `companyId` argument or input field. Any other root field, such as `coreDashboardTabs` or `planningProductionOrders`, is then refused with `FORBIDDEN` and `core.plant_forbidden`. To find the slugs of the plants a user may open, query `coreCompanies { name plants { slug name } }` without the header.
+A request without the header runs only the fields that company settings use: `coreCompanies`, `coreViewer`, and the queries and mutations on articles, article groups, equipment groups, roles and users. Those name the company in their `companyId` argument or input field. Any other root field, such as `coreDashboardTabs` or `planningProductionOrders`, is then refused with `FORBIDDEN` and `core.plant_forbidden`. To find the slugs of the plants a user may open, query `coreCompanies { name plants { slug name } }` without the header.
 
 ## Lists and paging
 
