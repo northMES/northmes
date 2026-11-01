@@ -43,9 +43,15 @@ async function settingsOf(
       variables: { companyId: company.id },
     });
     const permissions = new Set(data?.coreViewer.companyPermissions);
-    return companySettingsEntries(modules, { company: permissions }, plant.slug).flatMap(
-      ({ entries }) => entries,
-    )[0]?.href;
+    // Users also shows to a user who reads users at the plant only (ADR 0091).
+    const atPlant = new Set(
+      data?.coreViewer.plants.find(({ plantId }) => plantId === plant.id)?.permissions,
+    );
+    return companySettingsEntries(
+      modules,
+      { company: permissions, plant: atPlant },
+      plant.slug,
+    ).flatMap(({ entries }) => entries)[0]?.href;
   } catch (error) {
     if (isForbidden(error)) return undefined;
     throw error;
