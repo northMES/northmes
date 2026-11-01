@@ -18,7 +18,9 @@ import {
   companyId,
   forbiddenError,
   groupedRows,
+  planner,
   plantA,
+  plantB,
   rolesQuery,
   sara,
   settingsViewerQuery,
@@ -426,6 +428,28 @@ describe("a user's access", () => {
           row.slice(0, 4),
         ),
       ).toEqual([['Shift lead', 'Acme AB', '2 of 6', '1 person']]),
+    );
+  });
+
+  it('ADR0091 in company settings a reader who may give roles only at Plant A gets Add role and Remove at Plant A, and not at Plant B', async () => {
+    const saraAtBoth = user(sara, [assignment(shiftLead, plantA), assignment(planner, plantB)]);
+    renderCoreAt(accessHref, [
+      settingsViewerQuery(
+        ['core.user:read', 'core.role:read'],
+        [...reader, ...shiftLead.permissions],
+      ),
+      companiesQuery(),
+      userQuery(saraAtBoth),
+      rolesQuery([shiftLead, planner]),
+      permissionsQuery(sara, saraGrants),
+    ]);
+
+    expect(
+      await screen.findByRole('button', { name: 'Remove Shift lead at Plant A' }),
+    ).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Remove Planner at Plant B' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Add role' }).getAttribute('href')).toBe(
+      coreLinks.settings.users.user.addRole({ plant: 'plant-a', userId: sara.id }).href,
     );
   });
 

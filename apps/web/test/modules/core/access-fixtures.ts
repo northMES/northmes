@@ -30,6 +30,13 @@ export const plantA = {
   kind: 'PLANT',
   name: 'Plant A',
 } as const;
+/** Plant B of Acme AB, which the user cannot open: the companies list and the viewer omit it. */
+export const plantB = {
+  __typename: 'AccessScope',
+  id: idOf('plant-b'),
+  kind: 'PLANT',
+  name: 'Plant B',
+} as const;
 
 /** The company of the tests, whose settings pages the shell gives its id (#876). */
 export const companyId = acme.id;
@@ -271,7 +278,7 @@ export function roleQuery(each: ReturnType<typeof role>): MockLink.MockedRespons
 /** A user's role at a place, as CoreUser returns it; null role for a reader without core.role:read. */
 export function assignment(
   of: ReturnType<typeof role> | null,
-  scope: typeof acme | typeof plantA,
+  scope: typeof acme | typeof plantA | typeof plantB,
   id = idOf(`${of?.name ?? 'hidden'}-${scope.name}`),
 ) {
   return {
