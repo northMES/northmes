@@ -6,6 +6,7 @@ import { ArticleModule } from './api/article/article.module.ts';
 import { ArticleGroupModule } from './api/article-group/article-group.module.ts';
 import { CompanyModule } from './api/company/company.module.ts';
 import { DashboardModule } from './api/dashboard/dashboard.module.ts';
+import { EquipmentModule } from './api/equipment/equipment.module.ts';
 import { EquipmentGroupModule } from './api/equipment-group/equipment-group.module.ts';
 import { IntegrationTokenModule } from './api/integration-token/integration-token.module.ts';
 import { RoleModule } from './api/role/role.module.ts';
@@ -27,6 +28,7 @@ import { AdministrationServiceModule } from './core/administration-service.modul
     ArticleGroupModule,
     CompanyModule,
     DashboardModule,
+    EquipmentModule,
     EquipmentGroupModule,
     IntegrationTokenModule,
     RoleModule,

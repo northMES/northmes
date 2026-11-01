@@ -7,6 +7,8 @@ export type { MasterDataAccess, MasterDataRequestScope } from './access.ts';
 export { type MasterDataApiOptions, masterDataApi } from './master-data-api.ts';
 export {
   type MasterDataCreateContext,
+  type MasterDataFilterValues,
+  type MasterDataQuery,
   type MasterDataRecord,
   type MasterDataRow,
   type MasterDataService,

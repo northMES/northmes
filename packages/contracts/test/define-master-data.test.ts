@@ -87,6 +87,12 @@ describe('defineMasterData', () => {
     expect(gauge.operations.scope).toBe('companyOrPlant');
   });
 
+  it('#965 a plant-only register has no REST routes, since REST serves a plant operation under /plants/{plant}/', () => {
+    const routes = Object.values(fixtures.operations.operations).map(({ rest }) => rest);
+
+    expect(routes).toEqual([false, false, false, false, false, false]);
+  });
+
   it('#66 an update names the row by id and version, and takes no scope, since a row stays where it was made', () => {
     const { update } = gauge;
 
@@ -164,10 +170,10 @@ describe('defineMasterData', () => {
     const equipment = defineMasterData({
       module: 'tools',
       entity: 'Equipment',
-      plural: 'Equipment',
+      plural: 'EquipmentList',
       resource: 'equipment',
-      label: 'equipment',
-      pluralLabel: 'equipment',
+      label: 'item of equipment',
+      pluralLabel: 'items of equipment',
       article: 'an',
       permission: 'tools.equipment',
       scopes: ['plant'],
@@ -175,8 +181,59 @@ describe('defineMasterData', () => {
       output: {},
     });
 
-    expect(equipment.find.name).toBe('tools.findEquipment');
-    expect(equipment.plural).toBe('Equipment');
-    expect(equipment.create.description).toMatch(/^Creates an equipment at/);
+    expect(equipment.find.name).toBe('tools.findEquipmentList');
+    expect(equipment.plural).toBe('EquipmentList');
+    expect(equipment.pluralLabel).toBe('items of equipment');
+    expect(equipment.create.description).toMatch(/^Creates an item of equipment at/);
+  });
+
+  it('#66 a plural that is the entity throws, since the list field would take the name of the field that reads one row', () => {
+    expect(() =>
+      defineMasterData({
+        module: 'tools',
+        entity: 'Lift',
+        plural: 'Lift',
+        resource: 'lifts',
+        label: 'lift',
+        permission: 'tools.lift',
+        scopes: ['plant'],
+        fields: z.object({}),
+        output: {},
+      }),
+    ).toThrow('Register tools.Lift: the plural Lift is the entity');
+  });
+
+  it('#965 a filter field that takes the name of a list argument throws', () => {
+    expect(() =>
+      defineMasterData({
+        module: 'tools',
+        entity: 'Hoist',
+        resource: 'hoists',
+        label: 'hoist',
+        permission: 'tools.hoist',
+        scopes: ['plant'],
+        fields: z.object({}),
+        output: {},
+        filters: { search: z.string() },
+      }),
+    ).toThrow("Register tools.Hoist: filter search is the list's own argument");
+  });
+
+  it("#965 a register's filter fields are declared on its list and taken by its find", () => {
+    const clamps = defineMasterData({
+      module: 'tools',
+      entity: 'Clamp',
+      resource: 'clamps',
+      label: 'clamp',
+      permission: 'tools.clamp',
+      scopes: ['plant'],
+      fields: z.object({ isOpen: z.boolean().optional() }),
+      output: { isOpen: z.boolean() },
+      filters: { isOpen: z.boolean() },
+    });
+
+    expect(Object.keys(clamps.list.filters ?? {})).toEqual(['isOpen']);
+    expect(clamps.find.input.parse({ isOpen: true })).toMatchObject({ isOpen: true });
+    expect(clamps.find.input.safeParse({ isOpen: 'yes' }).success).toBe(false);
   });
 });

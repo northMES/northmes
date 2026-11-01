@@ -276,6 +276,17 @@ input CoreArchiveEquipmentGroupInput {
   id: ID!
 }
 
+"""The input of coreArchiveEquipment."""
+input CoreArchiveEquipmentInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
+  expectedVersion: Int!
+
+  """The id of the entity the command changes."""
+  id: ID!
+}
+
 """The input of coreAssignRole."""
 input CoreAssignRoleInput {
   """
@@ -413,6 +424,45 @@ input CoreCreateEquipmentGroupInput {
   Where the row sits: at the company, which every plant of it sees, or at the request's plant.
   """
   scope: String!
+
+  """
+  The translations of the name. An update that leaves them out keeps them.
+  """
+  translations: [TranslationInput!]
+}
+
+"""The input of coreCreateEquipment."""
+input CoreCreateEquipmentInput {
+  """The code, unique among the rows the scope sees, at most 32 characters."""
+  code: String!
+
+  """
+  The machine's own palette color for its stripe, or group for the group's color. A create without it takes the group's color; an update without it keeps it.
+  """
+  color: String
+
+  """
+  The id of the machine's equipment group, a group of the plant or of the company. A group of another plant is refused with core.crossScopeReference, an archived one that the machine did not have with core.equipment_group_not_active.
+  """
+  groupId: ID!
+
+  """
+  The id of the new entity, a UUID the client generates, so a retry finds the first.
+  """
+  id: ID!
+
+  """
+  True when the machine's OEE is measured. A create without it is false; an update without it keeps it.
+  """
+  isOee: Boolean
+
+  """
+  True when planners plan job orders on the machine. A create without it is plannable; an update without it keeps it.
+  """
+  isPlannable: Boolean
+
+  """The name, at most 200 characters."""
+  name: String!
 
   """
   The translations of the name. An update that leaves them out keeps them.
@@ -575,6 +625,17 @@ input CoreRestoreEquipmentGroupInput {
   id: ID!
 }
 
+"""The input of coreRestoreEquipment."""
+input CoreRestoreEquipmentInput {
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
+  expectedVersion: Int!
+
+  """The id of the entity the command changes."""
+  id: ID!
+}
+
 """The input of coreRevokeIntegrationToken."""
 input CoreRevokeIntegrationTokenInput {
   """
@@ -711,6 +772,48 @@ input CoreUpdateEquipmentGroupInput {
 
   """The id of the entity the command changes."""
   id: ID!
+
+  """The name, at most 200 characters."""
+  name: String!
+
+  """
+  The translations of the name. An update that leaves them out keeps them.
+  """
+  translations: [TranslationInput!]
+}
+
+"""The input of coreUpdateEquipment."""
+input CoreUpdateEquipmentInput {
+  """The code, unique among the rows the scope sees, at most 32 characters."""
+  code: String!
+
+  """
+  The machine's own palette color for its stripe, or group for the group's color. A create without it takes the group's color; an update without it keeps it.
+  """
+  color: String
+
+  """
+  The version of the entity that the change was made on; the command is refused when the entity has changed since.
+  """
+  expectedVersion: Int!
+
+  """
+  The id of the machine's equipment group, a group of the plant or of the company. A group of another plant is refused with core.crossScopeReference, an archived one that the machine did not have with core.equipment_group_not_active.
+  """
+  groupId: ID!
+
+  """The id of the entity the command changes."""
+  id: ID!
+
+  """
+  True when the machine's OEE is measured. A create without it is false; an update without it keeps it.
+  """
+  isOee: Boolean
+
+  """
+  True when planners plan job orders on the machine. A create without it is plannable; an update without it keeps it.
+  """
+  isPlannable: Boolean
 
   """The name, at most 200 characters."""
   name: String!
@@ -948,6 +1051,80 @@ type EffectivePermission {
 }
 
 """
+Equipment of a plant, something that runs operations or is measured: usually a machine, sometimes a building, a lift or a truck. It belongs to an equipment group of the plant or of the company, and is on the planning board when it is plannable or OEE-measured.
+"""
+type Equipment {
+  """
+  When the machine was archived, or null while it is active. An archived machine is hidden from coreEquipmentList unless includeArchived is true, and keeps its code.
+  """
+  archivedAt: DateTime
+
+  """The code, unique among the machines of the plant."""
+  code: String!
+
+  """
+  The machine's own palette color for its stripe, palette-1 to palette-20, or null when the stripe takes the group's color.
+  """
+  color: String
+
+  """
+  The machine's equipment group, also an archived one, or null where the request cannot read it.
+  """
+  group: EquipmentGroup
+
+  """The id of the machine's equipment group."""
+  groupId: ID!
+
+  """The machine's id."""
+  id: ID!
+
+  """True when the machine's OEE is measured."""
+  isOee: Boolean!
+
+  """True when planners plan job orders on the machine."""
+  isPlannable: Boolean!
+
+  """The machine's name."""
+  name: String!
+
+  """The translations of the name, in the order they were saved."""
+  translations: [Translation!]!
+
+  """When the machine last changed, its creation included."""
+  updatedAt: DateTime!
+
+  """
+  Grows by one with every change to the machine; an update sends it as expectedVersion.
+  """
+  version: Int!
+}
+
+"""
+One page of the Equipment list, with keyset paging over opaque cursors.
+"""
+type EquipmentConnection {
+  """The items of the page in the list's order."""
+  edges: [EquipmentEdge!]!
+
+  """Where the page sits in the list."""
+  pageInfo: PageInfo!
+
+  """
+  How many items the list holds with the same search and filters, across all pages.
+  """
+  totalCount: Int!
+}
+
+"""One Equipment of a page, with its cursor."""
+type EquipmentEdge {
+  """The cursor of this item, for after or before."""
+  cursor: String!
+
+  """The Equipment."""
+  node: Equipment!
+}
+
+"""
 A group of equipment, such as Assembly or Turning, at the company or at one plant. Its color is the band the planning board shows for its equipment.
 """
 type EquipmentGroup {
@@ -1038,6 +1215,27 @@ enum EquipmentGroupSortField {
   UPDATED_AT
 }
 
+"""One entry of the Equipment list's orderBy."""
+input EquipmentOrderBy {
+  """The direction to sort in, ascending by default."""
+  direction: SortDirection = ASC
+
+  """The field to sort by."""
+  field: EquipmentSortField!
+}
+
+"""The fields the Equipment list sorts by."""
+enum EquipmentSortField {
+  """Sorts by code."""
+  CODE
+
+  """Sorts by name."""
+  NAME
+
+  """Sorts by updatedAt."""
+  UPDATED_AT
+}
+
 """
 A credential that an outside system calls the public API with. It acts as itself, with its roles at the company or at one plant. Its secret is shown once, when it is created.
 """
@@ -1098,6 +1296,14 @@ type Mutation {
   ): ArticleGroup!
 
   """
+  Archives a machine: lists hide it, and it keeps its code. Needs core.equipment:archive where it sits; an archived machine is refused with core.archived.
+  """
+  coreArchiveEquipment(
+    """The input of the command core.archiveEquipment."""
+    input: CoreArchiveEquipmentInput!
+  ): Equipment!
+
+  """
   Archives an equipment group: lists hide it, and it keeps its code. Needs core.equipmentGroup:archive where it sits; an archived equipment group is refused with core.archived.
   """
   coreArchiveEquipmentGroup(
@@ -1136,6 +1342,14 @@ type Mutation {
     """The input of the command core.createArticleGroup."""
     input: CoreCreateArticleGroupInput!
   ): ArticleGroup!
+
+  """
+  Creates a machine at the request's plant. Needs core.equipment:create there; a code that another machine the scope sees uses is refused with core.code_taken.
+  """
+  coreCreateEquipment(
+    """The input of the command core.createEquipment."""
+    input: CoreCreateEquipmentInput!
+  ): Equipment!
 
   """
   Creates an equipment group at the company or at the request's plant. Needs core.equipmentGroup:create there; a code that another equipment group the scope sees uses is refused with core.code_taken.
@@ -1210,6 +1424,14 @@ type Mutation {
   ): ArticleGroup!
 
   """
+  Restores an archived machine. Needs core.equipment:archive where it sits; one that is not archived is refused with core.not_archived.
+  """
+  coreRestoreEquipment(
+    """The input of the command core.restoreEquipment."""
+    input: CoreRestoreEquipmentInput!
+  ): Equipment!
+
+  """
   Restores an archived equipment group. Needs core.equipmentGroup:archive where it sits; one that is not archived is refused with core.not_archived.
   """
   coreRestoreEquipmentGroup(
@@ -1264,6 +1486,14 @@ type Mutation {
     """The input of the command core.updateArticleGroup."""
     input: CoreUpdateArticleGroupInput!
   ): ArticleGroup!
+
+  """
+  Changes a machine: its code, its name and the other fields the input sends. Needs core.equipment:update where it sits; an archived machine is refused with core.archived.
+  """
+  coreUpdateEquipment(
+    """The input of the command core.updateEquipment."""
+    input: CoreUpdateEquipmentInput!
+  ): Equipment!
 
   """
   Changes an equipment group: its code, its name and the other fields the input sends. Needs core.equipmentGroup:update where it sits; an archived equipment group is refused with core.archived.
@@ -1594,6 +1824,19 @@ type Query {
   coreDashboardTabs: [DashboardTab!]!
 
   """
+  The machine with this id among those the request reads, or null. Needs core.equipment:read.
+  """
+  coreEquipment(
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+
+    """The machine's id."""
+    id: ID!
+  ): Equipment
+
+  """
   The equipment group with this id among those the request reads, or null. Needs core.equipmentGroup:read.
   """
   coreEquipmentGroup(
@@ -1646,6 +1889,58 @@ type Query {
     """
     search: String
   ): EquipmentGroupConnection!
+
+  """
+  One page of the machines the request reads: at a plant the plant's, in company settings those of every plant of the company. Needs core.equipment:read.
+  """
+  coreEquipmentList(
+    """
+    Reads the items after this cursor, such as the endCursor of the previous page.
+    """
+    after: String
+
+    """
+    Reads the items before this cursor, such as the startCursor of the next page. Not together with after.
+    """
+    before: String
+
+    """
+    The company of a request from company settings, which names no plant. At a plant it may be left out, or must be the plant's company.
+    """
+    companyId: ID
+
+    """
+    How many items to read forward, from 1 to 100. Ignored when last or before is given.
+    """
+    first: Int = 25
+
+    """Only the machines of this equipment group."""
+    groupId: ID
+
+    """Lists archived items too. Archived items are hidden by default."""
+    includeArchived: Boolean = false
+
+    """Only the machines whose isPlannable is this value."""
+    isPlannable: Boolean
+
+    """
+    How many items to read backward, from 1 to 100, 25 when only before is given.
+    """
+    last: Int
+
+    """
+    True for the machines the planning board shows, those plannable or OEE-measured; false for the others.
+    """
+    onBoard: Boolean
+
+    """The order of the list, at most 3 entries; the id breaks ties."""
+    orderBy: [EquipmentOrderBy!]
+
+    """
+    Only the items whose text contains this, ignoring case; at most 100 characters.
+    """
+    search: String
+  ): EquipmentConnection!
 
   """
   The integration tokens of the company, revoked ones too, newest first, without their secrets. Needs core.integration:manage at the company.
