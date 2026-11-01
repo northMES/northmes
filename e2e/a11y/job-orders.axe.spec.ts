@@ -63,6 +63,8 @@ test.describe('the job orders page', () => {
     await expect(page.getByRole('menu')).toHaveCSS('opacity', '1');
     await checkA11y('the Group by menu open');
     await page.getByRole('menuitemradio', { name: 'Machine' }).click();
+    // The Group by menu fades out before it leaves the page.
+    await expect(page.getByRole('menu')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^CNC 1 / })).toHaveAttribute(
       'aria-expanded',
       'true',
