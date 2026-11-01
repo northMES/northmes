@@ -172,7 +172,9 @@ describe('defineMasterData', () => {
       entity: 'Equipment',
       plural: 'EquipmentList',
       resource: 'equipment',
-      label: 'machine',
+      label: 'item of equipment',
+      pluralLabel: 'items of equipment',
+      article: 'an',
       permission: 'tools.equipment',
       scopes: ['plant'],
       fields: z.object({}),
@@ -181,7 +183,8 @@ describe('defineMasterData', () => {
 
     expect(equipment.find.name).toBe('tools.findEquipmentList');
     expect(equipment.plural).toBe('EquipmentList');
-    expect(equipment.create.description).toMatch(/^Creates a machine at/);
+    expect(equipment.pluralLabel).toBe('items of equipment');
+    expect(equipment.create.description).toMatch(/^Creates an item of equipment at/);
   });
 
   it('#66 a plural that is the entity throws, since the list field would take the name of the field that reads one row', () => {
@@ -198,6 +201,22 @@ describe('defineMasterData', () => {
         output: {},
       }),
     ).toThrow('Register tools.Lift: the plural Lift is the entity');
+  });
+
+  it('#965 a filter field that takes the name of a list argument throws', () => {
+    expect(() =>
+      defineMasterData({
+        module: 'tools',
+        entity: 'Hoist',
+        resource: 'hoists',
+        label: 'hoist',
+        permission: 'tools.hoist',
+        scopes: ['plant'],
+        fields: z.object({}),
+        output: {},
+        filters: { search: z.string() },
+      }),
+    ).toThrow("Register tools.Hoist: filter search is the list's own argument");
   });
 
   it("#965 a register's filter fields are declared on its list and taken by its find", () => {

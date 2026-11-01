@@ -222,7 +222,19 @@ describe('equipment', () => {
     ]);
   });
 
-  it('#965 a group of another plant is core.crossScopeReference on groupId, and so is a group id nobody uses', async () => {
+  const crossScope = {
+    code: 'BAD_USER_INPUT',
+    errorCode: 'core.crossScopeReference',
+    paths: [['groupId']],
+  };
+
+  const groupNotActive = {
+    code: 'BAD_USER_INPUT',
+    errorCode: 'core.equipment_group_not_active',
+    paths: [['groupId']],
+  };
+
+  it("#965 a create or an update at a plant that names another plant's group, or a group id nobody uses, is core.crossScopeReference on groupId and names no other plant", async () => {
     const place = await givenPlace();
     const atB = await group(place.plantAdminB, 'TRN');
     const assembly = await group(place.plantAdminA, 'ASM');
@@ -234,33 +246,74 @@ describe('equipment', () => {
       input: { id: created.id, expectedVersion: 1, code: 'M-1', name: 'Lathe', groupId: atB },
     });
 
-    const crossScope = {
-      code: 'BAD_USER_INPUT',
-      errorCode: 'core.crossScopeReference',
-      paths: [['groupId']],
-    };
     expect([other, unknown, moved].map(refusal)).toEqual([crossScope, crossScope, crossScope]);
     expect(JSON.stringify(other.errors)).not.toContain(place.plantB);
   });
 
-  it('#965 archiving a group keeps its machines in it, and an archived group takes no new machine', async () => {
+  it("#965 in company settings, which read every plant, an update that moves a machine into another plant's group is core.crossScopeReference", async () => {
+    const place = await givenPlace();
+    const atB = await group(place.plantAdminB, 'TRN');
+    const created = await machine(place.plantAdminA, 'M-1', await group(place.plantAdminA, 'ASM'));
+
+    const moved = await place.companySettings.send(updateMachine, {
+      input: { id: created.id, expectedVersion: 1, code: 'M-1', name: 'Lathe', groupId: atB },
+    });
+
+    expect(refusal(moved)).toEqual(crossScope);
+  });
+
+  it('#965 archiving a group keeps its machines in it, and the list answers the archived group', async () => {
+    const place = await givenPlace();
+    const assembly = await group(place.plantAdminA, 'ASM');
+    await machine(place.plantAdminA, 'M-1', assembly);
+    await place.plantAdminA.send(archiveGroup, { input: { id: assembly, expectedVersion: 1 } });
+
+    const answer = await place.plantAdminA.send<Listed>(listMachines, {});
+
+    expect(answer.data?.coreEquipmentList.edges[0]?.node.group).toMatchObject({ code: 'ASM' });
+    expect(answer.data?.coreEquipmentList.edges[0]?.node.group?.archivedAt).not.toBeNull();
+  });
+
+  it('#965 an update that keeps an archived group passes, also with its id in upper case', async () => {
     const place = await givenPlace();
     const assembly = await group(place.plantAdminA, 'ASM');
     const created = await machine(place.plantAdminA, 'M-1', assembly);
     await place.plantAdminA.send(archiveGroup, { input: { id: assembly, expectedVersion: 1 } });
+    const input = { id: created.id, code: 'M-1', name: 'Lathe' };
 
-    const answer = await place.plantAdminA.send<Listed>(listMachines, {});
-    const renamed = await place.plantAdminA.send(updateMachine, {
+    const kept = await place.plantAdminA.send(updateMachine, {
+      input: { ...input, expectedVersion: 1, groupId: assembly },
+    });
+    const upper = await place.plantAdminA.send(updateMachine, {
+      input: { ...input, expectedVersion: 2, groupId: assembly.toUpperCase() },
+    });
+
+    expect(kept.errors).toBeUndefined();
+    expect(upper.errors).toBeUndefined();
+  });
+
+  it('#965 a create in an archived group, or an update that moves a machine into one, is core.equipment_group_not_active on groupId', async () => {
+    const place = await givenPlace();
+    const assembly = await group(place.plantAdminA, 'ASM');
+    const created = await machine(place.plantAdminA, 'M-1', await group(place.plantAdminA, 'TRN'));
+    await place.plantAdminA.send(archiveGroup, { input: { id: assembly, expectedVersion: 1 } });
+
+    const added = await sendCreate(place.plantAdminA, 'M-2', assembly);
+    const moved = await place.plantAdminA.send(updateMachine, {
       input: { id: created.id, expectedVersion: 1, code: 'M-1', name: 'Lathe', groupId: assembly },
     });
-    const added = await sendCreate(place.plantAdminA, 'M-2', assembly);
 
-    expect(answer.data?.coreEquipmentList.edges[0]?.node.group).toMatchObject({ code: 'ASM' });
-    expect(answer.data?.coreEquipmentList.edges[0]?.node.group?.archivedAt).not.toBeNull();
-    expect(renamed.errors).toBeUndefined();
-    expect(refusal(added)).toEqual({
+    expect([added, moved].map(refusal)).toEqual([groupNotActive, groupNotActive]);
+  });
+
+  it('#965 a list filter value outside its contract, such as a groupId that is no uuid, is BAD_USER_INPUT on the filter', async () => {
+    const place = await givenPlace();
+
+    const answer = await place.plantAdminA.send(listMachines, { groupId: 'abc' });
+
+    expect(refusal(answer)).toEqual({
       code: 'BAD_USER_INPUT',
-      errorCode: 'core.archived',
+      errorCode: undefined,
       paths: [['groupId']],
     });
   });
