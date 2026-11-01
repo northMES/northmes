@@ -11,6 +11,7 @@ const merging = {
   isDraft: false,
   mergeStateStatus: 'CLEAN',
   inMergeQueue: false,
+  leftQueue: undefined,
   autoMerge: true,
   tier: 'low' as const,
   headSha: head,
@@ -42,6 +43,15 @@ describe('#978 the shepherd names what each open pull request waits on', () => {
 
   it('ADR0093 a branch that is only behind main needs no rebase: the merge queue builds it on main', () => {
     expect(triage({ ...merging, mergeStateStatus: 'BEHIND' })).toEqual(['merging: nothing to do']);
+  });
+
+  it('ADR0093 a pull request the queue dropped names the queue run to read and the one step to take, in place of the auto-merge line', () => {
+    const dropped = { ...merging, leftQueue: { reason: 'CI_FAILURE' } };
+
+    expect(triage(dropped)).toEqual([
+      'left the merge queue (CI_FAILURE): its checks failed on the queue commit, not on the head; find the run with gh run list --event merge_group --json headBranch,databaseId,conclusion and its branch gh-readonly-queue/main/pr-973-<sha>, read its log by the rule of CLAUDE.md, then run pnpm agent:auto-merge 973 once more',
+    ]);
+    expect(triage({ ...dropped, autoMerge: false })).toEqual(triage(dropped));
   });
 
   it("ADR0093 a pull request in the merge queue is GitHub's, whatever else it shows", () => {
@@ -258,6 +268,7 @@ describe('#978 fromGraph shapes a pull request of the query as triage reads it',
     isDraft: false,
     mergeStateStatus: 'BEHIND',
     isInMergeQueue: false,
+    dequeued: { nodes: [] },
     headRefOid: head,
     autoMergeRequest: { enabledAt: '2026-11-01T09:00:00Z' },
     labels: { nodes: [{ name: 'risk:high' }, { name: 'core' }] },
@@ -312,6 +323,7 @@ describe('#978 fromGraph shapes a pull request of the query as triage reads it',
       isDraft: false,
       mergeStateStatus: 'BEHIND',
       inMergeQueue: false,
+      leftQueue: undefined,
       autoMerge: true,
       tier: 'high',
       headSha: head,
@@ -337,6 +349,24 @@ describe('#978 fromGraph shapes a pull request of the query as triage reads it',
       { author: 'coderabbitai', resolved: false },
       { author: undefined, resolved: false },
     ]);
+  });
+
+  it('ADR0093 a removal from the queue counts when it came after the head was committed and the pull request is not back in the queue', () => {
+    const removed = (createdAt: string, extra = {}) =>
+      fromGraph({
+        ...node,
+        dequeued: { nodes: [{ createdAt, reason: 'CI_FAILURE' }] },
+        ...extra,
+      }).leftQueue;
+
+    expect(removed('2026-11-01T10:00:00Z')).toEqual({ reason: 'CI_FAILURE' });
+    expect(removed('2026-11-01T08:00:00Z')).toBeUndefined();
+    expect(removed('2026-11-01T10:00:00Z', { isInMergeQueue: true })).toBeUndefined();
+    expect(
+      fromGraph({ ...node, dequeued: { nodes: [{ createdAt: '2026-11-01T10:00:00Z' }] } })
+        .leftQueue,
+    ).toEqual({ reason: 'no reason given' });
+    expect(fromGraph({ ...node, dequeued: undefined }).leftQueue).toBeUndefined();
   });
 
   it('#978 no label, no auto-merge and no check rollup read as what they are', () => {

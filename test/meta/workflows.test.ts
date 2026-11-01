@@ -4,7 +4,10 @@ import { globSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
-import { workflowFiles as rulesetWorkflowFiles } from '../../scripts/repo/check-ruleset.mjs';
+import {
+  optionalJobs,
+  workflowFiles as rulesetWorkflowFiles,
+} from '../../scripts/repo/check-ruleset.mjs';
 import vitestConfig from '../../vitest.config.ts';
 
 interface Step {
@@ -471,9 +474,8 @@ describe('workflows', () => {
   // the pull request for the other PR jobs (ADR 0093).
   const claPermissions = { contents: 'read', 'pull-requests': 'read' };
   const pullRequestPermissions = { contents: 'read', 'pull-requests': 'read' };
-  // CodeQL / codeql uploads its analysis to code scanning and reads the workflow runs the actions
-  // language analyzes (ADR 0093).
-  const codeqlPermissions = { contents: 'read', actions: 'read', 'security-events': 'write' };
+  // CodeQL / codeql uploads its analysis to code scanning (ADR 0093).
+  const codeqlPermissions = { contents: 'read', 'security-events': 'write' };
 
   // Risk / risk gate reads the pull request, its files and reviews; Risk / risk label labels it with
   // its tier (ADR 0086). Only the label job holds the write token.
@@ -854,6 +856,7 @@ describe('workflows', () => {
         GITHUB_TOKEN: expression('github.token'),
         PR_NUMBER: expression('github.event.pull_request.number'),
         MERGE_GROUP_HEAD_REF: expression('github.event.merge_group.head_ref'),
+        MERGE_GROUP_BASE_SHA: expression('github.event.merge_group.base_sha'),
       },
     });
     expect(job.outputs).toEqual(
@@ -867,6 +870,20 @@ describe('workflows', () => {
     for (const [other, { needs }] of Object.entries(workflow.jobs)) {
       if (other === id) continue;
       expect(needsOf({ needs }), other).toContain(id);
+    }
+  });
+
+  // A required job that runs on some events only reports nothing on the others, and a queue entry
+  // waits until the queue gives up on it. The gates run on every event with always(); cla and risk
+  // label, which skip merge groups, are optional.
+  it('ADR0093 no job the ruleset requires runs on some events only', () => {
+    const required = workflows().filter(({ path }) => requiredWorkflowPaths.includes(path));
+
+    for (const { path, jobs } of required) {
+      for (const [id, job] of Object.entries(jobs)) {
+        if (optionalJobs.has(job.name ?? id)) continue;
+        expect(job.if ?? 'always()', `${path} job ${id}`).toBe('always()');
+      }
     }
   });
 

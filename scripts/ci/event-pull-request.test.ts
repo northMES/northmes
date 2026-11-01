@@ -25,6 +25,12 @@ describe('#985 PR / pull request writes the fields the pull request checks read'
     });
   });
 
+  it("#985 in a merge group the base is the group's parent commit, not the base the pull request recorded", () => {
+    expect(pullRequestOutputs(pull, { mergeGroupBaseSha: 'abc123' }).base_sha).toBe('abc123');
+    expect(pullRequestOutputs(pull, { mergeGroupBaseSha: '' }).base_sha).toBe(pull.base.sha);
+    expect(pullRequestOutputs(pull, {}).base_sha).toBe(pull.base.sha);
+  });
+
   it('#985 an empty body and a deleted fork repository read as an empty body from a fork', () => {
     expect(
       pullRequestOutputs({ ...pull, body: null, head: { ref: 'x', repo: null } }),

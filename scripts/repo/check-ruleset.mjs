@@ -25,19 +25,22 @@ const mainRuleset = 24515911;
 // The GitHub Actions app, which reports every workflow job.
 const githubActions = 15368;
 
-// The checks the ruleset requires that no workflow of this repository runs, by the app that
-// reports them. None since ADR 0093: CodeQL runs as the job codeql of codeql.yml, so that it
-// reports on merge queue commits too, which code scanning's default setup does not.
-const otherApps = new Map();
+// Every required check is a job of a workflow here since ADR 0093: CodeQL runs as the job codeql of
+// codeql.yml, so that it reports on merge queue commits too, which code scanning's default setup
+// does not.
 
 /** The workflow files whose jobs the main ruleset requires; test/meta/workflows.test.ts reads it. */
 export const workflowFiles = ['ci.yml', 'pr.yml', 'risk.yml', 'supply-chain.yml', 'codeql.yml'];
 
-// Jobs the ruleset may require but does not have to. cla joins before the first outside pull
-// request (ADR 0039), e2e when #281 lands; openapi diff fails a pull request through pr gate and
-// e2e through gate; risk label only labels the pull request (ADR 0086); pull request only reads
-// the pull request for the other PR jobs, which fail without it (ADR 0093).
-const optional = new Set(['cla', 'e2e', 'openapi diff', 'risk label', 'pull request']);
+/**
+ * Jobs the ruleset may require but does not have to. cla joins before the first outside pull
+ * request (ADR 0039) and runs on pull requests only, so it needs a merge_group run before it does;
+ * e2e joins when #281 lands; openapi diff fails a pull request through pr gate and e2e through gate;
+ * risk label only labels the pull request (ADR 0086); pull request only reads the pull request for
+ * the other PR jobs, which fail without it (ADR 0093). test/meta/workflows.test.ts reads it.
+ */
+export const optionalJobs = new Set(['cla', 'e2e', 'openapi diff', 'risk label', 'pull request']);
+const optional = optionalJobs;
 
 // The ref patterns that name main in a ruleset's condition; main is the default branch.
 const mainRefs = new Set(['~DEFAULT_BRANCH', '~ALL', 'refs/heads/main']);
@@ -45,7 +48,7 @@ const mainRefs = new Set(['~DEFAULT_BRANCH', '~ALL', 'refs/heads/main']);
 /**
  * The problems of the main ruleset's enforcement, target and required status checks against the
  * workflows' jobs.
- * @param {{ enforcement?: string, conditions?: { ref_name?: { include?: string[], exclude?: string[] } }, rules?:{ type: string, parameters?: { merge_method?: string, required_status_checks?: { context: string, integration_id?: number }[] } }[] }} ruleset
+ * @param {{ enforcement?: string, conditions?: { ref_name?: { include?: string[], exclude?: string[] } }, rules?:{ type: string, parameters?: { merge_method?: string, strict_required_status_checks_policy?: boolean, required_status_checks?: { context: string, integration_id?: number }[] } }[] }} ruleset
  * @param {{ file: string, jobs: Record<string, { name?: string }> }[]} workflows
  * @returns {string[]} one line per problem, none when the ruleset matches
  */
@@ -85,6 +88,14 @@ export function checkRuleset(ruleset, workflows) {
     ];
   }
 
+  // The strict policy held every pull request until its author updated the branch; the queue makes
+  // that update needless, and ADR 0093 turns the policy off.
+  if (rules.some(({ parameters }) => parameters?.strict_required_status_checks_policy === true)) {
+    problems.push(
+      'strict_required_status_checks_policy is true, so a pull request still waits for an update of its branch that the merge queue makes needless.',
+    );
+  }
+
   /** @type {Map<string, { app: number, source: string }>} */
   const expected = new Map();
   /** @type {Map<string, string>} */
@@ -99,9 +110,6 @@ export function checkRuleset(ruleset, workflows) {
         expected.set(name, { app: githubActions, source: file });
       }
     }
-  }
-  for (const [name, app] of otherApps) {
-    expected.set(name, { app, source: 'code scanning' });
   }
 
   const required = rules.flatMap(({ parameters }) => parameters?.required_status_checks ?? []);

@@ -15,6 +15,9 @@ describe('#985 the pull request behind a merge group', () => {
         'gh-readonly-queue/main/pr-104-929f8209d40f77f4abc622a499c93a83babdbe64',
       ),
     ).toBe(104);
+    expect(
+      pullNumberOfQueueRef('refs/heads/gh-readonly-queue/release/1.x/pr-7-929f8209d40f77f4abc6'),
+    ).toBe(7);
   });
 
   it('#985 a ref that is not a queue branch, or an empty one, names no pull request', () => {

@@ -49,26 +49,32 @@ export function shipPlan({ authorId, risk, body, alreadyAsked = false, baseRef }
   return { autoMerge: true, reviewer: maintainerLogin, comment };
 }
 
+const mutations = {
+  enqueuePullRequest:
+    'mutation($id: ID!, $sha: GitObjectID!) { enqueuePullRequest(input: { pullRequestId: $id, expectedHeadOid: $sha }) { clientMutationId } }',
+  mergePullRequest:
+    'mutation($id: ID!, $sha: GitObjectID!) { mergePullRequest(input: { pullRequestId: $id, mergeMethod: SQUASH, expectedHeadOid: $sha }) { clientMutationId } }',
+  enablePullRequestAutoMerge:
+    'mutation($id: ID!, $sha: GitObjectID!) { enablePullRequestAutoMerge(input: { pullRequestId: $id, mergeMethod: SQUASH, expectedHeadOid: $sha }) { clientMutationId } }',
+};
+
 // GitHub takes auto-merge only for a pull request that cannot merge yet, so a clean one, whose
 // required checks (the risk gate included) have all passed, goes straight into the merge queue,
-// through the same call GitHub's own Merge when ready button makes.
+// through the same call GitHub's own Merge when ready button makes (ADR 0093). Until the ruleset
+// has its merge queue rule, the same clean pull request is squash-merged now, as before.
 /**
  * @param {string} mergeableState GitHub's mergeable_state of the pull request
- * @returns {{ mutation: 'enqueuePullRequest' | 'enablePullRequestAutoMerge', query: string }}
+ * @param {boolean} queueEnabled whether the base branch merges through a merge queue
+ * @returns {{ mutation: keyof typeof mutations, query: string, now: boolean }}
  */
-export function mergeMutation(mergeableState) {
-  if (mergeableState === 'clean') {
-    return {
-      mutation: 'enqueuePullRequest',
-      query:
-        'mutation($id: ID!, $sha: GitObjectID!) { enqueuePullRequest(input: { pullRequestId: $id, expectedHeadOid: $sha }) { clientMutationId } }',
-    };
-  }
-  return {
-    mutation: 'enablePullRequestAutoMerge',
-    query:
-      'mutation($id: ID!, $sha: GitObjectID!) { enablePullRequestAutoMerge(input: { pullRequestId: $id, mergeMethod: SQUASH, expectedHeadOid: $sha }) { clientMutationId } }',
-  };
+export function mergeMutation(mergeableState, queueEnabled) {
+  const now = mergeableState === 'clean';
+  const mutation = now
+    ? queueEnabled
+      ? 'enqueuePullRequest'
+      : 'mergePullRequest'
+    : 'enablePullRequestAutoMerge';
+  return { mutation, query: mutations[mutation], now };
 }
 
 async function github(path, token, init = {}) {
@@ -123,12 +129,36 @@ if (import.meta.main) {
     process.exit(1);
   }
   // Auto-merge first, so a refusal leaves no comment that promises a merge.
-  const now = pull.mergeable_state === 'clean';
-  const { mutation, query } = mergeMutation(pull.mergeable_state);
-  const { errors } = await github('graphql', token, {
+  const { data } = await github('graphql', token, {
     method: 'POST',
-    body: JSON.stringify({ query, variables: { id: pull.node_id, sha: pull.head.sha } }),
+    body: JSON.stringify({
+      query: 'query($id: ID!) { node(id: $id) { ... on PullRequest { isMergeQueueEnabled } } }',
+      variables: { id: pull.node_id },
+    }),
   });
+  const queueEnabled = data?.node?.isMergeQueueEnabled === true;
+  const mutate = (name) =>
+    github('graphql', token, {
+      method: 'POST',
+      body: JSON.stringify({
+        query: mutations[name],
+        variables: { id: pull.node_id, sha: pull.head.sha },
+      }),
+    });
+  let { mutation, now } = mergeMutation(pull.mergeable_state, queueEnabled);
+  let { errors } = await mutate(mutation);
+  // A pull request GitHub reports as blocked while it can enter the queue is refused auto-merge
+  // with "clean status"; the queue takes it.
+  if (
+    errors &&
+    queueEnabled &&
+    !now &&
+    errors.some(({ message }) => /clean status/i.test(message))
+  ) {
+    mutation = 'enqueuePullRequest';
+    now = true;
+    ({ errors } = await mutate(mutation));
+  }
   if (errors) {
     console.error(`GitHub refused ${mutation}: ${errors.map(({ message }) => message).join('; ')}`);
     process.exit(1);
@@ -147,7 +177,9 @@ if (import.meta.main) {
   }
   console.log(
     now
-      ? `#${pullNumber} is in the merge queue. GitHub builds it on the latest main, checks it and squash-merges it. You are done.`
+      ? queueEnabled
+        ? `#${pullNumber} is in the merge queue. GitHub builds it on the latest main, checks it and squash-merges it. You are done.`
+        : `#${pullNumber} is squash-merged.`
       : plan.reviewer
         ? `Auto-merge is on for #${pullNumber}, and ${plan.reviewer} is asked to review. It joins the merge queue once the maintainer approves and every required check passes. You are done.`
         : `Auto-merge is on for #${pullNumber}. It joins the merge queue once every required check passes, and GitHub squash-merges it from there. You are done.`,

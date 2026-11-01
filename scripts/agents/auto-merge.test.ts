@@ -91,21 +91,31 @@ describe('ADR0086 one step after the pull request opens', () => {
     expect(plan.comment).toContain('declares a high blast radius');
   });
 
-  it('ADR0093 a clean pull request goes into the merge queue, and any other one gets auto-merge, which enqueues it when ready', () => {
-    expect(mergeMutation('clean')).toEqual({
+  it('ADR0093 a clean pull request goes into the merge queue where the base has one, is squash-merged where it has none yet, and any other one gets auto-merge, which enqueues it when ready', () => {
+    expect(mergeMutation('clean', true)).toEqual({
       mutation: 'enqueuePullRequest',
+      now: true,
       query: expect.stringContaining(
         'enqueuePullRequest(input: { pullRequestId: $id, expectedHeadOid: $sha })',
       ),
     });
+    expect(mergeMutation('clean', false)).toEqual({
+      mutation: 'mergePullRequest',
+      now: true,
+      query: expect.stringContaining(
+        'mergePullRequest(input: { pullRequestId: $id, mergeMethod: SQUASH, expectedHeadOid: $sha })',
+      ),
+    });
     for (const state of ['blocked', 'behind', 'unstable', 'unknown', 'dirty']) {
-      expect(mergeMutation(state)).toEqual({
-        mutation: 'enablePullRequestAutoMerge',
-        query: expect.stringContaining(
-          'enablePullRequestAutoMerge(input: { pullRequestId: $id, mergeMethod: SQUASH, expectedHeadOid: $sha })',
-        ),
-      });
+      for (const queue of [true, false]) {
+        expect(mergeMutation(state, queue)).toEqual({
+          mutation: 'enablePullRequestAutoMerge',
+          now: false,
+          query: expect.stringContaining(
+            'enablePullRequestAutoMerge(input: { pullRequestId: $id, mergeMethod: SQUASH, expectedHeadOid: $sha })',
+          ),
+        });
+      }
     }
-    expect(mergeMutation('clean').query).not.toContain('mergePullRequest');
   });
 });

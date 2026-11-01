@@ -275,11 +275,7 @@ describe('CI / cla', () => {
       'commits-renovate.json',
       'signed-on-main.json',
     );
-    const pull = {
-      ...JSON.parse(fixture('pull-renovate.json')),
-      user: agent,
-      commits: commits.length,
-    };
+    const pull = { ...JSON.parse(fixture('pull-renovate.json')), user: agent, commits: commits.length };
     routes[`repos/${repository}/pulls/702`] = JSON.stringify(pull);
     routes[`repos/${repository}/pulls/702/commits?per_page=100&page=1`] = JSON.stringify(commits);
 

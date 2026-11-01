@@ -27,7 +27,7 @@ All jobs read the repository (`contents: read`) and nothing more, with these exc
 | `release image` | `release.yml` | `contents: write`, `packages: write` | Pushes the image to ghcr.io with the job's token and writes the `.env` line into the release notes ([ADR 0080](../adr/0080-upgrade-paths-with-upgrade-stops-a-rehearsal-on-a-restored-copy-and-an-upgrade-matrix-in-ci.md)) |
 | `release attestations` | `release.yml` | `contents: write`, `packages: write`, `id-token: write`, `attestations: write` | Attests the image's build provenance and its SBOM, pushes both attestations to ghcr.io and attaches the SBOM and the bundles to the release. It checks out nothing and installs nothing ([ADR 0050](../adr/0050-github-organization-rulesets-ci-runners-and-supply-chain.md)) |
 | `Scorecard analysis` | `scorecard.yml` | `contents: read`, `security-events: write`, `id-token: write` | Uploads the findings to code scanning and publishes the score to the OpenSSF API |
-| `codeql` | `codeql.yml` | `contents: read`, `actions: read`, `security-events: write` | Runs CodeQL on `actions` and `javascript-typescript` with no build and uploads the analysis to code scanning; the actions language reads the workflow runs it analyzes (ADR 0093) |
+| `codeql` | `codeql.yml` | `contents: read`, `security-events: write` | Runs CodeQL on `actions` and `javascript-typescript` with no build from the checkout and uploads the analysis to code scanning (ADR 0093) |
 
 ### OIDC
 

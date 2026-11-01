@@ -11,11 +11,15 @@ import { errorAnnotation } from './annotation.mjs';
 import { eventPullNumber } from './pull-request.mjs';
 
 /**
- * The fields the pull request checks read, from GitHub's view of the pull request.
+ * The fields the pull request checks read, from GitHub's view of the pull request. The base commit
+ * is the one the run's checkout is built on: in a merge group that is the group's parent commit on
+ * the latest main, not the base the pull request recorded when it was opened, so a diff against it
+ * holds the pull request's change alone.
  * @param {{ number: number, title: string, body: string | null, user: { login: string }, head: { ref: string, repo: { fork: boolean } | null }, base: { sha: string } }} pull
+ * @param {{ mergeGroupBaseSha?: string }} event
  * @returns {Record<string, string>}
  */
-export function pullRequestOutputs(pull) {
+export function pullRequestOutputs(pull, { mergeGroupBaseSha } = {}) {
   return {
     number: String(pull.number),
     title: pull.title,
@@ -24,7 +28,7 @@ export function pullRequestOutputs(pull) {
     head_ref: pull.head.ref,
     // A deleted fork leaves no repository; a pull request without one is treated as from a fork.
     from_fork: String(pull.head.repo?.fork ?? true),
-    base_sha: pull.base.sha,
+    base_sha: mergeGroupBaseSha || pull.base.sha,
   };
 }
 
@@ -46,9 +50,16 @@ export function outputLines(outputs, delimiter = () => randomBytes(16).toString(
 
 /**
  * Reads the pull request through GitHub's REST API.
- * @param {{ fetch: typeof fetch, apiUrl: string, repository: string, token: string, pullNumber: number }} options
+ * @param {{ fetch: typeof fetch, apiUrl: string, repository: string, token: string, pullNumber: number, mergeGroupBaseSha?: string }} options
  */
-export async function readPullRequest({ fetch, apiUrl, repository, token, pullNumber }) {
+export async function readPullRequest({
+  fetch,
+  apiUrl,
+  repository,
+  token,
+  pullNumber,
+  mergeGroupBaseSha,
+}) {
   const response = await fetch(`${apiUrl}/repos/${repository}/pulls/${pullNumber}`, {
     headers: {
       accept: 'application/vnd.github+json',
@@ -61,7 +72,7 @@ export async function readPullRequest({ fetch, apiUrl, repository, token, pullNu
       `GitHub answered ${response.status} to GET /repos/${repository}/pulls/${pullNumber}`,
     );
   }
-  return pullRequestOutputs(await response.json());
+  return pullRequestOutputs(await response.json(), { mergeGroupBaseSha });
 }
 
 // The job passes the event's values through the environment, never inside the run script. Any
@@ -81,6 +92,7 @@ if (import.meta.main) {
       repository: process.env.GITHUB_REPOSITORY ?? '',
       token: process.env.GITHUB_TOKEN ?? '',
       pullNumber,
+      mergeGroupBaseSha: process.env.MERGE_GROUP_BASE_SHA,
     });
     if (process.env.GITHUB_OUTPUT) {
       appendFileSync(process.env.GITHUB_OUTPUT, outputLines(outputs));

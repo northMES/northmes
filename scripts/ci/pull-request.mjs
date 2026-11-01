@@ -118,7 +118,7 @@ export function parseNameStatus(output) {
 
 // The branch the merge queue builds a pull request on: gh-readonly-queue/<base>/pr-<number>-<base
 // sha>, as `refs/heads/...` in a merge_group event's head_ref.
-const queueRef = /(?:^|\/)gh-readonly-queue\/[^/]+\/pr-([1-9]\d*)-[0-9a-f]+$/;
+const queueRef = /(?:^|\/)gh-readonly-queue\/.+\/pr-([1-9]\d*)-[0-9a-f]+$/;
 
 /**
  * The number of the pull request a merge queue branch builds, or undefined for any other ref.

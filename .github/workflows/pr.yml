@@ -36,8 +36,10 @@ permissions:
 
 jobs:
   # The pull request the run is about, from its number on a pull_request event or from the queue
-  # branch on a merge_group event, read through the API. The script runs from the checkout, as the
-  # checks do: GitHub runs a pull request's own copy of this workflow either way.
+  # branch on a merge_group event, read through the API; in a merge group the base output is the
+  # group's parent commit, which the checkout is built on, so openapi diff compares the pull
+  # request's change alone. The script runs from the checkout, as the checks do: GitHub runs a pull
+  # request's own copy of this workflow either way.
   pull-request:
     name: pull request
     permissions:
@@ -65,6 +67,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           MERGE_GROUP_HEAD_REF: ${{ github.event.merge_group.head_ref }}
+          MERGE_GROUP_BASE_SHA: ${{ github.event.merge_group.base_sha }}
 
   pr-title:
     name: pr title

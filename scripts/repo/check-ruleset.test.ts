@@ -66,7 +66,7 @@ const mergeQueue = {
   },
 };
 
-function ruleset(checks: Check[], queue: object | null = mergeQueue) {
+function ruleset(checks: Check[], queue: object | null = mergeQueue, strict = false) {
   return {
     id: 24515911,
     name: 'main',
@@ -78,7 +78,7 @@ function ruleset(checks: Check[], queue: object | null = mergeQueue) {
       {
         type: 'required_status_checks',
         parameters: {
-          strict_required_status_checks_policy: false,
+          strict_required_status_checks_policy: strict,
           required_status_checks: checks,
         },
       },
@@ -181,6 +181,14 @@ describe('check-ruleset', () => {
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain('merge_queue');
     expect(problems[0]).toContain('latest main');
+  });
+
+  it('ADR0093 a ruleset that keeps the strict policy next to the queue fails naming it', () => {
+    const problems = checkRuleset(ruleset(matching, mergeQueue, true), workflows);
+
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('strict_required_status_checks_policy');
+    expect(problems[0]).toContain('merge queue');
   });
 
   it('ADR0093 a merge queue that does not squash fails naming its method', () => {
