@@ -2037,6 +2037,11 @@ type Query {
     orderBy: [UserOrderBy!]
 
     """
+    Only the users who hold a role at this place: the company, or a plant, where a company role counts too. A place outside the request's read answers no users.
+    """
+    placeId: ID
+
+    """
     Only the users who hold this role of the company, at any of its places.
     """
     roleId: ID
@@ -2285,6 +2290,22 @@ type Viewer {
   """
   plantPermissions: [String!]!
 
+  """
+  What the user holds at each plant the request reads: the request's plant, or without a plant every plant of the company.
+  """
+  plants: [ViewerPlant!]!
+
   """The signed-in user's id."""
   userId: ID!
+}
+
+"""What the signed-in user holds at one plant."""
+type ViewerPlant {
+  """
+  The permission keys the user holds at the plant, from roles there or at its company, sorted.
+  """
+  permissions: [String!]!
+
+  """The plant's scope id."""
+  plantId: ID!
 }
