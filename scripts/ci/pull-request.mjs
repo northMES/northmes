@@ -84,6 +84,16 @@ export function section(body, heading) {
 }
 
 /**
+ * The paths a change touches: a moved file counts under its new path and its old one, as GitHub's
+ * file list does with previous_filename.
+ * @param {readonly { path: string, from?: string }[]} changes
+ * @returns {string[]}
+ */
+export function changedPaths(changes) {
+  return changes.flatMap(({ path, from }) => (from === undefined ? [path] : [path, from]));
+}
+
+/**
  * The changes of `git diff -z --name-status -M`: NUL-separated fields, the status and then the
  * path, or for a rename or copy the old path and then the new one. A moved file counts under its
  * new path, with the old one as `from` for a check that reads where it came from. -z keeps every
