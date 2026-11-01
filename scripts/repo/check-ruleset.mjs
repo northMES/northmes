@@ -74,10 +74,19 @@ export function checkRuleset(ruleset, workflows) {
     problems.push(
       'The ruleset has no merge_queue rule, so a pull request merges without being built on the latest main.',
     );
-  } else if (queue.parameters?.merge_method !== 'SQUASH') {
-    problems.push(
-      `the merge queue merges with ${queue.parameters?.merge_method ?? 'no method'}, not SQUASH.`,
-    );
+  } else {
+    if (queue.parameters?.merge_method !== 'SQUASH') {
+      problems.push(
+        `the merge queue merges with ${queue.parameters?.merge_method ?? 'no method'}, not SQUASH.`,
+      );
+    }
+    // HEADGREEN merges a whole group once its last entry passes, an entry whose own checks failed
+    // included; ALLGREEN merges only entries whose checks passed (ADR 0093 rule 1).
+    if (queue.parameters?.grouping_strategy !== 'ALLGREEN') {
+      problems.push(
+        `the merge queue groups with ${queue.parameters?.grouping_strategy ?? 'no strategy'}, not ALLGREEN, so an entry whose checks failed can merge with a group that passed.`,
+      );
+    }
   }
 
   const rules = (ruleset.rules ?? []).filter(({ type }) => type === 'required_status_checks');

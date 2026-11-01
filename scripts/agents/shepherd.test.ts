@@ -49,9 +49,20 @@ describe('#978 the shepherd names what each open pull request waits on', () => {
     const dropped = { ...merging, leftQueue: { reason: 'CI_FAILURE' } };
 
     expect(triage(dropped)).toEqual([
-      'left the merge queue (CI_FAILURE): its checks failed on the queue commit, not on the head; find the run with gh run list --event merge_group --json headBranch,databaseId,conclusion and its branch gh-readonly-queue/main/pr-973-<sha>, read its log by the rule of CLAUDE.md, then run pnpm agent:auto-merge 973 once more',
+      'left the merge queue (CI_FAILURE): its checks failed on the queue commit, not on the head; find the run with gh run list --event merge_group --limit 100 --json headBranch,databaseId,conclusion and its branch gh-readonly-queue/main/pr-973-<sha>, read its log by the rule of CLAUDE.md, then run pnpm agent:auto-merge 973 once more',
     ]);
     expect(triage({ ...dropped, autoMerge: false })).toEqual(triage(dropped));
+    expect(triage({ ...dropped, leftQueue: { reason: 'CI_TIMEOUT' } })[0]).toContain(
+      'left the merge queue (CI_TIMEOUT): its checks failed',
+    );
+  });
+
+  it("ADR0093 a pull request a person or the queue took out for another reason is the maintainer's, not re-queued", () => {
+    for (const reason of ['DEQUEUED', 'MERGE_CONFLICT', 'QUEUE_CLEARED', 'no reason given']) {
+      expect(triage({ ...merging, leftQueue: { reason }, autoMerge: false })).toEqual([
+        `left the merge queue (${reason}): not for a failed check, so a person or the queue took it out; the maintainer decides whether it goes back`,
+      ]);
+    }
   });
 
   it("ADR0093 a pull request in the merge queue is GitHub's, whatever else it shows", () => {

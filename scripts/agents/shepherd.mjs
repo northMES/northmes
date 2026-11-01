@@ -22,6 +22,11 @@ const failed = new Set([
   'ERROR',
 ]);
 
+// The reasons the merge queue drops an entry for its checks: a failed check and a check that did
+// not report in time. Every other reason (a person took it out, a conflict, the queue cleared) is
+// not the shepherd's to undo.
+const checkRemovals = new Set(['CI_FAILURE', 'CI_TIMEOUT']);
+
 // The Risk gate, which stays red on a high pull request until the maintainer approves its head
 // (ADR 0086), and Argos, which is not a required check and waits for a person in Argos (ADR 0077).
 const riskGate = 'risk gate';
@@ -124,7 +129,9 @@ export function triage(pull) {
   }
   if (pull.leftQueue !== undefined) {
     needs.push(
-      `left the merge queue (${pull.leftQueue.reason}): its checks failed on the queue commit, not on the head; find the run with gh run list --event merge_group --json headBranch,databaseId,conclusion and its branch gh-readonly-queue/main/pr-${pull.number}-<sha>, read its log by the rule of CLAUDE.md, then run pnpm agent:auto-merge ${pull.number} once more`,
+      checkRemovals.has(pull.leftQueue.reason)
+        ? `left the merge queue (${pull.leftQueue.reason}): its checks failed on the queue commit, not on the head; find the run with gh run list --event merge_group --limit 100 --json headBranch,databaseId,conclusion and its branch gh-readonly-queue/main/pr-${pull.number}-<sha>, read its log by the rule of CLAUDE.md, then run pnpm agent:auto-merge ${pull.number} once more`
+        : `left the merge queue (${pull.leftQueue.reason}): not for a failed check, so a person or the queue took it out; the maintainer decides whether it goes back`,
     );
   } else if (!pull.autoMerge) {
     needs.push(`auto-merge is off: run pnpm agent:auto-merge ${pull.number}`);

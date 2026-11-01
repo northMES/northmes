@@ -191,6 +191,20 @@ describe('check-ruleset', () => {
     expect(problems[0]).toContain('merge queue');
   });
 
+  it('ADR0093 a merge queue that merges a group on its last entry alone fails naming ALLGREEN', () => {
+    const problems = checkRuleset(
+      ruleset(matching, {
+        ...mergeQueue,
+        parameters: { ...mergeQueue.parameters, grouping_strategy: 'HEADGREEN' },
+      }),
+      workflows,
+    );
+
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('HEADGREEN');
+    expect(problems[0]).toContain('ALLGREEN');
+  });
+
   it('ADR0093 a merge queue that does not squash fails naming its method', () => {
     const problems = checkRuleset(
       ruleset(matching, {
