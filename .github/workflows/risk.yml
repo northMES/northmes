@@ -5,7 +5,9 @@
 # downloads the check and .github/risk-paths from the default branch and runs them without a
 # checkout, as CI / cla does, so a pull request cannot change the script or the paths that judge it.
 # GitHub runs a pull request's own copy of this file, though, so the file itself is protected only
-# by being a risk path: a change to .github/ needs the maintainer's approval.
+# by being a risk path: a change to .github/ needs the maintainer's approval. The merge queue asks
+# for the gate on the commit it builds for a pull request (ADR 0092); that event carries no pull
+# request, so the gate finds it in the queue branch's name.
 name: Risk
 
 on:
@@ -13,11 +15,14 @@ on:
     types: [opened, synchronize, reopened, edited]
   pull_request_review:
     types: [submitted, dismissed]
+  merge_group:
+    types: [checks_requested]
 
-# One run at a time per pull request; the latest event wins, so a stale label does not stay.
+# One run at a time per pull request; the latest event wins, so a stale label does not stay. A
+# merge group run is in a group of its own.
 concurrency:
-  group: risk-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: risk-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name != 'merge_group' }}
 
 permissions:
   contents: read
@@ -59,13 +64,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          MERGE_GROUP_HEAD_REF: ${{ github.event.merge_group.head_ref }}
 
   # Only this job holds the write token. A pull request from a fork gets a read-only token, and a
-  # label that does not exist yet fails gh pr edit, so the step warns instead of failing.
+  # label that does not exist yet fails gh pr edit, so the step warns instead of failing. A merge
+  # group run has no pull request number in its event, and the pull request's own runs labelled it.
   risk-label:
     name: risk label
     needs: risk-gate
-    if: always() && needs.risk-gate.outputs.tier != ''
+    if: always() && needs.risk-gate.outputs.tier != '' && github.event_name != 'merge_group'
     permissions:
       contents: read
       pull-requests: write

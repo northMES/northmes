@@ -10,6 +10,7 @@ const merging = {
   number: 973,
   isDraft: false,
   mergeStateStatus: 'CLEAN',
+  inMergeQueue: false,
   autoMerge: true,
   tier: 'low' as const,
   headSha: head,
@@ -39,10 +40,20 @@ describe('#978 the shepherd names what each open pull request waits on', () => {
     ]);
   });
 
-  it('#978 a branch behind main needs a rebase', () => {
-    expect(triage({ ...merging, mergeStateStatus: 'BEHIND' })).toEqual([
-      'behind main: rebase onto origin/main in the shepherd worktree and push',
-    ]);
+  it('ADR0092 a branch that is only behind main needs no rebase: the merge queue builds it on main', () => {
+    expect(triage({ ...merging, mergeStateStatus: 'BEHIND' })).toEqual(['merging: nothing to do']);
+  });
+
+  it('ADR0092 a pull request in the merge queue is GitHub\'s, whatever else it shows', () => {
+    expect(
+      triage({
+        ...merging,
+        inMergeQueue: true,
+        mergeStateStatus: 'BLOCKED',
+        autoMerge: false,
+        checks: [{ name: 'e2e', conclusion: 'FAILURE' }],
+      }),
+    ).toEqual(['in the merge queue: GitHub builds it on main and merges it']);
   });
 
   it('#978 each check that failed, timed out, was cancelled or errored is named with its conclusion', () => {
@@ -246,6 +257,7 @@ describe('#978 fromGraph shapes a pull request of the query as triage reads it',
     title: 'feat(core): machines',
     isDraft: false,
     mergeStateStatus: 'BEHIND',
+    isInMergeQueue: false,
     headRefOid: head,
     autoMergeRequest: { enabledAt: '2026-11-01T09:00:00Z' },
     labels: { nodes: [{ name: 'risk:high' }, { name: 'core' }] },
@@ -299,6 +311,7 @@ describe('#978 fromGraph shapes a pull request of the query as triage reads it',
       title: 'feat(core): machines',
       isDraft: false,
       mergeStateStatus: 'BEHIND',
+      inMergeQueue: false,
       autoMerge: true,
       tier: 'high',
       headSha: head,

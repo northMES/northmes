@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { checkRuleset } from './check-ruleset.mjs';
 
 const actions = 15368;
-const codeql = 57789;
 
 function jobs(...names: string[]) {
   return Object.fromEntries(names.map((name) => [name.replaceAll(' ', '-'), { name }]));
@@ -18,6 +17,7 @@ const workflows = [
   {
     file: 'pr.yml',
     jobs: jobs(
+      'pull request',
       'pr title',
       'linked issue',
       'pr security',
@@ -29,6 +29,7 @@ const workflows = [
   },
   { file: 'risk.yml', jobs: jobs('risk gate', 'risk label') },
   { file: 'supply-chain.yml', jobs: jobs('license gate', 'dependency audit') },
+  { file: 'codeql.yml', jobs: jobs('codeql') },
 ];
 
 const requiredNames = [
@@ -47,11 +48,25 @@ const requiredNames = [
   'risk gate',
   'license gate',
   'dependency audit',
+  'codeql',
 ];
 
 type Check = { context: string; integration_id?: number };
 
-function ruleset(checks: Check[], strict = true) {
+const mergeQueue = {
+  type: 'merge_queue',
+  parameters: {
+    merge_method: 'SQUASH',
+    grouping_strategy: 'ALLGREEN',
+    max_entries_to_build: 5,
+    max_entries_to_merge: 5,
+    min_entries_to_merge: 1,
+    min_entries_to_merge_wait_minutes: 5,
+    check_response_timeout_minutes: 60,
+  },
+};
+
+function ruleset(checks: Check[], queue: object | null = mergeQueue) {
   return {
     id: 24515911,
     name: 'main',
@@ -59,10 +74,11 @@ function ruleset(checks: Check[], strict = true) {
     conditions: { ref_name: { include: ['~DEFAULT_BRANCH'], exclude: [] } },
     rules: [
       { type: 'deletion' },
+      ...(queue === null ? [] : [queue]),
       {
         type: 'required_status_checks',
         parameters: {
-          strict_required_status_checks_policy: strict,
+          strict_required_status_checks_policy: false,
           required_status_checks: checks,
         },
       },
@@ -70,10 +86,7 @@ function ruleset(checks: Check[], strict = true) {
   };
 }
 
-const matching: Check[] = [
-  ...requiredNames.map((context) => ({ context, integration_id: actions })),
-  { context: 'CodeQL', integration_id: codeql },
-];
+const matching: Check[] = requiredNames.map((context) => ({ context, integration_id: actions }));
 
 describe('check-ruleset', () => {
   it('a ruleset that requires every job of the workflows from its app passes', () => {
@@ -124,26 +137,27 @@ describe('check-ruleset', () => {
     expect(problems[1]).toContain('any app');
   });
 
-  it('CodeQL comes from the code scanning app, not from GitHub Actions', () => {
+  it('ADR0092 CodeQL is the job codeql of codeql.yml, from GitHub Actions, and the check of code scanning\'s default setup is stale', () => {
     const problems = checkRuleset(
       ruleset(
         matching.map((check) =>
-          check.context === 'CodeQL' ? { context: 'CodeQL', integration_id: actions } : check,
+          check.context === 'codeql' ? { context: 'CodeQL', integration_id: 57789 } : check,
         ),
       ),
       workflows,
     );
 
-    expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('"CodeQL"');
-    expect(problems[0]).toContain(String(codeql));
+    expect(problems).toHaveLength(2);
+    expect(problems[0]).toContain('"codeql"');
+    expect(problems[0]).toContain('codeql.yml');
+    expect(problems[1]).toMatch(/stale/);
+    expect(problems[1]).toContain('"CodeQL"');
   });
 
-  it('cla, e2e, openapi diff and risk label may be required or not', () => {
-    const optional = ['cla', 'e2e', 'openapi diff', 'risk label'].map((context) => ({
-      context,
-      integration_id: actions,
-    }));
+  it('cla, e2e, openapi diff, risk label and pull request may be required or not', () => {
+    const optional = ['cla', 'e2e', 'openapi diff', 'risk label', 'pull request'].map(
+      (context) => ({ context, integration_id: actions }),
+    );
 
     expect(checkRuleset(ruleset([...matching, ...optional]), workflows)).toEqual([]);
   });
@@ -161,11 +175,23 @@ describe('check-ruleset', () => {
     expect(problems[0]).toContain('"docs"');
   });
 
-  it('a ruleset whose checks are not strict fails naming strict_required_status_checks_policy', () => {
-    const problems = checkRuleset(ruleset(matching, false), workflows);
+  it('ADR0092 a ruleset without a merge_queue rule fails naming it, and the strict policy is not asked for', () => {
+    const problems = checkRuleset(ruleset(matching, null), workflows);
 
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('strict_required_status_checks_policy');
+    expect(problems[0]).toContain('merge_queue');
+    expect(problems[0]).toContain('latest main');
+  });
+
+  it('ADR0092 a merge queue that does not squash fails naming its method', () => {
+    const problems = checkRuleset(
+      ruleset(matching, { ...mergeQueue, parameters: { ...mergeQueue.parameters, merge_method: 'MERGE' } }),
+      workflows,
+    );
+
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('MERGE');
+    expect(problems[0]).toContain('SQUASH');
   });
 
   it('a ruleset that is not active fails naming its enforcement', () => {
@@ -203,7 +229,7 @@ describe('check-ruleset', () => {
   });
 
   it('a ruleset without a required_status_checks rule fails', () => {
-    const problems = checkRuleset({ ...ruleset(matching), rules: [] }, workflows);
+    const problems = checkRuleset({ ...ruleset(matching), rules: [mergeQueue] }, workflows);
 
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain('required_status_checks');

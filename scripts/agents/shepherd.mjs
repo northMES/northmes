@@ -28,8 +28,9 @@ const riskGate = 'risk gate';
 const argos = 'argos';
 
 /**
- * What one pull request waits on, in the order the shepherd acts: a draft is left alone; a conflict
- * or a branch behind main needs a rebase; a failed check needs its log read; CodeRabbit's threads
+ * What one pull request waits on, in the order the shepherd acts: a draft is left alone; one in the
+ * merge queue is GitHub's; a conflict needs a rebase, and a branch that is only behind main
+ * nothing, since the queue builds it on main (ADR 0092); a failed check needs its log read; CodeRabbit's threads
  * need answers; a person's thread is theirs; a high pull request without the maintainer's approval
  * of its head waits for the maintainer, asked once per head (a request made since the head was
  * committed counts, also after a comment cleared it), or for its author once the maintainer asked
@@ -39,6 +40,7 @@ const argos = 'argos';
  *   number: number,
  *   isDraft: boolean,
  *   mergeStateStatus: string,
+ *   inMergeQueue: boolean,
  *   autoMerge: boolean,
  *   tier: 'low' | 'high' | undefined,
  *   headSha: string,
@@ -52,14 +54,13 @@ const argos = 'argos';
  */
 export function triage(pull) {
   if (pull.isDraft) return ['draft: leave it to its session'];
+  if (pull.inMergeQueue) return ['in the merge queue: GitHub builds it on main and merges it'];
   const needs = [];
   const sha = pull.headSha.slice(0, 8);
   if (pull.mergeStateStatus === 'DIRTY') {
     needs.push(
       'conflict with main: rebase onto origin/main in the shepherd worktree, rebuild generated files with their command, and push',
     );
-  } else if (pull.mergeStateStatus === 'BEHIND') {
-    needs.push('behind main: rebase onto origin/main in the shepherd worktree and push');
   }
   const approved = maintainerApproved(pull.reviews, pull.headSha);
   const latest = latestMaintainerReview(pull.reviews);
@@ -146,7 +147,7 @@ const query = `query($search: String!) {
   search(query: $search, type: ISSUE, first: 100) {
     nodes {
       ... on PullRequest {
-        number title isDraft mergeStateStatus headRefOid
+        number title isDraft mergeStateStatus isInMergeQueue headRefOid
         autoMergeRequest { enabledAt }
         labels(first: 20) { nodes { name } }
         reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { databaseId } } } }
@@ -175,6 +176,7 @@ export function fromGraph(node) {
     title: node.title,
     isDraft: node.isDraft,
     mergeStateStatus: node.mergeStateStatus,
+    inMergeQueue: node.isInMergeQueue === true,
     autoMerge: node.autoMergeRequest !== null,
     tier: labels.includes('risk:high') ? 'high' : labels.includes('risk:low') ? 'low' : undefined,
     headSha: node.headRefOid,

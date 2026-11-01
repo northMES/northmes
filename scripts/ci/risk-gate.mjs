@@ -7,7 +7,7 @@
 import { appendFileSync } from 'node:fs';
 import { errorAnnotation } from './annotation.mjs';
 import { entryLines, pathMatcher } from './path-patterns.mjs';
-import { isBreakingTitle, section } from './pull-request.mjs';
+import { eventPullNumber, isBreakingTitle, section } from './pull-request.mjs';
 
 // ADR 0051 rule 18: only these validation impacts leave the pull request low. Records, security,
 // calculation, data migration, and any value the gate cannot read, need a person to judge whether
@@ -206,17 +206,25 @@ export function summary({ tier, reasons, ok }) {
   return `${lines.join('\n')}\n`;
 }
 
-// The job passes the pull request number through the environment, never inside the run script. The
-// workflow downloads this file and the ones it imports from the default branch. Any error fails the
-// job with its message, so a gate that cannot judge a pull request never passes it.
+// The job passes the pull request number, or on a merge_group event the queue branch that names
+// it (ADR 0092), through the environment, never inside the run script. The workflow downloads this
+// file and the ones it imports from the default branch. Any error fails the job with its message,
+// so a gate that cannot judge a pull request never passes it.
 if (import.meta.main) {
   try {
+    const pullNumber = eventPullNumber({
+      number: process.env.PR_NUMBER,
+      queueRef: process.env.MERGE_GROUP_HEAD_REF,
+    });
+    if (pullNumber === undefined) {
+      throw new Error('neither PR_NUMBER nor MERGE_GROUP_HEAD_REF names a pull request');
+    }
     const result = await checkRisk({
       fetch,
       apiUrl: process.env.GITHUB_API_URL ?? 'https://api.github.com',
       repository: process.env.GITHUB_REPOSITORY ?? '',
       token: process.env.GITHUB_TOKEN ?? '',
-      pullNumber: Number(process.env.PR_NUMBER),
+      pullNumber,
     });
     if (process.env.GITHUB_OUTPUT) {
       appendFileSync(process.env.GITHUB_OUTPUT, `tier=${result.tier}\n`);

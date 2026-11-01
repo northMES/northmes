@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-// The one step a session takes once its pull request is open (ADR 0086 rule 5):
-// `pnpm agent:auto-merge <number>`. It turns on auto-merge, and GitHub squash-merges the pull
-// request once every required check passes; one whose checks have all passed already, which GitHub
-// does not take auto-merge for, is squash-merged at once. For a high pull request it also asks the
-// maintainer to review, posts a comment with the reasons and the Blast radius section so the maintainer sees
-// what worries the session, and asks CodeRabbit to review. Risk / risk gate stays failed until the maintainer
-// approves the head commit, so the pull request then merges by itself. The script refuses a pull
-// request that northmes-agent did not open. It guards against a session's mistake, not an injected
-// one: GitHub's required risk gate and code owner review are the controls that hold.
+// The one step a session takes once its pull request is open (ADR 0086 rule 5, ADR 0092):
+// `pnpm agent:auto-merge <number>`. It turns on auto-merge, and GitHub adds the pull request to the
+// merge queue once every required check passes, where it is built on the latest main, checked
+// again and squash-merged; one whose checks have all passed already, which GitHub does not take
+// auto-merge for, is added to the queue at once. For a high pull request it also asks the
+// maintainer to review, posts a comment with the reasons and the Blast radius section so the
+// maintainer sees what worries the session, and asks CodeRabbit to review. Risk / risk gate stays
+// failed until the maintainer approves the head commit, so the pull request then merges by itself.
+// The script refuses a pull request that northmes-agent did not open. It guards against a session's
+// mistake, not an injected one: GitHub's required risk gate and code owner review are the controls
+// that hold.
 
 import { section } from '../ci/pull-request.mjs';
 import { agent, checkRisk } from '../ci/risk-gate.mjs';
@@ -45,6 +47,28 @@ export function shipPlan({ authorId, risk, body, alreadyAsked = false, baseRef }
     ...(blastRadius ? ['', 'What the blast-radius review found:', '', blastRadius] : []),
   ].join('\n');
   return { autoMerge: true, reviewer: maintainerLogin, comment };
+}
+
+// GitHub takes auto-merge only for a pull request that cannot merge yet, so a clean one, whose
+// required checks (the risk gate included) have all passed, goes straight into the merge queue,
+// through the same call GitHub's own Merge when ready button makes.
+/**
+ * @param {string} mergeableState GitHub's mergeable_state of the pull request
+ * @returns {{ mutation: 'enqueuePullRequest' | 'enablePullRequestAutoMerge', query: string }}
+ */
+export function mergeMutation(mergeableState) {
+  if (mergeableState === 'clean') {
+    return {
+      mutation: 'enqueuePullRequest',
+      query:
+        'mutation($id: ID!, $sha: GitObjectID!) { enqueuePullRequest(input: { pullRequestId: $id, expectedHeadOid: $sha }) { clientMutationId } }',
+    };
+  }
+  return {
+    mutation: 'enablePullRequestAutoMerge',
+    query:
+      'mutation($id: ID!, $sha: GitObjectID!) { enablePullRequestAutoMerge(input: { pullRequestId: $id, mergeMethod: SQUASH, expectedHeadOid: $sha }) { clientMutationId } }',
+  };
 }
 
 async function github(path, token, init = {}) {
@@ -95,17 +119,12 @@ if (import.meta.main) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
-  // Auto-merge first, so a refusal leaves no comment that promises a merge. GitHub takes auto-merge
-  // only for a pull request that cannot merge yet, so a clean one, whose required checks (the risk
-  // gate included) have all passed, is merged now through the same call GitHub would make.
+  // Auto-merge first, so a refusal leaves no comment that promises a merge.
   const now = pull.mergeable_state === 'clean';
-  const mutation = now ? 'mergePullRequest' : 'enablePullRequestAutoMerge';
+  const { mutation, query } = mergeMutation(pull.mergeable_state);
   const { errors } = await github('graphql', token, {
     method: 'POST',
-    body: JSON.stringify({
-      query: `mutation($id: ID!, $sha: GitObjectID!) { ${mutation}(input: { pullRequestId: $id, mergeMethod: SQUASH, expectedHeadOid: $sha }) { clientMutationId } }`,
-      variables: { id: pull.node_id, sha: pull.head.sha },
-    }),
+    body: JSON.stringify({ query, variables: { id: pull.node_id, sha: pull.head.sha } }),
   });
   if (errors) {
     console.error(`GitHub refused ${mutation}: ${errors.map(({ message }) => message).join('; ')}`);
@@ -125,9 +144,9 @@ if (import.meta.main) {
   }
   console.log(
     now
-      ? `#${pullNumber} is squash-merged.`
+      ? `#${pullNumber} is in the merge queue. GitHub builds it on the latest main, checks it and squash-merges it. You are done.`
       : plan.reviewer
-        ? `Auto-merge is on for #${pullNumber}, and ${plan.reviewer} is asked to review. It merges once the maintainer approves and every required check passes. You are done.`
-        : `Auto-merge is on for #${pullNumber}. GitHub squash-merges it once every required check passes. You are done.`,
+        ? `Auto-merge is on for #${pullNumber}, and ${plan.reviewer} is asked to review. It joins the merge queue once the maintainer approves and every required check passes. You are done.`
+        : `Auto-merge is on for #${pullNumber}. It joins the merge queue once every required check passes, and GitHub squash-merges it from there. You are done.`,
   );
 }

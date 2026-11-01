@@ -1,0 +1,42 @@
+# CodeQL as a workflow of its own (ADR 0092), in place of code scanning's default setup, which
+# reports on pushes and pull requests but not on the commits the merge queue builds, so a required
+# CodeQL check from it would hold every queue entry until the queue gave up. One job analyzes both
+# languages default setup analyzed, actions and javascript-typescript, with CodeQL's default
+# queries and no build, and uploads the results to code scanning. GitHub shows it as CodeQL /
+# codeql; the main ruleset requires it by that name from the GitHub Actions app, so a renamed job
+# needs a ruleset edit (ADR 0069). The weekly run keeps the alerts current against new queries.
+name: CodeQL
+
+on:
+  pull_request:
+  merge_group:
+    types: [checks_requested]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 4 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: codeql
+    # Uploading the analysis to code scanning writes security events; the actions language reads
+    # the workflow runs it analyzes.
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: actions, javascript-typescript
+          build-mode: none
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: /language:all

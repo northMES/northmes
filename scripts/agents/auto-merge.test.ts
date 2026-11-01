@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { describe, expect, it } from 'vitest';
-import { shipPlan } from './auto-merge.mjs';
+import { mergeMutation, shipPlan } from './auto-merge.mjs';
 
 const agent = 345317483; // northmes-agent
 const maintainer = 24939000; // Krister-Johansson
@@ -67,5 +67,21 @@ describe('ADR0086 one step after the pull request opens', () => {
 
     expect(plan.reviewer).toBe('Krister-Johansson');
     expect(plan.comment).toContain('declares a high blast radius');
+  });
+
+  it('ADR0092 a clean pull request goes into the merge queue, and any other one gets auto-merge, which enqueues it when ready', () => {
+    expect(mergeMutation('clean')).toEqual({
+      mutation: 'enqueuePullRequest',
+      query: expect.stringContaining('enqueuePullRequest(input: { pullRequestId: $id, expectedHeadOid: $sha })'),
+    });
+    for (const state of ['blocked', 'behind', 'unstable', 'unknown', 'dirty']) {
+      expect(mergeMutation(state)).toEqual({
+        mutation: 'enablePullRequestAutoMerge',
+        query: expect.stringContaining(
+          'enablePullRequestAutoMerge(input: { pullRequestId: $id, mergeMethod: SQUASH, expectedHeadOid: $sha })',
+        ),
+      });
+    }
+    expect(mergeMutation('clean').query).not.toContain('mergePullRequest');
   });
 });
