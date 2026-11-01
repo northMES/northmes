@@ -7,7 +7,7 @@
 </h1>
 
 [![CI](https://github.com/northMES/northmes/actions/workflows/ci.yml/badge.svg)](https://github.com/northMES/northmes/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/northMES/northmes/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/northMES/northmes/actions/workflows/github-code-scanning/codeql)
+[![CodeQL](https://github.com/northMES/northmes/actions/workflows/codeql.yml/badge.svg)](https://github.com/northMES/northmes/actions/workflows/codeql.yml)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/northMES/northmes/badge)](https://scorecard.dev/viewer/?uri=github.com/northMES/northmes)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15524/badge)](https://www.bestpractices.dev/projects/15524)
 [![License: AGPL-3.0-or-later](https://img.shields.io/badge/License-AGPL--3.0--or--later-blue.svg)](LICENSE)

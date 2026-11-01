@@ -279,8 +279,9 @@ describe('PR / pr tests script', () => {
   });
 
   it('fails a pull request that deletes a test without a Removed tests section', () => {
-    const repository = repositoryWith({ 'modules/planning/core/run.test.ts': 'export {};\n' }, (dir) =>
-      rmSync(join(dir, 'modules/planning/core/run.test.ts')),
+    const repository = repositoryWith(
+      { 'modules/planning/core/run.test.ts': 'export {};\n' },
+      (dir) => rmSync(join(dir, 'modules/planning/core/run.test.ts')),
     );
 
     expect(run(repository, 'chore: drop runs').status).toBe(1);

@@ -105,7 +105,7 @@ function expression(source: string): string {
 
 // What each pull request check runs, and the pull request fields it reads from the environment:
 // the outputs of PR / pull request, which carry the same fields on a pull_request event and on a
-// merge_group event (ADR 0092).
+// merge_group event (ADR 0093).
 const pullRequestCheckSteps = {
   'pr title': {
     run: 'node scripts/ci/pr-title.mjs',
@@ -189,11 +189,11 @@ const ciJobs = ['lint', 'typecheck', 'build', 'test', 'react doctor', 'e2e', 'ga
 
 // The jobs of the PR workflow, which GitHub shows as PR / <job name>. They keep the names they had
 // in the CI workflow, since the ruleset requires each by its job name. PR / pull request reads the
-// pull request for the others (ADR 0092).
+// pull request for the others (ADR 0093).
 const prJobs = ['pull request', ...pullRequestChecks, 'pr gate'];
 
 // The required workflows run on each event the merge queue asks for checks on, as a type list so
-// a new activity type does not start runs by itself (ADR 0092).
+// a new activity type does not start runs by itself (ADR 0093).
 const mergeGroup = { types: ['checks_requested'] };
 
 // write-all grants id-token: write with every other permission.
@@ -468,11 +468,11 @@ describe('workflows', () => {
   };
 
   // CI / cla reads the pull request and its commits through the API, and PR / pull request reads
-  // the pull request for the other PR jobs (ADR 0092).
+  // the pull request for the other PR jobs (ADR 0093).
   const claPermissions = { contents: 'read', 'pull-requests': 'read' };
   const pullRequestPermissions = { contents: 'read', 'pull-requests': 'read' };
   // CodeQL / codeql uploads its analysis to code scanning and reads the workflow runs the actions
-  // language analyzes (ADR 0092).
+  // language analyzes (ADR 0093).
   const codeqlPermissions = { contents: 'read', actions: 'read', 'security-events': 'write' };
 
   // Risk / risk gate reads the pull request, its files and reviews; Risk / risk label labels it with
@@ -497,15 +497,15 @@ describe('workflows', () => {
               ? pullRequestPermissions
               : job.name === 'codeql'
                 ? codeqlPermissions
-            : job.name === 'risk gate'
-              ? riskGatePermissions
-              : job.name === 'risk label'
-                ? riskLabelPermissions
-                : job.name === 'risk refresh'
-                  ? riskRefreshPermissions
-                  : job.name === 'Scorecard analysis'
-                    ? scorecardPermissions
-                    : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
+                : job.name === 'risk gate'
+                  ? riskGatePermissions
+                  : job.name === 'risk label'
+                    ? riskLabelPermissions
+                    : job.name === 'risk refresh'
+                      ? riskRefreshPermissions
+                      : job.name === 'Scorecard analysis'
+                        ? scorecardPermissions
+                        : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
       expect(job.permissions, where).toEqual(expected);
     }
   });
@@ -816,8 +816,8 @@ describe('workflows', () => {
 
   // The opened, synchronize and reopened types are the default; edited re-runs the pull request
   // checks after a fix to the title or body. The merge queue asks for the checks again on the
-  // commit it builds (ADR 0092).
-  it('ADR0076 ADR0092 the PR workflow runs on pull requests, also when one is edited, and on merge groups', () => {
+  // commit it builds (ADR 0093).
+  it('ADR0076 ADR0093 the PR workflow runs on pull requests, also when one is edited, and on merge groups', () => {
     const { workflow } = jobNamed('pr gate');
 
     expect(workflow.name).toBe('PR');
@@ -828,7 +828,7 @@ describe('workflows', () => {
   });
 
   // An edit changes the title or body and no code, so it re-runs only the PR workflow.
-  it('ADR0092 an edited pull request does not re-run CI, and a merge group does', () => {
+  it('ADR0093 an edited pull request does not re-run CI, and a merge group does', () => {
     const { workflow } = jobNamed('gate');
 
     expect(workflow.on).toEqual({
@@ -841,7 +841,7 @@ describe('workflows', () => {
   // A merge_group event carries no pull request, only the queue branch that names it, so one job
   // reads the pull request through the API on both events, from the number or from the branch, and
   // every check reads its outputs. It runs the script from the checkout, as the checks do.
-  it('ADR0092 PR / pull request reads the pull request from the event number or the queue branch through the API, and every other PR job needs it', () => {
+  it('ADR0093 PR / pull request reads the pull request from the event number or the queue branch through the API, and every other PR job needs it', () => {
     const { workflow, id, job } = jobNamed('pull request');
     const read = (job.steps ?? []).find(({ id }) => id === 'pull');
 
@@ -873,7 +873,7 @@ describe('workflows', () => {
   // The merge queue builds a pull request on the latest main and asks for the required checks on
   // that commit; a workflow without the trigger reports nothing there, and the entry waits until
   // the queue gives up on it.
-  it('ADR0092 every workflow whose jobs the ruleset requires runs on merge groups, on the checks_requested type only', () => {
+  it('ADR0093 every workflow whose jobs the ruleset requires runs on merge groups, on the checks_requested type only', () => {
     const required = workflows().filter(({ path }) => requiredWorkflowPaths.includes(path));
 
     expect(required.map(({ path }) => path).sort()).toEqual([...requiredWorkflowPaths].sort());
@@ -1057,7 +1057,7 @@ describe('workflows', () => {
 
   // A pull request runs its own copy of a workflow, so the gate's integrity rests on the check and
   // the path list coming from the default branch, and on .github/ being a high-risk path.
-  it('ADR0086 ADR0092 Risk / risk gate runs on pull requests, reviews and merge groups, checks out nothing and runs the check from the default branch', () => {
+  it('ADR0086 ADR0093 Risk / risk gate runs on pull requests, reviews and merge groups, checks out nothing and runs the check from the default branch', () => {
     const { workflow, job } = jobNamed('risk gate');
     const steps = job.steps ?? [];
     const download = steps.find(({ run }) => run?.includes('gh api'));
@@ -1135,8 +1135,8 @@ describe('workflows', () => {
 
   // A review run and an edited run can overlap; the later one wins, so a stale label does not stay.
   // A merge group run is in a group of its own, and labels nothing: its event has no pull request
-  // number, and the pull request's own runs labelled it (ADR 0092).
-  it('ADR0086 ADR0092 the Risk workflow runs one at a time per pull request, in a group of its own per merge group, and labels in a job of its own after the gate on pull request runs', () => {
+  // number, and the pull request's own runs labelled it (ADR 0093).
+  it('ADR0086 ADR0093 the Risk workflow runs one at a time per pull request, in a group of its own per merge group, and labels in a job of its own after the gate on pull request runs', () => {
     const { workflow, job } = jobNamed('risk label');
 
     expect(workflow.concurrency).toEqual({
@@ -1467,8 +1467,8 @@ describe('workflows', () => {
   // no other job or step reads it and a fork's pull request, which gets no secrets, uploads nothing
   // (docs/adr/0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md).
   // A merge group run builds the diff the pull request's own run already uploaded, so it gets no
-  // token and uploads nothing (ADR 0092).
-  it('ADR0077 ADR0092 only the e2e job reads ARGOS_TOKEN, as an environment variable of its test step, and not in a merge group', () => {
+  // token and uploads nothing (ADR 0093).
+  it('ADR0077 ADR0093 only the e2e job reads ARGOS_TOKEN, as an environment variable of its test step, and not in a merge group', () => {
     const token = 'secrets.ARGOS_TOKEN';
     const reads = (value: unknown) => JSON.stringify(value ?? {}).includes(token);
     const readers = workflows().flatMap((workflow) => [
@@ -1554,9 +1554,9 @@ describe('workflows', () => {
   });
 
   // CodeQL runs as a workflow so that it reports on the commits the merge queue builds, which code
-  // scanning's default setup does not (ADR 0092). One job analyzes the languages default setup
+  // scanning's default setup does not (ADR 0093). One job analyzes the languages default setup
   // analyzed, with no build, and uploads to code scanning.
-  it('ADR0092 CodeQL / codeql analyzes actions and javascript-typescript without a build on pull requests, merge groups, pushes to main and weekly, and uploads to code scanning', () => {
+  it('ADR0093 CodeQL / codeql analyzes actions and javascript-typescript without a build on pull requests, merge groups, pushes to main and weekly, and uploads to code scanning', () => {
     const { workflow, job } = jobNamed('codeql');
     const steps = job.steps ?? [];
     const init = steps.find(({ uses }) => uses?.startsWith('github/codeql-action/init@'));

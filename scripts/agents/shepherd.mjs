@@ -30,7 +30,7 @@ const argos = 'argos';
 /**
  * What one pull request waits on, in the order the shepherd acts: a draft is left alone; one in the
  * merge queue is GitHub's; a conflict needs a rebase, and a branch that is only behind main
- * nothing, since the queue builds it on main (ADR 0092); a failed check needs its log read; CodeRabbit's threads
+ * nothing, since the queue builds it on main (ADR 0093); a failed check needs its log read; CodeRabbit's threads
  * need answers; a person's thread is theirs; a high pull request without the maintainer's approval
  * of its head waits for the maintainer, asked once per head (a request made since the head was
  * committed counts, also after a comment cleared it), or for its author once the maintainer asked

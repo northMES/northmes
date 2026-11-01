@@ -40,11 +40,11 @@ describe('#978 the shepherd names what each open pull request waits on', () => {
     ]);
   });
 
-  it('ADR0092 a branch that is only behind main needs no rebase: the merge queue builds it on main', () => {
+  it('ADR0093 a branch that is only behind main needs no rebase: the merge queue builds it on main', () => {
     expect(triage({ ...merging, mergeStateStatus: 'BEHIND' })).toEqual(['merging: nothing to do']);
   });
 
-  it('ADR0092 a pull request in the merge queue is GitHub\'s, whatever else it shows', () => {
+  it("ADR0093 a pull request in the merge queue is GitHub's, whatever else it shows", () => {
     expect(
       triage({
         ...merging,

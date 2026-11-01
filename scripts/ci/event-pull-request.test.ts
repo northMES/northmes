@@ -26,19 +26,16 @@ describe('#985 PR / pull request writes the fields the pull request checks read'
   });
 
   it('#985 an empty body and a deleted fork repository read as an empty body from a fork', () => {
-    expect(pullRequestOutputs({ ...pull, body: null, head: { ref: 'x', repo: null } })).toMatchObject(
-      { body: '', from_fork: 'true' },
-    );
+    expect(
+      pullRequestOutputs({ ...pull, body: null, head: { ref: 'x', repo: null } }),
+    ).toMatchObject({ body: '', from_fork: 'true' });
   });
 
   it('#985 a one-line value is name=value and a value with line breaks is a heredoc with a random delimiter', () => {
     expect(outputLines({ number: '958', body: 'one\ntwo', title: 't' }, () => 'abc')).toBe(
       'number=958\nbody<<EOF_abc\none\ntwo\nEOF_abc\ntitle=t\n',
     );
-    const [first, second] = [
-      outputLines({ body: 'a\nb' }),
-      outputLines({ body: 'a\nb' }),
-    ];
+    const [first, second] = [outputLines({ body: 'a\nb' }), outputLines({ body: 'a\nb' })];
     expect(first).not.toBe(second);
     expect(first).toMatch(/^body<<EOF_[0-9a-f]{32}\na\nb\nEOF_[0-9a-f]{32}\n$/);
   });

@@ -1,4 +1,4 @@
-# CodeQL as a workflow of its own (ADR 0092), in place of code scanning's default setup, which
+# CodeQL as a workflow of its own (ADR 0093), in place of code scanning's default setup, which
 # reports on pushes and pull requests but not on the commits the merge queue builds, so a required
 # CodeQL check from it would hold every queue entry until the queue gave up. One job analyzes both
 # languages default setup analyzed, actions and javascript-typescript, with CodeQL's default

@@ -207,7 +207,7 @@ export function summary({ tier, reasons, ok }) {
 }
 
 // The job passes the pull request number, or on a merge_group event the queue branch that names
-// it (ADR 0092), through the environment, never inside the run script. The workflow downloads this
+// it (ADR 0093), through the environment, never inside the run script. The workflow downloads this
 // file and the ones it imports from the default branch. Any error fails the job with its message,
 // so a gate that cannot judge a pull request never passes it.
 if (import.meta.main) {

@@ -3,7 +3,10 @@
     "sha": "1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d",
     "author": { "login": "a-contributor", "id": 1000001, "type": "User" },
     "commit": {
-      "author": { "name": "A Contributor", "email": "1000001+a-contributor@users.noreply.github.com" }
+      "author": {
+        "name": "A Contributor",
+        "email": "1000001+a-contributor@users.noreply.github.com"
+      }
     }
   },
   {

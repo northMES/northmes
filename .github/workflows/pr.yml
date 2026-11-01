@@ -10,7 +10,7 @@
 # could inject shell code.
 #
 # The merge queue asks for the required checks on the commit it builds for a pull request
-# (ADR 0092), and a merge_group event carries no pull request, only the queue branch that names it.
+# (ADR 0093), and a merge_group event carries no pull request, only the queue branch that names it.
 # So PR / pull request reads the pull request through the API on both events and the checks read
 # its outputs, which carry the same fields on either event.
 name: PR

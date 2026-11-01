@@ -6,7 +6,7 @@
 # checkout, as CI / cla does, so a pull request cannot change the script or the paths that judge it.
 # GitHub runs a pull request's own copy of this file, though, so the file itself is protected only
 # by being a risk path: a change to .github/ needs the maintainer's approval. The merge queue asks
-# for the gate on the commit it builds for a pull request (ADR 0092); that event carries no pull
+# for the gate on the commit it builds for a pull request (ADR 0093); that event carries no pull
 # request, so the gate finds it in the queue branch's name.
 name: Risk
 

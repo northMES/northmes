@@ -5,7 +5,7 @@
 # fails on a high or critical advisory in the production tree that pnpm-workspace.yaml does not
 # list as an accepted risk (docs/security/vulnerability-policy.md). Both run weekly too, so an
 # advisory published after the last change still turns the audit red. Both are required checks, so
-# they run in the merge queue too (ADR 0092).
+# they run in the merge queue too (ADR 0093).
 name: Supply chain
 
 on:

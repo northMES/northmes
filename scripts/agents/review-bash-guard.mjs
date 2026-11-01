@@ -37,7 +37,9 @@ export function reviewCommandAllowed(command) {
   const words = command.trim().split(/\s+/);
   const prefix = allowed.find((leading) => leading.every((word, index) => words[index] === word));
   if (prefix === undefined) {
-    return refusal('git diff, log, show, status, ls-files, rev-parse, merge-base or blame; gh issue view, pr view or pr diff.');
+    return refusal(
+      'git diff, log, show, status, ls-files, rev-parse, merge-base or blame; gh issue view, pr view or pr diff.',
+    );
   }
   const option = words.slice(prefix.length).find((word) => writingOptions.test(word));
   if (option !== undefined) return refusal(`${option} writes a file or runs another program.`);
@@ -57,7 +59,9 @@ if (import.meta.main) {
       process.exitCode = 2;
     }
   } catch (error) {
-    process.stderr.write(`The code-reviewer agent's Bash guard failed, so the command is refused: ${error}\n`);
+    process.stderr.write(
+      `The code-reviewer agent's Bash guard failed, so the command is refused: ${error}\n`,
+    );
     process.exitCode = 2;
   }
 }

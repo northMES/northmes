@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-// The step behind PR / pull request (ADR 0092): the pull request the run is about, read through
+// The step behind PR / pull request (ADR 0093): the pull request the run is about, read through
 // GitHub's REST API and written to the job's outputs, so the pull request checks read the same
 // fields on a pull_request event and on a merge_group event, whose payload has no pull request.
 // A merge_group event names the pull request in its queue branch, gh-readonly-queue/<base>/pr-<n>-<sha>.
 
-import { appendFileSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
+import { appendFileSync } from 'node:fs';
 import { errorAnnotation } from './annotation.mjs';
 import { eventPullNumber } from './pull-request.mjs';
 
@@ -57,7 +57,9 @@ export async function readPullRequest({ fetch, apiUrl, repository, token, pullNu
     },
   });
   if (!response.ok) {
-    throw new Error(`GitHub answered ${response.status} to GET /repos/${repository}/pulls/${pullNumber}`);
+    throw new Error(
+      `GitHub answered ${response.status} to GET /repos/${repository}/pulls/${pullNumber}`,
+    );
   }
   return pullRequestOutputs(await response.json());
 }

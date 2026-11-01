@@ -137,7 +137,7 @@ describe('check-ruleset', () => {
     expect(problems[1]).toContain('any app');
   });
 
-  it('ADR0092 CodeQL is the job codeql of codeql.yml, from GitHub Actions, and the check of code scanning\'s default setup is stale', () => {
+  it("ADR0093 CodeQL is the job codeql of codeql.yml, from GitHub Actions, and the check of code scanning's default setup is stale", () => {
     const problems = checkRuleset(
       ruleset(
         matching.map((check) =>
@@ -175,7 +175,7 @@ describe('check-ruleset', () => {
     expect(problems[0]).toContain('"docs"');
   });
 
-  it('ADR0092 a ruleset without a merge_queue rule fails naming it, and the strict policy is not asked for', () => {
+  it('ADR0093 a ruleset without a merge_queue rule fails naming it, and the strict policy is not asked for', () => {
     const problems = checkRuleset(ruleset(matching, null), workflows);
 
     expect(problems).toHaveLength(1);
@@ -183,9 +183,12 @@ describe('check-ruleset', () => {
     expect(problems[0]).toContain('latest main');
   });
 
-  it('ADR0092 a merge queue that does not squash fails naming its method', () => {
+  it('ADR0093 a merge queue that does not squash fails naming its method', () => {
     const problems = checkRuleset(
-      ruleset(matching, { ...mergeQueue, parameters: { ...mergeQueue.parameters, merge_method: 'MERGE' } }),
+      ruleset(matching, {
+        ...mergeQueue,
+        parameters: { ...mergeQueue.parameters, merge_method: 'MERGE' },
+      }),
       workflows,
     );
 

@@ -12,7 +12,7 @@ name: CI
 
 # An edit to a pull request's title or body changes no code, so it runs only the pull request
 # checks in pr.yml. The merge queue builds each pull request on the latest main and asks for the
-# required checks on that commit (ADR 0092), so the workflow runs on merge_group too.
+# required checks on that commit (ADR 0093), so the workflow runs on merge_group too.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -180,7 +180,7 @@ jobs:
   # run with a failed attempt, Playwright's report with the traces of the failed attempts is kept as
   # an artifact, also when every failed spec passed on its retry and the job is green (#974). The
   # pull request's own run uploaded its screenshots to Argos; a merge group run builds the same
-  # diff on a queue branch, so it gets no token and uploads nothing (ADR 0077, ADR 0092).
+  # diff on a queue branch, so it gets no token and uploads nothing (ADR 0077, ADR 0093).
   e2e:
     name: e2e
     permissions:

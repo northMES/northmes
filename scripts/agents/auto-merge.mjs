@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-// The one step a session takes once its pull request is open (ADR 0086 rule 5, ADR 0092):
+// The one step a session takes once its pull request is open (ADR 0086 rule 5, ADR 0093):
 // `pnpm agent:auto-merge <number>`. It turns on auto-merge, and GitHub adds the pull request to the
 // merge queue once every required check passes, where it is built on the latest main, checked
 // again and squash-merged; one whose checks have all passed already, which GitHub does not take
@@ -102,7 +102,10 @@ if (import.meta.main) {
     token,
     pullNumber,
   });
-  const comments = await github(`repos/${repository}/issues/${pullNumber}/comments?per_page=100`, token);
+  const comments = await github(
+    `repos/${repository}/issues/${pullNumber}/comments?per_page=100`,
+    token,
+  );
   const alreadyAsked = comments.some(
     (comment) => comment.user?.id === agent && comment.body?.startsWith(askLine),
   );

@@ -4,7 +4,7 @@
 // of the workflows (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md). It names each
 // job the ruleset does not require, each required check that no job reports any more, and each
 // check required from the wrong app, checks that the ruleset is active on main and merges through
-// a merge queue that squashes (ADR 0092), and exits 1 when it finds a problem. It reads the workflows of the working tree, so run
+// a merge queue that squashes (ADR 0093), and exits 1 when it finds a problem. It reads the workflows of the working tree, so run
 // it on an up-to-date main: before a change that renames, adds or removes a job, to start from a
 // clean match, and after the merge and the ruleset edit that follow it. Between the edit just
 // before the merge and the merge itself it names the jobs that the merge renames or removes.
@@ -26,7 +26,7 @@ const mainRuleset = 24515911;
 const githubActions = 15368;
 
 // The checks the ruleset requires that no workflow of this repository runs, by the app that
-// reports them. None since ADR 0092: CodeQL runs as the job codeql of codeql.yml, so that it
+// reports them. None since ADR 0093: CodeQL runs as the job codeql of codeql.yml, so that it
 // reports on merge queue commits too, which code scanning's default setup does not.
 const otherApps = new Map();
 
@@ -36,7 +36,7 @@ export const workflowFiles = ['ci.yml', 'pr.yml', 'risk.yml', 'supply-chain.yml'
 // Jobs the ruleset may require but does not have to. cla joins before the first outside pull
 // request (ADR 0039), e2e when #281 lands; openapi diff fails a pull request through pr gate and
 // e2e through gate; risk label only labels the pull request (ADR 0086); pull request only reads
-// the pull request for the other PR jobs, which fail without it (ADR 0092).
+// the pull request for the other PR jobs, which fail without it (ADR 0093).
 const optional = new Set(['cla', 'e2e', 'openapi diff', 'risk label', 'pull request']);
 
 // The ref patterns that name main in a ruleset's condition; main is the default branch.
@@ -65,7 +65,7 @@ export function checkRuleset(ruleset, workflows) {
 
   // The merge queue builds each pull request on the latest main and runs the required checks there
   // before it merges, which the strict policy of ADR 0050 did by holding every pull request until
-  // its author updated the branch (ADR 0092).
+  // its author updated the branch (ADR 0093).
   const queue = (ruleset.rules ?? []).find(({ type }) => type === 'merge_queue');
   if (queue === undefined) {
     problems.push(

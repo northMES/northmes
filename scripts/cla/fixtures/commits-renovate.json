@@ -3,7 +3,10 @@
     "sha": "9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0d",
     "author": { "login": "renovate[bot]", "id": 29139614, "type": "Bot" },
     "commit": {
-      "author": { "name": "renovate[bot]", "email": "29139614+renovate[bot]@users.noreply.github.com" }
+      "author": {
+        "name": "renovate[bot]",
+        "email": "29139614+renovate[bot]@users.noreply.github.com"
+      }
     }
   }
 ]

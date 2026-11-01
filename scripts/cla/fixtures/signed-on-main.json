@@ -1,3 +1,5 @@
 {
-  "signatures": [{ "id": 1000002, "agreement": "individual", "version": "0.1", "date": "2026-10-15" }]
+  "signatures": [
+    { "id": 1000002, "agreement": "individual", "version": "0.1", "date": "2026-10-15" }
+  ]
 }

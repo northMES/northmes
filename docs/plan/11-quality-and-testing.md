@@ -456,7 +456,7 @@ flowchart LR
 
 ### Required checks
 
-The ruleset on `main` requires these checks by name, strict (the branch must be up to date). The checks from `lint` to `a11y` are jobs of `ci.yml`, which GitHub shows as `CI / <job name>`, for example `CI / lint`, except the pull request checks `pr title`, `linked issue`, `pr security`, `pr docs`, `pr tests` and `pr gate`, which are jobs of `pr.yml`, shown as `PR / <job name>` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)):
+The ruleset on `main` requires these checks by name, on the pull request's head and again on the commit the merge queue builds for it on the latest `main` ([ADR 0093](../adr/0093-merge-through-githubs-merge-queue-with-the-pull-request-checks-the-risk-gate-and-codeql-reporting-on-the-queues-commits.md)). The checks from `lint` to `a11y` are jobs of `ci.yml`, which GitHub shows as `CI / <job name>`, for example `CI / lint`, except the pull request checks `pr title`, `linked issue`, `pr security`, `pr docs`, `pr tests` and `pr gate`, which are jobs of `pr.yml`, shown as `PR / <job name>` ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)):
 
 | Check | Runs |
 |---|---|
@@ -474,7 +474,7 @@ The ruleset on `main` requires these checks by name, strict (the branch must be 
 | `a11y` | The axe specs over the board states, from the first board pull request |
 | `license gate` | `pnpm sbom` and the license script ([12-operations-and-security.md](12-operations-and-security.md#license-gate)) |
 | `dependency audit` | `pnpm audit --prod --audit-level high` |
-| `CodeQL` | GitHub's default setup for `actions` and `javascript-typescript` |
+| `codeql` | CodeQL for `actions` and `javascript-typescript` in `codeql.yml`, with no build |
 
 Each job in `ci.yml` is a required check of its own, so the merge box shows each kind of check as required ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)). A job that joins, leaves or changes its name in `ci.yml` needs a ruleset edit: an added name after the merge, a removed or old name just before it ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)), and `test/meta/workflows.test.ts` lists the job names. A required check matches by its name and the app alone, so no two workflows share a job name, which `test/meta/workflows.test.ts` checks. Required workflows have no `paths` filters, because a workflow skipped by a path filter leaves its required check waiting forever; a job that should run only for some paths decides in its first step.
 

@@ -20,7 +20,9 @@ describe('#985 the pull request behind a merge group', () => {
   it('#985 a ref that is not a queue branch, or an empty one, names no pull request', () => {
     expect(pullNumberOfQueueRef('refs/heads/main')).toBeUndefined();
     expect(pullNumberOfQueueRef('refs/heads/feat/pr-12-things')).toBeUndefined();
-    expect(pullNumberOfQueueRef('refs/heads/gh-readonly-queue/main/pr-abc-deadbeef')).toBeUndefined();
+    expect(
+      pullNumberOfQueueRef('refs/heads/gh-readonly-queue/main/pr-abc-deadbeef'),
+    ).toBeUndefined();
     expect(pullNumberOfQueueRef('refs/heads/gh-readonly-queue/main/pr-0-deadbeef')).toBeUndefined();
     expect(pullNumberOfQueueRef('')).toBeUndefined();
     expect(pullNumberOfQueueRef(undefined)).toBeUndefined();
@@ -33,7 +35,8 @@ describe('#985 the pull request an event is about', () => {
     expect(
       eventPullNumber({
         number: '',
-        queueRef: 'refs/heads/gh-readonly-queue/main/pr-964-8e4e97c1e0d6a1f0f4c3b2a19d8e7f6a5b4c3d2e',
+        queueRef:
+          'refs/heads/gh-readonly-queue/main/pr-964-8e4e97c1e0d6a1f0f4c3b2a19d8e7f6a5b4c3d2e',
       }),
     ).toBe(964);
     expect(eventPullNumber({ number: undefined, queueRef: undefined })).toBeUndefined();
