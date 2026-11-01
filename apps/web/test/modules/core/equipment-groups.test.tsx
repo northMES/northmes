@@ -514,7 +514,6 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
           },
         },
       } as MockLink.MockedResponse,
-      groupQuery({ ...mach, name: 'Machining hall', color: 'palette-12', version: 2 }),
     ]);
     await screen.findByRole('heading', { level: 1, name: 'Edit equipment group MACH' });
 
@@ -670,7 +669,6 @@ describe('a new equipment group (design #729)', () => {
           data: { coreCreateEquipmentGroup: { ...created, id: input.id } },
         }),
       } as MockLink.MockedResponse,
-      groupsQuery([created, heat]),
     ]);
 
     await screen.findByRole('heading', { level: 1, name: 'New equipment group' });
@@ -774,5 +772,306 @@ describe('a new equipment group (design #729)', () => {
       name: 'You need the permission to create equipment groups in Plant A',
     });
     expect(screen.queryByRole('button', { name: 'Save equipment group' })).toBeNull();
+  });
+});
+
+describe('the equipment group pages when an answer fails or is missing (review of #983)', () => {
+  it('#983 EG1 a list that fails after Show archived says so with Try again, not the rows of the list before', async () => {
+    renderCoreAt(groups, [
+      groupsQuery([asm]),
+      {
+        request: { query: CoreEquipmentGroups, variables: { includeArchived: true } },
+        error: new Error('Network down'),
+      },
+      companiesQuery(),
+      admin(),
+    ]);
+    const table = await screen.findByRole('table', { name: 'Equipment groups of Plant A' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(1));
+
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Show archived' }));
+    await screen.findByRole('heading', { level: 2, name: 'Could not load equipment groups' });
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
+  });
+
+  it('#983 EG1 a later page of groups that fails to load says so with Try again, which loads it', async () => {
+    renderCoreAt(groups, [
+      groupsQuery([asm, heat], false, { next: 'page-2' }),
+      {
+        request: {
+          query: CoreEquipmentGroups,
+          variables: { includeArchived: false, after: 'page-2' },
+        },
+        error: new Error('Network down'),
+      },
+      groupsQuery([mach], false, { after: 'page-2' }),
+      companiesQuery(),
+      admin(),
+    ]);
+    await screen.findByRole('heading', { level: 2, name: 'Could not load equipment groups' });
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    const table = await screen.findByRole('table', { name: 'Equipment groups of Plant A' });
+    await waitFor(() =>
+      expect(bodyRows(table).map((row) => row[1])).toEqual(['ASM', 'HEAT', 'MACH']),
+    );
+  });
+
+  it('#983 EG1 Show archived lives in the URL as archived=1', async () => {
+    const old = group('OLD', 'Old line', { archivedAt: lastChanged });
+    const router = renderCoreAt(`${groups}?archived=1`, [
+      groupsQuery([asm, old], true),
+      groupsQuery([asm]),
+      companiesQuery(),
+      admin(),
+    ]);
+    const table = await screen.findByRole('table', { name: 'Equipment groups of Plant A' });
+    await waitFor(() => expect(bodyRows(table).map((row) => row[1])).toEqual(['ASM', 'OLD']));
+    const box = screen.getByRole('checkbox', { name: 'Show archived' });
+    expect(box.getAttribute('aria-checked')).toBe('true');
+
+    await userEvent.click(box);
+    await waitFor(() => expect(router.state.location.search).toEqual({}));
+    await waitFor(() => expect(bodyRows(table).map((row) => row[1])).toEqual(['ASM']));
+  });
+
+  it('#983 EG6 a plant without any group shows the empty state with Show archived on too', async () => {
+    renderCoreAt(`${groups}?archived=1`, [groupsQuery([], true), companiesQuery(), admin()]);
+    await screen.findByRole('heading', { level: 2, name: 'No equipment groups yet' });
+  });
+
+  it('#983 EG4 a failed answer about the user shows the failed state with Try again, not loading for ever', async () => {
+    renderCoreAt(machPage, [
+      groupQuery(mach),
+      companiesQuery(),
+      { request: { query: viewerQuery([]).request.query }, error: new Error('Network down') },
+      admin(),
+    ]);
+    await screen.findByRole('heading', { level: 2, name: 'Could not load the equipment group' });
+    await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(await screen.findByRole('link', { name: 'Edit equipment group' })).toBeTruthy();
+  });
+
+  it('#983 EG4 an old link by code, not by id, shows the not-found state without asking the API', async () => {
+    renderCoreAt(`${groups}/MACH`, [companiesQuery(), admin()]);
+    await screen.findByRole('heading', {
+      level: 2,
+      name: 'This equipment group does not exist or you cannot see it',
+    });
+  });
+
+  it('#983 EG5 Reload after a conflict fills the form with the saved group, and the next save sends its version', async () => {
+    const user = userEvent.setup();
+    const newer = { ...mach, name: 'Machining hall', version: 2 };
+    const sent: Record<string, unknown>[] = [];
+    renderCoreAt(editMach, [
+      groupQuery(mach),
+      groupsQuery([mach]),
+      companiesQuery(),
+      admin(),
+      {
+        request: {
+          query: CoreUpdateEquipmentGroup,
+          variables: ({ input }: { input: Record<string, unknown> }) => input.expectedVersion === 1,
+        },
+        result: {
+          errors: [
+            new GraphQLError('Conflict', {
+              extensions: { code: 'CONFLICT', errorCode: 'core.version_conflict' },
+            }),
+          ],
+        },
+      } as MockLink.MockedResponse,
+      groupQuery(mach, newer),
+      {
+        request: {
+          query: CoreUpdateEquipmentGroup,
+          variables: ({ input }: { input: Record<string, unknown> }) => {
+            sent.push(input);
+            return true;
+          },
+        },
+        result: { data: { coreUpdateEquipmentGroup: { ...newer, version: 3 } } },
+      } as MockLink.MockedResponse,
+    ]);
+    await user.click(await screen.findByRole('radio', { name: 'Color 9' }));
+    await user.click(screen.getByRole('button', { name: 'Save equipment group' }));
+    await user.click(await screen.findByRole('button', { name: /Reload/ }));
+
+    await waitFor(() => expect(field('Name').value).toBe('Machining hall'));
+    await user.click(screen.getByRole('radio', { name: 'Color 9' }));
+    await user.click(screen.getByRole('button', { name: 'Save equipment group' }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({
+      expectedVersion: 2,
+      name: 'Machining hall',
+      color: 'palette-9',
+    });
+  });
+
+  it('#983 EG5 a Reload that fails keeps the entries and says so', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(editMach, [
+      groupQuery(mach),
+      groupsQuery([mach]),
+      companiesQuery(),
+      admin(),
+      {
+        request: { query: CoreUpdateEquipmentGroup, variables: () => true },
+        result: {
+          errors: [
+            new GraphQLError('Conflict', {
+              extensions: { code: 'CONFLICT', errorCode: 'core.version_conflict' },
+            }),
+          ],
+        },
+      } as MockLink.MockedResponse,
+      {
+        request: { query: CoreEquipmentGroup, variables: { id: mach.id } },
+        error: new Error('Network down'),
+      },
+    ]);
+    const name = await screen.findByRole('textbox', { name: 'Name' });
+    await user.type(name, ' hall');
+    await user.click(screen.getByRole('button', { name: 'Save equipment group' }));
+    await user.click(await screen.findByRole('button', { name: /Reload/ }));
+
+    expect(
+      (
+        await screen.findAllByText(
+          'Could not reload the equipment group. Your entries are kept. Try again.',
+        )
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(field('Name').value).toBe('Machining hall');
+  });
+
+  it('#983 EG5 the form of an archived group says why it is read-only', async () => {
+    const archived = { ...mach, archivedAt: lastChanged };
+    renderCoreAt(editMach, [
+      groupQuery(mach, archived),
+      groupsQuery([]),
+      companiesQuery(),
+      admin(),
+    ]);
+    expect(
+      await screen.findByText('MACH is archived. Restore it on its page to change it.'),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Save equipment group' })).toBeNull();
+  });
+
+  it('#983 New equipment group writes the new group into the cache, so its page opens without asking again', async () => {
+    const user = userEvent.setup();
+    const created = group('PAINT', 'Paint shop', { color: 'palette-2', colorFrom: 'palette' });
+    renderCoreAt(newGroup, [
+      groupsQuery([heat]),
+      companiesQuery(),
+      admin(),
+      {
+        request: { query: CoreCreateEquipmentGroup, variables: () => true },
+        result: ({ input }: { input: { id: string } }) => ({
+          data: { coreCreateEquipmentGroup: { ...created, id: input.id } },
+        }),
+      } as MockLink.MockedResponse,
+    ]);
+    await user.type(await screen.findByRole('textbox', { name: 'Code' }), 'PAINT');
+    await user.type(field('Name'), 'Paint shop');
+    await user.click(screen.getByRole('button', { name: 'Save equipment group' }));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Equipment group PAINT' }),
+    ).toBeTruthy();
+  });
+
+  it('#983 New equipment group names no free color until the groups have loaded', async () => {
+    renderCoreAt(newGroup, [
+      {
+        request: { query: CoreEquipmentGroups, variables: { includeArchived: false } },
+        error: new Error('Network down'),
+      },
+      companiesQuery(),
+      admin(),
+    ]);
+    expect(
+      await screen.findByText(
+        'One of the 20 palette colors. Pick none and the group takes the first palette color that no group uses.',
+      ),
+    ).toBeTruthy();
+  });
+
+  it('#983 New equipment group lets a holder of core.equipmentGroup:create at the company alone create a company group', async () => {
+    const user = userEvent.setup();
+    const sent: Record<string, unknown>[] = [];
+    renderCoreAt(
+      groups,
+      [
+        viewerQuery(['core.equipmentGroup:read'], ['core.equipmentGroup:create']),
+        groupsQuery([]),
+        companiesQuery(),
+        groupsQuery([]),
+        {
+          request: {
+            query: CoreCreateEquipmentGroup,
+            variables: ({ input }: { input: Record<string, unknown> }) => {
+              sent.push(input);
+              return true;
+            },
+          },
+          result: ({ input }: { input: { id: string } }) => ({
+            data: { coreCreateEquipmentGroup: { ...heat, id: input.id } },
+          }),
+        } as MockLink.MockedResponse,
+      ],
+      { hold: answeredAfter('CoreViewer', 'CoreEquipmentGroups') },
+    );
+    await user.click(await screen.findByRole('link', { name: 'New equipment group' }));
+    const scope = await screen.findByRole('radiogroup', { name: 'Scope' });
+    const radios = within(scope).getAllByRole('radio');
+    expect(radios).toHaveLength(1);
+    expect(await within(scope).findByRole('radio', { name: /^Acme AB/ })).toBeTruthy();
+    await user.type(field('Code'), 'HEAT');
+    await user.type(field('Name'), 'Heat treatment');
+    await user.click(screen.getByRole('button', { name: 'Save equipment group' }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({ scope: 'company', code: 'HEAT' });
+  });
+
+  it('#983 New equipment group sends the same id again when a save is retried (ADR 0012)', async () => {
+    const user = userEvent.setup();
+    const ids: unknown[] = [];
+    const created = group('PAINT', 'Paint shop');
+    renderCoreAt(newGroup, [
+      groupsQuery([]),
+      companiesQuery(),
+      admin(),
+      {
+        request: {
+          query: CoreCreateEquipmentGroup,
+          variables: ({ input }: { input: Record<string, unknown> }) => {
+            ids.push(input.id);
+            return true;
+          },
+        },
+        error: new Error('Network down'),
+      } as MockLink.MockedResponse,
+      {
+        request: {
+          query: CoreCreateEquipmentGroup,
+          variables: ({ input }: { input: Record<string, unknown> }) => {
+            ids.push(input.id);
+            return true;
+          },
+        },
+        result: ({ input }: { input: { id: string } }) => ({
+          data: { coreCreateEquipmentGroup: { ...created, id: input.id } },
+        }),
+      } as MockLink.MockedResponse,
+    ]);
+    await user.type(await screen.findByRole('textbox', { name: 'Code' }), 'PAINT');
+    await user.type(field('Name'), 'Paint shop');
+    await user.click(screen.getByRole('button', { name: 'Save equipment group' }));
+    await screen.findAllByText('Your entries are kept. Try again.');
+    await user.click(screen.getByRole('button', { name: 'Save equipment group' }));
+    await screen.findByRole('heading', { level: 1, name: 'Equipment group PAINT' });
+    expect(ids).toHaveLength(2);
+    expect(ids[1]).toBe(ids[0]);
   });
 });
