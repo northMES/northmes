@@ -64,7 +64,7 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
     ).toBeTruthy();
     expect(
       screen.getByText(
-        'Your draft and the saved plan are not affected. Try again, or open the job table for the same range.',
+        'Your draft and the saved plan are not affected. Try again, or open the job table.',
       ),
     ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Try again' }));
@@ -101,12 +101,16 @@ describe('the planning board page states (design D3, DR17 to DR22)', () => {
     );
   });
 
-  it('DR20 offers the job order table as a way out, for the same range', async () => {
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02', preview: 'error' }, undefined, 'board');
+  it('DR20 offers the job order table as a way out, with the order filter and no range (ADR 0091)', async () => {
+    renderGanttRoute(
+      { zoom: 'week', from: '2026-11-02', q: '1003', preview: 'error' },
+      undefined,
+      'board',
+    );
 
     await screen.findByRole('heading', { level: 2, name: 'The board could not be loaded' });
     expect(screen.getByRole('link', { name: 'Open the job table' }).getAttribute('href')).toBe(
-      `${planningLinks.jobOrders({ plant }).href}?from=2026-11-02`,
+      `${planningLinks.jobOrders({ plant }).href}?q=1003`,
     );
   });
 

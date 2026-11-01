@@ -69,7 +69,7 @@ export function lineListRows(snapshot: GanttSnapshot): LineListRow[] {
 }
 
 /** Whether a search text matches any of the texts, as a case-insensitive part. */
-function matches(q: string | undefined, ...texts: readonly string[]): boolean {
+export function matches(q: string | undefined, ...texts: readonly string[]): boolean {
   if (q === undefined) return true;
   const needle = q.toLowerCase();
   return texts.some((text) => text.toLowerCase().includes(needle));
@@ -143,18 +143,18 @@ export function lineRowMatches(
  * The values of a filter field with their counts among the rows that pass every other part of the
  * view (design ui-222, LI3), so a menu says what picking a value adds.
  */
-export function facetsOf<Row>(
+export function facetsOf<Row, Key extends string>(
   rows: readonly Row[],
-  view: OrderListSearch | CustomerOrderListSearch,
-  key: ListFilterKey,
-  passes: (row: Row, view: never, except: ListFilterKey) => boolean,
-  valuesOf: (row: Row, key: ListFilterKey) => readonly string[],
+  picked: readonly string[] | undefined,
+  key: Key,
+  passes: (row: Row, except: Key) => boolean,
+  valuesOf: (row: Row, key: Key) => readonly string[],
   labelOf: (value: string) => string,
 ): FacetValue[] {
   // A picked value stays in the menu and names its chip even when no row passes with it.
-  const counts = new Map<string, number>((view[key] ?? []).map((value) => [value, 0]));
+  const counts = new Map<string, number>((picked ?? []).map((value) => [value, 0]));
   for (const row of rows) {
-    if (!passes(row, view as never, key)) continue;
+    if (!passes(row, key)) continue;
     for (const value of valuesOf(row, key)) counts.set(value, (counts.get(value) ?? 0) + 1);
   }
   return [...counts.entries()]
@@ -167,14 +167,30 @@ export const orderFacets = (
   view: OrderListSearch,
   key: ListFilterKey,
   labelOf: (value: string) => string,
-) => facetsOf(rows, view, key, orderRowMatches as never, orderFieldValues, labelOf);
+) =>
+  facetsOf(
+    rows,
+    view[key],
+    key,
+    (row, except) => orderRowMatches(row, view, except),
+    orderFieldValues,
+    labelOf,
+  );
 
 export const lineFacets = (
   rows: readonly LineListRow[],
   view: CustomerOrderListSearch,
   key: ListFilterKey,
   labelOf: (value: string) => string,
-) => facetsOf(rows, view, key, lineRowMatches as never, lineFieldValues, labelOf);
+) =>
+  facetsOf(
+    rows,
+    view[key],
+    key,
+    (row, except) => lineRowMatches(row, view, except),
+    lineFieldValues,
+    labelOf,
+  );
 
 /** The sort key of an order row under a column. */
 function orderSortKey(row: OrderListRow, id: OrderSortId): number | string {

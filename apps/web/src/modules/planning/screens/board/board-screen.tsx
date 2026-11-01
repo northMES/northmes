@@ -792,16 +792,19 @@ export function BoardScreen() {
       status: 'error',
       title: 'The board could not be loaded',
       description:
-        'Your draft and the saved plan are not affected. Try again, or open the job table for the same range.',
+        'Your draft and the saved plan are not affected. Try again, or open the job table.',
       error: loadError,
       onRetry: () =>
         new Promise<void>((resolve) => {
           retryDone.current = resolve;
           rowList.retry();
         }),
+      // The job table has no range (ADR 0091); it takes the board's order filter as its search.
       action: (
         <Link
-          to={planningLinks.jobOrders({ plant }, { ...linkZoom, from }).href}
+          to={
+            planningLinks.jobOrders({ plant }, search.q === undefined ? {} : { q: search.q }).href
+          }
           className={buttonVariants({ variant: 'outline' })}
         >
           Open the job table

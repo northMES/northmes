@@ -58,11 +58,12 @@ export function planningRoutes(plantRoute: PlantRoute) {
     validateSearch: ganttSearch,
     component: lazyRouteComponent(() => import('./screens.ts'), 'GanttScreen'),
   });
-  // The job order table keeps zoom and from as the Gantt does, plus Late only and its sort.
+  // The job order table keeps its view as the order lists do, with no range (ADR 0091), and its
+  // filters as the URL's comma lists.
   const jobOrdersRoute = createRoute({
     getParentRoute: () => planningRoute,
     path: linkEntry(planningLinks.jobOrders).path,
-    validateSearch: jobOrdersSearch,
+    validateSearch: (raw: Record<string, unknown>) => urlSearchOf(jobOrdersSearch(raw)),
     component: lazyRouteComponent(() => import('./screens.ts'), 'JobOrdersScreen'),
   });
   // The production orders: the list (its index route comes with the lists), each order's page

@@ -26,11 +26,14 @@ export type OrderGroupKey = (typeof orderGroupKeys)[number];
 export const lineSortIds = ['wanted', 'customerOrder', 'customer', 'article'] as const;
 export type LineSortId = (typeof lineSortIds)[number];
 
-/** The filter fields the lists share: the status, the article and the customer. */
+/** The filter fields the order lists share: the status, the article and the customer. */
 export type ListFilterKey = 'status' | 'article' | 'customer';
 
+/** The filter fields of every planning list, the job orders' equipment included (ADR 0091). */
+export type AnyListFilterKey = ListFilterKey | 'equipment';
+
 /** A sort in the URL: a column id, with a leading minus for descending. */
-type SortKey<Id extends string> = Id | `-${Id}`;
+export type SortKey<Id extends string> = Id | `-${Id}`;
 
 export interface OrderListSearch {
   readonly q?: string;
@@ -55,12 +58,23 @@ export interface CustomerOrderListSearch {
   readonly sort?: SortKey<LineSortId>;
 }
 
-/** A filter key's comma list of picked values, or a validated view's list, each value once. */
-function commaList<Value extends string>(value: z.ZodType<Value>) {
+/**
+ * A filter key's comma list of picked values, or a validated view's list, each value once. The
+ * router parses a lone numeric value, such as an article number, as a number, which reads as its
+ * text.
+ */
+export function commaList<Value extends string>(value: z.ZodType<Value>) {
   return z
     .unknown()
     .transform((raw): Value[] | undefined => {
-      const values = typeof raw === 'string' ? raw.split(',') : Array.isArray(raw) ? raw : [];
+      const values =
+        typeof raw === 'string'
+          ? raw.split(',')
+          : typeof raw === 'number'
+            ? [String(raw)]
+            : Array.isArray(raw)
+              ? raw
+              : [];
       const picked = [...new Set(values.map(String))].filter(
         (each): each is Value => value.safeParse(each).success,
       );
@@ -69,20 +83,22 @@ function commaList<Value extends string>(value: z.ZodType<Value>) {
     .catch(undefined);
 }
 
-const text = z
+/** The search text: trimmed, 1 to 100 characters (ADR 0016). */
+export const searchText = z
   .union([z.string(), z.number()])
   .transform(String)
   .pipe(z.string().trim().min(1).max(100))
   .optional()
   .catch(undefined);
 
-const late = z
+/** Late only, as 1. */
+export const lateOnlyKey = z
   .union([z.literal(1), z.literal('1'), z.literal(true)])
   .transform(() => 1 as const)
   .optional()
   .catch(undefined);
 
-function sortKeys<Id extends string>(ids: readonly Id[]) {
+export function sortKeys<Id extends string>(ids: readonly Id[]) {
   const values = [...ids, ...ids.map((id): `-${Id}` => `-${id}`)] as [
     SortKey<Id>,
     ...SortKey<Id>[],
@@ -91,8 +107,8 @@ function sortKeys<Id extends string>(ids: readonly Id[]) {
 }
 
 const orderKeys = z.object({
-  q: text,
-  late,
+  q: searchText,
+  late: lateOnlyKey,
   status: commaList(z.enum(orderStatusValues)),
   article: commaList(z.string().min(1).max(100)),
   customer: commaList(z.string().min(1).max(64)),
@@ -101,8 +117,8 @@ const orderKeys = z.object({
 });
 
 const lineKeys = z.object({
-  q: text,
-  late,
+  q: searchText,
+  late: lateOnlyKey,
   status: commaList(z.enum([...orderStatusValues, notSupplied])),
   article: commaList(z.string().min(1).max(100)),
   customer: commaList(z.string().min(1).max(64)),
@@ -110,7 +126,7 @@ const lineKeys = z.object({
 });
 
 /** The keys of a parsed view without the undefined ones, so an absent key stays out of the URL. */
-function defined<View extends object>(view: View): View {
+export function defined<View extends object>(view: View): View {
   return Object.fromEntries(
     Object.entries(view).filter(([, value]) => value !== undefined),
   ) as View;
@@ -127,9 +143,7 @@ export function customerOrderListSearch(raw: Record<string, unknown>): CustomerO
 }
 
 /** A view as the URL holds it: each filter's picked values as a comma list. */
-export function urlSearchOf<View extends OrderListSearch | CustomerOrderListSearch>(
-  view: View,
-): Record<string, unknown> {
+export function urlSearchOf<View extends object>(view: View): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(view).map(([key, value]) => [
       key,
@@ -154,7 +168,7 @@ export function withLateOnly<View extends { readonly late?: 1 }>(view: View, on:
 /** The view with a filter field's picked values; none drops the field. */
 export function filteredBy<View extends object>(
   view: View,
-  key: ListFilterKey,
+  key: AnyListFilterKey,
   values: readonly string[],
 ): View {
   const { [key]: _, ...rest } = view as Record<string, unknown>;
@@ -163,7 +177,13 @@ export function filteredBy<View extends object>(
 
 /** The view without its filters; the search, Late only, the grouping and the sort stay. */
 export function unfiltered<View extends object>(view: View): View {
-  const { status: _s, article: _a, customer: _c, ...rest } = view as Record<string, unknown>;
+  const {
+    status: _s,
+    article: _a,
+    customer: _c,
+    equipment: _e,
+    ...rest
+  } = view as Record<string, unknown>;
   return rest as View;
 }
 
@@ -172,12 +192,12 @@ export function isFiltered(view: OrderListSearch | CustomerOrderListSearch): boo
 }
 
 /** The production orders view grouped by a field, or not grouped. */
-export function groupedBy(
-  view: OrderListSearch,
-  group: OrderGroupKey | undefined,
-): OrderListSearch {
+export function groupedBy<View extends { readonly group?: string }>(
+  view: View,
+  group: View['group'] | undefined,
+): View {
   const { group: _, ...rest } = view;
-  return group === undefined ? rest : { ...rest, group };
+  return (group === undefined ? rest : { ...rest, group }) as View;
 }
 
 /** The column and direction of a view's sort, or the list's default without a key. */

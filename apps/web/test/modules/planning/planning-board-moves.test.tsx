@@ -162,9 +162,9 @@ describe('moves on the planning board (plan 07, Moving without dragging; design 
     expect(screen.getByRole('button', { name: 'My draft, 2 changes' })).toBeTruthy();
 
     await router.navigate({
-      href: planningHref('jobOrders', { zoom: 'week', from: '2026-11-02' }),
+      href: planningHref('jobOrders', {}),
     });
-    const table = await screen.findByRole('table', { name: /^Job orders, / });
+    const table = await screen.findByRole('table', { name: 'Job orders' });
     const row = await within(table).findByRole('row', { name: /^1001\.10 / });
     expect(row.textContent).toContain('CNC 2');
     expect(row.textContent).toContain('Wed 4 Nov 06:00');
