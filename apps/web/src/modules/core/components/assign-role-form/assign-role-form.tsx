@@ -31,7 +31,6 @@ import {
   type HeldRole,
   type PickRole,
 } from './assign-role-form-fields.tsx';
-import { AssignRoleFormPerson, type PersonSearch } from './assign-role-form-person.tsx';
 
 /** The assignment the API returned. */
 export type AssignedRole = CoreAssignRoleMutation['coreAssignRole'];
@@ -173,8 +172,6 @@ export interface AssignRoleFormProps {
   readonly onAssigned: (person: AssignPerson) => Promise<void>;
   /** Writes the new assignment where the page that follows reads it. */
   readonly writeAssignment?: (cache: ApolloCache, assignment: AssignedRole) => void;
-  /** Person searches the API with these, in place of choosing from `people` (People's Add role). */
-  readonly personSearch?: PersonSearch;
 }
 
 /**
@@ -194,7 +191,6 @@ export function AssignRoleForm({
   cancelHref,
   onAssigned,
   writeAssignment,
-  personSearch,
 }: AssignRoleFormProps) {
   const company = useCompanyVariables();
   const [id] = useState(() => uuidv7());
@@ -213,10 +209,7 @@ export function AssignRoleForm({
   const roleField = useController({ control: form.control, name: 'roleId' });
   const where = whereField.field.value;
   const roleId = roleField.field.value;
-  // The person picked by a search, which the next search's results may leave out.
-  const [picked, setPicked] = useState<AssignPerson | undefined>(undefined);
-  const personOf = (personId: string) =>
-    people.find((each) => each.id === personId) ?? (picked?.id === personId ? picked : undefined);
+  const personOf = (personId: string) => people.find((each) => each.id === personId);
   const person = personOf(userId);
   const place = places.find((each) => each.id === where);
   const [highlighted, setHighlighted] = useState<string | undefined>(undefined);
@@ -275,24 +268,7 @@ export function AssignRoleForm({
   const errors = summaryErrors(form.formState.errors);
   const fieldCount = errors.filter(({ name }) => name !== undefined).length;
   const personField =
-    personSearch !== undefined ? (
-      <Controller
-        control={form.control}
-        name="userId"
-        render={({ field, fieldState }) => (
-          <AssignRoleFormPerson
-            {...personSearch}
-            value={person}
-            onChange={(next) => {
-              setPicked(next);
-              field.onChange(next?.id ?? '');
-              form.clearErrors('roleId');
-            }}
-            error={fieldState.error?.message}
-          />
-        )}
-      />
-    ) : onlyPerson === undefined ? (
+    onlyPerson === undefined ? (
       <Controller
         control={form.control}
         name="userId"

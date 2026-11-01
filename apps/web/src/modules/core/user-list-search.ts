@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import { plantSlug } from '@northmes/core-contracts';
 import { z } from 'zod';
 
 /** The page size of the users list, as the articles list's. */
@@ -53,8 +54,7 @@ const searchKeys = z.object({
     .catch(undefined),
   role: z.uuid().optional().catch(undefined),
   place: z
-    .string()
-    .regex(/^[a-z0-9][a-z0-9-]{0,62}$/)
+    .union([z.enum(['anywhere', 'company', 'plant']), plantSlug])
     .optional()
     .catch(undefined),
   status: z.enum(['active', 'blocked']).optional().catch(undefined),
