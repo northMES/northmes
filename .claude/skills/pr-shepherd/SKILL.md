@@ -1,0 +1,31 @@
+---
+name: pr-shepherd
+description: NorthMES recipe for tending the open pull requests northmes-agent opened after their sessions ended. Use when asked to shepherd, tend or sweep the open pull requests, in a scheduled headless session or by hand, so a rebase, a failed check, a CodeRabbit thread or a review request does not wait for the maintainer.
+---
+
+# Pull request shepherd
+
+A session that opens a pull request ends before the pull request merges. What happens after, a rebase when main moved, a flaky check, CodeRabbit's threads, a review request on a new head, waits for nobody unless a shepherd session takes it. The maintainer's step is the approval of a high pull request (ADR 0086); everything else is the shepherd's. The shepherd makes one pass and ends: it starts what it can, waits for no check and no review, and the next run reads the result.
+
+The pass runs in the shepherd worktree, .claude/worktrees/shepherd, which the maintainer made once and which the scheduled command resets to `origin/main` before each pass (`docs/agents/shepherd.md`), so the session starts from reviewed instructions and code. A folder directly under .claude/worktrees is where the sandbox lets a session install and where the session start hook sets pnpm's store paths (CLAUDE.md, Sandbox); the main checkout is neither, and a session there must not install.
+
+## The pass
+
+1. Run `git fetch origin` and then `pnpm agent:shepherd`. It prints each open pull request northmes-agent opened with what it waits on, in the order to act, or `merging: nothing to do`.
+2. For each pull request, act on its lines in the order printed, with the rules below. Skip a draft and a pull request whose only line is merging.
+3. End with one line per pull request: its number, what you did, and what it still waits on. Write it to the standard output; a scheduled run keeps the output in its log. A line that needs the maintainer says so.
+
+## The rules
+
+- **A conflict or a branch behind main.** First `git diff --name-only origin/main...origin/<branch> -- .claude`: a branch that changes a file under `.claude/` cannot be checked out or rebased here, because the sandbox refuses writes to that folder inside the working directory; report it and go on. Otherwise, in the shepherd worktree, `git fetch origin <branch>` and `git checkout -B <branch> origin/<branch>`. When git refuses because the branch is checked out in another worktree, its session is still on it: report that and go on. Run `git rebase origin/main`. Resolve a conflict in a generated file (a schema snapshot, a `*.gen.*` file, the lockfile) by rebuilding it with the command that owns it (AGENTS.md); resolve a conflict in source by hand only when the intent is plain from both sides, and otherwise abort the rebase, report the pull request as needing a session on its branch, and go on. Run `pnpm install --frozen-lockfile` when the rebase changed the lockfile, and `pnpm check` after a source conflict; after a clean rebase, CI runs it. Push with `git push --force-with-lease`. A rebase changes no diff, so ask for no new CodeRabbit review. When done with the branch, `git checkout -q -B shepherd origin/main`, so the worktree holds reviewed code again.
+- **A failed check.** Follow the rule in CLAUDE.md: read the log with `gh run view <run id> --log-failed` first. Re-run once with `gh run rerun <run id> --failed` only when the failure is outside the change, and write the run id and the reason on the pull request; a run id a comment on the pull request already names was re-run, and a second failure is real. A Risk run that stays red a few minutes after the maintainer's approval gets the same re-run, only when `gh run list --workflow Risk --commit <head sha>` shows no Risk run queued or in progress and `gh run list --workflow "Risk refresh"` shows none queued or in progress. A failure the change causes gets an issue that names the pull request and the failing test, linked from the pull request, unless one is linked already; a session on the branch picks it up.
+- **CodeRabbit threads.** Follow the rule in CLAUDE.md: check each comment against the code, fix what holds in the shepherd worktree on that branch, test first when it changes behaviour, push, reply in the thread with the commit, and resolve the thread; reply with the reason to what does not hold, and resolve that thread too. After a push that changes the diff, post `@coderabbitai review` once (docs/agents/coderabbit.md, Commands).
+- **A person's thread.** Leave it; only that person resolves it. A thread by a deleted account is the maintainer's: say so in the last lines.
+- **A new head on a high pull request with no review of it.** Run `gh pr edit <number> --add-reviewer Krister-Johansson` once per head. Post no comment: the auto-merge step already explained the tier when the pull request opened. When the maintainer requested changes on the head or dismissed his review of it, the branch needs a session, not a request: report it.
+- **Argos.** A red Argos check is not required (ADR 0077); the maintainer approves the difference in Argos. Report it.
+- **Auto-merge off.** Run `pnpm agent:auto-merge <number>` once (CLAUDE.md). On a pull request whose checks have all passed, the script squash-merges at once, which CLAUDE.md sanctions.
+- **No risk label yet, a blocked or not yet computed merge state.** Leave it for the next pass; a pull request blocked on two passes in a row goes to the maintainer in the last lines.
+
+## Limits
+
+The shepherd changes a branch only to rebase it or to answer a CodeRabbit thread, and never changes the Tier line, the Validation impact or a workflow file. It merges nothing by hand: GitHub merges through auto-merge, which the pull request's own session or the shepherd turned on with the project script. It touches no pull request that northmes-agent did not open, the release pull request included. When a pass needs something only the maintainer can do, a workflow push, a disputed thread, an approval, it says so in its last lines and goes on with the next pull request.
