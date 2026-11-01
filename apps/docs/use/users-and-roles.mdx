@@ -5,7 +5,7 @@ description: Create users with a temporary password, give and remove roles at th
 
 What a user may do in NorthMES comes from their roles. A role is a named set of permissions, and a user holds a role at a place: at the company, where it applies at every plant of the company, or at one plant. A role at one plant grants nothing at the company or at other plants.
 
-Users and roles are the company's settings, which open under any of its plants, such as `/plant-a/settings/users` and `/plant-a/settings/roles`, in the group named after the company, such as **Acme AB settings**, at the end of the settings navigation. A plant's own people live in the plant's settings, under **People**, at `/plant-a/settings/people`. See [Companies and plants](/use/companies-and-plants#settings) for the way there.
+Users and roles are the company's settings, which open under any of its plants, such as `/plant-a/settings/users` and `/plant-a/settings/roles`, in the group named after the company, such as **Acme AB settings**, at the end of the settings navigation. **Users** also shows to a Plant admin, who reads users at the plant only. See [Companies and plants](/use/companies-and-plants#settings) for the way there.
 
 ## Default roles
 
@@ -46,7 +46,7 @@ Each permission has an id, such as `core.article:read`, which the role pages sho
 | `core.role:read` | Read roles | At the plant or the company |
 | `core.role:manage` | Create and change custom roles | Company only |
 | `core.roleAssignment:manage` | Give and remove roles | At the place of the role |
-| `core.user:read` | Read users and People | At the plant or the company |
+| `core.user:read` | Read users | At the plant or the company |
 | `core.user:create` | Create users | Company only |
 | `core.user:block` | Block and unblock users | Company only |
 | `core.user:resetPassword` | Reset passwords | Company only |
@@ -65,7 +65,11 @@ When a role is out of your reach, the role list still shows it, disabled, with t
 
 ![The users of the company in the company's settings, with their roles as chips and their status](/images/use/users.png)
 
-The **Users** list shows each user's name, username, roles with their places, and status, 25 to a page. **Search users** finds a user by name or username, and the **Role** and **Status** filters narrow the list. **Name** and **Username** sort it. The search, filters, sort and page are part of the address, so a copied link shows the same rows.
+The **Users** list shows each user's name, username, roles with their places, and status, 25 to a page. **Search users** finds a user by name or username, and the **Role**, **Place** and **Status** filters narrow the list.
+
+**Place** keeps the users who hold a role at the company or at one plant. A plant also lists the holders of a company role, since a company role applies at every plant. With **Role** and **Place** both set, one role at that place must match both.
+
+Who reads users at the company sees every user with their roles at the company and every plant, and **Place** starts at **Anywhere**. A Plant admin, who reads users at the plant only, sees the same users with their roles at the plant and the company only, and **Place** starts at the plant. A user without a role there shows **No role at Plant A**. **Name** and **Username** sort it. The search, filters, sort and page are part of the address, so a copied link shows the same rows.
 
 **Actions for** a user, at the end of their row, holds **Reset password** and **Block user** or **Unblock user**, as your permissions allow. Your own row has no actions.
 
@@ -98,7 +102,7 @@ A username that is taken, or that a user had before, is refused, and the form ke
 A user's page has two tabs:
 
 - **General** shows the name, the username and the status.
-- **Access** lists the user's roles at the company and at each plant, with **Add role** and **Remove**, and what the user can do at the company, by module. **Show every permission** also lists the permissions they do not hold.
+- **Access** lists the user's roles at the company and at each plant, with **Add role** and **Remove**, and what the user can do at the company, by module. A Plant admin sees the roles at the plant and the company, and what the user can do at the plant. **Add role** and **Remove** show at a place where you may give roles. **Show every permission** also lists the permissions they do not hold.
 
 ![The Access tab of a user, with the role Planner at Plant A](/images/use/user-access.png)
 
@@ -138,18 +142,6 @@ A role's page has two tabs: **Permissions**, by module with each permission's id
 </Steps>
 
 **Edit role** on a custom role's page changes its name and permissions, with an optional reason. The form lists who holds the role and where, since a saved change applies to them from their next action. A permission you would add is locked when you do not hold it at every place where the role is given. If someone saved the role while you edited it, the save is refused and your changes stay in the form.
-
-## People at a plant
-
-**People** in plant settings lists who holds a role at the plant, one row per role. A Plant admin manages the plant's people here.
-
-![People at Plant A, each with their role and Remove](/images/use/people.png)
-
-- **Add role** gives a user of the company a role at this plant. **Person** searches the company's users by name or username.
-- **Remove** takes a role at this plant away, after the same dialog as on a user's page.
-- A person's page shows their roles at the plant and at the company, and what they can do at the plant. Roles at the company are given and removed on the user's page under **Users**.
-
-Blocking users and resetting passwords stay under **Users**.
 
 ## Limits in release 0.1.0
 

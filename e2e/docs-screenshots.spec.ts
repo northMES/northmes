@@ -93,10 +93,6 @@ test.describe('the docs screenshots', () => {
     await checkA11y('the roles of the company');
     await docsImage(page, 'use/roles');
 
-    await page.goto(coreLinks.settings.people({ plant }).href);
-    await expect(page.getByRole('table', { name: 'People at Plant A' })).toBeVisible();
-    await checkA11y('People at a plant');
-    await docsImage(page, 'use/people');
   });
 
   test('ADR0048 the articles guide shows the list, a grouped list and an article', async ({
