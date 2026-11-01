@@ -39,6 +39,10 @@ const blockUserMutation = `mutation ($input: CoreBlockUserInput!) {
   coreBlockUser(input: $input) { id blocked }
 }`;
 
+const resetPasswordMutation = `mutation ($input: CoreResetPasswordInput!) {
+  coreResetPassword(input: $input) { temporaryPassword }
+}`;
+
 /** The errorCode of each error of an answer, with its GraphQL code. */
 function refusals(answer: { readonly errors?: readonly { extensions?: unknown }[] }) {
   return answer.errors?.map(({ extensions }) => {
@@ -141,7 +145,7 @@ describe("core's Company admin role", () => {
     ]);
   });
 
-  it('E05-S06 a Plant admin assigns Planner at its plant, but not Company admin, not at another plant or at the company, and edits no role, creates no user and blocks none', async () => {
+  it('E05-S06 a Plant admin assigns Planner at its plant, but not Company admin, not at another plant or at the company, edits no role, creates no user, blocks none and resets no password', async () => {
     const given = await givenCompany(db.ownerUrl, {
       name: 'Acme AB',
       plantNames: ['Plant A', 'Plant B'],
@@ -185,6 +189,7 @@ describe("core's Company admin role", () => {
       },
     });
     const blocked = await jonas.client.send(blockUserMutation, { input: { id: sara.userId } });
+    const reset = await jonas.client.send(resetPasswordMutation, { input: { id: sara.userId } });
 
     expect(atPlant.errors).toBeUndefined();
     expect(atPlant.data?.coreAssignRole).toMatchObject({
@@ -192,7 +197,7 @@ describe("core's Company admin role", () => {
       role: { name: 'Planner' },
     });
     expect(refusals(admin)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.role_not_held' }]);
-    for (const answer of [otherPlant, atCompany, edited, created, blocked]) {
+    for (const answer of [otherPlant, atCompany, edited, created, blocked, reset]) {
       expect(refusals(answer)).toEqual([{ code: 'FORBIDDEN', errorCode: 'core.forbidden' }]);
     }
   });
