@@ -9,8 +9,9 @@ export {
 } from './viewer.graphql.gen.ts';
 
 // What the signed-in user holds where the access pages run, at the plant and at its company, or in
-// company settings at the company in companyId, which every access page reads to show only the
-// actions the user can take. pnpm gen writes its typed document to viewer.graphql.gen.ts; this
+// company settings at the company in companyId, and at each plant the request reads: the plant, or
+// in company settings every plant of the company (ADR 0091). Every access page reads it to show
+// only the actions the user can take. pnpm gen writes its typed document to viewer.graphql.gen.ts; this
 // block never runs.
 if (false) {
   gql`
@@ -19,6 +20,10 @@ if (false) {
         userId
         plantPermissions
         companyPermissions
+        plants {
+          plantId
+          permissions
+        }
       }
     }
   `;

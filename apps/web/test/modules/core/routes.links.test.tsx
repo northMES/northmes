@@ -39,13 +39,4 @@ describe('core routes', () => {
     const expected = new Set(['/', ...linkPatterns(coreLinks)]);
     expect(routeFullPaths().sort()).toEqual([...expected].sort());
   });
-
-  it("#876 a person's page in plant settings sits under People, under the plant's settings", () => {
-    expect(
-      coreLinks.settings.people.person({
-        plant: 'plant-a',
-        userId: '01920000-0000-7000-8000-00000000a001',
-      }).href,
-    ).toBe('/plant-a/settings/people/01920000-0000-7000-8000-00000000a001');
-  });
 });

@@ -238,33 +238,32 @@ describe('the Settings button', () => {
     expect(within(screen.getByRole('banner')).queryByRole('link', { name: 'Settings' })).toBeNull();
   });
 
-  it('E04-S02 a plant admin finds People in plant settings, and the main sidebar has no Administration group', async () => {
+  it('ADR0091 a plant admin finds no People in plant settings, and the main sidebar has no Administration group', async () => {
     const { fetch } = api(['core.user:read', 'core.role:read', 'core.roleAssignment:manage']);
     renderShellAt('/plant-a/articles', shellModules, { fetch });
 
     const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
-    expect(button.getAttribute('href')).toBe('/plant-a/settings/people');
+    expect(button.getAttribute('href')).toBe('/plant-a/settings/plant');
     const sidebar = screen.getByRole('navigation', { name: 'Main' });
     expect(within(sidebar).queryByText('Administration')).toBeNull();
     expect(linksIn(sidebar).map(([label]) => label)).not.toContain('People');
     expect(linksIn(sidebar).map(([label]) => label)).not.toContain('Users');
   });
 
-  it("E06 a plant admin, who manages the plant's roles, finds Plant, Machines, Equipment groups and Calendars after People in plant settings (#767)", async () => {
+  it("E06 a plant admin, who manages the plant's roles, finds Plant, Machines, Equipment groups and Calendars in plant settings (#767, ADR 0091)", async () => {
     const { fetch } = api(['core.user:read', 'core.roleAssignment:manage']);
     renderShellAt('/plant-a/articles', shellModules, { fetch });
 
     const button = await within(await screen.findByRole('banner')).findByRole('link', {
       name: 'Settings',
     });
-    await waitFor(() => expect(button.getAttribute('href')).toBe('/plant-a/settings/people'));
+    await waitFor(() => expect(button.getAttribute('href')).toBe('/plant-a/settings/plant'));
     await userEvent.click(button);
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     await waitFor(() =>
-      expect(linksIn(settings).slice(0, 5)).toEqual([
-        ['People', '/plant-a/settings/people'],
+      expect(linksIn(settings).slice(0, 4)).toEqual([
         ['Plant', '/plant-a/settings/plant'],
         ['Machines', '/plant-a/settings/machines'],
         ['Equipment groups', '/plant-a/settings/equipment-groups'],
@@ -275,7 +274,7 @@ describe('the Settings button', () => {
 
   it('E06 a planner, who manages no roles, sees neither Machines, Equipment groups nor Calendars', async () => {
     const { fetch } = api(['core.user:read', 'planning.productionOrder:read']);
-    renderShellAt('/plant-a/settings/people', shellModules, { fetch });
+    renderShellAt('/plant-a/settings/users', shellModules, { fetch });
 
     const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
     await waitFor(() => expect(linksIn(settings).length).toBeGreaterThan(0));

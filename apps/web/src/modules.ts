@@ -38,6 +38,12 @@ export interface SettingsLink {
   readonly link: (params: { readonly plant: string }) => { readonly href: string };
   /** The permission the page reads with: the entry shows only to a user who holds it at the company. */
   readonly permission?: string;
+  /**
+   * The page also reads at the plant (ADR 0091): the entry shows to a user who holds permission at
+   * the plant too, and for a user who lacks it at the company the page reads at the plant, with
+   * x-northmes-plant and no company, instead of at the company.
+   */
+  readonly readsAtPlant?: boolean;
 }
 
 /**
@@ -105,17 +111,10 @@ export const shellModules: readonly ShellModule[] = [
           { label: 'Customers', icon: 'Building2', link: coreLinks.customers },
         ],
       },
-      {
-        label: 'People',
-        icon: 'Users',
-        link: coreLinks.settings.people,
-        permission: 'core.user:read',
-        area: 'settings',
-      },
       // The plant's own page (design #767) reads the fixture G1 until the plant API (#419) gives it
       // core.plant:update; until then it shows to a user who administers the plant's roles, as
-      // the machines do. It follows People, so the Settings button keeps opening a page on live
-      // data; it moves first, as the design draws it, once it reads the plant from the server.
+      // the machines do. It moves first, as the design draws it, once it reads the plant from the
+      // server.
       {
         label: 'Plant',
         icon: 'Factory',
@@ -157,6 +156,8 @@ export const shellModules: readonly ShellModule[] = [
         icon: 'Users',
         link: coreLinks.settings.users,
         permission: 'core.user:read',
+        // A Plant admin reads the users of the company at its plant (ADR 0091).
+        readsAtPlant: true,
       },
       {
         label: 'Roles',

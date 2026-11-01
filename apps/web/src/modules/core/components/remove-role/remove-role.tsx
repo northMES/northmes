@@ -45,8 +45,6 @@ export interface RemoveRoleProps {
   readonly label?: string;
   /** Where focus goes after the removal: the next row's link, else the page's add action (NO24). */
   readonly focusAfter: () => HTMLElement | null;
-  /** Called when the dialog opens, so the page can read what the person loses (People). */
-  readonly onOpen?: () => void;
 }
 
 /**
@@ -103,11 +101,11 @@ function removalFailure(
 }
 
 /**
- * Remove on a role of a person (design core-304, AS7 and NO24), on a user's Access tab and on
- * People in plant settings: an alert dialog described by what the person loses and what the
+ * Remove on a role of a person (design core-304, AS7 and NO24), on a user's Access tab: an alert
+ * dialog described by what the person loses and what the
  * person's other roles still let them do, with an optional reason that has focus. Escape or Cancel
  * go back to Remove. The removed assignment leaves the
- * person's roles, the role's holders and the people of the plant in the cache.
+ * person's roles and the role's holders in the cache.
  */
 export function RemoveRole({
   person,
@@ -116,7 +114,6 @@ export function RemoveRole({
   kept = [],
   label,
   focusAfter,
-  onOpen,
 }: RemoveRoleProps) {
   const places = usePlaces();
   const [reason, setReason] = useState('');
@@ -130,12 +127,6 @@ export function RemoveRole({
             refs.filter((ref) => readField('id', ref) !== assignment.id),
           // What the person can do is computed from the roles, so it is read again.
           effectivePermissions: (_value, { DELETE }) => DELETE,
-        },
-      });
-      cache.modify({
-        fields: {
-          corePlantRoleAssignments: (refs: readonly { __ref: string }[], { readField }) =>
-            refs.filter((ref) => readField('id', ref) !== assignment.id),
         },
       });
       removeHolder(cache, assignment.role?.id, assignment.id);
@@ -185,7 +176,6 @@ export function RemoveRole({
       onOpenChange={(open) => {
         if (!open) return;
         setReason('');
-        onOpen?.();
       }}
       focusAfterConfirm={focusAfter}
       onConfirm={async () => {

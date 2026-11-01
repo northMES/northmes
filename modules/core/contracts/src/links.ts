@@ -9,9 +9,8 @@ import { defineCoreLinks } from '@northmes/contracts';
  * group's page, which is its form; the customers and each customer's page; the routings, each
  * article's routing and the edit form of an operation; and the tools and each tool's page. Its
  * settings section holds core's settings pages under the plant's settings (ADR 0066, #876): the
- * plant's own page, the people of the plant with Add role and each person's page with Add role for
- * that person, the machines, the equipment groups and the calendars; and the company's pages: the
- * users, the new user page, each user's page (its tab in `tab`) with Add role; the roles, the new
+ * plant's own page, the machines, the equipment groups and the calendars; and the company's pages: the
+ * users, read at the company or at the plant (ADR 0091), the new user page, each user's page (its tab in `tab`) with Add role; the roles, the new
  * role page (Start from in `from`), and each role's page (its tab in `tab`) with its edit page
  * (design core-304); and the warehouses (design #729). Core's pages sit at the plant root and at
  * the settings root, without the module id, so the articles list is /plant-a/articles and the users
@@ -60,13 +59,6 @@ export const coreLinks = defineCoreLinks(
     settings: {
       /** The plant's own page in plant settings (design #767): name, slug, zone and production day start. */
       plant: { path: 'plant' },
-      people: {
-        path: 'people',
-        children: {
-          addRole: { path: 'roles/new' },
-          person: { path: '$userId', children: { addRole: { path: 'roles/new' } } },
-        },
-      },
       /** The machines of the plant in plant settings (design #688): the list, each machine's page and its edit page. */
       machines: {
         path: 'machines',

@@ -54,7 +54,7 @@ describe('coreLinks', () => {
     expect(coreLinks.dashboard({ plant: 'plant-a' }, { tab: 't1' }).href).toBe('/plant-a?tab=t1');
   });
 
-  it('ADR0091 coreLinks has no People: a person\'s page is the user\'s page, and no plant pages for people, users or roles', () => {
+  it("ADR0091 coreLinks has no People: a person's page is the user's page, and no plant pages for people, users or roles", () => {
     expect(coreLinks.settings).not.toHaveProperty('people');
     expect(coreLinks.settings.users.user.addRole({ plant: 'plant-a', userId: 'u1' }).href).toBe(
       '/plant-a/settings/users/u1/roles/new',

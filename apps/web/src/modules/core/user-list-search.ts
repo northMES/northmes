@@ -21,14 +21,22 @@ const sortFields = { name: 'NAME', username: 'USERNAME' } as const;
 export type UserStatusFilter = 'active' | 'blocked';
 
 /**
+ * The Place filter in the URL (ADR 0091): anywhere, the company, the plant in the URL, or in
+ * company settings another plant of the company by its slug. "plant" keeps the URL's plant across a
+ * plant switch.
+ */
+export type UserPlace = 'anywhere' | 'company' | 'plant' | (string & {});
+
+/**
  * The view of the users list that lives in the URL: the search in q, the Role filter's role id in
- * role, the Status filter in status, the sort, and the page counter with the cursor of a page after
+ * role, the Place filter in place, the Status filter in status, the sort, and the page counter with the cursor of a page after
  * the first, in after for a page reached forward and in before for one reached backward. Defaults
  * stay out.
  */
 export interface UserListSearch {
   readonly q?: string;
   readonly role?: string;
+  readonly place?: UserPlace;
   readonly status?: UserStatusFilter;
   readonly sort?: UserSort;
   readonly page?: number;
@@ -44,6 +52,11 @@ const searchKeys = z.object({
     .optional()
     .catch(undefined),
   role: z.uuid().optional().catch(undefined),
+  place: z
+    .string()
+    .regex(/^[a-z0-9][a-z0-9-]{0,62}$/)
+    .optional()
+    .catch(undefined),
   status: z.enum(['active', 'blocked']).optional().catch(undefined),
   sort: z.enum(['name', '-name', 'username', '-username']).optional().catch(undefined),
   page: z.coerce.number().int().min(2).optional().catch(undefined),
@@ -52,10 +65,11 @@ const searchKeys = z.object({
 });
 
 /** The search, the filters and the sort of a view, which every change but paging keeps. */
-function query({ q, role, status, sort }: UserListSearch): UserListSearch {
+function query({ q, role, place, status, sort }: UserListSearch): UserListSearch {
   return {
     ...(q !== undefined && { q }),
     ...(role !== undefined && { role }),
+    ...(place !== undefined && { place }),
     ...(status !== undefined && { status }),
     ...(sort !== undefined && sort !== defaultSort && { sort }),
   };
@@ -86,6 +100,68 @@ export function usersSearchedFor(view: UserListSearch, text: string): UserListSe
 /** The view of the holders of a role, or of every role, from the first page. */
 export function usersWithRole(view: UserListSearch, role: string | undefined): UserListSearch {
   return query({ ...view, role });
+}
+
+/**
+ * The view of the users with a role at a place, from the first page. The page's default place,
+ * the plant at a plant and anywhere in company settings, stays out of the URL.
+ */
+export function usersAtPlace(
+  view: UserListSearch,
+  place: UserPlace,
+  defaultPlace: UserPlace,
+): UserListSearch {
+  return query({ ...view, place: place === defaultPlace ? undefined : place });
+}
+
+/** The Place filter of a view, resolved where the page reads (ADR 0091). */
+export interface PlaceFilter {
+  /** The place the filter shows: the view's, or the default when the view's does not apply. */
+  readonly place: UserPlace;
+  /** The scope id of coreUsers' placeId, undefined for anywhere. */
+  readonly placeId: string | undefined;
+  /** The place needs an id the page has not loaded yet, so the list waits. */
+  readonly pending: boolean;
+}
+
+/**
+ * The Place filter of the view where the page reads: at a plant, anywhere, the company or the
+ * plant, the default; in company settings, anywhere, the default, the company, the plant in the
+ * URL or another plant by its slug. A place that does not apply falls back to the default.
+ */
+export function placeFilterOf(
+  view: Pick<UserListSearch, 'place'>,
+  {
+    inCompany,
+    plant,
+    company,
+    plants,
+  }: {
+    /** The page reads in company settings. */
+    readonly inCompany: boolean;
+    /** The slug of the plant in the URL. */
+    readonly plant: string;
+    readonly company: { readonly id: string } | undefined;
+    /** The company's plants, empty until they load. */
+    readonly plants: readonly { readonly id: string; readonly slug: string }[];
+  },
+): PlaceFilter {
+  const fallback: UserPlace = inCompany ? 'anywhere' : 'plant';
+  const asked = view.place ?? fallback;
+  const plantAt = (slug: string): PlaceFilter => {
+    const id = plants.find((each) => each.slug === slug)?.id;
+    return { place: slug === plant ? 'plant' : slug, placeId: id, pending: id === undefined };
+  };
+  if (asked === 'anywhere') return { place: 'anywhere', placeId: undefined, pending: false };
+  if (asked === 'company') {
+    return { place: 'company', placeId: company?.id, pending: company === undefined };
+  }
+  if (asked === 'plant' || asked === plant) return plantAt(plant);
+  // Another plant's slug: only in company settings, and only once the plants say it is one.
+  if (inCompany && (plants.length === 0 || plants.some(({ slug }) => slug === asked))) {
+    return plantAt(asked);
+  }
+  return placeFilterOf({ place: fallback }, { inCompany, plant, company, plants });
 }
 
 /** The view of active or blocked users, or of both, from the first page. */
@@ -129,9 +205,9 @@ export function previousUsersPage(view: UserListSearch, startCursor: string): Us
 
 /**
  * The variables of coreUsers for the view: 25 users, forward from after or back from before, by
- * name unless the view sorts otherwise, narrowed by the role and the status.
+ * name unless the view sorts otherwise, narrowed by the role, the place's scope id and the status.
  */
-export function userListVariables(view: UserListSearch) {
+export function userListVariables(view: UserListSearch, placeId?: string) {
   const paging =
     view.before !== undefined
       ? { last: userPageSize, before: view.before }
@@ -144,6 +220,7 @@ export function userListVariables(view: UserListSearch) {
     ...(view.q !== undefined && { search: view.q }),
     ...(sorted && { orderBy: [{ field, direction: desc ? 'DESC' : 'ASC' }] as const }),
     ...(view.role !== undefined && { roleId: view.role }),
+    ...(placeId !== undefined && { placeId }),
     ...(view.status !== undefined && { blocked: view.status === 'blocked' }),
   };
 }

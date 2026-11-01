@@ -8,14 +8,15 @@ export {
   type CoreUsersQueryVariables,
 } from './users.graphql.gen.ts';
 
-// One page of the company's users, by name unless orderBy says otherwise and narrowed by a role
-// and by status, each with their roles at the company and its plants.
+// One page of the company's users, by name unless orderBy says otherwise and narrowed by a role, a
+// place and status, each with their roles at the company and its plants: in company settings with
+// companyId, or at the plant without it, with their roles at the plant and the company (ADR 0091).
 // A role the reader may not read comes as null. pnpm gen writes its typed document to
 // users.graphql.gen.ts; this block never runs.
 if (false) {
   gql`
     query CoreUsers(
-      $companyId: ID!
+      $companyId: ID
       $first: Int
       $after: String
       $last: Int
@@ -23,6 +24,7 @@ if (false) {
       $search: String
       $orderBy: [UserOrderBy!]
       $roleId: ID
+      $placeId: ID
       $blocked: Boolean
     ) {
       coreUsers(
@@ -34,6 +36,7 @@ if (false) {
         search: $search
         orderBy: $orderBy
         roleId: $roleId
+        placeId: $placeId
         blocked: $blocked
       ) {
         totalCount
