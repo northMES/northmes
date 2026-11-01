@@ -6,7 +6,7 @@ import type { Connection } from '@northmes/sdk/lists';
 import { sql, type Transaction } from 'kysely';
 import { type UserListArgs, userList } from '../api/user/queries/user.list.ts';
 import type { CoreDatabase } from '../infrastructure/database.ts';
-import { readIn, requestScope } from './access/request-scope.ts';
+import { type RequestScope, readIn, requestScope } from './access/request-scope.ts';
 
 /** A user as core's service hands it out. */
 export interface UserRecord {
@@ -21,10 +21,36 @@ export interface UserRecord {
   readonly companyId?: string;
 }
 
-/** What coreUsers narrows its list to: the holders of a role, and blocked or active users. */
+/**
+ * What coreUsers narrows its list to: the holders of a role, the holders of an assignment at a
+ * place, and blocked or active users. With both roleId and placeId, one assignment matches both.
+ */
 export interface UserFilter {
   readonly roleId?: string;
+  /** A scope id: the company, or a plant, whose holders also include the company's (ADR 0091). */
+  readonly placeId?: string;
   readonly blocked?: boolean;
+}
+
+/**
+ * The scopes where an assignment counts for the place filter, narrowed to the request's read
+ * (ADR 0091): the company keeps the company; a plant the read covers keeps the plant and the
+ * company, since a company role applies at every plant. Without a place, every scope the read
+ * covers: at a plant, the plant and the company; in company settings, undefined for all of them.
+ * Any other place answers an empty list, because row-level security reads every assignment.
+ */
+function placeScopes(
+  scope: RequestScope,
+  placeId: string | undefined,
+): readonly string[] | undefined {
+  const { companyId, plantId, principal } = scope;
+  if (placeId === undefined) return plantId === undefined ? undefined : [plantId, companyId];
+  if (placeId === companyId) return [companyId];
+  const inRead =
+    plantId === undefined
+      ? principal.scopes.get(placeId)?.parentId === companyId
+      : placeId === plantId;
+  return inRead ? [placeId, companyId] : [];
 }
 
 /** The columns of core.user_directory that make a UserRecord. */
@@ -61,26 +87,30 @@ export class UserService {
   async list(
     args: UserListArgs,
     companyId?: string,
-    { roleId, blocked }: UserFilter = {},
+    { roleId, placeId, blocked }: UserFilter = {},
   ): Promise<Connection<UserRecord>> {
     const scope = requestScope('core.user:read', companyId);
+    const places = placeScopes(scope, placeId);
     const page = await readIn(scope, () =>
       userList.page(
         this.db,
         (tx) => {
           let users = companyUsers(tx, scope.companyId);
-          if (roleId !== undefined) {
-            const { companyId, plantId } = scope;
+          if (roleId !== undefined || placeId !== undefined) {
             users = users.where('id', 'in', (holders) => {
-              const inCompany = holders
+              let held = holders
                 .selectFrom('core.role_assignment')
                 .select('user_id')
-                .where('company_id', '=', companyId)
-                .where('role_id', '=', roleId);
+                .where('company_id', '=', scope.companyId);
+              if (roleId !== undefined) held = held.where('role_id', '=', roleId);
               // At a plant, as roleAssignments reads them: never another plant's assignments.
-              return plantId === undefined
-                ? inCompany
-                : inCompany.where('scope_id', 'in', [plantId, companyId]);
+              if (places !== undefined) {
+                held =
+                  places.length === 0
+                    ? held.where(sql<boolean>`false`)
+                    : held.where('scope_id', 'in', places);
+              }
+              return held;
             });
           }
           if (blocked !== undefined) users = users.where('banned', '=', blocked);

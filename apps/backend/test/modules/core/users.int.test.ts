@@ -85,6 +85,18 @@ describe('the users of a company and their access', () => {
     return { client, userId, username };
   }
 
+  /** A fresh user with these grants, and a client of theirs in company settings: no plant. */
+  async function atCompanySettings(
+    grants: readonly Grant[],
+  ): Promise<{ client: GqlClient; userId: string }> {
+    if (!testApp) throw new Error('the test app did not start');
+    const { authorization, userId } = await signIn(testApp.app, db.ownerUrl, grants);
+    return {
+      client: gqlClient(await testApp.app.getUrl(), { headers: { authorization } }),
+      userId,
+    };
+  }
+
   it("E05-S08 coreUsers lists the company's users with their roles at the company and at the request's plant, and no user of another company", async () => {
     const { company, plants, slugs } = await givenCompany(db.ownerUrl, {
       name: 'Acme AB',
@@ -266,15 +278,15 @@ describe('the users of a company and their access', () => {
     };
   }
 
-  /** The ids coreUsers answers with these arguments, sorted, or the errors as they came. */
-  async function userIds(client: GqlClient, args: string) {
+  /** The ids coreUsers answers to this reader with these arguments, without the reader, sorted. */
+  async function userIds({ client, userId }: { client: GqlClient; userId: string }, args: string) {
     const answer = await client.send<{
       coreUsers: { totalCount: number; edges: { node: { id: string } }[] };
     }>(`{ coreUsers(${args}) { totalCount edges { node { id } } } }`);
     if (!answer.data) throw new Error(JSON.stringify(answer.errors));
-    const ids = answer.data.coreUsers.edges.map(({ node }) => node.id).sort();
+    const ids = answer.data.coreUsers.edges.map(({ node }) => node.id);
     expect(answer.data.coreUsers.totalCount).toBe(ids.length);
-    return ids;
+    return ids.filter((id) => id !== userId).sort();
   }
 
   it('E05-S08 a plant reader who names another plant as placeId gets no users, though a holder exists there', async () => {
@@ -284,7 +296,90 @@ describe('the users of a company and their access', () => {
       slugs[0] ?? '',
     );
 
-    expect(await userIds(reader.client, `placeId: "${plantB}"`)).toEqual([]);
+    expect(await userIds(reader, `placeId: "${plantB}"`)).toEqual([]);
+  });
+
+  it("E05-S08 coreUsers with placeId of the reader's plant lists the holders at the plant and of a company role, and no holder only at another plant", async () => {
+    const { plantA, slugs, atPlantA, atCompany } = await holdersByPlace();
+    const reader = await signedIn(
+      [{ scopeId: plantA, permissions: ['core.user:read', 'core.role:read'] }],
+      slugs[0] ?? '',
+    );
+
+    expect(await userIds(reader, `placeId: "${plantA}"`)).toEqual([atPlantA, atCompany].sort());
+  });
+
+  it('E05-S08 coreUsers with placeId of the company lists the holders of a company role only, at a plant and in company settings', async () => {
+    const { company, plantA, slugs, atCompany } = await holdersByPlace();
+    const plantReader = await signedIn(
+      [{ scopeId: plantA, permissions: ['core.user:read', 'core.role:read'] }],
+      slugs[0] ?? '',
+    );
+
+    expect(await userIds(plantReader, `placeId: "${company}"`)).toEqual([atCompany]);
+
+    const companyReader = await atCompanySettings([
+      { scopeId: company, permissions: ['core.user:read', 'core.role:read'] },
+    ]);
+    expect(await userIds(companyReader, `companyId: "${company}", placeId: "${company}"`)).toEqual([
+      atCompany,
+    ]);
+  });
+
+  it('E05-S08 coreUsers in company settings with roleId and placeId lists a user only when one assignment matches both', async () => {
+    const { company, plants } = await givenCompany(db.ownerUrl, {
+      plantNames: ['Plant A', 'Plant B'],
+    });
+    const [plantA = '', plantB = ''] = plants;
+    const roles = await queryAsCore<{ id: string; key: string }>(
+      db.ownerUrl,
+      `select id, key from core.role where company_id = $1`,
+      [company],
+    );
+    const role = (key: string) => roles.find((row) => row.key === key)?.id ?? '';
+    const split = await givenUser(db.ownerUrl, []);
+    await givenAssignment(db.ownerUrl, {
+      userId: split,
+      roleId: role('planning-planner'),
+      scopeId: plantB,
+    });
+    await givenAssignment(db.ownerUrl, {
+      userId: split,
+      roleId: role('planning-viewer'),
+      scopeId: plantA,
+    });
+    const planner = await givenUser(db.ownerUrl, []);
+    await givenAssignment(db.ownerUrl, {
+      userId: planner,
+      roleId: role('planning-planner'),
+      scopeId: plantA,
+    });
+    const reader = await atCompanySettings([
+      { scopeId: company, permissions: ['core.user:read', 'core.role:read'] },
+    ]);
+
+    expect(
+      await userIds(
+        reader,
+        `companyId: "${company}", roleId: "${role('planning-planner')}", placeId: "${plantA}"`,
+      ),
+    ).toEqual([planner]);
+    expect(await userIds(reader, `companyId: "${company}", placeId: "${plantB}"`)).toEqual([split]);
+  });
+
+  it('E05-S08 a company reader who names a plant of another company as placeId gets no users', async () => {
+    const { company } = await givenCompany(db.ownerUrl);
+    const other = await holdersByPlace();
+    const reader = await atCompanySettings([
+      { scopeId: company, permissions: ['core.user:read', 'core.role:read'] },
+    ]);
+
+    expect(await userIds(reader, `companyId: "${company}", placeId: "${other.plantA}"`)).toEqual(
+      [],
+    );
+    expect(await userIds(reader, `companyId: "${company}", placeId: "${other.company}"`)).toEqual(
+      [],
+    );
   });
 
   it('E05-S08 coreUsers sorts by name, the default, and by username either way', async () => {
