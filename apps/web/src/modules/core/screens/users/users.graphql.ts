@@ -10,7 +10,7 @@ export {
 
 // One page of the company's users, by name unless orderBy says otherwise and narrowed by a role, a
 // place and status, each with their roles at the company and its plants: in company settings with
-// companyId, or at the plant without it, with their roles at the plant and the company (ADR 0091).
+// companyId, or at the plant without it, with their roles at the plant and the company (ADR 0092).
 // A role the reader may not read comes as null. pnpm gen writes its typed document to
 // users.graphql.gen.ts; this block never runs.
 if (false) {

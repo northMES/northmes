@@ -94,7 +94,7 @@ function option(listbox: HTMLElement, name: string): HTMLElement {
 }
 
 describe('Add role', () => {
-  it('ADR0091 when the places could not be read, Add role shows the error with Try again, which reads them again', async () => {
+  it('ADR0092 when the places could not be read, Add role shows the error with Try again, which reads them again', async () => {
     const user = userEvent.setup();
     renderCoreAt(addRoleHref, [
       settingsViewerQuery(assigner),

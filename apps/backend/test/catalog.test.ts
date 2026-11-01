@@ -204,7 +204,7 @@ describe('checkCatalog', () => {
     ]);
   });
 
-  it('ADR0091 people is no longer reserved at the settings root, since People went into Users', () => {
+  it('ADR0092 people is no longer reserved at the settings root, since People went into Users', () => {
     expect(() => checkCatalog([core, plugin('people', ['core'])], { imageVersion })).not.toThrow();
   });
 

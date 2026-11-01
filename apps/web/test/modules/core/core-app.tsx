@@ -49,7 +49,7 @@ export const plant = 'plant-a';
  * The $plant route's component of the tests: the shell state of the plant in the URL, whose first
  * page the user may open is Articles, with the company of the access fixtures on a page of the
  * company's settings, as the shell gives it (#876), unless the page reads at the plant, as Users
- * does for a reader who reads users only there (ADR 0091).
+ * does for a reader who reads users only there (ADR 0092).
  */
 function PlantStub({ readsAtPlant }: { readonly readsAtPlant: boolean }) {
   const { plant } = useParams({ strict: false });
@@ -79,7 +79,7 @@ function PlantStub({ readsAtPlant }: { readonly readsAtPlant: boolean }) {
  * plantSettingsSource, the customers pages customersSource, the warehouses warehousesSource and
  * the routings routingsSource and the tools toolsSource, the fixture G1 when the test gives none.
  * With readsAtPlant, the company's pages read at the plant, as the shell renders Users for a reader
- * who reads users only at the plant (ADR 0091).
+ * who reads users only at the plant (ADR 0092).
  */
 export function renderCoreAt(
   href: string,

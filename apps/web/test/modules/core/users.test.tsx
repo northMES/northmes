@@ -83,7 +83,7 @@ function usersQuery(
   };
 }
 
-/** The same response, read at the plant: its variables name no company (ADR 0091). */
+/** The same response, read at the plant: its variables name no company (ADR 0092). */
 function atPlant(response: MockLink.MockedResponse): MockLink.MockedResponse {
   const { companyId: _company, ...variables } = (response.request.variables ?? {}) as Record<
     string,
@@ -100,7 +100,7 @@ function field(name: string): HTMLInputElement {
 }
 
 describe('users', () => {
-  it('ADR0091 a plant reader opens Users at the plant with Place set to the plant: roles at Plant A and the company only, and no New user or row menu', async () => {
+  it('ADR0092 a plant reader opens Users at the plant with Place set to the plant: roles at Plant A and the company only, and no New user or row menu', async () => {
     renderCoreAt(
       usersHref,
       [
@@ -134,7 +134,7 @@ describe('users', () => {
     expect(screen.queryByRole('button', { name: /^Actions for/ })).toBeNull();
   });
 
-  it('ADR0091 at the plant, Place offers Anywhere, the company and the plant, and Anywhere puts place=anywhere in the URL and reads with no place', async () => {
+  it('ADR0092 at the plant, Place offers Anywhere, the company and the plant, and Anywhere puts place=anywhere in the URL and reads with no place', async () => {
     const events = userEvent.setup();
     const router = renderCoreAt(
       usersHref,
@@ -161,7 +161,7 @@ describe('users', () => {
     expect(router.state.location.search).toEqual({ place: 'anywhere' });
   });
 
-  it('ADR0091 when the places could not be read at the plant, Users shows the error with Try again, which reads them again', async () => {
+  it('ADR0092 when the places could not be read at the plant, Users shows the error with Try again, which reads them again', async () => {
     const events = userEvent.setup();
     renderCoreAt(
       usersHref,
@@ -182,7 +182,7 @@ describe('users', () => {
     await waitFor(() => expect(bodyRows(table).map(([name]) => name)).toEqual(['Sara Nyberg']));
   });
 
-  it('ADR0091 a company reader opens Users with Place set to Anywhere, and sees a role at Plant B', async () => {
+  it('ADR0092 a company reader opens Users with Place set to Anywhere, and sees a role at Plant B', async () => {
     renderCoreAt(usersHref, [
       settingsViewerQuery(['core.user:read']),
       companiesQuery(),
@@ -198,7 +198,7 @@ describe('users', () => {
     expect(screen.getByRole('button', { name: 'Place: Anywhere' })).toBeDefined();
   });
 
-  it('ADR0091 a reader who may block users at the company and reads users only at the plant sees Block user at the plant', async () => {
+  it('ADR0092 a reader who may block users at the company and reads users only at the plant sees Block user at the plant', async () => {
     const events = userEvent.setup();
     renderCoreAt(
       usersHref,
@@ -216,7 +216,7 @@ describe('users', () => {
     expect(screen.queryByRole('menuitem', { name: 'Reset password' })).toBeNull();
   });
 
-  it('ADR0091 a reader without core.user:read at the plant or the company gets No access to Users, which names both', async () => {
+  it('ADR0092 a reader without core.user:read at the plant or the company gets No access to Users, which names both', async () => {
     renderCoreAt(
       usersHref,
       [

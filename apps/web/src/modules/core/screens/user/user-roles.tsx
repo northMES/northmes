@@ -50,7 +50,7 @@ function whereOf({ scope }: UserAssignment, places: Places): string {
 /**
  * Whether the reader may remove the assignment, as the API checks it (ADR 0010): the assignment
  * permission at its place, and every permission of its role there, by the reader's rights at that
- * place (ADR 0091). A role the reader may not read leaves the check to the API.
+ * place (ADR 0092). A role the reader may not read leaves the check to the API.
  */
 function canRemove(assignment: UserAssignment, viewer: Viewer): boolean {
   const holds = (permission: string) => viewer.canAt(assignment.scope, permission);
@@ -131,7 +131,7 @@ function WhereCell({
   readonly userId: string;
 }) {
   const Icon = assignment.scope.kind === 'COMPANY' ? Building2 : Factory;
-  // In company settings a plant links to the user's page in that plant's settings (ADR 0091).
+  // In company settings a plant links to the user's page in that plant's settings (ADR 0092).
   const plant =
     places.plant === undefined && assignment.scope.kind === 'PLANT'
       ? places.plants.find(({ id }) => id === assignment.scope.id)
@@ -155,7 +155,7 @@ function WhereCell({
 
 /**
  * The Roles card of the Access tab (design core-304, AS1, AS11, AS21, NO5 and NO13, ADR 0066 and
- * ADR 0091), in company settings or at the plant: the user's roles at the plants and at the company, the plant roles first,
+ * ADR 0092), in company settings or at the plant: the user's roles at the plants and at the company, the plant roles first,
  * each with its kind and its place, and Remove for a reader who may remove it, or the line that
  * names who can. Add role leads to the Add role page. A user without a role gets the empty state
  * that says so. At 320 px each role is a card. A reader without core.role:read sees No access in
@@ -178,7 +178,7 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
   const linked = viewer.canAtCompany('core.role:read');
   // At the plant the page reads the plant and its company (design core-304, AS1).
   const plantName = places.plant?.name;
-  // Add role offers the places the page reads where the reader may give roles (ADR 0091).
+  // Add role offers the places the page reads where the reader may give roles (ADR 0092).
   const offered = [
     ...(places.plant === undefined ? places.plants : [places.plant]).map(({ id }) => ({
       kind: 'PLANT',

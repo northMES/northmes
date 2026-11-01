@@ -16,7 +16,7 @@ export interface ViewerRecord {
   readonly plantPermissions: readonly string[];
   readonly companyPermissions: readonly string[];
   /**
-   * What the user holds at each plant the request reads (ADR 0091): the request's plant, or in
+   * What the user holds at each plant the request reads (ADR 0092): the request's plant, or in
    * company settings each plant of the company the user may open.
    */
   readonly plants: readonly ViewerPlantRecord[];

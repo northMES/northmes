@@ -67,7 +67,7 @@ describe("the company's settings pages under a plant", () => {
     expect(users?.variables).toMatchObject({ companyId });
   });
 
-  it("ADR0091 a Plant admin, who reads users at the plant only, finds Users in the company's group and no People, and Users reads at the plant with x-northmes-plant and no company", async () => {
+  it("ADR0092 a Plant admin, who reads users at the plant only, finds Users in the company's group and no People, and Users reads at the plant with x-northmes-plant and no company", async () => {
     const { fetch, seen } = fakeApi({
       CoreCompanies: companies,
       CoreViewer: () => viewer(['core.user:read', 'core.roleAssignment:manage'], []),
@@ -87,14 +87,14 @@ describe("the company's settings pages under a plant", () => {
     expect(users?.variables).not.toHaveProperty('companyId');
   });
 
-  it("ADR0091 /plant-a/settings/people shows the plant's page not found, since People went into Users", async () => {
+  it("ADR0092 /plant-a/settings/people shows the plant's page not found, since People went into Users", async () => {
     const { fetch } = companyAdmin(['core.user:read'], ['core.user:read']);
     renderShellAt('/plant-a/settings/people', shellModules, { fetch });
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Page not found' })).toBeDefined();
   });
 
-  it('ADR0091 when the permissions could not be read, Users shows the error with Try again, which reads them again', async () => {
+  it('ADR0092 when the permissions could not be read, Users shows the error with Try again, which reads them again', async () => {
     const user = userEvent.setup();
     let reads = 0;
     const { fetch } = fakeApi({

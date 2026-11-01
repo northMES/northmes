@@ -54,7 +54,7 @@ async function routeUsers(page: Page) {
 const usersHref = coreLinks.settings.users({ plant }).href;
 
 test.describe('users', () => {
-  test("ADR0091 a Plant admin opens Users on the people of its plant, gives a role at its plant from a user's Access tab and removes it", async ({
+  test("ADR0092 a Plant admin opens Users on the people of its plant, gives a role at its plant from a user's Access tab and removes it", async ({
     page,
     signIn,
     checkA11y,
@@ -86,7 +86,7 @@ test.describe('users', () => {
     await expect(remove).toHaveCount(0);
   });
 
-  test('ADR0091 the users list at a plant while it loads, empty and filtered to the company', async ({
+  test('ADR0092 the users list at a plant while it loads, empty and filtered to the company', async ({
     page,
     signIn,
     checkA11y,
@@ -111,7 +111,7 @@ test.describe('users', () => {
     await checkA11y('the users list at a plant filtered to the company');
   });
 
-  test('ADR0091 a planner, who reads users neither at the plant nor at the company, gets No access to Users', async ({
+  test('ADR0092 a planner, who reads users neither at the plant nor at the company, gets No access to Users', async ({
     page,
     signIn,
     checkA11y,

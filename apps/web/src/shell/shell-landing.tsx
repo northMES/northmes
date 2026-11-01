@@ -43,7 +43,7 @@ async function settingsOf(
       variables: { companyId: company.id },
     });
     const permissions = new Set(data?.coreViewer.companyPermissions);
-    // Users also shows to a user who reads users at the plant only (ADR 0091).
+    // Users also shows to a user who reads users at the plant only (ADR 0092).
     const atPlant = new Set(
       data?.coreViewer.plants.find(({ plantId }) => plantId === plant.id)?.permissions,
     );

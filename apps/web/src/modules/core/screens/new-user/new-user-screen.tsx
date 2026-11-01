@@ -308,7 +308,7 @@ export function NewUserScreen() {
   const companyName = places.company?.name ?? 'the company';
   // Role and place shows to a creator who may read roles where the page reads and assign them at
   // the company or a plant: in company settings every plant of the company, at a plant that plant
-  // (ADR 0091).
+  // (ADR 0092).
   const atPlants = places.plant === undefined ? places.plants : [places.plant];
   const assignable = [
     ...atPlants.map((each) => ({ ...each, kind: 'PLANT' as const })),

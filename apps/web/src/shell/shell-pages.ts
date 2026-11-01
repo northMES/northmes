@@ -166,7 +166,7 @@ export function plantOf(companies: readonly ShellCompany[], slug: string) {
  * The company settings entries of the modules that a user with these permissions may open, under a
  * plant of the company: core's first, then the other modules' (ADR 0066, #876). An entry shows to a
  * holder of its permission at the company, and an entry whose page also reads at the plant to a
- * holder of it at the plant too (ADR 0091).
+ * holder of it at the plant too (ADR 0092).
  */
 export function companySettingsEntries(
   modules: readonly ShellModule[],
@@ -187,7 +187,7 @@ export function companySettingsEntries(
 }
 
 /**
- * Where a page of the company's settings reads (ADR 0066, ADR 0091): at the company, with the
+ * Where a page of the company's settings reads (ADR 0066, ADR 0092): at the company, with the
  * company's id and no plant, unless its entry also reads at the plant and the user lacks the
  * entry's permission at the company; then at the plant, with x-northmes-plant. Undefined until the
  * company's permissions are known, for a page that waits for them.

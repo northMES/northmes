@@ -102,7 +102,7 @@ export function companies() {
 
 /**
  * coreViewer with these permissions at the plant and at the company, and at each plant of
- * `plants`, by its scope id (ADR 0091).
+ * `plants`, by its scope id (ADR 0092).
  */
 export function viewer(
   plantPermissions: readonly string[],

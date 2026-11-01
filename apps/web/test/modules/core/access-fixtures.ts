@@ -58,7 +58,7 @@ export function forbiddenError(
 /**
  * coreViewer in company settings, with these permissions at the company: the access pages read
  * them as the permissions at every plant of it too (ADR 0066), unless plantPermissions names what
- * the user holds at Plant A, which then includes the company's (ADR 0091).
+ * the user holds at Plant A, which then includes the company's (ADR 0092).
  */
 export function settingsViewerQuery(
   companyPermissions: readonly string[],

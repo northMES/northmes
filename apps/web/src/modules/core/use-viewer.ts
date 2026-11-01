@@ -21,7 +21,7 @@ export interface Viewer {
   /** Asks again, for a page's Try again. */
   readonly retry: () => Promise<unknown>;
   /**
-   * The user holds the permission at a place (ADR 0091): the company, or a plant the page reads,
+   * The user holds the permission at a place (ADR 0092): the company, or a plant the page reads,
    * which in company settings is any plant of the company. A plant the page does not read holds
    * none.
    */
