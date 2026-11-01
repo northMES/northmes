@@ -5,6 +5,7 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import { CoreCompanies } from '../../../src/modules/core/companies.graphql.ts';
 import { CoreCreateUser } from '../../../src/modules/core/screens/new-user/create-user.graphql.ts';
 import { CoreUserPermissions } from '../../../src/modules/core/screens/user/user-permissions.graphql.ts';
 import { CoreUsers } from '../../../src/modules/core/screens/users/users.graphql.ts';
@@ -158,6 +159,27 @@ describe('users', () => {
 
     await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
     expect(router.state.location.search).toEqual({ place: 'anywhere' });
+  });
+
+  it('ADR0091 when the places could not be read at the plant, Users shows the error with Try again, which reads them again', async () => {
+    const events = userEvent.setup();
+    renderCoreAt(
+      usersHref,
+      [
+        viewerQuery(['core.user:read']),
+        { request: { query: CoreCompanies }, error: new Error('Failed to fetch') },
+        companiesQuery(),
+        atPlant(usersQuery([user(sara, [])], undefined, undefined, { placeId: plantA.id })),
+      ],
+      { readsAtPlant: true },
+    );
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByRole('heading', { name: 'Could not load users' })).toBeDefined();
+    await events.click(screen.getByRole('button', { name: 'Try again' }));
+
+    const table = await screen.findByRole('table', { name: 'Users' });
+    await waitFor(() => expect(bodyRows(table).map(([name]) => name)).toEqual(['Sara Nyberg']));
   });
 
   it('ADR0091 a company reader opens Users with Place set to Anywhere, and sees a role at Plant B', async () => {
