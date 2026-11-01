@@ -89,7 +89,7 @@ ADR 0050 and ADR 0069 are accepted, so their text stays as it was. ADR 0086 is p
 
 ## More information
 
-* Related ADRs: [0050](0050-github-organization-rulesets-ci-runners-and-supply-chain.md) (the ruleset and default setup), [0069](0069-require-each-ci-job-as-a-status-check-on-main.md) (each job a required check), [0086](0086-risk-tiered-review-and-merge-of-agent-pull-requests.md) (the risk gate and auto-merge), [0077](0077-visual-regression-with-argos-from-the-axe-states-of-the-end-to-end-specs.md) (Argos), [0041](0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md) (the end-to-end retry).
+* Related ADRs: [0050](0050-github-organization-rulesets-ci-runners-and-supply-chain.md) (the ruleset and default setup), [0069](0069-require-each-ci-job-as-a-status-check-on-main.md) (each job a required check), [0086](0086-risk-tiered-review-and-merge-of-agent-pull-requests.md) (the risk gate and auto-merge), [0077](0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md) (Argos), [0041](0041-test-strategy-tdd-vitest-projects-testcontainers-and-playwright.md) (the end-to-end retry).
 * Plan: [13 delivery and GitHub](../plan/13-delivery-and-github.md), [11 quality and testing](../plan/11-quality-and-testing.md).
 * GitHub, managing a merge queue: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue. The `merge_group` event: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#merge_group.
 * Revisit when GitHub's default setup reports on merge groups, which would let CodeQL go back to it, and if the doubled CI minutes matter once the repository has more than one contributor.
