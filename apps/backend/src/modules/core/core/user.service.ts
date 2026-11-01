@@ -80,9 +80,9 @@ export class UserService {
 
   /**
    * One page of the users of the request's company, as coreUsers' arguments ask, narrowed by the
-   * filter: the holders of a role of the company where the request reads assignments (at a plant,
-   * the plant and the company; in company settings, the company and every plant of it), and blocked
-   * or active users.
+   * filter: the holders of a role of the company, or of a role at a place (ADR 0091), where the
+   * request reads assignments (at a plant, the plant and the company; in company settings, the
+   * company and every plant of it), and blocked or active users.
    */
   async list(
     args: UserListArgs,

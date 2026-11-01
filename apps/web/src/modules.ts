@@ -113,8 +113,8 @@ export const shellModules: readonly ShellModule[] = [
       },
       // The plant's own page (design #767) reads the fixture G1 until the plant API (#419) gives it
       // core.plant:update; until then it shows to a user who administers the plant's roles, as
-      // the machines do. It moves first, as the design draws it, once it reads the plant from the
-      // server.
+      // the machines do. It comes first, as the design draws it, so the Settings button of a Plant
+      // admin opens it while it reads the fixture.
       {
         label: 'Plant',
         icon: 'Factory',

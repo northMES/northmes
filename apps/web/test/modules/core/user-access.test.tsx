@@ -431,7 +431,7 @@ describe("a user's access", () => {
     );
   });
 
-  it('ADR0091 in company settings a reader who may give roles only at Plant A gets Add role and Remove at Plant A, and not at Plant B', async () => {
+  it('ADR0091 in company settings a reader who may give roles only at Plant A gets Remove at Plant A and not at Plant B, and Add role', async () => {
     const saraAtBoth = user(sara, [assignment(shiftLead, plantA), assignment(planner, plantB)]);
     renderCoreAt(accessHref, [
       settingsViewerQuery(

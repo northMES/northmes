@@ -20,7 +20,7 @@ Each company has the default roles of its modules. A default role cannot be edit
 
 ## Permissions
 
-Each permission has an id, such as `core.article:read`, which the role pages show beside its plain name. At a plant, a permission counts through a role at that plant or at the company. The company's settings pages check permissions at the company, so only roles at the company count there. The company-level permissions count only through a role at the company.
+Each permission has an id, such as `core.article:read`, which the role pages show beside its plain name. At a plant, a permission counts through a role at that plant or at the company. The company's settings pages check permissions at the company, so only roles at the company count there, except on **Users**, which reads at the plant for a user who reads users only there. The company-level permissions count only through a role at the company.
 
 | Permission | What it allows | Where it counts |
 |---|---|---|
@@ -69,7 +69,7 @@ The **Users** list shows each user's name, username, roles with their places, an
 
 **Place** keeps the users who hold a role at the company or at one plant. A plant also lists the holders of a company role, since a company role applies at every plant. With **Role** and **Place** both set, one role at that place must match both.
 
-Who reads users at the company sees every user with their roles at the company and every plant, and **Place** starts at **Anywhere**. A Plant admin, who reads users at the plant only, sees the same users with their roles at the plant and the company only, and **Place** starts at the plant. A user without a role there shows **No role at Plant A**. **Name** and **Username** sort it. The search, filters, sort and page are part of the address, so a copied link shows the same rows.
+Who reads users at the company sees every user with their roles at the company and every plant, and **Place** starts at **Anywhere**. A Plant admin, who reads users at the plant only, sees the same users with their roles at the plant and the company only, and **Place** starts at the plant. A user without a role there shows **No role at Plant A**. **Name** and **Username** sort the list. The search, filters, sort and page are part of the address, so a copied link shows the same rows.
 
 **Actions for** a user, at the end of their row, holds **Reset password** and **Block user** or **Unblock user**, as your permissions allow. Your own row has no actions.
 

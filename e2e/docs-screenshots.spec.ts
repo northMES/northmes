@@ -69,9 +69,9 @@ test.describe('the docs screenshots', () => {
     await docsImage(page, 'use/plant-switcher', menu);
   });
 
-  // No other spec reaches the company's users, a user's Access tab, the roles or People, so their
-  // axe checks (ADR 0021) run here.
-  test('ADR0048 the users guide shows the users, a user, the roles and People, each passing the WCAG 2.2 AA rules', async ({
+  // No other spec reaches the company's users, a user's Access tab or the roles, so their axe checks
+  // (ADR 0021) run here.
+  test('ADR0048 the users guide shows the users, a user and the roles, each passing the WCAG 2.2 AA rules', async ({
     page,
     signIn,
     checkA11y,
@@ -92,7 +92,6 @@ test.describe('the docs screenshots', () => {
     await expect(page.getByRole('row', { name: /Plant admin/ })).toBeVisible();
     await checkA11y('the roles of the company');
     await docsImage(page, 'use/roles');
-
   });
 
   test('ADR0048 the articles guide shows the list, a grouped list and an article', async ({
