@@ -14,7 +14,6 @@ import {
 import {
   calendarPageSearch,
   equipmentGroupListSearch,
-  equipmentGroupPageSearch,
   machineListSearch,
   machinePageSearch,
   plantPageSearch,
@@ -230,10 +229,10 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
     path: linkEntry(coreLinks.settings.people.person.addRole).path,
     component: lazyScreen('PersonAddRoleScreen'),
   });
-  // The machines with each machine's page and its edit page, the equipment groups with each
-  // group's page and its edit page, and the calendars with each calendar's page (designs #688 and
-  // #729). The list and the forms take the page state the mock source previews from the URL; a
-  // calendar's page keeps the week its week view shows.
+  // The machines with each machine's page and its edit page, the equipment groups with the new
+  // group page, each group's page and its edit page, and the calendars with each calendar's page
+  // (designs #688 and #729). The machine and calendar pages take the page state the mock source
+  // previews from the URL; a calendar's page keeps the week its week view shows.
   const machinesRoute = createRoute({
     getParentRoute: () => coreRoute,
     path: linkEntry(coreLinks.settings.machines).path,
@@ -272,6 +271,11 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
       urlSearchOfPlantSettingsList(equipmentGroupListSearch(raw)),
     component: lazyScreen('EquipmentGroupsScreen'),
   });
+  const newEquipmentGroupRoute = createRoute({
+    getParentRoute: () => equipmentGroupsRoute,
+    path: linkEntry(coreLinks.settings.equipmentGroups.new).path,
+    component: lazyScreen('NewEquipmentGroupScreen'),
+  });
   const equipmentGroupRoute = createRoute({
     getParentRoute: () => equipmentGroupsRoute,
     path: linkEntry(coreLinks.settings.equipmentGroups.group).path,
@@ -279,13 +283,11 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
   const equipmentGroupDetailRoute = createRoute({
     getParentRoute: () => equipmentGroupRoute,
     path: '/',
-    validateSearch: equipmentGroupPageSearch,
     component: lazyScreen('EquipmentGroupScreen'),
   });
   const editEquipmentGroupRoute = createRoute({
     getParentRoute: () => equipmentGroupRoute,
     path: linkEntry(coreLinks.settings.equipmentGroups.group.edit).path,
-    validateSearch: equipmentGroupPageSearch,
     component: lazyScreen('EditEquipmentGroupScreen'),
   });
   // The plant's own page in plant settings (design #767), on the fixture G1 until the plant API.
@@ -394,6 +396,7 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
     ]),
     equipmentGroupsRoute.addChildren([
       equipmentGroupListRoute,
+      newEquipmentGroupRoute,
       equipmentGroupRoute.addChildren([equipmentGroupDetailRoute, editEquipmentGroupRoute]),
     ]),
     calendarsRoute.addChildren([calendarListRoute, calendarRoute]),

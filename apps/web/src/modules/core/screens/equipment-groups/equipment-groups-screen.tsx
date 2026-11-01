@@ -3,54 +3,68 @@
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { Info, Layers, Lock, Pencil, Plus } from 'lucide-react';
+import { Archive, Info, Layers, Pencil, Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
 import { FilterChip } from '../../../../ui/components/filter-chip/index.ts';
 import { FilterMenu } from '../../../../ui/components/filter-menu/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
+import { isForbidden } from '../../../../ui/lib/graphql-errors.ts';
 import { Alert, AlertDescription } from '../../../../ui/primitives/alert.tsx';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
+import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
+import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import { GroupColor } from '../../components/group-color/index.ts';
 import {
   colorFromText,
   colorText,
   machineCountText,
   machinesOf,
-  ownerText,
 } from '../../equipment-group-facts.ts';
-import { groupsForbiddenDescription, groupsForbiddenTitle } from '../../equipment-group-states.tsx';
-import {
-  type PlantEquipmentGroup,
-  type PlantMachine,
-  PlantSettingsForbidden,
-  type PlantSettingsSnapshot,
+import { canChangeGroup, machinesFixtureNote } from '../../equipment-group-states.tsx';
+import type { EquipmentGroupRow } from '../../equipment-groups.graphql.ts';
+import { readForbiddenState } from '../../no-access.tsx';
+import type {
+  GroupColorFrom,
+  PlantMachine,
+  PlantSettingsSnapshot,
 } from '../../plant-settings-data.ts';
-import { plantTime } from '../../plant-settings-facts.ts';
-import { plantSettingsActionReason } from '../../plant-settings-reasons.ts';
 import {
   type EquipmentGroupListSearch,
   equipmentGroupListSearch,
   urlSearchOf,
 } from '../../plant-settings-search.ts';
 import { usePlantSettings } from '../../plant-settings-source-context.ts';
+import { useEquipmentGroups } from '../../use-equipment-groups.ts';
+import { usePlaces } from '../../use-places.ts';
+import { useViewer, type Viewer } from '../../use-viewer.ts';
 
 /** The id of the filter row, where Clear filters moves focus to the Scope menu. */
 const filtersId = 'equipment-groups-filters';
 
+/** The id of the Show archived checkbox, which its label names. */
+const showArchivedId = 'equipment-groups-show-archived';
+
 const link = 'text-link underline underline-offset-2 hover:no-underline';
 
-type Scope = PlantEquipmentGroup['scope']['kind'];
+type Scope = 'company' | 'plant';
 
 /** One row of the list: a group with the plant's machines in it. */
 interface GroupRow {
-  readonly group: PlantEquipmentGroup;
+  readonly group: EquipmentGroupRow;
   readonly machines: readonly PlantMachine[];
 }
 
-function columnsOf(plant: string, plantName: string): DataTableColumn<GroupRow>[] {
+/** The names a row shows: the scope's, and the plant's for its machines. */
+interface Names {
+  readonly plant: string;
+  readonly company: string;
+}
+
+function columnsOf(plant: string, names: Names, viewer: Viewer): DataTableColumn<GroupRow>[] {
   return [
     {
       id: 'color',
@@ -67,21 +81,39 @@ function columnsOf(plant: string, plantName: string): DataTableColumn<GroupRow>[
       header: 'Code',
       cell: (row) => (
         <Link
-          to={coreLinks.settings.equipmentGroups.group({ plant, groupCode: row.group.code }).href}
+          to={coreLinks.settings.equipmentGroups.group({ plant, groupId: row.group.id }).href}
           className={`font-mono ${link}`}
         >
           {row.group.code}
         </Link>
       ),
     },
-    { id: 'name', header: 'Name', cell: (row) => row.group.name },
-    { id: 'scope', header: 'Scope', cell: (row) => row.group.scope.name },
+    {
+      id: 'name',
+      header: 'Name',
+      cell: (row) =>
+        row.group.archivedAt === null ? (
+          row.group.name
+        ) : (
+          <span className="flex flex-wrap items-center gap-2">
+            {row.group.name}
+            <StatusBadge tone="neutral" icon={Archive}>
+              Archived
+            </StatusBadge>
+          </span>
+        ),
+    },
+    {
+      id: 'scope',
+      header: 'Scope',
+      cell: (row) => (row.group.scope === 'company' ? names.company : names.plant),
+    },
     {
       id: 'machines',
       header: 'Machines',
       cell: (row) =>
         row.machines.length === 0 ? (
-          <span className="text-muted-foreground">No machines at {plantName}</span>
+          <span className="text-muted-foreground">No machines at {names.plant}</span>
         ) : (
           <span className="flex flex-col">
             <span>{machineCountText(row.machines.length)}</span>
@@ -91,27 +123,30 @@ function columnsOf(plant: string, plantName: string): DataTableColumn<GroupRow>[
           </span>
         ),
     },
-    { id: 'colorFrom', header: 'Color from', cell: (row) => colorFromText(row.group.colorFrom) },
-    { id: 'source', header: 'Source', cell: (row) => ownerText(row.group.owner) },
+    {
+      id: 'colorFrom',
+      header: 'Color from',
+      cell: (row) => colorFromText(row.group.colorFrom as GroupColorFrom),
+    },
     {
       id: 'actions',
       header: 'Actions',
       headerHidden: true,
-      cell: (row) => (
-        <span className="flex justify-end">
-          <Link
-            to={
-              coreLinks.settings.equipmentGroups.group.edit({ plant, groupCode: row.group.code })
-                .href
-            }
-            aria-label={`Edit ${row.group.code}`}
-            className={`${buttonVariants({ variant: 'outline' })} h-8 px-2.5`}
-          >
-            <Pencil aria-hidden />
-            Edit
-          </Link>
-        </span>
-      ),
+      cell: (row) =>
+        row.group.archivedAt === null && canChangeGroup(viewer, row.group, 'update') ? (
+          <span className="flex justify-end">
+            <Link
+              to={
+                coreLinks.settings.equipmentGroups.group.edit({ plant, groupId: row.group.id }).href
+              }
+              aria-label={`Edit ${row.group.code}`}
+              className={`${buttonVariants({ variant: 'outline' })} h-8 px-2.5`}
+            >
+              <Pencil aria-hidden />
+              Edit
+            </Link>
+          </span>
+        ) : null,
     },
   ];
 }
@@ -123,14 +158,11 @@ const columnChoices = [
   { id: 'scope', label: 'Scope' },
   { id: 'machines', label: 'Machines' },
   { id: 'colorFrom', label: 'Color from' },
-  { id: 'source', label: 'Source' },
 ] as const;
 
-/** The groups of the snapshot by code, each with the plant's machines in it. */
-function rowsOf(snapshot: PlantSettingsSnapshot): GroupRow[] {
-  return [...snapshot.equipmentGroups]
-    .sort((a, b) => a.code.localeCompare(b.code))
-    .map((group) => ({ group, machines: machinesOf(snapshot, group.code) }));
+/** The groups in the API's order, by code, each with the plant's machines in it. */
+function rowsOf(groups: readonly EquipmentGroupRow[], snapshot: PlantSettingsSnapshot): GroupRow[] {
+  return groups.map((group) => ({ group, machines: machinesOf(snapshot, group.code) }));
 }
 
 /** "HEAT is a company group with no machines at Plant A.", for each group without machines here. */
@@ -138,19 +170,35 @@ function idleText(rows: readonly GroupRow[], plantName: string): string {
   return rows
     .filter((row) => row.machines.length === 0)
     .map((row) =>
-      row.group.scope.kind === 'company'
+      row.group.scope === 'company'
         ? ` ${row.group.code} is a company group with no machines at ${plantName}.`
         : ` ${row.group.code} has no machines at ${plantName}.`,
     )
     .join('');
 }
 
+/** New equipment group, for a holder of core.equipmentGroup:create at the plant or the company. */
+function NewEquipmentGroupLink() {
+  const { plant } = useShell();
+  const viewer = useViewer();
+  const permission = 'core.equipmentGroup:create';
+  if (!viewer.can(permission) && !viewer.canAtCompany(permission)) return null;
+  return (
+    <Link to={coreLinks.settings.equipmentGroups.new({ plant }).href} className={buttonVariants()}>
+      <Plus aria-hidden />
+      New equipment group
+    </Link>
+  );
+}
+
 /**
- * The equipment groups of the plant in plant settings (design #729, EG1 to EG9): the color rule,
- * the Scope filter and Columns, and one row per group with its color, code, name, scope, the
- * plant's machines in it, where its color came from and its source. The Scope filter lives in the
- * URL (ADR 0062); the columns stay local. The preview key opens the loading, empty, failed and
- * no-access states on the fixture. New equipment group waits for the equipment API.
+ * The equipment groups the plant sees in plant settings (design #729, EG1 to EG9): the color rule,
+ * the Scope filter, Show archived and Columns, and one row per group with its color, code, name,
+ * scope, the plant's machines in it and where its color came from. The groups come from the API,
+ * the plant's own and the company's, every page of them; the machines in each still come from the
+ * fixture G1. The Scope filter and Show archived live in the URL (ADR 0062); the columns stay
+ * local. Edit shows on a group the user may change, New equipment group to a user who may create
+ * one at the plant or the company.
  */
 export function EquipmentGroupsScreen() {
   const { plant } = useShell();
@@ -158,24 +206,49 @@ export function EquipmentGroupsScreen() {
   const navigate = useNavigate();
   const show = (next: EquipmentGroupListSearch) =>
     navigate({ to: '.', search: urlSearchOf(next), replace: true });
-  const { snapshot, error, retry } = usePlantSettings(view.preview);
+  const showArchived = view.archived === 1;
+  const setShowArchived = (shown: boolean) => {
+    const { archived: _, ...rest } = view;
+    show(shown ? { ...rest, archived: 1 } : rest);
+  };
+  const { data, previousData, error, refetch, pageError, retryPage } =
+    useEquipmentGroups(showArchived);
+  const { snapshot } = usePlantSettings(undefined);
+  const places = usePlaces();
+  const viewer = useViewer();
   const [hiddenColumns, setHiddenColumns] = useState<readonly string[]>([]);
-  const plantName = snapshot?.plant.name ?? 'the plant';
-  const companyName = snapshot?.company.name ?? 'The company';
+  const names: Names = {
+    plant: places.plant?.name ?? 'the plant',
+    company: places.company?.name ?? 'The company',
+  };
 
-  const allRows = useMemo(() => (snapshot === undefined ? [] : rowsOf(snapshot)), [snapshot]);
-  const rows = allRows.filter(
-    (row) => view.scope === undefined || view.scope.includes(row.group.scope.kind),
+  // The rows of the list before stand in only while the next answer loads, never for a failed one.
+  const failed = data === undefined && error !== undefined;
+  const page =
+    data?.coreEquipmentGroups ?? (failed ? undefined : previousData?.coreEquipmentGroups);
+  const loaded = page !== undefined && snapshot !== undefined;
+  const allRows = useMemo(
+    () =>
+      page === undefined || snapshot === undefined
+        ? []
+        : rowsOf(
+            page.edges.map(({ node }) => node),
+            snapshot,
+          ),
+    [page, snapshot],
   );
-  const columns = useMemo(() => columnsOf(plant, plantName), [plant, plantName]);
-  const scopeLabel = (value: Scope) => (value === 'company' ? companyName : plantName);
+  const rows = allRows.filter(
+    (row) => view.scope === undefined || view.scope.includes(row.group.scope as Scope),
+  );
+  const columns = columnsOf(plant, names, viewer);
+  const scopeLabel = (value: Scope) => (value === 'company' ? names.company : names.plant);
   const scopeOptions = (['company', 'plant'] as const).map((value) => ({
     value,
     label: scopeLabel(value),
-    count: allRows.filter((row) => row.group.scope.kind === value).length,
+    count: allRows.filter((row) => row.group.scope === value).length,
   }));
   const withScope = (values: readonly string[]) => {
-    const { scope: _, ...rest } = view;
+    const { scope: _scope, ...rest } = view;
     const scope = values.filter(
       (value): value is Scope => value === 'company' || value === 'plant',
     );
@@ -186,43 +259,49 @@ export function EquipmentGroupsScreen() {
     document.querySelector<HTMLElement>(`#${filtersId} button`)?.focus();
   };
 
-  const forbidden = snapshot === undefined && error instanceof PlantSettingsForbidden;
-  const failed = snapshot === undefined && error !== undefined;
+  const forbidden = data === undefined && isForbidden(error);
   const machineCount = rows.reduce((sum, row) => sum + row.machines.length, 0);
   const statusLine =
     allRows.length === 0
       ? 'No equipment groups.'
       : `${rows.length} equipment group${rows.length === 1 ? '' : 's'}, ${machineCount} machine${
           machineCount === 1 ? '' : 's'
-        }. Sorted by code.${idleText(rows, plantName)}`;
+        }. Sorted by code.${idleText(rows, names.plant)}`;
   const announced = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (snapshot === undefined) return;
+    if (!loaded) return;
     if (announced.current !== undefined && announced.current !== statusLine) announce(statusLine);
     announced.current = statusLine;
-  }, [snapshot, statusLine]);
+  }, [loaded, statusLine]);
 
   let state: PageState = { status: 'ready' };
   if (forbidden) {
-    state = {
-      status: 'empty',
-      icon: Lock,
-      title: groupsForbiddenTitle,
-      description: groupsForbiddenDescription,
-    };
+    state = readForbiddenState('equipment groups', names.plant);
   } else if (failed) {
-    state = { status: 'error', title: 'Could not load equipment groups', error, onRetry: retry };
-  } else if (snapshot === undefined) {
+    state = {
+      status: 'error',
+      title: 'Could not load equipment groups',
+      error,
+      onRetry: () => refetch(),
+    };
+  } else if (pageError !== undefined) {
+    state = {
+      status: 'error',
+      title: 'Could not load equipment groups',
+      error: pageError,
+      onRetry: retryPage,
+    };
+  } else if (!loaded) {
     state = { status: 'loading' };
   } else if (allRows.length === 0) {
     state = {
       status: 'empty',
       icon: Layers,
       title: 'No equipment groups yet',
-      description:
-        'Equipment groups come from the ERP with the machines, or are created here. Every machine on the board needs a group.',
+      description: 'Every machine on the board needs a group. Create the first one here.',
+      action: <NewEquipmentGroupLink />,
     };
-  } else if (rows.length === 0) {
+  } else if (rows.length === 0 && view.scope !== undefined) {
     state = {
       status: 'empty',
       title: 'No equipment groups match these filters',
@@ -237,21 +316,7 @@ export function EquipmentGroupsScreen() {
   return (
     <PageFrame
       title="Equipment groups"
-      meta={
-        snapshot?.erp === undefined ? undefined : (
-          <span className="text-sm text-muted-foreground">
-            ERP data as of {plantTime(snapshot, snapshot.erp.importedAtMs)}
-          </span>
-        )
-      }
-      actions={
-        forbidden ? undefined : (
-          <Button disabled>
-            <Plus aria-hidden />
-            New equipment group
-          </Button>
-        )
-      }
+      actions={forbidden ? undefined : <NewEquipmentGroupLink />}
       toolbar={
         forbidden ? undefined : (
           <div className="flex flex-col gap-3">
@@ -262,8 +327,8 @@ export function EquipmentGroupsScreen() {
             <Alert role="note">
               <Info aria-hidden />
               <AlertDescription className="text-foreground">
-                A group keeps the color it has. A group new from the ERP takes the color the ERP
-                sends, else the first of the 20 palette colors that no other group uses.
+                A group keeps the color it has. A new group without a picked color takes the first
+                of the 20 palette colors that no other group uses.
               </AlertDescription>
             </Alert>
             <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
@@ -276,6 +341,14 @@ export function EquipmentGroupsScreen() {
                   onChange={withScope}
                 />
               </div>
+              <Field orientation="horizontal" className="min-h-(--nm-target-min) w-auto">
+                <Checkbox
+                  id={showArchivedId}
+                  checked={showArchived}
+                  onCheckedChange={(shown) => setShowArchived(shown)}
+                />
+                <FieldLabel htmlFor={showArchivedId}>Show archived</FieldLabel>
+              </Field>
             </div>
             {view.scope !== undefined && (
               <div className="flex flex-wrap items-center gap-2">
@@ -295,26 +368,22 @@ export function EquipmentGroupsScreen() {
             )}
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <p data-list-status>
-                {failed ? '' : snapshot === undefined ? 'Loading equipment groups.' : statusLine}
+                {failed ? '' : loaded ? statusLine : 'Loading equipment groups.'}
               </p>
-              <p className="flex flex-wrap gap-x-2">
-                {snapshot?.fixture !== undefined && (
-                  <span>Showing fixture {snapshot.fixture}.</span>
-                )}
-                <span>{plantSettingsActionReason}</span>
-              </p>
+              <p>{machinesFixtureNote}</p>
             </div>
           </div>
         )
       }
       state={state}
+      busy={data === undefined && page !== undefined}
     >
       <DataTable
-        label={snapshot === undefined ? 'Equipment groups' : `Equipment groups of ${plantName}`}
+        label={loaded ? `Equipment groups of ${names.plant}` : 'Equipment groups'}
         scrollLabel="Equipment groups, scrolls sideways"
         columns={columns}
         rows={rows}
-        getRowId={(row) => row.group.code}
+        getRowId={(row) => row.group.id}
         hiddenColumns={hiddenColumns}
         headerMenu={
           <ColumnsMenu
@@ -324,7 +393,7 @@ export function EquipmentGroupsScreen() {
             onChange={setHiddenColumns}
           />
         }
-        loading={snapshot === undefined}
+        loading={!loaded}
         paging={{
           page: 1,
           pageSize: Math.max(25, rows.length),

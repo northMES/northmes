@@ -253,7 +253,11 @@ describe('the Settings button', () => {
   });
 
   it("E06 a plant admin, who manages the plant's roles, finds Plant, Machines, Equipment groups and Calendars after People in plant settings (#767)", async () => {
-    const { fetch } = api(['core.user:read', 'core.roleAssignment:manage']);
+    const { fetch } = api([
+      'core.user:read',
+      'core.roleAssignment:manage',
+      'core.equipmentGroup:read',
+    ]);
     renderShellAt('/plant-a/articles', shellModules, { fetch });
 
     const button = await within(await screen.findByRole('banner')).findByRole('link', {
@@ -282,6 +286,27 @@ describe('the Settings button', () => {
     expect(linksIn(settings).map(([label]) => label)).not.toContain('Machines');
     expect(linksIn(settings).map(([label]) => label)).not.toContain('Calendars');
     expect(linksIn(settings).map(([label]) => label)).not.toContain('Equipment groups');
+  });
+
+  it("#983 Equipment groups shows to a holder of core.equipmentGroup:read, not to one who only manages the plant's roles", async () => {
+    const reader = api(['core.user:read', 'core.equipmentGroup:read']);
+    renderShellAt('/plant-a/settings/people', shellModules, { fetch: reader.fetch });
+    const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
+    await waitFor(() =>
+      expect(linksIn(settings)).toContainEqual([
+        'Equipment groups',
+        '/plant-a/settings/equipment-groups',
+      ]),
+    );
+
+    cleanup();
+    const manager = api(['core.user:read', 'core.roleAssignment:manage']);
+    renderShellAt('/plant-a/settings/people', shellModules, { fetch: manager.fetch });
+    const managed = await screen.findByRole('navigation', { name: 'Plant A settings' });
+    await waitFor(() =>
+      expect(linksIn(managed)).toContainEqual(['Machines', '/plant-a/settings/machines']),
+    );
+    expect(linksIn(managed).map(([label]) => label)).not.toContain('Equipment groups');
   });
 
   it("#729 a company admin, who manages the integrations, finds Warehouses among the company's settings, and one who only reads roles does not", async () => {
