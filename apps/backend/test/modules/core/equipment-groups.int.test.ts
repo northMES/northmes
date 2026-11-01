@@ -122,6 +122,15 @@ describe('equipment groups', () => {
     expect(group).toMatchObject({ color: 'palette-2', colorFrom: 'palette' });
   });
 
+  it("#729 a Company admin's plant group without a color skips no color that only another plant uses", async () => {
+    const place = await givenPlace();
+    await create(place.plantAdminB, 'MIL', { color: 'palette-1' });
+
+    const group = await create(place.companyAdmin, 'WLD');
+
+    expect(group).toMatchObject({ color: 'palette-1', colorFrom: 'palette' });
+  });
+
   it('#729 an archived group leaves its color free for the next group without one', async () => {
     const place = await givenPlace();
     await create(place.plantAdminA, 'ASM', { color: 'palette-1' });
