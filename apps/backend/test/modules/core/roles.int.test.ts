@@ -180,6 +180,7 @@ describe('the roles of a company and the permission catalog', () => {
       'core.article',
       'core.articleGroup',
       'core.dashboardTab',
+      'core.equipment',
       'core.equipmentGroup',
       'core.integration',
       'core.role',

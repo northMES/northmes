@@ -9,6 +9,7 @@ export const corePermissions = {
   'core.article': ['read', 'create', 'update', 'archive', 'assign'],
   'core.articleGroup': ['read', 'create', 'update', 'archive'],
   'core.dashboardTab': ['manage'],
+  'core.equipment': ['read', 'create', 'update', 'archive'],
   'core.equipmentGroup': ['read', 'create', 'update', 'archive'],
   'core.integration': ['manage'],
   'core.role': ['read', 'manage'],
