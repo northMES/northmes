@@ -97,6 +97,29 @@ describe('the signed-in user at the request plant', () => {
     ]);
   });
 
+  it('E05-S08 coreViewer in company settings leaves out a plant the user cannot open', async () => {
+    const { company, plants } = await givenCompany(db.ownerUrl, {
+      plantNames: ['Plant A', 'Plant B'],
+    });
+    const [plantA = ''] = plants;
+    if (!testApp) throw new Error('the test app did not start');
+    const { authorization } = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: plantA, permissions: ['core.user:read'] },
+    ]);
+
+    const answer = await gqlClient(await testApp.app.getUrl(), {
+      headers: { authorization },
+    }).send<{ coreViewer: { plants: { plantId: string; permissions: string[] }[] } }>(
+      'query ($companyId: ID) { coreViewer(companyId: $companyId) { plants { plantId permissions } } }',
+      { companyId: company },
+    );
+
+    expect(answer.errors).toBeUndefined();
+    expect(answer.data?.coreViewer.plants).toEqual([
+      { plantId: plantA, permissions: ['core.user:read'] },
+    ]);
+  });
+
   it('E05-S06 coreViewer needs a plant', async () => {
     const { company } = await givenCompany(db.ownerUrl);
 
