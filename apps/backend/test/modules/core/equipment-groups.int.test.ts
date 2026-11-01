@@ -1,24 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { randomUUIDv7 } from 'node:crypto';
-import {
-  givenAssignment,
-  givenCompany,
-  hostFactory,
-  queryAsCore,
-  signIn,
-} from '@northmes/backend/testing';
+import { hostFactory } from '@northmes/backend/testing';
 import { equipmentGroups } from '@northmes/core-contracts';
 import {
   createTestApp,
   type GqlClient,
-  gqlClient,
   type MasterDataPlace,
   masterDataContract,
   type TestApp,
   useTestDatabase,
 } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { givenMasterDataPlace } from '../../fixtures/master-data-place.ts';
 
 const createGroup = `mutation ($input: CoreCreateEquipmentGroupInput!) {
   coreCreateEquipmentGroup(input: $input) { id code scope color colorFrom version }
@@ -49,51 +43,9 @@ describe('equipment groups', () => {
     await testApp?.app.close();
   });
 
-  /**
-   * A client of a fresh user who holds the default role `key` at `scopeId`, at plant `slug`, or in
-   * company settings without a slug.
-   */
-  async function holderOf(company: string, key: string, scopeId: string, slug?: string) {
-    if (!testApp) throw new Error('the test app did not start');
-    const user = await signIn(testApp.app, db.ownerUrl, []);
-    const [role] = await queryAsCore<{ id: string }>(
-      db.ownerUrl,
-      'select id from core.role where company_id = $1 and key = $2',
-      [company, key],
-    );
-    if (!role) throw new Error(`the company has no role ${key}`);
-    await givenAssignment(db.ownerUrl, { userId: user.userId, roleId: role.id, scopeId });
-    const headers: Record<string, string> = { authorization: user.authorization };
-    if (slug !== undefined) headers['x-northmes-plant'] = slug;
-    return gqlClient(await testApp.app.getUrl(), { headers });
-  }
-
-  /**
-   * A company with plants A and B, their admins, its admin at plant A and in company settings, a
-   * reader at plant A, and another company.
-   */
-  async function givenPlace(): Promise<MasterDataPlace> {
-    if (!testApp) throw new Error('the test app did not start');
-    const { company, plants, slugs } = await givenCompany(db.ownerUrl, { plants: 2 });
-    const other = await givenCompany(db.ownerUrl);
-    const [plantA = '', plantB = ''] = plants;
-    const [slugA = '', slugB = ''] = slugs;
-    const reader = await signIn(testApp.app, db.ownerUrl, [
-      { scopeId: plantA, permissions: ['core.equipmentGroup:read'] },
-    ]);
-    return {
-      company,
-      otherCompany: other.company,
-      plantA,
-      plantB,
-      companyAdmin: await holderOf(company, 'core-company-admin', company, slugA),
-      plantAdminA: await holderOf(company, 'core-plant-admin', plantA, slugA),
-      plantAdminB: await holderOf(company, 'core-plant-admin', plantB, slugB),
-      readerA: gqlClient(await testApp.app.getUrl(), {
-        headers: { authorization: reader.authorization, 'x-northmes-plant': slugA },
-      }),
-      companySettings: await holderOf(company, 'core-company-admin', company),
-    };
+  /** The place of the contract suite, whose reader holds core.equipmentGroup:read. */
+  function givenPlace(): Promise<MasterDataPlace> {
+    return givenMasterDataPlace(testApp, db.ownerUrl, 'core.equipmentGroup:read');
   }
 
   masterDataContract(equipmentGroups, { story: 'E06-S04', given: givenPlace });

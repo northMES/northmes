@@ -70,6 +70,16 @@ export type EquipmentGroupTable = MasterDataTable<{
   color_from: 'erp' | 'set' | 'palette';
 }>;
 
+/** core.equipment: a machine, a register at plant scope only. */
+export type EquipmentTable = MasterDataTable<{
+  /** The machine's group, of its plant or of the company. */
+  equipment_group_id: string;
+  is_plannable: Generated<boolean>;
+  is_oee: Generated<boolean>;
+  /** The machine's own palette color, or null for the group's. */
+  color: string | null;
+}>;
+
 /** core.article_plant: a plant an article is assigned to (ADR 0073). */
 export interface ArticlePlantTable {
   article_id: string;
@@ -217,6 +227,7 @@ export interface CoreDatabase {
   'core.article': ArticleTable;
   'core.article_plant': ArticlePlantTable;
   'core.article_group': ArticleGroupTable;
+  'core.equipment': EquipmentTable;
   'core.equipment_group': EquipmentGroupTable;
   'core.scope': ScopeTable;
   'core.company': CompanyTable;

@@ -61,6 +61,9 @@ const settingsCompanyId = z
   )
   .optional();
 
+/** The arguments of a register's list field, which its filter fields cannot take. */
+const listArguments = ['first', 'after', 'orderBy', 'search', 'includeArchived', 'companyId'];
+
 /** The input and output names that the kit gives a register, which its own fields cannot take. */
 const kitNames = [
   'id',
@@ -75,10 +78,14 @@ const kitNames = [
   'updatedAt',
 ];
 
+/** A register's filter fields: each name with the schema of the value a list call compares. */
+type MasterDataFilters = Readonly<Record<string, z.ZodType>>;
+
 export interface MasterDataOptions<
   Own extends ObjectSchema,
   Output extends z.core.$ZodShape,
   Scopes extends MasterDataScopes,
+  Filters extends MasterDataFilters = Readonly<Record<never, z.ZodType>>,
 > {
   /** The module's GraphQL name, such as core: the prefix of every contract name. */
   readonly module: string;
@@ -86,7 +93,10 @@ export interface MasterDataOptions<
   readonly entity: string;
   /** The REST resource, such as equipment-groups (ADR 0073). */
   readonly resource: string;
-  /** The entity's plural in PascalCase, Entity with an s unless given: coreEquipmentGroups. */
+  /**
+   * The entity's plural in PascalCase, Entity with an s unless given: coreEquipmentGroups. It may
+   * not be the entity, whose name the field that reads one row takes.
+   */
   readonly plural?: string;
   /** The entity in words for descriptions, such as equipment group. */
   readonly label: string;
@@ -101,6 +111,11 @@ export interface MasterDataOptions<
   readonly fields: Own;
   /** The register's own output fields, which every surface answers next to the kit's. */
   readonly output: Output;
+  /**
+   * The list's filter fields (ADR 0073), which the register's service applies, since a filter may
+   * read more than a column. None unless given.
+   */
+  readonly filters?: Filters;
 }
 
 /** The fields create and update take: the kit's and the register's own. */
@@ -148,11 +163,20 @@ export function defineMasterData<
   Own extends ObjectSchema,
   const Output extends z.core.$ZodShape,
   const Scopes extends MasterDataScopes,
->(options: MasterDataOptions<Own, Output, Scopes>) {
+  const Filters extends MasterDataFilters = Readonly<Record<never, z.ZodType>>,
+>(options: MasterDataOptions<Own, Output, Scopes, Filters>) {
   const { module, entity, resource, label, permission, scopes } = options;
   const plural = options.plural ?? `${entity}s`;
   const pluralLabel = options.pluralLabel ?? `${label}s`;
   const register = `${module}.${entity}`;
+  if (plural === entity) {
+    throw new Error(`Register ${register}: the plural ${plural} is the entity`);
+  }
+  for (const filter of Object.keys(options.filters ?? {})) {
+    if (listArguments.includes(filter)) {
+      throw new Error(`Register ${register}: filter ${filter} is the list's own argument`);
+    }
+  }
   for (const field of [...Object.keys(options.fields.shape), ...Object.keys(options.output)]) {
     if (kitNames.includes(field)) {
       throw new Error(`Register ${register}: field ${field} is the kit's own`);
@@ -221,6 +245,7 @@ export function defineMasterData<
       updatedAt: { column: 'updated_at', type: 'timestamptz' },
     },
     defaultOrderBy: ['code'],
+    filters: (options.filters ?? {}) as Filters,
     search: ['code', 'name'],
     archivable: true,
   });
@@ -237,6 +262,9 @@ export function defineMasterData<
   });
 
   const command = kebab(entity);
+  // REST serves a plant operation under /plants/{plant}/ (ADR 0064), which toRestRoutes does not
+  // build yet, so a plant-only register has no routes until it does.
+  const rest = <const Binding>(binding: Binding): Binding | false => (atCompany ? binding : false);
   const operations = defineOperations({
     module,
     resource,
@@ -244,36 +272,36 @@ export function defineMasterData<
     operations: {
       find: {
         contract: find,
-        rest: { method: 'GET', path: resource, status: 200, maxPageSize: 100 },
+        rest: rest({ method: 'GET', path: resource, status: 200, maxPageSize: 100 }),
         tool: false,
       },
       get: {
         contract: get,
-        rest: { method: 'GET', path: `${resource}/{id}`, status: 200 },
+        rest: rest({ method: 'GET', path: `${resource}/{id}`, status: 200 }),
         tool: false,
       },
       create: {
         contract: create,
         output: node,
-        rest: { method: 'POST', path: `commands/create-${command}`, status: 201 },
+        rest: rest({ method: 'POST', path: `commands/create-${command}`, status: 201 }),
         tool: false,
       },
       update: {
         contract: update,
         output: node,
-        rest: { method: 'POST', path: `commands/update-${command}`, status: 200 },
+        rest: rest({ method: 'POST', path: `commands/update-${command}`, status: 200 }),
         tool: false,
       },
       archive: {
         contract: archive,
         output: node,
-        rest: { method: 'POST', path: `commands/archive-${command}`, status: 200 },
+        rest: rest({ method: 'POST', path: `commands/archive-${command}`, status: 200 }),
         tool: false,
       },
       restore: {
         contract: restore,
         output: node,
-        rest: { method: 'POST', path: `commands/restore-${command}`, status: 200 },
+        rest: rest({ method: 'POST', path: `commands/restore-${command}`, status: 200 }),
         tool: false,
       },
     },
