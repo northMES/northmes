@@ -1,0 +1,62 @@
+---
+title: Equipment groups
+description: List the equipment groups a plant sees, create a group at the plant or for the whole company, change its name and color, and archive or restore it.
+---
+
+An equipment group gathers machines that do the same kind of work, such as machining or assembly. On the planning board each group is a band of machine rows, drawn in the group's color with its name beside it. A group sits at one plant, or at the company, where every plant of the company may use it.
+
+**Equipment groups** is in plant settings at `/<plant>/settings/equipment-groups`. It shows to a user who holds `core.equipmentGroup:read` at the plant.
+
+## Find a group
+
+The list shows the groups the plant sees, its own and the company's, sorted by code. Each row shows the group's color, its code, its name, its scope, the plant's machines in it and where its color came from. The code opens the group's page.
+
+- **Scope** filters the list to the company's groups, the plant's own, or both. The filter is part of the address.
+- **Show archived** lists the archived groups too, each with the **Archived** badge.
+- **Columns** hides and shows columns.
+- **Edit** on a row opens the group's form, for a user who may change the group.
+
+## A group's page
+
+The page shows the group's code, name, scope and color, with where the color came from: picked by someone, or the first free palette color when nobody picked one. It lists the plant's machines in the group and shows the band the group draws on the board, which holds the plannable machines only.
+
+**Edit equipment group**, **Archive** and **Restore** are at the top of the page, for a user who may use them.
+
+## Create a group
+
+<Steps>
+  <Step title="Open New equipment group">
+    In **Equipment groups**, select **New equipment group**.
+  </Step>
+  <Step title="Fill in the group">
+    - **Code**: up to 32 characters, unique among the groups the plant sees. The code cannot change later.
+    - **Name**: up to 200 characters. The board shows it beside the color.
+    - **Scope**: the plant, or the company for a group every plant may use. You see the scopes where you may create a group. The scope cannot change later.
+    - **Color** (optional): one of the 20 palette colors. Each color names the groups that use it already. Without a pick, the group takes the first palette color that no group uses, and the hint says which one.
+  </Step>
+  <Step title="Save">
+    Select **Save equipment group**. The group's page opens.
+  </Step>
+</Steps>
+
+A code that a group the plant sees already has is refused, and the form keeps what you typed. The preview under the fields shows the band the group will draw on the board.
+
+## Change a group
+
+Select **Edit equipment group** on the group's page, change the name or the color, and select **Save equipment group**. A change to a company group applies at every plant of the company, and the form says so.
+
+If someone else saved the group while you edited it, the save is refused and the form keeps your changes. **Reload** fills the form with the saved group, so you can make your change again on top of it.
+
+## Archive and restore a group
+
+Select **Archive** on the group's page and confirm with **Archive equipment group**. An archived group keeps its code, leaves the list unless **Show archived** is on, and cannot be changed. No machine can join it, and the machines in it keep it. **Restore** and **Restore equipment group** bring it back.
+
+## Who may change a group
+
+A company group belongs to the company: creating, changing and archiving it needs `core.equipmentGroup:create`, `:update` or `:archive` through a role at the company, such as Company admin. A plant's own group needs the permission at that plant, such as Plant admin. See [Users, roles and permissions](/use/users-and-roles#permissions).
+
+## Limits in release 0.1.0
+
+- The machines in each group come from the demo fixture until the machine pages read the API.
+- A group has no history yet.
+- A group cannot be deleted. Archive it instead.
