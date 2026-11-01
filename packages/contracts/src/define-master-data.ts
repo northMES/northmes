@@ -75,10 +75,14 @@ const kitNames = [
   'updatedAt',
 ];
 
+/** A register's filter fields: each name with the schema of the value a list call compares. */
+type MasterDataFilters = Readonly<Record<string, z.ZodType>>;
+
 export interface MasterDataOptions<
   Own extends ObjectSchema,
   Output extends z.core.$ZodShape,
   Scopes extends MasterDataScopes,
+  Filters extends MasterDataFilters,
 > {
   /** The module's GraphQL name, such as core: the prefix of every contract name. */
   readonly module: string;
@@ -86,7 +90,10 @@ export interface MasterDataOptions<
   readonly entity: string;
   /** The REST resource, such as equipment-groups (ADR 0073). */
   readonly resource: string;
-  /** The entity's plural in PascalCase, Entity with an s unless given: coreEquipmentGroups. */
+  /**
+   * The entity's plural in PascalCase, Entity with an s unless given: coreEquipmentGroups. It may
+   * not be the entity, whose name the field that reads one row takes.
+   */
   readonly plural?: string;
   /** The entity in words for descriptions, such as equipment group. */
   readonly label: string;
@@ -101,6 +108,11 @@ export interface MasterDataOptions<
   readonly fields: Own;
   /** The register's own output fields, which every surface answers next to the kit's. */
   readonly output: Output;
+  /**
+   * The list's filter fields (ADR 0073), which the register's service applies, since a filter may
+   * read more than a column. None unless given.
+   */
+  readonly filters?: Filters;
 }
 
 /** The fields create and update take: the kit's and the register's own. */
@@ -148,11 +160,15 @@ export function defineMasterData<
   Own extends ObjectSchema,
   const Output extends z.core.$ZodShape,
   const Scopes extends MasterDataScopes,
->(options: MasterDataOptions<Own, Output, Scopes>) {
+  const Filters extends MasterDataFilters = Readonly<Record<never, z.ZodType>>,
+>(options: MasterDataOptions<Own, Output, Scopes, Filters>) {
   const { module, entity, resource, label, permission, scopes } = options;
   const plural = options.plural ?? `${entity}s`;
   const pluralLabel = options.pluralLabel ?? `${label}s`;
   const register = `${module}.${entity}`;
+  if (plural === entity) {
+    throw new Error(`Register ${register}: the plural ${plural} is the entity`);
+  }
   for (const field of [...Object.keys(options.fields.shape), ...Object.keys(options.output)]) {
     if (kitNames.includes(field)) {
       throw new Error(`Register ${register}: field ${field} is the kit's own`);
@@ -221,6 +237,7 @@ export function defineMasterData<
       updatedAt: { column: 'updated_at', type: 'timestamptz' },
     },
     defaultOrderBy: ['code'],
+    filters: (options.filters ?? {}) as Filters,
     search: ['code', 'name'],
     archivable: true,
   });

@@ -164,19 +164,51 @@ describe('defineMasterData', () => {
     const equipment = defineMasterData({
       module: 'tools',
       entity: 'Equipment',
-      plural: 'Equipment',
+      plural: 'EquipmentList',
       resource: 'equipment',
-      label: 'equipment',
-      pluralLabel: 'equipment',
-      article: 'an',
+      label: 'machine',
       permission: 'tools.equipment',
       scopes: ['plant'],
       fields: z.object({}),
       output: {},
     });
 
-    expect(equipment.find.name).toBe('tools.findEquipment');
-    expect(equipment.plural).toBe('Equipment');
-    expect(equipment.create.description).toMatch(/^Creates an equipment at/);
+    expect(equipment.find.name).toBe('tools.findEquipmentList');
+    expect(equipment.plural).toBe('EquipmentList');
+    expect(equipment.create.description).toMatch(/^Creates a machine at/);
+  });
+
+  it('#66 a plural that is the entity throws, since the list field would take the name of the field that reads one row', () => {
+    expect(() =>
+      defineMasterData({
+        module: 'tools',
+        entity: 'Lift',
+        plural: 'Lift',
+        resource: 'lifts',
+        label: 'lift',
+        permission: 'tools.lift',
+        scopes: ['plant'],
+        fields: z.object({}),
+        output: {},
+      }),
+    ).toThrow('Register tools.Lift: the plural Lift is the entity');
+  });
+
+  it("#965 a register's filter fields are declared on its list and taken by its find", () => {
+    const clamps = defineMasterData({
+      module: 'tools',
+      entity: 'Clamp',
+      resource: 'clamps',
+      label: 'clamp',
+      permission: 'tools.clamp',
+      scopes: ['plant'],
+      fields: z.object({ isOpen: z.boolean().optional() }),
+      output: { isOpen: z.boolean() },
+      filters: { isOpen: z.boolean() },
+    });
+
+    expect(Object.keys(clamps.list.filters ?? {})).toEqual(['isOpen']);
+    expect(clamps.find.input.parse({ isOpen: true })).toMatchObject({ isOpen: true });
+    expect(clamps.find.input.safeParse({ isOpen: 'yes' }).success).toBe(false);
   });
 });
