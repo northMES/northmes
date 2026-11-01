@@ -58,6 +58,17 @@ export function AddRoleScreen() {
     };
   } else if (
     userState.status === 'ready' &&
+    places.company === undefined &&
+    places.error !== undefined
+  ) {
+    state = {
+      status: 'error',
+      title: 'Could not load the places',
+      error: places.error,
+      onRetry: places.retry,
+    };
+  } else if (
+    userState.status === 'ready' &&
     (roles === undefined || !viewer.loaded || places.company === undefined)
   ) {
     state = { status: 'loading' };
