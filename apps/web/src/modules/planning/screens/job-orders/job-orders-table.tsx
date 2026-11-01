@@ -26,6 +26,8 @@ import {
 import { type ReactNode, useMemo } from 'react';
 import type { ColumnChoice } from '../../../../ui/components/columns-menu/index.ts';
 import {
+  type DataTableGroup,
+  DataTableGroupHeader,
   DataTableMenuCell,
   DataTableMenuHead,
 } from '../../../../ui/components/data-table/index.ts';
@@ -47,7 +49,7 @@ import {
   TableHeader,
   TableRow,
 } from '../../../../ui/primitives/table.tsx';
-import type { GanttSnapshot, ZoomPreset } from '../../gantt-data.ts';
+import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { JobOrdersSortId } from '../../job-orders-search.ts';
 import { plantDateOf } from '../../timeline/time-scale.ts';
 import { quantityText, statusLabel } from '../gantt/gantt-rows.ts';
@@ -104,19 +106,16 @@ const skeletonRows = Array.from({ length: 6 }, (_, index) => `skeleton-${index}`
 /** What the cells read besides their row. */
 interface CellView {
   readonly snapshot: GanttSnapshot;
-  readonly zoom: ZoomPreset;
-  readonly from: string;
   readonly plant: string;
   readonly expanded: ReadonlySet<string>;
   readonly onToggleFacts: (id: string) => void;
 }
 
-/** The planning pages a row's actions lead to, with the range at the row's start and its order. */
-function rowTargets(row: JobOrderTableRow, { snapshot, zoom, from, plant }: CellView) {
+/** The planning pages a row's actions lead to, at the row's start with its order selected. */
+function rowTargets(row: JobOrderTableRow, { snapshot, plant }: CellView) {
   const start = row.jobOrder.placement?.setupStartMs;
   const search = {
-    zoom,
-    from: start === undefined ? from : plantDateOf(start, snapshot.plant.timeZone),
+    ...(start !== undefined && { from: plantDateOf(start, snapshot.plant.timeZone) }),
     order: row.order.id,
   };
   return {
@@ -262,13 +261,16 @@ function cellOf(column: string, row: JobOrderTableRow, view: CellView): ReactNod
 const monoColumns = new Set(['start', 'end', 'quantity', 'deadline', 'plannedEnd']);
 
 export interface JobOrdersTableProps {
-  /** The table's accessible name, "Job orders, W45, Mon 2 Nov to Sun 8 Nov". */
+  /** The table's accessible name, "Job orders". */
   readonly label: string;
   /** The rows in their sorted order; the table never sorts them itself. */
   readonly rows: readonly JobOrderTableRow[];
+  /**
+   * The rows in groups (ADR 0091, Group by): each group is a row group with a header row that names
+   * it, counts its rows and opens or closes it. With groups, `rows` is ignored.
+   */
+  readonly groups?: readonly DataTableGroup<JobOrderTableRow>[];
   readonly snapshot: GanttSnapshot | undefined;
-  readonly zoom: ZoomPreset;
-  readonly from: string;
   readonly sort: JobOrdersSort;
   readonly onSortChange: (sort: { readonly id: JobOrdersSortId; readonly desc: boolean }) => void;
   readonly hiddenColumns: readonly string[];
@@ -277,35 +279,31 @@ export interface JobOrdersTableProps {
   readonly onToggleFacts: (id: string) => void;
   /** The rows are loading: the header stays and skeleton rows replace the rows. */
   readonly loading: boolean;
-  /** The rows are those of the range before, kept dimmed while the next range loads (LI7). */
-  readonly stale?: boolean;
   /**
-   * The table's menus at the end of the header row, such as Columns as an icon (#875): the last
-   * header cell holds them, and every row gets an empty cell under it.
+   * The table's menus at the end of the header row, such as Group by and Columns as icons (#875):
+   * the last header cell holds them, and every row gets an empty cell under it.
    */
   readonly headerMenu?: ReactNode;
 }
 
 /**
- * The job order table (plan 07, Job order table view; D3 TA1): a semantic table on TanStack Table
- * v9 with a sort button in each sortable header and aria-sort on the sorted one, the Job order
- * column sticky at the start, one row per job order with its order's status, lock and lateness,
- * and under a late row the late facts, opened by the disclosure in Late by. Paging is the
- * server's: the fixture fits one page.
+ * The job order table (plan 07, Job order table view; D3 TA1; ADR 0091): a semantic table on
+ * TanStack Table v9 with a sort button in each sortable header and aria-sort on the sorted one,
+ * the Job order column sticky at the start, one row per job order with its order's status, lock
+ * and lateness, under a late row the late facts, opened by the disclosure in Late by, and with
+ * Group by a row group per group. Paging is the server's: the fixture fits one page.
  */
 export function JobOrdersTable({
   label,
   rows,
+  groups,
   snapshot,
-  zoom,
-  from,
   sort,
   onSortChange,
   hiddenColumns,
   expanded,
   onToggleFacts,
   loading,
-  stale = false,
   headerMenu,
 }: JobOrdersTableProps) {
   const { plant } = useShell();
@@ -329,10 +327,14 @@ export function JobOrdersTable({
     [hiddenColumns],
   );
   const sorting = useMemo<SortingState>(() => [{ id: sort.id, desc: sort.desc }], [sort]);
+  const data = useMemo(
+    () => (groups === undefined ? rows : groups.flatMap((group) => group.rows)),
+    [groups, rows],
+  );
   const table = useTable({
     features,
     columns,
-    data: rows as JobOrderTableRow[],
+    data: data as JobOrderTableRow[],
     getRowId: (row) => row.id,
     manualSorting: true,
     enableMultiSort: false,
@@ -350,10 +352,56 @@ export function JobOrdersTable({
   const cellCount = shown.length + (menu === undefined ? 0 : 1);
   const menuCell = menu === undefined ? null : <DataTableMenuCell />;
   const view: CellView | undefined =
-    snapshot === undefined ? undefined : { snapshot, zoom, from, plant, expanded, onToggleFacts };
+    snapshot === undefined ? undefined : { snapshot, plant, expanded, onToggleFacts };
+  const tableRows = table.getRowModel().rows;
+  /** A row's cells, and under a late row whose facts are open, the facts. */
+  const renderRow = (row: (typeof tableRows)[number], cellView: CellView) => {
+    const original = row.original;
+    const cells = (
+      <TableRow
+        key={row.id}
+        data-job-order={original.jobOrder.displayNumber}
+        className="border-border hover:bg-accent"
+      >
+        {row.getVisibleCells().map((cell) => {
+          const spec = jobOrdersColumns.find((each) => each.id === cell.column.id);
+          return (
+            <TableCell
+              key={cell.id}
+              className={cn(
+                'px-3 py-2 whitespace-normal',
+                spec?.numeric && 'text-end tabular-nums',
+                spec?.sticky && stickyCell,
+                monoColumns.has(cell.column.id) && 'font-mono',
+              )}
+            >
+              {cellOf(cell.column.id, original, cellView)}
+            </TableCell>
+          );
+        })}
+        {menuCell}
+      </TableRow>
+    );
+    if (!expanded.has(row.id) || original.analysis?.late !== true) return [cells];
+    return [
+      cells,
+      <TableRow key={`${row.id}-facts`} className="border-border bg-muted hover:bg-muted">
+        <TableCell colSpan={cellCount} className="px-3 py-3 whitespace-normal">
+          <section aria-label={`Late facts for ${original.jobOrder.displayNumber}`}>
+            <JobOrderLateFacts
+              snapshot={cellView.snapshot}
+              orderNumber={original.order.number}
+              deadlineMs={original.order.deadlineMs}
+              analysis={original.analysis}
+            />
+          </section>
+        </TableCell>
+      </TableRow>,
+    ];
+  };
   return (
     <div className="overflow-hidden rounded-xl border border-border bg-card text-card-foreground">
-      <Table aria-label={label} aria-busy={loading || stale || undefined}>
+      <Table aria-label={label} aria-busy={loading || undefined}>
         <TableCaption className="sr-only">{label}</TableCaption>
         <TableHeader className="sticky top-0 bg-muted text-xs font-semibold text-muted-foreground">
           {table.getHeaderGroups().map((group) => (
@@ -402,73 +450,40 @@ export function JobOrdersTable({
             </TableRow>
           ))}
         </TableHeader>
-        <TableBody className={cn(stale && 'opacity-60 transition-opacity delay-200 duration-150')}>
-          {loading || view === undefined
-            ? skeletonRows.map((key) => (
-                <TableRow key={key} className="border-border hover:bg-transparent">
-                  {shown.map((column) => (
-                    <TableCell key={column.id} className="px-3 py-3.5">
-                      <Skeleton
-                        aria-hidden
-                        className="h-3 w-24 rounded-sm bg-accent motion-reduce:animate-none"
-                      />
-                    </TableCell>
-                  ))}
-                  {menuCell}
-                </TableRow>
-              ))
-            : table.getRowModel().rows.flatMap((row) => {
-                const original = row.original;
-                const cells = (
-                  <TableRow
-                    key={row.id}
-                    data-job-order={original.jobOrder.displayNumber}
-                    className="border-border hover:bg-accent"
-                  >
-                    {row.getVisibleCells().map((cell) => {
-                      const spec = jobOrdersColumns.find((each) => each.id === cell.column.id);
-                      return (
-                        <TableCell
-                          key={cell.id}
-                          className={cn(
-                            'px-3 py-2 whitespace-normal',
-                            spec?.numeric && 'text-end tabular-nums',
-                            spec?.sticky && stickyCell,
-                            monoColumns.has(cell.column.id) && 'font-mono',
-                          )}
-                        >
-                          {cellOf(cell.column.id, original, view)}
-                        </TableCell>
-                      );
-                    })}
-                    {menuCell}
-                  </TableRow>
-                );
-                if (!expanded.has(row.id) || original.analysis?.late !== true) return [cells];
-                return [
-                  cells,
-                  <TableRow
-                    key={`${row.id}-facts`}
-                    className="border-border bg-muted hover:bg-muted"
-                  >
-                    <TableCell colSpan={cellCount} className="px-3 py-3 whitespace-normal">
-                      <section aria-label={`Late facts for ${original.jobOrder.displayNumber}`}>
-                        <JobOrderLateFacts
-                          snapshot={view.snapshot}
-                          orderNumber={original.order.number}
-                          deadlineMs={original.order.deadlineMs}
-                          analysis={original.analysis}
-                        />
-                      </section>
-                    </TableCell>
-                  </TableRow>,
-                ];
-              })}
-        </TableBody>
+        {loading || view === undefined ? (
+          <TableBody>
+            {skeletonRows.map((key) => (
+              <TableRow key={key} className="border-border hover:bg-transparent">
+                {shown.map((column) => (
+                  <TableCell key={column.id} className="px-3 py-3.5">
+                    <Skeleton
+                      aria-hidden
+                      className="h-3 w-24 rounded-sm bg-accent motion-reduce:animate-none"
+                    />
+                  </TableCell>
+                ))}
+                {menuCell}
+              </TableRow>
+            ))}
+          </TableBody>
+        ) : groups === undefined ? (
+          <TableBody>{tableRows.flatMap((row) => renderRow(row, view))}</TableBody>
+        ) : (
+          groups.map((group) => {
+            const ids = new Set(group.rows.map((row) => row.id));
+            const groupRows = tableRows.filter((row) => ids.has(row.id));
+            return (
+              <TableBody key={group.id}>
+                <DataTableGroupHeader group={group} cellCount={cellCount} />
+                {group.expanded === false ? null : groupRows.flatMap((row) => renderRow(row, view))}
+              </TableBody>
+            );
+          })
+        )}
       </Table>
       <div className="flex items-center gap-2 border-t border-border bg-muted px-3 py-2 text-xs text-muted-foreground">
         <span>
-          {loading || rows.length === 0 ? '' : `Rows 1 to ${rows.length} of ${rows.length}`}
+          {loading || data.length === 0 ? '' : `Rows 1 to ${data.length} of ${data.length}`}
         </span>
         <span className="grow" />
         <Button variant="outline" className="h-8 px-3" disabled>

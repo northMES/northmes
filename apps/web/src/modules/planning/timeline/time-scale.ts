@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { formatPlantDate, formatPlantDateTime, formatPlantTime } from '@northmes/contracts/format';
 import { Temporal } from 'temporal-polyfill';
-import type { ZoomLevel, ZoomPreset } from '../gantt-data.ts';
+import type { ZoomLevel } from '../gantt-data.ts';
 
 /** A half-open span of time in epoch milliseconds, [fromMs, toMs). */
 export interface TimeRange {
@@ -168,9 +168,6 @@ export const zoomLevelIds = [
   'year',
 ] as const;
 
-/** The four presets of D3 in the job order table's Range group, finest first. */
-export const zoomPresetIds: readonly ZoomPreset[] = ['hours', 'day', 'week', '4weeks'];
-
 /**
  * The zoom of the board and the Gantt (ADR 0090, Zoom as a width per hour): the width of one hour,
  * and the band of the ladder it is drawn in, which sets the header tiers, the snap step, the
@@ -244,16 +241,6 @@ export function isFineLevel(level: ZoomLevel): boolean {
 /** Whether plan 18's rules for Week and 4 weeks zoom apply: at `week` and every coarser level. */
 export function isCoarseLevel(level: ZoomLevel): boolean {
   return !zoomLevels[level].fine;
-}
-
-/**
- * The preset of the job order table's Range nearest a level: Quarter hours opens at Hours, and
- * Quarter and Year at 4 weeks (ADR 0089, Krister, 2026-10-30).
- */
-export function presetOfLevel(level: ZoomLevel): ZoomPreset {
-  if (level === 'quarter-hours') return 'hours';
-  if (level === 'quarter' || level === 'year') return '4weeks';
-  return level;
 }
 
 /** A plant date, "2026-11-02", as the start of that day or of its production day in the zone. */

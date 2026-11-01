@@ -150,6 +150,66 @@ export function DataTableMenuCell() {
 }
 
 /**
+ * The header row of a row group (design core-304, RO1; ui-222, LI29): a row header over every
+ * cell that names the group and counts its rows, and, for a group that opens and closes, a button
+ * with aria-expanded. The job order table draws its groups with it too (ADR 0091).
+ */
+export function DataTableGroupHeader<TRow>({
+  group,
+  cellCount,
+}: {
+  readonly group: DataTableGroup<TRow>;
+  /** The cells of a row, the empty cell under the header menu included. */
+  readonly cellCount: number;
+}) {
+  const opens = group.expanded !== undefined;
+  const name = (
+    <>
+      {group.label}
+      {/* The button's name reads "Flanges 2 articles", with the space. */}
+      {opens && ' '}
+      <span
+        className={cn(
+          'font-mono text-xs font-normal text-muted-foreground',
+          opens ? 'ms-1' : 'ms-2',
+        )}
+      >
+        {group.count}
+      </span>
+    </>
+  );
+  return (
+    <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
+      <th
+        scope="rowgroup"
+        colSpan={cellCount}
+        className={cn('px-3 text-start text-sm font-semibold', opens ? 'py-1' : 'py-2.5')}
+      >
+        {opens ? (
+          <Button
+            variant="ghost"
+            aria-expanded={group.expanded}
+            onClick={() => group.onExpandedChange?.(!group.expanded)}
+            className="h-auto min-h-(--nm-target-min) gap-1.5 px-1 text-sm font-semibold"
+          >
+            <ChevronRight
+              aria-hidden
+              className={cn(
+                'size-4 transition-transform motion-reduce:transition-none',
+                group.expanded && 'rotate-90',
+              )}
+            />
+            {name}
+          </Button>
+        ) : (
+          name
+        )}
+      </th>
+    </TableRow>
+  );
+}
+
+/**
  * A list on TanStack Table v9 with sorting and paging on the server (plan 06, Lists; design
  * ui-222): the header of a sortable column is a button that sorts ascending first and then flips
  * the direction, its aria-sort shows the sort, and the pager has Previous and Next with the row
@@ -328,51 +388,9 @@ export function DataTable<TRow extends RowData>({
         groups.map((group) => {
           const ids = new Set(group.rows.map(getRowId));
           const groupRows = table.getRowModel().rows.filter((row) => ids.has(row.id));
-          const opens = group.expanded !== undefined;
-          const name = (
-            <>
-              {group.label}
-              {/* The button's name reads "Flanges 2 articles", with the space. */}
-              {opens && ' '}
-              <span
-                className={cn(
-                  'font-mono text-xs font-normal text-muted-foreground',
-                  opens ? 'ms-1' : 'ms-2',
-                )}
-              >
-                {group.count}
-              </span>
-            </>
-          );
           return (
             <TableBody key={group.id} className={bodyClass}>
-              <TableRow className="border-border bg-muted/50 hover:bg-muted/50">
-                <th
-                  scope="rowgroup"
-                  colSpan={cellCount}
-                  className={cn('px-3 text-start text-sm font-semibold', opens ? 'py-1' : 'py-2.5')}
-                >
-                  {opens ? (
-                    <Button
-                      variant="ghost"
-                      aria-expanded={group.expanded}
-                      onClick={() => group.onExpandedChange?.(!group.expanded)}
-                      className="h-auto min-h-(--nm-target-min) gap-1.5 px-1 text-sm font-semibold"
-                    >
-                      <ChevronRight
-                        aria-hidden
-                        className={cn(
-                          'size-4 transition-transform motion-reduce:transition-none',
-                          group.expanded && 'rotate-90',
-                        )}
-                      />
-                      {name}
-                    </Button>
-                  ) : (
-                    name
-                  )}
-                </th>
-              </TableRow>
+              <DataTableGroupHeader group={group} cellCount={cellCount} />
               {group.expanded === false ? null : groupRows.length === 0 &&
                 group.empty !== undefined ? (
                 <TableRow className="border-border hover:bg-transparent">

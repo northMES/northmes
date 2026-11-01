@@ -14,7 +14,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | Data and platform | 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014, 0017, 0023, 0024, 0054, 0059, 0060, 0066, 0071 |
 | GraphQL, realtime and MCP | 0015, 0016, 0018, 0034, 0070 |
 | Web | 0019, 0020, 0021, 0053, 0061, 0062, 0067, 0070, 0075 |
-| Production planning | 0025, 0026, 0027, 0028, 0029, 0030, 0083, 0089, 0090 |
+| Production planning | 0025, 0026, 0027, 0028, 0029, 0030, 0083, 0089, 0090, 0091 |
 | ERP integration and the Pyramid connector | 0031, 0032 |
 | Operator station | 0033 |
 | AI | 0035, 0036 |
@@ -93,7 +93,7 @@ Epic E00 adds the checks that keep this folder in step ([14-roadmap.md](../plan/
 
 ## Index
 
-On 2026-10-31 the index holds 90 ADRs: 51 accepted and 39 proposed, 86 for release 1 and 4 for a later release. 28 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0003, 0006, 0008, 0012, 0014, 0015, 0016, 0017, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0058, 0060, 0061, 0062, 0063, 0064, 0069, 0088 and 0089.
+On 2026-11-01 the index holds 91 ADRs: 51 accepted and 40 proposed, 87 for release 1 and 4 for a later release. 28 of the accepted ADRs have an empty needs-confirmation: 0001, 0002, 0003, 0006, 0008, 0012, 0014, 0015, 0016, 0017, 0018, 0022, 0036, 0041, 0042, 0043, 0050, 0052, 0053, 0058, 0060, 0061, 0062, 0063, 0064, 0069, 0088 and 0089.
 
 | ADR | Title | Status | Release | Needs confirmation |
 |---|---|---|---|---|
@@ -187,5 +187,6 @@ On 2026-10-31 the index holds 90 ADRs: 51 accepted and 39 proposed, 86 for relea
 | 0088 | [Developer documentation kept current with a Docs section per pull request, generated references and executable examples](0088-developer-documentation-kept-current-with-a-docs-section-per-pull-request-generated-references-and-executable-examples.md) | accepted | 1 | |
 | 0089 | [Zoom levels and an endless time axis that loads by time chunk, on the planning board and the order Gantt](0089-zoom-levels-and-an-endless-time-axis-that-loads-by-time-chunk-on-the-planning-board-and-the-order-gantt.md) | accepted | 1 | |
 | 0090 | [A smooth zoom and a slim bar above the timeline, on the planning board and the order Gantt](0090-a-smooth-zoom-and-a-slim-bar-above-the-timeline-on-the-planning-board-and-the-order-gantt.md) | proposed | 1 | maintainer (the smooth zoom in release 1, recorded in the ledger of ADR 0055; the band edges and the hysteresis factor 1.1; the wheel factor 0.002 and the pinch factor, which need tuning by hand; the factor 2 and the 150 ms animation of the buttons and keys; Alt+Page Up and Alt+Page Down in place of Earlier and Later; the button name Go to now; the URL key q and its 250 ms debounce; three significant digits in zoom; the transform fallback; the View menu's contents per view) |
+| 0091 | [The job order table lists open job orders without a time range](0091-the-job-order-table-lists-open-job-orders-without-a-time-range.md) | proposed | 1 | maintainer (the ADR as a whole) |
 
-Next free number: 0091. Only Krister Johansson sets a status to accepted.
+Next free number: 0092. Only Krister Johansson sets a status to accepted.

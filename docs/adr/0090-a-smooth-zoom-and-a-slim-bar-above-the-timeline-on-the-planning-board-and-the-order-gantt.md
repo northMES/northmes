@@ -70,7 +70,7 @@ Chosen option: "A continuous zoom over the ladder's levels as bands, laid out on
 * When the draft drawer closes with no changes left, for example after Discard draft, My draft is gone, and focus moves to the order filter.
 * Earlier, Later, Go to date and the visible span as text leave the board and the Gantt. With focus inside the grid, Alt+Page Up and Alt+Page Down scroll the time area one viewport width earlier and later, as spreadsheets scroll one screen sideways; the row keys Page Up and Page Down ignore a press with Alt. Focus moves to the row's first block in the new view, or to the row's first cell when the row has none in view, so focus never stays on a block that culling unmounts. The time scroller's visible scrollbar, the plain wheel and Shift+wheel remain the pointer paths that move in time without dragging, and the header's top tier names the dates in view. `from` stays in the URL, so a link still opens at any date.
 * The fixture note and "Links shown for the selected order" show only while they have text, so no empty line sits between the bar and the grid.
-* The job order table view keeps its Range presets, Earlier, Now, Later and Go to date, because it has no time area to zoom.
+* The job order table view keeps its Range presets, Earlier, Now, Later and Go to date, because it has no time area to zoom. [ADR 0091](0091-the-job-order-table-lists-open-job-orders-without-a-time-range.md) (proposed) removes the table's range and these controls.
 
 ### The order filter
 

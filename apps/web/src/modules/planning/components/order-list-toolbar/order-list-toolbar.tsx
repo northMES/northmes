@@ -7,11 +7,11 @@ import { Button } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import type { FacetValue } from '../../order-list-rows.ts';
-import type { ListFilterKey } from '../../order-list-search.ts';
+import type { AnyListFilterKey } from '../../order-list-search.ts';
 
 /** One filter field of a list: its texts, its values with their counts and the picked ones. */
 export interface ListFilterField {
-  readonly key: ListFilterKey;
+  readonly key: AnyListFilterKey;
   /** The menu button's text, such as "Customer". */
   readonly label: string;
   /** The line above the values, such as "Show orders of these customers". */
@@ -32,15 +32,15 @@ export interface OrderListToolbarProps {
   readonly lateOnly: boolean;
   readonly onLateOnlyChange: (on: boolean) => void;
   readonly fields: readonly ListFilterField[];
-  readonly onFilterChange: (key: ListFilterKey, values: readonly string[]) => void;
+  readonly onFilterChange: (key: AnyListFilterKey, values: readonly string[]) => void;
   readonly onClearFilters: () => void;
 }
 
 /**
- * The toolbar the order lists share (design ui-222, LI1 and LI3; #687): the search, Late only, a
- * filter menu per field with the counts of its values, and under them the chips of the filters
- * that apply with Clear filters, which keeps the search, Late only and the grouping. Group by and
- * Columns sit in the table's header row (#875).
+ * The toolbar the planning lists share (design ui-222, LI1 and LI3; #687; ADR 0091): the search,
+ * Late only, a filter menu per field with the counts of its values, and under them the chips of
+ * the filters that apply with Clear filters, which keeps the search, Late only and the grouping.
+ * Group by and Columns sit in the table's header row (#875).
  */
 export function OrderListToolbar({
   searchId,
