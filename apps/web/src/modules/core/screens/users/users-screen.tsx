@@ -32,7 +32,7 @@ import {
 } from '../../../../ui/primitives/dropdown-menu.tsx';
 import { noAccessState } from '../../no-access.tsx';
 import { CoreRoles } from '../../roles.graphql.ts';
-import { useCompanyId, useCompanyVariables, usePlaces } from '../../use-places.ts';
+import { placeName, useCompanyId, useCompanyVariables, usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 import {
   nextUsersPage,
@@ -305,10 +305,9 @@ export function UsersScreen() {
     errorPolicy: 'all',
     skip: placeFilter.pending,
   });
-  // The Role filter lists the company's roles, for a reader who may read them where the page reads.
-  const canReadRoles = inCompany
-    ? viewer.canAtCompany('core.role:read')
-    : viewer.can('core.role:read');
+  // The Role filter lists the company's roles, for a reader who may read them where the page reads:
+  // in company settings viewer.can reads the company's permissions.
+  const canReadRoles = viewer.can('core.role:read');
   const roles = useQuery(CoreRoles, { variables: company, skip: !canReadRoles });
   const filtered =
     view.role !== undefined || view.status !== undefined || placeFilter.place !== defaultPlace;
@@ -323,7 +322,7 @@ export function UsersScreen() {
   });
   const stale = page === undefined && shownPage !== undefined;
   const companyName = places.company?.name ?? 'the company';
-  const plantName = places.plants.find(({ slug }) => slug === plant)?.name ?? plant;
+  const plantName = placeName(places.plant, plant);
   // The API checks these permissions at the company, at a plant too (requestCompany).
   const canReset = viewer.canAtCompany('core.user:resetPassword');
   const canBlock = viewer.canAtCompany('core.user:block');
@@ -413,6 +412,18 @@ export function UsersScreen() {
           }}
         >
           Clear search
+        </Button>
+      ),
+    };
+  } else if (shownPage.totalCount === 0 && !inCompany) {
+    // At the plant the default place narrows the list, so the empty state widens it (ADR 0092).
+    state = {
+      status: 'empty',
+      title: `Nobody holds a role at ${plantName}`,
+      description: `Users of ${companyName} with roles elsewhere show under Place: Anywhere.`,
+      action: (
+        <Button variant="link" onClick={() => show(usersAtPlace(view, 'anywhere', defaultPlace))}>
+          Show users anywhere
         </Button>
       ),
     };

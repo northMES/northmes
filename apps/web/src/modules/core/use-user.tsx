@@ -8,7 +8,7 @@ import type { PageState } from '../../ui/components/page-frame/index.ts';
 import { isForbidden } from '../../ui/lib/graphql-errors.ts';
 import { buttonVariants } from '../../ui/primitives/button.tsx';
 import { noAccessState } from './no-access.tsx';
-import { useCompanyId, usePlaces } from './use-places.ts';
+import { placeName, useCompanyId, usePlaces } from './use-places.ts';
 import { CoreUser, type CoreUserQuery } from './user.graphql.ts';
 
 /** A user with the roles they hold at the company and at its plants. */
@@ -49,7 +49,7 @@ export function useUser(): UserOfPage {
   let state: PageState = { status: 'ready' };
   if (forbidden) {
     const company = places.company?.name ?? 'the company';
-    const plantName = places.plants.find((each) => each.slug === plant)?.name ?? plant;
+    const plantName = placeName(places.plant, plant);
     // At the plant the read needs core.user:read at the plant or the company (ADR 0092).
     state =
       companyId === undefined

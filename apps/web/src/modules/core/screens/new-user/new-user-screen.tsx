@@ -314,11 +314,8 @@ export function NewUserScreen() {
     ...atPlants.map((each) => ({ ...each, kind: 'PLANT' as const })),
     ...(places.company === undefined ? [] : [{ ...places.company, kind: 'COMPANY' as const }]),
   ].filter((place) => viewer.canAt(place, 'core.roleAssignment:manage'));
-  const readsRoles =
-    places.plant === undefined
-      ? viewer.canAtCompany('core.role:read')
-      : viewer.can('core.role:read');
-  const assigns = readsRoles && assignable.length > 0;
+  // In company settings viewer.can reads the company's permissions.
+  const assigns = viewer.can('core.role:read') && assignable.length > 0;
   const roles = useQuery(CoreRoles, { variables: company, skip: !assigns });
   const firstRole: FirstRoleChoices | undefined =
     assigns && roles.data !== undefined && places.company !== undefined

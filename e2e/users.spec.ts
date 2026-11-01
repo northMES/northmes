@@ -100,8 +100,10 @@ test.describe('users', () => {
 
     users.empty();
     await page.goto(usersHref);
-    await expect(page.getByText('No users yet')).toBeVisible();
-    await checkA11y('the users list at a plant without users');
+    await expect(
+      page.getByRole('heading', { name: 'Nobody holds a role at Plant A' }),
+    ).toBeVisible();
+    await checkA11y('the users list at a plant where nobody holds a role');
     users.pass();
 
     await page.goto(coreLinks.settings.users({ plant }, { place: 'company' }).href);
