@@ -367,11 +367,12 @@ describe('the users of a company and their access', () => {
     expect(await userIds(reader, `companyId: "${company}", placeId: "${plantB}"`)).toEqual([split]);
   });
 
-  it('E05-S08 a company reader who names a plant of another company as placeId gets no users', async () => {
-    const { company } = await givenCompany(db.ownerUrl);
+  it('E05-S08 a company reader who names a plant or the company of another company as placeId gets no users, though both companies have holders and the reader reads both', async () => {
+    const { company } = await holdersByPlace();
     const other = await holdersByPlace();
     const reader = await atCompanySettings([
       { scopeId: company, permissions: ['core.user:read', 'core.role:read'] },
+      { scopeId: other.company, permissions: ['core.user:read', 'core.role:read'] },
     ]);
 
     expect(await userIds(reader, `companyId: "${company}", placeId: "${other.plantA}"`)).toEqual(

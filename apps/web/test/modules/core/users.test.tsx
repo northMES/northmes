@@ -100,7 +100,7 @@ function field(name: string): HTMLInputElement {
 }
 
 describe('users', () => {
-  it('ADR0092 a plant reader opens Users at the plant with Place set to the plant: roles at Plant A and the company only, and no New user or row menu', async () => {
+  it('ADR0092 a plant reader opens Users at the plant with Place set to the plant, which reads with placeId of the plant, and no New user or row menu', async () => {
     renderCoreAt(
       usersHref,
       [
@@ -158,6 +158,29 @@ describe('users', () => {
     await events.click(screen.getByRole('menuitemradio', { name: 'Anywhere' }));
 
     await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
+    expect(router.state.location.search).toEqual({ place: 'anywhere' });
+  });
+
+  it('ADR0092 at the plant, nobody with a role there shows Nobody holds a role at Plant A, with Show users anywhere, which sets Place to Anywhere', async () => {
+    const events = userEvent.setup();
+    const router = renderCoreAt(
+      usersHref,
+      [
+        viewerQuery(['core.user:read']),
+        companiesQuery(),
+        atPlant(usersQuery([], undefined, undefined, { placeId: plantA.id })),
+        atPlant(usersQuery([user(sara, [])])),
+      ],
+      { readsAtPlant: true },
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Nobody holds a role at Plant A' }),
+    ).toBeDefined();
+    await events.click(screen.getByRole('button', { name: 'Show users anywhere' }));
+
+    const table = await screen.findByRole('table', { name: 'Users' });
+    await waitFor(() => expect(bodyRows(table).map(([name]) => name)).toEqual(['Sara Nyberg']));
     expect(router.state.location.search).toEqual({ place: 'anywhere' });
   });
 
