@@ -8,6 +8,10 @@ describe('planningLinks', () => {
     expect(planningLinks.board({ plant: 'plant-a' }).href).toBe('/plant-a/planning/board');
   });
 
+  it("planningLinks.gantt builds the href of a plant's order Gantt", () => {
+    expect(planningLinks.gantt({ plant: 'plant-a' }).href).toBe('/plant-a/planning/order-gantt');
+  });
+
   it("#728 planningLinks.customerOrders.customerOrder builds the href of a customer order's page", () => {
     expect(
       planningLinks.customerOrders.customerOrder({ plant: 'plant-a', customerOrderId: '40211' })

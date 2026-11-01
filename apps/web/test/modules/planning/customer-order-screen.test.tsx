@@ -99,7 +99,7 @@ describe("a customer order's page (design #728, KO1 to KO3)", () => {
     );
     expect(
       within(table).getByRole('link', { name: 'Open on Gantt, order 1001' }).getAttribute('href'),
-    ).toBe('/plant-a/planning/gantt?zoom=week&from=2026-11-03&order=po-1001');
+    ).toBe('/plant-a/planning/order-gantt?zoom=week&from=2026-11-03&order=po-1001');
     expect(
       within(table).getByRole('button', { name: 'Change supply, line 1' }).hasAttribute('disabled'),
     ).toBe(true);

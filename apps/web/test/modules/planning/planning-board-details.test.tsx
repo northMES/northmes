@@ -129,7 +129,9 @@ describe('Details on the planning board (Krister, 2026-10-21: the Gantt drawer)'
     const drawer = await findDetails();
 
     await chooseDetailsAction(drawer, 'Show critical chain');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/plant-a/planning/gantt'));
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/plant-a/planning/order-gantt'),
+    );
     expect(router.state.location.search).toMatchObject({ order: 'po-1003', chain: 1 });
   });
 

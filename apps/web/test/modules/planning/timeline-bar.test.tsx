@@ -45,8 +45,17 @@ describe('the slim bar above the order Gantt (ADR 0090)', () => {
     expect(within(bar).queryByRole('button', { name: /^My draft/ })).toBeNull();
     expectNoRangeControls();
     // The page title and the bar share one row.
-    const heading = screen.getByRole('heading', { level: 1, name: 'Gantt' });
+    const heading = screen.getByRole('heading', { level: 1 });
     expect(heading.parentElement?.contains(bar)).toBe(true);
+  });
+
+  it('the page is titled Order Gantt, and its bar has the short name Gantt, as the board titled Planning board has the bar Board', async () => {
+    renderGanttRoute({ from: '2026-11-02' });
+    await findGantt();
+
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Order Gantt');
+    expect(screen.getByRole('toolbar', { name: 'Gantt' })).toBeTruthy();
+    expect(screen.queryByRole('toolbar', { name: 'Order Gantt' })).toBeNull();
   });
 
   it('#939 the View menu holds the columns, Hide closed time, Workload, Cascade and the tree pane widths, from the keyboard', async () => {

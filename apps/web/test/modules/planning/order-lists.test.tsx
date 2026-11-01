@@ -62,7 +62,7 @@ describe('the production orders list (plan 07; design #687, PL1 to PL3)', () => 
       '/plant-a/planning/orders/po-1001',
     );
     expect(within(row1001).getByRole('link', { name: 'Open on Gantt' }).getAttribute('href')).toBe(
-      '/plant-a/planning/gantt?zoom=week&from=2026-11-03&order=po-1001',
+      '/plant-a/planning/order-gantt?zoom=week&from=2026-11-03&order=po-1001',
     );
     expect(rowOf('data-order', '1004').textContent).toContain('Stock order');
     expect(rowOf('data-order', '1003').textContent).toContain('Late 15 h 15 min');
@@ -208,7 +208,7 @@ describe('the customer orders list (plan 07; design #687, CO1 and CO2)', () => {
     expect(supplied.textContent).toContain('Planned');
     expect(supplied.textContent).toContain('deadline Fri 6 Nov');
     expect(within(supplied).getByRole('link', { name: 'Open on Gantt' }).getAttribute('href')).toBe(
-      '/plant-a/planning/gantt?zoom=week&from=2026-11-03&order=po-1001',
+      '/plant-a/planning/order-gantt?zoom=week&from=2026-11-03&order=po-1001',
     );
     const late = rowOf('data-line', '40208-1');
     expect(late.textContent).toContain('Late 15 h 15 min');
