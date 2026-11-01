@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 // shared-candidate: #66
-import type { FieldValues, UseFormReturn } from 'react-hook-form';
 import { fieldErrorsOf, hasErrorCode } from '../../../ui/lib/graphql-errors.ts';
-import { setServerErrors } from '../../../ui/lib/use-zod-form.ts';
+import { setServerErrors, type useZodForm, type ZodForm } from '../../../ui/lib/use-zod-form.ts';
+
+/** The schema of a form that useZodForm binds. */
+type FormSchema = Parameters<typeof useZodForm>[0];
 
 /**
  * Places the errors of a register's failed create or update on its form (ADR 0022): each
@@ -12,10 +14,10 @@ import { setServerErrors } from '../../../ui/lib/use-zod-form.ts';
  * needs; and any other failure as Could not save. The typed values stay. A core.version_conflict
  * is the page's to show, since only it can reload the row.
  */
-export function showRegisterSaveError<Values extends FieldValues & { readonly code: string }>(
-  form: UseFormReturn<Values, unknown, unknown>,
+export function showRegisterSaveError<Schema extends FormSchema>(
+  form: ZodForm<Schema>,
   error: unknown,
-  values: Values,
+  values: { readonly code: string },
   { forbidden }: { readonly forbidden: string },
 ): void {
   const fieldErrors = fieldErrorsOf(error).map((entry) =>

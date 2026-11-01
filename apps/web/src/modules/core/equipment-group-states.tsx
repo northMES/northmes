@@ -3,6 +3,7 @@
 import { coreLinks } from '@northmes/core-contracts';
 import { Link } from '@tanstack/react-router';
 import { Lock } from 'lucide-react';
+import { z } from 'zod';
 import type { PageState } from '../../ui/components/page-frame/index.ts';
 import { isForbidden } from '../../ui/lib/graphql-errors.ts';
 import { buttonVariants } from '../../ui/primitives/button.tsx';
@@ -27,10 +28,15 @@ export function canChangeGroup(
   return group.scope === 'company' ? viewer.canAtCompany(permission) : viewer.can(permission);
 }
 
+/** Whether a route's group segment is an id; an old link by code is none (ADR 0062). */
+export function isGroupId(segment: string): boolean {
+  return z.uuid().safeParse(segment).success;
+}
+
 /**
  * The state of a group's page or its edit form (design #729, EG4 and EG5): no access, a failed
- * load, loading until the group and the rest the page shows are in, or a group the plant does not
- * see, with the way back to the list.
+ * load of the group or of the user's permissions, loading until the group and the rest the page
+ * shows are in, or a group the plant does not see, with the way back to the list.
  */
 export function equipmentGroupPageState({
   plant,
@@ -46,13 +52,15 @@ export function equipmentGroupPageState({
   readonly group: EquipmentGroup | null | undefined;
   /** The rest the page shows is in: the plant's machines and the user's permissions. */
   readonly restLoaded: boolean;
+  /** The error of the group's read, or of the user's permissions. */
   readonly error: unknown;
+  /** Asks again for whatever failed. */
   readonly retry: () => Promise<unknown>;
 }): PageState {
   if (group === undefined && isForbidden(error)) {
     return readForbiddenState('equipment groups', plantName);
   }
-  if (group === undefined && error !== undefined) {
+  if (error !== undefined && (group === undefined || !restLoaded)) {
     return {
       status: 'error',
       title: 'Could not load the equipment group',

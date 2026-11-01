@@ -20,10 +20,11 @@ export interface MachineListSearch {
 
 /**
  * The URL keys of the equipment groups list (design #729, EG1): the Scope filter as a comma list
- * of company and plant.
+ * of company and plant, and Show archived as archived=1 (ADR 0062).
  */
 export interface EquipmentGroupListSearch {
   readonly scope?: readonly Scope[];
+  readonly archived?: 1;
 }
 
 /** The URL keys of a machine's edit page: the page state the mock source answers with (MF1 to MF4). */
@@ -112,6 +113,11 @@ export function urlSearchOf(
 
 const equipmentGroupListKeys = z.object({
   scope: commaList(['company', 'plant'] as const),
+  archived: z
+    .union([z.literal(1), z.literal('1'), z.literal(true)])
+    .transform(() => 1 as const)
+    .optional()
+    .catch(undefined),
 });
 
 export function equipmentGroupListSearch(raw: Record<string, unknown>): EquipmentGroupListSearch {

@@ -12,7 +12,7 @@ An equipment group gathers machines that do the same kind of work, such as machi
 The list shows the groups the plant sees, its own and the company's, sorted by code. Each row shows the group's color, its code, its name, its scope, the plant's machines in it and where its color came from. The code opens the group's page.
 
 - **Scope** filters the list to the company's groups, the plant's own, or both. The filter is part of the address.
-- **Show archived** lists the archived groups too, each with the **Archived** badge.
+- **Show archived** lists the archived groups too, each with the **Archived** badge. It is part of the address, as the filter is.
 - **Columns** hides and shows columns.
 - **Edit** on a row opens the group's form, for a user who may change the group.
 
@@ -49,7 +49,7 @@ If someone else saved the group while you edited it, the save is refused and the
 
 ## Archive and restore a group
 
-Select **Archive** on the group's page and confirm with **Archive equipment group**. An archived group keeps its code, leaves the list unless **Show archived** is on, and cannot be changed. No machine can join it, and the machines in it keep it. **Restore** and **Restore equipment group** bring it back.
+Select **Archive** on the group's page and confirm with **Archive equipment group**. An archived group keeps its code, leaves the list unless **Show archived** is on, and cannot be changed. The API refuses a new machine in it or a move into it, and the machines in it keep it. **Restore** and **Restore equipment group** bring it back.
 
 ## Who may change a group
 

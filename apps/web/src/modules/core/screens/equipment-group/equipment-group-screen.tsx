@@ -27,6 +27,7 @@ import { colorNote, colorText, machineCountText, machinesOf } from '../../equipm
 import {
   canChangeGroup,
   equipmentGroupPageState,
+  isGroupId,
   machinesFixtureNote,
 } from '../../equipment-group-states.tsx';
 import type { GroupColorFrom } from '../../plant-settings-data.ts';
@@ -71,11 +72,16 @@ function Term({
 export function EquipmentGroupScreen() {
   const { plant } = useShell();
   const { groupId = '' } = useParams({ strict: false });
-  const { data, error, refetch } = useQuery(CoreEquipmentGroup, { variables: { id: groupId } });
+  const valid = isGroupId(groupId);
+  const { data, error, refetch } = useQuery(CoreEquipmentGroup, {
+    variables: { id: groupId },
+    skip: !valid,
+  });
   const { snapshot } = usePlantSettings(undefined);
   const places = usePlaces();
   const viewer = useViewer();
-  const group = data === undefined ? undefined : data.coreEquipmentGroup;
+  // An old link by the group's code names no group.
+  const group = !valid ? null : data === undefined ? undefined : data.coreEquipmentGroup;
   const plantName = places.plant?.name ?? 'the plant';
   const companyName = places.company?.name ?? 'the company';
   const back = coreLinks.settings.equipmentGroups({ plant }).href;
@@ -85,8 +91,12 @@ export function EquipmentGroupScreen() {
     plantName,
     group,
     restLoaded: snapshot !== undefined && viewer.loaded,
-    error,
-    retry: () => refetch(),
+    error: error ?? viewer.error,
+    retry: () =>
+      Promise.all([
+        error === undefined ? undefined : refetch(),
+        viewer.error === undefined ? undefined : viewer.retry(),
+      ]),
   });
   const machines = snapshot === undefined || !group ? [] : machinesOf(snapshot, group.code);
   const editable = group && group.archivedAt === null && canChangeGroup(viewer, group, 'update');

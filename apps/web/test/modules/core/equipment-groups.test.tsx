@@ -818,12 +818,10 @@ describe('the equipment group pages when an answer fails or is missing (review o
 
   it('#983 EG1 Show archived lives in the URL as archived=1', async () => {
     const old = group('OLD', 'Old line', { archivedAt: lastChanged });
-    const router = renderCoreAt(`${groups}?archived=1`, [
-      groupsQuery([asm, old], true),
-      groupsQuery([asm]),
-      companiesQuery(),
-      admin(),
-    ]);
+    const router = renderCoreAt(
+      coreLinks.settings.equipmentGroups({ plant }, { archived: '1' }).href,
+      [groupsQuery([asm, old], true), groupsQuery([asm]), companiesQuery(), admin()],
+    );
     const table = await screen.findByRole('table', { name: 'Equipment groups of Plant A' });
     await waitFor(() => expect(bodyRows(table).map((row) => row[1])).toEqual(['ASM', 'OLD']));
     const box = screen.getByRole('checkbox', { name: 'Show archived' });
@@ -835,7 +833,11 @@ describe('the equipment group pages when an answer fails or is missing (review o
   });
 
   it('#983 EG6 a plant without any group shows the empty state with Show archived on too', async () => {
-    renderCoreAt(`${groups}?archived=1`, [groupsQuery([], true), companiesQuery(), admin()]);
+    renderCoreAt(coreLinks.settings.equipmentGroups({ plant }, { archived: '1' }).href, [
+      groupsQuery([], true),
+      companiesQuery(),
+      admin(),
+    ]);
     await screen.findByRole('heading', { level: 2, name: 'No equipment groups yet' });
   });
 
@@ -852,7 +854,10 @@ describe('the equipment group pages when an answer fails or is missing (review o
   });
 
   it('#983 EG4 an old link by code, not by id, shows the not-found state without asking the API', async () => {
-    renderCoreAt(`${groups}/MACH`, [companiesQuery(), admin()]);
+    renderCoreAt(coreLinks.settings.equipmentGroups.group({ plant, groupId: 'MACH' }).href, [
+      companiesQuery(),
+      admin(),
+    ]);
     await screen.findByRole('heading', {
       level: 2,
       name: 'This equipment group does not exist or you cannot see it',

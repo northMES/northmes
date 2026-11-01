@@ -3,7 +3,7 @@
 // shared-candidate: #66
 import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /** One page of a register's list, as a connection field answers it (ADR 0073). */
 interface Page {
@@ -61,9 +61,14 @@ export function useEveryPage<
       ),
     [fetchMore, field, key],
   );
+  // The cursor already asked for, so a second run of the effect, as StrictMode does in
+  // development, does not append the same page twice.
+  const asked = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (next) void loadPage(next);
-  }, [next, loadPage]);
+    if (!next || asked.current === `${key} ${next}`) return;
+    asked.current = `${key} ${next}`;
+    void loadPage(next);
+  }, [key, next, loadPage]);
   const retryPage = useCallback(
     () => (next ? loadPage(next) : Promise.resolve()),
     [next, loadPage],

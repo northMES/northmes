@@ -6,7 +6,7 @@ import type { GroupColorFrom, PlantMachine, PlantSettingsSnapshot } from './plan
 /** The facts of the equipment groups that the groups pages share (design #729, EG1 to EG5). */
 
 /** A group as the facts read it: its id, its code and its palette color. */
-interface ColoredGroup {
+export interface ColoredGroup {
   readonly id: string;
   readonly code: string;
   readonly color: string;

@@ -15,6 +15,7 @@ import {
   equipmentGroupFormFields,
   type ScopeChoice,
 } from '../../components/equipment-group-form/index.ts';
+import { CoreEquipmentGroup } from '../../equipment-group.graphql.ts';
 import { createGroupForbiddenState } from '../../equipment-group-states.tsx';
 import { showRegisterSaveError } from '../../master-data/register-save-error.ts';
 import { useEquipmentGroups } from '../../use-equipment-groups.ts';
@@ -37,7 +38,12 @@ export function NewEquipmentGroupScreen() {
   const navigate = useNavigate();
   const viewer = useViewer();
   const places = usePlaces();
-  const { data } = useEquipmentGroups(false);
+  const { data, error, pageError } = useEquipmentGroups(false);
+  const groupsComplete =
+    data !== undefined &&
+    !data.coreEquipmentGroups.pageInfo.hasNextPage &&
+    error === undefined &&
+    pageError === undefined;
   const [id] = useState(() => uuidv7());
   const plantName = places.plant?.name ?? 'the plant';
   const scopes: ScopeChoice[] = [
@@ -61,7 +67,20 @@ export function NewEquipmentGroupScreen() {
       form.setValue('scope', firstScope);
     }
   }, [firstScope, form]);
-  const [create] = useMutation(CoreCreateEquipmentGroup);
+  const [create] = useMutation(CoreCreateEquipmentGroup, {
+    // The group's page opens on the answer, and every list reads the groups again.
+    update: (cache, { data: answer }) => {
+      if (!answer) return;
+      const group = answer.coreCreateEquipmentGroup;
+      cache.writeQuery({
+        query: CoreEquipmentGroup,
+        variables: { id: group.id },
+        data: { coreEquipmentGroup: group },
+      });
+      cache.evict({ fieldName: 'coreEquipmentGroups' });
+      cache.gc();
+    },
+  });
   const groups = coreLinks.settings.equipmentGroups({ plant }).href;
 
   const save = async (values: EquipmentGroupValues) => {
@@ -87,12 +106,19 @@ export function NewEquipmentGroupScreen() {
     }
   };
 
-  const state: PageState =
-    viewer.loaded && scopes.length === 0
-      ? createGroupForbiddenState(plantName)
-      : viewer.loaded
-        ? { status: 'ready' }
-        : { status: 'loading' };
+  let state: PageState = { status: 'ready' };
+  if (viewer.error !== undefined) {
+    state = {
+      status: 'error',
+      title: 'Could not open New equipment group',
+      error: viewer.error,
+      onRetry: viewer.retry,
+    };
+  } else if (!viewer.loaded) {
+    state = { status: 'loading' };
+  } else if (scopes.length === 0) {
+    state = createGroupForbiddenState(plantName);
+  }
   return (
     <PageFrame
       title="New equipment group"
@@ -105,6 +131,7 @@ export function NewEquipmentGroupScreen() {
           onSave={save}
           cancelHref={groups}
           groups={data?.coreEquipmentGroups.edges.map(({ node }) => node) ?? []}
+          groupsComplete={groupsComplete}
           scopes={scopes}
           machines={[]}
         />

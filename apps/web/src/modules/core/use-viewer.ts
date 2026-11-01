@@ -16,6 +16,10 @@ export interface Viewer {
   readonly can: (permission: string) => boolean;
   /** The user holds the permission at the company. */
   readonly canAtCompany: (permission: string) => boolean;
+  /** The error of a failed answer, while none arrived; a page shows it with `retry`. */
+  readonly error: unknown;
+  /** Asks again, for a page's Try again. */
+  readonly retry: () => Promise<unknown>;
 }
 
 /**
@@ -25,7 +29,7 @@ export interface Viewer {
  */
 export function useViewer(): Viewer {
   const variables = useCompanyVariables();
-  const { data } = useQuery(CoreViewer, { variables });
+  const { data, error, refetch } = useQuery(CoreViewer, { variables });
   const viewer = data?.coreViewer;
   const company = new Set(viewer?.companyPermissions ?? []);
   // A permission at the company holds at every plant of it, so in company settings, where the
@@ -37,5 +41,7 @@ export function useViewer(): Viewer {
     userId: viewer?.userId,
     can: (permission) => plant.has(permission),
     canAtCompany: (permission) => company.has(permission),
+    error: viewer === undefined ? error : undefined,
+    retry: () => refetch(),
   };
 }

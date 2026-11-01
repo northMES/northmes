@@ -9,7 +9,8 @@ import { expect, plant, test } from '../fixtures.ts';
 // group form, a group's page, the list with its Scope menu open, the edit form with a color
 // picked, the archive dialog, the list, the page and the form at 320 px, the list's loading,
 // empty, failed and no-access states, a group's loading, failed and no-access states, a group that
-// does not exist, and the edit form loading. The spec makes the plant group MACH and the company
+// does not exist, the edit form loading, and an archived group with its Restore dialog and the list
+// with Show archived on. The spec makes the plant group MACH and the company
 // group HEAT at plant A, the fixture G1's codes, so the pages show G1's machines in them and the
 // screenshots are the same in every run; the states come from routing the API's answers.
 
@@ -37,7 +38,8 @@ async function routeOperation(page: Page, operation: string) {
       await new Promise<void>((resolve) => {
         held.push(resolve);
       });
-      return route.fallback();
+      // A page.goto may have aborted the held request; its route is gone then.
+      return route.fallback().catch(() => {});
     }
     if (mode === 'fail') return route.fulfill({ status: 500, body: 'Internal Server Error' });
     if (mode === 'forbidden') {
@@ -231,5 +233,26 @@ test.describe('the equipment groups pages', () => {
       }),
     ).toBeVisible();
     await checkA11y('an equipment group that does not exist');
+
+    // An archived group: its page with the badge and Restore, the Restore dialog, and the list
+    // with Show archived on. OLD takes the first free color, as no group picks it.
+    await newGroup(page, { code: 'OLD', name: 'Old line', scope: /^Plant A$/ });
+    await page.getByRole('button', { name: 'Archive' }).click();
+    await page
+      .getByRole('alertdialog')
+      .getByRole('button', { name: 'Archive equipment group' })
+      .click();
+    await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
+    await checkA11y('an archived equipment group');
+    await page.getByRole('button', { name: 'Restore' }).click();
+    await expect(page.getByRole('alertdialog')).toHaveCSS('opacity', '1');
+    await checkA11y('the restore dialog');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    await page.goto(coreLinks.settings.equipmentGroups({ plant }, { archived: '1' }).href);
+    await expect(
+      page.getByRole('table', { name: 'Equipment groups of Plant A' }).getByText('Archived'),
+    ).toBeVisible();
+    await checkA11y('the equipment groups list with the archived groups');
   });
 });

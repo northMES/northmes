@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import type { ApolloCache } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import type { EquipmentGroup } from '../../equipment-group.graphql.ts';
 import { canChangeGroup } from '../../equipment-group-states.tsx';
@@ -15,8 +16,15 @@ import { CoreRestoreEquipmentGroup } from './restore-equipment-group.graphql.ts'
  */
 export function EquipmentGroupActions({ group }: { readonly group: EquipmentGroup }) {
   const viewer = useViewer();
-  const [archive] = useMutation(CoreArchiveEquipmentGroup);
-  const [restore] = useMutation(CoreRestoreEquipmentGroup);
+  // The group's page shows the answer; the lists read the groups again when they next open.
+  const options = {
+    update: (cache: ApolloCache) => {
+      cache.evict({ fieldName: 'coreEquipmentGroups' });
+      cache.gc();
+    },
+  };
+  const [archive] = useMutation(CoreArchiveEquipmentGroup, options);
+  const [restore] = useMutation(CoreRestoreEquipmentGroup, options);
   if (!canChangeGroup(viewer, group, 'archive')) return null;
   const variables = { input: { id: group.id, expectedVersion: group.version } };
   return (

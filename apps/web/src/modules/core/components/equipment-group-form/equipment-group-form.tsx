@@ -13,7 +13,12 @@ import { UnsavedChangesGuard } from '../../../../ui/components/unsaved-changes-g
 import { fieldProps, summaryErrors, type ZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import { Field, FieldDescription } from '../../../../ui/primitives/field.tsx';
 import { RadioGroup, RadioGroupItem } from '../../../../ui/primitives/radio-group.tsx';
-import { colorText, colorUsers, firstFreeColor } from '../../equipment-group-facts.ts';
+import {
+  type ColoredGroup,
+  colorText,
+  colorUsers,
+  firstFreeColor,
+} from '../../equipment-group-facts.ts';
 import { GroupBand } from '../group-band/index.ts';
 
 /**
@@ -33,13 +38,6 @@ export interface ScopeChoice {
   readonly label: string;
 }
 
-/** A group as the form reads the others: its id, its code and its palette color. */
-interface OtherGroup {
-  readonly id: string;
-  readonly code: string;
-  readonly color: string;
-}
-
 export interface EquipmentGroupFormProps {
   readonly form: ZodForm<typeof equipmentGroupFormFields>;
   /** Sends the values; a failure places its errors on the form before the promise settles. */
@@ -47,13 +45,21 @@ export interface EquipmentGroupFormProps {
   /** Where Cancel leads. */
   readonly cancelHref: string;
   /** The active groups the plant sees, for the colors in use and the first free one. */
-  readonly groups: readonly OtherGroup[];
+  readonly groups: readonly ColoredGroup[];
+  /**
+   * Every page of `groups` is in, so the form may name the free color the API will take; false
+   * while they load or after a page failed.
+   */
+  readonly groupsComplete?: boolean;
   /** The group the form changes; none on the new group page. */
   readonly groupId?: string;
   /** The scopes a new group may take; none on an existing group, whose scope stays. */
   readonly scopes?: readonly ScopeChoice[];
-  /** The sentence above the fields, such as the reach of a change to a company group. */
-  readonly note?: string;
+  /**
+   * The sentences above the fields: the reach of a change to a company group, or why the form is
+   * read-only.
+   */
+  readonly notes?: readonly string[];
   /** The group's machines at the plant, which the preview of its band draws. */
   readonly machines: readonly { code: string; name: string; isPlannable: boolean }[];
   /** The name the preview shows while Name is blank: the stored one, or none for a new group. */
@@ -78,8 +84,9 @@ export function EquipmentGroupForm({
   cancelHref,
   groups,
   groupId,
+  groupsComplete = true,
   scopes,
-  note,
+  notes = [],
   machines,
   storedName,
   conflict,
@@ -112,7 +119,11 @@ export function EquipmentGroupForm({
         <ConflictSummary noun="equipment group" errors={errors} onReload={conflict.onReload} />
       )}
       <FormSection title="Equipment group">
-        {note !== undefined && <p className="text-sm">{note}</p>}
+        {notes.map((note) => (
+          <p key={note} className="text-sm">
+            {note}
+          </p>
+        ))}
         <div className="grid gap-4 sm:grid-cols-2">
           <TextField
             label="Code"
@@ -151,7 +162,10 @@ export function EquipmentGroupForm({
               >
                 {scopes.map((choice) => (
                   // biome-ignore lint/a11y/noLabelWithoutControl: the radio inside is the control.
-                  <label key={choice.value} className="flex items-center gap-2 text-sm">
+                  <label
+                    key={choice.value}
+                    className="flex min-h-(--nm-target-min) items-center gap-2 text-sm"
+                  >
                     <RadioGroupItem value={choice.value} />
                     {choice.label}
                   </label>
@@ -213,7 +227,7 @@ export function EquipmentGroupForm({
             </RadioGroup>
             <FieldDescription id={`${colorId}-hint`}>
               {isNew
-                ? `One of the 20 palette colors. Pick none and the group takes ${colorText(free)}, the first palette color that no group uses.`
+                ? `One of the 20 palette colors. Pick none and the group takes ${groupsComplete ? `${colorText(free)}, ` : ''}the first palette color that no group uses.`
                 : 'One of the 20 palette colors. The color you set here stays: the import never replaces an existing color. Two groups can share a color; the name tells them apart.'}
             </FieldDescription>
           </Field>

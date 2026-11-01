@@ -196,7 +196,7 @@ function NewEquipmentGroupLink() {
  * the Scope filter, Show archived and Columns, and one row per group with its color, code, name,
  * scope, the plant's machines in it and where its color came from. The groups come from the API,
  * the plant's own and the company's, every page of them; the machines in each still come from the
- * fixture G1. The Scope filter lives in the URL (ADR 0062); Show archived and the columns stay
+ * fixture G1. The Scope filter and Show archived live in the URL (ADR 0062); the columns stay
  * local. Edit shows on a group the user may change, New equipment group to a user who may create
  * one at the plant or the company.
  */
@@ -206,7 +206,11 @@ export function EquipmentGroupsScreen() {
   const navigate = useNavigate();
   const show = (next: EquipmentGroupListSearch) =>
     navigate({ to: '.', search: urlSearchOf(next), replace: true });
-  const [showArchived, setShowArchived] = useState(false);
+  const showArchived = view.archived === 1;
+  const setShowArchived = (shown: boolean) => {
+    const { archived: _, ...rest } = view;
+    show(shown ? { ...rest, archived: 1 } : rest);
+  };
   const { data, previousData, error, refetch, pageError, retryPage } =
     useEquipmentGroups(showArchived);
   const { snapshot } = usePlantSettings(undefined);
@@ -218,7 +222,10 @@ export function EquipmentGroupsScreen() {
     company: places.company?.name ?? 'The company',
   };
 
-  const page = data?.coreEquipmentGroups ?? previousData?.coreEquipmentGroups;
+  // The rows of the list before stand in only while the next answer loads, never for a failed one.
+  const failed = data === undefined && error !== undefined;
+  const page =
+    data?.coreEquipmentGroups ?? (failed ? undefined : previousData?.coreEquipmentGroups);
   const loaded = page !== undefined && snapshot !== undefined;
   const allRows = useMemo(
     () =>
@@ -241,7 +248,7 @@ export function EquipmentGroupsScreen() {
     count: allRows.filter((row) => row.group.scope === value).length,
   }));
   const withScope = (values: readonly string[]) => {
-    const { scope: _, ...rest } = view;
+    const { scope: _scope, ...rest } = view;
     const scope = values.filter(
       (value): value is Scope => value === 'company' || value === 'plant',
     );
@@ -253,7 +260,6 @@ export function EquipmentGroupsScreen() {
   };
 
   const forbidden = data === undefined && isForbidden(error);
-  const failed = page === undefined && error !== undefined;
   const machineCount = rows.reduce((sum, row) => sum + row.machines.length, 0);
   const statusLine =
     allRows.length === 0
@@ -287,7 +293,7 @@ export function EquipmentGroupsScreen() {
     };
   } else if (!loaded) {
     state = { status: 'loading' };
-  } else if (allRows.length === 0 && !showArchived) {
+  } else if (allRows.length === 0) {
     state = {
       status: 'empty',
       icon: Layers,
@@ -335,7 +341,7 @@ export function EquipmentGroupsScreen() {
                   onChange={withScope}
                 />
               </div>
-              <Field orientation="horizontal" className="w-auto">
+              <Field orientation="horizontal" className="min-h-(--nm-target-min) w-auto">
                 <Checkbox
                   id={showArchivedId}
                   checked={showArchived}
