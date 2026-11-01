@@ -150,14 +150,6 @@ export function DataTableMenuCell() {
 }
 
 /**
- * A list on TanStack Table v9 with sorting and paging on the server (plan 06, Lists; design
- * ui-222): the header of a sortable column is a button that sorts ascending first and then flips
- * the direction, its aria-sort shows the sort, and the pager has Previous and Next with the row
- * range, such as "Rows 1 to 25 of 63". Focus stays on the control that was used. While the next
- * rows load, the table shows skeleton rows when it has none to show, and otherwise keeps the rows
- * of the view before, dimmed, so a search, sort, filter or page change does not empty it.
- */
-/**
  * The header row of a row group (design core-304, RO1; ui-222, LI29): a row header over every
  * cell that names the group and counts its rows, and, for a group that opens and closes, a button
  * with aria-expanded. The job order table draws its groups with it too (ADR 0091).
@@ -217,6 +209,14 @@ export function DataTableGroupHeader<TRow>({
   );
 }
 
+/**
+ * A list on TanStack Table v9 with sorting and paging on the server (plan 06, Lists; design
+ * ui-222): the header of a sortable column is a button that sorts ascending first and then flips
+ * the direction, its aria-sort shows the sort, and the pager has Previous and Next with the row
+ * range, such as "Rows 1 to 25 of 63". Focus stays on the control that was used. While the next
+ * rows load, the table shows skeleton rows when it has none to show, and otherwise keeps the rows
+ * of the view before, dimmed, so a search, sort, filter or page change does not empty it.
+ */
 export function DataTable<TRow extends RowData>({
   label,
   columns,

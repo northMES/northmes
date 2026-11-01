@@ -866,7 +866,7 @@ The table view is the main screen-reader path and a second view for every planne
 - A "Late only" filter that reuses the query behind the `late` filter of `planning_find_orders`, and works with the AI module disabled.
 - No time range: by default the table lists every open job order (planned and started, Not placed included), sorted by start, with a search by job order, order and article, filters for machine, status and article, and Group by machine or start day ([ADR 0091](../adr/0091-the-job-order-table-lists-open-job-orders-without-a-time-range.md), proposed). Finished job orders show under the status filter.
 - Server paging through the Relay connection ([ADR 0016](../adr/0016-graphql-list-conventions-connections-relations-filter-sort-search-and-group-by.md)), not row virtualization, because NVDA browse mode stops at the last rendered row.
-- Each row has Move (the shared Move dialog), Lock and Open order. The URL keeps the view: `q`, `late`, `machine`, `status`, `article`, `group` and `sort`.
+- Each row has Move (the shared Move dialog), Lock and Open order. The URL keeps the view: `q`, `late`, `equipment`, `status`, `article`, `group` and `sort` (ADR 0091).
 
 ### Board settings
 
