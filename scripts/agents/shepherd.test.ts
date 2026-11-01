@@ -10,6 +10,8 @@ const merging = {
   number: 973,
   isDraft: false,
   mergeStateStatus: 'CLEAN',
+  inMergeQueue: false,
+  leftQueue: undefined,
   autoMerge: true,
   tier: 'low' as const,
   headSha: head,
@@ -39,10 +41,40 @@ describe('#978 the shepherd names what each open pull request waits on', () => {
     ]);
   });
 
-  it('#978 a branch behind main needs a rebase', () => {
-    expect(triage({ ...merging, mergeStateStatus: 'BEHIND' })).toEqual([
-      'behind main: rebase onto origin/main in the shepherd worktree and push',
+  it('ADR0093 a branch that is only behind main needs no rebase: the merge queue builds it on main', () => {
+    expect(triage({ ...merging, mergeStateStatus: 'BEHIND' })).toEqual(['merging: nothing to do']);
+  });
+
+  it('ADR0093 a pull request the queue dropped names the queue run to read and the one step to take, in place of the auto-merge line', () => {
+    const dropped = { ...merging, leftQueue: { reason: 'CI_FAILURE' } };
+
+    expect(triage(dropped)).toEqual([
+      'left the merge queue (CI_FAILURE): its checks failed on the queue commit, not on the head; find the run with gh run list --event merge_group --limit 100 --json headBranch,databaseId,conclusion and its branch gh-readonly-queue/main/pr-973-<sha>, read its log by the rule of CLAUDE.md, then run pnpm agent:auto-merge 973 once more',
     ]);
+    expect(triage({ ...dropped, autoMerge: false })).toEqual(triage(dropped));
+    expect(triage({ ...dropped, leftQueue: { reason: 'CI_TIMEOUT' } })[0]).toContain(
+      'left the merge queue (CI_TIMEOUT): its checks failed',
+    );
+  });
+
+  it("ADR0093 a pull request a person or the queue took out for another reason is the maintainer's, not re-queued", () => {
+    for (const reason of ['DEQUEUED', 'MERGE_CONFLICT', 'QUEUE_CLEARED', 'no reason given']) {
+      expect(triage({ ...merging, leftQueue: { reason }, autoMerge: false })).toEqual([
+        `left the merge queue (${reason}): not for a failed check, so a person or the queue took it out; the maintainer decides whether it goes back`,
+      ]);
+    }
+  });
+
+  it("ADR0093 a pull request in the merge queue is GitHub's, whatever else it shows", () => {
+    expect(
+      triage({
+        ...merging,
+        inMergeQueue: true,
+        mergeStateStatus: 'BLOCKED',
+        autoMerge: false,
+        checks: [{ name: 'e2e', conclusion: 'FAILURE' }],
+      }),
+    ).toEqual(['in the merge queue: GitHub builds it on main and merges it']);
   });
 
   it('#978 each check that failed, timed out, was cancelled or errored is named with its conclusion', () => {
@@ -246,6 +278,8 @@ describe('#978 fromGraph shapes a pull request of the query as triage reads it',
     title: 'feat(core): machines',
     isDraft: false,
     mergeStateStatus: 'BEHIND',
+    isInMergeQueue: false,
+    dequeued: { nodes: [] },
     headRefOid: head,
     autoMergeRequest: { enabledAt: '2026-11-01T09:00:00Z' },
     labels: { nodes: [{ name: 'risk:high' }, { name: 'core' }] },
@@ -299,6 +333,8 @@ describe('#978 fromGraph shapes a pull request of the query as triage reads it',
       title: 'feat(core): machines',
       isDraft: false,
       mergeStateStatus: 'BEHIND',
+      inMergeQueue: false,
+      leftQueue: undefined,
       autoMerge: true,
       tier: 'high',
       headSha: head,
@@ -324,6 +360,24 @@ describe('#978 fromGraph shapes a pull request of the query as triage reads it',
       { author: 'coderabbitai', resolved: false },
       { author: undefined, resolved: false },
     ]);
+  });
+
+  it('ADR0093 a removal from the queue counts when it came after the head was committed and the pull request is not back in the queue', () => {
+    const removed = (createdAt: string, extra = {}) =>
+      fromGraph({
+        ...node,
+        dequeued: { nodes: [{ createdAt, reason: 'CI_FAILURE' }] },
+        ...extra,
+      }).leftQueue;
+
+    expect(removed('2026-11-01T10:00:00Z')).toEqual({ reason: 'CI_FAILURE' });
+    expect(removed('2026-11-01T08:00:00Z')).toBeUndefined();
+    expect(removed('2026-11-01T10:00:00Z', { isInMergeQueue: true })).toBeUndefined();
+    expect(
+      fromGraph({ ...node, dequeued: { nodes: [{ createdAt: '2026-11-01T10:00:00Z' }] } })
+        .leftQueue,
+    ).toEqual({ reason: 'no reason given' });
+    expect(fromGraph({ ...node, dequeued: undefined }).leftQueue).toBeUndefined();
   });
 
   it('#978 no label, no auto-merge and no check rollup read as what they are', () => {

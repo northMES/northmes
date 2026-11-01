@@ -115,3 +115,29 @@ export function parseNameStatus(output) {
   }
   return changes;
 }
+
+// The branch the merge queue builds a pull request on: gh-readonly-queue/<base>/pr-<number>-<base
+// sha>, as `refs/heads/...` in a merge_group event's head_ref.
+const queueRef = /(?:^|\/)gh-readonly-queue\/.+\/pr-([1-9]\d*)-[0-9a-f]+$/;
+
+/**
+ * The number of the pull request a merge queue branch builds, or undefined for any other ref.
+ * @param {string | undefined} ref
+ * @returns {number | undefined}
+ */
+export function pullNumberOfQueueRef(ref) {
+  const match = queueRef.exec(ref ?? '');
+  return match === null ? undefined : Number(match[1]);
+}
+
+/**
+ * The number of the pull request an event is about: the pull request's own number on a
+ * pull_request event, or the one the queue branch names on a merge_group event.
+ * @param {{ number?: string, queueRef?: string }} event the PR_NUMBER and MERGE_GROUP_HEAD_REF variables
+ * @returns {number | undefined}
+ */
+export function eventPullNumber({ number, queueRef }) {
+  const own = Number(number);
+  if (Number.isInteger(own) && own > 0) return own;
+  return pullNumberOfQueueRef(queueRef);
+}

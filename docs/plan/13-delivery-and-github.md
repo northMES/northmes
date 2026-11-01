@@ -621,23 +621,23 @@ A pin moves only after reading the skills' changelog between the two commits, re
 
 ### Repository settings
 
-- Merge methods: squash only, with the pull request title as the commit subject and a blank commit body. Auto-merge off.
+- Merge methods: squash only, with the pull request title as the commit subject and a blank commit body. Auto-merge on, turned on per pull request by the project script ([ADR 0086](../adr/0086-risk-tiered-review-and-merge-of-agent-pull-requests.md)).
 - Secret scanning and push protection on. Dependabot alerts on; Dependabot security updates off, so Renovate and Dependabot do not open the same fix.
 - Private vulnerability reporting on, with a `.github/VULNERABILITY_REPORT.yml` form and the CWE field required.
-- CodeQL default setup for `actions` and `javascript-typescript`.
+- CodeQL as the workflow `codeql.yml` for `actions` and `javascript-typescript`, so that it reports on the merge queue's commits; default setup is off ([ADR 0093](../adr/0093-merge-through-githubs-merge-queue-with-the-pull-request-checks-the-risk-gate-and-codeql-reporting-on-the-queues-commits.md)).
 - Immutable releases on from the first release tag.
 - `pnpm-workspace.yaml` sets `pmOnFail: ignore`, so the lockfile stays one YAML document and GitHub's dependency graph can read it. After the first push, check that the dependency graph lists the packages.
 - A `release` environment with Krister as required reviewer, "Prevent self-review" off (one maintainer must approve their own runs) and administrator bypass off.
 - `CODEOWNERS`: `* @Krister-Johansson`. Code owner review is required since [ADR 0084](../adr/0084-agent-sessions-in-auto-mode-inside-the-claude-code-sandbox-with-their-own-github-identity-and-the-maintainers-approval-on-main.md), because agents act as their own machine user and Krister approves their pull requests.
-- Signed commits stay off until every agent path signs. GitHub's merge queue stays off: handoff's queue with strict required checks merges one up-to-date pull request at a time.
+- Signed commits stay off until every agent path signs. GitHub's merge queue merges every pull request: squash, only non-failing entries, up to 5 built and merged at once, a 60 minute check timeout ([ADR 0093](../adr/0093-merge-through-githubs-merge-queue-with-the-pull-request-checks-the-risk-gate-and-codeql-reporting-on-the-queues-commits.md)).
 
 ### Rulesets
 
 Branch ruleset on `main`:
 
-- Pull request required, 1 approving review, stale approvals dismissed on push, review threads must be resolved ([ADR 0065](../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md)). Code owner review is required too, and `CODEOWNERS` names only Krister, so his approval is the one that counts ([ADR 0084](../adr/0084-agent-sessions-in-auto-mode-inside-the-claude-code-sandbox-with-their-own-github-identity-and-the-maintainers-approval-on-main.md)). Sessions open pull requests as `northmes-agent` and review their own diff with a review agent before the pull request opens; Krister approves and merges them. CodeRabbit reviews, but its approval no longer satisfies the rule. Krister approves Renovate's pull requests and the release pull request, which CodeRabbit skips.
+- Pull request required, 0 approving reviews with code owner review on the risk paths and the required `risk gate` check, stale approvals dismissed on push, review threads must be resolved ([ADR 0065](../adr/0065-coderabbit-check-run-and-a-required-approval-on-main.md), [ADR 0086](../adr/0086-risk-tiered-review-and-merge-of-agent-pull-requests.md)). `CODEOWNERS` names Krister for the risk paths ([ADR 0084](../adr/0084-agent-sessions-in-auto-mode-inside-the-claude-code-sandbox-with-their-own-github-identity-and-the-maintainers-approval-on-main.md)). Sessions open pull requests as `northmes-agent` and review their own diff with a review agent before the pull request opens; Krister approves the high ones, and the merge queue merges. CodeRabbit reviews, but its approval no longer satisfies the rule. Krister approves Renovate's pull requests and the release pull request, which CodeRabbit skips.
 - Squash merge only; linear history.
-- Required status checks, strict (branch up to date): `lint`, `typecheck`, `build`, `test`, `react doctor` and `gate` from the GitHub Actions app, the jobs of `ci.yml` that GitHub shows as `CI / lint` and so on, and `pr title`, `linked issue`, `pr security`, `pr docs`, `pr tests` and `pr gate`, the jobs of `pr.yml` that GitHub shows as `PR / pr title` and so on ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)), `license gate`, `dependency audit`, `CodeQL`.
+- Required status checks, not strict, since the merge queue builds each pull request on the latest `main` ([ADR 0093](../adr/0093-merge-through-githubs-merge-queue-with-the-pull-request-checks-the-risk-gate-and-codeql-reporting-on-the-queues-commits.md)): `lint`, `typecheck`, `build`, `test`, `react doctor` and `gate` from the GitHub Actions app, the jobs of `ci.yml` that GitHub shows as `CI / lint` and so on, and `pr title`, `linked issue`, `pr security`, `pr docs`, `pr tests` and `pr gate`, the jobs of `pr.yml` that GitHub shows as `PR / pr title` and so on ([ADR 0069](../adr/0069-require-each-ci-job-as-a-status-check-on-main.md)), `license gate`, `dependency audit`, `codeql`.
 - Block force pushes and deletion.
 - No bypass actors.
 
@@ -680,7 +680,7 @@ All workflows set `permissions: contents: read` at the top and raise permissions
 | `supply-chain.yml` `dependency audit` | pull request | `pnpm audit --prod --audit-level high`, with assessed exceptions recorded |
 | `supply-chain.yml` `dependency review` | pull request | `actions/dependency-review-action`, once the dependency graph reads the lockfile |
 | `images.yml` `image build + scan` | pull request, push to `main` | Builds the app and Postgres images without pushing; Trivy or Grype pinned by digest; fails on a critical finding with a fix |
-| CodeQL default setup | GitHub | `actions` and `javascript-typescript` |
+| `codeql.yml` `codeql` | pull request, merge group, push to `main`, weekly | CodeQL for `actions` and `javascript-typescript` with no build; uploads to code scanning |
 | `release-please.yml` | push to `main`, dispatch | The release flow below |
 | `nightly.yml` | schedule, dispatch | The Compose stack; ops tests (install, restore drill, WAL archive outage, upgrade from N-1 with a failing migration and rollback); the N-1 image over a database the current image wrote; the board performance spec; the autoplan bench; the reconnect-after-outage spec |
 | `scorecard.yml` | as in the maintainer's gqlPrune repository | OpenSSF Scorecard |
@@ -728,7 +728,7 @@ Blacksmith runs only for GitHub organizations, so until the repository moves eve
 | Renovate | The Mend Renovate app with `config:best-practices`, `helpers:pinGitHubActionDigests`, digest pinning for Compose files and Dockerfiles, a custom manager for the database image digest in `infra/pg-image.json`, `minimumReleaseAge` (stricter for the Module Federation packages), a weekly schedule, grouped GitHub Actions and dev dependency updates, label `dependencies`. Renovate pull requests skip `PR / linked issue` and CodeRabbit, so Krister approves them. If Renovate cannot update the pnpm lockfile in its first week, Dependabot version updates take over |
 | Codecov | Informational, no pull request comment; one component per module from paths; one upload from the UTC leg with OIDC instead of a token. The coverage threshold for the scheduling domain lives in `vitest.config.ts` |
 | Socket | The GitHub app with `socket.yml` triggering on `package.json` files, `pnpm-lock.yaml` and `pnpm-workspace.yaml`; checks new dependencies on pull requests |
-| CodeQL | Default setup, a required check |
+| CodeQL | The workflow `codeql.yml`, a required check that reports on the merge queue's commits too |
 | OpenSSF Scorecard | `scorecard.yml` with a read-only token that can read rulesets. Code-Review stays at 0 while one maintainer merges their own pull requests |
 | OpenSSF Best Practices | NorthMES registered at bestpractices.dev with `.bestpractices.json`; passing before release 1, silver after |
 | Context7 | `context7.json` points the Context7 library at `apps/docs` and excludes `docs/`, `.claude` and the root rule files |

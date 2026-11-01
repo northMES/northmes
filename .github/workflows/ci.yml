@@ -11,17 +11,20 @@
 name: CI
 
 # An edit to a pull request's title or body changes no code, so it runs only the pull request
-# checks in pr.yml.
+# checks in pr.yml. The merge queue builds each pull request on the latest main and asks for the
+# required checks on that commit (ADR 0093), so the workflow runs on merge_group too.
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
 
 # A newer commit on a pull request cancels the pull request's older run. CI / gate still
 # runs in the cancelled run and fails it, and the newer run's checks replace those on the same
 # commit once they finish. A re-run of an older run joins the same group, so it cancels the current
-# one. Each push to main runs in a group of its own that nothing cancels.
+# one. Each push to main and each merge group runs in a group of its own that nothing cancels.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -175,7 +178,9 @@ jobs:
   # pnpm e2e builds, installs Chromium and runs Playwright, whose global setup starts Postgres
   # through Testcontainers and whose workers each spawn the built server in role all. After a
   # run with a failed attempt, Playwright's report with the traces of the failed attempts is kept as
-  # an artifact, also when every failed spec passed on its retry and the job is green (#974).
+  # an artifact, also when every failed spec passed on its retry and the job is green (#974). The
+  # pull request's own run uploaded its screenshots to Argos; a merge group run builds the same
+  # diff on a queue branch, so it gets no token and uploads nothing (ADR 0077, ADR 0093).
   e2e:
     name: e2e
     permissions:
@@ -194,7 +199,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm e2e
         env:
-          ARGOS_TOKEN: ${{ secrets.ARGOS_TOKEN }}
+          ARGOS_TOKEN: ${{ github.event_name != 'merge_group' && secrets.ARGOS_TOKEN || '' }}
       - if: "!cancelled()"
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -238,8 +243,8 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
 
   # GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
-  # so CI / gate always runs and fails itself instead. Every job it needs runs on a pull request and
-  # on a push to main, so a skipped one fails it too.
+  # so CI / gate always runs and fails itself instead. Every job it needs runs on a pull request, in
+  # a merge group and on a push to main, so a skipped one fails it too.
   gate:
     name: gate
     # The gate reads only the results of the jobs it needs, so its token gets no permissions.

@@ -1,33 +1,77 @@
 # The pull request checks, which read the pull request's title, body, author, branch or base
 # instead of its code alone. GitHub shows each job as PR / <job name>. They run in a workflow of their
 # own, so an edit to the title or body re-runs them and not the tests, the build and the end-to-end
-# specs of ci.yml. The main ruleset requires each job here except openapi diff as a status check
-# by its job name, as docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md decides, and
-# openapi diff fails a pull request through PR / pr gate. A renamed, added or removed job needs a
-# ruleset edit: an added name after the merge, a removed or old name just before it. test/meta/workflows.test.ts lists the job names. The scripts take the event values
-# from environment variables: interpolated into a run script, a title or body could inject shell
-# code.
+# specs of ci.yml. The main ruleset requires each job here except pull request and openapi diff as
+# a status check by its job name, as docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md
+# decides; openapi diff fails a pull request through PR / pr gate, and the other jobs fail without
+# pull request. A renamed, added or removed job needs a ruleset edit: an added name after the merge,
+# a removed or old name just before it. test/meta/workflows.test.ts lists the job names. The scripts
+# take the event values from environment variables: interpolated into a run script, a title or body
+# could inject shell code.
+#
+# The merge queue asks for the required checks on the commit it builds for a pull request
+# (ADR 0093), and a merge_group event carries no pull request, only the queue branch that names it.
+# So PR / pull request reads the pull request through the API on both events and the checks read
+# its outputs, which carry the same fields on either event.
 name: PR
 
 on:
   # edited re-runs the checks after a fix to the title or body.
   pull_request:
     types: [opened, synchronize, reopened, edited]
+  merge_group:
+    types: [checks_requested]
 
 # A newer commit or edit on a pull request cancels the pull request's older PR run. The group starts
 # with the workflow name, so it never cancels a CI run. PR / pr gate still runs in the cancelled run
-# and fails it, and the newer run's checks replace those on the same commit once they finish.
+# and fails it, and the newer run's checks replace those on the same commit once they finish. Each
+# merge group runs in a group of its own that nothing cancels.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # No job here needs more than reading the repository.
 permissions:
   contents: read
 
 jobs:
+  # The pull request the run is about, from its number on a pull_request event or from the queue
+  # branch on a merge_group event, read through the API; in a merge group the base output is the
+  # group's parent commit, which the checkout is built on, so openapi diff compares the pull
+  # request's change alone. The script runs from the checkout, as the checks do: GitHub runs a pull
+  # request's own copy of this workflow either way.
+  pull-request:
+    name: pull request
+    permissions:
+      contents: read
+      pull-requests: read
+    runs-on: ubuntu-24.04
+    outputs:
+      number: ${{ steps.pull.outputs.number }}
+      title: ${{ steps.pull.outputs.title }}
+      body: ${{ steps.pull.outputs.body }}
+      author: ${{ steps.pull.outputs.author }}
+      head_ref: ${{ steps.pull.outputs.head_ref }}
+      from_fork: ${{ steps.pull.outputs.from_fork }}
+      base_sha: ${{ steps.pull.outputs.base_sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .node-version
+      - id: pull
+        run: node scripts/ci/event-pull-request.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MERGE_GROUP_HEAD_REF: ${{ github.event.merge_group.head_ref }}
+          MERGE_GROUP_BASE_SHA: ${{ github.event.merge_group.base_sha }}
+
   pr-title:
     name: pr title
+    needs: pull-request
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -40,11 +84,12 @@ jobs:
           node-version-file: .node-version
       - run: node scripts/ci/pr-title.mjs
         env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_TITLE: ${{ needs.pull-request.outputs.title }}
 
   # Renovate and release pull requests finish no issue and are exempt.
   linked-issue:
     name: linked issue
+    needs: pull-request
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -57,14 +102,15 @@ jobs:
           node-version-file: .node-version
       - run: node scripts/ci/linked-issue.mjs
         env:
-          PR_BODY: ${{ github.event.pull_request.body }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+          PR_BODY: ${{ needs.pull-request.outputs.body }}
+          PR_AUTHOR: ${{ needs.pull-request.outputs.author }}
+          PR_HEAD_REF: ${{ needs.pull-request.outputs.head_ref }}
+          PR_FROM_FORK: ${{ needs.pull-request.outputs.from_fork }}
 
   # ADR 0076: every pull request body has a Security note, filled in.
   pr-security:
     name: pr security
+    needs: pull-request
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -77,16 +123,18 @@ jobs:
           node-version-file: .node-version
       - run: node scripts/ci/pr-security.mjs
         env:
-          PR_BODY: ${{ github.event.pull_request.body }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+          PR_BODY: ${{ needs.pull-request.outputs.body }}
+          PR_AUTHOR: ${{ needs.pull-request.outputs.author }}
+          PR_HEAD_REF: ${{ needs.pull-request.outputs.head_ref }}
+          PR_FROM_FORK: ${{ needs.pull-request.outputs.from_fork }}
 
   # ADR 0088: every pull request body has a Docs section that names the pages it changes, or says
   # none with a reason that names each mapped surface (.github/docs-paths) the change touches. The
-  # merge commit's first parent is the base branch, so a depth of 2 holds both sides of the diff.
+  # merge commit's first parent is the base branch, on a pull request and in a merge group alike,
+  # so a depth of 2 holds both sides of the diff.
   pr-docs:
     name: pr docs
+    needs: pull-request
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -100,15 +148,16 @@ jobs:
           node-version-file: .node-version
       - run: node scripts/ci/pr-docs.mjs
         env:
-          PR_BODY: ${{ github.event.pull_request.body }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+          PR_BODY: ${{ needs.pull-request.outputs.body }}
+          PR_AUTHOR: ${{ needs.pull-request.outputs.author }}
+          PR_HEAD_REF: ${{ needs.pull-request.outputs.head_ref }}
+          PR_FROM_FORK: ${{ needs.pull-request.outputs.from_fork }}
 
   # AGENTS.md: a feat, fix or security pull request that changes source changes a test, and a
   # pull request that deletes a test says why under ## Removed tests.
   pr-tests:
     name: pr tests
+    needs: pull-request
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -122,11 +171,11 @@ jobs:
           node-version-file: .node-version
       - run: node scripts/ci/pr-tests.mjs
         env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
-          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
-          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
-          PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
+          PR_TITLE: ${{ needs.pull-request.outputs.title }}
+          PR_BODY: ${{ needs.pull-request.outputs.body }}
+          PR_AUTHOR: ${{ needs.pull-request.outputs.author }}
+          PR_HEAD_REF: ${{ needs.pull-request.outputs.head_ref }}
+          PR_FROM_FORK: ${{ needs.pull-request.outputs.from_fork }}
 
   # ADR 0064: a pull request that breaks the public API fails, unless NorthMES is still 0.x and the
   # title marks the break with !. oasdiff compares the base branch's schema/openapi-v1.json with the
@@ -135,6 +184,7 @@ jobs:
   # decides from what oasdiff finds, and passes when the base branch has no document yet.
   openapi-diff:
     name: openapi diff
+    needs: pull-request
     permissions:
       contents: read
     runs-on: ubuntu-24.04
@@ -147,7 +197,7 @@ jobs:
       - name: Check out the base branch's OpenAPI document
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.event.pull_request.base.sha }}
+          ref: ${{ needs.pull-request.outputs.base_sha }}
           path: base
           sparse-checkout: schema
           persist-credentials: false
@@ -163,18 +213,18 @@ jobs:
           fi
       - run: node scripts/ci/openapi-diff.mjs
         env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_TITLE: ${{ needs.pull-request.outputs.title }}
           OPENAPI_CHANGES: ${{ runner.temp }}/openapi-changes.json
 
   # GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
   # so PR / pr gate always runs and fails itself instead. Every job it needs runs on every event of
-  # this workflow, so a skipped one fails it too.
+  # this workflow, so a skipped one fails it too, as the checks do when pull request fails.
   pr-gate:
     name: pr gate
     # The gate reads only the results of the jobs it needs, so its token gets no permissions.
     permissions: {}
     if: always()
-    needs: [pr-title, linked-issue, pr-security, pr-docs, pr-tests, openapi-diff]
+    needs: [pull-request, pr-title, linked-issue, pr-security, pr-docs, pr-tests, openapi-diff]
     runs-on: ubuntu-24.04
     steps:
       - name: Fail when a job that PR / pr gate needs did not pass

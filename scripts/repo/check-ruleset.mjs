@@ -3,8 +3,8 @@
 // `pnpm repo:check-ruleset`: compares the required status checks of the main ruleset with the jobs
 // of the workflows (docs/adr/0069-require-each-ci-job-as-a-status-check-on-main.md). It names each
 // job the ruleset does not require, each required check that no job reports any more, and each
-// check required from the wrong app, checks that the ruleset is active on main with a strict
-// policy, and exits 1 when it finds a problem. It reads the workflows of the working tree, so run
+// check required from the wrong app, checks that the ruleset is active on main and merges through
+// a merge queue that squashes (ADR 0093), and exits 1 when it finds a problem. It reads the workflows of the working tree, so run
 // it on an up-to-date main: before a change that renames, adds or removes a job, to start from a
 // clean match, and after the merge and the ruleset edit that follow it. Between the edit just
 // before the merge and the merge itself it names the jobs that the merge renames or removes.
@@ -25,17 +25,22 @@ const mainRuleset = 24515911;
 // The GitHub Actions app, which reports every workflow job.
 const githubActions = 15368;
 
-// The checks the ruleset requires that no workflow of this repository runs, by the app that
-// reports them: CodeQL comes from code scanning's default setup (ADR 0050).
-const otherApps = new Map([['CodeQL', 57789]]);
+// Every required check is a job of a workflow here since ADR 0093: CodeQL runs as the job codeql of
+// codeql.yml, so that it reports on merge queue commits too, which code scanning's default setup
+// does not.
 
 /** The workflow files whose jobs the main ruleset requires; test/meta/workflows.test.ts reads it. */
-export const workflowFiles = ['ci.yml', 'pr.yml', 'risk.yml', 'supply-chain.yml'];
+export const workflowFiles = ['ci.yml', 'pr.yml', 'risk.yml', 'supply-chain.yml', 'codeql.yml'];
 
-// Jobs the ruleset may require but does not have to. cla joins before the first outside pull
-// request (ADR 0039), e2e when #281 lands; openapi diff fails a pull request through pr gate and
-// e2e through gate; risk label only labels the pull request (ADR 0086).
-const optional = new Set(['cla', 'e2e', 'openapi diff', 'risk label']);
+/**
+ * Jobs the ruleset may require but does not have to. cla joins before the first outside pull
+ * request (ADR 0039) and runs on pull requests only, so it needs a merge_group run before it does;
+ * e2e joins when #281 lands; openapi diff fails a pull request through pr gate and e2e through gate;
+ * risk label only labels the pull request (ADR 0086); pull request only reads the pull request for
+ * the other PR jobs, which fail without it (ADR 0093). test/meta/workflows.test.ts reads it.
+ */
+export const optionalJobs = new Set(['cla', 'e2e', 'openapi diff', 'risk label', 'pull request']);
+const optional = optionalJobs;
 
 // The ref patterns that name main in a ruleset's condition; main is the default branch.
 const mainRefs = new Set(['~DEFAULT_BRANCH', '~ALL', 'refs/heads/main']);
@@ -43,7 +48,7 @@ const mainRefs = new Set(['~DEFAULT_BRANCH', '~ALL', 'refs/heads/main']);
 /**
  * The problems of the main ruleset's enforcement, target and required status checks against the
  * workflows' jobs.
- * @param {{ enforcement?: string, conditions?: { ref_name?: { include?: string[], exclude?: string[] } }, rules?:{ type: string, parameters?: { strict_required_status_checks_policy?: boolean, required_status_checks?: { context: string, integration_id?: number }[] } }[] }} ruleset
+ * @param {{ enforcement?: string, conditions?: { ref_name?: { include?: string[], exclude?: string[] } }, rules?:{ type: string, parameters?: { merge_method?: string, strict_required_status_checks_policy?: boolean, required_status_checks?: { context: string, integration_id?: number }[] } }[] }} ruleset
  * @param {{ file: string, jobs: Record<string, { name?: string }> }[]} workflows
  * @returns {string[]} one line per problem, none when the ruleset matches
  */
@@ -61,6 +66,29 @@ export function checkRuleset(ruleset, workflows) {
     );
   }
 
+  // The merge queue builds each pull request on the latest main and runs the required checks there
+  // before it merges, which the strict policy of ADR 0050 did by holding every pull request until
+  // its author updated the branch (ADR 0093).
+  const queue = (ruleset.rules ?? []).find(({ type }) => type === 'merge_queue');
+  if (queue === undefined) {
+    problems.push(
+      'The ruleset has no merge_queue rule, so a pull request merges without being built on the latest main.',
+    );
+  } else {
+    if (queue.parameters?.merge_method !== 'SQUASH') {
+      problems.push(
+        `the merge queue merges with ${queue.parameters?.merge_method ?? 'no method'}, not SQUASH.`,
+      );
+    }
+    // HEADGREEN merges a whole group once its last entry passes, an entry whose own checks failed
+    // included; ALLGREEN merges only entries whose checks passed (ADR 0093 rule 1).
+    if (queue.parameters?.grouping_strategy !== 'ALLGREEN') {
+      problems.push(
+        `the merge queue groups with ${queue.parameters?.grouping_strategy ?? 'no strategy'}, not ALLGREEN, so an entry whose checks failed can merge with a group that passed.`,
+      );
+    }
+  }
+
   const rules = (ruleset.rules ?? []).filter(({ type }) => type === 'required_status_checks');
   if (rules.length === 0) {
     return [
@@ -69,9 +97,11 @@ export function checkRuleset(ruleset, workflows) {
     ];
   }
 
-  if (rules.some(({ parameters }) => parameters?.strict_required_status_checks_policy !== true)) {
+  // The strict policy held every pull request until its author updated the branch; the queue makes
+  // that update needless, and ADR 0093 turns the policy off.
+  if (rules.some(({ parameters }) => parameters?.strict_required_status_checks_policy === true)) {
     problems.push(
-      'strict_required_status_checks_policy is not true, so a pull request may merge without the latest main.',
+      'strict_required_status_checks_policy is true, so a pull request still waits for an update of its branch that the merge queue makes needless.',
     );
   }
 
@@ -89,9 +119,6 @@ export function checkRuleset(ruleset, workflows) {
         expected.set(name, { app: githubActions, source: file });
       }
     }
-  }
-  for (const [name, app] of otherApps) {
-    expected.set(name, { app, source: 'code scanning' });
   }
 
   const required = rules.flatMap(({ parameters }) => parameters?.required_status_checks ?? []);
@@ -159,6 +186,6 @@ if (import.meta.main) {
     process.exit(1);
   }
   console.log(
-    `The main ruleset (${mainRuleset}) is active on main and requires every job of ${workflowFiles.join(', ')} that ADR 0069 requires, each from its app.`,
+    `The main ruleset (${mainRuleset}) is active on main, merges through a merge queue that squashes, and requires every job of ${workflowFiles.join(', ')} that ADR 0069 requires, each from its app.`,
   );
 }

@@ -437,7 +437,7 @@ Boot refuses to start when `BETTER_AUTH_TELEMETRY` is set, when `enableSessionFo
 | Builds | Images are built, pushed and signed in the same workflow run as the release. Jobs are split so that no job both installs dependencies and holds `id-token: write`. Release, signing and attestations run on GitHub-hosted runners. |
 | Provenance | GitHub artifact attestations for image digests, SBOMs, the `docker save` tarballs and the Compose bundle; bundles renamed `<asset>.intoto.jsonl` for Scorecard. Cosign keyless signing is optional. |
 | SBOM | One CycloneDX SBOM per workspace package (`pnpm sbom --split`) and one per image that includes OS packages; attached to each release and copied into the image under `/usr/share/northmes/` |
-| Scanning | The image build on pull requests and `main` scans with Trivy or Grype pinned by digest and fails on critical findings that have a fix. CodeQL default setup for `actions` and `javascript-typescript`. OpenSSF Scorecard and the Best Practices badge. |
+| Scanning | The image build on pull requests and `main` scans with Trivy or Grype pinned by digest and fails on critical findings that have a fix. CodeQL for `actions` and `javascript-typescript` as the workflow `codeql.yml`. OpenSSF Scorecard and the Best Practices badge. |
 | Repository | Secret scanning and push protection; private vulnerability reporting; least-privilege workflow permissions; `persist-credentials: false`; no `pull_request_target`; a tag ruleset; immutable releases from the first release; a `release` environment with owner approval and no admin bypass; approval required for all outside contributors' workflow runs. |
 | Images | Rebuilt on every release, which also picks up new tzdata. Published as `ghcr.io/northmes/...`. |
 

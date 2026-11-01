@@ -9,7 +9,7 @@ Every ADR is public and self-contained. It states the names, versions, measured 
 | Area | ADRs |
 |---|---|
 | Release 1 scope | 0055 |
-| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063, 0065, 0069, 0079, 0084, 0085, 0086, 0087, 0088 |
+| Repository, tooling, releases and delivery | 0001, 0004, 0038, 0048, 0049, 0050, 0058, 0063, 0065, 0069, 0079, 0084, 0085, 0086, 0087, 0088, 0093 |
 | Architecture, modules and plugins | 0002, 0003, 0022, 0037, 0057, 0064, 0068, 0070, 0075 |
 | Data and platform | 0005, 0006, 0007, 0008, 0009, 0010, 0011, 0012, 0013, 0014, 0017, 0023, 0024, 0054, 0059, 0060, 0066, 0071 |
 | GraphQL, realtime and MCP | 0015, 0016, 0018, 0034, 0070 |
@@ -189,5 +189,6 @@ On 2026-11-01 the index holds 92 ADRs: 51 accepted and 41 proposed, 88 for relea
 | 0090 | [A smooth zoom and a slim bar above the timeline, on the planning board and the order Gantt](0090-a-smooth-zoom-and-a-slim-bar-above-the-timeline-on-the-planning-board-and-the-order-gantt.md) | proposed | 1 | maintainer (the smooth zoom in release 1, recorded in the ledger of ADR 0055; the band edges and the hysteresis factor 1.1; the wheel factor 0.002 and the pinch factor, which need tuning by hand; the factor 2 and the 150 ms animation of the buttons and keys; Alt+Page Up and Alt+Page Down in place of Earlier and Later; the button name Go to now; the URL key q and its 250 ms debounce; three significant digits in zoom; the transform fallback; the View menu's contents per view) |
 | 0091 | [The job order table lists open job orders without a time range](0091-the-job-order-table-lists-open-job-orders-without-a-time-range.md) | proposed | 1 | maintainer (the ADR as a whole) |
 | 0092 | [One Users page for the company and its plants, read at the plant by a plant reader](0092-one-users-page-for-the-company-and-its-plants-read-at-the-plant-by-a-plant-reader.md) | proposed | 1 | |
+| 0093 | [Merge through GitHub's merge queue, with the pull request checks, the risk gate and CodeQL reporting on the queue's commits](0093-merge-through-githubs-merge-queue-with-the-pull-request-checks-the-risk-gate-and-codeql-reporting-on-the-queues-commits.md) | proposed | 1 | maintainer (the merge queue in place of the strict policy, decided 2026-11-01; the queue settings in rule 1; CodeQL as a workflow in place of default setup; the cutover in rule 5) |
 
-Next free number: 0093. Only Krister Johansson sets a status to accepted.
+Next free number: 0094. Only Krister Johansson sets a status to accepted.

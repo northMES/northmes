@@ -22,14 +22,22 @@ const failed = new Set([
   'ERROR',
 ]);
 
+// The reasons the merge queue drops an entry for its checks: a failed check and a check that did
+// not report in time. Every other reason (a person took it out, a conflict, the queue cleared) is
+// not the shepherd's to undo.
+const checkRemovals = new Set(['CI_FAILURE', 'CI_TIMEOUT']);
+
 // The Risk gate, which stays red on a high pull request until the maintainer approves its head
 // (ADR 0086), and Argos, which is not a required check and waits for a person in Argos (ADR 0077).
 const riskGate = 'risk gate';
 const argos = 'argos';
 
 /**
- * What one pull request waits on, in the order the shepherd acts: a draft is left alone; a conflict
- * or a branch behind main needs a rebase; a failed check needs its log read; CodeRabbit's threads
+ * What one pull request waits on, in the order the shepherd acts: a draft is left alone; one in the
+ * merge queue is GitHub's; a conflict needs a rebase, and a branch that is only behind main
+ * nothing, since the queue builds it on main (ADR 0093); a failed check needs its log read, and so
+ * does the queue run that dropped the pull request from the queue, whose failure shows on the
+ * queue branch and not on the head; CodeRabbit's threads
  * need answers; a person's thread is theirs; a high pull request without the maintainer's approval
  * of its head waits for the maintainer, asked once per head (a request made since the head was
  * committed counts, also after a comment cleared it), or for its author once the maintainer asked
@@ -39,6 +47,8 @@ const argos = 'argos';
  *   number: number,
  *   isDraft: boolean,
  *   mergeStateStatus: string,
+ *   inMergeQueue: boolean,
+ *   leftQueue: { reason: string } | undefined,
  *   autoMerge: boolean,
  *   tier: 'low' | 'high' | undefined,
  *   headSha: string,
@@ -52,14 +62,13 @@ const argos = 'argos';
  */
 export function triage(pull) {
   if (pull.isDraft) return ['draft: leave it to its session'];
+  if (pull.inMergeQueue) return ['in the merge queue: GitHub builds it on main and merges it'];
   const needs = [];
   const sha = pull.headSha.slice(0, 8);
   if (pull.mergeStateStatus === 'DIRTY') {
     needs.push(
       'conflict with main: rebase onto origin/main in the shepherd worktree, rebuild generated files with their command, and push',
     );
-  } else if (pull.mergeStateStatus === 'BEHIND') {
-    needs.push('behind main: rebase onto origin/main in the shepherd worktree and push');
   }
   const approved = maintainerApproved(pull.reviews, pull.headSha);
   const latest = latestMaintainerReview(pull.reviews);
@@ -118,7 +127,15 @@ export function triage(pull) {
   if (pull.tier === undefined) {
     needs.push('no risk label yet: the Risk run has not reported; look again later');
   }
-  if (!pull.autoMerge) needs.push(`auto-merge is off: run pnpm agent:auto-merge ${pull.number}`);
+  if (pull.leftQueue !== undefined) {
+    needs.push(
+      checkRemovals.has(pull.leftQueue.reason)
+        ? `left the merge queue (${pull.leftQueue.reason}): its checks failed on the queue commit, not on the head; find the run with gh run list --event merge_group --limit 100 --json headBranch,databaseId,conclusion and its branch gh-readonly-queue/main/pr-${pull.number}-<sha>, read its log by the rule of CLAUDE.md, then run pnpm agent:auto-merge ${pull.number} once more`
+        : `left the merge queue (${pull.leftQueue.reason}): not for a failed check, so a person or the queue took it out; the maintainer decides whether it goes back`,
+    );
+  } else if (!pull.autoMerge) {
+    needs.push(`auto-merge is off: run pnpm agent:auto-merge ${pull.number}`);
+  }
   if (needs.length === 0 && pull.mergeStateStatus === 'BLOCKED') {
     needs.push(
       'blocked by GitHub for a reason this view does not show (a required check not reported yet, a ruleset rule): look again later, then ask the maintainer',
@@ -146,12 +163,15 @@ const query = `query($search: String!) {
   search(query: $search, type: ISSUE, first: 100) {
     nodes {
       ... on PullRequest {
-        number title isDraft mergeStateStatus headRefOid
+        number title isDraft mergeStateStatus isInMergeQueue headRefOid
         autoMergeRequest { enabledAt }
         labels(first: 20) { nodes { name } }
         reviewRequests(first: 20) { nodes { requestedReviewer { ... on User { databaseId } } } }
         timelineItems(itemTypes: [REVIEW_REQUESTED_EVENT], last: 20) { nodes {
           ... on ReviewRequestedEvent { createdAt requestedReviewer { ... on User { databaseId } } }
+        } }
+        dequeued: timelineItems(itemTypes: [REMOVED_FROM_MERGE_QUEUE_EVENT], last: 1) { nodes {
+          ... on RemovedFromMergeQueueEvent { createdAt reason }
         } }
         reviews(last: 100) { nodes { author { ... on User { databaseId } } state commit { oid } } }
         reviewThreads(first: 100) { nodes { isResolved comments(first: 1) { nodes { author { login } } } } }
@@ -164,6 +184,17 @@ const query = `query($search: String!) {
   }
 }`;
 
+/**
+ * The queue's latest removal of the pull request, when it was for this head and the pull request
+ * is not back in the queue; a removal before the head was committed belongs to an older head.
+ */
+function leftQueueOf(node, committed) {
+  const removal = node.dequeued?.nodes?.at(-1);
+  if (node.isInMergeQueue === true || removal?.createdAt === undefined) return undefined;
+  if (removal.createdAt < committed) return undefined;
+  return { reason: removal.reason ?? 'no reason given' };
+}
+
 /** One pull request of the query's answer as triage reads it. */
 export function fromGraph(node) {
   const labels = node.labels.nodes.map(({ name }) => name);
@@ -175,6 +206,8 @@ export function fromGraph(node) {
     title: node.title,
     isDraft: node.isDraft,
     mergeStateStatus: node.mergeStateStatus,
+    inMergeQueue: node.isInMergeQueue === true,
+    leftQueue: leftQueueOf(node, committed),
     autoMerge: node.autoMergeRequest !== null,
     tier: labels.includes('risk:high') ? 'high' : labels.includes('risk:low') ? 'low' : undefined,
     headSha: node.headRefOid,

@@ -4,7 +4,10 @@ import { globSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
-import { workflowFiles as rulesetWorkflowFiles } from '../../scripts/repo/check-ruleset.mjs';
+import {
+  optionalJobs,
+  workflowFiles as rulesetWorkflowFiles,
+} from '../../scripts/repo/check-ruleset.mjs';
 import vitestConfig from '../../vitest.config.ts';
 
 interface Step {
@@ -103,53 +106,55 @@ function expression(source: string): string {
   return `\${{ ${source} }}`;
 }
 
-// What each pull request check runs, and the pull request fields it reads from the environment.
+// What each pull request check runs, and the pull request fields it reads from the environment:
+// the outputs of PR / pull request, which carry the same fields on a pull_request event and on a
+// merge_group event (ADR 0093).
 const pullRequestCheckSteps = {
   'pr title': {
     run: 'node scripts/ci/pr-title.mjs',
-    env: { PR_TITLE: expression('github.event.pull_request.title') },
+    env: { PR_TITLE: expression('needs.pull-request.outputs.title') },
   },
   'linked issue': {
     run: 'node scripts/ci/linked-issue.mjs',
     env: {
-      PR_BODY: expression('github.event.pull_request.body'),
-      PR_AUTHOR: expression('github.event.pull_request.user.login'),
-      PR_HEAD_REF: expression('github.event.pull_request.head.ref'),
-      PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
+      PR_BODY: expression('needs.pull-request.outputs.body'),
+      PR_AUTHOR: expression('needs.pull-request.outputs.author'),
+      PR_HEAD_REF: expression('needs.pull-request.outputs.head_ref'),
+      PR_FROM_FORK: expression('needs.pull-request.outputs.from_fork'),
     },
   },
   'pr security': {
     run: 'node scripts/ci/pr-security.mjs',
     env: {
-      PR_BODY: expression('github.event.pull_request.body'),
-      PR_AUTHOR: expression('github.event.pull_request.user.login'),
-      PR_HEAD_REF: expression('github.event.pull_request.head.ref'),
-      PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
+      PR_BODY: expression('needs.pull-request.outputs.body'),
+      PR_AUTHOR: expression('needs.pull-request.outputs.author'),
+      PR_HEAD_REF: expression('needs.pull-request.outputs.head_ref'),
+      PR_FROM_FORK: expression('needs.pull-request.outputs.from_fork'),
     },
   },
   'pr docs': {
     run: 'node scripts/ci/pr-docs.mjs',
     env: {
-      PR_BODY: expression('github.event.pull_request.body'),
-      PR_AUTHOR: expression('github.event.pull_request.user.login'),
-      PR_HEAD_REF: expression('github.event.pull_request.head.ref'),
-      PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
+      PR_BODY: expression('needs.pull-request.outputs.body'),
+      PR_AUTHOR: expression('needs.pull-request.outputs.author'),
+      PR_HEAD_REF: expression('needs.pull-request.outputs.head_ref'),
+      PR_FROM_FORK: expression('needs.pull-request.outputs.from_fork'),
     },
   },
   'pr tests': {
     run: 'node scripts/ci/pr-tests.mjs',
     env: {
-      PR_TITLE: expression('github.event.pull_request.title'),
-      PR_BODY: expression('github.event.pull_request.body'),
-      PR_AUTHOR: expression('github.event.pull_request.user.login'),
-      PR_HEAD_REF: expression('github.event.pull_request.head.ref'),
-      PR_FROM_FORK: expression('github.event.pull_request.head.repo.fork'),
+      PR_TITLE: expression('needs.pull-request.outputs.title'),
+      PR_BODY: expression('needs.pull-request.outputs.body'),
+      PR_AUTHOR: expression('needs.pull-request.outputs.author'),
+      PR_HEAD_REF: expression('needs.pull-request.outputs.head_ref'),
+      PR_FROM_FORK: expression('needs.pull-request.outputs.from_fork'),
     },
   },
   'openapi diff': {
     run: 'node scripts/ci/openapi-diff.mjs',
     env: {
-      PR_TITLE: expression('github.event.pull_request.title'),
+      PR_TITLE: expression('needs.pull-request.outputs.title'),
       OPENAPI_CHANGES: `${expression('runner.temp')}/openapi-changes.json`,
     },
   },
@@ -186,8 +191,13 @@ const requiredWorkflowPaths = rulesetWorkflowFiles.map((file) => `.github/workfl
 const ciJobs = ['lint', 'typecheck', 'build', 'test', 'react doctor', 'e2e', 'gate'];
 
 // The jobs of the PR workflow, which GitHub shows as PR / <job name>. They keep the names they had
-// in the CI workflow, since the ruleset requires each by its job name.
-const prJobs = [...pullRequestChecks, 'pr gate'];
+// in the CI workflow, since the ruleset requires each by its job name. PR / pull request reads the
+// pull request for the others (ADR 0093).
+const prJobs = ['pull request', ...pullRequestChecks, 'pr gate'];
+
+// The required workflows run on each event the merge queue asks for checks on, as a type list so
+// a new activity type does not start runs by itself (ADR 0093).
+const mergeGroup = { types: ['checks_requested'] };
 
 // write-all grants id-token: write with every other permission.
 function holdsIdTokenWrite(permissions: Permissions | undefined): boolean {
@@ -460,8 +470,12 @@ describe('workflows', () => {
     },
   };
 
-  // CI / cla reads the pull request and its commits through the API.
+  // CI / cla reads the pull request and its commits through the API, and PR / pull request reads
+  // the pull request for the other PR jobs (ADR 0093).
   const claPermissions = { contents: 'read', 'pull-requests': 'read' };
+  const pullRequestPermissions = { contents: 'read', 'pull-requests': 'read' };
+  // CodeQL / codeql uploads its analysis to code scanning (ADR 0093).
+  const codeqlPermissions = { contents: 'read', 'security-events': 'write' };
 
   // Risk / risk gate reads the pull request, its files and reviews; Risk / risk label labels it with
   // its tier (ADR 0086). Only the label job holds the write token.
@@ -471,7 +485,7 @@ describe('workflows', () => {
   // which pull requests the commit heads; it reads no files.
   const riskRefreshPermissions = { actions: 'write', 'pull-requests': 'read' };
 
-  it('every job sets its own permissions: contents: read, none for CI / gate and PR / pr gate, which read no files, what CI / cla reads, what Risk / risk gate reads, what Risk / risk label writes, what Scorecard publishes with for its analysis, and what the three release jobs write', () => {
+  it('every job sets its own permissions: contents: read, none for CI / gate and PR / pr gate, which read no files, what CI / cla and PR / pull request read, what Risk / risk gate reads, what Risk / risk label writes, what Scorecard and CodeQL publish with for their analyses, and what the three release jobs write', () => {
     const jobs = allJobs();
 
     expect(jobs, 'jobs').not.toHaveLength(0);
@@ -481,15 +495,19 @@ describe('workflows', () => {
           ? {}
           : job.name === 'cla'
             ? claPermissions
-            : job.name === 'risk gate'
-              ? riskGatePermissions
-              : job.name === 'risk label'
-                ? riskLabelPermissions
-                : job.name === 'risk refresh'
-                  ? riskRefreshPermissions
-                  : job.name === 'Scorecard analysis'
-                    ? scorecardPermissions
-                    : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
+            : job.name === 'pull request'
+              ? pullRequestPermissions
+              : job.name === 'codeql'
+                ? codeqlPermissions
+                : job.name === 'risk gate'
+                  ? riskGatePermissions
+                  : job.name === 'risk label'
+                    ? riskLabelPermissions
+                    : job.name === 'risk refresh'
+                      ? riskRefreshPermissions
+                      : job.name === 'Scorecard analysis'
+                        ? scorecardPermissions
+                        : (releasePermissions[job.name ?? ''] ?? { contents: 'read' });
       expect(job.permissions, where).toEqual(expected);
     }
   });
@@ -799,24 +817,86 @@ describe('workflows', () => {
   });
 
   // The opened, synchronize and reopened types are the default; edited re-runs the pull request
-  // checks after a fix to the title or body.
-  it('ADR0076 the PR workflow runs on pull requests only, also when one is edited', () => {
+  // checks after a fix to the title or body. The merge queue asks for the checks again on the
+  // commit it builds (ADR 0093).
+  it('ADR0076 ADR0093 the PR workflow runs on pull requests, also when one is edited, and on merge groups', () => {
     const { workflow } = jobNamed('pr gate');
 
     expect(workflow.name).toBe('PR');
     expect(workflow.on).toEqual({
       pull_request: { types: ['opened', 'synchronize', 'reopened', 'edited'] },
+      merge_group: mergeGroup,
     });
   });
 
   // An edit changes the title or body and no code, so it re-runs only the PR workflow.
-  it('an edited pull request does not re-run CI', () => {
+  it('ADR0093 an edited pull request does not re-run CI, and a merge group does', () => {
     const { workflow } = jobNamed('gate');
 
     expect(workflow.on).toEqual({
       pull_request: { types: ['opened', 'synchronize', 'reopened'] },
+      merge_group: mergeGroup,
       push: { branches: ['main'] },
     });
+  });
+
+  // A merge_group event carries no pull request, only the queue branch that names it, so one job
+  // reads the pull request through the API on both events, from the number or from the branch, and
+  // every check reads its outputs. It runs the script from the checkout, as the checks do.
+  it('ADR0093 PR / pull request reads the pull request from the event number or the queue branch through the API, and every other PR job needs it', () => {
+    const { workflow, id, job } = jobNamed('pull request');
+    const read = (job.steps ?? []).find(({ id }) => id === 'pull');
+
+    expect(workflow.path).toBe('.github/workflows/pr.yml');
+    expect(job.if).toBeUndefined();
+    expect(read).toEqual({
+      id: 'pull',
+      run: 'node scripts/ci/event-pull-request.mjs',
+      env: {
+        GITHUB_TOKEN: expression('github.token'),
+        PR_NUMBER: expression('github.event.pull_request.number'),
+        MERGE_GROUP_HEAD_REF: expression('github.event.merge_group.head_ref'),
+        MERGE_GROUP_BASE_SHA: expression('github.event.merge_group.base_sha'),
+      },
+    });
+    expect(job.outputs).toEqual(
+      Object.fromEntries(
+        ['number', 'title', 'body', 'author', 'head_ref', 'from_fork', 'base_sha'].map((name) => [
+          name,
+          expression(`steps.pull.outputs.${name}`),
+        ]),
+      ),
+    );
+    for (const [other, { needs }] of Object.entries(workflow.jobs)) {
+      if (other === id) continue;
+      expect(needsOf({ needs }), other).toContain(id);
+    }
+  });
+
+  // A required job that runs on some events only reports nothing on the others, and a queue entry
+  // waits until the queue gives up on it. The gates run on every event with always(); cla and risk
+  // label, which skip merge groups, are optional.
+  it('ADR0093 no job the ruleset requires runs on some events only', () => {
+    const required = workflows().filter(({ path }) => requiredWorkflowPaths.includes(path));
+
+    for (const { path, jobs } of required) {
+      for (const [id, job] of Object.entries(jobs)) {
+        if (optionalJobs.has(job.name ?? id)) continue;
+        expect(job.if ?? 'always()', `${path} job ${id}`).toBe('always()');
+      }
+    }
+  });
+
+  // The merge queue builds a pull request on the latest main and asks for the required checks on
+  // that commit; a workflow without the trigger reports nothing there, and the entry waits until
+  // the queue gives up on it.
+  it('ADR0093 every workflow whose jobs the ruleset requires runs on merge groups, on the checks_requested type only', () => {
+    const required = workflows().filter(({ path }) => requiredWorkflowPaths.includes(path));
+
+    expect(required.map(({ path }) => path).sort()).toEqual([...requiredWorkflowPaths].sort());
+    for (const { path, on } of required) {
+      expect((on as Record<string, unknown>).merge_group, path).toEqual(mergeGroup);
+    }
   });
 
   // GitHub skips a job when a job it needs failed, and a skipped required check counts as passed,
@@ -849,7 +929,7 @@ describe('workflows', () => {
   // The group starts with the workflow name, so it never cancels a CI run.
   // ADR 0069: the ruleset names each PR job, so the list is pinned on purpose; a renamed, added or
   // removed job needs a ruleset edit timed to its merge.
-  it('ADR0069 the job list of the PR workflow is pinned, because the main ruleset names each job: pr title, linked issue, pr security, pr docs, pr tests, openapi diff and pr gate', () => {
+  it('ADR0069 the job list of the PR workflow is pinned, because the main ruleset names each job: pull request, pr title, linked issue, pr security, pr docs, pr tests, openapi diff and pr gate', () => {
     const { workflow } = jobNamed('pr gate');
 
     expect(
@@ -859,20 +939,23 @@ describe('workflows', () => {
     ).toEqual([...prJobs].sort());
   });
 
-  it('PR cancels its own older run of a pull request and no CI run', () => {
+  it('PR cancels its own older run of a pull request, no CI run and no merge group run', () => {
     const { workflow } = jobNamed('pr gate');
 
     expect(workflow.concurrency).toEqual({
-      group: `${expression('github.workflow')}-${expression('github.event.pull_request.number')}`,
-      'cancel-in-progress': true,
+      group: `${expression('github.workflow')}-${expression(
+        'github.event.pull_request.number || github.run_id',
+      )}`,
+      'cancel-in-progress': expression("github.event_name == 'pull_request'"),
     });
     expect(workflow.name).not.toBe(jobNamed('gate').workflow.name);
   });
 
   // A newer commit on a pull request cancels the pull request's older CI run, and the newer
-  // run reports every required check on the head commit. Each push to main runs in a group of its
-  // own that nothing cancels, so every commit on main keeps a full run.
-  it('CI cancels the older run of a pull request and never a run on a push to main', () => {
+  // run reports every required check on the head commit. Each push to main and each merge group
+  // runs in a group of its own that nothing cancels, so every commit on main keeps a full run and
+  // the queue gets every check it asked for.
+  it('CI cancels the older run of a pull request and never a run on a push to main or a merge group', () => {
     const { workflow } = jobNamed('gate');
 
     expect(workflow.concurrency).toEqual({
@@ -940,7 +1023,7 @@ describe('workflows', () => {
     expect(job.env?.OASDIFF_IMAGE).toMatch(/^tufin\/oasdiff:v\d+\.\d+\.\d+@sha256:[0-9a-f]{64}$/);
     expect(checkouts.map(({ with: inputs }) => inputs?.ref)).toEqual([
       undefined,
-      expression('github.event.pull_request.base.sha'),
+      expression('needs.pull-request.outputs.base_sha'),
     ]);
     expect(checkouts[1]?.with).toMatchObject({ path: 'base', 'sparse-checkout': 'schema' });
     expect(compare?.run).toContain('docker run --rm --network none');
@@ -991,14 +1074,14 @@ describe('workflows', () => {
 
   // A pull request runs its own copy of a workflow, so the gate's integrity rests on the check and
   // the path list coming from the default branch, and on .github/ being a high-risk path.
-  it('ADR0086 Risk / risk gate runs on pull requests and reviews, checks out nothing and runs the check from the default branch', () => {
+  it('ADR0086 ADR0093 Risk / risk gate runs on pull requests, reviews and merge groups, checks out nothing and runs the check from the default branch', () => {
     const { workflow, job } = jobNamed('risk gate');
     const steps = job.steps ?? [];
     const download = steps.find(({ run }) => run?.includes('gh api'));
     const check = steps.find(({ id }) => id === 'risk');
 
     expect(workflow.path).toBe('.github/workflows/risk.yml');
-    expect(triggersOf(workflow.on)).toEqual(['pull_request', 'pull_request_review']);
+    expect(triggersOf(workflow.on)).toEqual(['pull_request', 'pull_request_review', 'merge_group']);
     expect(steps.some(({ uses }) => uses?.startsWith('actions/checkout@'))).toBe(false);
     expect(download?.env).toEqual({
       GH_TOKEN: expression('github.token'),
@@ -1017,6 +1100,7 @@ describe('workflows', () => {
       env: {
         GITHUB_TOKEN: expression('github.token'),
         PR_NUMBER: expression('github.event.pull_request.number'),
+        MERGE_GROUP_HEAD_REF: expression('github.event.merge_group.head_ref'),
       },
     });
   });
@@ -1067,15 +1151,19 @@ describe('workflows', () => {
   });
 
   // A review run and an edited run can overlap; the later one wins, so a stale label does not stay.
-  it('ADR0086 the Risk workflow runs one at a time per pull request and labels in a job of its own after the gate', () => {
+  // A merge group run is in a group of its own, and labels nothing: its event has no pull request
+  // number, and the pull request's own runs labelled it (ADR 0093).
+  it('ADR0086 ADR0093 the Risk workflow runs one at a time per pull request, in a group of its own per merge group, and labels in a job of its own after the gate on pull request runs', () => {
     const { workflow, job } = jobNamed('risk label');
 
     expect(workflow.concurrency).toEqual({
-      group: `risk-${expression('github.event.pull_request.number')}`,
-      'cancel-in-progress': true,
+      group: `risk-${expression('github.event.pull_request.number || github.run_id')}`,
+      'cancel-in-progress': expression("github.event_name != 'merge_group'"),
     });
     expect(needsOf(job)).toEqual(['risk-gate']);
-    expect(job.if).toBe("always() && needs.risk-gate.outputs.tier != ''");
+    expect(job.if).toBe(
+      "always() && needs.risk-gate.outputs.tier != '' && github.event_name != 'merge_group'",
+    );
     expect(job.steps?.some(({ uses }) => uses?.startsWith('actions/checkout@'))).toBe(false);
   });
 
@@ -1395,7 +1483,9 @@ describe('workflows', () => {
   // The Argos token reaches only the step that runs the e2e specs, as an environment variable, so
   // no other job or step reads it and a fork's pull request, which gets no secrets, uploads nothing
   // (docs/adr/0077-visual-regression-snapshots-with-argos-from-the-playwright-specs.md).
-  it('ADR0077 only the e2e job reads ARGOS_TOKEN, as an environment variable of its test step', () => {
+  // A merge group run builds the diff the pull request's own run already uploaded, so it gets no
+  // token and uploads nothing (ADR 0093).
+  it('ADR0077 ADR0093 only the e2e job reads ARGOS_TOKEN, as an environment variable of its test step, and not in a merge group', () => {
     const token = 'secrets.ARGOS_TOKEN';
     const reads = (value: unknown) => JSON.stringify(value ?? {}).includes(token);
     const readers = workflows().flatMap((workflow) => [
@@ -1414,7 +1504,7 @@ describe('workflows', () => {
     ]);
 
     expect(readers).toEqual([
-      `.github/workflows/ci.yml e2e pnpm e2e env ARGOS_TOKEN=\${{ ${token} }}`,
+      `.github/workflows/ci.yml e2e pnpm e2e env ARGOS_TOKEN=\${{ github.event_name != 'merge_group' && ${token} || '' }}`,
     ]);
   });
 
@@ -1478,5 +1568,33 @@ describe('workflows', () => {
     for (const step of job.steps ?? []) {
       expect(JSON.stringify(step), 'a step that reads a secret').not.toMatch(/secrets\./);
     }
+  });
+
+  // CodeQL runs as a workflow so that it reports on the commits the merge queue builds, which code
+  // scanning's default setup does not (ADR 0093). One job analyzes the languages default setup
+  // analyzed, with no build, and uploads to code scanning.
+  it('ADR0093 CodeQL / codeql analyzes actions and javascript-typescript without a build on pull requests, merge groups, pushes to main and weekly, and uploads to code scanning', () => {
+    const { workflow, job } = jobNamed('codeql');
+    const steps = job.steps ?? [];
+    const init = steps.find(({ uses }) => uses?.startsWith('github/codeql-action/init@'));
+    const analyze = steps.find(({ uses }) => uses?.startsWith('github/codeql-action/analyze@'));
+    const on = workflow.on as Record<string, { branches?: string[] } | { cron: string }[] | null>;
+
+    expect(workflow.path).toBe('.github/workflows/codeql.yml');
+    expect(workflow.name).toBe('CodeQL');
+    expect(Object.keys(on).sort()).toEqual(['merge_group', 'pull_request', 'push', 'schedule']);
+    expect(on.pull_request).toBeNull();
+    expect(on.push).toEqual({ branches: ['main'] });
+    expect(on.schedule).toEqual([{ cron: expect.stringMatching(/^\d+ \d+ \* \* \d$/) }]);
+    expect(workflow.permissions).toEqual({ contents: 'read' });
+    expect(runsOnOf(job)).toBe('ubuntu-24.04');
+    expect(steps[0]?.uses).toMatch(/^actions\/checkout@/);
+    expect(init?.with).toEqual({
+      languages: 'actions, javascript-typescript',
+      'build-mode': 'none',
+    });
+    expect(analyze?.with).toEqual({ category: '/language:all' });
+    expect(init?.uses?.split('@')[1]).toBe(analyze?.uses?.split('@')[1]);
+    expect(steps.some(installsDependencies)).toBe(false);
   });
 });
