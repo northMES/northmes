@@ -292,9 +292,7 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
 
     await screen.findByRole('heading', { level: 2, name: 'No equipment groups yet' });
     expect(
-      screen.getByText(
-        'Every machine on the board needs a group. Create the first one, or wait for the ERP to send them with the machines.',
-      ),
+      screen.getByText('Every machine on the board needs a group. Create the first one here.'),
     ).toBeTruthy();
 
     cleanup();
@@ -327,7 +325,7 @@ describe("an equipment group's page (design #729, EG4)", () => {
     renderCoreAt(machPage, [groupQuery(mach), companiesQuery(), admin()]);
     await screen.findByRole('heading', { level: 1, name: 'Equipment group MACH' });
 
-    expect(definition('Code')).toBe('MACH');
+    await waitFor(() => expect(definition('Code')).toBe('MACH'));
     expect(definition('Name')).toBe('Machining');
     await waitFor(() => expect(definition('Scope')).toBe('Plant A'));
     expect(definition('Color')).toBe(
@@ -520,7 +518,9 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
     ]);
     await screen.findByRole('heading', { level: 1, name: 'Edit equipment group MACH' });
 
-    expect(field('Code').hasAttribute('readonly')).toBe(true);
+    expect((await screen.findByRole('textbox', { name: 'Code' })).hasAttribute('readonly')).toBe(
+      true,
+    );
     const colors = await screen.findByRole('radiogroup', { name: 'Color' });
     expect(within(colors).getAllByRole('radio')).toHaveLength(20);
     expect(
@@ -675,9 +675,9 @@ describe('a new equipment group (design #729)', () => {
 
     await screen.findByRole('heading', { level: 1, name: 'New equipment group' });
     const scope = await screen.findByRole('radiogroup', { name: 'Scope' });
-    expect(within(scope).getByRole('radio', { name: 'Plant A' }).getAttribute('aria-checked')).toBe(
-      'true',
-    );
+    expect(
+      (await within(scope).findByRole('radio', { name: 'Plant A' })).getAttribute('aria-checked'),
+    ).toBe('true');
     expect(within(scope).getByRole('radio', { name: /^Acme AB/ })).toBeTruthy();
     const colors = screen.getByRole('radiogroup', { name: 'Color' });
     expect(within(colors).queryByRole('radio', { checked: true })).toBeNull();
@@ -731,8 +731,7 @@ describe('a new equipment group (design #729)', () => {
         },
       } as MockLink.MockedResponse,
     ]);
-    await screen.findByRole('heading', { level: 1, name: 'New equipment group' });
-    await user.type(field('Code'), 'HEAT');
+    await user.type(await screen.findByRole('textbox', { name: 'Code' }), 'HEAT');
     await user.type(field('Name'), 'Heat');
     await user.click(
       within(await screen.findByRole('radiogroup', { name: 'Color' })).getByRole('radio', {

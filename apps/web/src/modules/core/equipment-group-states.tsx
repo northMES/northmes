@@ -3,48 +3,56 @@
 import { coreLinks } from '@northmes/core-contracts';
 import { Link } from '@tanstack/react-router';
 import { Lock } from 'lucide-react';
-import type { ReactNode } from 'react';
 import type { PageState } from '../../ui/components/page-frame/index.ts';
+import { isForbidden } from '../../ui/lib/graphql-errors.ts';
 import { buttonVariants } from '../../ui/primitives/button.tsx';
-import { PlantSettingsForbidden } from './plant-settings-data.ts';
+import type { EquipmentGroup } from './equipment-group.graphql.ts';
+import { readForbiddenState } from './no-access.tsx';
+import type { Viewer } from './use-viewer.ts';
 
-/** The no-access title of the equipment groups pages (design #729, EG9). */
-export const groupsForbiddenTitle = 'You need the permission to manage the settings of this plant';
+/** The actions on a group that need a permission where the group sits. */
+type GroupAction = 'update' | 'archive';
 
-/** The no-access description of the equipment groups pages. */
-export const groupsForbiddenDescription =
-  'Ask your plant admin for a role that manages plant settings.';
+/**
+ * Whether the user may change the group: a company group needs the permission at the company, a
+ * plant group at the plant, where a role at the company counts too (ADR 0007). The API checks it
+ * again on every change.
+ */
+export function canChangeGroup(
+  viewer: Viewer,
+  group: Pick<EquipmentGroup, 'scope'>,
+  action: GroupAction,
+): boolean {
+  const permission = `core.equipmentGroup:${action}`;
+  return group.scope === 'company' ? viewer.canAtCompany(permission) : viewer.can(permission);
+}
 
 /**
  * The state of a group's page or its edit form (design #729, EG4 and EG5): no access, a failed
- * load, loading, or a group the snapshot does not hold, with the way back to the list.
+ * load, loading until the group and the rest the page shows are in, or a group the plant does not
+ * see, with the way back to the list.
  */
 export function equipmentGroupPageState({
   plant,
-  loaded,
-  found,
+  plantName,
+  group,
+  restLoaded,
   error,
   retry,
-  forbiddenAction,
 }: {
   readonly plant: string;
-  readonly loaded: boolean;
-  readonly found: boolean;
+  readonly plantName: string;
+  /** The group, null for an id the plant does not see, undefined until the answer is in. */
+  readonly group: EquipmentGroup | null | undefined;
+  /** The rest the page shows is in: the plant's machines and the user's permissions. */
+  readonly restLoaded: boolean;
   readonly error: unknown;
   readonly retry: () => Promise<unknown>;
-  /** The way out of the no-access state, such as back to the group's page. */
-  readonly forbiddenAction?: ReactNode;
 }): PageState {
-  if (!loaded && error instanceof PlantSettingsForbidden) {
-    return {
-      status: 'empty',
-      icon: Lock,
-      title: groupsForbiddenTitle,
-      description: groupsForbiddenDescription,
-      ...(forbiddenAction !== undefined && { action: forbiddenAction }),
-    };
+  if (group === undefined && isForbidden(error)) {
+    return readForbiddenState('equipment groups', plantName);
   }
-  if (!loaded && error !== undefined) {
+  if (group === undefined && error !== undefined) {
     return {
       status: 'error',
       title: 'Could not load the equipment group',
@@ -52,8 +60,8 @@ export function equipmentGroupPageState({
       onRetry: retry,
     };
   }
-  if (!loaded) return { status: 'loading' };
-  if (!found) {
+  if (group === undefined || !restLoaded) return { status: 'loading' };
+  if (group === null) {
     return {
       status: 'empty',
       title: 'This equipment group does not exist or you cannot see it',
@@ -70,3 +78,17 @@ export function equipmentGroupPageState({
   }
   return { status: 'ready' };
 }
+
+/** The state of the new group page for a user who may create a group nowhere here. */
+export function createGroupForbiddenState(plantName: string): PageState {
+  return {
+    status: 'empty',
+    icon: Lock,
+    title: `You need the permission to create equipment groups in ${plantName}`,
+    description: 'Ask your plant admin for a role that can create equipment groups.',
+  };
+}
+
+/** The note on the groups pages while the machines in each group still come from the fixture. */
+export const machinesFixtureNote =
+  'The machines in each group show the fixture G1 until the machine pages read the API.';

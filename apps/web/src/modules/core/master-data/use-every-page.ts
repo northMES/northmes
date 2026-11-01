@@ -1,0 +1,70 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+// shared-candidate: #66
+import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
+import { useQuery } from '@apollo/client/react';
+import { useCallback, useEffect, useState } from 'react';
+
+/** One page of a register's list, as a connection field answers it (ADR 0073). */
+interface Page {
+  readonly edges: readonly unknown[];
+  readonly pageInfo: { readonly hasNextPage: boolean; readonly endCursor?: string | null };
+}
+
+/**
+ * Every page of a register's list (ADR 0022): `query` reads one page of the connection `field`
+ * after the cursor in its `after` variable. The hook reads the first page, then each next page
+ * until the last, and adds its edges to the answer, so a list or a picker holds every row of a
+ * short register. A next page that fails to load is `pageError` until `retryPage` loads it, or the
+ * variables change; the rows already loaded stay.
+ */
+export function useEveryPage<
+  Field extends string,
+  Data extends { readonly [key in Field]: Page },
+  Variables extends OperationVariables,
+>(
+  query: TypedDocumentNode<Data, Variables>,
+  field: Field,
+  variables: Variables,
+  fetchPolicy?: 'cache-first' | 'cache-and-network',
+) {
+  const result = useQuery<Data, Variables>(query, {
+    variables,
+    fetchPolicy,
+  } as useQuery.Options<Data, Variables>);
+  const { data, fetchMore } = result;
+  // A failed page, with the variables of the list it belongs to, so a new list does not show the
+  // old error.
+  const key = JSON.stringify(variables);
+  const [failed, setFailed] = useState<{ key: string; error: unknown }>();
+  const pageError = failed?.key === key ? failed.error : undefined;
+  const pageInfo = data?.[field].pageInfo;
+  const next = pageInfo?.hasNextPage ? pageInfo.endCursor : null;
+  const loadPage = useCallback(
+    (after: string) =>
+      fetchMore({
+        variables: { after } as unknown as Partial<Variables>,
+        updateQuery: (previous, { fetchMoreResult }) =>
+          ({
+            ...fetchMoreResult,
+            [field]: {
+              ...fetchMoreResult[field],
+              edges: [...(previous as Data)[field].edges, ...fetchMoreResult[field].edges],
+            },
+          }) as Data,
+      }).then(
+        () => setFailed(undefined),
+        (error: unknown) =>
+          setFailed({ key, error: error ?? new Error('The next page did not load') }),
+      ),
+    [fetchMore, field, key],
+  );
+  useEffect(() => {
+    if (next) void loadPage(next);
+  }, [next, loadPage]);
+  const retryPage = useCallback(
+    () => (next ? loadPage(next) : Promise.resolve()),
+    [next, loadPage],
+  );
+  return { ...result, pageError, retryPage };
+}
