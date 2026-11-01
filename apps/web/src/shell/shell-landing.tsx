@@ -43,7 +43,7 @@ async function settingsOf(
       variables: { companyId: company.id },
     });
     const permissions = new Set(data?.coreViewer.companyPermissions);
-    return companySettingsEntries(modules, permissions, plant.slug).flatMap(
+    return companySettingsEntries(modules, { company: permissions }, plant.slug).flatMap(
       ({ entries }) => entries,
     )[0]?.href;
   } catch (error) {

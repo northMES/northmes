@@ -429,7 +429,7 @@ describe("a user's access", () => {
     );
   });
 
-  it("E04-S02 a plant in the Where column links to the person's page in that plant's settings", async () => {
+  it("ADR0091 a plant in the Where column links to the user's page in that plant's settings", async () => {
     renderCoreAt(accessHref, [
       settingsViewerQuery(reader),
       companiesQuery(),
@@ -439,7 +439,7 @@ describe("a user's access", () => {
     ]);
 
     expect((await screen.findByRole('link', { name: 'Plant A' })).getAttribute('href')).toBe(
-      coreLinks.settings.people.person({ plant: 'plant-a', userId: sara.id }).href,
+      coreLinks.settings.users.user({ plant: 'plant-a', userId: sara.id }, { tab: 'access' }).href,
     );
   });
 

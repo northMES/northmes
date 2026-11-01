@@ -50,10 +50,12 @@ export function forbiddenError(
 
 /**
  * coreViewer in company settings, with these permissions at the company: the access pages read
- * them as the permissions at every plant of it too (ADR 0066).
+ * them as the permissions at every plant of it too (ADR 0066), unless plantPermissions names what
+ * the user holds at Plant A, which then includes the company's (ADR 0091).
  */
 export function settingsViewerQuery(
   companyPermissions: readonly string[],
+  plantPermissions: readonly string[] = companyPermissions,
 ): MockLink.MockedResponse {
   return {
     request: { query: CoreViewer, variables: inCompany },
@@ -64,13 +66,16 @@ export function settingsViewerQuery(
           userId: viewerId,
           plantPermissions: [],
           companyPermissions,
+          plants: [
+            { __typename: 'ViewerPlant', plantId: plantA.id, permissions: plantPermissions },
+          ],
         },
       },
     },
   };
 }
 
-/** coreViewer at the plant, People's, with these permissions at the plant and at the company. */
+/** coreViewer at the plant, with these permissions at the plant and at the company. */
 export function viewerQuery(
   plantPermissions: readonly string[],
   companyPermissions: readonly string[] = [],
@@ -84,6 +89,9 @@ export function viewerQuery(
           userId: viewerId,
           plantPermissions,
           companyPermissions,
+          plants: [
+            { __typename: 'ViewerPlant', plantId: plantA.id, permissions: plantPermissions },
+          ],
         },
       },
     },

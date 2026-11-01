@@ -28,7 +28,7 @@ import { RemoveRole, roleLoss } from '../../components/remove-role/index.ts';
 import { permissionPhrase } from '../../no-access.tsx';
 import { roleKind } from '../../role-kind.ts';
 import { CoreRoles } from '../../roles.graphql.ts';
-import { type Places, useCompanyId, useCompanyVariables } from '../../use-places.ts';
+import { type Places, useCompanyVariables } from '../../use-places.ts';
 import type { User, UserAssignment } from '../../use-user.tsx';
 import type { Viewer } from '../../use-viewer.ts';
 
@@ -49,11 +49,11 @@ function whereOf({ scope }: UserAssignment, places: Places): string {
 
 /**
  * Whether the reader may remove the assignment, as the API checks it (ADR 0010): the assignment
- * permission at its place, and every permission of its role there. A role the reader may not read
- * leaves the check to the API.
+ * permission at its place, and every permission of its role there, by the reader's rights at that
+ * place (ADR 0091). A role the reader may not read leaves the check to the API.
  */
 function canRemove(assignment: UserAssignment, viewer: Viewer): boolean {
-  const holds = assignment.scope.kind === 'COMPANY' ? viewer.canAtCompany : viewer.can;
+  const holds = (permission: string) => viewer.canAt(assignment.scope, permission);
   if (!holds('core.roleAssignment:manage')) return false;
   return assignment.role?.permissions.every(holds) ?? true;
 }
@@ -69,7 +69,7 @@ const addRoleId = 'user-add-role';
 /**
  * The role of an assignment: its name with its kind under it, or No access (NO5). The name links to
  * the role's page in company settings for a reader who holds core.role:read at the company, which
- * that page needs; for anyone else, such as a Plant admin on a person's page, it is plain text.
+ * that page needs; for anyone else, such as a Plant admin who reads at the plant, it is plain text.
  */
 function RoleCell({
   assignment,
@@ -131,7 +131,7 @@ function WhereCell({
   readonly userId: string;
 }) {
   const Icon = assignment.scope.kind === 'COMPANY' ? Building2 : Factory;
-  // In company settings a plant links to the person's page in that plant's settings.
+  // In company settings a plant links to the user's page in that plant's settings (ADR 0091).
   const plant =
     places.plant === undefined && assignment.scope.kind === 'PLANT'
       ? places.plants.find(({ id }) => id === assignment.scope.id)
@@ -143,7 +143,7 @@ function WhereCell({
         whereOf(assignment, places)
       ) : (
         <Link
-          to={coreLinks.settings.people.person({ plant: plant.slug, userId }).href}
+          to={coreLinks.settings.users.user({ plant: plant.slug, userId }, { tab: 'access' }).href}
           className="text-link underline underline-offset-2 hover:no-underline"
         >
           {whereOf(assignment, places)}
@@ -154,8 +154,8 @@ function WhereCell({
 }
 
 /**
- * The Roles card of the Access tab in company settings (design core-304, AS1, AS11, AS21, NO5
- * and NO13, ADR 0066): the user's roles at the plants and at the company, the plant roles first,
+ * The Roles card of the Access tab (design core-304, AS1, AS11, AS21, NO5 and NO13, ADR 0066 and
+ * ADR 0091), in company settings or at the plant: the user's roles at the plants and at the company, the plant roles first,
  * each with its kind and its place, and Remove for a reader who may remove it, or the line that
  * names who can. Add role leads to the Add role page. A user without a role gets the empty state
  * that says so. At 320 px each role is a card. A reader without core.role:read sees No access in
@@ -163,9 +163,6 @@ function WhereCell({
  */
 export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesProps) {
   const { plant } = useShell();
-  // On a person's page of People the roles belong to the plant; on a user's page of the company's
-  // settings they belong to the company (#876).
-  const plantSlug = useCompanyId() === undefined ? plant : undefined;
   const headingId = useId();
   const isMobile = useIsMobile();
   // A role's kind comes from the company's roles, which the roles pages read too.
@@ -179,10 +176,20 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
   };
   const companyName = places.company?.name ?? 'the company';
   const linked = viewer.canAtCompany('core.role:read');
-  // In plant settings the page reads the plant and its company (design core-304, AS1).
+  // At the plant the page reads the plant and its company (design core-304, AS1).
   const plantName = places.plant?.name;
+  // Add role offers the places the page reads where the reader may give roles (ADR 0091).
+  const offered = [
+    ...(places.plant === undefined ? places.plants : [places.plant]).map(({ id }) => ({
+      kind: 'PLANT',
+      id,
+    })),
+    ...(places.company === undefined ? [] : [{ kind: 'COMPANY', id: places.company.id }]),
+  ];
   const canAdd =
-    viewer.can('core.roleAssignment:manage') && viewer.can('core.role:read') && !rolesForbidden;
+    offered.some((place) => viewer.canAt(place, 'core.roleAssignment:manage')) &&
+    viewer.can('core.role:read') &&
+    !rolesForbidden;
   // The plant roles first, then those of the company (AS1).
   const assignments = [...user.roleAssignments].sort(
     (a, b) => Number(a.scope.kind === 'COMPANY') - Number(b.scope.kind === 'COMPANY'),
@@ -309,12 +316,7 @@ export function UserRoles({ user, viewer, places, rolesForbidden }: UserRolesPro
         {canAdd && (
           <Link
             id={addRoleId}
-            to={
-              plantSlug === undefined
-                ? coreLinks.settings.users.user.addRole({ plant, userId: user.id }).href
-                : coreLinks.settings.people.person.addRole({ plant: plantSlug, userId: user.id })
-                    .href
-            }
+            to={coreLinks.settings.users.user.addRole({ plant, userId: user.id }).href}
             className={buttonVariants({ variant: 'outline' })}
           >
             <Plus aria-hidden />
