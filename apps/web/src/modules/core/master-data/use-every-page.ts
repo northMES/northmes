@@ -28,10 +28,12 @@ export function useEveryPage<
   variables: Variables,
   fetchPolicy?: 'cache-first' | 'cache-and-network',
 ) {
-  const result = useQuery<Data, Variables>(query, {
+  // A generic Variables leaves useQuery's overloads unresolved, so the hook reads the query as
+  // one whose variables are any record; the caller's types still check the variables it passes.
+  const result = useQuery(query as TypedDocumentNode<Data, OperationVariables>, {
     variables,
     fetchPolicy,
-  } as useQuery.Options<Data, Variables>);
+  });
   const { data, fetchMore } = result;
   // A failed page, with the variables of the list it belongs to, so a new list does not show the
   // old error.
@@ -43,7 +45,7 @@ export function useEveryPage<
   const loadPage = useCallback(
     (after: string) =>
       fetchMore({
-        variables: { after } as unknown as Partial<Variables>,
+        variables: { after },
         updateQuery: (previous, { fetchMoreResult }) =>
           ({
             ...fetchMoreResult,
