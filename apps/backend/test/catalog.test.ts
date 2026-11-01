@@ -189,7 +189,6 @@ describe('checkCatalog', () => {
     const error = refusal([
       core,
       inRepoModule('articles', ['core']),
-      plugin('people', ['core']),
       inRepoModule('users', ['core']),
       plugin('roles', ['core']),
       inRepoModule('all-pages', ['core']),
@@ -198,12 +197,15 @@ describe('checkCatalog', () => {
 
     expect(error.problems).toEqual([
       'Module id "articles" is reserved: /$plant/articles is a core web path segment',
-      'Module id "people" is reserved: /$plant/settings/people is a core web path segment',
       'Module id "users" is reserved: /$plant/settings/users is a core web path segment',
       'Module id "roles" is reserved: /$plant/settings/roles is a core web path segment',
       'Module id "all-pages" is reserved: /$plant/all-pages is a shell web path segment',
       'Module id "settings" is reserved: /$plant/settings is a shell web path segment',
     ]);
+  });
+
+  it('ADR0091 people is no longer reserved at the settings root, since People went into Users', () => {
+    expect(() => checkCatalog([core, plugin('people', ['core'])], { imageVersion })).not.toThrow();
   });
 
   it('E02-S01 two modules whose derived names collide are refused naming both ids', () => {
