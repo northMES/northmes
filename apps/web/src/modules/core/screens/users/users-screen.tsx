@@ -364,6 +364,14 @@ export function UsersScreen() {
           `${plantName} or at ${companyName}`,
           `a plant admin of ${plantName} or a company admin of ${companyName}`,
         );
+  } else if (placeFilter.pending && places.error !== undefined) {
+    // The place's id comes from the user's companies, so the list waits on them (ADR 0091).
+    state = {
+      status: 'error',
+      title: 'Could not load users',
+      error: places.error,
+      onRetry: places.retry,
+    };
   } else if (page === undefined && error !== undefined) {
     state = {
       status: 'error',
