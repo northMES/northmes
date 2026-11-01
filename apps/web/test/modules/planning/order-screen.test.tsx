@@ -153,7 +153,7 @@ describe('the production order page (plan 07, planning records; design #686, PO1
     );
     expect(
       screen.getByRole('link', { name: 'Zoom to order on the Gantt' }).getAttribute('href'),
-    ).toBe('/plant-a/planning/gantt?zoom=week&from=2026-11-03&order=po-1001');
+    ).toBe('/plant-a/planning/order-gantt?zoom=week&from=2026-11-03&order=po-1001');
     expect(screen.getAllByRole('link', { name: 'Show on board' })[0]?.getAttribute('href')).toBe(
       '/plant-a/planning/board?zoom=week&from=2026-11-03&order=po-1001',
     );

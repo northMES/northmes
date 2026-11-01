@@ -52,7 +52,7 @@ test.describe('the slim bar above the timeline', () => {
     await signIn(href('gantt', { from: '2026-11-02' }));
     const gantt = page.getByRole('treegrid', { name: /order Gantt/ });
     await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
-    const bar = page.getByRole('toolbar', { name: 'Gantt' });
+    const bar = page.getByRole('toolbar', { name: 'Order Gantt' });
 
     await expectGridUnderTitle(page, gantt, bar);
     await expect(bar.getByRole('button', { name: /^My draft/ })).toHaveCount(0);
