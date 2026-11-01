@@ -63,7 +63,7 @@ export function GanttToolbar({
   onOpenDraft,
 }: GanttToolbarProps) {
   return (
-    <div role="toolbar" aria-label="Order Gantt" className="flex flex-wrap items-center gap-2">
+    <div role="toolbar" aria-label="Gantt" className="flex flex-wrap items-center gap-2">
       <Button variant="outline" className="h-8 px-3" onClick={onGoToNow}>
         Go to now
       </Button>
