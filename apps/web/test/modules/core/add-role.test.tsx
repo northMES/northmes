@@ -5,6 +5,7 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import { CoreCompanies } from '../../../src/modules/core/companies.graphql.ts';
 import { CoreAssignRole } from '../../../src/modules/core/components/assign-role-form/assign-role.graphql.ts';
 import { CoreUserPermissions } from '../../../src/modules/core/screens/user/user-permissions.graphql.ts';
 import {
@@ -93,6 +94,23 @@ function option(listbox: HTMLElement, name: string): HTMLElement {
 }
 
 describe('Add role', () => {
+  it('ADR0091 when the places could not be read, Add role shows the error with Try again, which reads them again', async () => {
+    const user = userEvent.setup();
+    renderCoreAt(addRoleHref, [
+      settingsViewerQuery(assigner),
+      { request: { query: CoreCompanies }, error: new Error('Failed to fetch') },
+      companiesQuery(),
+      userQuery(annaOfPage),
+      rolesQuery([operator]),
+    ]);
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByRole('heading', { name: 'Could not load the places' })).toBeDefined();
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+    expect(await screen.findByRole('combobox', { name: 'Role' })).toBeDefined();
+  });
+
   /**
    * Renders Add role for Anna Berg in company settings for the assigner, with the roles Operator,
    * Shift lead, Planner and Viewer, an answer to Viewer at Plant A with the reason "Covers the

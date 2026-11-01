@@ -21,12 +21,16 @@ export interface Places {
   /** The company of the plant in the URL. */
   readonly company: Place | undefined;
   /**
-   * The plant in the URL on a page of the plant, such as People; undefined on a page of the
-   * company's settings, such as Users, which reads at the company and every plant of it.
+   * The plant in the URL on a page that reads at the plant, such as Users for a Plant admin;
+   * undefined on a page that reads in company settings, at the company and every plant of it.
    */
   readonly plant: Place | undefined;
   /** The plants of the company that the user can open, as the companies list orders them. */
   readonly plants: readonly PlantPlace[];
+  /** The read of the user's companies failed before it answered; undefined otherwise. */
+  readonly error?: unknown;
+  /** Reads the user's companies again, for Try again after an error. */
+  readonly retry: () => Promise<unknown>;
 }
 
 /**
@@ -39,7 +43,8 @@ export interface Places {
 export function usePlaces({ skip = false }: { readonly skip?: boolean } = {}): Places {
   const { plant: slug } = useParams({ strict: false });
   const inCompany = useCompanyId() !== undefined;
-  const { data } = useQuery(CoreCompanies, { skip });
+  const { data, error, refetch } = useQuery(CoreCompanies, { skip });
+  const retry = () => refetch();
   for (const company of data?.coreCompanies ?? []) {
     const plant = company.plants.find((each) => each.slug === slug);
     if (plant !== undefined) {
@@ -51,10 +56,17 @@ export function usePlaces({ skip = false }: { readonly skip?: boolean } = {}): P
           slug: plantSlug,
           name,
         })),
+        retry,
       };
     }
   }
-  return { company: undefined, plant: undefined, plants: [] };
+  return {
+    company: undefined,
+    plant: undefined,
+    plants: [],
+    ...(data === undefined && error !== undefined && { error }),
+    retry,
+  };
 }
 
 /** The name of a place, or the fallback while the places load. */
@@ -63,8 +75,8 @@ export function placeName(place: Place | undefined, fallback: string): string {
 }
 
 /**
- * The company of a page of the company's settings, such as Users, from the shell (ADR 0066,
- * #876), or undefined on a page of the plant, such as People.
+ * The company of a page that reads in company settings, such as Users for a Company admin, from
+ * the shell (ADR 0066, #876), or undefined on a page that reads at the plant (ADR 0091).
  */
 export function useCompanyId(): string | undefined {
   return useShell().companyId;
