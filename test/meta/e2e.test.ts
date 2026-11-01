@@ -52,6 +52,36 @@ describe('playwright.config.ts', () => {
     expect(ci?.ignoreUploadFailures).toBe(true);
   });
 
+  // A spec that fails on timing (axe reading colors mid-transition, a locator that settles late)
+  // costs a re-run and a person without a retry (#974). Locally the first failure is the one to
+  // read, so the retry is for CI only, read as the Argos upload reads it: CI set to true, not to
+  // any value.
+  it('ADR0041 the specs retry once in CI and not locally', async () => {
+    const ci = await playwrightConfig({ CI: 'true' });
+    const local = await playwrightConfig({ CI: undefined });
+    const localWithCiFalse = await playwrightConfig({ CI: 'false' });
+
+    expect(ci.retries).toBe(1);
+    expect(local.retries).toBe(0);
+    expect(localWithCiFalse.retries).toBe(0);
+  });
+
+  // One reading of CI for the retry, the worker count and the html report, so a runner that sets
+  // CI to another value gets all three or none.
+  it('ADR0041 the retry, the worker count and the html report read CI the same way', async () => {
+    const ci = await playwrightConfig({ CI: 'true' });
+    const other = await playwrightConfig({ CI: '1' });
+    const reporters = (config: Awaited<ReturnType<typeof playwrightConfig>>) =>
+      (Array.isArray(config.reporter) ? config.reporter : []).map(([name]) => name);
+
+    expect([ci.retries, ci.workers, reporters(ci).includes('html')]).toEqual([1, 2, true]);
+    expect([other.retries, other.workers, reporters(other).includes('html')]).toEqual([
+      0,
+      undefined,
+      false,
+    ]);
+  });
+
   it('ADR0077 the e2e project pins the viewport, locale, time zone, color scheme and font rendering', async () => {
     const config = await playwrightConfig();
 
