@@ -520,7 +520,9 @@ function PlantLayout({
   const readsAt =
     companyEntry === undefined
       ? undefined
-      : companyPageReadsAt(companyEntry, gated ? companyPermissions : new Set());
+      : gated
+        ? companyPageReadsAt(companyEntry, companyPermissions)
+        : 'company';
   // At the company it reads through the client without a plant, with the company in the shell
   // state, once the user's companies say which company the plant is in (ADR 0066). Until then, or
   // until the permissions say where it reads, it shows its loading state under its entry's name, or

@@ -310,7 +310,8 @@ export function UsersScreen() {
     ? viewer.canAtCompany('core.role:read')
     : viewer.can('core.role:read');
   const roles = useQuery(CoreRoles, { variables: company, skip: !canReadRoles });
-  const filtered = view.role !== undefined || view.status !== undefined || view.place !== undefined;
+  const filtered =
+    view.role !== undefined || view.status !== undefined || placeFilter.place !== defaultPlace;
   const page = data?.coreUsers;
   // While a new search or page loads, the list keeps the users or the no-match state it shows, and
   // their pager, so focus stays on the control used (design ui-222, LI7).

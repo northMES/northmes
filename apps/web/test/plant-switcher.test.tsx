@@ -251,7 +251,7 @@ describe('the plant switcher', () => {
     );
   });
 
-  it('ADR0091 on Users with Place set to the plant, the link to Plant B keeps place=plant, so it lists the people of Plant B', async () => {
+  it('ADR0091 on Users with Place set to the plant, the link to Plant B keeps place=plant', async () => {
     const user = userEvent.setup();
     renderAt('/plant-a/settings/users?place=plant', twoCompanies, shellModules);
 
