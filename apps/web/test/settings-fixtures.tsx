@@ -100,14 +100,26 @@ export function companies() {
   };
 }
 
-/** coreViewer with these permissions at the plant and at the company. */
-export function viewer(plantPermissions: readonly string[], companyPermissions: readonly string[]) {
+/**
+ * coreViewer with these permissions at the plant and at the company, and at each plant of
+ * `plants`, by its scope id (ADR 0091).
+ */
+export function viewer(
+  plantPermissions: readonly string[],
+  companyPermissions: readonly string[],
+  plants: Readonly<Record<string, readonly string[]>> = {},
+) {
   return {
     coreViewer: {
       __typename: 'Viewer',
       userId: '019a0000-0000-7000-8000-00000000a1e0',
       plantPermissions,
       companyPermissions,
+      plants: Object.entries(plants).map(([plantId, permissions]) => ({
+        __typename: 'ViewerPlant',
+        plantId,
+        permissions,
+      })),
     },
   };
 }
