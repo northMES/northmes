@@ -11,13 +11,40 @@
 # files directly in its folder. The gate refuses a pattern with whitespace, ! or [, so write an
 # inline comment on a line of its own.
 
-# CI, the gate and its scripts, and the meta tests that guard the controls
+# CI, the gate and its scripts, and the meta tests that guard a control: a test of a file that
+# GitHub, CI, Renovate, CodeRabbit or Claude Code reads, a test that is the only run of a rule the
+# project relies on (a grant, a license boundary, a dependency rule, the hardening of the image and
+# the Compose bundle), the test that every test file is collected, and the helper those tests
+# share. The other meta tests check naming, layout and docs rules, and get the tier their
+# blast-radius review judges (#977).
 /.github/
 /scripts/ci/
 /scripts/agents/
-/test/meta/
+/test/meta/agent-sandbox.test.ts
+/test/meta/agent-files.test.ts
+/test/meta/workflows.test.ts
+/test/meta/coderabbit.test.ts
+/test/meta/gates.test.ts
+/test/meta/collection.test.ts
+/test/meta/docs-paths.test.ts
+/test/meta/security-docs.test.ts
+/test/meta/security-policy.test.ts
+/test/meta/renovate.test.ts
+/test/meta/workspace.test.ts
+/test/meta/tooling.test.ts
+/test/meta/no-truncate.test.ts
+/test/meta/mit-imports.test.ts
+/test/meta/no-customer-data.test.ts
+/test/meta/compose.test.ts
+/test/meta/image.test.ts
+/test/meta/react-doctor.test.ts
+/test/meta/launch.test.ts
+/test/meta/integration-project.test.ts
+/test/meta/e2e.test.ts
+/test/meta/docs.ts
 
-# Agent configuration and instructions
+# Agent configuration and instructions, the skills included: a skill can carry hooks, tool grants
+# and commands that run when it loads, and CLAUDE.md tells sessions to follow them.
 /.claude/
 /CLAUDE.md
 /AGENTS.md

@@ -1,11 +1,11 @@
 ---
 status: "proposed"
-date: 2026-10-21
+date: 2026-11-01
 decision-makers: Krister Johansson
 consulted: GitHub documentation on rulesets, CODEOWNERS and auto-merge; CodeRabbit configuration reference (auto_review.labels); Claude Code documentation on auto mode; OpenSSF Scorecard checks; published practice on risk-based merge of agent pull requests (Vercel, April 2026; Rewind); a review of the change in a fresh context
 informed: contributors and coding agents
 release: "1"
-needs-confirmation: "maintainer (the review machinery in .github/risk-paths and the blast-radius tier rule, decided 2026-10-22; Risk refresh and auto-merge for every tier, decided 2026-10-22; the shadow phase and when it ends; the switch of the main ruleset to code owner review on the risk paths only, with risk gate required from the GitHub Actions app; the lower OpenSSF Scorecard Code-Review and Branch-Protection scores; accepted risk A-08, recorded with the switch)"
+needs-confirmation: "maintainer (the review machinery in .github/risk-paths and the blast-radius tier rule, decided 2026-10-22; the meta tests on the risk paths narrowed to those that guard a control, decided 2026-11-01; Risk refresh and auto-merge for every tier, decided 2026-10-22; the shadow phase and when it ends; the switch of the main ruleset to code owner review on the risk paths only, with risk gate required from the GitHub Actions app; the lower OpenSSF Scorecard Code-Review and Branch-Protection scores; accepted risk A-08, recorded with the switch)"
 ---
 
 # Risk-tiered review and merge of agent pull requests
@@ -37,7 +37,7 @@ Chosen option: "A deterministic floor from changed paths and the validation impa
 The fixed floor covers the review machinery only (Krister, 2026-10-22): the files that decide how a pull request is judged and merged, and what agent sessions are told and allowed to do. Whether any other change is high, docs, ADRs, dependencies, migrations and access code included, is the blast-radius review's judgment: could a wrong version destroy or corrupt customer data, open an unchecked way in or weaken a check, or does the change not feel right to it? A session cannot loosen the machinery by declaring a low tier. A wrong low tier elsewhere is accepted risk A-08.
 
 1. **Two tiers.** A pull request is high when any of these holds, and low otherwise:
-   * it changes, or renames a file out of, a path in `.github/risk-paths`, which names the review machinery: `.github/`, `scripts/ci/`, `scripts/agents/`, `test/meta/`, `.claude/`, `CLAUDE.md`, `AGENTS.md` and `skills-lock.json`;
+   * it changes, or renames a file out of, a path in `.github/risk-paths`, which names the review machinery: `.github/`, `scripts/ci/`, `scripts/agents/`, `.claude/`, `CLAUDE.md`, `AGENTS.md`, `skills-lock.json`, and the meta tests that guard a control, by the criterion the file states: a test of a file that GitHub, CI, Renovate, CodeRabbit or Claude Code reads, a test that is the only run of a rule the project relies on, the collection test and the helper they share. The other meta tests, which check naming, layout and docs rules, get the tier their blast-radius review judges. `.claude/skills/` stays on the list because a skill can carry hooks, tool grants and commands that run when it loads, and sessions follow it;
    * its Validation impact (ADR 0051 rule 18) names anything other than none or UI only (records, security, calculation, data migration, or a value the gate cannot read), or it has no Validation impact section;
    * a Tier line in its Blast radius section says `Tier: high`, or the section has no Tier line;
    * its title marks a breaking change with `!`;
@@ -105,5 +105,7 @@ ADR 0050 is accepted, so its text stays as it was. ADR 0065 and ADR 0084 are pro
 * Bad, because it needs an Anthropic API key as a repository secret and costs per pull request, and it adds a trust boundary to the threat model.
 
 ## More information
+
+Until 2026-11-01 the whole `test/meta/` folder was a risk path, which made eight of the seventeen high pull requests merged in the ten days before high for a test of a naming rule or a recipe skill (#977). The list now names the guarding meta tests by the criterion in `.github/risk-paths`; recipe skills stay high for the reason rule 1 gives.
 
 ADR 0049 already kept tasks that touch authentication, row-level security or secrets on handoff's guided graph; `.github/risk-paths` was the same idea for pull requests, and since 2026-10-22 it keeps only the governance files, leaving authentication, secrets and data to the blast-radius review. Vercel reported in April 2026 that an agent reviews and merges a majority of the pull requests in its largest monorepo without a human reviewer, based on a classifier of the diff's blast radius. Rewind's write-up on AI-approved pull requests describes the same split: the model's findings feed a deterministic verdict, and a protected policy file forces a human for authentication, secrets, infrastructure and governance files. Revisit when a second maintainer joins, or when a low pull request causes an incident.
