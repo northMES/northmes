@@ -30,7 +30,7 @@ export class Viewer {
   companyPermissions!: string[];
   @Field(() => [ViewerPlant], {
     description:
-      "What the user holds at each plant the request reads: the request's plant, or without a plant every plant of the company.",
+      "What the user holds at each plant the request reads: the request's plant, or without a plant each plant of the company the user may open.",
   })
   plants!: ViewerPlant[];
 }
