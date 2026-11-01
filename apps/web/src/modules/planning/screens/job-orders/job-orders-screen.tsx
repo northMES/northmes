@@ -5,253 +5,238 @@ import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Ellipsis } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ChoiceMenu } from '../../../../ui/components/choice-menu/index.ts';
 import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
+import type { DataTableGroup } from '../../../../ui/components/data-table/index.ts';
 import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
 import { Button } from '../../../../ui/primitives/button.tsx';
-import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../../../ui/primitives/dropdown-menu.tsx';
-import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
-import { PresetControls, RangeControls } from '../../components/range-controls/index.ts';
-import type { GanttSnapshot } from '../../gantt-data.ts';
-import { applyDraft, draftRowIds } from '../../gantt-draft.ts';
-import { useGanttSource } from '../../gantt-source-context.ts';
 import {
+  type ListFilterField,
+  OrderListToolbar,
+} from '../../components/order-list-toolbar/index.ts';
+import { applyDraft, draftRowIds } from '../../gantt-draft.ts';
+import {
+  groupedBy,
+  type JobOrderGroupKey,
   type JobOrdersSearch,
   jobOrdersSearch,
+  notPlaced,
   sortedBy,
   sortOf,
-  withLateOnly,
 } from '../../job-orders-search.ts';
 import { phase1Reason } from '../../mock-reasons.ts';
-import { usePlanningDraft } from '../../planning-draft.tsx';
 import {
-  plantDateOf,
-  rangeLabel,
-  rangeOf,
-  shiftedFrom,
-  type TimeRange,
-} from '../../timeline/time-scale.ts';
-import { jobOrderTableRows, sortedJobOrderRows } from './job-orders-rows.ts';
+  filteredBy,
+  searchedFor,
+  unfiltered,
+  urlSearchOf,
+  withLateOnly,
+} from '../../order-list-search.ts';
+import { usePlanningDraft } from '../../planning-draft.tsx';
+import { usePlanningSnapshot } from '../../use-planning-snapshot.ts';
+import { statusLabel } from '../gantt/gantt-rows.ts';
+import {
+  groupedJobOrderRows,
+  type JobOrderFilterKey,
+  type JobOrderTableRow,
+  jobOrderCountText,
+  jobOrderFacets,
+  jobOrderRowMatches,
+  jobOrderTableRows,
+  notPlacedLabel,
+  sortedJobOrderRows,
+} from './job-orders-rows.ts';
 import { JobOrdersTable, jobOrdersColumnChoices, jobOrdersColumns } from './job-orders-table.tsx';
 
-/** The table opens at Week, as the Gantt does (D5). */
-const defaultZoom = 'week';
+/** The id of the search input, where Clear filters moves focus. */
+const searchFieldId = 'job-orders-search';
 
-/** The id of the Late only checkbox, which its label names. */
-const lateOnlyId = 'job-orders-late-only';
+/** The choices of Group by, by their URL values. */
+const groupChoices: readonly { readonly value: JobOrderGroupKey; readonly label: string }[] = [
+  { value: 'machine', label: 'Machine' },
+  { value: 'startDay', label: 'Start day' },
+];
 
-/** "Sorted by machine, then start." for the default sort, else the column and its direction. */
+/** "Sorted by start." for the default sort, else the column and its direction. */
 function sortText(sort: ReturnType<typeof sortOf>): string {
-  if (sort.id === 'machine' && !sort.desc) return 'Sorted by machine, then start.';
+  if (sort.id === 'start' && !sort.desc) return 'Sorted by start.';
   const header = jobOrdersColumns.find((column) => column.id === sort.id)?.header ?? sort.id;
   return `Sorted by ${header.toLowerCase()}, ${sort.desc ? 'descending' : 'ascending'}.`;
 }
 
-/** A snapshot the page loaded, with the request it answers: its range and Late only. */
-interface Loaded {
-  readonly key: string;
-  readonly range: TimeRange;
-  /** The range as text, which the status line names while another range loads. */
-  readonly label: string;
-  readonly lateOnly: boolean;
-  readonly snapshot: GanttSnapshot;
-}
-
 /**
- * The job orders page (plan 07, Job order table view; plan 18; design #660, T1 and T2): the main
- * screen-reader path of the timeline. The range controls of the Gantt, Late only, Columns and
- * Table options above a semantic table of the job orders in the range, each with its machine,
- * span, quantity, status, soft lock holder, the order's deadline, planned end and late-by, with the
- * late facts under a late row. zoom, from, late and sort live in the URL, so a link from the board
- * or the Gantt carries the range (Krister, 2026-10-17); the columns stay local. Move is drawn but
- * disabled while the page reads the fixture G1.
+ * The job orders page (plan 07, Job order table view; ADR 0091): the main screen-reader path of
+ * the plan, as a work list. Every open job order of the plant with its machine, span, quantity,
+ * status, soft lock holder, the order's deadline, planned end and late-by, with the late facts
+ * under a late row; the search, Late only, the Machine, Status and Article filters with their
+ * counts, Group by and Columns above it, and no time range. Search, Late only, the filters, the
+ * grouping and the sort live in the URL (ADR 0062); the columns and the collapsed groups stay
+ * local. Move is drawn but disabled while the page reads the fixture G1.
  */
 export function JobOrdersScreen() {
   const { plant } = useShell();
-  const search = jobOrdersSearch(useSearch({ strict: false }));
+  const view = jobOrdersSearch(useSearch({ strict: false }));
   const navigate = useNavigate();
-  const setSearch = (next: JobOrdersSearch) =>
-    navigate({ to: '.', search: next as Record<string, unknown>, replace: true });
-  const source = useGanttSource();
-  const [loaded, setLoaded] = useState<Loaded | undefined>(undefined);
-  const [loadError, setLoadError] = useState<unknown>(undefined);
-  const [attempt, setAttempt] = useState(0);
-  /** Settles the promise of Try again once the reload it started has settled. */
-  const retryDone = useRef<(() => void) | undefined>(undefined);
+  const show = (next: JobOrdersSearch) =>
+    navigate({ to: '.', search: urlSearchOf(next), replace: true });
+  const { snapshot, error, retry } = usePlanningSnapshot();
   const [hiddenColumns, setHiddenColumns] = useState<readonly string[]>([]);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const snapshot = loaded?.snapshot;
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
 
-  const zoom = search.zoom ?? defaultZoom;
-  const timeZone = snapshot?.plant.timeZone ?? 'UTC';
-  const productionDayStart = snapshot?.plant.productionDayStart ?? '06:00';
-  // The range starts at the date in the URL, else at the snapshot's now, else at today.
-  const from =
-    search.from ??
-    (snapshot === undefined
-      ? plantDateOf(Date.now(), timeZone)
-      : plantDateOf(snapshot.nowMs, timeZone));
-  const range = useMemo(
-    () => rangeOf(from, zoom, timeZone, productionDayStart),
-    [from, zoom, timeZone, productionDayStart],
-  );
-
-  const lateOnly = search.late === 1;
-  // The request the page shows: a snapshot loaded for another key is the view before, kept dimmed
-  // while this one loads (design ui-222, LI7), and the first load without a date in the URL asks
-  // again once the snapshot's now names the week.
-  const loadKey = `${range.fromMs}:${range.toMs}:${lateOnly}:${attempt}`;
-  const label = rangeLabel(range, zoom, timeZone);
-  useEffect(() => {
-    let cancelled = false;
-    setLoadError(undefined);
-    source
-      .load({
-        from: new Date(range.fromMs).toISOString(),
-        to: new Date(range.toMs).toISOString(),
-        filter: { lateOnly },
-      })
-      .then((answer) => {
-        if (!cancelled) setLoaded({ key: loadKey, range, label, lateOnly, snapshot: answer });
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) setLoadError(error ?? new Error('The job orders could not be loaded'));
-      })
-      .finally(() => {
-        if (cancelled) return;
-        retryDone.current?.();
-        retryDone.current = undefined;
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [source, loadKey, range, label, lateOnly]);
-  const stale = loaded !== undefined && loaded.key !== loadKey;
-  /** A request is in flight: the one the page shows is not the one it asked for last. */
-  const pending = stale && loadError === undefined;
-
-  const sort = sortOf(search);
-  // The rows of the loaded request, so a range change shows the rows of the view before, dimmed,
-  // until its own rows arrive, never the old snapshot cut to the new range.
   // The rows read the plan with the planner's draft applied, the draft the board and the Gantt
   // write (plan 07, Drafts).
   const [draft] = usePlanningDraft();
   const applied = useMemo(
-    () => (loaded === undefined ? undefined : applyDraft(loaded.snapshot, draft, loaded.range)),
-    [loaded, draft],
+    () => (snapshot === undefined ? undefined : applyDraft(snapshot, draft)),
+    [snapshot, draft],
   );
+  const allRows = useMemo(
+    () => (applied === undefined ? [] : jobOrderTableRows(applied, draftRowIds(draft))),
+    [applied, draft],
+  );
+  const sort = sortOf(view);
   const rows = useMemo(
     () =>
-      loaded === undefined || applied === undefined
-        ? []
-        : sortedJobOrderRows(
-            jobOrderTableRows(applied, loaded.range, loaded.lateOnly, draftRowIds(draft)),
-            sort,
-          ),
-    [loaded, applied, draft, sort],
+      sortedJobOrderRows(
+        allRows.filter((row) => jobOrderRowMatches(row, view)),
+        sort,
+      ),
+    [allRows, view, sort],
   );
-  const lateRows = rows.filter((row) => row.analysis?.late).length;
+  const timeZone = applied?.plant.timeZone ?? 'UTC';
+  const groups = useMemo(
+    () => (view.group === undefined ? undefined : groupedJobOrderRows(rows, view.group, timeZone)),
+    [rows, view.group, timeZone],
+  );
 
+  const machineName = (code: string) =>
+    code === notPlaced
+      ? notPlacedLabel
+      : (applied?.equipment.find((machine) => machine.code === code)?.name ?? code);
+  const labelOf = (key: JobOrderFilterKey) =>
+    key === 'machine' ? machineName : key === 'status' ? statusLabel : (value: string) => value;
+  const fields: ListFilterField[] = (
+    [
+      ['machine', 'Machine', 'Show job orders on these machines', 'Remove the machine filter'],
+      ['status', 'Status', 'Show job orders with these statuses', 'Remove the status filter'],
+      ['article', 'Article', 'Show job orders of these articles', 'Remove the article filter'],
+    ] as const
+  ).map(([key, label, heading, remove]) => ({
+    key,
+    label,
+    heading,
+    remove,
+    values: jobOrderFacets(allRows, view, key, labelOf(key)),
+    picked: view[key] ?? [],
+  }));
+
+  const lateCount = rows.filter((row) => row.analysis?.late).length;
+  const notPlacedCount = rows.filter((row) => row.jobOrder.equipment === undefined).length;
+  const counts = [
+    jobOrderCountText(rows.length),
+    lateCount > 0 ? `${lateCount} late` : undefined,
+    notPlacedCount > 0 ? `${notPlacedCount} not placed` : undefined,
+    view.late === 1 ? 'late only' : undefined,
+  ]
+    .filter((part) => part !== undefined)
+    .join(', ');
+  const groupLabel = groupChoices.find((choice) => choice.value === view.group)?.label ?? '';
+  const statusLine = `${counts}. ${
+    groups === undefined
+      ? sortText(sort)
+      : `${groups.length} group${groups.length === 1 ? '' : 's'} by ${groupLabel.toLowerCase()}, job orders ${sortText(sort).charAt(0).toLowerCase()}${sortText(sort).slice(1)}`
+  }`;
+  // A change of the rows after a user action is announced once through the app's helper; the
+  // first rows are not.
+  const announced = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (snapshot === undefined) return;
+    if (announced.current !== undefined && announced.current !== statusLine) announce(statusLine);
+    announced.current = statusLine;
+  }, [snapshot, statusLine]);
+
+  const openRows = allRows.filter((row) => jobOrderRowMatches(row, {}));
   let state: PageState = { status: 'ready' };
-  if (loadError !== undefined) {
-    state = {
-      status: 'error',
-      title: 'Could not load the job orders',
-      error: loadError,
-      onRetry: () =>
-        new Promise<void>((resolve) => {
-          retryDone.current = resolve;
-          setAttempt((count) => count + 1);
-        }),
-    };
-  } else if (loaded === undefined) {
+  if (snapshot === undefined && error !== undefined) {
+    state = { status: 'error', title: 'Could not load the job orders', error, onRetry: retry };
+  } else if (snapshot === undefined) {
     state = { status: 'loading' };
-  } else if (!stale && rows.length === 0) {
+  } else if (allRows.length === 0) {
     state = {
       status: 'empty',
-      title: 'No job orders in this range',
-      description: lateOnly
-        ? 'No order with a job order in this range is late. Turn Late only off, or move the range.'
-        : 'Move the range with Earlier, Later or Go to date to find job orders.',
+      title: 'No job orders yet',
+      description:
+        'Job orders come with the production orders, from the ERP or created here. They show here once an order has its operations.',
+    };
+  } else if (rows.length === 0 && openRows.length === 0 && Object.keys(view).length === 0) {
+    state = {
+      status: 'empty',
+      title: 'No open job orders',
+      description: 'Pick Finished under Status to see the finished job orders.',
+    };
+  } else if (rows.length === 0) {
+    state = {
+      status: 'empty',
+      title: 'No job orders match these filters',
+      description: 'Change or clear the filters to see job orders again.',
       action: (
         <Button
-          variant="outline"
-          onClick={() => void setSearch({ ...search, from: shiftedFrom(from, zoom, 'later') })}
+          variant="link"
+          onClick={() => {
+            show(withLateOnly(unfiltered(searchedFor(view, '')), false));
+            document.getElementById(searchFieldId)?.focus();
+          }}
         >
-          Show the next range
+          Clear filters
         </Button>
       ),
     };
   }
-  // The rows the page shows are the loaded request's: while another loads, the line says so and
-  // names the rows' own range, never the new one.
-  const statusText = [
-    `${rows.length} job orders in ${loaded?.label ?? label}`,
-    lateRows > 0 ? `${lateRows} late` : undefined,
-    loaded?.lateOnly ? 'late only' : undefined,
-  ]
-    .filter((part) => part !== undefined)
-    .join(', ');
-  const statusLine =
-    loadError !== undefined
-      ? `Could not load ${label}.`
-      : pending
-        ? `Loading ${label}. Showing ${statusText} until it loads.`
-        : `${statusText}. ${sortText(sort)}`;
-  // A change of the rows after a user action is announced once through the app's helper; the
-  // first rows, and the rows of the view before while the next loads, are not.
-  const announced = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    if (loaded === undefined || stale) return;
-    if (announced.current !== undefined && announced.current !== statusLine) announce(statusLine);
-    announced.current = statusLine;
-  }, [loaded, stale, statusLine]);
-  const rangeSearch = { zoom, from };
+  const tableGroups: DataTableGroup<JobOrderTableRow>[] | undefined = groups?.map((group) => ({
+    id: group.id,
+    label: group.label,
+    count: jobOrderCountText(group.rows.length),
+    rows: group.rows,
+    expanded: !collapsed.has(group.id),
+    onExpandedChange: (open) =>
+      setCollapsed((current) => {
+        const next = new Set(current);
+        if (open) next.delete(group.id);
+        else next.add(group.id);
+        return next;
+      }),
+  }));
+  // The board and the Gantt take the page's search as their order filter.
+  const timelineSearch: Readonly<Record<string, string>> =
+    view.q === undefined ? {} : { q: view.q };
   return (
     <PageFrame
       title="Job orders"
       state={state}
-      busy={pending}
       toolbar={
         <div className="flex flex-col gap-2">
-          <div role="toolbar" aria-label="Job table" className="flex flex-wrap items-center gap-2">
-            <RangeControls
-              zoomControls={
-                <PresetControls
-                  label="Range"
-                  zoom={zoom}
-                  onZoomChange={(next) => void setSearch({ ...search, zoom: next })}
-                />
-              }
-              from={from}
-              onFromChange={(next) => void setSearch({ ...search, from: next })}
-              onEarlier={() =>
-                void setSearch({ ...search, from: shiftedFrom(from, zoom, 'earlier') })
-              }
-              onNow={() =>
-                void setSearch({
-                  ...search,
-                  from: plantDateOf(snapshot?.nowMs ?? Date.now(), timeZone),
-                })
-              }
-              onLater={() => void setSearch({ ...search, from: shiftedFrom(from, zoom, 'later') })}
-              rangeLabel={label}
-            />
-            <Field orientation="horizontal" className="w-auto">
-              <Checkbox
-                id={lateOnlyId}
-                checked={lateOnly}
-                onCheckedChange={(checked) => void setSearch(withLateOnly(search, checked))}
+          <div className="flex flex-wrap items-start gap-2">
+            <div className="grow">
+              <OrderListToolbar
+                searchId={searchFieldId}
+                searchLabel="Search job orders"
+                q={view.q ?? ''}
+                onSearch={(q) => show(searchedFor(view, q))}
+                lateOnly={view.late === 1}
+                onLateOnlyChange={(on) => show(withLateOnly(view, on))}
+                fields={fields}
+                onFilterChange={(key, values) => show(filteredBy(view, key, values))}
+                onClearFilters={() => show(unfiltered(view))}
               />
-              <FieldLabel htmlFor={lateOnlyId}>Late only</FieldLabel>
-            </Field>
-            <span className="grow" />
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={<Button variant="outline" size="icon-sm" aria-label="Table options" />}
@@ -260,12 +245,12 @@ export function JobOrdersScreen() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-56">
                 <DropdownMenuItem
-                  render={<Link to={planningLinks.gantt({ plant }, rangeSearch).href} />}
+                  render={<Link to={planningLinks.gantt({ plant }, timelineSearch).href} />}
                 >
-                  Open the Gantt at this range
+                  Open the Gantt
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  render={<Link to={planningLinks.board({ plant }, rangeSearch).href} />}
+                  render={<Link to={planningLinks.board({ plant }, timelineSearch).href} />}
                 >
                   Open the planning board
                 </DropdownMenuItem>
@@ -281,21 +266,29 @@ export function JobOrdersScreen() {
       }
     >
       <JobOrdersTable
-        label={`Job orders, ${label}`}
+        label="Job orders"
         rows={rows}
-        snapshot={applied ?? snapshot}
-        zoom={zoom}
-        from={from}
+        groups={tableGroups}
+        snapshot={applied}
         sort={sort}
-        onSortChange={(next) => void setSearch(sortedBy(search, next))}
+        onSortChange={(next) => void show(sortedBy(view, next))}
         hiddenColumns={hiddenColumns}
         headerMenu={
-          <ColumnsMenu
-            compact
-            columns={jobOrdersColumnChoices}
-            hidden={hiddenColumns}
-            onChange={setHiddenColumns}
-          />
+          <>
+            <ChoiceMenu
+              compact
+              label="Group by"
+              choices={groupChoices}
+              value={view.group}
+              onChange={(group) => show(groupedBy(view, group))}
+            />
+            <ColumnsMenu
+              compact
+              columns={jobOrdersColumnChoices}
+              hidden={hiddenColumns}
+              onChange={setHiddenColumns}
+            />
+          </>
         }
         expanded={expanded}
         onToggleFacts={(id) =>
@@ -306,8 +299,7 @@ export function JobOrdersScreen() {
             return next;
           })
         }
-        loading={loaded === undefined}
-        stale={pending}
+        loading={snapshot === undefined}
       />
       <p className="text-xs text-muted-foreground">{phase1Reason}</p>
     </PageFrame>

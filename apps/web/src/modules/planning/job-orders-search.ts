@@ -1,9 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { z } from 'zod';
-import type { ZoomPreset } from './gantt-data.ts';
-import { plantDateTime, zoomKey } from './gantt-search.ts';
-import { bandOf, presetOfLevel } from './timeline/time-scale.ts';
+import type { JobOrderStatus } from './gantt-data.ts';
+import {
+  commaList,
+  defined,
+  lateOnlyKey,
+  sortOf as listSortOf,
+  type SortKey,
+  searchText,
+  sortedBy as sortedListBy,
+  sortKeys,
+} from './order-list-search.ts';
 
 /** The sortable columns of the job order table, by their column ids. */
 export const jobOrdersSortIds = [
@@ -19,69 +27,67 @@ export const jobOrdersSortIds = [
 export type JobOrdersSortId = (typeof jobOrdersSortIds)[number];
 
 /** A sort in the URL's sort key: a column id, with a leading minus for descending (ui-222). */
-export type JobOrdersSort = JobOrdersSortId | `-${JobOrdersSortId}`;
+export type JobOrdersSort = SortKey<JobOrdersSortId>;
+
+/** The statuses of a job order, which the Status filter offers. */
+export const jobOrderStatusValues = [
+  'planned',
+  'started',
+  'finished',
+] as const satisfies readonly JobOrderStatus[];
+
+/** The statuses the table lists while the Status filter picks none: the open job orders. */
+export const openJobOrderStatuses: readonly JobOrderStatus[] = ['planned', 'started'];
+
+/** The token of the Machine filter for a job order without a machine, Not placed. */
+export const notPlaced = 'none';
+
+/** The fields the job order table groups by (ADR 0091). */
+export const jobOrderGroupKeys = ['machine', 'startDay'] as const;
+export type JobOrderGroupKey = (typeof jobOrderGroupKeys)[number];
+
+/** The default sort, Start ascending, which stays out of the URL. */
+const defaultSort: JobOrdersSortId = 'start';
 
 /**
- * The view state of the job orders page in the URL (ADR 0062, plan 18): the zoom preset and the
- * first plant date of the range, which mean the same on the board and the Gantt (the zoom of a
- * link from them opens at the preset of its band, ADR 0090), Late only in
- * late=1 (the filter the Gantt shares, plan 18), and the sort. The default sort, machine then
- * start, stays out of the URL.
+ * The view state of the job orders page in the URL (ADR 0091, ADR 0062): the search in q, Late
+ * only in late=1, one key per filter field with a comma list of the picked values, Group by in
+ * group, and the sort. The page has no range, so zoom and from are dropped.
  */
 export interface JobOrdersSearch {
-  readonly zoom?: ZoomPreset;
-  /** The first plant date of the visible range, "2026-11-02". */
-  readonly from?: string;
+  readonly q?: string;
   /** 1 keeps the job orders of orders that are late at now. */
   readonly late?: 1;
+  /** The picked machines by code, and none for Not placed. */
+  readonly machine?: readonly string[];
+  readonly status?: readonly JobOrderStatus[];
+  readonly article?: readonly string[];
+  readonly group?: JobOrderGroupKey;
   readonly sort?: JobOrdersSort;
 }
 
-const sortValues = [
-  ...jobOrdersSortIds,
-  ...jobOrdersSortIds.map((id): `-${JobOrdersSortId}` => `-${id}`),
-] as [JobOrdersSort, ...JobOrdersSort[]];
-
 /** The URL keys, each of which falls back to its default on its own (ADR 0062). */
 const searchKeys = z.object({
-  zoom: zoomKey
-    .transform((pxPerHour) => presetOfLevel(bandOf(pxPerHour)))
-    .optional()
-    .catch(undefined),
-  // A link from the board or the Gantt names their visible start, which opens at its date.
-  from: z
-    .union([z.iso.date(), plantDateTime.transform((value) => value.slice(0, 10))])
-    .optional()
-    .catch(undefined),
-  late: z
-    .union([z.literal(1), z.literal('1'), z.literal(true)])
-    .transform(() => 1 as const)
-    .optional()
-    .catch(undefined),
-  sort: z.enum(sortValues).optional().catch(undefined),
+  q: searchText,
+  late: lateOnlyKey,
+  machine: commaList(z.string().min(1).max(64)),
+  status: commaList(z.enum(jobOrderStatusValues)),
+  article: commaList(z.string().min(1).max(100)),
+  group: z.enum(jobOrderGroupKeys).optional().catch(undefined),
+  sort: sortKeys(jobOrdersSortIds),
 });
 
 /** The view state that a URL's search describes, for the job orders route's validateSearch. */
 export function jobOrdersSearch(raw: Record<string, unknown>): JobOrdersSearch {
-  const { zoom, from, late, sort } = searchKeys.parse(raw);
-  return {
-    ...(zoom !== undefined && { zoom }),
-    ...(from !== undefined && { from }),
-    ...(late !== undefined && { late }),
-    ...(sort !== undefined && { sort }),
-  };
+  return defined(searchKeys.parse(raw));
 }
 
-/** The column and direction of a view's sort; the default, machine ascending, without a key. */
+/** The column and direction of a view's sort; the default, Start ascending, without a key. */
 export function sortOf(search: JobOrdersSearch): {
   readonly id: JobOrdersSortId;
   readonly desc: boolean;
 } {
-  const sort: JobOrdersSort | undefined = search.sort;
-  if (sort === undefined) return { id: 'machine', desc: false };
-  return sort.startsWith('-')
-    ? { id: sort.slice(1) as JobOrdersSortId, desc: true }
-    : { id: sort as JobOrdersSortId, desc: false };
+  return listSortOf<JobOrdersSortId>(search, defaultSort);
 }
 
 /** The view sorted on a column; the default sort leaves the key out. */
@@ -89,14 +95,14 @@ export function sortedBy(
   search: JobOrdersSearch,
   sort: { readonly id: string; readonly desc: boolean },
 ): JobOrdersSearch {
-  const { sort: _, ...rest } = search;
-  const id = sort.id as JobOrdersSortId;
-  if (id === 'machine' && !sort.desc) return rest;
-  return { ...rest, sort: sort.desc ? `-${id}` : id };
+  return sortedListBy<JobOrdersSearch, JobOrdersSortId>(search, sort, defaultSort);
 }
 
-/** The view with Late only on or off. */
-export function withLateOnly(search: JobOrdersSearch, lateOnly: boolean): JobOrdersSearch {
-  const { late: _, ...rest } = search;
-  return lateOnly ? { ...rest, late: 1 } : rest;
+/** The view grouped by a field, or not grouped. */
+export function groupedBy(
+  search: JobOrdersSearch,
+  group: JobOrderGroupKey | undefined,
+): JobOrdersSearch {
+  const { group: _, ...rest } = search;
+  return group === undefined ? rest : { ...rest, group };
 }

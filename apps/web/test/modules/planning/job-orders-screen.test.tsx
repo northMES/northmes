@@ -93,9 +93,7 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     const late = within(table).getByRole('row', { name: /^1003\.20 / });
     expect(late.textContent).toContain('Late 15 h 15 min');
     expect(late.textContent).toContain('Gear blank 32');
-    expect(within(table).getByRole('row', { name: /^1002\.10 / }).textContent).toContain(
-      'Locked',
-    );
+    expect(within(table).getByRole('row', { name: /^1002\.10 / }).textContent).toContain('Locked');
     expect(screen.getByText('Rows 1 to 10 of 10')).toBeTruthy();
     // The job order number opens the Gantt with the order selected and its start in view.
     expect(within(late).getByRole('link', { name: '1003.20' }).getAttribute('href')).toBe(
@@ -116,15 +114,11 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     );
     const notPlaced = within(table).getByRole('row', { name: /^1005\.20 / });
     expect(notPlaced.textContent).toContain('Not placed');
-    expect(within(table).getByRole('row', { name: /^1004\.10 / }).textContent).toContain(
-      'Started',
-    );
+    expect(within(table).getByRole('row', { name: /^1004\.10 / }).textContent).toContain('Started');
     expect(statusLine()).toBe('9 job orders, 2 late, 1 not placed. Sorted by start.');
 
     await userEvent.click(filterButton('Status'));
-    expect(screen.getByRole('menuitemcheckbox', { name: /^Finished/ }).textContent).toContain(
-      '1',
-    );
+    expect(screen.getByRole('menuitemcheckbox', { name: /^Finished/ }).textContent).toContain('1');
     await userEvent.click(screen.getByRole('menuitemcheckbox', { name: /^Finished/ }));
     await userEvent.keyboard('{Escape}');
 
@@ -152,16 +146,14 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     await userEvent.click(screen.getByRole('menuitemcheckbox', { name: /^Mill 1/ }));
     await userEvent.keyboard('{Escape}');
 
-    await waitFor(() =>
-      expect(rowNumbers(table)).toEqual(['1003.20', '1004.20', '1005.20']),
-    );
-    expect(router.state.location.search).toEqual({ machine: 'none,MILL1' });
+    await waitFor(() => expect(rowNumbers(table)).toEqual(['1003.20', '1004.20', '1005.20']));
+    expect(router.state.location.search).toEqual({ machine: 'MILL1,none' });
     expect(screen.getByRole('button', { name: 'Machine, 2 selected' })).toBeTruthy();
 
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search job orders' }), 'Gear');
 
     await waitFor(() => expect(rowNumbers(table)).toEqual(['1003.20']));
-    expect(router.state.location.search).toEqual({ machine: 'none,MILL1', q: 'Gear' });
+    expect(router.state.location.search).toEqual({ machine: 'MILL1,none', q: 'Gear' });
 
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
 
@@ -220,7 +212,11 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     await userEvent.click(screen.getByRole('menuitemradio', { name: 'Start day' }));
 
     await waitFor(() =>
-      expect(within(table).getAllByRole('rowheader').map((group) => group.textContent)).toEqual([
+      expect(
+        within(table)
+          .getAllByRole('rowheader')
+          .map((group) => group.textContent),
+      ).toEqual([
         'Tue 3 Nov 1 job order',
         'Wed 4 Nov 3 job orders',
         'Thu 5 Nov 3 job orders',
@@ -370,13 +366,18 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     cleanup();
 
     const finished = Object.fromEntries(
-      byStart.map((number) => [number, (row: GanttJobOrder) => ({ ...row, status: 'finished' as const })]),
+      byStart.map((number) => [
+        number,
+        (row: GanttJobOrder) => ({ ...row, status: 'finished' as const }),
+      ]),
     );
     renderGanttRoute({}, sourceOf(g1With(finished)), 'jobOrders');
     expect(
       await screen.findByRole('heading', { level: 2, name: 'No open job orders' }),
     ).toBeTruthy();
-    expect(screen.getByText('Pick Finished under Status to see the finished job orders.')).toBeTruthy();
+    expect(
+      screen.getByText('Pick Finished under Status to see the finished job orders.'),
+    ).toBeTruthy();
     cleanup();
 
     const router = renderGanttRoute({ q: 'nothing', late: 1 }, undefined, 'jobOrders');

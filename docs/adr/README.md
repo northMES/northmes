@@ -189,4 +189,4 @@ On 2026-11-01 the index holds 91 ADRs: 51 accepted and 40 proposed, 87 for relea
 | 0090 | [A smooth zoom and a slim bar above the timeline, on the planning board and the order Gantt](0090-a-smooth-zoom-and-a-slim-bar-above-the-timeline-on-the-planning-board-and-the-order-gantt.md) | proposed | 1 | maintainer (the smooth zoom in release 1, recorded in the ledger of ADR 0055; the band edges and the hysteresis factor 1.1; the wheel factor 0.002 and the pinch factor, which need tuning by hand; the factor 2 and the 150 ms animation of the buttons and keys; Alt+Page Up and Alt+Page Down in place of Earlier and Later; the button name Go to now; the URL key q and its 250 ms debounce; three significant digits in zoom; the transform fallback; the View menu's contents per view) |
 | 0091 | [The job order table lists open job orders without a time range](0091-the-job-order-table-lists-open-job-orders-without-a-time-range.md) | proposed | 1 | maintainer (the ADR as a whole) |
 
-Next free number: 0091. Only Krister Johansson sets a status to accepted.
+Next free number: 0092. Only Krister Johansson sets a status to accepted.

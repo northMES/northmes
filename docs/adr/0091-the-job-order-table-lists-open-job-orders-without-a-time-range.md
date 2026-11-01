@@ -93,7 +93,7 @@ Chosen option: "A work list of open job orders, without a range", because it is 
 * `job-orders-search.test.tsx`: each key parses and falls back on its own; `machine`, `status` and `article` read comma lists; `zoom` and `from` are dropped; the default sort leaves `sort` out.
 * `job-orders-screen.test.tsx`, on the fixture G1 and on snapshots built from it: the table lists every open job order sorted by start; a finished job order shows only with Status Finished; a job order without a machine shows Not placed and sorts last; the search, Late only and the Machine filter narrow the rows and write the URL; Clear filters clears the filter menus and keeps the search and Late only, as on the order lists; Group by Machine and Group by Start day put the rows under their headers; and the page has no Range, Earlier, Now, Later or Go to date.
 * `planning-board-states.test.tsx`: the board's "Open the job table" link carries `q` and no `zoom` or `from`.
-* `e2e/a11y/job-orders.axe.spec.ts`: `checkA11y` passes on the job orders page in its ready, loading, error, empty and filtered states.
+* `e2e/a11y/job-orders.axe.spec.ts`: `checkA11y` passes on the job orders page with its rows, a row's late facts open, a sort, Late only, the Machine filter menu open, the rows grouped by machine, the Columns menu and a row menu open, and with no row that matches. The web test covers the error and empty states, which the fixture G1 never reaches in a browser.
 
 ## Pros and cons of the options
 

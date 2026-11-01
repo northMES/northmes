@@ -305,8 +305,8 @@ describe('the production order page (plan 07, planning records; design #686, PO1
     );
     cleanup();
 
-    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, undefined, 'jobOrders');
-    await screen.findByRole('table', { name: /^Job orders, / });
+    renderGanttRoute({}, undefined, 'jobOrders');
+    await screen.findByRole('table', { name: 'Job orders' });
     await userEvent.click(screen.getByRole('button', { name: 'Actions for 1001.10' }));
     expect(screen.getByRole('menuitem', { name: 'Open order' }).getAttribute('href')).toBe(
       '/plant-a/planning/orders/po-1001',

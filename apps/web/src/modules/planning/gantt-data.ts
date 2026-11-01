@@ -47,12 +47,6 @@ import type { zoomLevelIds } from './timeline/time-scale.ts';
 /** The levels of the zoom ladder, finest first, by their URL ids (ADR 0089, Zoom levels). */
 export type ZoomLevel = (typeof zoomLevelIds)[number];
 
-/**
- * The four zoom presets of the approved board design D3, which the job order table keeps as its
- * Range (ADR 0089); on the board and the Gantt they are levels of the ladder.
- */
-export type ZoomPreset = Extract<ZoomLevel, 'hours' | 'day' | 'week' | '4weeks'>;
-
 /** The filters of the job order table view, which apply to the Gantt unchanged (plan 18). */
 export interface GanttFilter {
   /** Late only: orders late at now. */
