@@ -6,6 +6,7 @@ The third-party skills in `.claude/skills/` are pinned in `skills-lock.json`, wi
 
 - tdd and codebase-design: use them for every code change.
 - db-test (project skill): tests against Postgres, fixtures through db.command, test apps through createTestApp, and the meaning of a migrate or row-level security error.
+- pr-shepherd (project skill): one pass over the open pull requests after their sessions ended, from `pnpm agent:shepherd`; the maintainer schedules it as `docs/agents/shepherd.md` says.
 - vitest, pnpm and turborepo: tests, workspace settings and task wiring.
 - apollo-client: web data code. playwright-cli: end-to-end specs and checking a UI change in a browser.
 - wrdn-authz and secret-serialization: reviews of permissions and of code that holds secrets. Row-level security with transaction-local scopes counts as tenant scoping.
