@@ -114,7 +114,7 @@ Navigation and reserved segments:
 
 ## More information
 
-* Design: [#957][issue-957] draws the list for both readers, the user's page, the navigation and the page states on the core-304 artifact ([ADR 0079][adr-0079]). The build waits for its approval.
+* Design: [#957][issue-957] draws the list for both readers, the user's page, the navigation and the page states on the core-304 artifact ([ADR 0079][adr-0079]). The build goes ahead before the frames, so that Krister can try the page in the app; the frames then record the page as built or as changed after the trial, and their approval follows ADR 0079.
 * Krister Johansson answered M-105, M-106 and M-107 in [16 open questions](../plan/16-open-questions.md) on 2026-10-31.
 * When the build lands, the user guide changes with it ([ADR 0088][adr-0088]): `apps/docs/use/users-and-roles.mdx` loses its section "People at a plant", its line that a plant's people live under People, and "Read users and People" in its permission table; `apps/docs/use/companies-and-plants.mdx` no longer names People among the plant's pages, and no longer says that the company's pages show the whole company for every reader.
 * Related ADRs: [0008][adr-0008] (row-level security), [0010][adr-0010] (roles, the grant rule), [0021][adr-0021] (accessibility), [0062][adr-0062] (link manifests, URL view state), [0066][adr-0066] (company and plant settings, core's admin roles), [0074][adr-0074] (core's pages and reserved segments), [0076][adr-0076] (least privilege), [0079][adr-0079] (design pages), [0088][adr-0088] (docs per pull request).
