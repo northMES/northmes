@@ -256,7 +256,7 @@ describe('the shell', () => {
       ],
       [
         ['Planning board', '/plant-a/planning/board'],
-        ['Gantt', '/plant-a/planning/gantt'],
+        ['Order Gantt', '/plant-a/planning/order-gantt'],
         ['Job orders', '/plant-a/planning/job-orders'],
         ['Production orders', '/plant-a/planning/orders'],
         ['Customer orders', '/plant-a/planning/customer-orders'],

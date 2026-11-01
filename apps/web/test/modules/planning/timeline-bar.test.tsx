@@ -38,14 +38,14 @@ describe('the slim bar above the order Gantt (ADR 0090)', () => {
   it('#939 holds Go to now and one View menu on the title row, and no range controls or My draft without changes', async () => {
     renderGanttRoute({ from: '2026-11-02' });
     await findGantt();
-    const bar = screen.getByRole('toolbar', { name: 'Gantt' });
+    const bar = screen.getByRole('toolbar', { name: 'Order Gantt' });
 
     expect(within(bar).getByRole('button', { name: 'Go to now' })).toBeTruthy();
     expect(within(bar).getByRole('button', { name: 'View' })).toBeTruthy();
     expect(within(bar).queryByRole('button', { name: /^My draft/ })).toBeNull();
     expectNoRangeControls();
     // The page title and the bar share one row.
-    const heading = screen.getByRole('heading', { level: 1, name: 'Gantt' });
+    const heading = screen.getByRole('heading', { level: 1, name: 'Order Gantt' });
     expect(heading.parentElement?.contains(bar)).toBe(true);
   });
 
@@ -89,7 +89,7 @@ describe('the slim bar above the order Gantt (ADR 0090)', () => {
 
     expect(gantt.contains(zoom)).toBe(false);
     expect(gantt.compareDocumentPosition(zoom) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getByRole('toolbar', { name: 'Gantt' }).contains(zoom)).toBe(false);
+    expect(screen.getByRole('toolbar', { name: 'Order Gantt' }).contains(zoom)).toBe(false);
     // WCAG 2.4.11: the time scroller reserves the buttons' size, from the target size token, so a
     // focused block scrolled into view is never under them.
     expect(gantt.style.scrollPaddingBottom).toContain('var(--nm-target-min)');
