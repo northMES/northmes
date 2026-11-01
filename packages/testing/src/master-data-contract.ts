@@ -72,8 +72,8 @@ const forbidden = { code: 'FORBIDDEN', errorCode: 'core.forbidden' };
  * The master-data kit's contract suite (ADR 0022), which every register runs once: create, the
  * code rule of ADR 0009 with its case and its scopes, archive, restore, the version check, the
  * permission check, and what each plant reads. A register at plant scope only skips the company
- * cases. Call it in the body of a describe of the register's tests, with an app that serves the
- * register's GraphQL fields.
+ * cases, and checks that company settings cannot create a row. Call it in the body of a describe
+ * of the register's tests, with an app that serves the register's GraphQL fields.
  */
 export function masterDataContract(
   register: MasterDataRegister,

@@ -87,6 +87,12 @@ describe('defineMasterData', () => {
     expect(gauge.operations.scope).toBe('companyOrPlant');
   });
 
+  it('#965 a plant-only register has no REST routes, since REST serves a plant operation under /plants/{plant}/', () => {
+    const routes = Object.values(fixtures.operations.operations).map(({ rest }) => rest);
+
+    expect(routes).toEqual([false, false, false, false, false, false]);
+  });
+
   it('#66 an update names the row by id and version, and takes no scope, since a row stays where it was made', () => {
     const { update } = gauge;
 

@@ -254,6 +254,9 @@ export function defineMasterData<
   });
 
   const command = kebab(entity);
+  // REST serves a plant operation under /plants/{plant}/ (ADR 0064), which toRestRoutes does not
+  // build yet, so a plant-only register has no routes until it does.
+  const rest = <const Binding>(binding: Binding): Binding | false => (atCompany ? binding : false);
   const operations = defineOperations({
     module,
     resource,
@@ -261,36 +264,36 @@ export function defineMasterData<
     operations: {
       find: {
         contract: find,
-        rest: { method: 'GET', path: resource, status: 200, maxPageSize: 100 },
+        rest: rest({ method: 'GET', path: resource, status: 200, maxPageSize: 100 }),
         tool: false,
       },
       get: {
         contract: get,
-        rest: { method: 'GET', path: `${resource}/{id}`, status: 200 },
+        rest: rest({ method: 'GET', path: `${resource}/{id}`, status: 200 }),
         tool: false,
       },
       create: {
         contract: create,
         output: node,
-        rest: { method: 'POST', path: `commands/create-${command}`, status: 201 },
+        rest: rest({ method: 'POST', path: `commands/create-${command}`, status: 201 }),
         tool: false,
       },
       update: {
         contract: update,
         output: node,
-        rest: { method: 'POST', path: `commands/update-${command}`, status: 200 },
+        rest: rest({ method: 'POST', path: `commands/update-${command}`, status: 200 }),
         tool: false,
       },
       archive: {
         contract: archive,
         output: node,
-        rest: { method: 'POST', path: `commands/archive-${command}`, status: 200 },
+        rest: rest({ method: 'POST', path: `commands/archive-${command}`, status: 200 }),
         tool: false,
       },
       restore: {
         contract: restore,
         output: node,
-        rest: { method: 'POST', path: `commands/restore-${command}`, status: 200 },
+        rest: rest({ method: 'POST', path: `commands/restore-${command}`, status: 200 }),
         tool: false,
       },
     },

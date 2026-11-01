@@ -36,6 +36,23 @@ type OwnOutput<Definition extends MasterDataDefinition> = Exclude<
 > &
   string;
 
+/** A query of a register's rows, which a filter hook narrows. */
+export type MasterDataQuery = SelectQueryBuilder<
+  RegisterDb,
+  string,
+  Record<string, unknown> & { readonly id: string }
+>;
+
+/** The filter fields a register's list declares. */
+type FiltersOf<Definition extends MasterDataDefinition> = NonNullable<
+  Definition['list']['filters']
+>;
+
+/** The filter values a list call set, by field: only those it set, never null. */
+export type MasterDataFilterValues<Definition extends MasterDataDefinition> = {
+  readonly [Field in keyof FiltersOf<Definition>]?: z.output<FiltersOf<Definition>[Field]>;
+};
+
 /** The locked row a command on an existing register row acts on. */
 export type MasterDataRow = Selectable<MasterDataColumns> & Record<string, unknown>;
 
@@ -82,6 +99,14 @@ export interface MasterDataServiceOptions<
       context: MasterDataUpdateContext,
     ): Promise<OwnColumns> | OwnColumns;
   };
+  /**
+   * Narrows a list's rows by the filter values a call set, for a register whose list declares
+   * filter fields, which it then needs. A call that sets none skips it.
+   */
+  readonly filter?: (
+    query: MasterDataQuery,
+    filters: MasterDataFilterValues<Definition>,
+  ) => MasterDataQuery;
 }
 
 /** A register's service, which every surface calls (ADR 0073). */
@@ -147,7 +172,8 @@ export function named<Class extends Type>(Class: Class, name: string): Class {
  * target, and a service whose reads go through the ScopedDatabase and whose writes go through the
  * command bus (ADR 0012). A row sits at the company's node or at the request's plant; a read at a
  * plant sees the plant's rows and the company's, and one in company settings every row of the
- * company. The table is one that pnpm gen:migration --register wrote. masterDataApi builds the
+ * company; a list call's filter values go through the register's filter hook. The table is one
+ * that pnpm gen:migration --register wrote. masterDataApi builds the
  * GraphQL and operation surfaces on what it returns.
  *
  * @internal Until ADR 0022 settles whether plugins define registers: the kit trusts its access
@@ -163,6 +189,10 @@ export function masterDataService<
   const register = `${module}.${entity}`;
   const atCompany = definition.scopes.includes('company' as never);
   const Label = capitalized(label);
+  const filterFields = Object.keys(definition.list.filters ?? {});
+  if (filterFields.length > 0 && !options.filter) {
+    throw new Error(`Register ${register}: its list declares filter fields, so it needs a filter`);
+  }
 
   /** The rows of the table as the service hands them out, which row-level security limits. */
   function select(tx: Transaction<RegisterDb>) {
@@ -194,6 +224,20 @@ export function masterDataService<
       scope.plantId
         ? select(tx).where('scope_id', 'in', [scope.plantId, scope.companyId])
         : select(tx).where('company_id', '=', scope.companyId);
+  }
+
+  /** The rows that `scope` reads, narrowed by the filter values of a list call. */
+  function listed(scope: MasterDataRequestScope, call: unknown) {
+    const values = call as Readonly<Record<string, unknown>>;
+    const filters = Object.fromEntries(
+      filterFields.filter((field) => values[field] != null).map((field) => [field, values[field]]),
+    ) as MasterDataFilterValues<Definition>;
+    return (tx: Transaction<RegisterDb>) => {
+      const rows = ofRequest(scope)(tx) as unknown as MasterDataQuery;
+      return options.filter && Object.keys(filters).length > 0
+        ? options.filter(rows, filters)
+        : rows;
+    };
   }
 
   /** The one row with this id, after a command changed it. */
@@ -394,7 +438,7 @@ export function masterDataService<
 
     async list(args: ListArgs<string>, companyId?: string): Promise<Connection<Row>> {
       const scope = access.requestScope(read, companyId);
-      const page = await access.readIn(scope, () => list.page(this.db, ofRequest(scope), args));
+      const page = await access.readIn(scope, () => list.page(this.db, listed(scope, args), args));
       return {
         ...page,
         count: () => access.readIn(scope, () => page.count()),
@@ -404,7 +448,7 @@ export function masterDataService<
     async find(input: unknown): Promise<ListPage<Row>> {
       const scope = access.requestScope(read);
       return access.readIn(scope, () =>
-        list.find(this.db, ofRequest(scope), input as Parameters<typeof list.find>[2]),
+        list.find(this.db, listed(scope, input), input as Parameters<typeof list.find>[2]),
       ) as Promise<ListPage<Row>>;
     }
 

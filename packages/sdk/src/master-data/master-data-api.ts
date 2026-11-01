@@ -27,25 +27,36 @@ export interface MasterDataApiOptions {
   readonly type: () => Type;
   /** The register's list, defineList of the definition's list with the type. */
   readonly list: ListKit<string>;
+  /**
+   * The list field's arguments, for a register whose list declares filter fields: an ArgsType
+   * class that extends list.Args with one argument per filter field, by the same names. The list's
+   * Args unless given.
+   */
+  readonly args?: () => Type;
 }
 
 /**
  * The surfaces of a register (ADR 0022), for the module's api/: the GraphQL queries `<module><Entity>`
  * and `<module><Plural>` and the four mutations on the hand-written type, plant-free with companyId
- * (ADR 0066), and the binding of its operations (ADR 0073). Each calls one method of the service
+ * (ADR 0066) except the create of a plant-only register, and the binding of its operations
+ * (ADR 0073). Each calls one method of the service
  * that masterDataService built, and holds no logic of its own.
  *
  * @internal Until ADR 0022 settles whether plugins define registers.
  */
 export function masterDataApi<const Definition extends MasterDataDefinition>(
   kit: MasterDataServiceKit<Definition>,
-  { type, list }: MasterDataApiOptions,
+  { type, list, args = () => list.Args }: MasterDataApiOptions,
 ): { readonly providers: Type[] } {
   type Row = MasterDataRecord<Definition>;
   const { definition, Service } = kit;
   const { module, entity, plural, label, pluralLabel, permission } = definition;
   const read = `${permission}:read`;
   const field = `${module}${entity}`;
+  // A row of a plant-only register sits at the request's plant, so its create needs one.
+  const createPlantFree: MethodDecorator = definition.scopes.includes('company' as never)
+    ? PlantFree()
+    : () => undefined;
 
   @Resolver(type)
   class QueryResolver {
@@ -70,10 +81,10 @@ export function masterDataApi<const Definition extends MasterDataDefinition>(
     })
     @PlantFree()
     many(
-      @Args({ type: () => list.Args }) args: ListArgs<string>,
+      @Args({ type: args }) listArgs: ListArgs<string>,
       @Args('companyId', companyIdArg) companyId?: string | null,
     ): Promise<Connection<Row>> {
-      return this.service.list(args, companyId ?? undefined);
+      return this.service.list(listArgs, companyId ?? undefined);
     }
   }
   named(QueryResolver, `${entity}QueryResolver`);
@@ -86,7 +97,7 @@ export function masterDataApi<const Definition extends MasterDataDefinition>(
       name: `${module}Create${entity}`,
       description: definition.create.description,
     })
-    @PlantFree()
+    @createPlantFree
     create(@Args('input', commandInputArg(definition.create)) input: unknown): Promise<Row> {
       return this.service.create(input);
     }

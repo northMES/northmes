@@ -161,11 +161,16 @@ describe('equipment', () => {
       color: 'palette-4',
     });
 
-    expect(plain).toMatchObject({ groupId: assembly, isPlannable: true, isOee: false, color: null });
+    expect(plain).toMatchObject({
+      groupId: assembly,
+      isPlannable: true,
+      isOee: false,
+      color: null,
+    });
     expect(own).toMatchObject({ isPlannable: false, isOee: true, color: 'palette-4' });
   });
 
-  it('#67 an update without the flags or the color keeps them, and a null color returns the stripe to the group', async () => {
+  it('#67 an update without the flags or the color keeps them, and the color group returns the stripe to the group', async () => {
     const place = await givenPlace();
     const assembly = await group(place.plantAdminA, 'ASM');
     const created = await machine(place.plantAdminA, 'M-1', assembly, {
@@ -179,7 +184,7 @@ describe('equipment', () => {
       input: { ...input, expectedVersion: 1 },
     });
     const cleared = await place.plantAdminA.send<{ coreUpdateEquipment: Machine }>(updateMachine, {
-      input: { ...input, expectedVersion: 2, color: null },
+      input: { ...input, expectedVersion: 2, color: 'group' },
     });
 
     expect(kept.data?.coreUpdateEquipment).toMatchObject({
