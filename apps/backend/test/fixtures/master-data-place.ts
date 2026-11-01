@@ -44,9 +44,7 @@ export async function givenMasterDataPlace(
   const other = await givenCompany(ownerUrl);
   const [plantA = '', plantB = ''] = plants;
   const [slugA = '', slugB = ''] = slugs;
-  const reader = await signIn(app, ownerUrl, [
-    { scopeId: plantA, permissions: [readPermission] },
-  ]);
+  const reader = await signIn(app, ownerUrl, [{ scopeId: plantA, permissions: [readPermission] }]);
   return {
     company,
     otherCompany: other.company,
