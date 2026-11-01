@@ -54,13 +54,10 @@ describe('coreLinks', () => {
     expect(coreLinks.dashboard({ plant: 'plant-a' }, { tab: 't1' }).href).toBe('/plant-a?tab=t1');
   });
 
-  it("#876 coreLinks builds the hrefs of the people of a plant and their Add role under the plant's settings, and has no plant pages for people, users or roles", () => {
-    expect(coreLinks.settings.people({ plant: 'plant-a' }).href).toBe('/plant-a/settings/people');
-    expect(coreLinks.settings.people.addRole({ plant: 'plant-a' }).href).toBe(
-      '/plant-a/settings/people/roles/new',
-    );
-    expect(coreLinks.settings.people.person.addRole({ plant: 'plant-a', userId: 'u1' }).href).toBe(
-      '/plant-a/settings/people/u1/roles/new',
+  it("ADR0092 coreLinks has no People: a person's page is the user's page, and no plant pages for people, users or roles", () => {
+    expect(coreLinks.settings).not.toHaveProperty('people');
+    expect(coreLinks.settings.users.user.addRole({ plant: 'plant-a', userId: 'u1' }).href).toBe(
+      '/plant-a/settings/users/u1/roles/new',
     );
     expect(coreLinks).not.toHaveProperty('people');
     expect(coreLinks).not.toHaveProperty('users');

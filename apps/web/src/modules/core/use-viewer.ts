@@ -16,6 +16,18 @@ export interface Viewer {
   readonly can: (permission: string) => boolean;
   /** The user holds the permission at the company. */
   readonly canAtCompany: (permission: string) => boolean;
+  /**
+   * The user holds the permission at a place (ADR 0092): the company, or a plant the page reads,
+   * which in company settings is any plant of the company. A plant the page does not read holds
+   * none.
+   */
+  readonly canAt: (place: ViewerPlace, permission: string) => boolean;
+}
+
+/** A place as canAt takes it: the company, or a plant by its scope id. */
+export interface ViewerPlace {
+  readonly kind: string;
+  readonly id: string;
 }
 
 /**
@@ -32,10 +44,15 @@ export function useViewer(): Viewer {
   // answer names no plant, the company's permissions are those at each plant too.
   const plant =
     variables.companyId === undefined ? new Set(viewer?.plantPermissions ?? []) : company;
+  const plants = new Map(
+    (viewer?.plants ?? []).map(({ plantId, permissions }) => [plantId, new Set(permissions)]),
+  );
   return {
     loaded: viewer !== undefined,
     userId: viewer?.userId,
     can: (permission) => plant.has(permission),
     canAtCompany: (permission) => company.has(permission),
+    canAt: ({ kind, id }, permission) =>
+      kind === 'COMPANY' ? company.has(permission) : (plants.get(id)?.has(permission) ?? false),
   };
 }

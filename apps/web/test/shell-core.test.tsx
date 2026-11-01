@@ -82,10 +82,10 @@ describe("core's pages at the plant root (ADR 0074)", () => {
   });
 
   it('E04-S02 the breadcrumb of a core plant settings page reads Plant A, Settings, then the page', async () => {
-    renderShellAt('/plant-a/settings/people', shellModules, { fetch: api().fetch });
+    renderShellAt('/plant-a/settings/machines', shellModules, { fetch: api().fetch });
     await screen.findByRole('navigation', { name: 'Plant A settings' });
 
-    await waitFor(() => expect(crumbs()).toEqual(['Plant A', 'Settings', 'People']));
+    await waitFor(() => expect(crumbs()).toEqual(['Plant A', 'Settings', 'Machines']));
   });
 
   it('E04-S02 the breadcrumb of another module keeps its module crumb beside core at the plant root', async () => {
@@ -115,7 +115,7 @@ describe("core's pages at the plant root (ADR 0074)", () => {
   });
 
   it('#876 the way out of a settings page that failed is the settings landing, and the landing has none', () => {
-    for (const path of ['/plant-a/settings/users', '/plant-a/settings/people/u-1']) {
+    for (const path of ['/plant-a/settings/users', '/plant-a/settings/users/u-1']) {
       expect(wayOutOf(shellModules, { plant: 'plant-a' }, path)).toEqual({
         label: 'Go to Settings',
         href: '/plant-a/settings',

@@ -30,6 +30,13 @@ export const plantA = {
   kind: 'PLANT',
   name: 'Plant A',
 } as const;
+/** Plant B of Acme AB, which the user cannot open: the companies list and the viewer omit it. */
+export const plantB = {
+  __typename: 'AccessScope',
+  id: idOf('plant-b'),
+  kind: 'PLANT',
+  name: 'Plant B',
+} as const;
 
 /** The company of the tests, whose settings pages the shell gives its id (#876). */
 export const companyId = acme.id;
@@ -50,10 +57,12 @@ export function forbiddenError(
 
 /**
  * coreViewer in company settings, with these permissions at the company: the access pages read
- * them as the permissions at every plant of it too (ADR 0066).
+ * them as the permissions at every plant of it too (ADR 0066), unless plantPermissions names what
+ * the user holds at Plant A, which then includes the company's (ADR 0092).
  */
 export function settingsViewerQuery(
   companyPermissions: readonly string[],
+  plantPermissions: readonly string[] = companyPermissions,
 ): MockLink.MockedResponse {
   return {
     request: { query: CoreViewer, variables: inCompany },
@@ -64,13 +73,16 @@ export function settingsViewerQuery(
           userId: viewerId,
           plantPermissions: [],
           companyPermissions,
+          plants: [
+            { __typename: 'ViewerPlant', plantId: plantA.id, permissions: plantPermissions },
+          ],
         },
       },
     },
   };
 }
 
-/** coreViewer at the plant, People's, with these permissions at the plant and at the company. */
+/** coreViewer at the plant, with these permissions at the plant and at the company. */
 export function viewerQuery(
   plantPermissions: readonly string[],
   companyPermissions: readonly string[] = [],
@@ -84,6 +96,9 @@ export function viewerQuery(
           userId: viewerId,
           plantPermissions,
           companyPermissions,
+          plants: [
+            { __typename: 'ViewerPlant', plantId: plantA.id, permissions: plantPermissions },
+          ],
         },
       },
     },
@@ -263,7 +278,7 @@ export function roleQuery(each: ReturnType<typeof role>): MockLink.MockedRespons
 /** A user's role at a place, as CoreUser returns it; null role for a reader without core.role:read. */
 export function assignment(
   of: ReturnType<typeof role> | null,
-  scope: typeof acme | typeof plantA,
+  scope: typeof acme | typeof plantA | typeof plantB,
   id = idOf(`${of?.name ?? 'hidden'}-${scope.name}`),
 ) {
   return {

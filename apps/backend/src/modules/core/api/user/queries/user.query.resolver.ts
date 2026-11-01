@@ -31,6 +31,13 @@ export class UserQueryResolver {
       description: 'Only the users who hold this role of the company, at any of its places.',
     })
     roleId?: string | null,
+    @Args('placeId', {
+      type: () => ID,
+      nullable: true,
+      description:
+        "Only the users who hold a role at this place: the company, or a plant, where a company role counts too. A place outside the request's read answers no users.",
+    })
+    placeId?: string | null,
     @Args('blocked', {
       type: () => Boolean,
       nullable: true,
@@ -40,6 +47,7 @@ export class UserQueryResolver {
   ): Promise<Connection<UserRecord>> {
     const filter: UserFilter = {
       ...(roleId ? { roleId } : {}),
+      ...(placeId ? { placeId } : {}),
       ...(typeof blocked === 'boolean' ? { blocked } : {}),
     };
     return this.users.list(args, companyId ?? undefined, filter);

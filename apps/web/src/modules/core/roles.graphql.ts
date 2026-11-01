@@ -9,8 +9,8 @@ export {
 } from './roles.graphql.gen.ts';
 
 // The roles of the company with their permissions and who holds them: the roles list, Start from on
-// New role and the role picker of Add role read it in company settings with companyId, and Add role
-// of People at a plant without. pnpm gen writes its typed document to roles.graphql.gen.ts; this
+// New role and the role picker of Add role read it in company settings with companyId, and the
+// Users pages at a plant without (ADR 0092). pnpm gen writes its typed document to roles.graphql.gen.ts; this
 // block never runs.
 if (false) {
   gql`

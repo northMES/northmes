@@ -32,17 +32,20 @@ import {
 } from '../../../../ui/primitives/dropdown-menu.tsx';
 import { noAccessState } from '../../no-access.tsx';
 import { CoreRoles } from '../../roles.graphql.ts';
-import { useCompanyId, usePlaces } from '../../use-places.ts';
+import { placeName, useCompanyId, useCompanyVariables, usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 import {
   nextUsersPage,
+  placeFilterOf,
   previousUsersPage,
   type UserListSearch,
+  type UserPlace,
   type UserStatusFilter,
   userListSearch,
   userListVariables,
   userPageSize,
   userSortOf,
+  usersAtPlace,
   usersSearchedFor,
   usersSortedBy,
   usersUnfiltered,
@@ -74,11 +77,17 @@ function UserLink({ user }: { readonly user: UserRow }) {
 
 /**
  * The user's roles per place as chips (design core-304, US1): "Shift lead at Plant A" with the
- * place's icon, or No access for a role the reader may not read.
+ * place's icon, or No access for a role the reader may not read. At a plant the list reads the
+ * roles at the plant and the company only, so a user without one there has "No role at Plant A"
+ * (ADR 0092).
  */
-function RoleChips({ user }: { readonly user: UserRow }) {
+function RoleChips({ user, plantName }: { readonly user: UserRow; readonly plantName?: string }) {
   if (user.roleAssignments.length === 0) {
-    return <span className="text-muted-foreground">No role</span>;
+    return (
+      <span className="text-muted-foreground">
+        {plantName === undefined ? 'No role' : `No role at ${plantName}`}
+      </span>
+    );
   }
   return (
     <ul className="flex flex-wrap gap-1">
@@ -99,6 +108,8 @@ function RoleChips({ user }: { readonly user: UserRow }) {
 
 /** What the reader may do to the users of the list, which decides their rows' menus. */
 interface RowRights {
+  /** The plant the list reads at, whose name a user without a role there shows; none in company settings. */
+  readonly plantName?: string;
   /** The reader's own user id, whose row has no menu. */
   readonly self: string | undefined;
   readonly canReset: boolean;
@@ -189,7 +200,7 @@ function columnsOf(rights: RowRights): readonly DataTableColumn<UserRow>[] {
     {
       id: 'roles',
       header: 'Roles',
-      cell: (user) => <RoleChips user={user} />,
+      cell: (user) => <RoleChips user={user} plantName={rights.plantName} />,
     },
     { id: 'status', header: 'Status', cell: (user) => <UserStatus blocked={user.blocked} /> },
     ...(rights.canReset || rights.canBlock
@@ -262,30 +273,44 @@ const statusChoices: readonly FilterChoice<UserStatusFilter>[] = [
 ];
 
 /**
- * The users of the company in company settings (design core-304, US1 to US4, and shell-313, C1):
- * Search users, the Role and Status filters, and one page of 25 users, by Name unless Username
- * sorts it, with their username, their roles at the company and at each of its plants as chips,
- * their status and a row menu with Reset password and Block user or Unblock user by permission,
- * with Previous and Next. Search, filters, sort and page live in the URL. New user shows to a user
- * who may create users. The list takes the canonical list's loading, empty and error states with users as
- * the noun; a reader without core.user:read gets the page "No access to Users".
+ * The users of the company (design core-304, US1 to US4, and shell-313, C1; ADR 0092): Search
+ * users, the Role, Place and Status filters, and one page of 25 users, by Name unless Username
+ * sorts it, with their username, their roles as chips, their status and a row menu with Reset
+ * password and Block user or Unblock user by permission at the company, with Previous and Next.
+ * Search, filters, sort and page live in the URL. In company settings it reads the company and
+ * every plant of it, Place Anywhere by default; for a reader who reads users only at the plant it
+ * reads the plant and the company, Place the plant by default. New user shows to a user who may
+ * create users at the company. The list takes the canonical list's loading, empty and error states
+ * with users as the noun; a reader without core.user:read gets the page "No access to Users".
  */
 export function UsersScreen() {
-  const companyId = useCompanyId() ?? '';
+  const companyId = useCompanyId();
+  const inCompany = companyId !== undefined;
+  const company = useCompanyVariables();
   const { plant } = useShell();
   const places = usePlaces();
   const viewer = useViewer();
   const view = userListSearch(useSearch({ strict: false }));
   const navigate = useNavigate();
+  const defaultPlace: UserPlace = inCompany ? 'anywhere' : 'plant';
+  const placeFilter = placeFilterOf(view, {
+    inCompany,
+    plant,
+    company: places.company,
+    plants: places.plants,
+  });
   const { data, previousData, error, refetch } = useQuery(CoreUsers, {
-    variables: { companyId, ...userListVariables(view) },
+    variables: { ...company, ...userListVariables(view, placeFilter.placeId) },
     fetchPolicy: 'cache-and-network',
     errorPolicy: 'all',
+    skip: placeFilter.pending,
   });
-  // The Role filter lists the company's roles, for a reader who may read them.
-  const canReadRoles = viewer.canAtCompany('core.role:read');
-  const roles = useQuery(CoreRoles, { variables: { companyId }, skip: !canReadRoles });
-  const filtered = view.role !== undefined || view.status !== undefined;
+  // The Role filter lists the company's roles, for a reader who may read them where the page reads:
+  // in company settings viewer.can reads the company's permissions.
+  const canReadRoles = viewer.can('core.role:read');
+  const roles = useQuery(CoreRoles, { variables: company, skip: !canReadRoles });
+  const filtered =
+    view.role !== undefined || view.status !== undefined || placeFilter.place !== defaultPlace;
   const page = data?.coreUsers;
   // While a new search or page loads, the list keeps the users or the no-match state it shows, and
   // their pager, so focus stays on the control used (design ui-222, LI7).
@@ -297,13 +322,15 @@ export function UsersScreen() {
   });
   const stale = page === undefined && shownPage !== undefined;
   const companyName = places.company?.name ?? 'the company';
-  // The API checks both permissions at the company, and at every other company of the user.
+  const plantName = placeName(places.plant, plant);
+  // The API checks these permissions at the company, at a plant too (requestCompany).
   const canReset = viewer.canAtCompany('core.user:resetPassword');
   const canBlock = viewer.canAtCompany('core.user:block');
   const self = viewer.userId;
+  const rowPlant = inCompany ? undefined : plantName;
   const columns = useMemo(
-    () => columnsOf({ self, canReset, canBlock }),
-    [self, canReset, canBlock],
+    () => columnsOf({ self, canReset, canBlock, plantName: rowPlant }),
+    [self, canReset, canBlock, rowPlant],
   );
   const show = (next: UserListSearch) => {
     navigate({ to: '.', search: next, replace: true });
@@ -316,14 +343,35 @@ export function UsersScreen() {
       New user
     </Link>
   ) : undefined;
+  // Place offers anywhere, the company and the plants the read covers (ADR 0092).
+  const placeChoices: FilterChoice<UserPlace>[] = [
+    { value: 'anywhere', label: 'Anywhere' },
+    { value: 'company', label: companyName },
+    ...(inCompany
+      ? places.plants.map(({ slug, name }) => ({
+          value: slug === plant ? 'plant' : slug,
+          label: name,
+        }))
+      : [{ value: 'plant', label: plantName }]),
+  ];
   let state: PageState = { status: 'ready' };
   if (forbidden) {
-    state = noAccessState(
-      'Users',
-      'core.user:read',
-      companyName,
-      `a company admin of ${companyName}`,
-    );
+    state = inCompany
+      ? noAccessState('Users', 'core.user:read', companyName, `a company admin of ${companyName}`)
+      : noAccessState(
+          'Users',
+          'core.user:read',
+          `${plantName} or at ${companyName}`,
+          `a plant admin of ${plantName} or a company admin of ${companyName}`,
+        );
+  } else if (placeFilter.pending && places.error !== undefined) {
+    // The place's id comes from the user's companies, so the list waits on them (ADR 0092).
+    state = {
+      status: 'error',
+      title: 'Could not load users',
+      error: places.error,
+      onRetry: places.retry,
+    };
   } else if (page === undefined && error !== undefined) {
     state = {
       status: 'error',
@@ -367,6 +415,18 @@ export function UsersScreen() {
         </Button>
       ),
     };
+  } else if (shownPage.totalCount === 0 && !inCompany) {
+    // At the plant the default place narrows the list, so the empty state widens it (ADR 0092).
+    state = {
+      status: 'empty',
+      title: `Nobody holds a role at ${plantName}`,
+      description: `Users of ${companyName} with roles elsewhere show under Place: Anywhere.`,
+      action: (
+        <Button variant="link" onClick={() => show(usersAtPlace(view, 'anywhere', defaultPlace))}>
+          Show users anywhere
+        </Button>
+      ),
+    };
   } else if (shownPage.totalCount === 0) {
     state = {
       status: 'empty',
@@ -400,6 +460,12 @@ export function UsersScreen() {
                 onChange={(role) => show(usersWithRole(view, role))}
               />
             )}
+            <FilterMenu
+              label="Place"
+              value={placeFilter.place}
+              choices={placeChoices}
+              onChange={(place) => show(usersAtPlace(view, place ?? defaultPlace, defaultPlace))}
+            />
             <FilterMenu
               label="Status"
               value={view.status}

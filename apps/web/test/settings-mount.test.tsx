@@ -67,6 +67,54 @@ describe("the company's settings pages under a plant", () => {
     expect(users?.variables).toMatchObject({ companyId });
   });
 
+  it("ADR0092 a Plant admin, who reads users at the plant only, finds Users in the company's group and no People, and Users reads at the plant with x-northmes-plant and no company", async () => {
+    const { fetch, seen } = fakeApi({
+      CoreCompanies: companies,
+      CoreViewer: () => viewer(['core.user:read', 'core.roleAssignment:manage'], []),
+    });
+    renderShellAt('/plant-a/settings/users', shellModules, { fetch });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Users' })).toBeDefined();
+    const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
+    const company = await within(settings).findByRole('list', { name: 'Acme AB settings' });
+    expect(linksIn(company)).toEqual([['Users', '/plant-a/settings/users']]);
+    expect(within(settings).queryByRole('link', { name: 'People' })).toBeNull();
+    await waitFor(() =>
+      expect(seen.some(({ operationName }) => operationName === 'CoreUsers')).toBe(true),
+    );
+    const users = seen.find(({ operationName }) => operationName === 'CoreUsers');
+    expect(users?.plant).toBe('plant-a');
+    expect(users?.variables).not.toHaveProperty('companyId');
+  });
+
+  it("ADR0092 /plant-a/settings/people shows the plant's page not found, since People went into Users", async () => {
+    const { fetch } = companyAdmin(['core.user:read'], ['core.user:read']);
+    renderShellAt('/plant-a/settings/people', shellModules, { fetch });
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Page not found' })).toBeDefined();
+  });
+
+  it('ADR0092 when the permissions could not be read, Users shows the error with Try again, which reads them again', async () => {
+    const user = userEvent.setup();
+    let reads = 0;
+    const { fetch } = fakeApi({
+      CoreCompanies: companies,
+      CoreViewer: () => {
+        reads += 1;
+        return reads === 1 ? unreachable : viewer(['core.user:read'], []);
+      },
+    });
+    renderShellAt('/plant-a/settings/users', shellModules, { fetch });
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByRole('heading', { name: 'Could not load settings' })).toBeDefined();
+
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+    expect(screen.getByRole('heading', { level: 1, name: 'Users' })).toBeDefined();
+  });
+
   it("#876 while the user's companies load, a page of the company shows its loading state under its h1", async () => {
     const { fetch } = fakeApi({
       CoreViewer: () => viewer(['core.article:read'], ['core.user:read']),

@@ -194,42 +194,14 @@ export function coreRoutes(plantRoute: PlantRoute) {
 
 /**
  * The core module's settings routes under the shell's /$plant/settings route (ADR 0066, #876):
- * People with Add role and a person's page, the plant's own page, the machines, the equipment
- * groups and the calendars of the plant; and the company's pages: the users with a user's page and
- * Add role, the roles with a role's page and its editor, and the warehouses. Their paths come from
- * the settings section of coreLinks. The top route is pathless, so People sits at
- * /plant-a/settings/people and the users at /plant-a/settings/users (ADR 0074).
+ * the plant's own page, the machines, the equipment groups and the calendars of the plant; and the
+ * company's pages: the users with a user's page and Add role, which a plant reader reads at the
+ * plant (ADR 0092), the roles with a role's page and its editor, and the warehouses. Their paths
+ * come from the settings section of coreLinks. The top route is pathless, so the users sit at
+ * /plant-a/settings/users (ADR 0074).
  */
 export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
   const coreRoute = createRoute({ getParentRoute: () => settingsRoute, id: coreModuleId });
-  const peopleRoute = createRoute({
-    getParentRoute: () => coreRoute,
-    path: linkEntry(coreLinks.settings.people).path,
-  });
-  const peopleListRoute = createRoute({
-    getParentRoute: () => peopleRoute,
-    path: '/',
-    component: lazyScreen('PeopleScreen'),
-  });
-  const peopleAddRoleRoute = createRoute({
-    getParentRoute: () => peopleRoute,
-    path: linkEntry(coreLinks.settings.people.addRole).path,
-    component: lazyScreen('PeopleAddRoleScreen'),
-  });
-  const personRoute = createRoute({
-    getParentRoute: () => peopleRoute,
-    path: linkEntry(coreLinks.settings.people.person).path,
-  });
-  const personDetailRoute = createRoute({
-    getParentRoute: () => personRoute,
-    path: '/',
-    component: lazyScreen('PersonScreen'),
-  });
-  const personAddRoleRoute = createRoute({
-    getParentRoute: () => personRoute,
-    path: linkEntry(coreLinks.settings.people.person.addRole).path,
-    component: lazyScreen('PersonAddRoleScreen'),
-  });
   // The machines with each machine's page and its edit page, the equipment groups with each
   // group's page and its edit page, and the calendars with each calendar's page (designs #688 and
   // #729). The list and the forms take the page state the mock source previews from the URL; a
@@ -383,11 +355,6 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
   });
   return coreRoute.addChildren([
     plantPageRoute,
-    peopleRoute.addChildren([
-      peopleListRoute,
-      peopleAddRoleRoute,
-      personRoute.addChildren([personDetailRoute, personAddRoleRoute]),
-    ]),
     machinesRoute.addChildren([
       machineListRoute,
       machineRoute.addChildren([machineDetailRoute, editMachineRoute]),

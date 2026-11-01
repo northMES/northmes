@@ -5,6 +5,7 @@ import { coreLinks } from '@northmes/core-contracts';
 import { cleanup, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
+import { CoreCompanies } from '../../../src/modules/core/companies.graphql.ts';
 import { CoreCreateUser } from '../../../src/modules/core/screens/new-user/create-user.graphql.ts';
 import { CoreUserPermissions } from '../../../src/modules/core/screens/user/user-permissions.graphql.ts';
 import { CoreUsers } from '../../../src/modules/core/screens/users/users.graphql.ts';
@@ -20,11 +21,13 @@ import {
   idOf,
   person,
   plantA,
+  plantB,
   rolesQuery,
   sara,
   settingsViewerQuery,
   shiftLead,
   user,
+  viewerQuery,
   viewerRole,
 } from './access-fixtures.ts';
 import { answeredAfter, bodyRows, renderCoreAt, watchForSkeletonRows } from './core-app.tsx';
@@ -80,11 +83,186 @@ function usersQuery(
   };
 }
 
+/** The same response, read at the plant: its variables name no company (ADR 0092). */
+function atPlant(response: MockLink.MockedResponse): MockLink.MockedResponse {
+  const { companyId: _company, ...variables } = (response.request.variables ?? {}) as Record<
+    string,
+    unknown
+  >;
+  return { ...response, request: { ...response.request, variables } };
+}
+
+/** The href of Users at Plant A. */
+const usersHref = coreLinks.settings.users({ plant: 'plant-a' }).href;
+
 function field(name: string): HTMLInputElement {
   return screen.getByRole('textbox', { name }) as HTMLInputElement;
 }
 
 describe('users', () => {
+  it('ADR0092 a plant reader opens Users at the plant with Place set to the plant, which reads with placeId of the plant, and no New user or row menu', async () => {
+    renderCoreAt(
+      usersHref,
+      [
+        viewerQuery(['core.user:read', 'core.role:read', 'core.roleAssignment:manage']),
+        companiesQuery(),
+        rolesQuery([shiftLead, viewerRole], {}),
+        atPlant(
+          usersQuery(
+            [
+              user(anna, []),
+              user(sara, [assignment(viewerRole, acme), assignment(shiftLead, plantA)]),
+            ],
+            undefined,
+            undefined,
+            { placeId: plantA.id },
+          ),
+        ),
+      ],
+      { readsAtPlant: true },
+    );
+
+    const table = await screen.findByRole('table', { name: 'Users' });
+    await waitFor(() =>
+      expect(bodyRows(table)).toEqual([
+        ['Anna Berg', 'a.berg', 'No role at Plant A', 'Active'],
+        ['Sara Nyberg', 's.nyberg', 'Viewer at Acme ABShift lead at Plant A', 'Active'],
+      ]),
+    );
+    expect(screen.getByRole('button', { name: 'Place: Plant A' })).toBeDefined();
+    expect(screen.queryByRole('link', { name: 'New user' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Actions for/ })).toBeNull();
+  });
+
+  it('ADR0092 at the plant, Place offers Anywhere, the company and the plant, and Anywhere puts place=anywhere in the URL and reads with no place', async () => {
+    const events = userEvent.setup();
+    const router = renderCoreAt(
+      usersHref,
+      [
+        viewerQuery(['core.user:read']),
+        companiesQuery(),
+        atPlant(usersQuery([user(sara, [])], undefined, undefined, { placeId: plantA.id })),
+        atPlant(usersQuery([user(anna, []), user(sara, [])])),
+      ],
+      { readsAtPlant: true },
+    );
+    const table = await screen.findByRole('table', { name: 'Users' });
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(1));
+
+    await events.click(screen.getByRole('button', { name: 'Place: Plant A' }));
+    expect(screen.getAllByRole('menuitemradio').map((item) => item.textContent)).toEqual([
+      'Anywhere',
+      'Acme AB',
+      'Plant A',
+    ]);
+    await events.click(screen.getByRole('menuitemradio', { name: 'Anywhere' }));
+
+    await waitFor(() => expect(bodyRows(table)).toHaveLength(2));
+    expect(router.state.location.search).toEqual({ place: 'anywhere' });
+  });
+
+  it('ADR0092 at the plant, nobody with a role there shows Nobody holds a role at Plant A, with Show users anywhere, which sets Place to Anywhere', async () => {
+    const events = userEvent.setup();
+    const router = renderCoreAt(
+      usersHref,
+      [
+        viewerQuery(['core.user:read']),
+        companiesQuery(),
+        atPlant(usersQuery([], undefined, undefined, { placeId: plantA.id })),
+        atPlant(usersQuery([user(sara, [])])),
+      ],
+      { readsAtPlant: true },
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Nobody holds a role at Plant A' }),
+    ).toBeDefined();
+    await events.click(screen.getByRole('button', { name: 'Show users anywhere' }));
+
+    const table = await screen.findByRole('table', { name: 'Users' });
+    await waitFor(() => expect(bodyRows(table).map(([name]) => name)).toEqual(['Sara Nyberg']));
+    expect(router.state.location.search).toEqual({ place: 'anywhere' });
+  });
+
+  it('ADR0092 when the places could not be read at the plant, Users shows the error with Try again, which reads them again', async () => {
+    const events = userEvent.setup();
+    renderCoreAt(
+      usersHref,
+      [
+        viewerQuery(['core.user:read']),
+        { request: { query: CoreCompanies }, error: new Error('Failed to fetch') },
+        companiesQuery(),
+        atPlant(usersQuery([user(sara, [])], undefined, undefined, { placeId: plantA.id })),
+      ],
+      { readsAtPlant: true },
+    );
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByRole('heading', { name: 'Could not load users' })).toBeDefined();
+    await events.click(screen.getByRole('button', { name: 'Try again' }));
+
+    const table = await screen.findByRole('table', { name: 'Users' });
+    await waitFor(() => expect(bodyRows(table).map(([name]) => name)).toEqual(['Sara Nyberg']));
+  });
+
+  it('ADR0092 a company reader opens Users with Place set to Anywhere, and sees a role at Plant B', async () => {
+    renderCoreAt(usersHref, [
+      settingsViewerQuery(['core.user:read']),
+      companiesQuery(),
+      usersQuery([user(sara, [assignment(shiftLead, plantB)])]),
+    ]);
+
+    const table = await screen.findByRole('table', { name: 'Users' });
+    await waitFor(() =>
+      expect(bodyRows(table)).toEqual([
+        ['Sara Nyberg', 's.nyberg', 'Shift lead at Plant B', 'Active'],
+      ]),
+    );
+    expect(screen.getByRole('button', { name: 'Place: Anywhere' })).toBeDefined();
+  });
+
+  it('ADR0092 a reader who may block users at the company and reads users only at the plant sees Block user at the plant', async () => {
+    const events = userEvent.setup();
+    renderCoreAt(
+      usersHref,
+      [
+        viewerQuery(['core.user:read'], ['core.user:block']),
+        companiesQuery(),
+        atPlant(usersQuery([user(sara, [])], undefined, undefined, { placeId: plantA.id })),
+      ],
+      { readsAtPlant: true },
+    );
+
+    await events.click(await screen.findByRole('button', { name: 'Actions for Sara Nyberg' }));
+
+    expect(await screen.findByRole('menuitem', { name: 'Block user' })).toBeDefined();
+    expect(screen.queryByRole('menuitem', { name: 'Reset password' })).toBeNull();
+  });
+
+  it('ADR0092 a reader without core.user:read at the plant or the company gets No access to Users, which names both', async () => {
+    renderCoreAt(
+      usersHref,
+      [
+        viewerQuery([]),
+        companiesQuery(),
+        {
+          ...atPlant(usersQuery([], undefined, undefined, { placeId: plantA.id })),
+          result: { data: null, errors: [forbiddenError(['coreUsers'])] },
+        },
+      ],
+      { readsAtPlant: true },
+    );
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'No access to Users' }),
+    ).toBeDefined();
+    expect(
+      screen.getByText(
+        /\(core\.user:read\) at Plant A or at Acme AB\. Ask a plant admin of Plant A or a company admin of Acme AB/,
+      ),
+    ).toBeDefined();
+  });
+
   it('E04-S02 the users list in company settings shows each user with their username, their roles per place and their status, and New user for a user who may create users', async () => {
     renderCoreAt(coreLinks.settings.users({ plant: 'plant-a' }).href, [
       settingsViewerQuery(['core.user:read', 'core.user:create']),
