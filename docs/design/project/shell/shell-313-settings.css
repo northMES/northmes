@@ -7,584 +7,137 @@
    because a part loads the D1 page styles again after this file. Canvas labels are not part of the UI. */
 
 /* Canvas */
-.frame.set-w1920 {
-  width: 1920px;
-}
-.frame.set-w1440 {
-  width: 1440px;
-}
-.frame.set-w1280 {
-  width: 1280px;
-}
-.frame.set-w320 {
-  width: 320px;
-}
-.frame.set-w320 > .flabel {
-  width: max-content;
-  max-width: none;
-  white-space: nowrap;
-}
-.set-url {
-  font:
-    400 12px / 16px "IBM Plex Mono",
-    ui-monospace,
-    monospace;
-  color: #4f4c46;
-}
+.frame.set-w1920{width:1920px}
+.frame.set-w1440{width:1440px}
+.frame.set-w1280{width:1280px}
+.frame.set-w320{width:320px}
+.frame.set-w320 > .flabel{width:max-content;max-width:none;white-space:nowrap}
+.set-url{font:400 12px/16px "IBM Plex Mono",ui-monospace,monospace;color:#4f4c46}
 
 /* A part rendered on its own (prop theme light or dark) paints its own surface */
-.set-solo {
-  padding: 16px;
-  background: var(--background);
-  color: var(--foreground);
-  font: 400 14px / 20px var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  text-wrap: pretty;
-}
-.set-solo a {
-  text-decoration: none;
-}
+.set-solo{padding:16px;background:var(--background);color:var(--foreground);font:400 14px/20px var(--font-sans);-webkit-font-smoothing:antialiased;text-wrap:pretty}
+.set-solo a{text-decoration:none}
 
 /* Frame: a part mounted as the content of main fills it (the layout part of a settings page, rules 3.2) */
-.sh-content > .sc-host {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-}
+.sh-content > .sc-host{display:flex;flex-direction:column;flex:1 1 auto;min-width:0;min-height:0}
 
 /* Frame: company settings have no sidebar, so the account button sits at the end of the top bar (rules 6.8) */
-.btn.set-acct {
-  padding: 0;
-}
-.btn.set-acct .sh-av {
-  width: 30px;
-  height: 30px;
-}
+.btn.set-acct{padding:0}
+.btn.set-acct .sh-av{width:30px;height:30px}
 
 /* Frame: icon buttons in the top bar keep their 36 px when a long trail fills the bar, and the trail shortens instead
    (WCAG 2.5.8; RE29) */
-.sh-tb > .btn.icon,
-.sh-tb > .sh-tipw {
-  flex: none;
-}
+.sh-tb > .btn.icon,.sh-tb > .sh-tipw{flex:none}
 
 /* Frame: the Settings button in the top bar. On a settings page it marks the current area. */
-.btn.set-on {
-  background: var(--accent);
-  color: var(--accent-foreground);
-  box-shadow: inset 0 -2px 0 var(--foreground);
-}
-.btn.set-on.is-focus {
-  box-shadow:
-    inset 0 -2px 0 var(--foreground),
-    0 0 0 2px var(--focus-ring);
-}
+.btn.set-on{background:var(--accent);color:var(--accent-foreground);box-shadow:inset 0 -2px 0 var(--foreground)}
+.btn.set-on.is-focus{box-shadow:inset 0 -2px 0 var(--foreground),0 0 0 2px var(--focus-ring)}
 
 /* Settings layout inside main (rules 3.1, 3.2): the navigation column (220 px) and the page column, 24 px apart. Both
    scroll on their own; the 4 px inset keeps focus rings inside the scrollers. At 320 one column, the page alone. */
-.set-lay {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  gap: 24px;
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
-}
-.set-lay.nar {
-  display: flex;
-  flex-direction: column;
-}
-.set-navcol {
-  min-width: 0;
-  min-height: 0;
-  margin: -4px;
-  padding: 4px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-.set-navcol > .sc-host {
-  display: block;
-  min-width: 0;
-}
-.set-page {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-  min-height: 0;
-  margin: -4px;
-  padding: 4px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  border-radius: var(--radius-md);
-}
-.set-page.nar {
-  flex: 1 1 auto;
-  gap: 12px;
-}
-.set-page.nar .sh-h1 {
-  font-size: 24px;
-  line-height: 30px;
-}
-.set-lay.set-solo {
-  min-height: 600px;
-}
-.set-lay.nar.set-solo {
-  width: 320px;
-  min-height: 640px;
-}
+.set-lay{display:grid;grid-template-columns:220px minmax(0,1fr);grid-template-rows:minmax(0,1fr);gap:24px;flex:1 1 auto;min-width:0;min-height:0}
+.set-lay.nar{display:flex;flex-direction:column}
+.set-navcol{min-width:0;min-height:0;margin:-4px;padding:4px;overflow-x:hidden;overflow-y:auto;scrollbar-width:thin}
+.set-navcol > .sc-host{display:block;min-width:0}
+.set-page{display:flex;flex-direction:column;gap:16px;min-width:0;min-height:0;margin:-4px;padding:4px;overflow-y:auto;scrollbar-width:thin;border-radius:var(--radius-md)}
+.set-page.nar{flex:1 1 auto;gap:12px}
+.set-page.nar .sh-h1{font-size:24px;line-height:30px}
+.set-lay.set-solo{min-height:600px}
+.set-lay.nar.set-solo{width:320px;min-height:640px}
 /* Parts in the page column keep their height and the column scrolls; a form fills the column and scrolls inside its
    own scroller, so its footer bar stays at the foot (#222) */
-.set-page > .sc-host {
-  display: flex;
-  flex-direction: column;
-  flex: 1 0 auto;
-  min-width: 0;
-}
-.set-page > .sc-host[data-sc-name="shell-313-settings-form"] {
-  flex: 1 1 0;
-  min-height: 0;
-}
-.set-page:focus-visible,
-.set-page.is-focus {
-  outline: 2px solid var(--focus-outline);
-  outline-offset: -2px;
-  box-shadow: inset 0 0 0 4px var(--focus-ring);
-}
+.set-page > .sc-host{display:flex;flex-direction:column;flex:1 0 auto;min-width:0}
+.set-page > .sc-host[data-sc-name="shell-313-settings-form"]{flex:1 1 0;min-height:0}
+.set-page:focus-visible,.set-page.is-focus{outline:2px solid var(--focus-outline);outline-offset:-2px;box-shadow:inset 0 0 0 4px var(--focus-ring)}
 
 /* Back link: at the head of the company settings navigation, and above the h1 at 320 */
-a.set-backl {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-  min-height: var(--nm-target-min);
-  padding: 2px 4px;
-  margin: 0 -4px;
-  border-radius: var(--radius-sm);
-  color: var(--link);
-  font-size: 14px;
-  line-height: 20px;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-a.set-backl .ic {
-  flex: none;
-  width: 16px;
-  height: 16px;
-}
-a.set-backl:hover {
-  text-decoration-thickness: 2px;
-}
-.set-page > a.set-backl {
-  margin-bottom: -4px;
-}
+a.set-backl{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;min-height:var(--nm-target-min);padding:2px 4px;margin:0 -4px;border-radius:var(--radius-sm);color:var(--link);font-size:14px;line-height:20px;text-decoration:underline;text-underline-offset:3px}
+a.set-backl .ic{flex:none;width:16px;height:16px}
+a.set-backl:hover{text-decoration-thickness:2px}
+.set-page > a.set-backl{margin-bottom:-4px}
 
 /* Settings navigation */
-.set-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-width: 0;
-  padding: 2px 0 0;
-  color: var(--foreground);
-  font: 400 14px / 20px var(--font-sans);
-  text-wrap: pretty;
-}
-.set-nav a {
-  text-decoration: none;
-}
-.set-nav a.set-backl {
-  text-decoration: underline;
-}
-.set-nav.set-solo {
-  width: 248px;
-  padding: 20px 16px 24px;
-}
-.set-chead {
-  display: grid;
-  gap: 2px;
-  padding: 0 10px;
-}
-.set-ckick {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--muted-foreground);
-  overflow-wrap: anywhere;
-}
-.set-ctitle {
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-  hyphens: auto;
-}
-.set-cgrp {
-  display: grid;
-  gap: 2px;
-}
-.set-clab {
-  padding: 4px 10px;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
-  color: var(--muted-foreground);
-}
-.set-clist {
-  display: grid;
-  gap: 1px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.set-ci {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 32px;
-  padding: 6px 10px;
-  border-radius: var(--radius-md);
-  color: var(--foreground);
-  font-size: 14px;
-  line-height: 20px;
-  overflow-wrap: anywhere;
-  hyphens: auto;
-}
-.set-ci .ic {
-  flex: none;
-  color: var(--muted-foreground);
-}
-.set-ci:hover,
-.set-ci.hov {
-  background: var(--accent);
-  color: var(--accent-foreground);
-}
-.set-ci.cur {
-  background: var(--secondary);
-  color: var(--secondary-foreground);
-  font-weight: 600;
-  box-shadow: inset 3px 0 0 var(--foreground);
-}
-.set-ci.cur .ic {
-  color: var(--foreground);
-}
-.set-ci.is-focus {
-  outline: 2px solid var(--focus-outline);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--focus-ring);
-}
-.set-ci.cur.is-focus {
-  box-shadow:
-    inset 3px 0 0 var(--foreground),
-    0 0 0 2px var(--focus-ring);
-}
-.set-ci .set-cl {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px 8px;
-  min-width: 0;
-}
-.set-ci .badge {
-  height: 20px;
-  font-size: 11px;
-  line-height: 16px;
-}
-.set-ci.set-unav {
-  color: var(--muted-foreground);
-}
-.set-ci.set-unav .ic {
-  box-sizing: content-box;
-  padding: 1px;
-  border: 1px dashed var(--muted-foreground);
-  border-radius: var(--radius-sm);
-}
-.set-crule {
-  height: 1px;
-  margin: 0 10px;
-  background: var(--border);
-}
+.set-nav{display:flex;flex-direction:column;gap:14px;min-width:0;padding:2px 0 0;color:var(--foreground);font:400 14px/20px var(--font-sans);text-wrap:pretty}
+.set-nav a{text-decoration:none}
+.set-nav a.set-backl{text-decoration:underline}
+.set-nav.set-solo{width:248px;padding:20px 16px 24px}
+.set-chead{display:grid;gap:2px;padding:0 10px}
+.set-ckick{font-size:12px;line-height:16px;color:var(--muted-foreground);overflow-wrap:anywhere}
+.set-ctitle{font-size:16px;line-height:24px;font-weight:600;overflow-wrap:anywhere;hyphens:auto}
+.set-cgrp{display:grid;gap:2px}
+.set-clab{padding:4px 10px;font-size:12px;line-height:16px;font-weight:600;color:var(--muted-foreground)}
+.set-clist{display:grid;gap:1px;margin:0;padding:0;list-style:none}
+.set-ci{display:flex;align-items:center;gap:8px;min-height:32px;padding:6px 10px;border-radius:var(--radius-md);color:var(--foreground);font-size:14px;line-height:20px;overflow-wrap:anywhere;hyphens:auto}
+.set-ci .ic{flex:none;color:var(--muted-foreground)}
+.set-ci:hover,.set-ci.hov{background:var(--accent);color:var(--accent-foreground)}
+.set-ci.cur{background:var(--secondary);color:var(--secondary-foreground);font-weight:600;box-shadow:inset 3px 0 0 var(--foreground)}
+.set-ci.cur .ic{color:var(--foreground)}
+.set-ci.is-focus{outline:2px solid var(--focus-outline);outline-offset:2px;box-shadow:0 0 0 2px var(--focus-ring)}
+.set-ci.cur.is-focus{box-shadow:inset 3px 0 0 var(--foreground),0 0 0 2px var(--focus-ring)}
+.set-ci .set-cl{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;min-width:0}
+.set-ci .badge{height:20px;font-size:11px;line-height:16px}
+.set-ci.set-unav{color:var(--muted-foreground)}
+.set-ci.set-unav .ic{box-sizing:content-box;padding:1px;border:1px dashed var(--muted-foreground);border-radius:var(--radius-sm)}
+.set-crule{height:1px;margin:0 10px;background:var(--border)}
 
 /* Landing */
-.set-landp {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-  color: var(--foreground);
-  font: 400 14px / 20px var(--font-sans);
-  text-wrap: pretty;
-}
-.set-landp a {
-  text-decoration: none;
-}
-.set-landp.set-solo {
-  padding: 20px;
-}
-.set-lgrp {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-}
-.set-h2 {
-  margin: 0;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 600;
-  color: var(--muted-foreground);
-}
-.set-h2.lg {
-  font-size: 16px;
-  line-height: 24px;
-  color: var(--foreground);
-}
-.set-land {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--card);
-  overflow: hidden;
-}
-.set-land li + li {
-  border-top: 1px solid var(--border);
-}
-.set-land.cols {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  overflow: visible;
-}
-.set-land.cols li {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--card);
-  overflow: hidden;
-}
-a.set-lr {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 44px;
-  height: 100%;
-  padding: 8px 12px;
-  color: var(--foreground);
-}
-a.set-lr:hover,
-a.set-lr.hov {
-  background: var(--accent);
-  color: var(--accent-foreground);
-}
-a.set-lr.is-focus {
-  outline: 2px solid var(--focus-outline);
-  outline-offset: -2px;
-  box-shadow: inset 0 0 0 4px var(--focus-ring);
-}
-.set-lr > .ic {
-  flex: none;
-  color: var(--muted-foreground);
-}
-.set-lr .set-lr-t {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-.set-lr .set-lr-n {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 2px 8px;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  hyphens: auto;
-}
-.set-lr .set-lr-n .badge {
-  height: 20px;
-  font-size: 11px;
-  line-height: 16px;
-}
-.set-lr .set-lr-d {
-  font-size: 13px;
-  line-height: 18px;
-  color: var(--muted-foreground);
-}
-.set-lr .set-lr-c {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  margin-left: auto;
-  color: var(--muted-foreground);
-}
-.set-lwide {
-  max-width: 1040px;
-}
-.set-lwide a.set-lr {
-  min-height: 64px;
-  padding: 12px 16px;
-  align-items: flex-start;
-}
-.set-lwide a.set-lr > .ic {
-  margin-top: 2px;
-}
-.set-lwide .set-lr .set-lr-c {
-  align-self: center;
-}
-.set-lwide a.set-lr.nod {
-  align-items: center;
-}
-.set-lwide a.set-lr.nod > .ic {
-  margin-top: 0;
-}
+.set-landp{display:flex;flex-direction:column;gap:16px;min-width:0;color:var(--foreground);font:400 14px/20px var(--font-sans);text-wrap:pretty}
+.set-landp a{text-decoration:none}
+.set-landp.set-solo{padding:20px}
+.set-lgrp{display:grid;gap:8px;min-width:0}
+.set-h2{margin:0;font-size:14px;line-height:20px;font-weight:600;color:var(--muted-foreground)}
+.set-h2.lg{font-size:16px;line-height:24px;color:var(--foreground)}
+.set-land{display:grid;margin:0;padding:0;list-style:none;border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);overflow:hidden}
+.set-land li + li{border-top:1px solid var(--border)}
+.set-land.cols{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;border:0;border-radius:0;background:transparent;overflow:visible}
+.set-land.cols li{border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card);overflow:hidden}
+a.set-lr{display:flex;align-items:center;gap:12px;min-height:44px;height:100%;padding:8px 12px;color:var(--foreground)}
+a.set-lr:hover,a.set-lr.hov{background:var(--accent);color:var(--accent-foreground)}
+a.set-lr.is-focus{outline:2px solid var(--focus-outline);outline-offset:-2px;box-shadow:inset 0 0 0 4px var(--focus-ring)}
+.set-lr > .ic{flex:none;color:var(--muted-foreground)}
+.set-lr .set-lr-t{display:grid;gap:2px;min-width:0}
+.set-lr .set-lr-n{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;min-width:0;overflow-wrap:anywhere;hyphens:auto}
+.set-lr .set-lr-n .badge{height:20px;font-size:11px;line-height:16px}
+.set-lr .set-lr-d{font-size:13px;line-height:18px;color:var(--muted-foreground)}
+.set-lr .set-lr-c{flex:none;width:16px;height:16px;margin-left:auto;color:var(--muted-foreground)}
+.set-lwide{max-width:1040px}
+.set-lwide a.set-lr{min-height:64px;padding:12px 16px;align-items:flex-start}
+.set-lwide a.set-lr > .ic{margin-top:2px}
+.set-lwide .set-lr .set-lr-c{align-self:center}
+.set-lwide a.set-lr.nod{align-items:center}
+.set-lwide a.set-lr.nod > .ic{margin-top:0}
 /* A module that did not load keeps its landing row, drawn as its navigation entry is: muted, the icon in a dashed frame */
-a.set-lr.set-unav {
-  color: var(--muted-foreground);
-}
-a.set-lr.set-unav > .ic:first-child {
-  box-sizing: content-box;
-  padding: 1px;
-  border: 1px dashed var(--muted-foreground);
-  border-radius: var(--radius-sm);
-}
-.set-empty {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  background: var(--card);
-}
-.set-empty .lf-state {
-  min-height: 260px;
-}
-.set-empty a.btn {
-  text-decoration: none;
-}
+a.set-lr.set-unav{color:var(--muted-foreground)}
+a.set-lr.set-unav > .ic:first-child{box-sizing:content-box;padding:1px;border:1px dashed var(--muted-foreground);border-radius:var(--radius-sm)}
+.set-empty{border:1px solid var(--border);border-radius:var(--radius-xl);background:var(--card)}
+.set-empty .lf-state{min-height:260px}
+.set-empty a.btn{text-decoration:none}
 
 /* List and form blocks: what the #222 classes do not cover */
 /* An identifier in Plex Mono, such as a long username, breaks anywhere when its column is too narrow (RE28) */
-.lf-td > .lf-mono {
-  overflow-wrap: anywhere;
-}
-.set-swatch {
-  display: inline-block;
-  flex: none;
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-  border: 1px solid var(--block-border);
-}
-.set-g6 {
-  background: var(--palette-6);
-}
-.set-g3 {
-  background: var(--palette-3);
-}
-.set-g9 {
-  background: var(--palette-9);
-}
-.set-g12 {
-  background: var(--palette-12);
-}
-.set-g2 {
-  background: var(--palette-2);
-}
-.set-cellf {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-.set-cellw {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  min-width: 0;
-}
-.set-cellw a.set-tl {
-  color: var(--link);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  font-size: 13px;
-  line-height: 18px;
-  min-height: var(--nm-target-min);
-  display: inline-flex;
-  align-items: center;
-}
-.badge.set-st-ok {
-  --bb: var(--success-subtle);
-  --bf: var(--success);
-}
-.badge.set-st-wait {
-  --bb: var(--warning-subtle);
-  --bf: var(--warning);
-}
+.lf-td > .lf-mono{overflow-wrap:anywhere}
+.set-swatch{display:inline-block;flex:none;width:12px;height:12px;border-radius:3px;border:1px solid var(--block-border)}
+.set-g6{background:var(--palette-6)}
+.set-g3{background:var(--palette-3)}
+.set-g9{background:var(--palette-9)}
+.set-g12{background:var(--palette-12)}
+.set-g2{background:var(--palette-2)}
+.set-cellf{display:inline-flex;align-items:center;gap:8px;min-width:0}
+.set-cellw{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;min-width:0}
+.set-cellw a.set-tl{color:var(--link);text-decoration:underline;text-underline-offset:3px;font-size:13px;line-height:18px;min-height:var(--nm-target-min);display:inline-flex;align-items:center}
+.badge.set-st-ok{--bb:var(--success-subtle);--bf:var(--success)}
+.badge.set-st-wait{--bb:var(--warning-subtle);--bf:var(--warning)}
 
 /* The plant list at / (D2 ST38 without Admin): no plant, so the top bar starts with the NorthMES mark; one group per
    company with its plants and, for a user who holds an admin permission there, the link to the company's settings */
-.set-home {
-  display: grid;
-  gap: 16px;
-  max-width: 640px;
-}
-.set-home-co {
-  display: grid;
-  gap: 4px;
-}
-.set-home-h {
-  margin: 0;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 600;
-}
-.set-home-pl {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.set-home-pl li,
-.set-home-s {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 8px;
-  min-height: 32px;
-  margin: 0;
-}
-.set-home a.set-home-a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--nm-target-min);
-  color: var(--link);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.set-home a.set-home-a.set-home-pb {
-  text-decoration: none;
-}
-.set-home-a .set-home-pn {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-.set-home-a .sh-onboarding {
-  margin-left: 8px;
-}
-.set-home-p {
-  margin-left: 4px;
-  font: 500 13px / 18px var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  color: var(--muted-foreground);
-  overflow-wrap: anywhere;
-}
-.set-home-s {
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-}
+.set-home{display:grid;gap:16px;max-width:640px}
+.set-home-co{display:grid;gap:4px}
+.set-home-h{margin:0;font-size:14px;line-height:20px;font-weight:600}
+.set-home-pl{display:grid;gap:4px;margin:0;padding:0;list-style:none}
+.set-home-pl li,.set-home-s{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;min-height:32px;margin:0}
+.set-home a.set-home-a{display:inline-flex;align-items:center;min-height:var(--nm-target-min);color:var(--link);text-decoration:underline;text-underline-offset:2px}
+.set-home a.set-home-a.set-home-pb{text-decoration:none}
+.set-home-a .set-home-pn{text-decoration:underline;text-underline-offset:2px}
+.set-home-a .sh-onboarding{margin-left:8px}
+.set-home-p{margin-left:4px;font:500 13px/18px var(--font-mono);font-variant-numeric:tabular-nums;color:var(--muted-foreground);overflow-wrap:anywhere}
+.set-home-s{margin-top:4px;padding-top:8px;border-top:1px solid var(--border)}
