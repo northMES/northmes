@@ -40,6 +40,12 @@ export {
   type SubscriptionTransport,
 } from './gql-client.ts';
 export {
+  type MasterDataContractOptions,
+  type MasterDataPlace,
+  type MasterDataRegister,
+  masterDataContract,
+} from './master-data-contract.ts';
+export {
   type ConformanceCall,
   type OperationsConformanceOptions,
   operationsConformance,
