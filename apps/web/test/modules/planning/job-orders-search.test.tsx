@@ -8,12 +8,12 @@ import {
 } from '../../../src/modules/planning/job-orders-search.ts';
 
 describe('jobOrdersSearch (ADR 0091, URL keys)', () => {
-  it('reads the search, Late only, the filters as comma lists, the grouping and the sort', () => {
+  it('ADR0091 reads the search, Late only, the filters as comma lists, the grouping and the sort', () => {
     expect(
       jobOrdersSearch({
         q: ' 1003 ',
         late: '1',
-        machine: 'CNC1,none',
+        equipment: 'CNC1,none',
         status: 'planned,finished',
         article: 'Hub 12',
         group: 'startDay',
@@ -22,7 +22,7 @@ describe('jobOrdersSearch (ADR 0091, URL keys)', () => {
     ).toEqual({
       q: '1003',
       late: 1,
-      machine: ['CNC1', 'none'],
+      equipment: ['CNC1', 'none'],
       status: ['planned', 'finished'],
       article: ['Hub 12'],
       group: 'startDay',
@@ -30,14 +30,14 @@ describe('jobOrdersSearch (ADR 0091, URL keys)', () => {
     });
   });
 
-  it('drops zoom and from, which mean nothing without a range', () => {
+  it('ADR0091 drops zoom and from, which mean nothing without a range', () => {
     expect(jobOrdersSearch({ zoom: 'week', from: '2026-11-02' })).toEqual({});
     expect(jobOrdersSearch({ zoom: 37.5, from: '2026-11-03T13:20', q: '1001' })).toEqual({
       q: '1001',
     });
   });
 
-  it('lets each key fall back on its own (ADR 0062)', () => {
+  it('ADR0091 lets each key fall back on its own (ADR 0062)', () => {
     expect(
       jobOrdersSearch({
         q: 'x'.repeat(101),
@@ -45,12 +45,24 @@ describe('jobOrdersSearch (ADR 0091, URL keys)', () => {
         status: 'planned,lost',
         group: 'week',
         sort: 'quantity',
-        machine: 'CNC2',
+        equipment: 'CNC2',
       }),
-    ).toEqual({ status: ['planned'], machine: ['CNC2'] });
+    ).toEqual({ status: ['planned'], equipment: ['CNC2'] });
   });
 
-  it('sorts by start by default and leaves that sort out of the URL', () => {
+  it('ADR0091 reads a filter value that the router parsed as a number, such as a numeric article (ADR 0062)', () => {
+    expect(jobOrdersSearch({ article: 100234, equipment: 1001 })).toEqual({
+      article: ['100234'],
+      equipment: ['1001'],
+    });
+  });
+
+  it('ADR0091 reads the grouping by equipment and by start day, and no other', () => {
+    expect(jobOrdersSearch({ group: 'equipment' })).toEqual({ group: 'equipment' });
+    expect(jobOrdersSearch({ group: 'machine' })).toEqual({});
+  });
+
+  it('ADR0091 sorts by start by default and leaves that sort out of the URL', () => {
     expect(sortOf({})).toEqual({ id: 'start', desc: false });
     expect(sortOf({ sort: '-machine' })).toEqual({ id: 'machine', desc: true });
     expect(sortedBy({ q: '1001', sort: 'deadline' }, { id: 'start', desc: false })).toEqual({

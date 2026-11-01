@@ -78,8 +78,20 @@ const byStart = [
   '1005.20',
 ];
 
+/** G1 with every job order finished. */
+function g1AllFinished(): GanttSnapshot {
+  return g1With(
+    Object.fromEntries(
+      byStart.map((number) => [
+        number,
+        (row: GanttJobOrder) => ({ ...row, status: 'finished' as const }),
+      ]),
+    ),
+  );
+}
+
 describe('the job orders page (ADR 0091, a work list without a time range)', () => {
-  it('lists every open job order sorted by start, with the fixture notice and no range controls', async () => {
+  it('ADR0091 lists every open job order sorted by start, with the fixture notice and no range controls', async () => {
     // A link from before ADR 0091 still carries zoom and from, which the page ignores.
     renderGanttRoute({ zoom: 'week', from: '2026-12-07' }, undefined, 'jobOrders');
     const table = await findTable();
@@ -105,20 +117,22 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     expect(screen.queryByLabelText('Go to date')).toBeNull();
   });
 
-  it('shows a finished job order only under Status Finished, and a job order without a machine as Not placed, last', async () => {
+  it('ADR0091 shows a finished job order only under Status Finished, whose count names it', async () => {
     const router = renderGanttRoute({}, sourceOf(g1WithStatuses()), 'jobOrders');
     const table = await findTable();
 
     await waitFor(() =>
       expect(rowNumbers(table)).toEqual(byStart.filter((number) => number !== '1006.10')),
     );
-    const notPlaced = within(table).getByRole('row', { name: /^1005\.20 / });
-    expect(notPlaced.textContent).toContain('Not placed');
     expect(within(table).getByRole('row', { name: /^1004\.10 / }).textContent).toContain('Started');
-    expect(statusLine()).toBe('9 job orders, 2 late, 1 not placed. Sorted by start.');
 
     await userEvent.click(filterButton('Status'));
-    expect(screen.getByRole('menuitemcheckbox', { name: /^Finished/ }).textContent).toContain('1');
+    expect(screen.getByRole('menuitemcheckbox', { name: /^Finished/ }).textContent).toBe(
+      'Finished 1',
+    );
+    expect(screen.getByRole('menuitemcheckbox', { name: /^Planned/ }).textContent).toBe(
+      'Planned 8',
+    );
     await userEvent.click(screen.getByRole('menuitemcheckbox', { name: /^Finished/ }));
     await userEvent.keyboard('{Escape}');
 
@@ -126,10 +140,33 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     expect(router.state.location.search).toEqual({ status: 'finished' });
   });
 
-  it('narrows the rows by the search, Late only and the Machine filter, and writes them to the URL', async () => {
-    const router = renderGanttRoute({}, sourceOf(g1WithStatuses()), 'jobOrders');
+  it('ADR0091 treats a job order without a machine or without a placement as Not placed: named so, counted, and last in both sort directions', async () => {
+    const snapshot = g1With({
+      '1001.10': ({ placement: _, ...row }) => row,
+      '1003.10': ({ equipment: _, ...row }) => row,
+    });
+    const router = renderGanttRoute({}, sourceOf(snapshot), 'jobOrders');
     const table = await findTable();
-    await waitFor(() => expect(rowNumbers(table)).toHaveLength(9));
+
+    const placedByStart = byStart.filter((number) => !['1001.10', '1003.10'].includes(number));
+    await waitFor(() =>
+      expect(rowNumbers(table)).toEqual([...placedByStart, '1001.10', '1003.10']),
+    );
+    for (const number of ['1001.10', '1003.10']) {
+      const row = within(table).getByRole('row', { name: new RegExp(`^${number} `) });
+      expect(row.textContent).toContain('Not placed');
+    }
+    expect(statusLine()).toBe('10 job orders, 2 late, 2 not placed. Sorted by start.');
+
+    await userEvent.click(within(table).getByRole('button', { name: 'Start' }));
+
+    await waitFor(() => expect(router.state.location.search).toEqual({ sort: '-start' }));
+    expect(rowNumbers(table)).toEqual([...placedByStart.reverse(), '1001.10', '1003.10']);
+  });
+
+  it('ADR0091 Late only keeps the rows of late orders, writes late=1 and announces the change once', async () => {
+    const router = renderGanttRoute({}, undefined, 'jobOrders');
+    const table = await findTable();
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Late only' }));
 
@@ -139,7 +176,11 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     expect(statusLine()).toBe(line);
     // The change is announced once through the app's polite region, not by a live status line.
     await waitFor(() => expect(document.getElementById(politeRegionId)?.textContent).toBe(line));
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Late only' }));
+  });
+
+  it('ADR0091 the Machine filter offers Not placed, narrows the rows and writes equipment to the URL', async () => {
+    const router = renderGanttRoute({}, sourceOf(g1WithStatuses()), 'jobOrders');
+    const table = await findTable();
 
     await userEvent.click(filterButton('Machine'));
     await userEvent.click(screen.getByRole('menuitemcheckbox', { name: /^Not placed/ }));
@@ -147,33 +188,42 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     await userEvent.keyboard('{Escape}');
 
     await waitFor(() => expect(rowNumbers(table)).toEqual(['1003.20', '1004.20', '1005.20']));
-    expect(router.state.location.search).toEqual({ machine: 'MILL1,none' });
+    expect(router.state.location.search).toEqual({ equipment: 'MILL1,none' });
     expect(screen.getByRole('button', { name: 'Machine, 2 selected' })).toBeTruthy();
+  });
 
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Search job orders' }), 'Gear');
-
+  it('ADR0091 Clear filters clears the filter menus and keeps the search and Late only', async () => {
+    const router = renderGanttRoute(
+      { q: 'Gear', late: 1, equipment: 'MILL1' },
+      undefined,
+      'jobOrders',
+    );
+    const table = await findTable();
     await waitFor(() => expect(rowNumbers(table)).toEqual(['1003.20']));
-    expect(router.state.location.search).toEqual({ machine: 'MILL1,none', q: 'Gear' });
 
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
 
     await waitFor(() => expect(rowNumbers(table)).toEqual(['1003.10', '1003.20']));
-    expect(router.state.location.search).toEqual({ q: 'Gear' });
+    expect(router.state.location.search).toEqual({ q: 'Gear', late: 1 });
   });
 
-  it('finds a job order by its own number and by its order number', async () => {
+  it('ADR0091 finds a job order by its own number, its order number and its article', async () => {
     const router = renderGanttRoute({ q: '1001.2' }, undefined, 'jobOrders');
     const table = await findTable();
     await waitFor(() => expect(rowNumbers(table)).toEqual(['1001.20']));
+    const search = screen.getByRole('searchbox', { name: 'Search job orders' });
 
-    await userEvent.clear(screen.getByRole('searchbox', { name: 'Search job orders' }));
-    await userEvent.type(screen.getByRole('searchbox', { name: 'Search job orders' }), '1004');
-
+    await userEvent.clear(search);
+    await userEvent.type(search, '1004');
     await waitFor(() => expect(rowNumbers(table)).toEqual(['1004.10', '1004.20']));
     expect(router.state.location.search).toEqual({ q: '1004' });
+
+    await userEvent.clear(search);
+    await userEvent.type(search, 'Gear');
+    await waitFor(() => expect(rowNumbers(table)).toEqual(['1003.10', '1003.20']));
   });
 
-  it('groups the rows by machine in the plant order with Not placed last, and by start day', async () => {
+  it('ADR0091 Group by Machine puts the rows under the machines in the plant order with Not placed last', async () => {
     const router = renderGanttRoute({}, sourceOf(g1WithStatuses()), 'jobOrders');
     const table = await findTable();
 
@@ -187,7 +237,7 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
       'Mill 1 2 job orders',
       'Not placed 1 job order',
     ]);
-    expect(router.state.location.search).toEqual({ group: 'machine' });
+    expect(router.state.location.search).toEqual({ group: 'equipment' });
     expect(statusLine()).toBe(
       '9 job orders, 2 late, 1 not placed. 4 groups by machine, job orders sorted by start.',
     );
@@ -207,6 +257,16 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     await userEvent.click(cnc1);
     expect(cnc1.getAttribute('aria-expanded')).toBe('false');
     await waitFor(() => expect(rowNumbers(table)).not.toContain('1001.10'));
+  });
+
+  it('ADR0091 Group by Start day puts the rows under the plant dates of their starts with Not placed last, each grouping with its own collapsed groups', async () => {
+    const router = renderGanttRoute(
+      { group: 'equipment' },
+      sourceOf(g1WithStatuses()),
+      'jobOrders',
+    );
+    const table = await findTable();
+    await userEvent.click(await within(table).findByRole('button', { name: /^Not placed/ }));
 
     await userEvent.click(screen.getByRole('button', { name: 'Group by: Machine' }));
     await userEvent.click(screen.getByRole('menuitemradio', { name: 'Start day' }));
@@ -225,9 +285,27 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
       ]),
     );
     expect(router.state.location.search).toEqual({ group: 'startDay' });
+    expect(
+      within(table)
+        .getByRole('button', { name: /^Not placed/ })
+        .getAttribute('aria-expanded'),
+    ).toBe('true');
   });
 
-  it('sorts on a header, sets aria-sort and writes the sort to the URL', async () => {
+  it('ADR0091 No grouping brings the flat list back and leaves group out of the URL', async () => {
+    const router = renderGanttRoute({ group: 'equipment' }, undefined, 'jobOrders');
+    const table = await findTable();
+    expect(await within(table).findAllByRole('rowheader')).toHaveLength(3);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Group by: Machine' }));
+    await userEvent.click(screen.getByRole('menuitemradio', { name: 'No grouping' }));
+
+    await waitFor(() => expect(within(table).queryAllByRole('rowheader')).toHaveLength(0));
+    expect(rowNumbers(table)).toEqual(byStart);
+    expect(router.state.location.search).toEqual({});
+  });
+
+  it('ADR0091 sorts on a header, sets aria-sort and writes the sort to the URL', async () => {
     const router = renderGanttRoute({}, undefined, 'jobOrders');
     const table = await findTable();
 
@@ -248,7 +326,7 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     expect(router.state.location.search).toEqual({});
   });
 
-  it('opens the late facts of a late row under it with the deadline rule, the delay and the binding row', async () => {
+  it('T1 the late facts of a late row open under it with the deadline rule, the delay and the binding row', async () => {
     renderGanttRoute({}, undefined, 'jobOrders');
     const table = await findTable();
     const row = within(table).getByRole('row', { name: /^1003\.20 / });
@@ -268,7 +346,7 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     expect(within(table).queryByRole('button', { name: 'Late facts for 1001.10' })).toBeNull();
   });
 
-  it('hides a column through the Columns menu and keeps Job order', async () => {
+  it('T1 the Columns menu hides a column and keeps Job order', async () => {
     renderGanttRoute({}, undefined, 'jobOrders');
     const table = await findTable();
     expect(within(table).getByRole('columnheader', { name: 'Soft lock' })).toBeTruthy();
@@ -305,8 +383,8 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     expect(facts.closest('td')?.getAttribute('colspan')).toBe(String(headers.length));
   });
 
-  it('draws Move disabled with its reason, and leads from a row to the Gantt and the board at its start, and from the page with its search', async () => {
-    renderGanttRoute({ q: '1001' }, undefined, 'jobOrders');
+  it('T1 Move is drawn but disabled with its reason, and the row menu leads to the Gantt and the board at the row start', async () => {
+    renderGanttRoute({}, undefined, 'jobOrders');
     const table = await findTable();
     const row = within(table).getByRole('row', { name: /^1001\.10 / });
 
@@ -322,19 +400,41 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     expect(screen.getByRole('menuitem', { name: 'Show on board' }).getAttribute('href')).toBe(
       '/plant-a/planning/board?from=2026-11-03&order=po-1001',
     );
-    await userEvent.keyboard('{Escape}');
+  });
+
+  it('ADR0091 the table options lead to the Gantt and the board without the search, which matches more than an order number there', async () => {
+    renderGanttRoute({ q: 'Gear' }, undefined, 'jobOrders');
+    await findTable();
 
     await userEvent.click(screen.getByRole('button', { name: 'Table options' }));
 
     expect(screen.getByRole('menuitem', { name: 'Open the Gantt' }).getAttribute('href')).toBe(
-      '/plant-a/planning/gantt?q=1001',
+      '/plant-a/planning/gantt',
     );
     expect(
       screen.getByRole('menuitem', { name: 'Open the planning board' }).getAttribute('href'),
-    ).toBe('/plant-a/planning/board?q=1001');
+    ).toBe('/plant-a/planning/board');
   });
 
-  it('shows the error state when the job orders cannot be loaded, and Try again loads them', async () => {
+  it('ADR0091 the status line says the job orders are loading while they load', async () => {
+    let answer: (() => void) | undefined;
+    const source: GanttDataSource = {
+      ...g1DataSource,
+      load: async (input) => {
+        await new Promise<void>((resolve) => {
+          answer = resolve;
+        });
+        return g1DataSource.load(input);
+      },
+    };
+    renderGanttRoute({}, source, 'jobOrders');
+
+    await waitFor(() => expect(statusLine()).toBe('Loading the job orders.'));
+    answer?.();
+    await waitFor(() => expect(statusLine()).toBe('10 job orders, 2 late. Sorted by start.'));
+  });
+
+  it('ADR0091 a failed load shows the error state and its status line, and Try again loads the job orders', async () => {
     let fail = true;
     const source: GanttDataSource = {
       ...g1DataSource,
@@ -346,47 +446,55 @@ describe('the job orders page (ADR 0091, a work list without a time range)', () 
     expect(
       await screen.findByRole('heading', { level: 2, name: 'Could not load the job orders' }),
     ).toBeTruthy();
+    expect(statusLine()).toBe('Could not load the job orders.');
     fail = false;
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }));
 
     expect(rowNumbers(await findTable())).toEqual(byStart);
   });
 
-  it('names the empty states: no job orders yet, none open, and none that match', async () => {
+  it('ADR0091 a plant without job orders shows No job orders yet', async () => {
     const empty = { ...g1Snapshot(), productionOrders: [] };
     renderGanttRoute(
       {},
       sourceOf({ ...empty, analysis: { jobOrders: {}, orders: {}, workload: [] } }),
       'jobOrders',
     );
+
     expect(
       await screen.findByRole('heading', { level: 2, name: 'No job orders yet' }),
     ).toBeTruthy();
     expect(statusLine()).toBe('0 job orders. Sorted by start.');
-    cleanup();
+  });
 
-    const finished = Object.fromEntries(
-      byStart.map((number) => [
-        number,
-        (row: GanttJobOrder) => ({ ...row, status: 'finished' as const }),
-      ]),
+  it('ADR0091 a plant whose job orders are all finished shows No open job orders, also with a sort or a grouping in the URL', async () => {
+    renderGanttRoute(
+      { sort: '-deadline', group: 'equipment' },
+      sourceOf(g1AllFinished()),
+      'jobOrders',
     );
-    renderGanttRoute({}, sourceOf(g1With(finished)), 'jobOrders');
+
     expect(
       await screen.findByRole('heading', { level: 2, name: 'No open job orders' }),
     ).toBeTruthy();
     expect(
       screen.getByText('Pick Finished under Status to see the finished job orders.'),
     ).toBeTruthy();
-    cleanup();
+  });
 
-    const router = renderGanttRoute({ q: 'nothing', late: 1 }, undefined, 'jobOrders');
+  it('ADR0091 a search and filters that match nothing show No job orders match, whose Clear filters clears them all', async () => {
+    const router = renderGanttRoute(
+      { q: 'nothing', late: 1, sort: 'deadline' },
+      undefined,
+      'jobOrders',
+    );
     expect(
       await screen.findByRole('heading', { level: 2, name: 'No job orders match these filters' }),
     ).toBeTruthy();
+
     await userEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
 
-    await waitFor(() => expect(router.state.location.search).toEqual({}));
-    expect(rowNumbers(await findTable())).toEqual(byStart);
+    await waitFor(() => expect(router.state.location.search).toEqual({ sort: 'deadline' }));
+    expect(rowNumbers(await findTable())).toHaveLength(10);
   });
 });
