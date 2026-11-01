@@ -45,6 +45,7 @@ Chosen option: "Core's pages at the plant root and at the company settings root,
 * Every other module keeps its id as its path segment and its module crumb: `/plant-a/planning/board` reads "Plant A > Planning > Planning board".
 * The old URLs `/<plant>/core/...` lead nowhere and show a not found page, as do the old settings URLs ([ADR 0066][adr-0066]). No one used the system yet, so Krister decided on 2026-10-31 that no old URL redirects.
 * The host refuses a module id equal to one of core's top-level web segments at the plant root, `/$plant/<segment>` (such as `articles`), or at the settings root, `/$plant/settings/<segment>` (today `people`, `plant`, `machines`, `equipment-groups`, `calendars`, `users`, `roles` and `warehouses`), or to one of the shell's own segments under the plant (`all-pages` and `settings`). `createShellRoutes` reads core's segments from its routes and the shell's from its plant routes; the backend catalog check reads core's from `coreLinks` and its settings section and lists the shell's.
+* [ADR 0092](0092-one-users-page-for-the-company-and-its-plants-read-at-the-plant-by-a-plant-reader.md) (proposed) merges People into Users, so `people` would leave core's segments at the settings root.
 
 ### Consequences
 
