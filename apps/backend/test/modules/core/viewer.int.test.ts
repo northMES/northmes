@@ -54,6 +54,49 @@ describe('the signed-in user at the request plant', () => {
     expect(answer.data?.coreViewer.userId).toBe(userId);
   });
 
+  it('E05-S08 coreViewer in company settings answers what the user holds at each plant of the company, and at a plant only that plant', async () => {
+    const { company, plants, slugs } = await givenCompany(db.ownerUrl, {
+      plantNames: ['Plant A', 'Plant B'],
+    });
+    const [plantA = '', plantB = ''] = plants;
+    if (!testApp) throw new Error('the test app did not start');
+    const { authorization } = await signIn(testApp.app, db.ownerUrl, [
+      { scopeId: company, permissions: ['core.user:read'] },
+      { scopeId: plantA, permissions: ['core.roleAssignment:manage', 'core.role:read'] },
+    ]);
+    const url = await testApp.app.getUrl();
+    const query = `query ($companyId: ID) {
+      coreViewer(companyId: $companyId) { plants { plantId permissions } }
+    }`;
+    type PlantsAnswer = { coreViewer: { plants: { plantId: string; permissions: string[] }[] } };
+
+    const atCompany = await gqlClient(url, { headers: { authorization } }).send<PlantsAnswer>(
+      query,
+      { companyId: company },
+    );
+    const atPlantB = await gqlClient(url, {
+      headers: { authorization, 'x-northmes-plant': slugs[1] ?? '' },
+    }).send<PlantsAnswer>(query, {});
+
+    expect(atCompany.errors).toBeUndefined();
+    expect(
+      [...(atCompany.data?.coreViewer.plants ?? [])].sort((a, b) =>
+        a.plantId.localeCompare(b.plantId),
+      ),
+    ).toEqual(
+      [
+        {
+          plantId: plantA,
+          permissions: ['core.role:read', 'core.roleAssignment:manage', 'core.user:read'],
+        },
+        { plantId: plantB, permissions: ['core.user:read'] },
+      ].sort((a, b) => a.plantId.localeCompare(b.plantId)),
+    );
+    expect(atPlantB.data?.coreViewer.plants).toEqual([
+      { plantId: plantB, permissions: ['core.user:read'] },
+    ]);
+  });
+
   it('E05-S06 coreViewer needs a plant', async () => {
     const { company } = await givenCompany(db.ownerUrl);
 
