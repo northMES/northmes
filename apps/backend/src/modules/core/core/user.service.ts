@@ -27,14 +27,14 @@ export interface UserRecord {
  */
 export interface UserFilter {
   readonly roleId?: string;
-  /** A scope id: the company, or a plant, whose holders also include the company's (ADR 0091). */
+  /** A scope id: the company, or a plant, whose holders also include the company's (ADR 0092). */
   readonly placeId?: string;
   readonly blocked?: boolean;
 }
 
 /**
  * The scopes where an assignment counts for the place filter, narrowed to the request's read
- * (ADR 0091): the company keeps the company; a plant the read covers keeps the plant and the
+ * (ADR 0092): the company keeps the company; a plant the read covers keeps the plant and the
  * company, since a company role applies at every plant. Without a place, every scope the read
  * covers: at a plant, the plant and the company; in company settings, undefined for all of them.
  * Any other place answers an empty list, because row-level security reads every assignment.
@@ -80,7 +80,7 @@ export class UserService {
 
   /**
    * One page of the users of the request's company, as coreUsers' arguments ask, narrowed by the
-   * filter: the holders of a role of the company, or of a role at a place (ADR 0091), where the
+   * filter: the holders of a role of the company, or of a role at a place (ADR 0092), where the
    * request reads assignments (at a plant, the plant and the company; in company settings, the
    * company and every plant of it), and blocked or active users.
    */

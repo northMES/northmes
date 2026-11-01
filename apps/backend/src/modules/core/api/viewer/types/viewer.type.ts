@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 
-/** What the signed-in user holds at one plant (ADR 0091). */
+/** What the signed-in user holds at one plant (ADR 0092). */
 @ObjectType('ViewerPlant', { description: 'What the signed-in user holds at one plant.' })
 export class ViewerPlant {
   @Field(() => ID, { description: "The plant's scope id." }) plantId!: string;

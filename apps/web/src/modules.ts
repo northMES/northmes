@@ -39,7 +39,7 @@ export interface SettingsLink {
   /** The permission the page reads with: the entry shows only to a user who holds it at the company. */
   readonly permission?: string;
   /**
-   * The page also reads at the plant (ADR 0091): the entry shows to a user who holds permission at
+   * The page also reads at the plant (ADR 0092): the entry shows to a user who holds permission at
    * the plant too, and for a user who lacks it at the company the page reads at the plant, with
    * x-northmes-plant and no company, instead of at the company.
    */
@@ -156,7 +156,7 @@ export const shellModules: readonly ShellModule[] = [
         icon: 'Users',
         link: coreLinks.settings.users,
         permission: 'core.user:read',
-        // A Plant admin reads the users of the company at its plant (ADR 0091).
+        // A Plant admin reads the users of the company at its plant (ADR 0092).
         readsAtPlant: true,
       },
       {

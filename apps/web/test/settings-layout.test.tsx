@@ -238,7 +238,7 @@ describe('the Settings button', () => {
     expect(within(screen.getByRole('banner')).queryByRole('link', { name: 'Settings' })).toBeNull();
   });
 
-  it('ADR0091 a plant admin finds no People in plant settings, and the main sidebar has no Administration group', async () => {
+  it('ADR0092 a plant admin finds no People in plant settings, and the main sidebar has no Administration group', async () => {
     const { fetch } = api(['core.user:read', 'core.role:read', 'core.roleAssignment:manage']);
     renderShellAt('/plant-a/articles', shellModules, { fetch });
 
@@ -252,7 +252,7 @@ describe('the Settings button', () => {
     expect(linksIn(sidebar).map(([label]) => label)).not.toContain('Users');
   });
 
-  it("E06 a plant admin, who manages the plant's roles, finds Plant, Machines, Equipment groups and Calendars in plant settings (#767, ADR 0091)", async () => {
+  it("E06 a plant admin, who manages the plant's roles, finds Plant, Machines, Equipment groups and Calendars in plant settings (#767, ADR 0092)", async () => {
     const { fetch } = api(['core.user:read', 'core.roleAssignment:manage']);
     renderShellAt('/plant-a/articles', shellModules, { fetch });
 

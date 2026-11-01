@@ -107,7 +107,7 @@ describe('the landing at /', () => {
     expect(within(main).queryByRole('link', { name: 'Nordic Steel settings' })).toBeNull();
   });
 
-  it('ADR0091 the plant list links the company settings of a user who reads users only at its first plant, to Users', async () => {
+  it('ADR0092 the plant list links the company settings of a user who reads users only at its first plant, to Users', async () => {
     const [acme] = companies().coreCompanies;
     const plantA = acme?.plants[0]?.id ?? '';
     const { fetch } = fakeApi({

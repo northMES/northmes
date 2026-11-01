@@ -79,7 +79,7 @@ function UserLink({ user }: { readonly user: UserRow }) {
  * The user's roles per place as chips (design core-304, US1): "Shift lead at Plant A" with the
  * place's icon, or No access for a role the reader may not read. At a plant the list reads the
  * roles at the plant and the company only, so a user without one there has "No role at Plant A"
- * (ADR 0091).
+ * (ADR 0092).
  */
 function RoleChips({ user, plantName }: { readonly user: UserRow; readonly plantName?: string }) {
   if (user.roleAssignments.length === 0) {
@@ -273,7 +273,7 @@ const statusChoices: readonly FilterChoice<UserStatusFilter>[] = [
 ];
 
 /**
- * The users of the company (design core-304, US1 to US4, and shell-313, C1; ADR 0091): Search
+ * The users of the company (design core-304, US1 to US4, and shell-313, C1; ADR 0092): Search
  * users, the Role, Place and Status filters, and one page of 25 users, by Name unless Username
  * sorts it, with their username, their roles as chips, their status and a row menu with Reset
  * password and Block user or Unblock user by permission at the company, with Previous and Next.
@@ -344,7 +344,7 @@ export function UsersScreen() {
       New user
     </Link>
   ) : undefined;
-  // Place offers anywhere, the company and the plants the read covers (ADR 0091).
+  // Place offers anywhere, the company and the plants the read covers (ADR 0092).
   const placeChoices: FilterChoice<UserPlace>[] = [
     { value: 'anywhere', label: 'Anywhere' },
     { value: 'company', label: companyName },
@@ -366,7 +366,7 @@ export function UsersScreen() {
           `a plant admin of ${plantName} or a company admin of ${companyName}`,
         );
   } else if (placeFilter.pending && places.error !== undefined) {
-    // The place's id comes from the user's companies, so the list waits on them (ADR 0091).
+    // The place's id comes from the user's companies, so the list waits on them (ADR 0092).
     state = {
       status: 'error',
       title: 'Could not load users',

@@ -31,7 +31,7 @@ export interface UserOfPage {
 
 /**
  * Reads the user that the $userId segment of the URL names: in company settings in the company
- * (ADR 0066), or at the plant with their roles at the plant and its company (ADR 0091). A
+ * (ADR 0066), or at the plant with their roles at the plant and its company (ADR 0092). A
  * role the reader may not read comes as null beside a FORBIDDEN error, so the answer keeps its
  * data (errorPolicy all).
  */
@@ -50,7 +50,7 @@ export function useUser(): UserOfPage {
   if (forbidden) {
     const company = places.company?.name ?? 'the company';
     const plantName = places.plants.find((each) => each.slug === plant)?.name ?? plant;
-    // At the plant the read needs core.user:read at the plant or the company (ADR 0091).
+    // At the plant the read needs core.user:read at the plant or the company (ADR 0092).
     state =
       companyId === undefined
         ? noAccessState(

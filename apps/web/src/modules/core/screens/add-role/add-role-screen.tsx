@@ -14,7 +14,7 @@ import { useViewer } from '../../use-viewer.ts';
 import { CoreUser } from '../../user.graphql.ts';
 
 /**
- * Add role on a user's page (design core-304, AS3, AS5, AS14, NO21 to NO23, ADR 0066, ADR 0091):
+ * Add role on a user's page (design core-304, AS3, AS5, AS14, NO21 to NO23, ADR 0066, ADR 0092):
  * Where, the places the page reads where the assigner may give roles (in company settings each
  * plant of the company and the company and all its plants; at a plant the plant and the company),
  * then Role, where the roles the assigner cannot give at that place stay with what they need. An

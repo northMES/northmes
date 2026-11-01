@@ -11,7 +11,7 @@ export {
 // What the signed-in user holds at the plant in the URL and at its company, from which the shell
 // shows the entries that need a permission, in the sidebar, in the settings navigations and behind
 // the Settings button. The plant's client sends it; company settings send it without a plant and
-// with the company's id, and then read what the user holds at each plant (ADR 0091). pnpm gen writes its typed document to viewer.graphql.gen.ts; this block
+// with the company's id, and then read what the user holds at each plant (ADR 0092). pnpm gen writes its typed document to viewer.graphql.gen.ts; this block
 // never runs.
 if (false) {
   gql`

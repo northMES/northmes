@@ -17,7 +17,7 @@ export interface Viewer {
   /** The user holds the permission at the company. */
   readonly canAtCompany: (permission: string) => boolean;
   /**
-   * The user holds the permission at a place (ADR 0091): the company, or a plant the page reads,
+   * The user holds the permission at a place (ADR 0092): the company, or a plant the page reads,
    * which in company settings is any plant of the company. A plant the page does not read holds
    * none.
    */

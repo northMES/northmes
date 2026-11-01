@@ -10,7 +10,7 @@ import { defineCoreLinks } from '@northmes/contracts';
  * article's routing and the edit form of an operation; and the tools and each tool's page. Its
  * settings section holds core's settings pages under the plant's settings (ADR 0066, #876): the
  * plant's own page, the machines, the equipment groups and the calendars; and the company's pages: the
- * users, read at the company or at the plant (ADR 0091), the new user page, each user's page (its tab in `tab`) with Add role; the roles, the new
+ * users, read at the company or at the plant (ADR 0092), the new user page, each user's page (its tab in `tab`) with Add role; the roles, the new
  * role page (Start from in `from`), and each role's page (its tab in `tab`) with its edit page
  * (design core-304); and the warehouses (design #729). Core's pages sit at the plant root and at
  * the settings root, without the module id, so the articles list is /plant-a/articles and the users

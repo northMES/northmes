@@ -365,7 +365,7 @@ interface PlantLayoutProps {
  * collapsed to the rail and the Settings crumb (ADR 0066, #876); a page of the company's settings,
  * such as Users, reads and writes through the client without a plant, with the plant's company in
  * the shell state, so its requests name the company and no plant; Users, for a reader who reads
- * users only at the plant, reads at the plant instead (ADR 0091). Once the user's
+ * users only at the plant, reads at the plant instead (ADR 0092). Once the user's
  * plants have loaded, a slug that names none of them gets the page of an unknown plant (ADR 0007,
  * D2 ST29) instead of the shell; while they load, or when they fail to, the shell shows the slug.
  */
@@ -516,7 +516,7 @@ function PlantLayout({
     );
   }
   // A page of the company's settings reads at the company or, for Users and a reader who reads it
-  // only at the plant, at the plant, as the permissions say (ADR 0091); it waits for them.
+  // only at the plant, at the plant, as the permissions say (ADR 0092); it waits for them.
   const readsAt =
     companyEntry === undefined
       ? undefined

@@ -196,7 +196,7 @@ export function coreRoutes(plantRoute: PlantRoute) {
  * The core module's settings routes under the shell's /$plant/settings route (ADR 0066, #876):
  * the plant's own page, the machines, the equipment groups and the calendars of the plant; and the
  * company's pages: the users with a user's page and Add role, which a plant reader reads at the
- * plant (ADR 0091), the roles with a role's page and its editor, and the warehouses. Their paths
+ * plant (ADR 0092), the roles with a role's page and its editor, and the warehouses. Their paths
  * come from the settings section of coreLinks. The top route is pathless, so the users sit at
  * /plant-a/settings/users (ADR 0074).
  */

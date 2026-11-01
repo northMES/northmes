@@ -76,7 +76,7 @@ export function placeName(place: Place | undefined, fallback: string): string {
 
 /**
  * The company of a page that reads in company settings, such as Users for a Company admin, from
- * the shell (ADR 0066, #876), or undefined on a page that reads at the plant (ADR 0091).
+ * the shell (ADR 0066, #876), or undefined on a page that reads at the plant (ADR 0092).
  */
 export function useCompanyId(): string | undefined {
   return useShell().companyId;

@@ -21,7 +21,7 @@ const sortFields = { name: 'NAME', username: 'USERNAME' } as const;
 export type UserStatusFilter = 'active' | 'blocked';
 
 /**
- * The Place filter in the URL (ADR 0091): anywhere, the company, the plant in the URL, or in
+ * The Place filter in the URL (ADR 0092): anywhere, the company, the plant in the URL, or in
  * company settings another plant of the company by its slug. "plant" keeps the URL's plant across a
  * plant switch.
  */
@@ -114,7 +114,7 @@ export function usersAtPlace(
   return query({ ...view, place: place === defaultPlace ? undefined : place });
 }
 
-/** The Place filter of a view, resolved where the page reads (ADR 0091). */
+/** The Place filter of a view, resolved where the page reads (ADR 0092). */
 export interface PlaceFilter {
   /** The place the filter shows: the view's, or the default when the view's does not apply. */
   readonly place: UserPlace;
