@@ -181,7 +181,7 @@ if (import.meta.main) {
         ? `#${pullNumber} is in the merge queue. GitHub builds it on the latest main, checks it and squash-merges it. You are done.`
         : `#${pullNumber} is squash-merged.`
       : plan.reviewer
-        ? `Auto-merge is on for #${pullNumber}, and ${plan.reviewer} is asked to review. It joins the merge queue once the maintainer approves and every required check passes. You are done.`
-        : `Auto-merge is on for #${pullNumber}. It joins the merge queue once every required check passes, and GitHub squash-merges it from there. You are done.`,
+        ? `Auto-merge is on for #${pullNumber}, and ${plan.reviewer} is asked to review. It ${queueEnabled ? 'joins the merge queue' : 'merges'} once the maintainer approves and every required check passes. You are done.`
+        : `Auto-merge is on for #${pullNumber}. It ${queueEnabled ? 'joins the merge queue once every required check passes, and GitHub squash-merges it from there' : 'squash-merges once every required check passes'}. You are done.`,
   );
 }
