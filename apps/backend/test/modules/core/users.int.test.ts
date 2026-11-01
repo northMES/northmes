@@ -235,6 +235,58 @@ describe('the users of a company and their access', () => {
     expect(answer.data?.coreUsers.totalCount).toBe(2);
   });
 
+  /**
+   * A company with Plant A and Plant B, its Plant admin role, and a holder of that role at Plant A,
+   * at the company and at Plant B.
+   */
+  async function holdersByPlace() {
+    const { company, plants, slugs } = await givenCompany(db.ownerUrl, {
+      plantNames: ['Plant A', 'Plant B'],
+    });
+    const [plantA = '', plantB = ''] = plants;
+    const [{ id: plantAdmin } = { id: '' }] = await queryAsCore<{ id: string }>(
+      db.ownerUrl,
+      `select id from core.role where company_id = $1 and key = 'core-plant-admin'`,
+      [company],
+    );
+    const holderAt = async (scopeId: string) => {
+      const userId = await givenUser(db.ownerUrl, []);
+      await givenAssignment(db.ownerUrl, { userId, roleId: plantAdmin, scopeId });
+      return userId;
+    };
+    return {
+      company,
+      plantA,
+      plantB,
+      slugs,
+      plantAdmin,
+      atPlantA: await holderAt(plantA),
+      atCompany: await holderAt(company),
+      atPlantB: await holderAt(plantB),
+    };
+  }
+
+  /** The ids coreUsers answers with these arguments, sorted, or the errors as they came. */
+  async function userIds(client: GqlClient, args: string) {
+    const answer = await client.send<{
+      coreUsers: { totalCount: number; edges: { node: { id: string } }[] };
+    }>(`{ coreUsers(${args}) { totalCount edges { node { id } } } }`);
+    if (!answer.data) throw new Error(JSON.stringify(answer.errors));
+    const ids = answer.data.coreUsers.edges.map(({ node }) => node.id).sort();
+    expect(answer.data.coreUsers.totalCount).toBe(ids.length);
+    return ids;
+  }
+
+  it('E05-S08 a plant reader who names another plant as placeId gets no users, though a holder exists there', async () => {
+    const { plantA, plantB, slugs } = await holdersByPlace();
+    const reader = await signedIn(
+      [{ scopeId: plantA, permissions: ['core.user:read', 'core.role:read'] }],
+      slugs[0] ?? '',
+    );
+
+    expect(await userIds(reader.client, `placeId: "${plantB}"`)).toEqual([]);
+  });
+
   it('E05-S08 coreUsers sorts by name, the default, and by username either way', async () => {
     const { admin } = await listedUsers();
 
