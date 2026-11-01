@@ -25,8 +25,11 @@ function groupRefused(code: string, message: string): DomainError {
 /**
  * Checks the group a machine at `scopeId` names (ADR 0009): a group of the machine's plant or of
  * its company, which is not archived. A group the request cannot read answers as one of another
- * plant does, so the refusal tells nothing of where it is.
+ * plant does, so the refusal tells nothing of where it is. The read takes no lock: under
+ * row-level security FOR SHARE also applies the UPDATE policy, which a Plant admin fails on a
+ * company group.
  */
+// shared-candidate: #968
 async function checkGroup(
   tx: Transaction<CoreDatabase>,
   groupId: string,
@@ -46,7 +49,7 @@ async function checkGroup(
   }
   if (group.archived_at !== null) {
     throw groupRefused(
-      'core.archived',
+      'core.equipment_group_not_active',
       'The equipment group is archived. Choose an active group, or restore this one first.',
     );
   }
@@ -78,7 +81,8 @@ export const equipmentService = masterDataService(equipment, {
       };
     },
     async update({ groupId, isPlannable, isOee, color }, { tx, target }) {
-      if (groupId !== target.equipment_group_id) {
+      // Postgres answers a uuid in lower case, and the contract takes one in either.
+      if (groupId.toLowerCase() !== target.equipment_group_id) {
         await checkGroup(tx as Transaction<CoreDatabase>, groupId, {
           companyId: target.company_id,
           scopeId: target.scope_id,

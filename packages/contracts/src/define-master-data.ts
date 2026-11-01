@@ -61,6 +61,9 @@ const settingsCompanyId = z
   )
   .optional();
 
+/** The arguments of a register's list field, which its filter fields cannot take. */
+const listArguments = ['first', 'after', 'orderBy', 'search', 'includeArchived', 'companyId'];
+
 /** The input and output names that the kit gives a register, which its own fields cannot take. */
 const kitNames = [
   'id',
@@ -82,7 +85,7 @@ export interface MasterDataOptions<
   Own extends ObjectSchema,
   Output extends z.core.$ZodShape,
   Scopes extends MasterDataScopes,
-  Filters extends MasterDataFilters,
+  Filters extends MasterDataFilters = Readonly<Record<never, z.ZodType>>,
 > {
   /** The module's GraphQL name, such as core: the prefix of every contract name. */
   readonly module: string;
@@ -168,6 +171,11 @@ export function defineMasterData<
   const register = `${module}.${entity}`;
   if (plural === entity) {
     throw new Error(`Register ${register}: the plural ${plural} is the entity`);
+  }
+  for (const filter of Object.keys(options.filters ?? {})) {
+    if (listArguments.includes(filter)) {
+      throw new Error(`Register ${register}: filter ${filter} is the list's own argument`);
+    }
   }
   for (const field of [...Object.keys(options.fields.shape), ...Object.keys(options.output)]) {
     if (kitNames.includes(field)) {

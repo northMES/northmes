@@ -103,7 +103,7 @@ The test file runs `masterDataContract(definition, { story, given, ownFields })`
 
 - `apps/backend/test/operations/conformance.int.test.ts`: an entry for its operations, once they have REST routes.
 - `apps/backend/test/graphql/schema-sdl.test.ts` and `apps/backend/test/testing/create-test-app.int.test.ts`: its root fields.
-- `apps/backend/test/modules/core/plant-free.int.test.ts`: its six plant-free fields.
+- `apps/backend/test/modules/core/plant-free.int.test.ts`: its plant-free fields, six for a company and plant register and five for a plant-only one, whose create needs the plant.
 - `apps/backend/test/modules/core/roles.int.test.ts`: its permission resource.
 - `apps/docs/use/users-and-roles.mdx`: its permissions; `apps/docs/api.mdx`, Choose the plant: its fields.
 - `pnpm gen`, which refreshes `schema/api.graphql` and `schema/openapi-v1.json`.

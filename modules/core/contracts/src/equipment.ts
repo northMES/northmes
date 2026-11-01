@@ -22,7 +22,7 @@ export const equipment = defineMasterData({
     groupId: z
       .uuid()
       .describe(
-        "The id of the machine's equipment group, a group of the plant or of the company. A group of another plant is refused with core.crossScopeReference, an archived one that the machine did not have with core.archived.",
+        "The id of the machine's equipment group, a group of the plant or of the company. A group of another plant is refused with core.crossScopeReference, an archived one that the machine did not have with core.equipment_group_not_active.",
       ),
     isPlannable: z
       .boolean()

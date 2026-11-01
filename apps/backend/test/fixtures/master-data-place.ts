@@ -14,7 +14,8 @@ export async function givenMasterDataPlace(
   readPermission: string,
 ): Promise<MasterDataPlace> {
   if (!testApp) throw new Error('the test app did not start');
-  const url = await testApp.app.getUrl();
+  const { app } = testApp;
+  const url = await app.getUrl();
 
   /**
    * A client of a fresh user who holds the default role `key` at `scopeId`, at plant `slug`, or in
@@ -26,8 +27,7 @@ export async function givenMasterDataPlace(
     scopeId: string,
     slug?: string,
   ): Promise<GqlClient> {
-    if (!testApp) throw new Error('the test app did not start');
-    const user = await signIn(testApp.app, ownerUrl, []);
+    const user = await signIn(app, ownerUrl, []);
     const [role] = await queryAsCore<{ id: string }>(
       ownerUrl,
       'select id from core.role where company_id = $1 and key = $2',
@@ -44,7 +44,7 @@ export async function givenMasterDataPlace(
   const other = await givenCompany(ownerUrl);
   const [plantA = '', plantB = ''] = plants;
   const [slugA = '', slugB = ''] = slugs;
-  const reader = await signIn(testApp.app, ownerUrl, [
+  const reader = await signIn(app, ownerUrl, [
     { scopeId: plantA, permissions: [readPermission] },
   ]);
   return {

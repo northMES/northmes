@@ -4,11 +4,7 @@ import 'reflect-metadata';
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { defineMasterData } from '@northmes/contracts';
 import { defineList } from '@northmes/sdk/lists';
-import {
-  type MasterDataAccess,
-  masterDataApi,
-  masterDataService,
-} from '@northmes/sdk/master-data';
+import { type MasterDataAccess, masterDataApi, masterDataService } from '@northmes/sdk/master-data';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 

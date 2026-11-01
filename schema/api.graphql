@@ -442,7 +442,7 @@ input CoreCreateEquipmentInput {
   color: String
 
   """
-  The id of the machine's equipment group, a group of the plant or of the company. A group of another plant is refused with core.crossScopeReference, an archived one that the machine did not have with core.archived.
+  The id of the machine's equipment group, a group of the plant or of the company. A group of another plant is refused with core.crossScopeReference, an archived one that the machine did not have with core.equipment_group_not_active.
   """
   groupId: ID!
 
@@ -798,7 +798,7 @@ input CoreUpdateEquipmentInput {
   expectedVersion: Int!
 
   """
-  The id of the machine's equipment group, a group of the plant or of the company. A group of another plant is refused with core.crossScopeReference, an archived one that the machine did not have with core.archived.
+  The id of the machine's equipment group, a group of the plant or of the company. A group of another plant is refused with core.crossScopeReference, an archived one that the machine did not have with core.equipment_group_not_active.
   """
   groupId: ID!
 
@@ -1051,7 +1051,7 @@ type EffectivePermission {
 }
 
 """
-A machine of a plant: usually a machine, sometimes a building, a lift or a truck. It belongs to an equipment group of the plant or of the company, and is on the planning board when it is plannable or OEE-measured.
+Equipment of a plant, something that runs operations or is measured: usually a machine, sometimes a building, a lift or a truck. It belongs to an equipment group of the plant or of the company, and is on the planning board when it is plannable or OEE-measured.
 """
 type Equipment {
   """
@@ -1059,7 +1059,7 @@ type Equipment {
   """
   archivedAt: DateTime
 
-  """The code, unique among the machines of the plant and the company."""
+  """The code, unique among the machines of the plant."""
   code: String!
 
   """
@@ -1891,7 +1891,7 @@ type Query {
   ): EquipmentGroupConnection!
 
   """
-  One page of the machines the request reads: at a plant the plant's and the company's, in company settings every one of the company. Needs core.equipment:read.
+  One page of the machines the request reads: at a plant the plant's, in company settings those of every plant of the company. Needs core.equipment:read.
   """
   coreEquipmentList(
     """

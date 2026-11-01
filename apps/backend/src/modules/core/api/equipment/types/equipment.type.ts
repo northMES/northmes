@@ -9,12 +9,12 @@ import { Translation } from '@northmes/sdk/graphql';
  */
 @ObjectType('Equipment', {
   description:
-    'A machine of a plant: usually a machine, sometimes a building, a lift or a truck. It belongs to an equipment group of the plant or of the company, and is on the planning board when it is plannable or OEE-measured.',
+    'Equipment of a plant, something that runs operations or is measured: usually a machine, sometimes a building, a lift or a truck. It belongs to an equipment group of the plant or of the company, and is on the planning board when it is plannable or OEE-measured.',
 })
 export class Equipment {
   @Field(() => ID, { description: "The machine's id." }) id!: string;
   @Field(() => String, {
-    description: 'The code, unique among the machines of the plant and the company.',
+    description: 'The code, unique among the machines of the plant.',
   })
   code!: string;
   @Field(() => String, { description: "The machine's name." }) name!: string;

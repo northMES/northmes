@@ -9,13 +9,14 @@ import {
   type Type,
 } from '@nestjs/common';
 import type { MasterDataDefinition, MasterDataScope, Translation } from '@northmes/contracts';
+import { GraphQLError } from 'graphql';
 import { type Selectable, type SelectQueryBuilder, sql, type Transaction } from 'kysely';
 import type { z } from 'zod';
 import { COMMAND_BUS, type CommandBus, type HandlerContext } from '../commands/command-bus.ts';
 import { registerCommand } from '../commands/define-command.ts';
 import { parseCommandInput } from '../commands/parse-input.ts';
 import { DATABASE, type ScopedDatabase } from '../data/database.ts';
-import { DomainError } from '../errors/domain-error.ts';
+import { DomainError, type FieldError } from '../errors/domain-error.ts';
 import type { Connection, ListArgs, ListKit, ListPage } from '../lists/define-list.ts';
 import { noteCreated } from '../operations/outcome.ts';
 import type { MasterDataAccess, MasterDataRequestScope } from './access.ts';
@@ -226,12 +227,40 @@ export function masterDataService<
         : select(tx).where('company_id', '=', scope.companyId);
   }
 
+  /**
+   * The filter values a list call set, each parsed with its contract, since a GraphQL ID or
+   * String holds any text. A value outside it is BAD_USER_INPUT on the filter field.
+   */
+  function filtersOf(call: unknown): MasterDataFilterValues<Definition> {
+    const values = call as Readonly<Record<string, unknown>>;
+    const schemas = (definition.list.filters ?? {}) as Readonly<Record<string, z.ZodType>>;
+    const parsed: Record<string, unknown> = {};
+    const fieldErrors: FieldError[] = [];
+    for (const field of filterFields) {
+      if (values[field] == null) continue;
+      const result = schemas[field]?.safeParse(values[field]);
+      if (result?.success) parsed[field] = result.data;
+      else
+        fieldErrors.push(
+          ...(result?.error.issues ?? []).map(({ message, code }) => ({
+            path: [field],
+            message,
+            code,
+          })),
+        );
+    }
+    if (fieldErrors.length > 0) {
+      const problems = fieldErrors.map(({ path, message }) => `${path.join('.')}: ${message}`);
+      throw new GraphQLError(`Invalid filter for ${definition.find.name}: ${problems.join('; ')}`, {
+        extensions: { code: 'BAD_USER_INPUT', fieldErrors },
+      });
+    }
+    return parsed as MasterDataFilterValues<Definition>;
+  }
+
   /** The rows that `scope` reads, narrowed by the filter values of a list call. */
   function listed(scope: MasterDataRequestScope, call: unknown) {
-    const values = call as Readonly<Record<string, unknown>>;
-    const filters = Object.fromEntries(
-      filterFields.filter((field) => values[field] != null).map((field) => [field, values[field]]),
-    ) as MasterDataFilterValues<Definition>;
+    const filters = filtersOf(call);
     return (tx: Transaction<RegisterDb>) => {
       const rows = ofRequest(scope)(tx) as unknown as MasterDataQuery;
       return options.filter && Object.keys(filters).length > 0
