@@ -5,7 +5,7 @@ import { createMemoryHistory, createRoute, RouterProvider } from '@tanstack/reac
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ShellModule } from '../src/modules.ts';
+import { type ShellModule, shellModules } from '../src/modules.ts';
 import { createShellRouter } from '../src/shell/index.ts';
 import { PageFrame } from '../src/ui/components/page-frame/index.ts';
 import { fakeSession } from './auth/fake-session.ts';
@@ -104,9 +104,13 @@ function apiWith(companies: readonly ReturnType<typeof company>[]) {
 }
 
 /** Renders the shell at path for a signed-in viewer whose plants are those of companies. */
-function renderAt(path: string, companies: readonly ReturnType<typeof company>[]) {
+function renderAt(
+  path: string,
+  companies: readonly ReturnType<typeof company>[],
+  modules: readonly ShellModule[] = [planning],
+) {
   const api = apiWith(companies);
-  const router = createShellRouter([planning], {
+  const router = createShellRouter(modules, {
     session: fakeSession(),
     fetch: api.fetch,
     history: createMemoryHistory({ initialEntries: [path] }),
@@ -244,6 +248,17 @@ describe('the plant switcher', () => {
     const list = await openSwitcher(user, /switch plant$/);
     expect(within(list.menu).getByRole('menuitem', { name: 'Plant C' }).getAttribute('href')).toBe(
       '/plant-c/planning/orders?page=2',
+    );
+  });
+
+  it('ADR0091 on Users with Place set to the plant, the link to Plant B keeps place=plant, so it lists the people of Plant B', async () => {
+    const user = userEvent.setup();
+    renderAt('/plant-a/settings/users?place=plant', twoCompanies, shellModules);
+
+    const { menu } = await openSwitcher(user, /switch plant$/);
+
+    expect(within(menu).getByRole('menuitem', { name: 'Plant B' }).getAttribute('href')).toBe(
+      '/plant-b/settings/users?place=plant',
     );
   });
 
