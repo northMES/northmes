@@ -98,12 +98,15 @@ function columnsOf(view: CellView): readonly DataTableColumn<MachineRow>[] {
     {
       id: 'group',
       header: 'Group',
-      cell: (row) => (
-        <span className="inline-flex items-center gap-1.5">
-          <GroupColor color={row.machine.group?.color} shape="dot" />
-          {row.groupName}
-        </span>
-      ),
+      cell: (row) =>
+        row.machine.group === null ? (
+          <span className="text-muted-foreground">Not shown</span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5">
+            <GroupColor color={row.machine.group.color} shape="dot" />
+            {row.groupName}
+          </span>
+        ),
     },
     {
       id: 'plannable',
@@ -219,11 +222,14 @@ interface GroupHere {
   readonly count: number;
 }
 
-/** The groups that hold machines at the plant, by code: a company group with none here leads nowhere. */
+/**
+ * The groups that hold active machines at the plant, by code: a company group with none here leads
+ * nowhere.
+ */
 function groupsHere(rows: readonly MachineRow[]): GroupHere[] {
   const groups = new Map<string, GroupHere>();
   for (const { machine } of rows) {
-    if (machine.group === null) continue;
+    if (machine.group === null || machine.archivedAt !== null) continue;
     const known = groups.get(machine.group.code);
     groups.set(machine.group.code, {
       code: machine.group.code,
@@ -332,7 +338,11 @@ export function MachinesScreen() {
   // The rows of the list before stand in only while the next answer loads, never for a failed one.
   const failed = data === undefined && error !== undefined;
   const page = data?.coreEquipmentList ?? (failed ? undefined : previousData?.coreEquipmentList);
-  const loaded = page !== undefined && snapshot !== undefined;
+  // The list counts as loaded once every page is in, so the status line never counts one page.
+  const loaded =
+    page !== undefined &&
+    snapshot !== undefined &&
+    (!page.pageInfo.hasNextPage || pageError !== undefined);
   const allRows = useMemo(
     () =>
       page === undefined || snapshot === undefined
@@ -344,7 +354,7 @@ export function MachinesScreen() {
     [page, snapshot],
   );
   const rows = allRows.filter((row) => matches(row, view));
-  const columns = useMemo(() => columnsOf({ plant, viewer }), [plant, viewer]);
+  const columns = columnsOf({ plant, viewer });
   const groupNames = new Map(allRows.map((row) => [row.groupCode, row.groupName]));
   const facets = (key: 'group' | 'calendar') => {
     // A picked value stays in the menu and names its chip even when no row passes with it.
@@ -352,6 +362,8 @@ export function MachinesScreen() {
     for (const row of allRows) {
       if (!matches(row, view, key)) continue;
       const value = key === 'group' ? row.groupCode : (row.calendar ?? noCalendar);
+      // A group the user cannot read has no code to filter by.
+      if (value === '') continue;
       counts.set(value, (counts.get(value) ?? 0) + 1);
     }
     return [...counts.entries()]
@@ -422,7 +434,9 @@ export function MachinesScreen() {
     state = {
       status: 'empty',
       title: 'No machines yet',
-      description: 'Create the first machine here. Every machine belongs to an equipment group.',
+      description: viewer.can('core.equipment:create')
+        ? 'Create the first machine here. Every machine belongs to an equipment group.'
+        : 'A plant admin creates the machines here.',
       action: <NewMachineLink />,
     };
   } else if (rows.length === 0) {
@@ -526,7 +540,9 @@ export function MachinesScreen() {
               </div>
             )}
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <p data-list-status>{failed ? '' : loaded ? statusLine : 'Loading machines.'}</p>
+              <p data-list-status>
+                {failed || pageError !== undefined ? '' : loaded ? statusLine : 'Loading machines.'}
+              </p>
               <p>{machineFixtureNote}</p>
             </div>
           </div>

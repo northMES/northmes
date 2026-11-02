@@ -52,14 +52,9 @@ test.describe('machines', () => {
     await page.goto(machinePage);
     await confirm(page, 'Archive', 'machine');
     await page.goto(coreLinks.settings.machines({ plant: plantB }).href);
-    // The list has loaded once its status line or its empty state shows; plant B may have no
-    // other machine.
-    await expect(
-      page
-        .locator('[data-list-status]')
-        .filter({ hasText: /Sorted by code/ })
-        .or(page.getByRole('heading', { level: 2, name: 'No machines yet' })),
-    ).toBeVisible();
+    // The list has loaded once its status line counts the machines; the toolbar keeps it in the
+    // empty state too, as plant B may have no other machine.
+    await expect(page.locator('[data-list-status]')).toContainText('Sorted by code');
     await expect(page.getByRole('link', { name: code, exact: true })).toHaveCount(0);
     await page.getByRole('checkbox', { name: 'Show archived' }).click();
     await page

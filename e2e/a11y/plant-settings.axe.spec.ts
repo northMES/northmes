@@ -12,20 +12,25 @@ import { expect, plant, test, uniqueCode } from '../fixtures.ts';
 // after a refused save; an archived machine and a machine that does not exist; and the calendars
 // list and a calendar's page with its week view, a calendar with three shifts at 1280 and 320,
 // and their no-access states. The machines come from the API: each test makes its own group and
-// G1's machine codes in it, so the routing operations and the week of the fixture G1 show and the
-// screenshots are the same in every run; the API's states come from routing its answers. The
-// calendars read the fixture G1; the preview key opens their states on mock data.
+// G1's machine codes in it, so the routing operations and the week of the fixture G1 show; the
+// group's code is new in each run, and other specs on the worker's database may add groups and
+// machines, so the list's screenshots can differ between runs. The API's states come from routing
+// its answers. The calendars read the fixture G1; the preview key opens their states on mock data.
 
 /** An href of the seed plant with a search. */
 function withSearch(href: string, search: Record<string, string>): string {
   return `${href}?${new URLSearchParams(search).toString()}`;
 }
 
-/** Makes a plant group named Machining with a code of its own, for one test's machines. */
+/**
+ * Makes a plant group for one test's machines, named and coded on its own, so no other group of
+ * the worker's database shares its name, and returns its name.
+ */
 async function machining(page: Page): Promise<string> {
   const code = uniqueCode('MG');
-  await newGroup(page, plant, { code, name: 'Machining', scope: /^Plant A$/, color: 'Color 3' });
-  return `Machining (${code})`;
+  const name = `Machining ${code}`;
+  await newGroup(page, plant, { code, name, scope: /^Plant A$/, color: 'Color 3' });
+  return name;
 }
 
 test.describe('the plant settings pages', () => {
@@ -41,8 +46,14 @@ test.describe('the plant settings pages', () => {
     await checkA11y('the new machine form');
 
     const group = await machining(page);
-    await newMachine(page, plant, { code: 'CNC1', name: 'CNC 1', group });
-    await newMachine(page, plant, { code: 'LATHE1', name: 'Lathe 1', group, plannable: false });
+    const option = `${group} (${group.replace('Machining ', '')})`;
+    await newMachine(page, plant, { code: 'CNC1', name: 'CNC 1', group: option });
+    await newMachine(page, plant, {
+      code: 'LATHE1',
+      name: 'Lathe 1',
+      group: option,
+      plannable: false,
+    });
     await page.goto(machines);
     const table = page.getByRole('table', { name: 'Machines' });
     await expect(table.getByRole('link', { name: 'CNC1', exact: true })).toBeVisible();
@@ -54,15 +65,13 @@ test.describe('the plant settings pages', () => {
     await checkA11y('the machines list');
 
     await page.locator('button[aria-haspopup="menu"]', { hasText: /^Group$/ }).click();
-    await expect(page.getByRole('menuitemcheckbox', { name: /^Machining/ })).toBeVisible();
+    await expect(
+      page.getByRole('menuitemcheckbox', { name: new RegExp(`^${group}`) }),
+    ).toBeVisible();
     await expect(page.getByRole('menu')).toHaveCSS('opacity', '1');
     await checkA11y('the Group filter menu open');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);
-
-    await page.goto(coreLinks.settings.machines({ plant }, { archived: '1' }).href);
-    await expect(page.getByRole('checkbox', { name: 'Show archived' })).toBeChecked();
-    await checkA11y('the machines list with the archived machines');
 
     list('hold');
     await page.goto(machines);
@@ -105,7 +114,11 @@ test.describe('the plant settings pages', () => {
     const update = await routeOperation(page, 'CoreUpdateEquipment');
     await signIn(coreLinks.settings.machines({ plant }).href);
     const group = await machining(page);
-    await newMachine(page, plant, { code: 'MILL1', name: 'Mill 1', group });
+    await newMachine(page, plant, {
+      code: 'MILL1',
+      name: 'Mill 1',
+      group: `${group} (${group.replace('Machining ', '')})`,
+    });
     const mill = page.url();
     await expect(
       page.getByRole('table', { name: 'Routing operations that may run on Mill 1' }),
@@ -139,6 +152,13 @@ test.describe('the plant settings pages', () => {
     await page.goto(edit);
     await expect(page.getByText('Loading the machine.')).toBeVisible();
     await checkA11y('the edit form loading', { busy: true });
+
+    await page.goto(mill);
+    await expect(page.getByRole('heading', { level: 1, name: 'Machine' })).toBeVisible();
+    // The page frame marks the loading machine busy; it draws no skeleton, so the busy element is
+    // empty and never visible.
+    await expect(page.locator('main [aria-busy="true"]')).toHaveCount(1);
+    await checkA11y('a machine loading', { busy: true });
 
     one('fail');
     await page.goto(mill);
@@ -176,6 +196,17 @@ test.describe('the plant settings pages', () => {
     await confirm(page, 'Archive', 'machine');
     await expect(page.getByRole('button', { name: 'Restore', exact: true })).toBeVisible();
     await checkA11y('an archived machine');
+    await page.getByRole('button', { name: 'Restore', exact: true }).click();
+    await expect(page.getByRole('alertdialog')).toHaveCSS('opacity', '1');
+    await checkA11y('the restore dialog of a machine');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+
+    await page.goto(coreLinks.settings.machines({ plant }, { archived: '1' }).href);
+    await expect(
+      page.getByRole('table', { name: 'Machines' }).getByText('Archived', { exact: true }),
+    ).toBeVisible();
+    await checkA11y('the machines list with the archived machines');
   });
 
   test('ADR0021 the calendars list and a calendar with its week view pass the WCAG 2.2 AA rules', async ({

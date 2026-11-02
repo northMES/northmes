@@ -76,7 +76,11 @@ export async function newGroup(
   await page.getByLabel('Code').fill(code);
   await page.getByLabel('Name', { exact: true }).fill(name);
   await page.getByRole('radiogroup', { name: 'Scope' }).getByRole('radio', { name: scope }).click();
-  if (color !== undefined) await page.getByRole('radio', { name: color, exact: true }).click();
+  // Another group of the worker's database may use the color: its radio is then "Color 3, used
+  // by MACH".
+  if (color !== undefined) {
+    await page.getByRole('radio', { name: new RegExp(`^${color}(,|$)`) }).click();
+  }
   await page.getByRole('button', { name: 'Save equipment group' }).click();
   await expect(
     page.getByRole('heading', { level: 1, name: `Equipment group ${code}` }),

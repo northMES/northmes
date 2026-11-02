@@ -148,7 +148,8 @@ export function MachineForm({
               </FieldLabel>
             </Field>
             <FieldDescription id={`${plannableId}-hint`}>
-              A machine that is not plannable stays off the board.
+              Autoplan places no job order on a machine that is not plannable. It stays off the
+              board unless its OEE is measured.
             </FieldDescription>
           </Field>
           <Field className="sm:col-span-2">

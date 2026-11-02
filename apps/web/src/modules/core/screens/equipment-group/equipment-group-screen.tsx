@@ -211,12 +211,14 @@ export function EquipmentGroupScreen() {
               </ScrollTable>
             )}
           </PageSection>
-          <PageSection
-            title="On the board"
-            lead="Only plannable machines have a row on the board. The color and the name are always shown together."
-          >
-            <GroupBand name={group.name} color={group.color} machines={machines ?? []} />
-          </PageSection>
+          {machines !== undefined && (
+            <PageSection
+              title="On the board"
+              lead="Only plannable machines have a row on the board. The color and the name are always shown together."
+            >
+              <GroupBand name={group.name} color={group.color} machines={machines} />
+            </PageSection>
+          )}
         </>
       )}
     </PageFrame>

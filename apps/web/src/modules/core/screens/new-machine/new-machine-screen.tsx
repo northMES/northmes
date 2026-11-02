@@ -35,7 +35,8 @@ export function NewMachineScreen() {
   const navigate = useNavigate();
   const viewer = useViewer();
   const places = usePlaces();
-  const { data } = useEquipmentGroups(false);
+  const groups = useEquipmentGroups(false);
+  const groupsError = groups.data === undefined ? groups.error : undefined;
   const [id] = useState(() => uuidv7());
   const form = useZodForm(machineFormFields, {
     defaultValues: { code: '', name: '', groupId: '', isPlannable: true, color: 'group' },
@@ -89,6 +90,14 @@ export function NewMachineScreen() {
     state = { status: 'loading' };
   } else if (!viewer.can('core.equipment:create')) {
     state = createMachineForbiddenState(plantName);
+  } else if (groupsError !== undefined) {
+    // The group field needs the equipment groups: without them no machine can be saved.
+    state = {
+      status: 'error',
+      title: 'Could not open New machine',
+      error: groupsError,
+      onRetry: () => groups.refetch(),
+    };
   }
   return (
     <PageFrame title="New machine" crumbs={[{ label: 'Machines', href: machines }]} state={state}>
@@ -97,7 +106,7 @@ export function NewMachineScreen() {
           form={form}
           onSave={save}
           cancelHref={machines}
-          groups={data?.coreEquipmentGroups.edges.map(({ node }) => node) ?? []}
+          groups={groups.data?.coreEquipmentGroups.edges.map(({ node }) => node) ?? []}
           isNew
         />
       )}

@@ -195,11 +195,11 @@ function NewEquipmentGroupLink() {
 /**
  * The equipment groups the plant sees in plant settings (design #729, EG1 to EG9): the color rule,
  * the Scope filter, Show archived and Columns, and one row per group with its color, code, name,
- * scope, the plant's machines in it and where its color came from. The groups and the machines come
- * from the API, the groups the plant's own and the company's, every page of them; a user who may
- * not read machines sees the groups without them. The Scope filter and Show archived live in the URL (ADR 0062); the columns stay
- * local. Edit shows on a group the user may change, New equipment group to a user who may create
- * one at the plant or the company.
+ * scope, the plant's machines in it and where its color came from. The groups and the machines
+ * come from the API, the groups the plant's own and the company's, every page of them; a user who
+ * may not read machines sees the groups without them. The Scope filter and Show archived live in
+ * the URL (ADR 0062); the columns stay local. Edit shows on a group the user may change, New
+ * equipment group to a user who may create one at the plant or the company.
  */
 export function EquipmentGroupsScreen() {
   const { plant } = useShell();

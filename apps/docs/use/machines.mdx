@@ -3,7 +3,7 @@ title: Machines
 description: List the machines of a plant, create a machine in an equipment group, change its name, group, plannable flag and color stripe, and archive or restore it.
 ---
 
-A machine is a piece of equipment at one plant that runs job orders, such as a lathe or an assembly bench. Every machine belongs to an [equipment group](/use/equipment-groups) of its plant or of the company. A plannable machine has a row on the planning board, in its group's band.
+A machine is a piece of equipment at one plant that runs job orders, such as a lathe or an assembly bench. Every machine belongs to an [equipment group](/use/equipment-groups) of its plant or of the company. A plannable machine, or one whose OEE is measured, has a row on the planning board, in its group's band.
 
 **Machines** is in plant settings at `/<plant>/settings/machines`. It shows to a user who holds `core.equipment:read` at the plant.
 
@@ -36,7 +36,7 @@ The page shows the machine's code, name, equipment group, plannable flag, calend
     - **Code**: up to 32 characters, unique among the plant's machines. The code cannot change later.
     - **Name**: up to 200 characters. The board and the Gantt show it.
     - **Equipment group**: an active group of the plant or of the company. The machine's row sits in the group's band on the board.
-    - **Plannable**: on unless you clear it. A machine that is not plannable stays off the board, and autoplan places nothing on it.
+    - **Plannable**: on unless you clear it. Autoplan places nothing on a machine that is not plannable, and it stays off the board unless its OEE is measured.
     - **Color stripe**: the group's color, or one of the 20 palette colors as the machine's own. The stripe sits before the machine's name on the board.
   </Step>
   <Step title="Save">
@@ -58,7 +58,7 @@ Select **Archive** on the machine's page and confirm with **Archive machine**. A
 
 ## Who may change a machine
 
-Creating, changing and archiving a machine needs `core.equipment:create`, `:update` or `:archive` at the machine's plant, such as Plant admin holds. See [Users, roles and permissions](/use/users-and-roles#permissions).
+Creating, changing and archiving a machine needs `core.equipment:create`, `:update` or `:archive` at the machine's plant, such as Plant admin holds. The group field reads the equipment groups, so New machine also needs `core.equipmentGroup:read`. See [Users, roles and permissions](/use/users-and-roles#permissions).
 
 ## Limits in release 0.1.0
 

@@ -24,9 +24,7 @@ export function stripeColorOf(machine: Pick<MachineRow, 'color' | 'group'>): str
   return machine.color ?? machine.group?.color;
 }
 
-/** The machines in a group, by code. */
+/** The machines in a group, in the order of `machines`, which the API sorts by code. */
 export function machinesIn(machines: readonly MachineRow[], groupId: string): MachineRow[] {
-  return machines
-    .filter((machine) => machine.groupId === groupId)
-    .sort((a, b) => a.code.localeCompare(b.code));
+  return machines.filter((machine) => machine.groupId === groupId);
 }

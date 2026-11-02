@@ -251,9 +251,9 @@ describe('the machines list in plant settings (design #688, MA1 to MA9)', () => 
     await waitFor(() => expect(machineRows()).toEqual(['CNC1', 'CNC2']));
     expect(bodyRows(table)[0]?.[2]).toBe('Not shown');
     await userEvent.click(screen.getByRole('button', { name: 'Group' }));
-    expect(
-      screen.getAllByRole('menuitemcheckbox').map((item) => item.textContent?.trim()),
-    ).toEqual(['Machining1']);
+    expect(screen.getAllByRole('menuitemcheckbox').map((item) => item.textContent?.trim())).toEqual(
+      ['Machining 1'],
+    );
   });
 
   it('#991 MA1 Plannable only, the Group filter and the search live in the URL', async () => {
@@ -844,7 +844,6 @@ describe('the machines of an equipment group (design #729, EG4)', () => {
     // The band would claim the group has no plannable machine, which nobody knows here.
     expect(screen.queryByRole('heading', { name: 'On the board' })).toBeNull();
   });
-
 
   it("#991 EG4 a group's page lists its machines at the plant from the API, each a link to its page", async () => {
     const groupPage = coreLinks.settings.equipmentGroups.group({ plant, groupId: mach.id }).href;
