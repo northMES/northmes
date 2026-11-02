@@ -85,8 +85,14 @@ async function configWithPlugins(
 }
 
 interface Fixtures {
-  /** Opens href, signs the dev admin in on the sign-in page it leads to, and waits for href. */
-  signIn: (href: string) => Promise<void>;
+  /**
+   * Opens href, signs the dev admin in on the sign-in page it leads to, or the seed's dev user
+   * `as`, and waits for href.
+   */
+  signIn: (
+    href: string,
+    as?: { readonly email: string; readonly password: string },
+  ) => Promise<void>;
   /** Signs in, creates an article at plant A through New article, and stays on its page. */
   newArticle: () => Promise<{ code: string; href: string }>;
   /**
@@ -202,7 +208,7 @@ export const test = base.extend<Fixtures, { stack: Stack } & WorkerOptions>({
     await use(page);
   },
   signIn: async ({ page }, use) => {
-    await use(async (href) => {
+    await use(async (href, as = devAdmin) => {
       // Each sign-in comes from a client address of its own, so the server's throttle of 3
       // sign-ins in 10 seconds per client does not refuse a fast run of specs (#476).
       signIns += 1;
@@ -210,8 +216,8 @@ export const test = base.extend<Fixtures, { stack: Stack } & WorkerOptions>({
         'x-forwarded-for': `10.0.${(signIns >> 8) & 255}.${signIns & 255}`,
       });
       await page.goto(href);
-      await page.getByLabel('Email').fill(devAdmin.email);
-      await page.getByLabel('Password', { exact: true }).fill(devAdmin.password);
+      await page.getByLabel('Email').fill(as.email);
+      await page.getByLabel('Password', { exact: true }).fill(as.password);
       await page.getByRole('button', { name: 'Sign in' }).click();
       await page.waitForURL((url) => url.pathname === new URL(href, url).pathname);
     });

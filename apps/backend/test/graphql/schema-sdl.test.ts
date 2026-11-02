@@ -50,6 +50,7 @@ describe('schemaSdl', () => {
       'coreArticleGroups',
       'coreArticles',
       'coreCompanies',
+      'coreCustomers',
       'coreDashboardTabs',
       'coreEquipment',
       'coreEquipmentGroup',

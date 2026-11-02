@@ -20,6 +20,18 @@ export interface Viewer {
   readonly error: unknown;
   /** Asks again, for a page's Try again. */
   readonly retry: () => Promise<unknown>;
+  /**
+   * The user holds the permission at a place (ADR 0092): the company, or a plant the page reads,
+   * which in company settings is any plant of the company. A plant the page does not read holds
+   * none.
+   */
+  readonly canAt: (place: ViewerPlace, permission: string) => boolean;
+}
+
+/** A place as canAt takes it: the company, or a plant by its scope id. */
+export interface ViewerPlace {
+  readonly kind: string;
+  readonly id: string;
 }
 
 /**
@@ -36,6 +48,9 @@ export function useViewer(): Viewer {
   // answer names no plant, the company's permissions are those at each plant too.
   const plant =
     variables.companyId === undefined ? new Set(viewer?.plantPermissions ?? []) : company;
+  const plants = new Map(
+    (viewer?.plants ?? []).map(({ plantId, permissions }) => [plantId, new Set(permissions)]),
+  );
   return {
     loaded: viewer !== undefined,
     userId: viewer?.userId,
@@ -43,5 +58,7 @@ export function useViewer(): Viewer {
     canAtCompany: (permission) => company.has(permission),
     error: viewer === undefined ? error : undefined,
     retry: () => refetch(),
+    canAt: ({ kind, id }, permission) =>
+      kind === 'COMPANY' ? company.has(permission) : (plants.get(id)?.has(permission) ?? false),
   };
 }

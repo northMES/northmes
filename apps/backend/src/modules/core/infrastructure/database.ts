@@ -62,6 +62,23 @@ export interface ArticleGroupTable {
   updated_at: Generated<Date>;
 }
 
+/** core.customer: a customer of a company, a register of the company with a number and a name. */
+export interface CustomerTable {
+  id: Generated<string>;
+  /** The company's node, the same as company_id. */
+  scope_id: string;
+  company_id: string;
+  version: Generated<number>;
+  /** The customer number. */
+  code: string;
+  /** lower(code), which the unique index of the number within the company holds. */
+  code_key: GeneratedAlways<string>;
+  name: string;
+  created_at: Generated<Date>;
+  /** When the customer last changed, its creation included; an update trigger moves it on. */
+  updated_at: Generated<Date>;
+}
+
 /** core.equipment_group: an equipment group, a register at the company or at a plant. */
 export type EquipmentGroupTable = MasterDataTable<{
   /** A palette color, palette-1 to palette-20. */
@@ -227,6 +244,7 @@ export interface CoreDatabase {
   'core.article': ArticleTable;
   'core.article_plant': ArticlePlantTable;
   'core.article_group': ArticleGroupTable;
+  'core.customer': CustomerTable;
   'core.equipment': EquipmentTable;
   'core.equipment_group': EquipmentGroupTable;
   'core.scope': ScopeTable;

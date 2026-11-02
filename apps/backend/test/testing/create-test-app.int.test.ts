@@ -40,6 +40,7 @@ describe('createTestApp', () => {
       'coreArticleGroups',
       'coreArticles',
       'coreCompanies',
+      'coreCustomers',
       'coreDashboardTabs',
       'coreEquipment',
       'coreEquipmentGroup',

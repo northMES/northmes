@@ -16,6 +16,7 @@ const lines: Readonly<Record<string, string>> = {
   'core.articleGroup:create': 'Create article groups',
   'core.articleGroup:update': 'Change article groups',
   'core.articleGroup:archive': 'Archive and restore article groups',
+  'core.customer:read': 'Read customers',
   'core.equipment:read': 'Read machines',
   'core.equipment:create': 'Create machines',
   'core.equipment:update': 'Change machines',

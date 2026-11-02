@@ -163,21 +163,42 @@ export function plantOf(companies: readonly ShellCompany[], slug: string) {
 }
 
 /**
- * The company settings entries of the modules that a user with these permissions at the company
- * may open, under a plant of the company: core's first, then the other modules' (ADR 0066, #876).
+ * The company settings entries of the modules that a user with these permissions may open, under a
+ * plant of the company: core's first, then the other modules' (ADR 0066, #876). An entry shows to a
+ * holder of its permission at the company, and an entry whose page also reads at the plant to a
+ * holder of it at the plant too (ADR 0092).
  */
 export function companySettingsEntries(
   modules: readonly ShellModule[],
-  permissions: ReadonlySet<string> | undefined,
+  {
+    company,
+    plant: atPlant,
+  }: { readonly company?: ReadonlySet<string>; readonly plant?: ReadonlySet<string> },
   plant: string,
 ) {
-  const shown = shownTo(permissions);
+  const shown = (entry: SettingsLink) =>
+    shownTo(company)(entry) || (entry.readsAtPlant === true && shownTo(atPlant)(entry));
   return modules.map(({ module, settingsLinks = [] }) => ({
     moduleId: module.id,
     entries: settingsLinks
       .filter(shown)
       .map(({ label, icon, link }) => ({ label, icon, href: link({ plant }).href })),
   }));
+}
+
+/**
+ * Where a page of the company's settings reads (ADR 0066, ADR 0092): at the company, with the
+ * company's id and no plant, unless its entry also reads at the plant and the user lacks the
+ * entry's permission at the company; then at the plant, with x-northmes-plant. Undefined until the
+ * company's permissions are known, for a page that waits for them.
+ */
+export function companyPageReadsAt(
+  entry: SettingsLink,
+  companyPermissions: ReadonlySet<string> | undefined,
+): 'company' | 'plant' | undefined {
+  if (entry.readsAtPlant !== true || entry.permission === undefined) return 'company';
+  if (companyPermissions === undefined) return undefined;
+  return companyPermissions.has(entry.permission) ? 'company' : 'plant';
 }
 
 /**
@@ -201,6 +222,22 @@ export function settingsWayOut(plant: string, pathname: string): WayOut | undefi
 }
 
 /**
+ * The company settings entry of a page under a plant, such as Users for a user's page: the entry
+ * whose page it is, or the nearest one above it, or undefined for a page that is none of the
+ * company's (#876).
+ */
+export function companySettingsEntryAt(
+  modules: readonly ShellModule[],
+  plant: string,
+  pathname: string,
+): SettingsLink | undefined {
+  return modules
+    .flatMap(({ settingsLinks = [] }) => settingsLinks)
+    .filter(({ link }) => currentOf(link({ plant }).href, pathname) !== undefined)
+    .sort((a, b) => b.link({ plant }).href.length - a.link({ plant }).href.length)[0];
+}
+
+/**
  * Whether a page is one of the company's settings pages under a plant, such as Users: its entry
  * is a company settings entry, or the nearest one above it is (#876).
  */
@@ -209,9 +246,7 @@ export function isCompanySettingsPage(
   plant: string,
   pathname: string,
 ): boolean {
-  return modules.some(({ settingsLinks = [] }) =>
-    settingsLinks.some(({ link }) => currentOf(link({ plant }).href, pathname) !== undefined),
-  );
+  return companySettingsEntryAt(modules, plant, pathname) !== undefined;
 }
 
 /** An entry of a navigation as a page: its label and its href. */
