@@ -82,6 +82,12 @@ describe('coreLinks', () => {
     );
   });
 
+  it('#991 coreLinks builds the href of the new machine page, beside the machines by id', () => {
+    expect(coreLinks.settings.machines.new({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/settings/machines/new',
+    );
+  });
+
   it("#876 coreLinks builds the href of the plant page under the plant's settings", () => {
     expect(coreLinks.settings.plant({ plant: 'plant-a' }).href).toBe('/plant-a/settings/plant');
     expect(coreLinks.settings.plant({ plant: 'plant-a' }, { preview: 'noCalendar' }).href).toBe(
