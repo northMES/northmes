@@ -93,10 +93,8 @@ describe("the plant's own page in plant settings (design #767, PP1 to PP7)", () 
 
   it('PP4 the other plant settings pages ignore the noCalendar preview', async () => {
     renderCoreAt(
-      coreLinks.settings.calendars.calendar(
-        { plant, calendarId: 'A1' },
-        { preview: 'noCalendar' },
-      ).href,
+      coreLinks.settings.calendars.calendar({ plant, calendarId: 'A1' }, { preview: 'noCalendar' })
+        .href,
       [],
     );
     expect(await screen.findByRole('heading', { level: 1, name: 'Calendar A1' })).toBeTruthy();

@@ -26,9 +26,6 @@ function bodyRows(table: HTMLElement): string[][] {
   );
 }
 
-
-
-
 /** The height of an hour in the week view, in pixels. */
 const hourPx = 36;
 
