@@ -453,7 +453,7 @@ describe("a machine's page (design #688, MA3)", () => {
 
     await user.click(await screen.findByRole('button', { name: 'Archive' }));
     const dialog = await screen.findByRole('alertdialog', { name: 'Archive machine CNC1?' });
-    expect(within(dialog).getByText(/leaves the board/)).toBeTruthy();
+    expect(within(dialog).getByText(/hidden from the list/)).toBeTruthy();
     await user.click(within(dialog).getByRole('button', { name: 'Archive machine' }));
 
     await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());

@@ -18,7 +18,7 @@ The list shows the groups the plant sees, its own and the company's, sorted by c
 
 ## A group's page
 
-The page shows the group's code, name, scope and color, with where the color came from: picked by someone, or the first free palette color when nobody picked one. It lists the plant's machines in the group and shows the band the group draws on the board, which holds the plannable machines only.
+The page shows the group's code, name, scope and color, with where the color came from: picked by someone, or the first free palette color when nobody picked one. It lists the plant's [machines](/use/machines) in the group and shows the band the group draws on the board, which holds the plannable machines only. A user without `core.equipment:read` sees the group without its machines.
 
 **Edit equipment group**, **Archive** and **Restore** are at the top of the page, for a user who may use them.
 
@@ -57,6 +57,5 @@ A company group belongs to the company: creating, changing and archiving it need
 
 ## Limits in release 0.1.0
 
-- The machines in each group come from the demo fixture until the machine pages read the API.
 - A group has no history yet.
 - A group cannot be deleted. Archive it instead.

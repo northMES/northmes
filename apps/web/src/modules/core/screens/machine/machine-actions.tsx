@@ -29,8 +29,8 @@ export function MachineActions({ machine }: { readonly machine: Machine }) {
       archived={machine.archivedAt !== null}
       archive={() => archive({ variables })}
       restore={() => restore({ variables })}
-      archiveDescription="An archived machine leaves the board and the list, and keeps its code."
-      restoreDescription="The machine shows in the list again, and on the board when it is plannable."
+      archiveDescription="Archived machines are hidden from the list and keep their codes. An archived machine cannot be changed until it is restored."
+      restoreDescription="The machine shows in the list again and can be changed again."
       forbidden={(verb) => `You do not have permission to ${verb} machines at this plant.`}
     />
   );
