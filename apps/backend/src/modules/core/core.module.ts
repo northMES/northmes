@@ -5,6 +5,7 @@ import { AccessApiModule } from './api/access/access-api.module.ts';
 import { ArticleModule } from './api/article/article.module.ts';
 import { ArticleGroupModule } from './api/article-group/article-group.module.ts';
 import { CompanyModule } from './api/company/company.module.ts';
+import { CustomerModule } from './api/customer/customer.module.ts';
 import { DashboardModule } from './api/dashboard/dashboard.module.ts';
 import { EquipmentModule } from './api/equipment/equipment.module.ts';
 import { EquipmentGroupModule } from './api/equipment-group/equipment-group.module.ts';
@@ -27,6 +28,7 @@ import { AdministrationServiceModule } from './core/administration-service.modul
     ArticleModule,
     ArticleGroupModule,
     CompanyModule,
+    CustomerModule,
     DashboardModule,
     EquipmentModule,
     EquipmentGroupModule,
