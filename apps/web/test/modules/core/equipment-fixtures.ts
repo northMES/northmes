@@ -55,7 +55,10 @@ export const asm = group('ASM', 'Assembly', { color: 'palette-8' });
 export const heat = group('HEAT', 'Heat treatment', { scope: 'company', colorFrom: 'palette' });
 export const mach = group('MACH', 'Machining', { color: 'palette-3', colorFrom: 'erp' });
 
-export type MachineNode = ReturnType<typeof machine>;
+/** A machine as the API answers it; its group is null where the request cannot read it. */
+export type MachineNode = Omit<ReturnType<typeof machine>, 'group'> & {
+  readonly group: ReturnType<typeof machine>['group'] | null;
+};
 
 /**
  * A fictional machine of the plant with an id made from its code, in the group `of`, plannable
