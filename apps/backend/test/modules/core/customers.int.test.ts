@@ -98,6 +98,45 @@ describe('customers', () => {
     await expect(givenCustomer(other.company, 'C-100', 'Baltic Valves')).resolves.toBeDefined();
   });
 
+  it("E06-S07 a customer sits at its company's node, so a row at a plant's node is refused", async () => {
+    const place = await givenCompany(db.ownerUrl);
+    const plant = place.plants[0] ?? '';
+
+    const atPlant = db.command(
+      { principal, scopes: [place.company, plant], reason: 'E06-S07 probe' },
+      (tx) =>
+        tx.query(
+          `insert into core.customer (scope_id, company_id, code, name)
+           values ($1, $1, 'C-100', 'Nordic Pumps')`,
+          [plant],
+        ),
+    );
+
+    await expect(atPlant).rejects.toMatchObject({
+      code: '23503',
+      constraint: 'customer_company_fkey',
+    });
+  });
+
+  it('E06-S07 coreCustomers searches number and name, and sorts by name', async () => {
+    const place = await givenCompany(db.ownerUrl);
+    await givenCustomer(place.company, 'C-100', 'Nordic Pumps');
+    await givenCustomer(place.company, 'C-200', 'Lakeside Foundry');
+    await givenCustomer(place.company, 'P-300', 'Baltic Valves');
+    const client = await plantUser(place);
+    const codes = async (args: string) => {
+      const answer: Answer = await client.send(
+        `query { coreCustomers(${args}) { edges { node { code } } } }`,
+      );
+      const page = answer.data?.coreCustomers as { edges: { node: { code: string } }[] };
+      return page.edges.map(({ node }) => node.code);
+    };
+
+    expect(await codes('search: "pumps"')).toEqual(['C-100']);
+    expect(await codes('search: "p-3"')).toEqual(['P-300']);
+    expect(await codes('orderBy: [{ field: NAME }]')).toEqual(['P-300', 'C-200', 'C-100']);
+  });
+
   it("E06-S07 a plant lists its company's customers by number", async () => {
     const place = await givenCompany(db.ownerUrl);
     await givenCustomer(place.company, 'C-200', 'Lakeside Foundry');
