@@ -7,6 +7,7 @@ import { userEvent } from '@testing-library/user-event';
 import { GraphQLError } from 'graphql';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CoreEquipment } from '../../../src/modules/core/equipment.graphql.ts';
+import { CoreEquipmentGroups } from '../../../src/modules/core/equipment-groups.graphql.ts';
 import { CoreEquipmentList } from '../../../src/modules/core/equipment-list.graphql.ts';
 import { CoreUpdateEquipment } from '../../../src/modules/core/screens/edit-machine/update-machine.graphql.ts';
 import { CoreArchiveEquipment } from '../../../src/modules/core/screens/machine/archive-machine.graphql.ts';
@@ -208,6 +209,51 @@ describe('the machines list in plant settings (design #688, MA1 to MA9)', () => 
     ]);
     await screen.findByRole('table', { name: 'Machines' });
     await waitFor(() => expect(machineRows()).toEqual(['ASM1', 'CNC1', 'CNC2']));
+  });
+
+  it('#991 MA6 the empty list asks only a user who may create machines to create the first', async () => {
+    renderCoreAt(
+      machines,
+      [viewerQuery(['core.equipment:read']), machinesQuery([]), companiesQuery()],
+      { hold: answeredAfter('CoreViewer', 'CoreEquipmentList') },
+    );
+    expect(await screen.findByRole('heading', { level: 2, name: 'No machines yet' })).toBeTruthy();
+    expect(screen.getByText('A plant admin creates the machines here.')).toBeTruthy();
+  });
+
+  it('#991 MA1 a later page of machines that fails to load says so with Try again', async () => {
+    renderCoreAt(machines, [
+      machinesQuery([asm1, cnc1], false, { next: 'page-2' }),
+      {
+        request: {
+          query: CoreEquipmentList,
+          variables: { includeArchived: false, after: 'page-2' },
+        },
+        error: new Error('Network down'),
+      },
+      companiesQuery(),
+      admin(),
+    ]);
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Could not load machines' }),
+    ).toBeTruthy();
+    // The status line never counts the first page alone as the plant's machines.
+    expect(statusLine()).not.toMatch(/^2 machines/);
+  });
+
+  it('#991 MA1 a machine whose group the user cannot read shows Not shown, and the Group menu offers no empty option', async () => {
+    renderCoreAt(machines, [
+      machinesQuery([{ ...cnc1, group: null }, cnc2]),
+      companiesQuery(),
+      admin(),
+    ]);
+    const table = await screen.findByRole('table', { name: 'Machines' });
+    await waitFor(() => expect(machineRows()).toEqual(['CNC1', 'CNC2']));
+    expect(bodyRows(table)[0]?.[2]).toBe('Not shown');
+    await userEvent.click(screen.getByRole('button', { name: 'Group' }));
+    expect(
+      screen.getAllByRole('menuitemcheckbox').map((item) => item.textContent?.trim()),
+    ).toEqual(['Machining1']);
   });
 
   it('#991 MA1 Plannable only, the Group filter and the search live in the URL', async () => {
@@ -562,6 +608,7 @@ describe("a machine's edit form (design #688, MA4)", () => {
   it('#991 MA4 a save refused for a newer version keeps the entries and offers Reload, which fills the form with the saved machine', async () => {
     const user = userEvent.setup();
     const saved = { ...cnc1, name: 'CNC 1 east', version: 2 };
+    const sent: Record<string, unknown>[] = [];
     renderCoreAt(editOf(cnc1.id), [
       machineQuery(cnc1),
       groupsQuery([mach]),
@@ -569,6 +616,9 @@ describe("a machine's edit form (design #688, MA4)", () => {
       admin(),
       refused(CoreUpdateEquipment, 'core.version_conflict'),
       machineQuery(cnc1, saved),
+      recorded(CoreUpdateEquipment, sent, () => ({
+        coreUpdateEquipment: { ...saved, version: 3 },
+      })),
     ]);
     const name = await screen.findByRole('textbox', { name: 'Name' });
     await user.clear(name);
@@ -579,6 +629,9 @@ describe("a machine's edit form (design #688, MA4)", () => {
     expect(field('Name').value).toBe('CNC 1 hall');
     await user.click(reload);
     await waitFor(() => expect(field('Name').value).toBe('CNC 1 east'));
+    await user.click(screen.getByRole('button', { name: 'Save machine' }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({ expectedVersion: 2, name: 'CNC 1 east' });
   });
 
   it('#991 MA4 a group the API refuses lands on Equipment group, and the entries stay', async () => {
@@ -603,9 +656,11 @@ describe("a machine's edit form (design #688, MA4)", () => {
     await user.selectOptions(groupField, asm.id);
     await user.click(screen.getByRole('button', { name: 'Save machine' }));
 
+    await waitFor(() => expect(groupField.getAttribute('aria-invalid')).toBe('true'));
     expect(
-      (await screen.findAllByText('Assembly is archived. Choose an active group.')).length,
-    ).toBeGreaterThan(0);
+      document.getElementById(groupField.getAttribute('aria-describedby')?.split(' ')[0] ?? '')
+        ?.textContent,
+    ).toBe('Assembly is archived. Choose an active group.');
     expect(groupField.value).toBe(asm.id);
   });
 
@@ -727,10 +782,23 @@ describe('a new machine (design #688)', () => {
     await user.selectOptions(groupField, mach.id);
     await user.click(screen.getByRole('button', { name: 'Save machine' }));
 
+    await waitFor(() => expect(field('Code').getAttribute('aria-invalid')).toBe('true'));
     expect(
       (await screen.findAllByText('Code CNC1 is already in use here. Choose another code.')).length,
     ).toBeGreaterThan(0);
     expect(field('Code').value).toBe('CNC1');
+  });
+
+  it('#991 New machine says so when the equipment groups cannot be read, with Try again', async () => {
+    renderCoreAt(newMachine, [
+      forbidden({ query: CoreEquipmentGroups, variables: { includeArchived: false } }),
+      companiesQuery(),
+      viewerQuery(['core.equipment:read', 'core.equipment:create']),
+    ]);
+    expect(
+      await screen.findByRole('heading', { level: 2, name: 'Could not open New machine' }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy();
   });
 
   it('#991 New machine says so to a user who may not create machines', async () => {
@@ -745,6 +813,39 @@ describe('a new machine (design #688)', () => {
 });
 
 describe('the machines of an equipment group (design #729, EG4)', () => {
+  it('#991 EG1 EG4 a user who reads groups but not machines sees the groups, without their machines', async () => {
+    const refusedMachines = forbidden({
+      query: CoreEquipmentList,
+      variables: { includeArchived: false },
+    });
+    renderCoreAt(coreLinks.settings.equipmentGroups({ plant }).href, [
+      groupsQuery([mach]),
+      refusedMachines,
+      companiesQuery(),
+      viewerQuery(['core.equipmentGroup:read']),
+    ]);
+    const list = await screen.findByRole('table', { name: 'Equipment groups of Plant A' });
+    await waitFor(() => expect(bodyRows(list)[0]?.[4]).toBe('Not shown'));
+    expect(statusLine()).toBe('1 equipment group. Sorted by code.');
+    cleanup();
+
+    renderCoreAt(coreLinks.settings.equipmentGroups.group({ plant, groupId: mach.id }).href, [
+      groupQuery(mach),
+      refusedMachines,
+      companiesQuery(),
+      viewerQuery(['core.equipmentGroup:read']),
+    ]);
+    expect(
+      await screen.findByText(
+        'You cannot see the machines at Plant A: that needs core.equipment:read.',
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole('table', { name: 'Machines in MACH' })).toBeNull();
+    // The band would claim the group has no plannable machine, which nobody knows here.
+    expect(screen.queryByRole('heading', { name: 'On the board' })).toBeNull();
+  });
+
+
   it("#991 EG4 a group's page lists its machines at the plant from the API, each a link to its page", async () => {
     const groupPage = coreLinks.settings.equipmentGroups.group({ plant, groupId: mach.id }).href;
     renderCoreAt(groupPage, [
