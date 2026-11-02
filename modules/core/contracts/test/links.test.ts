@@ -127,15 +127,19 @@ describe('coreLinks', () => {
     );
   });
 
-  it("#876 coreLinks builds the hrefs of the equipment groups, a group's page and its edit form under the plant's settings", () => {
+  it("#983 coreLinks builds the hrefs of the equipment groups, the new group page, a group's page by its id and its edit form under the plant's settings", () => {
+    const groupId = '019a0000-0000-7000-8000-00004d414348';
     expect(
       coreLinks.settings.equipmentGroups({ plant: 'plant-a' }, { scope: 'company' }).href,
     ).toBe('/plant-a/settings/equipment-groups?scope=company');
-    expect(
-      coreLinks.settings.equipmentGroups.group({ plant: 'plant-a', groupCode: 'MACH' }).href,
-    ).toBe('/plant-a/settings/equipment-groups/MACH');
-    expect(
-      coreLinks.settings.equipmentGroups.group.edit({ plant: 'plant-a', groupCode: 'MACH' }).href,
-    ).toBe('/plant-a/settings/equipment-groups/MACH/edit');
+    expect(coreLinks.settings.equipmentGroups.new({ plant: 'plant-a' }).href).toBe(
+      '/plant-a/settings/equipment-groups/new',
+    );
+    expect(coreLinks.settings.equipmentGroups.group({ plant: 'plant-a', groupId }).href).toBe(
+      `/plant-a/settings/equipment-groups/${groupId}`,
+    );
+    expect(coreLinks.settings.equipmentGroups.group.edit({ plant: 'plant-a', groupId }).href).toBe(
+      `/plant-a/settings/equipment-groups/${groupId}/edit`,
+    );
   });
 });

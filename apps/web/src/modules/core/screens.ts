@@ -24,6 +24,7 @@ export { MachineScreen } from './screens/machine/index.ts';
 export { MachinesScreen } from './screens/machines/index.ts';
 export { NewArticleScreen } from './screens/new-article/index.ts';
 export { NewArticleGroupScreen } from './screens/new-article-group/index.ts';
+export { NewEquipmentGroupScreen } from './screens/new-equipment-group/index.ts';
 export { NewRoleScreen } from './screens/new-role/index.ts';
 export { NewUserScreen } from './screens/new-user/index.ts';
 export { PeopleScreen } from './screens/people/index.ts';

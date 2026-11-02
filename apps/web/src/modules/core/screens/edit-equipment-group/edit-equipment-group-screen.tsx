@@ -1,165 +1,154 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
-import { Link, useParams, useSearch } from '@tanstack/react-router';
-import { useId, useState } from 'react';
-import { FormSection } from '../../../../ui/components/form-section/index.ts';
+import { useNavigate, useParams } from '@tanstack/react-router';
+import { useRef, useState } from 'react';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
-import { ReadOnlyField } from '../../../../ui/components/read-only-field/index.ts';
-import { TextField } from '../../../../ui/components/text-field/index.ts';
-import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
-import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
-import { Field, FieldDescription } from '../../../../ui/primitives/field.tsx';
-import { RadioGroup, RadioGroupItem } from '../../../../ui/primitives/radio-group.tsx';
+import { announce } from '../../../../ui/lib/announce.ts';
+import { fieldId } from '../../../../ui/lib/field-id.ts';
+import { hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
+import { useZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import { Skeleton } from '../../../../ui/primitives/skeleton.tsx';
-import { GroupBand } from '../../components/group-band/index.ts';
-import { colorText, colorUsers, machinesOf, paletteColors } from '../../equipment-group-facts.ts';
-import { equipmentGroupPageState } from '../../equipment-group-states.tsx';
-import type { PlantEquipmentGroup, PlantSettingsSnapshot } from '../../plant-settings-data.ts';
-import { equipmentGroupSaveReason } from '../../plant-settings-reasons.ts';
-import { equipmentGroupPageSearch } from '../../plant-settings-search.ts';
+import {
+  EquipmentGroupForm,
+  type EquipmentGroupValues,
+  equipmentGroupFormFields,
+} from '../../components/equipment-group-form/index.ts';
+import { CoreEquipmentGroup, type EquipmentGroup } from '../../equipment-group.graphql.ts';
+import { machinesOf } from '../../equipment-group-facts.ts';
+import {
+  canChangeGroup,
+  equipmentGroupPageState,
+  isGroupId,
+} from '../../equipment-group-states.tsx';
+import { showRegisterSaveError } from '../../master-data/register-save-error.ts';
+import type { PlantMachine } from '../../plant-settings-data.ts';
 import { usePlantSettings } from '../../plant-settings-source-context.ts';
+import { useEquipmentGroups } from '../../use-equipment-groups.ts';
+import { usePlaces } from '../../use-places.ts';
+import { useViewer } from '../../use-viewer.ts';
+import { CoreUpdateEquipmentGroup } from './update-equipment-group.graphql.ts';
 
-/** The tag of a field the ERP owns. */
-const fromErp = 'From the ERP';
+/** The form's values as the group holds them. */
+function valuesOf(group: EquipmentGroup): EquipmentGroupValues {
+  return {
+    code: group.code,
+    name: group.name,
+    color: group.color as EquipmentGroupValues['color'],
+  };
+}
 
-/** The form of a group (EG5): the code, the name, the palette color with a preview, the reason. */
-function GroupForm({
-  snapshot,
-  group,
-}: {
-  readonly snapshot: PlantSettingsSnapshot;
-  readonly group: PlantEquipmentGroup;
-}) {
+interface GroupFormProps {
+  readonly group: EquipmentGroup;
+  readonly machines: readonly PlantMachine[];
+  readonly companyName: string;
+}
+
+/**
+ * The group's form as it was when the page opened. Save sends the name and the color with the
+ * version the form was filled from as expectedVersion, so a change someone saved in between is
+ * refused with core.version_conflict, not overwritten. Reload reads the saved group outside the
+ * page's query, so a failed reload keeps the form and its entries. A saved change returns to the
+ * group's page.
+ */
+function GroupForm({ group, machines, companyName }: GroupFormProps) {
+  const client = useApolloClient();
   const { plant } = useShell();
-  const imported = group.owner === 'erp';
-  const colorId = useId();
-  const [color, setColor] = useState(group.color);
-  const [name, setName] = useState(group.name);
-  const users = colorUsers(snapshot, group);
-  const machines = machinesOf(snapshot, group.code);
+  const navigate = useNavigate();
+  const viewer = useViewer();
+  const { data } = useEquipmentGroups(false);
+  const expectedVersion = useRef(group.version);
+  const [conflict, setConflict] = useState(false);
+  const form = useZodForm(equipmentGroupFormFields, { defaultValues: valuesOf(group) });
+  const [update] = useMutation(CoreUpdateEquipmentGroup);
+  const groupPage = coreLinks.settings.equipmentGroups.group({ plant, groupId: group.id }).href;
+  const company = group.scope === 'company';
+
+  const save = async (values: EquipmentGroupValues) => {
+    setConflict(false);
+    const { code, name, color } = values;
+    try {
+      const { data: saved } = await update({
+        variables: {
+          input: {
+            id: group.id,
+            expectedVersion: expectedVersion.current,
+            code,
+            name,
+            ...(color !== undefined && { color }),
+          },
+        },
+      });
+      if (!saved) return;
+      announce(`Equipment group ${saved.coreUpdateEquipmentGroup.code} saved`);
+      await navigate({ to: groupPage, replace: true });
+    } catch (error) {
+      if (hasErrorCode(error, 'core.version_conflict')) {
+        setConflict(true);
+        return;
+      }
+      showRegisterSaveError(form, error, values, {
+        forbidden: company
+          ? 'You do not have permission to change company equipment groups. They belong to the company, so the change needs the permission there.'
+          : 'You do not have permission to change equipment groups at this plant.',
+      });
+    }
+  };
+
+  const onReload = async () => {
+    const saved = await client
+      .query({
+        query: CoreEquipmentGroup,
+        variables: { id: group.id },
+        fetchPolicy: 'network-only',
+      })
+      .then(({ data: answer }) => answer?.coreEquipmentGroup ?? undefined)
+      .catch(() => undefined);
+    if (saved === undefined) {
+      form.setError('root.server', {
+        type: 'server',
+        message: 'Could not reload the equipment group. Your entries are kept. Try again.',
+      });
+      return;
+    }
+    form.reset(valuesOf(saved));
+    expectedVersion.current = saved.version;
+    setConflict(false);
+    document.getElementById(fieldId('name'))?.focus();
+  };
+
+  const archived = group.archivedAt !== null;
+  const allowed = canChangeGroup(viewer, group, 'update');
+  const notes = [
+    ...(company
+      ? [
+          `${group.code} is a company group: a change here applies at every plant of ${companyName}.`,
+        ]
+      : []),
+    ...(archived ? [`${group.code} is archived. Restore it on its page to change it.`] : []),
+    ...(!archived && !allowed
+      ? [
+          company
+            ? 'You may read this group but not change it: a change to a company group needs the permission at the company.'
+            : 'You may read this group but not change it.',
+        ]
+      : []),
+  ];
   return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-      }}
-    >
-      <FormSection title="Equipment group">
-        {group.scope.kind === 'company' && (
-          <p className="text-sm">
-            {group.code} is a company group: a change here applies at every plant of{' '}
-            {group.scope.name}.
-          </p>
-        )}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <ReadOnlyField
-            label="Code"
-            value={group.code}
-            tag={imported ? fromErp : 'Set at creation'}
-            hint={
-              imported
-                ? "The ERP's group code identifies the group. It cannot change."
-                : 'The code identifies the group. It cannot change.'
-            }
-          />
-          {imported ? (
-            <ReadOnlyField
-              label="Name"
-              value={group.name}
-              tag={fromErp}
-              hint="The ERP sends the name with the machines."
-            />
-          ) : (
-            <TextField
-              label="Name"
-              name="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              hint="Shown beside the color on the board, the Gantt and the machine pages."
-            />
-          )}
-          <Field className="sm:col-span-2">
-            <span id={colorId} className="text-xs font-semibold">
-              Color
-            </span>
-            <RadioGroup
-              aria-labelledby={colorId}
-              aria-describedby={`${colorId}-hint`}
-              value={color}
-              onValueChange={(value) => setColor(String(value))}
-              name="color"
-              className="grid grid-cols-5 gap-2 sm:grid-cols-10"
-            >
-              {paletteColors.map((each) => {
-                const usedBy = users.get(each) ?? [];
-                // The radio takes its name from the label, "Color 1, used by HEAT", while the
-                // swatch shows the number and the codes.
-                const name =
-                  usedBy.length === 0
-                    ? colorText(each)
-                    : `${colorText(each)}, used by ${usedBy.join(', ')}`;
-                return (
-                  // biome-ignore lint/a11y/noLabelWithoutControl: the radio inside is the control.
-                  <label
-                    key={each}
-                    className="flex cursor-pointer flex-col items-center gap-1 rounded-md border border-transparent p-1 has-data-checked:border-foreground"
-                  >
-                    <span
-                      aria-hidden
-                      className="h-8 w-full rounded-sm border border-border"
-                      style={{ background: `var(--${each})` }}
-                    />
-                    <span className="sr-only">{name}</span>
-                    <span className="flex items-center gap-1.5 text-xs">
-                      <RadioGroupItem value={each} />
-                      <span aria-hidden>{each.replace('palette-', '')}</span>
-                    </span>
-                    <span aria-hidden className="min-h-4 font-mono text-tick text-muted-foreground">
-                      {usedBy.join(', ')}
-                    </span>
-                  </label>
-                );
-              })}
-            </RadioGroup>
-            <FieldDescription id={`${colorId}-hint`}>
-              One of the 20 palette colors. The color you set here stays: the import never replaces
-              an existing color. Two groups can share a color; the name tells them apart.
-            </FieldDescription>
-          </Field>
-        </div>
-      </FormSection>
-      <FormSection title="Preview on the board">
-        {/* A blank Name while typing keeps the stored name beside the color. */}
-        <GroupBand
-          name={name.trim() === '' ? group.name : name}
-          color={color}
-          machines={machines}
-        />
-      </FormSection>
-      <FormSection title="Reason for the change">
-        <TextareaField
-          label="Reason"
-          name="reason"
-          optional
-          placeholder="Why you made this change"
-          hint="Shown in the group's history. Do not enter personal data. Up to 500 characters."
-        />
-      </FormSection>
-      <div className="flex flex-wrap items-center gap-2 border-t border-border py-3">
-        <Button type="submit" disabled>
-          Save equipment group
-        </Button>
-        <Link
-          to={coreLinks.settings.equipmentGroups.group({ plant, groupCode: group.code }).href}
-          className={buttonVariants({ variant: 'outline' })}
-        >
-          Cancel
-        </Link>
-        <p className="text-sm text-muted-foreground">{equipmentGroupSaveReason}</p>
-      </div>
-    </form>
+    <EquipmentGroupForm
+      form={form}
+      onSave={save}
+      cancelHref={groupPage}
+      groups={data?.coreEquipmentGroups.edges.map(({ node }) => node) ?? []}
+      groupId={group.id}
+      notes={notes}
+      machines={machines}
+      storedName={group.name}
+      conflict={conflict ? { onReload } : undefined}
+      editable={!archived && allowed}
+    />
   );
 }
 
@@ -167,14 +156,14 @@ function GroupForm({
 function FormSkeleton() {
   return (
     <div className="flex flex-col gap-4">
-      {['group', 'reason'].map((section) => (
+      {['group', 'preview'].map((section) => (
         <div
           key={section}
           className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6"
         >
           <Skeleton aria-hidden className="h-4 w-32 rounded-sm bg-accent" />
           <div className="grid gap-4 sm:grid-cols-2">
-            {(section === 'group' ? ['code', 'name'] : ['reason']).map((field) => (
+            {(section === 'group' ? ['code', 'name'] : ['band']).map((field) => (
               <div key={field} className="flex flex-col gap-2">
                 <Skeleton aria-hidden className="h-3 w-20 rounded-sm bg-accent" />
                 <Skeleton aria-hidden className="h-9 w-full rounded-md bg-accent" />
@@ -189,50 +178,59 @@ function FormSkeleton() {
 }
 
 /**
- * The edit form of an equipment group in plant settings (design #729, EG5): the code, the name
- * (read-only with the From the ERP tag for a group the ERP sent), the 20 palette colors with the
- * other groups that use each, the band it draws on the board in the name and color entered, and
- * the reason for the change. The form is drawn on the fixture; Save waits for the equipment API.
- * An unknown code shows the not-found state.
+ * The edit form of an equipment group in plant settings (design #729, EG5): the code, which stays,
+ * the name, the 20 palette colors with the other groups that use each, and the band it draws on
+ * the board in the name and color entered. Save equipment group shows to a user who may change the
+ * group where it sits; to anyone else, and on an archived group, the form is read-only. An id the
+ * plant does not see shows the not-found state.
  */
 export function EditEquipmentGroupScreen() {
   const { plant } = useShell();
-  const { groupCode = '' } = useParams({ strict: false });
-  const search = equipmentGroupPageSearch(useSearch({ strict: false }));
-  const { snapshot, error, retry } = usePlantSettings(search.preview);
-  const group = snapshot?.equipmentGroups.find((each) => each.code === groupCode);
-  const groupPage = coreLinks.settings.equipmentGroups.group({ plant, groupCode }).href;
+  const { groupId = '' } = useParams({ strict: false });
+  const valid = isGroupId(groupId);
+  const { data, error, refetch } = useQuery(CoreEquipmentGroup, {
+    variables: { id: groupId },
+    skip: !valid,
+  });
+  const { snapshot } = usePlantSettings(undefined);
+  const places = usePlaces();
+  const viewer = useViewer();
+  // An old link by the group's code names no group.
+  const group = !valid ? null : data === undefined ? undefined : data.coreEquipmentGroup;
+  const groupPage = coreLinks.settings.equipmentGroups.group({ plant, groupId }).href;
   const state = equipmentGroupPageState({
     plant,
-    loaded: snapshot !== undefined,
-    found: group !== undefined,
-    error,
-    retry,
-    forbiddenAction: (
-      <Link to={groupPage} className={buttonVariants({ variant: 'outline' })}>
-        Back to equipment group {groupCode}
-      </Link>
-    ),
+    plantName: places.plant?.name ?? 'the plant',
+    group,
+    restLoaded: snapshot !== undefined && viewer.loaded,
+    error: error ?? viewer.error,
+    retry: () =>
+      Promise.all([
+        error === undefined ? undefined : refetch(),
+        viewer.error === undefined ? undefined : viewer.retry(),
+      ]),
   });
+  const title = group ? `Equipment group ${group.code}` : 'Equipment group';
   return (
     <PageFrame
-      title={`Edit equipment group ${group?.code ?? groupCode}`}
+      title={`Edit ${title.charAt(0).toLowerCase()}${title.slice(1)}`}
       crumbs={[
         { label: 'Equipment groups', href: coreLinks.settings.equipmentGroups({ plant }).href },
-        { label: `Equipment group ${group?.code ?? groupCode}`, href: groupPage },
+        { label: title, href: groupPage },
       ]}
       currentCrumb="Edit"
-      meta={
-        group === undefined ? undefined : (
-          <span className="text-sm text-muted-foreground">{group.name}</span>
-        )
-      }
+      meta={group ? <span className="text-sm text-muted-foreground">{group.name}</span> : undefined}
       state={state}
     >
       {state.status === 'loading' && <FormSkeleton />}
-      {snapshot !== undefined && group !== undefined && (
-        // A new group gets a fresh form, so the color and name picked for another never carry over.
-        <GroupForm key={group.code} snapshot={snapshot} group={group} />
+      {state.status === 'ready' && group && snapshot !== undefined && (
+        // A reloaded or another group gets a fresh form, so its entries never carry over.
+        <GroupForm
+          key={group.id}
+          group={group}
+          machines={machinesOf(snapshot, group.code)}
+          companyName={places.company?.name ?? 'the company'}
+        />
       )}
     </PageFrame>
   );

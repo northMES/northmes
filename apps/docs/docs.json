@@ -20,6 +20,7 @@
               "use/companies-and-plants",
               "use/users-and-roles",
               "use/articles",
+              "use/equipment-groups",
               "use/dashboard"
             ]
           }
