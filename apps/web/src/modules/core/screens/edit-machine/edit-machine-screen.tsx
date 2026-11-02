@@ -1,293 +1,220 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
-import { Link, useParams, useSearch } from '@tanstack/react-router';
-import { CircleAlert, Lock } from 'lucide-react';
-import { useId } from 'react';
-import { FormSection } from '../../../../ui/components/form-section/index.ts';
-import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
-import { ReadOnlyField } from '../../../../ui/components/read-only-field/index.ts';
-import { SelectField } from '../../../../ui/components/select-field/index.ts';
-import { TextField } from '../../../../ui/components/text-field/index.ts';
-import { TextareaField } from '../../../../ui/components/textarea-field/index.ts';
-import { Alert, AlertDescription, AlertTitle } from '../../../../ui/primitives/alert.tsx';
-import { Badge } from '../../../../ui/primitives/badge.tsx';
-import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
-import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
-import { Field, FieldDescription, FieldLabel } from '../../../../ui/primitives/field.tsx';
-import { Label } from '../../../../ui/primitives/label.tsx';
-import { RadioGroup, RadioGroupItem } from '../../../../ui/primitives/radio-group.tsx';
+import { useNavigate, useParams } from '@tanstack/react-router';
+import { useRef, useState } from 'react';
+import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
+import { announce } from '../../../../ui/lib/announce.ts';
+import { fieldId } from '../../../../ui/lib/field-id.ts';
+import { hasErrorCode } from '../../../../ui/lib/graphql-errors.ts';
+import { useZodForm } from '../../../../ui/lib/use-zod-form.ts';
 import { Skeleton } from '../../../../ui/primitives/skeleton.tsx';
-import { GroupColor } from '../../components/group-color/index.ts';
 import {
-  type PlantMachine,
-  PlantSettingsForbidden,
-  type PlantSettingsSnapshot,
-} from '../../plant-settings-data.ts';
-import { groupColorOf, groupNamer } from '../../plant-settings-facts.ts';
-import { machineSaveReason } from '../../plant-settings-reasons.ts';
-import { machinePageSearch } from '../../plant-settings-search.ts';
-import { usePlantSettings } from '../../plant-settings-source-context.ts';
+  MachineForm,
+  type MachineFormGroup,
+  type MachineValues,
+  machineFormFields,
+} from '../../components/machine-form/index.ts';
+import { CoreEquipment, type Machine } from '../../equipment.graphql.ts';
+import { isMachineId, machinePageState } from '../../machine-states.tsx';
+import { showRegisterSaveError } from '../../master-data/register-save-error.ts';
+import { useEquipmentGroups } from '../../use-equipment-groups.ts';
+import { usePlaces } from '../../use-places.ts';
+import { useViewer } from '../../use-viewer.ts';
+import { CoreUpdateEquipment } from './update-machine.graphql.ts';
 
-/** The tag of a field the ERP owns (design #688, MA4). */
-const fromErp = 'From the ERP';
+/** The form's values as the machine holds them. */
+function valuesOf(machine: Machine): MachineValues {
+  return {
+    code: machine.code,
+    name: machine.name,
+    groupId: machine.groupId,
+    isPlannable: machine.isPlannable,
+    color: (machine.color ?? 'group') as MachineValues['color'],
+  };
+}
 
-/** The form of a machine (MA4): the ERP's code and plannable flag, and the plant's own fields. */
-function MachineForm({
-  snapshot,
-  machine,
-  failed,
-}: {
-  readonly snapshot: PlantSettingsSnapshot;
-  readonly machine: PlantMachine;
-  /** The page previews a save that failed (MF3): the entries stay and the alert says so. */
-  readonly failed: boolean;
-}) {
+/**
+ * The groups the machine may join: the active ones the plant sees, by code, and the machine's own
+ * group when it is archived, so the form still names it.
+ */
+function groupsFor(
+  machine: Machine,
+  active: readonly MachineFormGroup[] | undefined,
+): MachineFormGroup[] {
+  const groups = [...(active ?? [])];
+  const own = machine.group;
+  if (own !== null && !groups.some((each) => each.id === own.id)) {
+    groups.push(own);
+    groups.sort((a, b) => a.code.localeCompare(b.code));
+  }
+  return groups;
+}
+
+/**
+ * The machine's form as it was when the page opened. Save sends the name, the group, the plannable
+ * flag and the color stripe with the version the form was filled from as expectedVersion, so a
+ * change someone saved in between is refused with core.version_conflict, not overwritten. Reload
+ * reads the saved machine outside the page's query, so a failed reload keeps the form and its
+ * entries. A saved change returns to the machine's page.
+ */
+function EditForm({ machine }: { readonly machine: Machine }) {
+  const client = useApolloClient();
   const { plant } = useShell();
-  const imported = machine.owner === 'erp';
-  const plannableId = useId();
-  const stripeId = useId();
-  const color = groupColorOf(snapshot, machine);
-  const groupName = groupNamer(snapshot)(machine.group);
+  const navigate = useNavigate();
+  const viewer = useViewer();
+  const { data } = useEquipmentGroups(false);
+  const expectedVersion = useRef(machine.version);
+  const [conflict, setConflict] = useState(false);
+  const form = useZodForm(machineFormFields, { defaultValues: valuesOf(machine) });
+  const [update] = useMutation(CoreUpdateEquipment, {
+    update: (cache) => {
+      cache.evict({ fieldName: 'coreEquipmentList' });
+      cache.gc();
+    },
+  });
+  const machinePage = coreLinks.settings.machines.machine({ plant, equipmentId: machine.id }).href;
+
+  const save = async (values: MachineValues) => {
+    setConflict(false);
+    const { code, name, groupId, isPlannable = true, color = 'group' } = values;
+    try {
+      const { data: saved } = await update({
+        variables: {
+          input: {
+            id: machine.id,
+            expectedVersion: expectedVersion.current,
+            code,
+            name,
+            groupId,
+            isPlannable,
+            color,
+          },
+        },
+      });
+      if (!saved) return;
+      announce(`Machine ${saved.coreUpdateEquipment.code} saved`);
+      await navigate({ to: machinePage, replace: true });
+    } catch (error) {
+      if (hasErrorCode(error, 'core.version_conflict')) {
+        setConflict(true);
+        return;
+      }
+      showRegisterSaveError(form, error, values, {
+        forbidden: 'You do not have permission to change machines at this plant.',
+      });
+    }
+  };
+
+  const onReload = async () => {
+    const saved = await client
+      .query({ query: CoreEquipment, variables: { id: machine.id }, fetchPolicy: 'network-only' })
+      .then(({ data: answer }) => answer?.coreEquipment ?? undefined)
+      .catch(() => undefined);
+    if (saved === undefined) {
+      form.setError('root.server', {
+        type: 'server',
+        message: 'Could not reload the machine. Your entries are kept. Try again.',
+      });
+      return;
+    }
+    form.reset(valuesOf(saved));
+    expectedVersion.current = saved.version;
+    setConflict(false);
+    document.getElementById(fieldId('name'))?.focus();
+  };
+
+  const archived = machine.archivedAt !== null;
+  const allowed = viewer.can('core.equipment:update');
+  const notes = [
+    ...(archived ? [`${machine.code} is archived. Restore it on its page to change it.`] : []),
+    ...(!archived && !allowed ? ['You may read this machine but not change it.'] : []),
+  ];
   return (
-    <form
-      className="flex flex-col gap-4"
-      onSubmit={(event) => {
-        event.preventDefault();
-      }}
-    >
-      {failed && (
-        <Alert variant="destructive" role="alert">
-          <CircleAlert aria-hidden />
-          <AlertTitle>Could not save the machine</AlertTitle>
-          <AlertDescription>
-            Your entries are kept. Try again; if it fails again, give your plant admin the
-            correlation id.
-          </AlertDescription>
-        </Alert>
+    <MachineForm
+      form={form}
+      onSave={save}
+      cancelHref={machinePage}
+      groups={groupsFor(
+        machine,
+        data?.coreEquipmentGroups.edges.map(({ node }) => node),
       )}
-      <FormSection title="Machine">
-        <div className="grid gap-4 sm:grid-cols-2">
-          {imported ? (
-            <ReadOnlyField
-              label="Code"
-              value={machine.code}
-              tag={fromErp}
-              hint="The ERP's machine code identifies the machine. It cannot change."
-            />
-          ) : (
-            <ReadOnlyField
-              label="Code"
-              value={machine.code}
-              tag="Set at creation"
-              hint="The code identifies the machine. It cannot change."
-            />
-          )}
-          <TextField
-            label="Name"
-            name="name"
-            defaultValue={machine.name}
-            hint="Shown on the board, the Gantt and the station."
-          />
-          <SelectField
-            label="Equipment group"
-            name="group"
-            defaultValue={machine.group}
-            options={snapshot.equipmentGroups.map((group) => ({
-              value: group.code,
-              label: group.name,
-            }))}
-            hint="The row band on the board. Choose a group or create one under Equipment groups."
-          />
-          <SelectField
-            label="Calendar"
-            name="calendar"
-            defaultValue={machine.calendar ?? ''}
-            placeholder="No calendar"
-            options={snapshot.calendars.map((calendar) => ({
-              value: calendar.name,
-              label: calendar.name,
-            }))}
-            hint="The plant calendar by default. A machine with its own shift pattern gets its own calendar."
-          />
-          <Field className="sm:col-span-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-semibold">Plannable</span>
-              {imported && (
-                <Badge variant="outline" className="h-4.5 gap-1 px-1.5 text-tick">
-                  <Lock aria-hidden className="size-3" />
-                  {fromErp}
-                </Badge>
-              )}
-            </div>
-            <Field orientation="horizontal" className="w-auto">
-              <Checkbox
-                id={plannableId}
-                name="isPlannable"
-                defaultChecked={machine.isPlannable}
-                readOnly={imported}
-                aria-describedby={`${plannableId}-hint`}
-              />
-              <FieldLabel htmlFor={plannableId} className="font-normal">
-                Plannable: the machine appears on the board and autoplan places job orders on it
-              </FieldLabel>
-            </Field>
-            <FieldDescription id={`${plannableId}-hint`}>
-              {imported
-                ? 'The ERP sent the plannable flag. Whether a value changed here survives the next import is open with the product owner (plan 07, field ownership).'
-                : 'A machine that is not plannable stays off the board.'}
-            </FieldDescription>
-          </Field>
-          <Field className="sm:col-span-2">
-            <span id={stripeId} className="text-xs font-semibold">
-              Color stripe
-            </span>
-            <RadioGroup
-              aria-labelledby={stripeId}
-              defaultValue="group"
-              name="stripe"
-              className="flex flex-col gap-2"
-            >
-              <Label className="flex min-h-9 items-center gap-3 font-normal">
-                <RadioGroupItem value="group" />
-                <GroupColor color={color} shape="stripe" />
-                From the group, {groupName}
-              </Label>
-              <Label className="flex min-h-9 items-center gap-3 font-normal">
-                <RadioGroupItem value="own" />
-                Own color
-              </Label>
-            </RadioGroup>
-            <FieldDescription>
-              The 6 px stripe before the machine name. The name is always written beside it.
-            </FieldDescription>
-          </Field>
-        </div>
-      </FormSection>
-      <FormSection title="Reason for change">
-        <TextareaField
-          label="Reason"
-          name="reason"
-          placeholder="Why you made this change"
-          hint="Shown in the machine's history. Do not enter personal data. Up to 500 characters."
-        />
-      </FormSection>
-      <div className="flex flex-wrap items-center gap-2 border-t border-border py-3">
-        <Button type="submit" disabled>
-          Save machine
-        </Button>
-        <Link
-          to={coreLinks.settings.machines.machine({ plant, equipmentId: machine.code }).href}
-          className={buttonVariants({ variant: 'outline' })}
-        >
-          Cancel
-        </Link>
-        <p className="text-sm text-muted-foreground">{machineSaveReason}</p>
-      </div>
-    </form>
+      notes={notes}
+      conflict={conflict ? { onReload } : undefined}
+      editable={!archived && allowed}
+    />
   );
 }
 
-/** The skeleton's sections, each with the keys of its field placeholders. */
-const skeletonSections = [
-  { id: 'machine', fields: ['code', 'name', 'group', 'calendar'] },
-  { id: 'reason', fields: ['reason'] },
-] as const;
-
-/** The form's skeleton while the machine loads (MF1): two sections of field placeholders. */
+/** The form's skeleton while the machine loads (MF1): one section of field placeholders. */
 function FormSkeleton() {
   return (
-    <div aria-busy="true" className="flex flex-col gap-4">
-      {skeletonSections.map((section) => (
-        <div
-          key={section.id}
-          className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6"
-        >
-          <Skeleton aria-hidden className="h-4 w-32 rounded-sm bg-accent" />
-          <div className="grid gap-4 sm:grid-cols-2">
-            {section.fields.map((field) => (
-              <div key={field} className="flex flex-col gap-2">
-                <Skeleton aria-hidden className="h-3 w-20 rounded-sm bg-accent" />
-                <Skeleton aria-hidden className="h-9 w-full rounded-md bg-accent" />
-              </div>
-            ))}
-          </div>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6">
+        <Skeleton aria-hidden className="h-4 w-32 rounded-sm bg-accent" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          {['code', 'name', 'group'].map((field) => (
+            <div key={field} className="flex flex-col gap-2">
+              <Skeleton aria-hidden className="h-3 w-20 rounded-sm bg-accent" />
+              <Skeleton aria-hidden className="h-9 w-full rounded-md bg-accent" />
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
       <p className="text-sm text-muted-foreground">Loading the machine.</p>
     </div>
   );
 }
 
 /**
- * The edit form of a machine in plant settings (E06; design #688, MA4 and MF1 to MF4; ui-222 DE7):
- * the ERP's code and plannable flag read-only with the From the ERP tag, the name, the equipment
- * group, the calendar, the color stripe and the reason for change. The form is drawn on the
- * fixture; Save waits for the equipment API. The preview key opens the loading, failed-save and
- * no-access states; an unknown code shows the not-found state (MF2).
+ * The edit form of a machine in plant settings (design #688, MA4 and MF1 to MF4): the code, which
+ * stays, the name, the equipment group, the plannable flag and the color stripe. Save machine
+ * shows to a user who may change machines at the plant; to anyone else, and on an archived
+ * machine, the form is read-only. An id the plant does not have shows the not-found state.
  */
 export function EditMachineScreen() {
   const { plant } = useShell();
   const { equipmentId = '' } = useParams({ strict: false });
-  const search = machinePageSearch(useSearch({ strict: false }));
-  // A failed save keeps the form; the mock source answers the fixture and the form shows the alert.
-  const failed = search.preview === 'error';
-  const { snapshot, error, retry } = usePlantSettings(failed ? undefined : search.preview);
-  const machine = snapshot?.equipment.find((each) => each.code === equipmentId);
+  const valid = isMachineId(equipmentId);
+  const { data, error, refetch } = useQuery(CoreEquipment, {
+    variables: { id: equipmentId },
+    skip: !valid,
+  });
+  const places = usePlaces();
+  const viewer = useViewer();
+  // An old link by the machine's code names no machine.
+  const machine = !valid ? null : data === undefined ? undefined : data.coreEquipment;
   const machinePage = coreLinks.settings.machines.machine({ plant, equipmentId }).href;
-  let state: PageState = { status: 'ready' };
-  if (snapshot === undefined && error instanceof PlantSettingsForbidden) {
-    state = {
-      status: 'empty',
-      icon: Lock,
-      title: 'You need the permission to change machines at this plant',
-      description: `Ask your plant admin for a role that can change machines. You can read machine ${equipmentId} but not edit it.`,
-      action: (
-        <Link to={machinePage} className={buttonVariants({ variant: 'outline' })}>
-          Back to machine {equipmentId}
-        </Link>
-      ),
-    };
-  } else if (snapshot === undefined && error !== undefined) {
-    state = { status: 'error', title: 'Could not load the machine', error, onRetry: retry };
-  } else if (snapshot !== undefined && machine === undefined) {
-    state = {
-      status: 'empty',
-      title: 'This machine does not exist or you cannot see it',
-      description:
-        'The link may be out of date, or the machine belongs to a plant you have no role in.',
-      action: (
-        <Link
-          to={coreLinks.settings.machines({ plant }).href}
-          className={buttonVariants({ variant: 'outline' })}
-        >
-          Back to Machines
-        </Link>
-      ),
-    };
-  }
-  const loaded = snapshot !== undefined && machine !== undefined;
-  const loading = snapshot === undefined && error === undefined;
+  const state = machinePageState({
+    plant,
+    plantName: places.plant?.name ?? 'the plant',
+    machine,
+    restLoaded: viewer.loaded,
+    error: error ?? viewer.error,
+    retry: () =>
+      Promise.all([
+        error === undefined ? undefined : refetch(),
+        viewer.error === undefined ? undefined : viewer.retry(),
+      ]),
+  });
   return (
     <PageFrame
-      title={machine === undefined ? 'Edit machine' : `Edit machine ${machine.code}`}
+      title={machine ? `Edit machine ${machine.code}` : 'Edit machine'}
       crumbs={[
         { label: 'Machines', href: coreLinks.settings.machines({ plant }).href },
-        ...(machine === undefined ? [] : [{ label: `Machine ${machine.code}`, href: machinePage }]),
+        ...(machine ? [{ label: `Machine ${machine.code}`, href: machinePage }] : []),
       ]}
       currentCrumb="Edit"
       meta={
-        loaded ? (
-          <span className="text-sm text-muted-foreground">
-            {machine.name}, {groupNamer(snapshot)(machine.group)}
-          </span>
-        ) : undefined
+        machine ? <span className="text-sm text-muted-foreground">{machine.name}</span> : undefined
       }
       state={state}
     >
-      {loading && <FormSkeleton />}
-      {loaded && <MachineForm snapshot={snapshot} machine={machine} failed={failed} />}
+      {state.status === 'loading' && <FormSkeleton />}
+      {/* A reloaded or another machine gets a fresh form, so its entries never carry over. */}
+      {state.status === 'ready' && machine && <EditForm key={machine.id} machine={machine} />}
     </PageFrame>
   );
 }

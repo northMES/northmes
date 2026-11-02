@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
 import { PageSection } from '../../../../ui/components/page-section/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
+import { isForbidden } from '../../../../ui/lib/graphql-errors.ts';
 import { buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
   Table,
@@ -23,15 +24,16 @@ import { GroupBand } from '../../components/group-band/index.ts';
 import { GroupColor } from '../../components/group-color/index.ts';
 import { ScrollTable } from '../../components/scroll-table/index.ts';
 import { CoreEquipmentGroup } from '../../equipment-group.graphql.ts';
-import { colorNote, colorText, machineCountText, machinesOf } from '../../equipment-group-facts.ts';
+import { colorNote, colorText, machineCountText } from '../../equipment-group-facts.ts';
 import {
   canChangeGroup,
   equipmentGroupPageState,
   isGroupId,
-  machinesFixtureNote,
 } from '../../equipment-group-states.tsx';
+import { calendarOf, machinesIn } from '../../machine-facts.ts';
 import type { GroupColorFrom } from '../../plant-settings-data.ts';
 import { usePlantSettings } from '../../plant-settings-source-context.ts';
+import { usePlantMachines } from '../../use-machines.ts';
 import { usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 import { EquipmentGroupActions } from './equipment-group-actions.tsx';
@@ -66,8 +68,8 @@ function Term({
  * name, its scope and its color with where the color came from, the plant's machines in it, and
  * the band it draws on the board. Edit equipment group shows to a user who may change the group,
  * Archive or Restore to one who may archive it, where it sits. An archived group carries the
- * Archived badge. The group comes from the API by its id; its machines still come from the fixture
- * G1 by its code. History is not built in this round.
+ * Archived badge. The group and its machines come from the API, the machines' calendars from the
+ * fixture G1 by code. History is not built in this round.
  */
 export function EquipmentGroupScreen() {
   const { plant } = useShell();
@@ -78,6 +80,7 @@ export function EquipmentGroupScreen() {
     skip: !valid,
   });
   const { snapshot } = usePlantSettings(undefined);
+  const plantMachines = usePlantMachines();
   const places = usePlaces();
   const viewer = useViewer();
   // An old link by the group's code names no group.
@@ -90,7 +93,7 @@ export function EquipmentGroupScreen() {
     plant,
     plantName,
     group,
-    restLoaded: snapshot !== undefined && viewer.loaded,
+    restLoaded: snapshot !== undefined && plantMachines.settled && viewer.loaded,
     error: error ?? viewer.error,
     retry: () =>
       Promise.all([
@@ -98,7 +101,10 @@ export function EquipmentGroupScreen() {
         viewer.error === undefined ? undefined : viewer.retry(),
       ]),
   });
-  const machines = snapshot === undefined || !group ? [] : machinesOf(snapshot, group.code);
+  const machines =
+    plantMachines.machines === undefined || !group
+      ? undefined
+      : machinesIn(plantMachines.machines, group.id);
   const editable = group && group.archivedAt === null && canChangeGroup(viewer, group, 'update');
   return (
     <PageFrame
@@ -156,9 +162,15 @@ export function EquipmentGroupScreen() {
           </PageSection>
           <PageSection
             title="Machines"
-            lead={`${machineCountText(machines.length)} at ${plantName}. A machine's group is set on the machine's page.`}
+            lead={
+              machines === undefined
+                ? isForbidden(plantMachines.error)
+                  ? `You cannot see the machines at ${plantName}: that needs core.equipment:read.`
+                  : `Could not load the machines at ${plantName}.`
+                : `${machineCountText(machines.length)} at ${plantName}. A machine's group is set on the machine's page.`
+            }
           >
-            {machines.length > 0 && (
+            {machines !== undefined && machines.length > 0 && (
               <ScrollTable label={`Machines in ${group.code}`}>
                 <Table>
                   <TableCaption className="sr-only">Machines in {group.code}</TableCaption>
@@ -173,13 +185,13 @@ export function EquipmentGroupScreen() {
                   </TableHeader>
                   <TableBody>
                     {machines.map((machine) => (
-                      <TableRow key={machine.code}>
+                      <TableRow key={machine.id}>
                         <TableCell className={cell}>
                           <Link
                             to={
                               coreLinks.settings.machines.machine({
                                 plant,
-                                equipmentId: machine.code,
+                                equipmentId: machine.id,
                               }).href
                             }
                             className={`font-mono ${link}`}
@@ -190,7 +202,7 @@ export function EquipmentGroupScreen() {
                         <TableCell className={cell}>{machine.name}</TableCell>
                         <TableCell className={cell}>{machine.isPlannable ? 'Yes' : 'No'}</TableCell>
                         <TableCell className={`${cell} font-mono`}>
-                          {machine.calendar ?? 'None'}
+                          {(snapshot && calendarOf(snapshot, machine.code)?.name) ?? 'None'}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -203,9 +215,8 @@ export function EquipmentGroupScreen() {
             title="On the board"
             lead="Only plannable machines have a row on the board. The color and the name are always shown together."
           >
-            <GroupBand name={group.name} color={group.color} machines={machines} />
+            <GroupBand name={group.name} color={group.color} machines={machines ?? []} />
           </PageSection>
-          <p className="text-xs text-muted-foreground">{machinesFixtureNote}</p>
         </>
       )}
     </PageFrame>

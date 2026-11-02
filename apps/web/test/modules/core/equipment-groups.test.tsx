@@ -14,17 +14,6 @@ import { CoreRestoreEquipmentGroup } from '../../../src/modules/core/screens/equ
 import { CoreCreateEquipmentGroup } from '../../../src/modules/core/screens/new-equipment-group/create-equipment-group.graphql.ts';
 import { companiesQuery, viewerQuery } from './access-fixtures.ts';
 import {
-  asm,
-  forbidden,
-  type Group,
-  group,
-  groupQuery,
-  groupsQuery,
-  heat,
-  mach,
-  machinesQuery,
-} from './equipment-fixtures.ts';
-import {
   answeredAfter,
   holdRequests,
   lastChanged,
@@ -32,6 +21,17 @@ import {
   renderCoreAt,
   spoken,
 } from './core-app.tsx';
+import {
+  asm,
+  forbidden,
+  group,
+  groupQuery,
+  groupsQuery,
+  heat,
+  mach,
+  machine,
+  machinesQuery,
+} from './equipment-fixtures.ts';
 
 afterEach(cleanup);
 
@@ -519,7 +519,12 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
       plant,
       groupId: heat.id,
     }).href;
-    renderGroupsAt(editHeat, [groupQuery(heat), groupsQuery([heat]), companiesQuery(), admin(true)]);
+    renderGroupsAt(editHeat, [
+      groupQuery(heat),
+      groupsQuery([heat]),
+      companiesQuery(),
+      admin(true),
+    ]);
     await screen.findByRole('heading', { level: 1, name: 'Edit equipment group HEAT' });
     expect(
       await screen.findByText(
@@ -874,9 +879,12 @@ describe('the equipment group pages when an answer fails or is missing (review o
 
   it('#983 EG5 the form of an archived group says why it is read-only', async () => {
     const archived = { ...mach, archivedAt: lastChanged };
-    renderGroupsAt(editMach, [
+    // The machines answer names the archived group too, as the API does: the cache keeps one
+    // copy of each group.
+    renderCoreAt(editMach, [
       groupQuery(mach, archived),
       groupsQuery([]),
+      machinesQuery([machine('CNC1', 'CNC 1', archived)]),
       companiesQuery(),
       admin(),
     ]);

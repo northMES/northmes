@@ -7,15 +7,15 @@ import type { PlantSettingsPreview } from './plant-settings-data.ts';
 /**
  * The URL keys of the machines list (design #688, MA1 and ui-222 URL keys): the search in q, the
  * Group and Calendar filters as comma lists of codes and names, Plannable only in plannable=1, and
- * preview, the page state the mock source answers with (MA5 to MA8). Defaults stay out, and a key
- * that does not apply falls back on its own (ADR 0062).
+ * Show archived in archived=1. Defaults stay out, and a key that does not apply falls back on its
+ * own (ADR 0062).
  */
 export interface MachineListSearch {
   readonly q?: string;
   readonly group?: readonly string[];
   readonly calendar?: readonly string[];
   readonly plannable?: 1;
-  readonly preview?: PlantSettingsPreview;
+  readonly archived?: 1;
 }
 
 /**
@@ -27,15 +27,15 @@ export interface EquipmentGroupListSearch {
   readonly archived?: 1;
 }
 
-/** The URL keys of a machine's edit page: the page state the mock source answers with (MF1 to MF4). */
-export interface MachinePageSearch {
+/** The URL keys of the plant page: the page state the mock source answers with (PP4 to PP7). */
+export interface PlantPageSearch {
   readonly preview?: PlantSettingsPreview;
 }
 
 /** The URL keys of a calendar's page: the first plant date of the week its week view shows. */
 export interface CalendarPageSearch {
   readonly week?: string;
-  /** The page state the mock source answers with, as on the machines pages. */
+  /** The page state the mock source answers with, as on the plant page. */
   readonly preview?: PlantSettingsPreview;
 }
 
@@ -62,12 +62,19 @@ function codeList() {
     .catch(undefined);
 }
 
-/** The page states of the machines and calendars pages; noCalendar is the plant page's alone. */
+/** The page states of the calendars pages; noCalendar is the plant page's alone. */
 const preview = z.enum(['loading', 'empty', 'error', 'forbidden']).optional().catch(undefined);
 
 /** The page states of the plant page (design #767, PP4 to PP7). */
 const plantPreview = z
   .enum(['loading', 'error', 'forbidden', 'noCalendar'])
+  .optional()
+  .catch(undefined);
+
+/** A checkbox kept in the URL as 1, such as Plannable only or Show archived. */
+const flag = z
+  .union([z.literal(1), z.literal('1'), z.literal(true)])
+  .transform(() => 1 as const)
   .optional()
   .catch(undefined);
 
@@ -80,12 +87,8 @@ const machineListKeys = z.object({
     .catch(undefined),
   group: codeList(),
   calendar: codeList(),
-  plannable: z
-    .union([z.literal(1), z.literal('1'), z.literal(true)])
-    .transform(() => 1 as const)
-    .optional()
-    .catch(undefined),
-  preview,
+  plannable: flag,
+  archived: flag,
 });
 
 /** The keys of a parsed view without the undefined ones, so an absent key stays out of the URL. */
@@ -113,27 +116,18 @@ export function urlSearchOf(
 
 const equipmentGroupListKeys = z.object({
   scope: commaList(['company', 'plant'] as const),
-  archived: z
-    .union([z.literal(1), z.literal('1'), z.literal(true)])
-    .transform(() => 1 as const)
-    .optional()
-    .catch(undefined),
+  archived: flag,
 });
 
 export function equipmentGroupListSearch(raw: Record<string, unknown>): EquipmentGroupListSearch {
   return defined(equipmentGroupListKeys.parse(raw));
 }
 
-export function machinePageSearch(raw: Record<string, unknown>): MachinePageSearch {
-  const parsed = preview.parse(raw.preview);
-  return parsed === undefined ? {} : { preview: parsed };
-}
-
 /**
  * The URL keys of the plant page (design #767): the page state the mock source answers with,
  * noCalendar among them, the plant before its first calendar version.
  */
-export function plantPageSearch(raw: Record<string, unknown>): MachinePageSearch {
+export function plantPageSearch(raw: Record<string, unknown>): PlantPageSearch {
   const parsed = plantPreview.parse(raw.preview);
   return parsed === undefined ? {} : { preview: parsed };
 }

@@ -17,16 +17,16 @@ import {
   equipmentGroupFormFields,
 } from '../../components/equipment-group-form/index.ts';
 import { CoreEquipmentGroup, type EquipmentGroup } from '../../equipment-group.graphql.ts';
-import { machinesOf } from '../../equipment-group-facts.ts';
 import {
   canChangeGroup,
   equipmentGroupPageState,
   isGroupId,
 } from '../../equipment-group-states.tsx';
+import type { MachineRow } from '../../equipment-list.graphql.ts';
+import { machinesIn } from '../../machine-facts.ts';
 import { showRegisterSaveError } from '../../master-data/register-save-error.ts';
-import type { PlantMachine } from '../../plant-settings-data.ts';
-import { usePlantSettings } from '../../plant-settings-source-context.ts';
 import { useEquipmentGroups } from '../../use-equipment-groups.ts';
+import { usePlantMachines } from '../../use-machines.ts';
 import { usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 import { CoreUpdateEquipmentGroup } from './update-equipment-group.graphql.ts';
@@ -42,7 +42,7 @@ function valuesOf(group: EquipmentGroup): EquipmentGroupValues {
 
 interface GroupFormProps {
   readonly group: EquipmentGroup;
-  readonly machines: readonly PlantMachine[];
+  readonly machines: readonly MachineRow[];
   readonly companyName: string;
 }
 
@@ -192,7 +192,7 @@ export function EditEquipmentGroupScreen() {
     variables: { id: groupId },
     skip: !valid,
   });
-  const { snapshot } = usePlantSettings(undefined);
+  const plantMachines = usePlantMachines();
   const places = usePlaces();
   const viewer = useViewer();
   // An old link by the group's code names no group.
@@ -202,7 +202,7 @@ export function EditEquipmentGroupScreen() {
     plant,
     plantName: places.plant?.name ?? 'the plant',
     group,
-    restLoaded: snapshot !== undefined && viewer.loaded,
+    restLoaded: plantMachines.settled && viewer.loaded,
     error: error ?? viewer.error,
     retry: () =>
       Promise.all([
@@ -223,12 +223,12 @@ export function EditEquipmentGroupScreen() {
       state={state}
     >
       {state.status === 'loading' && <FormSkeleton />}
-      {state.status === 'ready' && group && snapshot !== undefined && (
+      {state.status === 'ready' && group && (
         // A reloaded or another group gets a fresh form, so its entries never carry over.
         <GroupForm
           key={group.id}
           group={group}
-          machines={machinesOf(snapshot, group.code)}
+          machines={machinesIn(plantMachines.machines ?? [], group.id)}
           companyName={places.company?.name ?? 'the company'}
         />
       )}

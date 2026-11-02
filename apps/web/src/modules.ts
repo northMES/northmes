@@ -124,14 +124,15 @@ export const shellModules: readonly ShellModule[] = [
         area: 'settings',
       },
       // Plant settings (ADR 0066; design shell-313, #688 and #729): the machines and the
-      // calendars read the fixture G1 until their pages read core's API; until then they show to a
-      // user who administers the plant's roles there, the plant admin and the company admin. The
-      // equipment groups read the API and show to a holder of core.equipmentGroup:read.
+      // equipment groups read the API and show to a holder of core.equipment:read and
+      // core.equipmentGroup:read. The calendars read the fixture G1 until their page reads core's
+      // API; until then they show to a user who administers the plant's roles there, the plant
+      // admin and the company admin.
       {
         label: 'Machines',
         icon: 'Drill',
         link: coreLinks.settings.machines,
-        permission: 'core.roleAssignment:manage',
+        permission: 'core.equipment:read',
         area: 'settings',
       },
       {

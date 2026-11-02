@@ -14,6 +14,14 @@ import { CoreRestoreEquipment } from '../../../src/modules/core/screens/machine/
 import { CoreCreateEquipment } from '../../../src/modules/core/screens/new-machine/create-machine.graphql.ts';
 import { companiesQuery, viewerQuery } from './access-fixtures.ts';
 import {
+  answeredAfter,
+  holdRequests,
+  lastChanged,
+  plant,
+  renderCoreAt,
+  spoken,
+} from './core-app.tsx';
+import {
   asm,
   asm1,
   cnc1,
@@ -30,14 +38,6 @@ import {
   machinesQuery,
   mill1,
 } from './equipment-fixtures.ts';
-import {
-  answeredAfter,
-  holdRequests,
-  lastChanged,
-  plant,
-  renderCoreAt,
-  spoken,
-} from './core-app.tsx';
 
 afterEach(cleanup);
 
@@ -160,9 +160,10 @@ describe('the machines list in plant settings (design #688, MA1 to MA9)', () => 
     expect(within(table).getByRole('link', { name: 'CNC1' }).getAttribute('href')).toBe(
       pageOf(cnc1.id),
     );
-    expect(within(table).getByRole('link', { name: 'Edit CNC1' }).getAttribute('href')).toBe(
-      editOf(cnc1.id),
-    );
+    // Edit shows once the user's permissions are in.
+    expect(
+      (await within(table).findByRole('link', { name: 'Edit CNC1' })).getAttribute('href'),
+    ).toBe(editOf(cnc1.id));
     expect(within(table).getAllByRole('link', { name: 'A1' })[0]?.getAttribute('href')).toBe(
       '/plant-a/settings/calendars/A1',
     );
@@ -234,11 +235,7 @@ describe('the machines list in plant settings (design #688, MA1 to MA9)', () => 
 
   it('#991 MA1 a picked group that no row has keeps its name in the chip and its checked item in the menu', async () => {
     // The assembly bench is the only machine of Assembly and is not plannable.
-    renderCoreAt(`${machines}?group=ASM&plannable=1`, [
-      machinesQuery(),
-      companiesQuery(),
-      admin(),
-    ]);
+    renderCoreAt(`${machines}?group=ASM&plannable=1`, [machinesQuery(), companiesQuery(), admin()]);
     await screen.findByRole('heading', { level: 2, name: 'No machines match these filters' });
 
     expect(screen.getByText('Group:').parentElement?.textContent).toBe('Group: Assembly 0');
@@ -274,7 +271,9 @@ describe('the machines list in plant settings (design #688, MA1 to MA9)', () => 
     held.release();
     expect(await screen.findByRole('heading', { level: 2, name: 'No machines yet' })).toBeTruthy();
     expect(
-      screen.getByText('Create the first machine here. Every machine belongs to an equipment group.'),
+      screen.getByText(
+        'Create the first machine here. Every machine belongs to an equipment group.',
+      ),
     ).toBeTruthy();
     cleanup();
 
@@ -312,6 +311,7 @@ describe("a machine's page (design #688, MA3)", () => {
     renderCoreAt(pageOf(cnc1.id), [machineQuery(cnc1), companiesQuery(), admin()]);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Machine CNC1' })).toBeTruthy();
+    await screen.findByText('Code', { selector: 'dt' });
     expect(screen.getByText('CNC 1, Machining')).toBeTruthy();
     expect(definition('Code')).toBe('CNC1');
     expect(definition('Name')).toBe('CNC 1');
@@ -357,7 +357,7 @@ describe("a machine's page (design #688, MA3)", () => {
   it('#991 MA3 a machine the fixture does not know is on the plant calendar with an empty week, and its own color shows', async () => {
     const press = machine('PRESS9', 'Press 9', asm, { isPlannable: false, color: 'palette-5' });
     renderCoreAt(pageOf(press.id), [machineQuery(press), companiesQuery(), admin()]);
-    await screen.findByRole('heading', { level: 1, name: 'Machine PRESS9' });
+    await screen.findByText('Plannable', { selector: 'dt' });
 
     expect(definition('Plannable')).toContain('No');
     expect(definition('Calendar')).toContain('A1');
@@ -487,7 +487,9 @@ describe("a machine's edit form (design #688, MA4)", () => {
       true,
     );
     expect(field('Name').value).toBe('CNC 1');
-    const groupField = screen.getByRole('combobox', { name: 'Equipment group' }) as HTMLSelectElement;
+    const groupField = screen.getByRole('combobox', {
+      name: 'Equipment group',
+    }) as HTMLSelectElement;
     await waitFor(() =>
       expect(Array.from(groupField.options).map((option) => option.textContent)).toEqual([
         'Choose a group',
@@ -664,10 +666,9 @@ describe('a new machine (design #688)', () => {
         coreCreateEquipment: { ...press, id: input.id },
       })),
     ]);
-    await screen.findByRole('heading', { level: 1, name: 'New machine' });
-    expect(screen.getByRole('checkbox', { name: /^Plannable/ }).getAttribute('aria-checked')).toBe(
-      'true',
-    );
+    expect(
+      (await screen.findByRole('checkbox', { name: /^Plannable/ })).getAttribute('aria-checked'),
+    ).toBe('true');
 
     await user.type(field('Code'), ' PRESS9 ');
     await user.type(field('Name'), 'Press 9 ');

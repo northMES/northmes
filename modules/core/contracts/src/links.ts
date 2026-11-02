@@ -10,7 +10,8 @@ import { defineCoreLinks } from '@northmes/contracts';
  * article's routing and the edit form of an operation; and the tools and each tool's page. Its
  * settings section holds core's settings pages under the plant's settings (ADR 0066, #876): the
  * plant's own page, the people of the plant with Add role and each person's page with Add role for
- * that person, the machines, the equipment groups with the new group page and the calendars; and
+ * that person, the machines with the new machine page, the equipment groups with the new group
+ * page and the calendars; and
  * the company's pages: the users, the new user page, each user's page (its tab in `tab`) with Add
  * role; the roles, the new role page (Start from in `from`), and each role's page (its tab in
  * `tab`) with its edit page (design core-304); and the warehouses (design #729). Core's pages sit
@@ -67,10 +68,16 @@ export const coreLinks = defineCoreLinks(
           person: { path: '$userId', children: { addRole: { path: 'roles/new' } } },
         },
       },
-      /** The machines of the plant in plant settings (design #688): the list, each machine's page and its edit page. */
+      /**
+       * The machines of the plant in plant settings (design #688): the list, the new machine page,
+       * each machine's page by its id and its edit page.
+       */
       machines: {
         path: 'machines',
-        children: { machine: { path: '$equipmentId', children: { edit: { path: 'edit' } } } },
+        children: {
+          new: { path: 'new' },
+          machine: { path: '$equipmentId', children: { edit: { path: 'edit' } } },
+        },
       },
       /**
        * The equipment groups in plant settings (design #729): the list, the new group page, each

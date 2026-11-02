@@ -96,7 +96,3 @@ export function createGroupForbiddenState(plantName: string): PageState {
     description: 'Ask your plant admin for a role that can create equipment groups.',
   };
 }
-
-/** The note on the groups pages while the machines in each group still come from the fixture. */
-export const machinesFixtureNote =
-  'The machines in each group show the fixture G1 until the machine pages read the API.';
