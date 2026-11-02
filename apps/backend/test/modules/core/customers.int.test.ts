@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { givenCompany, hostFactory, queryAsCore, signIn, signInAt } from '@northmes/backend/testing';
+import {
+  givenCompany,
+  hostFactory,
+  queryAsCore,
+  signIn,
+  signInAt,
+} from '@northmes/backend/testing';
 import { createTestApp, gqlClient, type TestApp, useTestDatabase } from '@northmes/testing';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -85,10 +91,11 @@ describe('customers', () => {
     const other = await givenCompany(db.ownerUrl);
     await givenCustomer(acme.company, 'C-100', 'Nordic Pumps');
 
-    const clash = givenCustomer(acme.company, 'c-100', 'Another customer');
-    await givenCustomer(other.company, 'C-100', 'Baltic Valves');
-
-    await expect(clash).rejects.toMatchObject({ code: '23505', constraint: 'customer_code_key' });
+    await expect(givenCustomer(acme.company, 'c-100', 'Another customer')).rejects.toMatchObject({
+      code: '23505',
+      constraint: 'customer_code_key',
+    });
+    await expect(givenCustomer(other.company, 'C-100', 'Baltic Valves')).resolves.toBeDefined();
   });
 
   it("E06-S07 a plant lists its company's customers by number", async () => {

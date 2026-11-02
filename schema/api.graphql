@@ -929,6 +929,70 @@ type CreatedUser {
   user: User!
 }
 
+"""
+A customer of the company, a buyer of its products, identified by its customer number.
+"""
+type Customer {
+  """The customer number, unique within the company."""
+  code: String!
+
+  """The customer's id."""
+  id: ID!
+
+  """The customer's name."""
+  name: String!
+
+  """When the customer last changed, its creation included."""
+  updatedAt: DateTime!
+
+  """Grows by one with every change to the customer."""
+  version: Int!
+}
+
+"""One page of the Customer list, with keyset paging over opaque cursors."""
+type CustomerConnection {
+  """The items of the page in the list's order."""
+  edges: [CustomerEdge!]!
+
+  """Where the page sits in the list."""
+  pageInfo: PageInfo!
+
+  """
+  How many items the list holds with the same search and filters, across all pages.
+  """
+  totalCount: Int!
+}
+
+"""One Customer of a page, with its cursor."""
+type CustomerEdge {
+  """The cursor of this item, for after or before."""
+  cursor: String!
+
+  """The Customer."""
+  node: Customer!
+}
+
+"""One entry of the Customer list's orderBy."""
+input CustomerOrderBy {
+  """The direction to sort in, ascending by default."""
+  direction: SortDirection = ASC
+
+  """The field to sort by."""
+  field: CustomerSortField!
+}
+
+"""The fields the Customer list sorts by."""
+enum CustomerSortField {
+  """Sorts by code."""
+  CODE
+
+  """Sorts by name."""
+  NAME
+
+  """Sorts by updatedAt."""
+  UPDATED_AT
+}
+
 """A tab of the dashboard, with the widgets of its layout."""
 type DashboardTab {
   """
@@ -1817,6 +1881,39 @@ type Query {
   The companies where the signed-in user holds a role, sorted by name, each with the plants the user may open. The answer is the same with or without x-northmes-plant.
   """
   coreCompanies: [Company!]!
+
+  """
+  One page of the company's customers, with search, orderBy and paging. Needs core.customer:read.
+  """
+  coreCustomers(
+    """
+    Reads the items after this cursor, such as the endCursor of the previous page.
+    """
+    after: String
+
+    """
+    Reads the items before this cursor, such as the startCursor of the next page. Not together with after.
+    """
+    before: String
+
+    """
+    How many items to read forward, from 1 to 100. Ignored when last or before is given.
+    """
+    first: Int = 25
+
+    """
+    How many items to read backward, from 1 to 100, 25 when only before is given.
+    """
+    last: Int
+
+    """The order of the list, at most 3 entries; the id breaks ties."""
+    orderBy: [CustomerOrderBy!]
+
+    """
+    Only the items whose text contains this, ignoring case; at most 100 characters.
+    """
+    search: String
+  ): CustomerConnection!
 
   """
   The dashboard's tabs at the request's plant: the company's, then the plant's, then the signed-in user's own, each in its order. Needs no permission beyond opening the plant.

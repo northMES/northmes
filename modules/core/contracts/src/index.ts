@@ -36,6 +36,7 @@ export {
   getArticleGroup,
 } from './article-group-queries.ts';
 export { article, articleList, findArticles, getArticle } from './article-queries.ts';
+export { customer, customerList } from './customer-queries.ts';
 export {
   type DashboardWidget,
   type DashboardWidgetSize,
