@@ -14,11 +14,15 @@ create table core.customer (
     constraint customer_name_check check (name = btrim(name) and length(name) between 1 and 200),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  -- The row sits at its company's node: scope_id is the company's id, and core.company holds
+  -- company nodes only, so a plant's node is refused.
   constraint customer_company_check check (scope_id = company_id),
-  constraint customer_scope_fkey foreign key (scope_id) references core.scope (id)
+  constraint customer_company_fkey foreign key (company_id) references core.company (id)
 );
 
--- A customer number is unique within the company and compares without case (ADR 0009).
+-- A customer number is unique within the company and compares without case. A register that sits
+-- only at the company has no plant rows to clash with, so a unique index per company holds the
+-- rule that ADR 0009's exclusion constraint holds for a register at the company and its plants.
 -- toDomainError maps a violation of an index whose name ends in _code_key to core.code_taken.
 create unique index customer_code_key on core.customer (company_id, code_key);
 -- The default order of coreCustomers, by number with id as the tie-breaker (ADR 0016).
