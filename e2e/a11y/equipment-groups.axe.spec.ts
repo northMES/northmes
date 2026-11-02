@@ -133,7 +133,7 @@ test.describe('the equipment groups pages', () => {
     const edit = page.url();
 
     await page.goto(mach);
-    await page.getByRole('button', { name: 'Archive' }).click();
+    await page.getByRole('button', { name: 'Archive', exact: true }).click();
     // The dialog fades in; axe reads its text against the page until it has (#867).
     await expect(page.getByRole('alertdialog')).toHaveCSS('opacity', '1');
     await checkA11y('the archive dialog');
@@ -237,14 +237,14 @@ test.describe('the equipment groups pages', () => {
     // An archived group: its page with the badge and Restore, the Restore dialog, and the list
     // with Show archived on. OLD takes the first free color, as no group picks it.
     await newGroup(page, { code: 'OLD', name: 'Old line', scope: /^Plant A$/ });
-    await page.getByRole('button', { name: 'Archive' }).click();
+    await page.getByRole('button', { name: 'Archive', exact: true }).click();
     await page
       .getByRole('alertdialog')
       .getByRole('button', { name: 'Archive equipment group' })
       .click();
-    await expect(page.getByRole('button', { name: 'Restore' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Restore', exact: true })).toBeVisible();
     await checkA11y('an archived equipment group');
-    await page.getByRole('button', { name: 'Restore' }).click();
+    await page.getByRole('button', { name: 'Restore', exact: true }).click();
     await expect(page.getByRole('alertdialog')).toHaveCSS('opacity', '1');
     await checkA11y('the restore dialog');
     await page.keyboard.press('Escape');

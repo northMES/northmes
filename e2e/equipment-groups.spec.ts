@@ -30,7 +30,7 @@ async function newGroup(
 
 /** Archives or restores the group on its page, through the confirm dialog. */
 async function confirm(page: Page, action: 'Archive' | 'Restore') {
-  await page.getByRole('button', { name: action }).click();
+  await page.getByRole('button', { name: action, exact: true }).click();
   await page
     .getByRole('alertdialog')
     .getByRole('button', { name: `${action} equipment group` })
@@ -87,10 +87,10 @@ test.describe('equipment groups', () => {
     const listB = page.getByRole('table', { name: 'Equipment groups of Plant B' });
     await expect(listB.getByRole('link', { name: shared, exact: true })).toBeVisible();
     await expect(listB.getByRole('link', { name: local, exact: true })).toHaveCount(0);
-    await page.getByLabel('Show archived').check();
+    await page.getByRole('checkbox', { name: 'Show archived' }).check();
     await listB.getByRole('link', { name: local, exact: true }).click();
     await confirm(page, 'Restore');
-    await expect(page.getByRole('button', { name: 'Archive' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Archive', exact: true })).toBeVisible();
 
     // The company's group is archived again, so plant A's list holds only what the axe spec made.
     await page.goto(coreLinks.settings.equipmentGroups({ plant }).href);
