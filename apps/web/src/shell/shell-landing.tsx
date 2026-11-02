@@ -27,25 +27,34 @@ export type Landing =
 
 /**
  * The first of the company's settings pages the user may open, under the company's first plant
- * (#876), or undefined: for a company without a plant, where the pages have no place, and for a
- * company the API refuses to answer for.
+ * (#876), or under the first plant where the user reads a page that also reads at the plant, such
+ * as Users (ADR 0092); or undefined: for a company without a plant, where the pages have no place,
+ * and for a company the API refuses to answer for.
  */
 async function settingsOf(
   modules: readonly ShellModule[],
   client: ApolloClient,
   company: ShellCompany,
 ): Promise<string | undefined> {
-  const [plant] = company.plants;
-  if (plant === undefined) return undefined;
+  if (company.plants.length === 0) return undefined;
   try {
     const { data } = await client.query({
       query: CoreViewer,
       variables: { companyId: company.id },
     });
     const permissions = new Set(data?.coreViewer.companyPermissions);
-    return companySettingsEntries(modules, permissions, plant.slug).flatMap(
-      ({ entries }) => entries,
-    )[0]?.href;
+    for (const plant of company.plants) {
+      const atPlant = new Set(
+        data?.coreViewer.plants.find(({ plantId }) => plantId === plant.id)?.permissions,
+      );
+      const [first] = companySettingsEntries(
+        modules,
+        { company: permissions, plant: atPlant },
+        plant.slug,
+      ).flatMap(({ entries }) => entries);
+      if (first !== undefined) return first.href;
+    }
+    return undefined;
   } catch (error) {
     if (isForbidden(error)) return undefined;
     throw error;

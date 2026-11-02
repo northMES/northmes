@@ -18,7 +18,9 @@ import {
   companyId,
   forbiddenError,
   groupedRows,
+  planner,
   plantA,
+  plantB,
   rolesQuery,
   sara,
   settingsViewerQuery,
@@ -429,7 +431,29 @@ describe("a user's access", () => {
     );
   });
 
-  it("E04-S02 a plant in the Where column links to the person's page in that plant's settings", async () => {
+  it('ADR0092 in company settings a reader who may give roles only at Plant A gets Remove at Plant A and not at Plant B, and Add role', async () => {
+    const saraAtBoth = user(sara, [assignment(shiftLead, plantA), assignment(planner, plantB)]);
+    renderCoreAt(accessHref, [
+      settingsViewerQuery(
+        ['core.user:read', 'core.role:read'],
+        [...reader, ...shiftLead.permissions],
+      ),
+      companiesQuery(),
+      userQuery(saraAtBoth),
+      rolesQuery([shiftLead, planner]),
+      permissionsQuery(sara, saraGrants),
+    ]);
+
+    expect(
+      await screen.findByRole('button', { name: 'Remove Shift lead at Plant A' }),
+    ).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Remove Planner at Plant B' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Add role' }).getAttribute('href')).toBe(
+      coreLinks.settings.users.user.addRole({ plant: 'plant-a', userId: sara.id }).href,
+    );
+  });
+
+  it("ADR0092 a plant in the Where column links to the user's page in that plant's settings", async () => {
     renderCoreAt(accessHref, [
       settingsViewerQuery(reader),
       companiesQuery(),
@@ -439,7 +463,7 @@ describe("a user's access", () => {
     ]);
 
     expect((await screen.findByRole('link', { name: 'Plant A' })).getAttribute('href')).toBe(
-      coreLinks.settings.people.person({ plant: 'plant-a', userId: sara.id }).href,
+      coreLinks.settings.users.user({ plant: 'plant-a', userId: sara.id }, { tab: 'access' }).href,
     );
   });
 

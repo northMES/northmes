@@ -44,11 +44,12 @@ import { ShellNotFound } from './shell-not-found.tsx';
 import {
   allPagesHref,
   allPagesPath,
+  companyPageReadsAt,
   companySettingsEntries,
+  companySettingsEntryAt,
   entryAt,
   firstHref,
   groupAt,
-  isCompanySettingsPage,
   isCore,
   isSettingsLanding,
   isSettingsPage,
@@ -363,7 +364,8 @@ interface PlantLayoutProps {
  * top bar, main. A page under /<plant>/settings gets the settings layout inside main, the sidebar
  * collapsed to the rail and the Settings crumb (ADR 0066, #876); a page of the company's settings,
  * such as Users, reads and writes through the client without a plant, with the plant's company in
- * the shell state, so its requests name the company and no plant. Once the user's
+ * the shell state, so its requests name the company and no plant; Users, for a reader who reads
+ * users only at the plant, reads at the plant instead (ADR 0092). Once the user's
  * plants have loaded, a slug that names none of them gets the page of an unknown plant (ADR 0007,
  * D2 ST29) instead of the shell; while they load, or when they fail to, the shell shows the slug.
  */
@@ -414,7 +416,8 @@ function PlantLayout({
   // A page is a settings page by its path, whether or not the permissions have loaded, so its
   // layout does not change once they do.
   const inSettings = isSettingsPage(plant, pathname);
-  const companyPage = inSettings && isCompanySettingsPage(modules, plant, pathname);
+  const companyEntry = inSettings ? companySettingsEntryAt(modules, plant, pathname) : undefined;
+  const companyPage = companyEntry !== undefined;
   const shown = shownTo(permissions);
   // The contributions the user may see at the plant: the slots render these (ADR 0068).
   const contributions = useMemo(
@@ -438,9 +441,11 @@ function PlantLayout({
   const companyEntries =
     companyId === undefined
       ? []
-      : companySettingsEntries(modules, companyPermissions, plant).flatMap(
-          ({ entries }) => entries,
-        );
+      : companySettingsEntries(
+          modules,
+          { company: companyPermissions, plant: permissions },
+          plant,
+        ).flatMap(({ entries }) => entries);
   const settingsNavGroups: SettingsGroup[] =
     companyEntries.length === 0 || found === undefined
       ? settingsGroups
@@ -510,35 +515,45 @@ function PlantLayout({
       />
     );
   }
-  // A page of the company's settings reads through the client without a plant, with the company
-  // in the shell state, once the user's companies say which company the plant is in (ADR 0066).
-  // Until then it shows its loading state under its entry's name, or the failed read with Try
-  // again.
-  const settingsPage = !companyPage ? (
-    <Outlet />
-  ) : companyShell === undefined ? (
-    <PageFrame
-      title={entryAt(modules, { plant }, pathname)?.label ?? 'Settings'}
-      state={
-        companiesFailed === undefined
-          ? { status: 'loading' }
-          : {
-              status: 'error',
-              title: 'Could not load settings',
-              error: companiesFailed,
-              onRetry: () => refetchCompanies(),
-            }
-      }
-    >
-      {null}
-    </PageFrame>
-  ) : (
-    <ApolloProvider client={companiesClient}>
-      <ShellProvider value={companyShell}>
-        <Outlet />
-      </ShellProvider>
-    </ApolloProvider>
-  );
+  // A page of the company's settings reads at the company or, for Users and a reader who reads it
+  // only at the plant, at the plant, as the permissions say (ADR 0092); it waits for them.
+  const readsAt =
+    companyEntry === undefined
+      ? undefined
+      : gated
+        ? companyPageReadsAt(companyEntry, companyPermissions)
+        : 'company';
+  // At the company it reads through the client without a plant, with the company in the shell
+  // state, once the user's companies say which company the plant is in (ADR 0066). Until then, or
+  // until the permissions say where it reads, it shows its loading state under its entry's name, or
+  // the failed read with Try again.
+  const waiting = readsAt === undefined ? viewerFailed : companiesFailed;
+  const settingsPage =
+    !companyPage || readsAt === 'plant' ? (
+      <Outlet />
+    ) : readsAt === undefined || companyShell === undefined ? (
+      <PageFrame
+        title={entryAt(modules, { plant }, pathname)?.label ?? 'Settings'}
+        state={
+          waiting === undefined
+            ? { status: 'loading' }
+            : {
+                status: 'error',
+                title: 'Could not load settings',
+                error: waiting,
+                onRetry: () => (readsAt === undefined ? refetchViewer() : refetchCompanies()),
+              }
+        }
+      >
+        {null}
+      </PageFrame>
+    ) : (
+      <ApolloProvider client={companiesClient}>
+        <ShellProvider value={companyShell}>
+          <Outlet />
+        </ShellProvider>
+      </ApolloProvider>
+    );
   const page = inSettings ? (
     <ShellSettingsLayout
       column={

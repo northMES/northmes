@@ -31,7 +31,7 @@ import { noAccessState } from '../../no-access.tsx';
 import { addHolder } from '../../role-cache.ts';
 import { CoreRoles } from '../../roles.graphql.ts';
 import { handOverTemporaryPassword } from '../../temporary-password.ts';
-import { useCompanyId, usePlaces } from '../../use-places.ts';
+import { useCompanyVariables, usePlaces } from '../../use-places.ts';
 import { useViewer } from '../../use-viewer.ts';
 import { CoreUser } from '../../user.graphql.ts';
 import { CoreCreateUser } from './create-user.graphql.ts';
@@ -101,7 +101,7 @@ function NewUserForm({
   /** The roles and places of Role and place, for a creator who may assign roles. */
   readonly firstRole: FirstRoleChoices | undefined;
 }) {
-  const companyId = useCompanyId() ?? '';
+  const company = useCompanyVariables();
   const { plant } = useShell();
   const navigate = useNavigate();
   const [id] = useState(() => uuidv7());
@@ -117,7 +117,7 @@ function NewUserForm({
       const { user } = data.coreCreateUser;
       cache.writeQuery({
         query: CoreUser,
-        variables: { id: user.id, companyId },
+        variables: { id: user.id, ...company },
         data: { coreUser: user },
       });
       for (const { id: assignmentId, role } of user.roleAssignments) {
@@ -142,7 +142,7 @@ function NewUserForm({
       return;
     }
     try {
-      const input = { ...rest, scopeId, ...(reason ? { reason } : {}), id, companyId };
+      const input = { ...rest, scopeId, ...(reason ? { reason } : {}), id, ...company };
       const { data } = await create({ variables: { input } });
       if (!data) return;
       const { user, temporaryPassword } = data.coreCreateUser;
@@ -299,26 +299,30 @@ function NewUserForm({
  * core.user:create gets the page "No access to New user".
  */
 export function NewUserScreen() {
-  const companyId = useCompanyId() ?? '';
+  const company = useCompanyVariables();
   const { plant } = useShell();
   const places = usePlaces();
   const viewer = useViewer();
   // The API checks core.user:create at the company (its scope hook).
   const forbidden = viewer.loaded && !viewer.canAtCompany('core.user:create');
   const companyName = places.company?.name ?? 'the company';
-  // Role and place shows to a creator who may read roles and assign them at the company or a plant.
-  const assigns = viewer.canAtCompany('core.role:read') && viewer.can('core.roleAssignment:manage');
-  const roles = useQuery(CoreRoles, { variables: { companyId }, skip: !assigns });
+  // Role and place shows to a creator who may read roles where the page reads and assign them at
+  // the company or a plant: in company settings every plant of the company, at a plant that plant
+  // (ADR 0092).
+  const atPlants = places.plant === undefined ? places.plants : [places.plant];
+  const assignable = [
+    ...atPlants.map((each) => ({ ...each, kind: 'PLANT' as const })),
+    ...(places.company === undefined ? [] : [{ ...places.company, kind: 'COMPANY' as const }]),
+  ].filter((place) => viewer.canAt(place, 'core.roleAssignment:manage'));
+  // In company settings viewer.can reads the company's permissions.
+  const assigns = viewer.can('core.role:read') && assignable.length > 0;
+  const roles = useQuery(CoreRoles, { variables: company, skip: !assigns });
   const firstRole: FirstRoleChoices | undefined =
     assigns && roles.data !== undefined && places.company !== undefined
       ? {
           roles: roles.data.coreRoles,
-          places: [
-            ...places.plants.map((plant) => ({ ...plant, kind: 'PLANT' as const })),
-            { ...places.company, kind: 'COMPANY' as const },
-          ],
-          holds: (key, place) =>
-            place.kind === 'COMPANY' ? viewer.canAtCompany(key) : viewer.can(key),
+          places: assignable,
+          holds: (key, place) => viewer.canAt(place, key),
         }
       : undefined;
   let state: PageState = { status: 'ready' };

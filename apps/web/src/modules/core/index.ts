@@ -5,7 +5,7 @@ import { coreRoutes, coreSettingsRoutes } from './routes.tsx';
 
 /**
  * The core module's web part, its public api: the routes at the plant root, such as
- * /$plant/articles, and the settings routes at the settings root, such as /$plant/settings/people
+ * /$plant/articles, and the settings routes at the settings root, such as /$plant/settings/machines
  * and /$plant/settings/users (ADR 0074, #876). The shell and other modules import it from this
  * file only.
  */

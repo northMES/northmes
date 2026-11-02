@@ -107,6 +107,36 @@ describe('the landing at /', () => {
     expect(within(main).queryByRole('link', { name: 'Nordic Steel settings' })).toBeNull();
   });
 
+  it('ADR0092 the plant list links the company settings of a user who reads users only at its first plant, to Users', async () => {
+    const [acme] = companies().coreCompanies;
+    const plantA = acme?.plants[0]?.id ?? '';
+    const { fetch } = fakeApi({
+      CoreCompanies: () => companiesWith(['plant-a', 'plant-b']),
+      CoreViewer: () => viewer([], [], { [plantA]: ['core.user:read'] }),
+    });
+    renderShellAt('/', shellModules, { fetch });
+
+    const main = await screen.findByRole('main');
+    expect(
+      (await within(main).findByRole('link', { name: 'Acme AB settings' })).getAttribute('href'),
+    ).toBe(coreLinks.settings.users({ plant: 'plant-a' }).href);
+  });
+
+  it('ADR0092 the plant list links the company settings of a user who reads users only at a later plant, to Users under that plant', async () => {
+    const [acme] = companies().coreCompanies;
+    const plantB = acme?.plants[1]?.id ?? '';
+    const { fetch } = fakeApi({
+      CoreCompanies: () => companiesWith(['plant-a', 'plant-b']),
+      CoreViewer: () => viewer([], [], { [plantB]: ['core.user:read'] }),
+    });
+    renderShellAt('/', shellModules, { fetch });
+
+    const main = await screen.findByRole('main');
+    expect(
+      (await within(main).findByRole('link', { name: 'Acme AB settings' })).getAttribute('href'),
+    ).toBe(coreLinks.settings.users({ plant: 'plant-b' }).href);
+  });
+
   // The target size of the plant and settings links (WCAG 2.5.8) is read from the boxes the browser
   // lays out in e2e/design-rules.spec.ts.
 
