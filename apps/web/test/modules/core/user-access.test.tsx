@@ -447,10 +447,12 @@ describe("a user's access", () => {
     expect(
       await screen.findByRole('button', { name: 'Remove Shift lead at Plant A' }),
     ).toBeDefined();
-    expect(screen.queryByRole('button', { name: 'Remove Planner at Plant B' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'Add role' }).getAttribute('href')).toBe(
+    // Add role waits for the places the page reads as well as the viewer, so it may show after
+    // Remove does.
+    expect((await screen.findByRole('link', { name: 'Add role' })).getAttribute('href')).toBe(
       coreLinks.settings.users.user.addRole({ plant: 'plant-a', userId: sara.id }).href,
     );
+    expect(screen.queryByRole('button', { name: 'Remove Planner at Plant B' })).toBeNull();
   });
 
   it("ADR0092 a plant in the Where column links to the user's page in that plant's settings", async () => {
