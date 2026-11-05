@@ -7,6 +7,7 @@ import { quantityWithUnit } from '../../stock-facts.ts';
 import { workingMsBetween } from '../../timeline/availability-shading.ts';
 import {
   type JobOrderRow,
+  jobOrderTitle,
   latenessText,
   quantityText,
   savedSetupOf,
@@ -162,7 +163,7 @@ export function blockName(
   machineName: string,
   options: BlockStateOptions & { readonly extraNames?: readonly string[] } = {},
 ): string {
-  const { jobOrder, operation, order } = row;
+  const { jobOrder, order } = row;
   const timeZone = snapshot.plant.timeZone;
   // A row whose placement comes with a time chunk not loaded yet is placed, its time unknown.
   const span =
@@ -174,7 +175,7 @@ export function blockName(
   const states = blockStates(row, snapshot, options);
   const release = releaseText(row, timeZone, snapshot.settings.retoolOverlapsLeadTime);
   return [
-    `${operation.displayNumber} ${operation.name}`,
+    jobOrderTitle(row),
     order.article,
     quantityText(jobOrder.quantity),
     machineName,

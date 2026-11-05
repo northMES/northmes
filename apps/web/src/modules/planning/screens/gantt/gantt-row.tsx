@@ -78,8 +78,9 @@ export function GanttRowView({
     original.kind === 'run'
       ? original.run.orderIds.some((id) => selectedOrderIds.has(id))
       : selectedOrderIds.has(original.order.id);
+  const summary = original.kind !== 'jobOrder';
   const heightRem = rowHeightRem[original.kind];
-  const span = original.kind !== 'jobOrder' ? rowSpan(original) : undefined;
+  const span = summary ? rowSpan(original) : undefined;
   const shading =
     original.kind === 'jobOrder' ? closedWindowsOf(original.jobOrder.equipment) : closedWindows;
   const onChain = chainRowIds.has(original.id);
@@ -92,7 +93,8 @@ export function GanttRowView({
       aria-setsize={setSize}
       aria-posinset={posInSet}
       aria-rowindex={rowIndex}
-      aria-expanded={original.kind !== 'jobOrder' ? expanded : undefined}
+      // Only a row with rows under it is expanded or collapsed: an order with no job orders is a leaf.
+      aria-expanded={row.getCanExpand() ? expanded : undefined}
       aria-selected={selected}
       tabIndex={focused ? 0 : -1}
       data-row-id={original.id}
@@ -118,9 +120,8 @@ export function GanttRowView({
         // As wide as its tracks: a sticky cell cannot leave its row, so a row only as wide as the
         // grid would take the tree cells with it once the scroll passes the row's width (#890).
         'grid w-max min-w-full border-b border-border outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
-        (original.kind === 'order' || original.kind === 'run') && 'bg-muted',
+        background,
         original.kind === 'run' && 'border-s-4 border-s-foreground/60',
-        original.kind === 'jobOrder' && 'bg-lane',
       )}
       // Tailwind has no side variant of the border style, so the run's double start edge is inline.
       style={{
@@ -161,7 +162,7 @@ export function GanttRowView({
           ),
         )}
       </TreePane>
-      {original.kind !== 'jobOrder' ? (
+      {summary ? (
         <div
           role="gridcell"
           tabIndex={-1}

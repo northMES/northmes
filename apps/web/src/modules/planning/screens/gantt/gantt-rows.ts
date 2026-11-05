@@ -373,12 +373,15 @@ export function jobOrderSubtext(
   return `${where}, ${quantityText(jobOrder.quantity)}, ${statusLabel(jobOrder.status)}`;
 }
 
-/** The machines an operation allows, by name: "CNC 1, CNC 2". */
-export function allowedMachinesText(
+/**
+ * The machines an operation allows besides the job order's own, by name, "Mill 1"; none when the
+ * job order's machine is the only one.
+ */
+export function otherAllowedMachinesText(
   operation: GanttOperation,
+  jobOrder: GanttJobOrder,
   machineName: (code: string) => string,
-): string {
-  return operation.allowedEquipment.length === 0
-    ? 'none'
-    : operation.allowedEquipment.map(machineName).join(', ');
+): string | undefined {
+  const others = operation.allowedEquipment.filter((code) => code !== jobOrder.equipment);
+  return others.length === 0 ? undefined : others.map(machineName).join(', ');
 }

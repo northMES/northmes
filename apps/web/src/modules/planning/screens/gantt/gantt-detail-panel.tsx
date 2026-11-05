@@ -49,11 +49,12 @@ import {
 } from './gantt-details.ts';
 import { moveRefusalOf, refusalMessage, stepMessage } from './gantt-move.ts';
 import {
-  allowedMachinesText,
   earlyText,
   type GanttRow,
   type JobOrderRow,
+  jobOrderTitle,
   type OrderRow,
+  otherAllowedMachinesText,
   quantityText,
   type RunRow,
   rowSpan,
@@ -503,6 +504,7 @@ function JobOrderDetails({
   // place above join At a glance, in the plant's order.
   const others = otherHoverFields(boardFields.hover, row, snapshot, machineName);
   const linked = linkedJobOrdersOf(row, machineName, timeZone);
+  const otherAllowed = otherAllowedMachinesText(operation, jobOrder, machineName);
   const saved = savedSetupOf(snapshot, jobOrder.id);
   const setupAndRun = shownFields(['setupAndRun'], row, snapshot, machineName)[0]?.value ?? '';
   const refused = moveRefusalOf(snapshot, row.id);
@@ -546,7 +548,7 @@ function JobOrderDetails({
   return (
     <>
       <DetailsHeader
-        title={`${operation.displayNumber} ${operation.name}`}
+        title={jobOrderTitle(row)}
         orderId={order.id}
         orderNumber={order.number}
         subline={`${order.article}, ${quantityText(jobOrder.quantity)}`}
@@ -576,10 +578,12 @@ function JobOrderDetails({
                 </option>
               ))}
             </select>
-            {/* The disabled select cannot open, so the machines it offers are written out. */}
-            <span className="mt-0.5 block text-xs text-muted-foreground">
-              Allowed: {allowedMachinesText(operation, machineName)}
-            </span>
+            {/* The disabled select cannot open, so the other machines it offers are written out. */}
+            {otherAllowed !== undefined && (
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Also allowed: {otherAllowed}
+              </span>
+            )}
           </dd>
           <Field label="Time">
             {jobOrder.placement === undefined ? (
@@ -667,7 +671,8 @@ function JobOrderDetails({
             {release !== undefined && (
               <li>{release.charAt(0).toUpperCase() + release.slice(1)}.</li>
             )}
-            <li>{`Lead time ${formatDuration(operation.leadTimeS)}, send ahead ${operation.sendAheadQuantity === 0 ? 'none' : quantityText(operation.sendAheadQuantity)}.`}</li>
+            <li>{`Lead time after the operation before: ${formatDuration(operation.leadTimeS)}.`}</li>
+            <li>{`Send ahead to the next operation: ${operation.sendAheadQuantity === 0 ? 'none' : quantityText(operation.sendAheadQuantity)}.`}</li>
           </ul>
         </FoldSection>
         {inventory !== undefined && shortages.length > 0 && (
