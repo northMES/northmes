@@ -41,9 +41,10 @@ import {
   earlyText,
   type GanttRow,
   type JobOrderRow,
+  jobOrderSubtext,
+  jobOrderTitle,
   type Level1Row,
   latenessText,
-  machinesText,
   orderSubtext,
   quantityText,
   rowSpan,
@@ -145,11 +146,7 @@ export const ganttColumns: readonly GanttColumn[] = [
     widthPx: 96,
     minWidthPx: 88,
     cell: (row, { machineName }) =>
-      row.kind === 'jobOrder'
-        ? machineName(row.jobOrder.equipment)
-        : row.kind === 'operation'
-          ? machineName(row.operation.allowedEquipment[0])
-          : '',
+      row.kind === 'jobOrder' ? machineName(row.jobOrder.equipment) : '',
   },
   {
     id: 'quantity',
@@ -163,9 +160,7 @@ export const ganttColumns: readonly GanttColumn[] = [
           ? row.orders.reduce((sum, order) => sum + order.quantity, 0)
           : row.kind === 'order'
             ? row.order.quantity
-            : row.kind === 'operation'
-              ? row.operation.quantity
-              : row.jobOrder.quantity,
+            : row.jobOrder.quantity,
       ),
   },
   { id: 'start', header: 'Start', widthPx: 128, minWidthPx: 80, cell: timeCell('fromMs') },
@@ -230,7 +225,7 @@ export const ganttColumns: readonly GanttColumn[] = [
     header: 'Lock',
     widthPx: 80,
     minWidthPx: 64,
-    cell: (row) => (row.kind === 'operation' && row.operation.isLocked ? 'Hard lock' : ''),
+    cell: (row) => (row.kind === 'jobOrder' && row.operation.isLocked ? 'Hard lock' : ''),
   },
 ];
 
@@ -296,7 +291,7 @@ export interface GanttTableInput {
 export type GanttTableRow = Row<typeof features, GanttRow>;
 
 /**
- * The tree table (plan 18, Tree columns): TanStack Table v9 over the three levels with the
+ * The tree table (plan 18, Tree columns): TanStack Table v9 over the tree's levels with the
  * expanded row model, so the visible rows come flattened with their depth, and column visibility
  * from the Columns menu. Sorting is the screen's: it sorts the level 1 rows and keeps the tree.
  */
@@ -590,9 +585,7 @@ export function GanttRowHeader({
       ? `the run of ${original.run.article}`
       : original.kind === 'order'
         ? `order ${original.order.number}`
-        : original.kind === 'operation'
-          ? `operation ${original.operation.displayNumber}`
-          : '';
+        : '';
   let title: string;
   let subtext: string;
   const badges: ReactNode[] = [];
@@ -644,17 +637,11 @@ export function GanttRowHeader({
         </Badge>,
       );
     }
-    // The order row carries the warning of its operations, so a collapsed tree still shows it.
+    // The order row carries the warning of its job orders, so a collapsed tree still shows it.
     if (materialShortOrderIds?.has(original.order.id)) badges.push(materialBadge);
-  } else if (original.kind === 'operation') {
-    title = `${original.operation.displayNumber} ${original.operation.name}`;
-    subtext = [
-      quantityText(original.operation.quantity),
-      machinesText(original.operation, machineName),
-      original.notPlaced > 0 ? `${original.notPlaced} not placed` : undefined,
-    ]
-      .filter((part) => part !== undefined)
-      .join(', ');
+  } else {
+    title = jobOrderTitle(original);
+    subtext = jobOrderSubtext(original.jobOrder, machineName);
     if (original.operation.isLocked) {
       badges.push(
         <Badge key="lock" variant="outline" className="h-4.5 px-1.5">
@@ -664,9 +651,6 @@ export function GanttRowHeader({
       );
     }
     if (materialShortages?.has(original.operation.displayNumber)) badges.push(materialBadge);
-  } else {
-    title = machineName(original.jobOrder.equipment);
-    subtext = `${quantityText(original.jobOrder.quantity)}, ${statusLabel(original.jobOrder.status)}`;
   }
   return (
     <>

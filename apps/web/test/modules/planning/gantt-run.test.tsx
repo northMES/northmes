@@ -152,7 +152,8 @@ describe('runs of orders of one article on the order Gantt (ADR 0083, plan 18 Ru
     expect(within(rowOf(gantt, 'po-1005')).getByRole('rowheader').textContent).toContain(
       'early by 7 days',
     );
-    expect(rowOf(gantt, 'jo-1005-10').getAttribute('aria-level')).toBe('4');
+    // Under a run the tree is three levels: the run, its orders, their job orders.
+    expect(rowOf(gantt, 'jo-1005-10').getAttribute('aria-level')).toBe('3');
     // The level 1 rows in the autoplan order: the run takes 1001's deadline and priority.
     expect(
       Array.from(gantt.querySelectorAll('[role="row"][aria-level="1"]')).map((row) =>

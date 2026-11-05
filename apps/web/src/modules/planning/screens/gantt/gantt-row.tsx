@@ -39,7 +39,7 @@ export interface GanttRowProps {
 
 /**
  * One row of the treegrid (plan 18, Tree grid semantics): aria-level, aria-setsize, aria-posinset
- * and, at levels 1 and 2, aria-expanded; the rowheader, the tree columns as gridcells and one
+ * and, on a run or an order row, aria-expanded; the rowheader, the tree columns as gridcells and one
  * gridcell for the time area, which holds the summary bar or the block. A row is a tab stop under
  * the roving tabindex; the keys of row focus mode arrive through onKeyDown. The tree cells sit in
  * the tree pane, which covers the time cell where they meet (#943).
@@ -78,19 +78,13 @@ export function GanttRowView({
     original.kind === 'run'
       ? original.run.orderIds.some((id) => selectedOrderIds.has(id))
       : selectedOrderIds.has(original.order.id);
-  const summary = original.kind !== 'jobOrder';
   const heightRem = rowHeightRem[original.kind];
-  const span = summary ? rowSpan(original) : undefined;
+  const span = original.kind !== 'jobOrder' ? rowSpan(original) : undefined;
   const shading =
     original.kind === 'jobOrder' ? closedWindowsOf(original.jobOrder.equipment) : closedWindows;
   const onChain = chainRowIds.has(original.id);
   const markers = rowMarkers(original, snapshot, scale, { onChain });
-  const background =
-    original.kind === 'order' || original.kind === 'run'
-      ? 'bg-muted'
-      : original.kind === 'operation'
-        ? 'bg-lane-alt'
-        : 'bg-lane';
+  const background = original.kind === 'jobOrder' ? 'bg-lane' : 'bg-muted';
   return (
     <div
       role="row"
@@ -98,7 +92,7 @@ export function GanttRowView({
       aria-setsize={setSize}
       aria-posinset={posInSet}
       aria-rowindex={rowIndex}
-      aria-expanded={summary ? expanded : undefined}
+      aria-expanded={original.kind !== 'jobOrder' ? expanded : undefined}
       aria-selected={selected}
       tabIndex={focused ? 0 : -1}
       data-row-id={original.id}
@@ -126,7 +120,6 @@ export function GanttRowView({
         'grid w-max min-w-full border-b border-border outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
         (original.kind === 'order' || original.kind === 'run') && 'bg-muted',
         original.kind === 'run' && 'border-s-4 border-s-foreground/60',
-        original.kind === 'operation' && 'bg-lane-alt',
         original.kind === 'jobOrder' && 'bg-lane',
       )}
       // Tailwind has no side variant of the border style, so the run's double start edge is inline.
@@ -168,7 +161,7 @@ export function GanttRowView({
           ),
         )}
       </TreePane>
-      {summary ? (
+      {original.kind !== 'jobOrder' ? (
         <div
           role="gridcell"
           tabIndex={-1}

@@ -49,11 +49,10 @@ import {
 } from './gantt-details.ts';
 import { moveRefusalOf, refusalMessage, stepMessage } from './gantt-move.ts';
 import {
+  allowedMachinesText,
   earlyText,
   type GanttRow,
   type JobOrderRow,
-  machinesText,
-  type OperationRow,
   type OrderRow,
   quantityText,
   type RunRow,
@@ -577,6 +576,10 @@ function JobOrderDetails({
                 </option>
               ))}
             </select>
+            {/* The disabled select cannot open, so the machines it offers are written out. */}
+            <span className="mt-0.5 block text-xs text-muted-foreground">
+              Allowed: {allowedMachinesText(operation, machineName)}
+            </span>
           </dd>
           <Field label="Time">
             {jobOrder.placement === undefined ? (
@@ -664,6 +667,7 @@ function JobOrderDetails({
             {release !== undefined && (
               <li>{release.charAt(0).toUpperCase() + release.slice(1)}.</li>
             )}
+            <li>{`Lead time ${formatDuration(operation.leadTimeS)}, send ahead ${operation.sendAheadQuantity === 0 ? 'none' : quantityText(operation.sendAheadQuantity)}.`}</li>
           </ul>
         </FoldSection>
         {inventory !== undefined && shortages.length > 0 && (
@@ -911,37 +915,6 @@ function RunDetails({ row }: { readonly row: RunRow }) {
   );
 }
 
-function OperationDetails({ row }: { readonly row: OperationRow }) {
-  const { machineName } = useGanttView();
-  const { operation, order } = row;
-  const openOrder = useOpenOrder(order.id);
-  return (
-    <>
-      <DetailsHeader
-        title={`${operation.displayNumber} ${operation.name}`}
-        orderId={order.id}
-        orderNumber={order.number}
-        subline={`${order.article}, ${quantityText(operation.quantity)}`}
-        menu={
-          <ActionsMenu
-            name={`Actions for ${operation.displayNumber}`}
-            actions={[openOrder, { label: 'Lock', reason: phase1Reason }]}
-          />
-        }
-      />
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[0.8125rem]">
-        <Field label="Machines">{machinesText(operation, machineName)}</Field>
-        <Field label="Lead time">{formatDuration(operation.leadTimeS)}</Field>
-        <Field label="Send ahead">
-          {operation.sendAheadQuantity === 0 ? 'none' : quantityText(operation.sendAheadQuantity)}
-        </Field>
-        <Field label="Hard lock">{operation.isLocked ? 'yes' : 'no'}</Field>
-        {row.notPlaced > 0 && <Field label="Not placed">{row.notPlaced}</Field>}
-      </dl>
-    </>
-  );
-}
-
 export interface GanttDetailDrawerProps {
   /** The row the drawer shows; none keeps it closed. */
   readonly row: GanttRow | undefined;
@@ -1006,7 +979,6 @@ export function GanttDetailDrawer({
               onFocusRow={onFocusRow}
             />
           )}
-          {row?.kind === 'operation' && <OperationDetails row={row} />}
           {row?.kind === 'run' && <RunDetails row={row} />}
         </div>
       </SheetContent>

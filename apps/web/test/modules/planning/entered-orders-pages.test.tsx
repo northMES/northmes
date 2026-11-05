@@ -53,7 +53,7 @@ describe('orders entered by hand on the plan pages (#768, NG1)', () => {
     );
     const gantt = await findGantt();
 
-    const notPlaced = within(gantt).getByRole('row', { name: /Not placed/ });
+    const notPlaced = within(gantt).getByRole('row', { name: /^Not placed/ });
     expect(notPlaced.textContent).toContain('N-1007.10');
     expect(notPlaced.textContent).toContain('N-1007.20');
   });
