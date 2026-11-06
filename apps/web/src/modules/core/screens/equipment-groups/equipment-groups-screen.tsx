@@ -18,27 +18,20 @@ import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import { GroupColor } from '../../components/group-color/index.ts';
-import {
-  colorFromText,
-  colorText,
-  machineCountText,
-  machinesOf,
-} from '../../equipment-group-facts.ts';
-import { canChangeGroup, machinesFixtureNote } from '../../equipment-group-states.tsx';
+import { colorFromText, colorText, machineCountText } from '../../equipment-group-facts.ts';
+import { canChangeGroup } from '../../equipment-group-states.tsx';
 import type { EquipmentGroupRow } from '../../equipment-groups.graphql.ts';
+import type { MachineRow } from '../../equipment-list.graphql.ts';
+import { machinesIn } from '../../machine-facts.ts';
 import { readForbiddenState } from '../../no-access.tsx';
-import type {
-  GroupColorFrom,
-  PlantMachine,
-  PlantSettingsSnapshot,
-} from '../../plant-settings-data.ts';
+import type { GroupColorFrom } from '../../plant-settings-data.ts';
 import {
   type EquipmentGroupListSearch,
   equipmentGroupListSearch,
   urlSearchOf,
 } from '../../plant-settings-search.ts';
-import { usePlantSettings } from '../../plant-settings-source-context.ts';
 import { useEquipmentGroups } from '../../use-equipment-groups.ts';
+import { usePlantMachines } from '../../use-machines.ts';
 import { usePlaces } from '../../use-places.ts';
 import { useViewer, type Viewer } from '../../use-viewer.ts';
 
@@ -52,10 +45,10 @@ const link = 'text-link underline underline-offset-2 hover:no-underline';
 
 type Scope = 'company' | 'plant';
 
-/** One row of the list: a group with the plant's machines in it. */
+/** One row of the list: a group with the plant's machines in it, none where they are not shown. */
 interface GroupRow {
   readonly group: EquipmentGroupRow;
-  readonly machines: readonly PlantMachine[];
+  readonly machines: readonly MachineRow[] | undefined;
 }
 
 /** The names a row shows: the scope's, and the plant's for its machines. */
@@ -112,7 +105,9 @@ function columnsOf(plant: string, names: Names, viewer: Viewer): DataTableColumn
       id: 'machines',
       header: 'Machines',
       cell: (row) =>
-        row.machines.length === 0 ? (
+        row.machines === undefined ? (
+          <span className="text-muted-foreground">Not shown</span>
+        ) : row.machines.length === 0 ? (
           <span className="text-muted-foreground">No machines at {names.plant}</span>
         ) : (
           <span className="flex flex-col">
@@ -161,14 +156,20 @@ const columnChoices = [
 ] as const;
 
 /** The groups in the API's order, by code, each with the plant's machines in it. */
-function rowsOf(groups: readonly EquipmentGroupRow[], snapshot: PlantSettingsSnapshot): GroupRow[] {
-  return groups.map((group) => ({ group, machines: machinesOf(snapshot, group.code) }));
+function rowsOf(
+  groups: readonly EquipmentGroupRow[],
+  machines: readonly MachineRow[] | undefined,
+): GroupRow[] {
+  return groups.map((group) => ({
+    group,
+    machines: machines === undefined ? undefined : machinesIn(machines, group.id),
+  }));
 }
 
 /** "HEAT is a company group with no machines at Plant A.", for each group without machines here. */
 function idleText(rows: readonly GroupRow[], plantName: string): string {
   return rows
-    .filter((row) => row.machines.length === 0)
+    .filter((row) => row.machines?.length === 0)
     .map((row) =>
       row.group.scope === 'company'
         ? ` ${row.group.code} is a company group with no machines at ${plantName}.`
@@ -194,11 +195,11 @@ function NewEquipmentGroupLink() {
 /**
  * The equipment groups the plant sees in plant settings (design #729, EG1 to EG9): the color rule,
  * the Scope filter, Show archived and Columns, and one row per group with its color, code, name,
- * scope, the plant's machines in it and where its color came from. The groups come from the API,
- * the plant's own and the company's, every page of them; the machines in each still come from the
- * fixture G1. The Scope filter and Show archived live in the URL (ADR 0062); the columns stay
- * local. Edit shows on a group the user may change, New equipment group to a user who may create
- * one at the plant or the company.
+ * scope, the plant's machines in it and where its color came from. The groups and the machines
+ * come from the API, the groups the plant's own and the company's, every page of them; a user who
+ * may not read machines sees the groups without them. The Scope filter and Show archived live in
+ * the URL (ADR 0062); the columns stay local. Edit shows on a group the user may change, New
+ * equipment group to a user who may create one at the plant or the company.
  */
 export function EquipmentGroupsScreen() {
   const { plant } = useShell();
@@ -213,7 +214,7 @@ export function EquipmentGroupsScreen() {
   };
   const { data, previousData, error, refetch, pageError, retryPage } =
     useEquipmentGroups(showArchived);
-  const { snapshot } = usePlantSettings(undefined);
+  const plantMachines = usePlantMachines();
   const places = usePlaces();
   const viewer = useViewer();
   const [hiddenColumns, setHiddenColumns] = useState<readonly string[]>([]);
@@ -226,16 +227,16 @@ export function EquipmentGroupsScreen() {
   const failed = data === undefined && error !== undefined;
   const page =
     data?.coreEquipmentGroups ?? (failed ? undefined : previousData?.coreEquipmentGroups);
-  const loaded = page !== undefined && snapshot !== undefined;
+  const loaded = page !== undefined && plantMachines.settled;
   const allRows = useMemo(
     () =>
-      page === undefined || snapshot === undefined
+      page === undefined
         ? []
         : rowsOf(
             page.edges.map(({ node }) => node),
-            snapshot,
+            plantMachines.machines,
           ),
-    [page, snapshot],
+    [page, plantMachines.machines],
   );
   const rows = allRows.filter(
     (row) => view.scope === undefined || view.scope.includes(row.group.scope as Scope),
@@ -260,13 +261,16 @@ export function EquipmentGroupsScreen() {
   };
 
   const forbidden = data === undefined && isForbidden(error);
-  const machineCount = rows.reduce((sum, row) => sum + row.machines.length, 0);
+  const machineCount = rows.reduce((sum, row) => sum + (row.machines?.length ?? 0), 0);
+  const groupsText = `${rows.length} equipment group${rows.length === 1 ? '' : 's'}`;
   const statusLine =
     allRows.length === 0
       ? 'No equipment groups.'
-      : `${rows.length} equipment group${rows.length === 1 ? '' : 's'}, ${machineCount} machine${
-          machineCount === 1 ? '' : 's'
-        }. Sorted by code.${idleText(rows, names.plant)}`;
+      : plantMachines.machines === undefined
+        ? `${groupsText}. Sorted by code.`
+        : `${groupsText}, ${machineCount} machine${
+            machineCount === 1 ? '' : 's'
+          }. Sorted by code.${idleText(rows, names.plant)}`;
   const announced = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!loaded) return;
@@ -366,12 +370,9 @@ export function EquipmentGroupsScreen() {
                 </Button>
               </div>
             )}
-            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <p data-list-status>
-                {failed ? '' : loaded ? statusLine : 'Loading equipment groups.'}
-              </p>
-              <p>{machinesFixtureNote}</p>
-            </div>
+            <p data-list-status className="text-xs text-muted-foreground">
+              {failed ? '' : loaded ? statusLine : 'Loading equipment groups.'}
+            </p>
           </div>
         )
       }

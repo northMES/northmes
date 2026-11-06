@@ -21,6 +21,7 @@
               "use/users-and-roles",
               "use/articles",
               "use/equipment-groups",
+              "use/machines",
               "use/dashboard"
             ]
           }

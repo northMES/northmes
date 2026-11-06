@@ -113,7 +113,7 @@ export const shellModules: readonly ShellModule[] = [
       },
       // The plant's own page (design #767) reads the fixture G1 until the plant API (#419) gives it
       // core.plant:update; until then it shows to a user who administers the plant's roles, as
-      // the machines do. It comes first, as the design draws it, so the Settings button of a Plant
+      // the calendars do. It comes first, as the design draws it, so the Settings button of a Plant
       // admin opens it while it reads the fixture.
       {
         label: 'Plant',
@@ -123,14 +123,15 @@ export const shellModules: readonly ShellModule[] = [
         area: 'settings',
       },
       // Plant settings (ADR 0066; design shell-313, #688 and #729): the machines and the
-      // calendars read the fixture G1 until their pages read core's API; until then they show to a
-      // user who administers the plant's roles there, the plant admin and the company admin. The
-      // equipment groups read the API and show to a holder of core.equipmentGroup:read.
+      // equipment groups read the API; Machines shows to a holder of core.equipment:read, Equipment
+      // groups to a holder of core.equipmentGroup:read. The calendars read the fixture G1 until their page reads core's
+      // API; until then they show to a user who administers the plant's roles there, the plant
+      // admin and the company admin.
       {
         label: 'Machines',
         icon: 'Drill',
         link: coreLinks.settings.machines,
-        permission: 'core.roleAssignment:manage',
+        permission: 'core.equipment:read',
         area: 'settings',
       },
       {
@@ -192,7 +193,7 @@ export const shellModules: readonly ShellModule[] = [
       { label: 'Release orders', icon: 'ListChecks', link: planningLinks.release },
       // Plant settings (plan 07, Settings; #766, #762): the planning rules, then which fields
       // blocks and hover cards show. planning.settings:manage is not installed yet, so the entries
-      // show to a user who administers the plant's roles there, as the machines and calendars do.
+      // show to a user who administers the plant's roles there, as the calendars do.
       {
         label: 'Planning rules',
         icon: 'SlidersHorizontal',

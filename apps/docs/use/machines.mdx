@@ -1,0 +1,67 @@
+---
+title: Machines
+description: List the machines of a plant, create a machine in an equipment group, change its name, group, plannable flag and color stripe, and archive or restore it.
+---
+
+A machine is a piece of equipment at one plant that runs job orders, such as a lathe or an assembly bench. Every machine belongs to an [equipment group](/use/equipment-groups) of its plant or of the company. A plannable machine, or one whose OEE is measured, has a row on the planning board, in its group's band.
+
+**Machines** is in plant settings at `/<plant>/settings/machines`. It shows to a user who holds `core.equipment:read` at the plant.
+
+## Find a machine
+
+The list shows the plant's machines, sorted by code. Each row shows the machine's code, its name with its color stripe, its group, whether it is plannable, its calendar and how many routing operations may run on it. The code opens the machine's page.
+
+- The **Equipment groups** above the list show each group that holds machines here, with how many. A group's link filters the list to it.
+- **Search machines** finds a machine by its code, its name or its group's name.
+- **Group** and **Calendar** filter the list to the machines in the groups and on the calendars you pick.
+- **Plannable only** leaves out the machines that are not on the board.
+- **Show archived** lists the archived machines too, each with the **Archived** badge.
+- **Columns** hides and shows columns.
+
+The search, the filters, **Plannable only** and **Show archived** are part of the address, so a link opens the list as you see it.
+
+## A machine's page
+
+The page shows the machine's code, name, equipment group, plannable flag, calendar and color stripe, each with the rule behind it. It lists the routing operations that may run on the machine and the machine's job orders this week. **Show on board** opens the planning board on that week.
+
+**Edit machine**, **Archive** and **Restore** are at the top of the page, for a user who may use them.
+
+## Create a machine
+
+<Steps>
+  <Step title="Open New machine">
+    In **Machines**, select **New machine**.
+  </Step>
+  <Step title="Fill in the machine">
+    - **Code**: up to 32 characters, unique among the plant's machines. The code cannot change later.
+    - **Name**: up to 200 characters. The board and the Gantt show it.
+    - **Equipment group**: an active group of the plant or of the company. The machine's row sits in the group's band on the board.
+    - **Plannable**: on unless you clear it. Autoplan places nothing on a machine that is not plannable, and it stays off the board unless its OEE is measured.
+    - **Color stripe**: the group's color, or one of the 20 palette colors as the machine's own. The stripe sits before the machine's name on the board.
+  </Step>
+  <Step title="Save">
+    Select **Save machine**. The machine's page opens.
+  </Step>
+</Steps>
+
+A code that another machine of the plant already has is refused, and the form keeps what you typed.
+
+## Change a machine
+
+Select **Edit machine** on the machine's page, change the name, the group, the plannable flag or the color stripe, and select **Save machine**. The API refuses a group of another plant and an archived group the machine is not in.
+
+If someone else saved the machine while you edited it, the save is refused and the form keeps your changes. **Reload** fills the form with the saved machine, so you can make your change again on top of it.
+
+## Archive and restore a machine
+
+Select **Archive** on the machine's page and confirm with **Archive machine**. An archived machine keeps its code, leaves the list unless **Show archived** is on, and cannot be changed. **Restore** and **Restore machine** bring it back.
+
+## Who may change a machine
+
+Creating, changing and archiving a machine needs `core.equipment:create`, `:update` or `:archive` at the machine's plant, such as Plant admin holds. The group field reads the equipment groups, so New machine also needs `core.equipmentGroup:read`. See [Users, roles and permissions](/use/users-and-roles#permissions).
+
+## Limits in release 0.1.0
+
+- The calendars, the routing operations and the job orders on a machine's page come from the demo fixture until they have their API. A machine whose code the fixture does not know is on the plant calendar, with no routing operations and an empty week.
+- A machine has no history yet.
+- A machine cannot be deleted. Archive it instead.

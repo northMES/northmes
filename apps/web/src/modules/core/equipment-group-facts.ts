@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { paletteColors } from '@northmes/contracts';
-import type { GroupColorFrom, PlantMachine, PlantSettingsSnapshot } from './plant-settings-data.ts';
+import type { GroupColorFrom } from './plant-settings-data.ts';
 
 /** The facts of the equipment groups that the groups pages share (design #729, EG1 to EG5). */
 
@@ -31,13 +31,6 @@ export function colorNote(from: GroupColorFrom): string {
     return 'No color was picked, so the group took the first of the 20 palette colors that no other group used. The group keeps it.';
   }
   return 'The ERP sent it with the first import. The group keeps it: a later import color does not replace it.';
-}
-
-/** The plant's machines in a group, by code. */
-export function machinesOf(snapshot: PlantSettingsSnapshot, code: string): PlantMachine[] {
-  return snapshot.equipment
-    .filter((machine) => machine.group === code)
-    .sort((a, b) => a.code.localeCompare(b.code));
 }
 
 /** "3 machines", "1 machine" or "No machines". */

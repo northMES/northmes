@@ -3,7 +3,7 @@
 import { coreLinks } from '@northmes/core-contracts';
 import { useShell } from '@northmes/web-sdk';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { CircleCheck, Ellipsis, Lock, Pencil, Plus } from 'lucide-react';
+import { Archive, CircleCheck, Pencil, Plus } from 'lucide-react';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ColumnsMenu } from '../../../../ui/components/columns-menu/index.ts';
 import { DataTable, type DataTableColumn } from '../../../../ui/components/data-table/index.ts';
@@ -13,47 +13,51 @@ import { PageFrame, type PageState } from '../../../../ui/components/page-frame/
 import { SearchField } from '../../../../ui/components/search-field/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
 import { announce } from '../../../../ui/lib/announce.ts';
+import { isForbidden } from '../../../../ui/lib/graphql-errors.ts';
 import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
 import { Checkbox } from '../../../../ui/primitives/checkbox.tsx';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '../../../../ui/primitives/dropdown-menu.tsx';
 import { Field, FieldLabel } from '../../../../ui/primitives/field.tsx';
 import { GroupColor } from '../../components/group-color/index.ts';
 import { machineCountText } from '../../equipment-group-facts.ts';
-import {
-  type PlantMachine,
-  PlantSettingsForbidden,
-  type PlantSettingsSnapshot,
-} from '../../plant-settings-data.ts';
-import { allowedIn, allowedInText, groupNamer, plantTime } from '../../plant-settings-facts.ts';
-import { plantSettingsActionReason } from '../../plant-settings-reasons.ts';
+import type { MachineRow as Machine } from '../../equipment-list.graphql.ts';
+import { calendarOf, stripeColorOf } from '../../machine-facts.ts';
+import { readForbiddenState } from '../../no-access.tsx';
+import type { PlantSettingsSnapshot } from '../../plant-settings-data.ts';
+import { allowedIn, allowedInText } from '../../plant-settings-facts.ts';
+import { machineFixtureNote } from '../../plant-settings-reasons.ts';
 import {
   type MachineListSearch,
   machineListSearch,
   urlSearchOf,
 } from '../../plant-settings-search.ts';
 import { usePlantSettings } from '../../plant-settings-source-context.ts';
+import { useMachines } from '../../use-machines.ts';
+import { usePlaces } from '../../use-places.ts';
+import { useViewer, type Viewer } from '../../use-viewer.ts';
 
 /** The id of the search input, where Clear filters moves focus. */
 const searchFieldId = 'machines-search';
+
+/** The id of the Show archived checkbox, which its label names. */
+const showArchivedId = 'machines-show-archived';
 
 /** The token of the Calendar filter for a machine without one. */
 const noCalendar = 'none';
 
 /** One row of the list: a machine with what the columns show of it. */
 interface MachineRow {
-  readonly machine: PlantMachine;
+  readonly machine: Machine;
+  /** The group's code, which the Group filter keeps in the URL; empty where it is not shown. */
+  readonly groupCode: string;
   readonly groupName: string;
-  readonly groupColor: string | undefined;
+  /** The calendar's name from the fixture G1, or none. */
+  readonly calendar: string | null;
   readonly allowedCount: number;
 }
 
 interface CellView {
   readonly plant: string;
+  readonly viewer: Viewer;
 }
 
 function columnsOf(view: CellView): readonly DataTableColumn<MachineRow>[] {
@@ -66,7 +70,7 @@ function columnsOf(view: CellView): readonly DataTableColumn<MachineRow>[] {
           to={
             coreLinks.settings.machines.machine({
               plant: view.plant,
-              equipmentId: row.machine.code,
+              equipmentId: row.machine.id,
             }).href
           }
           className="font-mono text-link underline underline-offset-2 hover:no-underline"
@@ -80,21 +84,29 @@ function columnsOf(view: CellView): readonly DataTableColumn<MachineRow>[] {
       id: 'name',
       header: 'Name',
       cell: (row) => (
-        <span className="inline-flex items-center gap-2">
-          <GroupColor color={row.groupColor} shape="stripe" />
+        <span className="inline-flex flex-wrap items-center gap-2">
+          <GroupColor color={stripeColorOf(row.machine)} shape="stripe" />
           {row.machine.name}
+          {row.machine.archivedAt !== null && (
+            <StatusBadge tone="neutral" icon={Archive}>
+              Archived
+            </StatusBadge>
+          )}
         </span>
       ),
     },
     {
       id: 'group',
       header: 'Group',
-      cell: (row) => (
-        <span className="inline-flex items-center gap-1.5">
-          <GroupColor color={row.groupColor} shape="dot" />
-          {row.groupName}
-        </span>
-      ),
+      cell: (row) =>
+        row.machine.group === null ? (
+          <span className="text-muted-foreground">Not shown</span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5">
+            <GroupColor color={row.machine.group.color} shape="dot" />
+            {row.groupName}
+          </span>
+        ),
     },
     {
       id: 'plannable',
@@ -112,19 +124,19 @@ function columnsOf(view: CellView): readonly DataTableColumn<MachineRow>[] {
       id: 'calendar',
       header: 'Calendar',
       cell: (row) =>
-        row.machine.calendar === null ? (
+        row.calendar === null ? (
           <span className="text-muted-foreground">None</span>
         ) : (
           <Link
             to={
               coreLinks.settings.calendars.calendar({
                 plant: view.plant,
-                calendarId: row.machine.calendar,
+                calendarId: row.calendar,
               }).href
             }
             className="font-mono text-link underline underline-offset-2 hover:no-underline"
           >
-            {row.machine.calendar}
+            {row.calendar}
           </Link>
         ),
     },
@@ -137,37 +149,24 @@ function columnsOf(view: CellView): readonly DataTableColumn<MachineRow>[] {
       id: 'actions',
       header: 'Actions',
       headerHidden: true,
-      cell: (row) => {
-        const edit = coreLinks.settings.machines.machine.edit({
-          plant: view.plant,
-          equipmentId: row.machine.code,
-        }).href;
-        return (
-          <span className="flex items-center justify-end gap-1">
-            <Link to={edit} className={`${buttonVariants({ variant: 'outline' })} h-8 px-2.5`}>
+      cell: (row) =>
+        row.machine.archivedAt === null && view.viewer.can('core.equipment:update') ? (
+          <span className="flex justify-end">
+            <Link
+              to={
+                coreLinks.settings.machines.machine.edit({
+                  plant: view.plant,
+                  equipmentId: row.machine.id,
+                }).href
+              }
+              aria-label={`Edit ${row.machine.code}`}
+              className={`${buttonVariants({ variant: 'outline' })} h-8 px-2.5`}
+            >
               <Pencil aria-hidden />
               Edit
             </Link>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={`Actions for ${row.machine.code}`}
-                  />
-                }
-              >
-                <Ellipsis aria-hidden />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-48">
-                <DropdownMenuItem render={<Link to={edit} />}>Edit</DropdownMenuItem>
-                <DropdownMenuItem disabled>Archive</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </span>
-        );
-      },
+        ) : null,
     },
   ];
 }
@@ -181,17 +180,18 @@ const columnChoices = [
   { id: 'allowedIn', label: 'Allowed in' },
 ] as const;
 
-/** The rows of the snapshot, by code. */
-function rowsOf(snapshot: PlantSettingsSnapshot): MachineRow[] {
-  const groupName = groupNamer(snapshot);
-  return [...snapshot.equipment]
-    .sort((a, b) => a.code.localeCompare(b.code))
-    .map((machine) => ({
-      machine,
-      groupName: groupName(machine.group),
-      groupColor: snapshot.equipmentGroups.find((group) => group.code === machine.group)?.color,
-      allowedCount: allowedIn(snapshot, machine.code).length,
-    }));
+/**
+ * The rows of the machines in the API's order, by code, each with its calendar and the routing
+ * operations that allow it from the fixture G1.
+ */
+function rowsOf(machines: readonly Machine[], snapshot: PlantSettingsSnapshot): MachineRow[] {
+  return machines.map((machine) => ({
+    machine,
+    groupCode: machine.group?.code ?? '',
+    groupName: machine.group?.name ?? '',
+    calendar: calendarOf(snapshot, machine.code)?.name ?? null,
+    allowedCount: allowedIn(snapshot, machine.code).length,
+  }));
 }
 
 /** Whether a row passes the view's search, Plannable only and filters, a field left out aside. */
@@ -207,28 +207,59 @@ function matches(row: MachineRow, view: MachineListSearch, except?: 'group' | 'c
       return false;
     }
   }
-  if (except !== 'group' && view.group !== undefined && !view.group.includes(row.machine.group)) {
+  if (except !== 'group' && view.group !== undefined && !view.group.includes(row.groupCode)) {
     return false;
   }
-  const calendar = row.machine.calendar ?? noCalendar;
+  const calendar = row.calendar ?? noCalendar;
   return except === 'calendar' || view.calendar === undefined || view.calendar.includes(calendar);
 }
 
-/** The groups that hold machines at the plant: a company group with none here leads nowhere. */
-function groupsHere(snapshot: PlantSettingsSnapshot): PlantSettingsSnapshot['equipmentGroups'] {
-  return snapshot.equipmentGroups.filter((group) =>
-    snapshot.equipment.some((machine) => machine.group === group.code),
+/** A group that holds machines at the plant, with how many. */
+interface GroupHere {
+  readonly code: string;
+  readonly name: string;
+  readonly color: string;
+  readonly count: number;
+}
+
+/**
+ * The groups that hold active machines at the plant, by code: a company group with none here leads
+ * nowhere.
+ */
+function groupsHere(rows: readonly MachineRow[]): GroupHere[] {
+  const groups = new Map<string, GroupHere>();
+  for (const { machine } of rows) {
+    if (machine.group === null || machine.archivedAt !== null) continue;
+    const known = groups.get(machine.group.code);
+    groups.set(machine.group.code, {
+      code: machine.group.code,
+      name: machine.group.name,
+      color: machine.group.color,
+      count: (known?.count ?? 0) + 1,
+    });
+  }
+  return [...groups.values()].sort((a, b) => a.code.localeCompare(b.code));
+}
+
+/** New equipment group, for a holder of core.equipmentGroup:create at the plant or the company. */
+function NewEquipmentGroupLink() {
+  const { plant } = useShell();
+  const viewer = useViewer();
+  const permission = 'core.equipmentGroup:create';
+  if (!viewer.can(permission) && !viewer.canAtCompany(permission)) return null;
+  return (
+    <Link
+      to={coreLinks.settings.equipmentGroups.new({ plant }).href}
+      className={`${buttonVariants({ variant: 'outline' })} h-8 px-3`}
+    >
+      <Plus aria-hidden />
+      New equipment group
+    </Link>
   );
 }
 
 /** The equipment groups above the table (MA1): each a link to the list filtered to it. */
-function EquipmentGroups({
-  snapshot,
-  rows,
-}: {
-  readonly snapshot: PlantSettingsSnapshot;
-  readonly rows: readonly MachineRow[];
-}) {
+function EquipmentGroups({ rows }: { readonly rows: readonly MachineRow[] }) {
   const { plant } = useShell();
   const headingId = useId();
   return (
@@ -245,41 +276,49 @@ function EquipmentGroups({
             A group is a band of rows on the board. Its color and name are always shown together.
           </p>
         </div>
-        <Button variant="outline" className="h-8 px-3" disabled>
-          <Plus aria-hidden />
-          New equipment group
-        </Button>
+        <NewEquipmentGroupLink />
       </div>
       <div className="flex flex-wrap gap-2">
-        {groupsHere(snapshot).map((group) => {
-          const count = rows.filter((row) => row.machine.group === group.code).length;
-          return (
-            <Link
-              key={group.code}
-              to={coreLinks.settings.machines({ plant }, { group: group.code }).href}
-              className={`${buttonVariants({ variant: 'outline' })} h-8 gap-2 px-2.5 font-normal`}
-            >
-              <GroupColor color={group.color} shape="dot" />
-              {/* The spaces keep the link's name "Machining MACH 3 machines" in words. */}
-              <span>{group.name}</span>{' '}
-              <span className="font-mono text-xs text-muted-foreground">{group.code}</span>{' '}
-              <span className="text-xs text-muted-foreground">{machineCountText(count)}</span>
-            </Link>
-          );
-        })}
+        {groupsHere(rows).map((group) => (
+          <Link
+            key={group.code}
+            to={coreLinks.settings.machines({ plant }, { group: group.code }).href}
+            className={`${buttonVariants({ variant: 'outline' })} h-8 gap-2 px-2.5 font-normal`}
+          >
+            <GroupColor color={group.color} shape="dot" />
+            {/* The spaces keep the link's name "Machining MACH 3 machines" in words. */}
+            <span>{group.name}</span>{' '}
+            <span className="font-mono text-xs text-muted-foreground">{group.code}</span>{' '}
+            <span className="text-xs text-muted-foreground">{machineCountText(group.count)}</span>
+          </Link>
+        ))}
       </div>
     </section>
   );
 }
 
+/** New machine, for a holder of core.equipment:create at the plant. */
+function NewMachineLink() {
+  const { plant } = useShell();
+  const viewer = useViewer();
+  if (!viewer.can('core.equipment:create')) return null;
+  return (
+    <Link to={coreLinks.settings.machines.new({ plant }).href} className={buttonVariants()}>
+      <Plus aria-hidden />
+      New machine
+    </Link>
+  );
+}
+
 /**
- * The machines of the plant in plant settings (E06; design #688, MA1 to MA9): the equipment groups
- * above the table, the search, the Group and Calendar filters with their counts, Plannable only
- * and Columns, and one row per machine with its code, name with the group's color stripe, group,
- * plannable flag, calendar and the count of routing operations that allow it. Search, the filters
- * and Plannable only live in the URL (ADR 0062); the columns stay local. The preview key opens the
- * loading, empty, failed and no-access states on the fixture. New machine, New equipment group
- * and Archive wait for the equipment API.
+ * The machines of the plant in plant settings (design #688, MA1 to MA9): the equipment groups
+ * above the table, the search, the Group and Calendar filters with their counts, Plannable only,
+ * Show archived and Columns, and one row per machine with its code, name with its color stripe,
+ * group, plannable flag, calendar and the count of routing operations that allow it. The machines
+ * come from the API, every page of them; their calendars and routing operations still come from
+ * the fixture G1 by code. Search, the filters, Plannable only and Show archived live in the URL
+ * (ADR 0062); the columns stay local. Edit shows on a machine the user may change, New machine to
+ * a user who may create one.
  */
 export function MachinesScreen() {
   const { plant } = useShell();
@@ -287,26 +326,55 @@ export function MachinesScreen() {
   const navigate = useNavigate();
   const show = (next: MachineListSearch) =>
     navigate({ to: '.', search: urlSearchOf(next), replace: true });
-  const { snapshot, error, retry } = usePlantSettings(view.preview);
+  const showArchived = view.archived === 1;
+  const { data, previousData, error, refetch, pageError, retryPage } = useMachines(showArchived);
+  const { snapshot } = usePlantSettings(undefined);
+  const places = usePlaces();
+  const viewer = useViewer();
   const [hiddenColumns, setHiddenColumns] = useState<readonly string[]>([]);
   const plannableId = `${searchFieldId}-plannable`;
+  const plantName = places.plant?.name ?? 'the plant';
 
-  const allRows = useMemo(() => (snapshot === undefined ? [] : rowsOf(snapshot)), [snapshot]);
+  // The rows of the list before stand in only while the next answer loads, never for a failed one.
+  const failed = data === undefined && error !== undefined;
+  const page = data?.coreEquipmentList ?? (failed ? undefined : previousData?.coreEquipmentList);
+  // The list counts as loaded once every page is in, so the status line never counts one page.
+  const loaded =
+    page !== undefined &&
+    snapshot !== undefined &&
+    (!page.pageInfo.hasNextPage || pageError !== undefined);
+  const allRows = useMemo(
+    () =>
+      page === undefined || snapshot === undefined
+        ? []
+        : rowsOf(
+            page.edges.map(({ node }) => node),
+            snapshot,
+          ),
+    [page, snapshot],
+  );
   const rows = allRows.filter((row) => matches(row, view));
-  const columns = useMemo(() => columnsOf({ plant }), [plant]);
-  const groupName = snapshot === undefined ? (code: string) => code : groupNamer(snapshot);
+  const columns = columnsOf({ plant, viewer });
+  const groupNames = new Map(allRows.map((row) => [row.groupCode, row.groupName]));
   const facets = (key: 'group' | 'calendar') => {
     // A picked value stays in the menu and names its chip even when no row passes with it.
     const counts = new Map<string, number>((view[key] ?? []).map((value) => [value, 0]));
     for (const row of allRows) {
       if (!matches(row, view, key)) continue;
-      const value = key === 'group' ? row.machine.group : (row.machine.calendar ?? noCalendar);
+      const value = key === 'group' ? row.groupCode : (row.calendar ?? noCalendar);
+      // A group the user cannot read has no code to filter by.
+      if (value === '') continue;
       counts.set(value, (counts.get(value) ?? 0) + 1);
     }
     return [...counts.entries()]
       .map(([value, count]) => ({
         value,
-        label: key === 'group' ? groupName(value) : value === noCalendar ? 'None' : value,
+        label:
+          key === 'group'
+            ? (groupNames.get(value) ?? value)
+            : value === noCalendar
+              ? 'None'
+              : value,
         count,
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
@@ -335,37 +403,41 @@ export function MachinesScreen() {
     return rest;
   };
 
-  const forbidden = snapshot === undefined && error instanceof PlantSettingsForbidden;
+  const forbidden = data === undefined && isForbidden(error);
   const plannable = rows.filter((row) => row.machine.isPlannable).length;
-  const groupCount = snapshot === undefined ? 0 : groupsHere(snapshot).length;
+  const groupCount = groupsHere(allRows).length;
   const statusLine = `${rows.length} machine${rows.length === 1 ? '' : 's'}, ${plannable} plannable, ${groupCount} equipment group${groupCount === 1 ? '' : 's'}${
     view.plannable === 1 ? ', plannable only' : ''
   }. Sorted by code. Allowed in counts the routing operations that may run on the machine.`;
   const announced = useRef<string | undefined>(undefined);
   useEffect(() => {
-    if (snapshot === undefined) return;
+    if (!loaded) return;
     if (announced.current !== undefined && announced.current !== statusLine) announce(statusLine);
     announced.current = statusLine;
-  }, [snapshot, statusLine]);
+  }, [loaded, statusLine]);
 
   let state: PageState = { status: 'ready' };
   if (forbidden) {
+    state = readForbiddenState('machines', plantName);
+  } else if (failed) {
+    state = { status: 'error', title: 'Could not load machines', error, onRetry: () => refetch() };
+  } else if (pageError !== undefined) {
     state = {
-      status: 'empty',
-      icon: Lock,
-      title: 'You need the permission to read machines at this plant',
-      description: 'Ask your plant admin for a role that can read machines.',
+      status: 'error',
+      title: 'Could not load machines',
+      error: pageError,
+      onRetry: retryPage,
     };
-  } else if (snapshot === undefined && error !== undefined) {
-    state = { status: 'error', title: 'Could not load machines', error, onRetry: retry };
-  } else if (snapshot === undefined) {
+  } else if (!loaded) {
     state = { status: 'loading' };
   } else if (allRows.length === 0) {
     state = {
       status: 'empty',
       title: 'No machines yet',
-      description:
-        'Machines come from the ERP or are created here. Create the first one, or wait for the next import.',
+      description: viewer.can('core.equipment:create')
+        ? 'Create the first machine here. Every machine belongs to an equipment group.'
+        : 'A plant admin creates the machines here.',
+      action: <NewMachineLink />,
     };
   } else if (rows.length === 0) {
     state = {
@@ -389,27 +461,11 @@ export function MachinesScreen() {
   return (
     <PageFrame
       title="Machines"
-      meta={
-        snapshot?.erp === undefined ? undefined : (
-          <span className="text-sm text-muted-foreground">
-            ERP data as of {plantTime(snapshot, snapshot.erp.importedAtMs)}
-          </span>
-        )
-      }
-      actions={
-        forbidden ? undefined : (
-          <Button disabled>
-            <Plus aria-hidden />
-            New machine
-          </Button>
-        )
-      }
+      actions={forbidden ? undefined : <NewMachineLink />}
       toolbar={
         forbidden ? undefined : (
           <div className="flex flex-col gap-3">
-            {snapshot !== undefined && allRows.length > 0 && (
-              <EquipmentGroups snapshot={snapshot} rows={allRows} />
-            )}
+            {loaded && allRows.length > 0 && <EquipmentGroups rows={allRows} />}
             <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <SearchField
@@ -444,6 +500,17 @@ export function MachinesScreen() {
                   <FieldLabel htmlFor={plannableId}>Plannable only</FieldLabel>
                 </Field>
               </div>
+              <Field orientation="horizontal" className="min-h-(--nm-target-min) w-auto">
+                <Checkbox
+                  id={showArchivedId}
+                  checked={showArchived}
+                  onCheckedChange={(shown) => {
+                    const { archived: _, ...rest } = view;
+                    show(shown ? { ...rest, archived: 1 } : rest);
+                  }}
+                />
+                <FieldLabel htmlFor={showArchivedId}>Show archived</FieldLabel>
+              </Field>
             </div>
             {filtered && (
               <div className="flex flex-wrap items-center gap-2">
@@ -473,24 +540,22 @@ export function MachinesScreen() {
               </div>
             )}
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
-              <p data-list-status>{statusLine}</p>
-              <p className="flex flex-wrap gap-x-2">
-                {snapshot?.fixture !== undefined && (
-                  <span>Showing fixture {snapshot.fixture}.</span>
-                )}
-                <span>{plantSettingsActionReason}</span>
+              <p data-list-status>
+                {failed || pageError !== undefined ? '' : loaded ? statusLine : 'Loading machines.'}
               </p>
+              <p>{machineFixtureNote}</p>
             </div>
           </div>
         )
       }
       state={state}
+      busy={data === undefined && page !== undefined}
     >
       <DataTable
         label="Machines"
         columns={columns}
         rows={rows}
-        getRowId={(row) => row.machine.code}
+        getRowId={(row) => row.machine.id}
         hiddenColumns={hiddenColumns}
         headerMenu={
           <ColumnsMenu
@@ -500,7 +565,7 @@ export function MachinesScreen() {
             onChange={setHiddenColumns}
           />
         }
-        loading={snapshot === undefined}
+        loading={!loaded}
         paging={{
           page: 1,
           pageSize: Math.max(25, rows.length),

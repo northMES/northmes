@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { coreLinks } from '@northmes/core-contracts';
-import type { Page, Request } from '@playwright/test';
 import { seedCompany } from '../../scripts/stack/seed.mjs';
+import { newGroup, newMachine, routeOperation } from '../equipment.ts';
 import { expect, plant, test } from '../fixtures.ts';
 
 // The axe check of ADR 0021 over the equipment groups pages (design #729, EG1 to EG9): the new
@@ -10,85 +10,9 @@ import { expect, plant, test } from '../fixtures.ts';
 // picked, the archive dialog, the list, the page and the form at 320 px, the list's loading,
 // empty, failed and no-access states, a group's loading, failed and no-access states, a group that
 // does not exist, the edit form loading, and an archived group with its Restore dialog and the list
-// with Show archived on. The spec makes the plant group MACH and the company
-// group HEAT at plant A, the fixture G1's codes, so the pages show G1's machines in them and the
-// screenshots are the same in every run; the states come from routing the API's answers.
-
-/** The GraphQL operation a request runs, such as `CoreEquipmentGroups`. */
-function operationOf(request: Request): string | undefined {
-  if (request.method() !== 'POST' || !new URL(request.url()).pathname.endsWith('/graphql')) {
-    return undefined;
-  }
-  return (request.postDataJSON() as { operationName?: string } | null)?.operationName;
-}
-
-type Mode = 'pass' | 'hold' | 'empty' | 'fail' | 'forbidden';
-
-/**
- * Routes the answers to `operation`: `hold` keeps them back, so the page stays in its loading
- * state, `empty` gives the server's list without its rows, `fail` answers 500, `forbidden` the
- * API's FORBIDDEN, and `pass` leaves them alone. A change of mode lets the held ones go.
- */
-async function routeOperation(page: Page, operation: string) {
-  let mode: Mode = 'pass';
-  const held: (() => void)[] = [];
-  await page.route('**/graphql', async (route) => {
-    if (operationOf(route.request()) !== operation || mode === 'pass') return route.fallback();
-    if (mode === 'hold') {
-      await new Promise<void>((resolve) => {
-        held.push(resolve);
-      });
-      // A page.goto may have aborted the held request; its route is gone then.
-      return route.fallback().catch(() => {});
-    }
-    if (mode === 'fail') return route.fulfill({ status: 500, body: 'Internal Server Error' });
-    if (mode === 'forbidden') {
-      return route.fulfill({
-        json: {
-          data: null,
-          errors: [
-            {
-              message: 'Forbidden',
-              extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
-            },
-          ],
-        },
-      });
-    }
-    const response = await route.fetch();
-    const body = (await response.json()) as {
-      data?: { coreEquipmentGroups?: Record<string, unknown> };
-    };
-    if (body.data?.coreEquipmentGroups) {
-      body.data.coreEquipmentGroups = {
-        ...body.data.coreEquipmentGroups,
-        totalCount: 0,
-        edges: [],
-      };
-    }
-    return route.fulfill({ response, json: body });
-  });
-  return (next: Mode) => {
-    mode = next;
-    for (const resolve of held.splice(0)) resolve();
-  };
-}
-
-/** Creates a group through New equipment group at plant A and waits for its page. */
-async function newGroup(
-  page: Page,
-  { code, name, scope, color }: { code: string; name: string; scope: RegExp; color?: string },
-) {
-  await page.goto(coreLinks.settings.equipmentGroups.new({ plant }).href);
-  await page.getByLabel('Code').fill(code);
-  await page.getByLabel('Name', { exact: true }).fill(name);
-  await page.getByRole('radiogroup', { name: 'Scope' }).getByRole('radio', { name: scope }).click();
-  if (color !== undefined) await page.getByRole('radio', { name: color, exact: true }).click();
-  await page.getByRole('button', { name: 'Save equipment group' }).click();
-  await expect(
-    page.getByRole('heading', { level: 1, name: `Equipment group ${code}` }),
-  ).toBeVisible();
-}
+// with Show archived on. The spec makes the plant group MACH and the company group HEAT at plant
+// A, the fixture G1's codes, and the machine CNC2 in MACH, so the screenshots are the same in
+// every run; the states come from routing the API's answers.
 
 test.describe('the equipment groups pages', () => {
   test('#983 ADR0021 each state of the equipment groups pages passes the WCAG 2.2 AA rules', async ({
@@ -97,19 +21,26 @@ test.describe('the equipment groups pages', () => {
     checkA11y,
   }) => {
     const groups = coreLinks.settings.equipmentGroups({ plant }).href;
-    const list = await routeOperation(page, 'CoreEquipmentGroups');
+    const list = await routeOperation(page, 'CoreEquipmentGroups', 'coreEquipmentGroups');
     const one = await routeOperation(page, 'CoreEquipmentGroup');
     await signIn(coreLinks.settings.equipmentGroups.new({ plant }).href);
     await expect(page.getByRole('radiogroup', { name: 'Scope' })).toBeVisible();
     await checkA11y('the new equipment group form');
 
-    await newGroup(page, {
+    await newGroup(page, plant, {
       code: 'HEAT',
       name: 'Heat treatment',
       scope: new RegExp(`^${seedCompany.name}`),
     });
-    await newGroup(page, { code: 'MACH', name: 'Machining', scope: /^Plant A$/, color: 'Color 3' });
+    await newGroup(page, plant, {
+      code: 'MACH',
+      name: 'Machining',
+      scope: /^Plant A$/,
+      color: 'Color 3',
+    });
     const mach = page.url();
+    await newMachine(page, plant, { code: 'CNC2', name: 'CNC 2', group: 'Machining (MACH)' });
+    await page.goto(mach);
     await expect(page.getByRole('table', { name: 'Machines in MACH' })).toBeVisible();
     await checkA11y('an equipment group');
 
@@ -236,7 +167,7 @@ test.describe('the equipment groups pages', () => {
 
     // An archived group: its page with the badge and Restore, the Restore dialog, and the list
     // with Show archived on. OLD takes the first free color, as no group picks it.
-    await newGroup(page, { code: 'OLD', name: 'Old line', scope: /^Plant A$/ });
+    await newGroup(page, plant, { code: 'OLD', name: 'Old line', scope: /^Plant A$/ });
     await page.getByRole('button', { name: 'Archive', exact: true }).click();
     await page
       .getByRole('alertdialog')

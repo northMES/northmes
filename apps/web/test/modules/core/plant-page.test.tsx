@@ -93,15 +93,11 @@ describe("the plant's own page in plant settings (design #767, PP1 to PP7)", () 
 
   it('PP4 the other plant settings pages ignore the noCalendar preview', async () => {
     renderCoreAt(
-      coreLinks.settings.machines.machine.edit(
-        { plant, equipmentId: 'CNC1' },
-        { preview: 'noCalendar' },
-      ).href,
+      coreLinks.settings.calendars.calendar({ plant, calendarId: 'A1' }, { preview: 'noCalendar' })
+        .href,
       [],
     );
-    await screen.findByRole('heading', { level: 1, name: 'Edit machine CNC1' });
-
-    expect(field('Calendar', 'combobox').value).toBe('A1');
+    expect(await screen.findByRole('heading', { level: 1, name: 'Calendar A1' })).toBeTruthy();
   });
 
   it('PP5 to PP7 the preview key opens the loading, failed and no-access states on mock data', async () => {

@@ -9,14 +9,14 @@ import { defineCoreLinks } from '@northmes/contracts';
  * group's page, which is its form; the customers and each customer's page; the routings, each
  * article's routing and the edit form of an operation; and the tools and each tool's page. Its
  * settings section holds core's settings pages under the plant's settings (ADR 0066, #876): the
- * plant's own page, the machines, the equipment groups with the new group page and the calendars;
- * and the company's pages: the users, read at the company or at the plant (ADR 0092), the new user
- * page, each user's page (its tab in `tab`) with Add role; the roles, the new role page (Start from
- * in `from`), and each role's page (its tab in `tab`) with its edit page (design core-304); and the
- * warehouses (design #729). Core's pages sit at the plant root and at the settings root, without
- * the module id, so the articles list is /plant-a/articles and the users /plant-a/settings/users
- * (ADR 0074). The web's routes take their paths from it, and other modules, server code and
- * end-to-end specs build core's URLs with it.
+ * plant's own page, the machines with the new machine page, the equipment groups with the new
+ * group page and the calendars; and the company's pages: the users, read at the company or at the
+ * plant (ADR 0092), the new user page, each user's page (its tab in `tab`) with Add role; the
+ * roles, the new role page (Start from in `from`), and each role's page (its tab in `tab`) with its
+ * edit page (design core-304); and the warehouses (design #729). Core's pages sit at the plant
+ * root and at the settings root, without the module id, so the articles list is /plant-a/articles
+ * and the users /plant-a/settings/users (ADR 0074). The web's routes take their paths from it, and
+ * other modules, server code and end-to-end specs build core's URLs with it.
  */
 export const coreLinks = defineCoreLinks(
   {
@@ -60,10 +60,16 @@ export const coreLinks = defineCoreLinks(
     settings: {
       /** The plant's own page in plant settings (design #767): name, slug, zone and production day start. */
       plant: { path: 'plant' },
-      /** The machines of the plant in plant settings (design #688): the list, each machine's page and its edit page. */
+      /**
+       * The machines of the plant in plant settings (design #688): the list, the new machine page,
+       * each machine's page by its id and its edit page.
+       */
       machines: {
         path: 'machines',
-        children: { machine: { path: '$equipmentId', children: { edit: { path: 'edit' } } } },
+        children: {
+          new: { path: 'new' },
+          machine: { path: '$equipmentId', children: { edit: { path: 'edit' } } },
+        },
       },
       /**
        * The equipment groups in plant settings (design #729): the list, the new group page, each

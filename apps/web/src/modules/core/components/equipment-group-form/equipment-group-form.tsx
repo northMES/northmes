@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-import { paletteColors, scopeLevel } from '@northmes/contracts';
+import { scopeLevel } from '@northmes/contracts';
 import { equipmentGroups } from '@northmes/core-contracts';
 import { useId } from 'react';
 import type { z } from 'zod';
@@ -20,6 +20,7 @@ import {
   firstFreeColor,
 } from '../../equipment-group-facts.ts';
 import { GroupBand } from '../group-band/index.ts';
+import { PalettePicker } from '../palette-picker/index.ts';
 
 /**
  * The fields of the equipment group form: the code, the name and the palette color that create
@@ -181,50 +182,15 @@ export function EquipmentGroupForm({
             <span id={colorId} className="text-xs font-semibold">
               Color
             </span>
-            <RadioGroup
-              aria-labelledby={colorId}
-              aria-describedby={`${colorId}-hint`}
-              value={color ?? ''}
-              onValueChange={(value) =>
-                form.setValue('color', String(value) as EquipmentGroupValues['color'], {
-                  shouldDirty: true,
-                })
-              }
-              disabled={!editable}
+            <PalettePicker
               name="color"
-              className="grid grid-cols-5 gap-2 sm:grid-cols-10"
-            >
-              {paletteColors.map((each) => {
-                const usedBy = users.get(each) ?? [];
-                // The radio takes its name from the label, "Color 1, used by HEAT", while the
-                // swatch shows the number and the codes.
-                const label =
-                  usedBy.length === 0
-                    ? colorText(each)
-                    : `${colorText(each)}, used by ${usedBy.join(', ')}`;
-                return (
-                  // biome-ignore lint/a11y/noLabelWithoutControl: the radio inside is the control.
-                  <label
-                    key={each}
-                    className="flex cursor-pointer flex-col items-center gap-1 rounded-md border border-transparent p-1 has-data-checked:border-foreground"
-                  >
-                    <span
-                      aria-hidden
-                      className="h-8 w-full rounded-sm border border-border"
-                      style={{ background: `var(--${each})` }}
-                    />
-                    <span className="sr-only">{label}</span>
-                    <span className="flex items-center gap-1.5 text-xs">
-                      <RadioGroupItem value={each} />
-                      <span aria-hidden>{each.replace('palette-', '')}</span>
-                    </span>
-                    <span aria-hidden className="min-h-4 font-mono text-tick text-muted-foreground">
-                      {usedBy.join(', ')}
-                    </span>
-                  </label>
-                );
-              })}
-            </RadioGroup>
+              labelledBy={colorId}
+              describedBy={`${colorId}-hint`}
+              value={color}
+              onChange={(picked) => form.setValue('color', picked, { shouldDirty: true })}
+              disabled={!editable}
+              usersOf={(each) => users.get(each) ?? []}
+            />
             <FieldDescription id={`${colorId}-hint`}>
               {isNew
                 ? `One of the 20 palette colors. Pick none and the group takes ${groupsComplete ? `${colorText(free)}, ` : ''}the first palette color that no group uses.`

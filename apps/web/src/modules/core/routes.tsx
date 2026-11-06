@@ -15,7 +15,6 @@ import {
   calendarPageSearch,
   equipmentGroupListSearch,
   machineListSearch,
-  machinePageSearch,
   plantPageSearch,
   urlSearchOf as urlSearchOfPlantSettingsList,
 } from './plant-settings-search.ts';
@@ -201,10 +200,10 @@ export function coreRoutes(plantRoute: PlantRoute) {
  */
 export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
   const coreRoute = createRoute({ getParentRoute: () => settingsRoute, id: coreModuleId });
-  // The machines with each machine's page and its edit page, the equipment groups with the new
-  // group page, each group's page and its edit page, and the calendars with each calendar's page
-  // (designs #688 and #729). The machine and calendar pages take the page state the mock source
-  // previews from the URL; a calendar's page keeps the week its week view shows.
+  // The machines and the equipment groups, each with its new page, each row's page by id and its
+  // edit page, and the calendars with each calendar's page (designs #688 and #729). The calendar
+  // pages take the page state the mock source previews from the URL; a calendar's page keeps the
+  // week its week view shows.
   const machinesRoute = createRoute({
     getParentRoute: () => coreRoute,
     path: linkEntry(coreLinks.settings.machines).path,
@@ -216,6 +215,11 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
       urlSearchOfPlantSettingsList(machineListSearch(raw)),
     component: lazyScreen('MachinesScreen'),
   });
+  const newMachineRoute = createRoute({
+    getParentRoute: () => machinesRoute,
+    path: linkEntry(coreLinks.settings.machines.new).path,
+    component: lazyScreen('NewMachineScreen'),
+  });
   const machineRoute = createRoute({
     getParentRoute: () => machinesRoute,
     path: linkEntry(coreLinks.settings.machines.machine).path,
@@ -223,13 +227,11 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
   const machineDetailRoute = createRoute({
     getParentRoute: () => machineRoute,
     path: '/',
-    validateSearch: machinePageSearch,
     component: lazyScreen('MachineScreen'),
   });
   const editMachineRoute = createRoute({
     getParentRoute: () => machineRoute,
     path: linkEntry(coreLinks.settings.machines.machine.edit).path,
-    validateSearch: machinePageSearch,
     component: lazyScreen('EditMachineScreen'),
   });
   const equipmentGroupsRoute = createRoute({
@@ -359,6 +361,7 @@ export function coreSettingsRoutes(settingsRoute: SettingsRoute) {
     plantPageRoute,
     machinesRoute.addChildren([
       machineListRoute,
+      newMachineRoute,
       machineRoute.addChildren([machineDetailRoute, editMachineRoute]),
     ]),
     equipmentGroupsRoute.addChildren([

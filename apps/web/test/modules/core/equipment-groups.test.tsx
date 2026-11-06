@@ -21,6 +21,17 @@ import {
   renderCoreAt,
   spoken,
 } from './core-app.tsx';
+import {
+  asm,
+  forbidden,
+  group,
+  groupQuery,
+  groupsQuery,
+  heat,
+  mach,
+  machine,
+  machinesQuery,
+} from './equipment-fixtures.ts';
 
 afterEach(cleanup);
 
@@ -49,100 +60,16 @@ function field(label: string): HTMLInputElement {
   return screen.getByRole('textbox', { name: label }) as HTMLInputElement;
 }
 
-type Group = ReturnType<typeof group>;
-
 /**
- * A fictional equipment group with an id made from its code, at the plant unless scope says the
- * company, active unless archivedAt says otherwise. Its codes are those of the fixture G1, so the
- * pages find G1's machines in it.
+ * Renders the core module at href with mocks and the plant's machines of the fixture G1, which
+ * the group pages count and list.
  */
-function group(
-  code: string,
-  name: string,
-  {
-    scope = 'plant',
-    color = 'palette-1',
-    colorFrom = 'set',
-    version = 1,
-    archivedAt = null,
-  }: {
-    scope?: 'company' | 'plant';
-    color?: string;
-    colorFrom?: 'erp' | 'set' | 'palette';
-    version?: number;
-    archivedAt?: string | null;
-  } = {},
+function renderGroupsAt(
+  href: string,
+  mocks: readonly MockLink.MockedResponse[],
+  options?: Parameters<typeof renderCoreAt>[2],
 ) {
-  const digits = [...code].map((char) => char.charCodeAt(0).toString(16)).join('');
-  return {
-    __typename: 'EquipmentGroup' as const,
-    id: `019a0000-0000-7000-8000-${digits.padStart(12, '0').slice(-12)}`,
-    code,
-    name,
-    color,
-    colorFrom,
-    scope,
-    version,
-    archivedAt,
-    updatedAt: lastChanged,
-  };
-}
-
-const asm = group('ASM', 'Assembly', { color: 'palette-8' });
-const heat = group('HEAT', 'Heat treatment', { scope: 'company', colorFrom: 'palette' });
-const mach = group('MACH', 'Machining', { color: 'palette-3', colorFrom: 'erp' });
-
-/**
- * coreEquipmentGroups, with or without the archived ones, answered with these groups: the first
- * page, or with `after` and `next` the page after that cursor and the cursor of the page after it.
- */
-function groupsQuery(
-  groups: readonly Group[],
-  includeArchived = false,
-  { after, next }: { after?: string; next?: string } = {},
-): MockLink.MockedResponse {
-  return {
-    request: {
-      query: CoreEquipmentGroups,
-      variables: after === undefined ? { includeArchived } : { includeArchived, after },
-    },
-    result: {
-      data: {
-        coreEquipmentGroups: {
-          __typename: 'EquipmentGroupConnection',
-          totalCount: groups.length,
-          pageInfo: {
-            __typename: 'PageInfo',
-            hasNextPage: next !== undefined,
-            endCursor: next ?? null,
-          },
-          edges: groups.map((node) => ({ __typename: 'EquipmentGroupEdge', node })),
-        },
-      },
-    },
-  };
-}
-
-/** coreEquipmentGroup for the group's id, answered with it, or null for an unknown id. */
-function groupQuery(found: Group, answer: Group | null = found): MockLink.MockedResponse {
-  return {
-    request: { query: CoreEquipmentGroup, variables: { id: found.id } },
-    result: { data: { coreEquipmentGroup: answer } },
-  };
-}
-
-/** A query of `query` refused with FORBIDDEN, as the API answers a user without the permission. */
-function forbidden(request: MockLink.MockedResponse['request']): MockLink.MockedResponse {
-  return {
-    request,
-    result: {
-      errors: [
-        new GraphQLError('Forbidden', {
-          extensions: { code: 'FORBIDDEN', errorCode: 'core.forbidden' },
-        }),
-      ],
-    },
-  };
+  return renderCoreAt(href, [...mocks, machinesQuery()], options);
 }
 
 /** Every equipment group permission at the plant, and at the company with company. */
@@ -160,7 +87,7 @@ const newGroup = coreLinks.settings.equipmentGroups.new({ plant }).href;
 
 describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () => {
   it("#983 EG1 lists the groups the plant sees by code with their color, scope, the plant's machines in them and where the color came from", async () => {
-    renderCoreAt(groups, [groupsQuery([asm, heat, mach]), companiesQuery(), admin(true)]);
+    renderGroupsAt(groups, [groupsQuery([asm, heat, mach]), companiesQuery(), admin(true)]);
     const table = await screen.findByRole('table', { name: 'Equipment groups of Plant A' });
 
     await waitFor(() =>
@@ -192,11 +119,6 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
     expect(screen.getByRole('note').textContent).toBe(
       'A group keeps the color it has. A new group without a picked color takes the first of the 20 palette colors that no other group uses.',
     );
-    expect(
-      screen.getByText(
-        'The machines in each group show the fixture G1 until the machine pages read the API.',
-      ),
-    ).toBeTruthy();
     expect(within(table).getByRole('link', { name: 'MACH' }).getAttribute('href')).toBe(machPage);
     expect(within(table).getByRole('link', { name: 'Edit MACH' }).getAttribute('href')).toBe(
       editMach,
@@ -208,7 +130,7 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
   });
 
   it('#983 EG1 offers Edit only on the groups the user may change, and New equipment group only to a holder of core.equipmentGroup:create', async () => {
-    renderCoreAt(
+    renderGroupsAt(
       groups,
       [
         viewerQuery(['core.equipmentGroup:read', 'core.equipmentGroup:update']),
@@ -226,7 +148,7 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
   });
 
   it('#983 EG1 reads every page of the groups, past the first', async () => {
-    renderCoreAt(groups, [
+    renderGroupsAt(groups, [
       groupsQuery([asm, heat], false, { next: 'page-2' }),
       groupsQuery([mach], false, { after: 'page-2' }),
       companiesQuery(),
@@ -239,7 +161,7 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
   });
 
   it('#983 EG1 filters by Scope through its menu and from the URL, with a chip and Clear filters that gives focus back to Scope', async () => {
-    const router = renderCoreAt(groups, [
+    const router = renderGroupsAt(groups, [
       groupsQuery([asm, heat, mach]),
       companiesQuery(),
       admin(),
@@ -267,7 +189,7 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
 
   it('#983 EG1 Show archived lists the archived groups too, each with the Archived badge', async () => {
     const old = group('OLD', 'Old line', { archivedAt: lastChanged });
-    renderCoreAt(groups, [
+    renderGroupsAt(groups, [
       groupsQuery([asm]),
       groupsQuery([asm, old], true),
       companiesQuery(),
@@ -284,7 +206,7 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
 
   it('#983 EG6 to EG9 show the loading, empty, failed and no-access states', async () => {
     const held = holdRequests((operation) => operation.operationName === 'CoreEquipmentGroups');
-    renderCoreAt(groups, [groupsQuery([]), companiesQuery(), admin()], { hold: held.link });
+    renderGroupsAt(groups, [groupsQuery([]), companiesQuery(), admin()], { hold: held.link });
     expect(
       (await screen.findByRole('table', { name: 'Equipment groups' })).getAttribute('aria-busy'),
     ).toBe('true');
@@ -296,7 +218,7 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
     ).toBeTruthy();
 
     cleanup();
-    renderCoreAt(groups, [
+    renderGroupsAt(groups, [
       {
         request: { query: CoreEquipmentGroups, variables: { includeArchived: false } },
         error: new Error('Network down'),
@@ -307,7 +229,7 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
     await screen.findByRole('heading', { level: 2, name: 'Could not load equipment groups' });
 
     cleanup();
-    renderCoreAt(groups, [
+    renderGroupsAt(groups, [
       forbidden({ query: CoreEquipmentGroups, variables: { includeArchived: false } }),
       companiesQuery(),
       viewerQuery([]),
@@ -322,7 +244,7 @@ describe('the equipment groups in plant settings (design #729, EG1 to EG9)', () 
 
 describe("an equipment group's page (design #729, EG4)", () => {
   it('#983 EG4 shows MACH with its color from the ERP, its machines, and the band of its plannable machines it draws on the board', async () => {
-    renderCoreAt(machPage, [groupQuery(mach), companiesQuery(), admin()]);
+    renderGroupsAt(machPage, [groupQuery(mach), companiesQuery(), admin()]);
     await screen.findByRole('heading', { level: 1, name: 'Equipment group MACH' });
 
     await waitFor(() => expect(definition('Code')).toBe('MACH'));
@@ -351,7 +273,7 @@ describe("an equipment group's page (design #729, EG4)", () => {
   });
 
   it('#983 EG4 says the company group HEAT took the first free palette color and has no machines here', async () => {
-    renderCoreAt(coreLinks.settings.equipmentGroups.group({ plant, groupId: heat.id }).href, [
+    renderGroupsAt(coreLinks.settings.equipmentGroups.group({ plant, groupId: heat.id }).href, [
       groupQuery(heat),
       companiesQuery(),
       admin(),
@@ -376,7 +298,7 @@ describe("an equipment group's page (design #729, EG4)", () => {
   });
 
   it('#983 EG4 says a group does not exist, with the way back, and shows the failed and no-access states', async () => {
-    renderCoreAt(machPage, [groupQuery(mach, null), companiesQuery(), admin()]);
+    renderGroupsAt(machPage, [groupQuery(mach, null), companiesQuery(), admin()]);
     await screen.findByRole('heading', {
       level: 2,
       name: 'This equipment group does not exist or you cannot see it',
@@ -386,7 +308,7 @@ describe("an equipment group's page (design #729, EG4)", () => {
     ).toBe(groups);
 
     cleanup();
-    renderCoreAt(machPage, [
+    renderGroupsAt(machPage, [
       {
         request: { query: CoreEquipmentGroup, variables: { id: mach.id } },
         error: new Error('Network down'),
@@ -397,7 +319,7 @@ describe("an equipment group's page (design #729, EG4)", () => {
     await screen.findByRole('heading', { level: 2, name: 'Could not load the equipment group' });
 
     cleanup();
-    renderCoreAt(machPage, [
+    renderGroupsAt(machPage, [
       forbidden({ query: CoreEquipmentGroup, variables: { id: mach.id } }),
       companiesQuery(),
       viewerQuery([]),
@@ -411,7 +333,7 @@ describe("an equipment group's page (design #729, EG4)", () => {
   it('#983 EG4 Archive asks first, archives the group with its version and says so; the archived group offers Restore', async () => {
     const user = userEvent.setup();
     const archived = { ...mach, version: 2, archivedAt: lastChanged };
-    renderCoreAt(machPage, [
+    renderGroupsAt(machPage, [
       groupQuery(mach),
       companiesQuery(),
       admin(),
@@ -453,7 +375,7 @@ describe("an equipment group's page (design #729, EG4)", () => {
 
   it('#983 EG4 a refused archive keeps the dialog open with the reason', async () => {
     const user = userEvent.setup();
-    renderCoreAt(machPage, [
+    renderGroupsAt(machPage, [
       groupQuery(mach),
       companiesQuery(),
       admin(),
@@ -489,7 +411,7 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
   it('#983 EG5 keeps the code, offers the 20 palette colors with the groups that use them, previews the band, and saves the name and color with the version', async () => {
     const user = userEvent.setup();
     const sent: Record<string, unknown>[] = [];
-    const router = renderCoreAt(editMach, [
+    const router = renderGroupsAt(editMach, [
       groupQuery(mach),
       groupsQuery([asm, heat, mach]),
       companiesQuery(),
@@ -556,7 +478,7 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
 
   it('#983 EG5 a save refused for a newer version keeps the entries and offers Reload', async () => {
     const user = userEvent.setup();
-    renderCoreAt(editMach, [
+    renderGroupsAt(editMach, [
       groupQuery(mach),
       groupsQuery([mach]),
       companiesQuery(),
@@ -597,7 +519,12 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
       plant,
       groupId: heat.id,
     }).href;
-    renderCoreAt(editHeat, [groupQuery(heat), groupsQuery([heat]), companiesQuery(), admin(true)]);
+    renderGroupsAt(editHeat, [
+      groupQuery(heat),
+      groupsQuery([heat]),
+      companiesQuery(),
+      admin(true),
+    ]);
     await screen.findByRole('heading', { level: 1, name: 'Edit equipment group HEAT' });
     expect(
       await screen.findByText(
@@ -607,7 +534,7 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
   });
 
   it('#983 EG5 shows a group the user may not change read-only, without Save', async () => {
-    renderCoreAt(
+    renderGroupsAt(
       editMach,
       [
         viewerQuery(['core.equipmentGroup:read']),
@@ -624,7 +551,7 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
 
   it('#983 EG5 shows the loading, not-found and failed states of the form', async () => {
     const held = holdRequests((operation) => operation.operationName === 'CoreEquipmentGroup');
-    renderCoreAt(editMach, [groupQuery(mach, null), groupsQuery([]), companiesQuery(), admin()], {
+    renderGroupsAt(editMach, [groupQuery(mach, null), groupsQuery([]), companiesQuery(), admin()], {
       hold: held.link,
     });
     expect(await screen.findByText('Loading the equipment group.')).toBeTruthy();
@@ -635,7 +562,7 @@ describe("an equipment group's edit form (design #729, EG5)", () => {
     });
 
     cleanup();
-    renderCoreAt(editMach, [
+    renderGroupsAt(editMach, [
       {
         request: { query: CoreEquipmentGroup, variables: { id: mach.id } },
         error: new Error('Network down'),
@@ -653,7 +580,7 @@ describe('a new equipment group (design #729)', () => {
     const user = userEvent.setup();
     const sent: Record<string, unknown>[] = [];
     const created = group('PAINT', 'Paint shop', { color: 'palette-2', colorFrom: 'palette' });
-    const router = renderCoreAt(newGroup, [
+    const router = renderGroupsAt(newGroup, [
       groupsQuery([heat]),
       companiesQuery(),
       admin(true),
@@ -707,7 +634,7 @@ describe('a new equipment group (design #729)', () => {
 
   it('#983 New equipment group puts a taken code on Code and keeps the entries', async () => {
     const user = userEvent.setup();
-    renderCoreAt(newGroup, [
+    renderGroupsAt(newGroup, [
       groupsQuery([heat]),
       companiesQuery(),
       admin(true),
@@ -745,7 +672,7 @@ describe('a new equipment group (design #729)', () => {
   });
 
   it('#983 New equipment group offers only the scopes where the user may create, and says so where there is none', async () => {
-    renderCoreAt(
+    renderGroupsAt(
       newGroup,
       [
         viewerQuery(['core.equipmentGroup:read', 'core.equipmentGroup:create']),
@@ -762,7 +689,7 @@ describe('a new equipment group (design #729)', () => {
     ).toEqual(['true']);
 
     cleanup();
-    renderCoreAt(
+    renderGroupsAt(
       newGroup,
       [viewerQuery(['core.equipmentGroup:read']), groupsQuery([]), companiesQuery()],
       { hold: answeredAfter('CoreViewer', 'CoreEquipmentGroups') },
@@ -777,7 +704,7 @@ describe('a new equipment group (design #729)', () => {
 
 describe('the equipment group pages when an answer fails or is missing (review of #983)', () => {
   it('#983 EG1 a list that fails after Show archived says so with Try again, not the rows of the list before', async () => {
-    renderCoreAt(groups, [
+    renderGroupsAt(groups, [
       groupsQuery([asm]),
       {
         request: { query: CoreEquipmentGroups, variables: { includeArchived: true } },
@@ -795,7 +722,7 @@ describe('the equipment group pages when an answer fails or is missing (review o
   });
 
   it('#983 EG1 a later page of groups that fails to load says so with Try again, which loads it', async () => {
-    renderCoreAt(groups, [
+    renderGroupsAt(groups, [
       groupsQuery([asm, heat], false, { next: 'page-2' }),
       {
         request: {
@@ -818,7 +745,7 @@ describe('the equipment group pages when an answer fails or is missing (review o
 
   it('#983 EG1 Show archived lives in the URL as archived=1', async () => {
     const old = group('OLD', 'Old line', { archivedAt: lastChanged });
-    const router = renderCoreAt(
+    const router = renderGroupsAt(
       coreLinks.settings.equipmentGroups({ plant }, { archived: '1' }).href,
       [groupsQuery([asm, old], true), groupsQuery([asm]), companiesQuery(), admin()],
     );
@@ -833,7 +760,7 @@ describe('the equipment group pages when an answer fails or is missing (review o
   });
 
   it('#983 EG6 a plant without any group shows the empty state with Show archived on too', async () => {
-    renderCoreAt(coreLinks.settings.equipmentGroups({ plant }, { archived: '1' }).href, [
+    renderGroupsAt(coreLinks.settings.equipmentGroups({ plant }, { archived: '1' }).href, [
       groupsQuery([], true),
       companiesQuery(),
       admin(),
@@ -842,7 +769,7 @@ describe('the equipment group pages when an answer fails or is missing (review o
   });
 
   it('#983 EG4 a failed answer about the user shows the failed state with Try again, not loading for ever', async () => {
-    renderCoreAt(machPage, [
+    renderGroupsAt(machPage, [
       groupQuery(mach),
       companiesQuery(),
       { request: { query: viewerQuery([]).request.query }, error: new Error('Network down') },
@@ -854,7 +781,7 @@ describe('the equipment group pages when an answer fails or is missing (review o
   });
 
   it('#983 EG4 an old link by code, not by id, shows the not-found state without asking the API', async () => {
-    renderCoreAt(coreLinks.settings.equipmentGroups.group({ plant, groupId: 'MACH' }).href, [
+    renderGroupsAt(coreLinks.settings.equipmentGroups.group({ plant, groupId: 'MACH' }).href, [
       companiesQuery(),
       admin(),
     ]);
@@ -868,7 +795,7 @@ describe('the equipment group pages when an answer fails or is missing (review o
     const user = userEvent.setup();
     const newer = { ...mach, name: 'Machining hall', version: 2 };
     const sent: Record<string, unknown>[] = [];
-    renderCoreAt(editMach, [
+    renderGroupsAt(editMach, [
       groupQuery(mach),
       groupsQuery([mach]),
       companiesQuery(),
@@ -915,7 +842,7 @@ describe('the equipment group pages when an answer fails or is missing (review o
 
   it('#983 EG5 a Reload that fails keeps the entries and says so', async () => {
     const user = userEvent.setup();
-    renderCoreAt(editMach, [
+    renderGroupsAt(editMach, [
       groupQuery(mach),
       groupsQuery([mach]),
       companiesQuery(),
@@ -952,9 +879,12 @@ describe('the equipment group pages when an answer fails or is missing (review o
 
   it('#983 EG5 the form of an archived group says why it is read-only', async () => {
     const archived = { ...mach, archivedAt: lastChanged };
+    // The machines answer names the archived group too, as the API does: the cache keeps one
+    // copy of each group.
     renderCoreAt(editMach, [
       groupQuery(mach, archived),
       groupsQuery([]),
+      machinesQuery([machine('CNC1', 'CNC 1', archived)]),
       companiesQuery(),
       admin(),
     ]);
@@ -967,7 +897,7 @@ describe('the equipment group pages when an answer fails or is missing (review o
   it('#983 New equipment group writes the new group into the cache, so its page opens without asking again', async () => {
     const user = userEvent.setup();
     const created = group('PAINT', 'Paint shop', { color: 'palette-2', colorFrom: 'palette' });
-    renderCoreAt(newGroup, [
+    renderGroupsAt(newGroup, [
       groupsQuery([heat]),
       companiesQuery(),
       admin(),
@@ -987,7 +917,7 @@ describe('the equipment group pages when an answer fails or is missing (review o
   });
 
   it('#983 New equipment group names no free color until the groups have loaded', async () => {
-    renderCoreAt(newGroup, [
+    renderGroupsAt(newGroup, [
       {
         request: { query: CoreEquipmentGroups, variables: { includeArchived: false } },
         error: new Error('Network down'),
@@ -1005,7 +935,7 @@ describe('the equipment group pages when an answer fails or is missing (review o
   it('#983 New equipment group lets a holder of core.equipmentGroup:create at the company alone create a company group', async () => {
     const user = userEvent.setup();
     const sent: Record<string, unknown>[] = [];
-    renderCoreAt(
+    renderGroupsAt(
       groups,
       [
         viewerQuery(['core.equipmentGroup:read'], ['core.equipmentGroup:create']),
@@ -1043,7 +973,7 @@ describe('the equipment group pages when an answer fails or is missing (review o
     const user = userEvent.setup();
     const ids: unknown[] = [];
     const created = group('PAINT', 'Paint shop');
-    renderCoreAt(newGroup, [
+    renderGroupsAt(newGroup, [
       groupsQuery([]),
       companiesQuery(),
       admin(),

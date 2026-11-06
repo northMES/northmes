@@ -1,30 +1,62 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
 import { coreLinks } from '@northmes/core-contracts';
-import { expect, plant, test } from '../fixtures.ts';
+import type { Page } from '@playwright/test';
+import { confirm, newGroup, newMachine, routeOperation } from '../equipment.ts';
+import { expect, plant, test, uniqueCode } from '../fixtures.ts';
 
 // The axe check of ADR 0021 over the states of the plant settings pages (E06; design #688): the
-// machines list and its loading, empty, failed and no-access states, a machine's page, the edit
-// form with its loading, failed-save and no-access states and the not-found state, the calendars
-// list and a calendar's page with its week view, a calendar with three shifts at 1280 and 320, and their no-access states. The pages read the fixture G1, so every state is
-// the same in every run; the preview key opens the states on mock data.
+// machines list with its Group menu open, Show archived and its loading, empty, failed and
+// no-access states; the new machine form; a machine's page with its archive dialog and its
+// loading, failed and no-access states; the edit form with its own color picked, loading and
+// after a refused save; an archived machine and a machine that does not exist; and the calendars
+// list and a calendar's page with its week view, a calendar with three shifts at 1280 and 320,
+// and their no-access states. The machines come from the API: each test makes its own group and
+// G1's machine codes in it, so the routing operations and the week of the fixture G1 show; the
+// group's code is new in each run, and other specs on the worker's database may add groups and
+// machines, so the list's screenshots can differ between runs. The API's states come from routing
+// its answers. The calendars read the fixture G1; the preview key opens their states on mock data.
 
 /** An href of the seed plant with a search. */
 function withSearch(href: string, search: Record<string, string>): string {
   return `${href}?${new URLSearchParams(search).toString()}`;
 }
 
+/**
+ * Makes a plant group for one test's machines, named and coded on its own, so no other group of
+ * the worker's database shares its name, and returns its name.
+ */
+async function machining(page: Page): Promise<string> {
+  const code = uniqueCode('MG');
+  const name = `Machining ${code}`;
+  await newGroup(page, plant, { code, name, scope: /^Plant A$/, color: 'Color 3' });
+  return name;
+}
+
 test.describe('the plant settings pages', () => {
-  test('ADR0021 each state of the machines list passes the WCAG 2.2 AA rules', async ({
+  test('#991 ADR0021 each state of the machines list passes the WCAG 2.2 AA rules', async ({
     page,
     signIn,
     checkA11y,
   }) => {
     const machines = coreLinks.settings.machines({ plant }).href;
-    await signIn(machines);
+    const list = await routeOperation(page, 'CoreEquipmentList', 'coreEquipmentList');
+    await signIn(coreLinks.settings.machines.new({ plant }).href);
+    await expect(page.getByRole('button', { name: 'Save machine' })).toBeVisible();
+    await checkA11y('the new machine form');
+
+    const group = await machining(page);
+    const option = `${group} (${group.replace('Machining ', '')})`;
+    await newMachine(page, plant, { code: 'CNC1', name: 'CNC 1', group: option });
+    await newMachine(page, plant, {
+      code: 'LATHE1',
+      name: 'Lathe 1',
+      group: option,
+      plannable: false,
+    });
+    await page.goto(machines);
     const table = page.getByRole('table', { name: 'Machines' });
-    await expect(table).toBeVisible();
-    await expect(page.getByText('Showing fixture G1.')).toBeVisible();
+    await expect(table.getByRole('link', { name: 'CNC1', exact: true })).toBeVisible();
     const settingsNav = page.getByRole('navigation', { name: /settings$/ });
     await expect(settingsNav).toBeVisible();
     // The company's settings end the navigation as a group of their pages (#876); the dev admin
@@ -33,74 +65,125 @@ test.describe('the plant settings pages', () => {
     await checkA11y('the machines list');
 
     await page.locator('button[aria-haspopup="menu"]', { hasText: /^Group$/ }).click();
-    await expect(page.getByRole('menuitemcheckbox', { name: /^Assembly/ })).toBeVisible();
+    await expect(
+      page.getByRole('menuitemcheckbox', { name: new RegExp(`^${group}`) }),
+    ).toBeVisible();
     await expect(page.getByRole('menu')).toHaveCSS('opacity', '1');
     await checkA11y('the Group filter menu open');
     await page.keyboard.press('Escape');
     await expect(page.getByRole('menu')).toHaveCount(0);
 
-    await page.goto(withSearch(machines, { preview: 'loading' }));
+    list('hold');
+    await page.goto(machines);
     await expect(page.getByRole('table', { name: 'Machines' })).toHaveAttribute(
       'aria-busy',
       'true',
     );
     await checkA11y('the machines list loading', { busy: true });
 
-    await page.goto(withSearch(machines, { preview: 'empty' }));
+    list('empty');
+    await page.goto(machines);
     await expect(page.getByRole('heading', { level: 2, name: 'No machines yet' })).toBeVisible();
     await checkA11y('the machines list empty');
 
-    await page.goto(withSearch(machines, { preview: 'error' }));
+    list('fail');
+    await page.goto(machines);
     await expect(
       page.getByRole('heading', { level: 2, name: 'Could not load machines' }),
     ).toBeVisible();
     await checkA11y('the machines list failed');
 
-    await page.goto(withSearch(machines, { preview: 'forbidden' }));
+    list('forbidden');
+    await page.goto(machines);
     await expect(
       page.getByRole('heading', {
         level: 2,
-        name: 'You need the permission to read machines at this plant',
+        name: 'You need the permission to read machines in Plant A',
       }),
     ).toBeVisible();
     await checkA11y('the machines list without access');
+    list('pass');
   });
 
-  test('ADR0021 each state of a machine and its edit form passes the WCAG 2.2 AA rules', async ({
+  test('#991 ADR0021 each state of a machine and its edit form passes the WCAG 2.2 AA rules', async ({
     page,
     signIn,
     checkA11y,
   }) => {
-    await signIn(coreLinks.settings.machines.machine({ plant, equipmentId: 'CNC1' }).href);
-    await expect(page.getByRole('heading', { level: 1, name: 'Machine CNC1' })).toBeVisible();
+    const one = await routeOperation(page, 'CoreEquipment');
+    const update = await routeOperation(page, 'CoreUpdateEquipment');
+    await signIn(coreLinks.settings.machines({ plant }).href);
+    const group = await machining(page);
+    await newMachine(page, plant, {
+      code: 'MILL1',
+      name: 'Mill 1',
+      group: `${group} (${group.replace('Machining ', '')})`,
+    });
+    const mill = page.url();
     await expect(
-      page.getByRole('table', { name: 'Routing operations that may run on CNC 1' }),
+      page.getByRole('table', { name: 'Routing operations that may run on Mill 1' }),
     ).toBeVisible();
     await checkA11y('a machine');
 
-    const edit = coreLinks.settings.machines.machine.edit({ plant, equipmentId: 'CNC1' }).href;
-    await page.getByRole('link', { name: 'Edit' }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Edit machine CNC1' })).toBeVisible();
-    await checkA11y('the edit form of a machine');
+    await page.getByRole('button', { name: 'Archive', exact: true }).click();
+    // The dialog fades in; axe reads its text against the page until it has (#867).
+    await expect(page.getByRole('alertdialog')).toHaveCSS('opacity', '1');
+    await checkA11y('the archive dialog of a machine');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
 
-    await page.goto(withSearch(edit, { preview: 'loading' }));
-    await expect(page.getByRole('heading', { level: 1, name: 'Edit machine' })).toBeVisible();
+    await page.getByRole('link', { name: 'Edit machine' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Edit machine MILL1' })).toBeVisible();
+    const edit = page.url();
+    await page.getByRole('radio', { name: 'Own color' }).click();
+    await page
+      .getByRole('radiogroup', { name: 'Own color' })
+      .getByRole('radio', { name: 'Color 12' })
+      .click();
+    await checkA11y('the edit form of a machine with its own color picked');
+
+    update('fail');
+    await page.getByRole('button', { name: 'Save machine' }).click();
+    await expect(page.getByRole('heading', { name: 'Could not save the machine' })).toBeVisible();
+    await checkA11y('the edit form after a failed save');
+    update('pass');
+
+    one('hold');
+    await page.goto(edit);
+    await expect(page.getByText('Loading the machine.')).toBeVisible();
     await checkA11y('the edit form loading', { busy: true });
 
-    await page.goto(withSearch(edit, { preview: 'error' }));
-    await expect(page.getByRole('alert')).toContainText('Could not save the machine');
-    await checkA11y('the edit form after a failed save');
+    await page.goto(mill);
+    await expect(page.getByRole('heading', { level: 1, name: 'Machine' })).toBeVisible();
+    // The page frame marks the loading machine busy; it draws no skeleton, so the busy element is
+    // empty and never visible.
+    await expect(page.locator('main [aria-busy="true"]')).toHaveCount(1);
+    await checkA11y('a machine loading', { busy: true });
 
-    await page.goto(withSearch(edit, { preview: 'forbidden' }));
+    one('fail');
+    await page.goto(mill);
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Could not load the machine' }),
+    ).toBeVisible();
+    await checkA11y('a machine failed');
+
+    one('forbidden');
+    await page.goto(mill);
     await expect(
       page.getByRole('heading', {
         level: 2,
-        name: 'You need the permission to change machines at this plant',
+        name: 'You need the permission to read machines in Plant A',
       }),
     ).toBeVisible();
-    await checkA11y('the edit form without access');
+    await checkA11y('a machine without access');
+    one('pass');
 
-    await page.goto(coreLinks.settings.machines.machine({ plant, equipmentId: 'ROBOT9' }).href);
+    await page.goto(
+      coreLinks.settings.machines.machine({
+        plant,
+        equipmentId: '019a0000-0000-7000-8000-0000000000ff',
+      }).href,
+    );
     await expect(
       page.getByRole('heading', {
         level: 2,
@@ -108,6 +191,22 @@ test.describe('the plant settings pages', () => {
       }),
     ).toBeVisible();
     await checkA11y('a machine that does not exist');
+
+    await page.goto(mill);
+    await confirm(page, 'Archive', 'machine');
+    await expect(page.getByRole('button', { name: 'Restore', exact: true })).toBeVisible();
+    await checkA11y('an archived machine');
+    await page.getByRole('button', { name: 'Restore', exact: true }).click();
+    await expect(page.getByRole('alertdialog')).toHaveCSS('opacity', '1');
+    await checkA11y('the restore dialog of a machine');
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+
+    await page.goto(coreLinks.settings.machines({ plant }, { archived: '1' }).href);
+    await expect(
+      page.getByRole('table', { name: 'Machines' }).getByText('Archived', { exact: true }),
+    ).toBeVisible();
+    await checkA11y('the machines list with the archived machines');
   });
 
   test('ADR0021 the calendars list and a calendar with its week view pass the WCAG 2.2 AA rules', async ({

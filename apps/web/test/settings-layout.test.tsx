@@ -256,6 +256,7 @@ describe('the Settings button', () => {
     const { fetch } = api([
       'core.user:read',
       'core.roleAssignment:manage',
+      'core.equipment:read',
       'core.equipmentGroup:read',
     ]);
     renderShellAt('/plant-a/articles', shellModules, { fetch });
@@ -303,9 +304,27 @@ describe('the Settings button', () => {
     renderShellAt('/plant-a/settings/users', shellModules, { fetch: manager.fetch });
     const managed = await screen.findByRole('navigation', { name: 'Plant A settings' });
     await waitFor(() =>
-      expect(linksIn(managed)).toContainEqual(['Machines', '/plant-a/settings/machines']),
+      expect(linksIn(managed)).toContainEqual(['Calendars', '/plant-a/settings/calendars']),
     );
     expect(linksIn(managed).map(([label]) => label)).not.toContain('Equipment groups');
+  });
+
+  it("#991 Machines shows to a holder of core.equipment:read, not to one who only manages the plant's roles", async () => {
+    const reader = api(['core.user:read', 'core.equipment:read']);
+    renderShellAt('/plant-a/settings/people', shellModules, { fetch: reader.fetch });
+    const settings = await screen.findByRole('navigation', { name: 'Plant A settings' });
+    await waitFor(() =>
+      expect(linksIn(settings)).toContainEqual(['Machines', '/plant-a/settings/machines']),
+    );
+
+    cleanup();
+    const manager = api(['core.user:read', 'core.roleAssignment:manage']);
+    renderShellAt('/plant-a/settings/people', shellModules, { fetch: manager.fetch });
+    const managed = await screen.findByRole('navigation', { name: 'Plant A settings' });
+    await waitFor(() =>
+      expect(linksIn(managed)).toContainEqual(['Calendars', '/plant-a/settings/calendars']),
+    );
+    expect(linksIn(managed).map(([label]) => label)).not.toContain('Machines');
   });
 
   it("#729 a company admin, who manages the integrations, finds Warehouses among the company's settings, and one who only reads roles does not", async () => {

@@ -5,7 +5,6 @@ import { Temporal } from 'temporal-polyfill';
 import type {
   PlantCalendar,
   PlantCalendarDeviation,
-  PlantMachine,
   PlantRouting,
   PlantSettingsSnapshot,
   PlantShift,
@@ -17,20 +16,6 @@ import type {
 export function machineNamer(snapshot: PlantSettingsSnapshot): (code: string) => string {
   const names = new Map(snapshot.equipment.map((machine) => [machine.code, machine.name]));
   return (code) => names.get(code) ?? code;
-}
-
-/** The group's name by its code. */
-export function groupNamer(snapshot: PlantSettingsSnapshot): (code: string) => string {
-  const names = new Map(snapshot.equipmentGroups.map((group) => [group.code, group.name]));
-  return (code) => names.get(code) ?? code;
-}
-
-/** The group's color token, such as palette-3, or none. */
-export function groupColorOf(
-  snapshot: PlantSettingsSnapshot,
-  machine: PlantMachine,
-): string | undefined {
-  return snapshot.equipmentGroups.find((group) => group.code === machine.group)?.color;
 }
 
 /** One routing operation that names a machine among its allowed machines. */

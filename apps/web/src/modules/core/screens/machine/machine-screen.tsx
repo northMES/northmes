@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 Krister Johansson trading as Flexmatic
-
+import { useQuery } from '@apollo/client/react';
 import { coreLinks } from '@northmes/core-contracts';
 import { planningLinks } from '@northmes/planning-contracts';
 import { useShell } from '@northmes/web-sdk';
-import { Link, useParams, useSearch } from '@tanstack/react-router';
+import { Link, useParams } from '@tanstack/react-router';
 import { cn } from 'cn';
-import { Archive, ChartGantt, CircleCheck, Lock, Pencil } from 'lucide-react';
+import { Archive, ChartGantt, CircleCheck, Pencil } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { PageFrame, type PageState } from '../../../../ui/components/page-frame/index.ts';
+import { PageFrame } from '../../../../ui/components/page-frame/index.ts';
 import { PageSection } from '../../../../ui/components/page-section/index.ts';
 import { StatusBadge } from '../../../../ui/components/status-badge/index.ts';
-import { Button, buttonVariants } from '../../../../ui/primitives/button.tsx';
+import { buttonVariants } from '../../../../ui/primitives/button.tsx';
 import {
   Table,
   TableBody,
@@ -22,24 +22,27 @@ import {
   TableRow,
 } from '../../../../ui/primitives/table.tsx';
 import { GroupColor } from '../../components/group-color/index.ts';
-import {
-  type PlantMachine,
-  PlantSettingsForbidden,
-  type PlantSettingsSnapshot,
-} from '../../plant-settings-data.ts';
+import { CoreEquipment, type Machine } from '../../equipment.graphql.ts';
+import { colorText } from '../../equipment-group-facts.ts';
+import { calendarOf, stripeColorOf } from '../../machine-facts.ts';
+import { isMachineId, machinePageState } from '../../machine-states.tsx';
+import type { PlantSettingsSnapshot } from '../../plant-settings-data.ts';
 import {
   allowedIn,
-  groupColorOf,
-  groupNamer,
   machineNamer,
   openOrdersOf,
   patternText,
   plantTime,
   weekOf,
 } from '../../plant-settings-facts.ts';
-import { plantSettingsActionReason } from '../../plant-settings-reasons.ts';
-import { machinePageSearch } from '../../plant-settings-search.ts';
+import { machineFixtureNote } from '../../plant-settings-reasons.ts';
 import { usePlantSettings } from '../../plant-settings-source-context.ts';
+import { usePlaces } from '../../use-places.ts';
+import { useViewer } from '../../use-viewer.ts';
+import { MachineActions } from './machine-actions.tsx';
+
+/** A machine as the fixture's sections read it: by its code, named by its name. */
+type NamedMachine = Pick<Machine, 'code' | 'name'>;
 
 const head = 'h-auto px-3 py-2 text-xs font-semibold text-muted-foreground';
 const cell = 'px-3 py-2 whitespace-normal';
@@ -73,31 +76,34 @@ function MachineSection({
   machine,
 }: {
   readonly snapshot: PlantSettingsSnapshot;
-  readonly machine: PlantMachine;
+  readonly machine: Machine;
 }) {
   const { plant } = useShell();
-  const color = groupColorOf(snapshot, machine);
-  const calendar = snapshot.calendars.find((each) => each.name === machine.calendar);
-  const lead =
-    machine.owner === 'erp'
-      ? `From the ERP, machine code ${machine.code}${
-          snapshot.erp === undefined
-            ? ''
-            : `, imported ${plantTime(snapshot, snapshot.erp.importedAtMs)}`
-        }. The plannable flag came with it.`
-      : 'Created in NorthMES.';
+  const calendar = calendarOf(snapshot, machine.code);
   return (
-    <PageSection title="Machine" lead={lead}>
+    <PageSection title="Machine">
       <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Definition term="Code" value={machine.code} mono />
         <Definition term="Name" value={machine.name} />
         <Definition
           term="Equipment group"
           value={
-            <span className="inline-flex items-center gap-1.5">
-              <GroupColor color={color} shape="dot" />
-              {groupNamer(snapshot)(machine.group)}
-            </span>
+            machine.group === null ? (
+              <span className="text-muted-foreground">Not shown</span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5">
+                <GroupColor color={machine.group.color} shape="dot" />
+                <Link
+                  to={
+                    coreLinks.settings.equipmentGroups.group({ plant, groupId: machine.groupId })
+                      .href
+                  }
+                  className="text-link underline underline-offset-2 hover:no-underline"
+                >
+                  {machine.group.name}
+                </Link>
+              </span>
+            )
           }
           note="Its row band on the board."
         />
@@ -144,8 +150,10 @@ function MachineSection({
           term="Color stripe"
           value={
             <span className="inline-flex items-center gap-2">
-              <GroupColor color={color} shape="stripe" />
-              From the group
+              <GroupColor color={stripeColorOf(machine)} shape="stripe" />
+              {machine.color === null
+                ? `From the group${machine.group === null ? '' : `, ${colorText(machine.group.color)}`}`
+                : `${colorText(machine.color)}, its own`}
             </span>
           }
           note="The 6 px stripe before the machine name on the board."
@@ -161,7 +169,7 @@ function AllowedSection({
   machine,
 }: {
   readonly snapshot: PlantSettingsSnapshot;
-  readonly machine: PlantMachine;
+  readonly machine: NamedMachine;
 }) {
   const machineName = machineNamer(snapshot);
   const allowed = allowedIn(snapshot, machine.code);
@@ -220,7 +228,7 @@ function WeekSection({
   machine,
 }: {
   readonly snapshot: PlantSettingsSnapshot;
-  readonly machine: PlantMachine;
+  readonly machine: NamedMachine;
 }) {
   const { plant } = useShell();
   const week = weekOf(snapshot.nowMs, snapshot.plant.timeZone);
@@ -296,86 +304,86 @@ function WeekSection({
 }
 
 /**
- * A machine's page in plant settings (E06; design #688, MA3): its code in the h1 with the group's
- * color stripe, name and group beside it; the Machine section with the rule behind each fact, the
- * routing operations that allow the machine and its job orders this week; Edit as a link and
- * Archive disabled until the equipment API exists. An unknown code shows the not-found state (MF2).
+ * A machine's page in plant settings (design #688, MA3): its code in the h1 with its color stripe,
+ * name and group beside it; the Machine section with the rule behind each fact, the routing
+ * operations that allow the machine and its job orders this week. The machine comes from the API
+ * by its id; its calendar, the routing operations and the week still come from the fixture G1 by
+ * its code. Edit machine shows to a user who may change it, Archive or Restore to one who may
+ * archive it. An archived machine carries the Archived badge; an unknown id or an old link by code
+ * shows the not-found state (MF2).
  */
 export function MachineScreen() {
   const { plant } = useShell();
   const { equipmentId = '' } = useParams({ strict: false });
-  const search = machinePageSearch(useSearch({ strict: false }));
-  const { snapshot, error, retry } = usePlantSettings(search.preview);
-  const machine = snapshot?.equipment.find((each) => each.code === equipmentId);
+  const valid = isMachineId(equipmentId);
+  const { data, error, refetch } = useQuery(CoreEquipment, {
+    variables: { id: equipmentId },
+    skip: !valid,
+  });
+  const { snapshot } = usePlantSettings(undefined);
+  const places = usePlaces();
+  const viewer = useViewer();
+  // An old link by the machine's code names no machine.
+  const machine = !valid ? null : data === undefined ? undefined : data.coreEquipment;
   const back = coreLinks.settings.machines({ plant }).href;
-  let state: PageState = { status: 'ready' };
-  if (snapshot === undefined && error instanceof PlantSettingsForbidden) {
-    state = {
-      status: 'empty',
-      icon: Lock,
-      title: 'You need the permission to read machines at this plant',
-      description: 'Ask your plant admin for a role that can read machines.',
-    };
-  } else if (snapshot === undefined && error !== undefined) {
-    state = { status: 'error', title: 'Could not load the machine', error, onRetry: retry };
-  } else if (snapshot === undefined) {
-    state = { status: 'loading' };
-  } else if (machine === undefined) {
-    state = {
-      status: 'empty',
-      title: 'This machine does not exist or you cannot see it',
-      description:
-        'The link may be out of date, or the machine belongs to a plant you have no role in.',
-      action: (
-        <Link to={back} className={buttonVariants({ variant: 'outline' })}>
-          Back to Machines
-        </Link>
-      ),
-    };
-  }
-  const loaded = snapshot !== undefined && machine !== undefined;
+  const state = machinePageState({
+    plant,
+    plantName: places.plant?.name ?? 'the plant',
+    machine,
+    restLoaded: snapshot !== undefined && viewer.loaded,
+    error: error ?? viewer.error,
+    retry: () =>
+      Promise.all([
+        error === undefined ? undefined : refetch(),
+        viewer.error === undefined ? undefined : viewer.retry(),
+      ]),
+  });
+  const editable = machine && machine.archivedAt === null && viewer.can('core.equipment:update');
   return (
     <PageFrame
-      title={machine === undefined ? 'Machine' : `Machine ${machine.code}`}
+      title={machine ? `Machine ${machine.code}` : 'Machine'}
       crumbs={[{ label: 'Machines', href: back }]}
       meta={
-        loaded ? (
+        machine ? (
           <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <GroupColor color={groupColorOf(snapshot, machine)} shape="stripe" />
-            {machine.name}, {groupNamer(snapshot)(machine.group)}
+            <GroupColor color={stripeColorOf(machine)} shape="stripe" />
+            {machine.group === null ? machine.name : `${machine.name}, ${machine.group.name}`}
           </span>
         ) : undefined
       }
       actions={
-        loaded ? (
+        machine ? (
           <>
-            <Link
-              to={
-                coreLinks.settings.machines.machine.edit({ plant, equipmentId: machine.code }).href
-              }
-              className={buttonVariants({ variant: 'outline' })}
-            >
-              <Pencil aria-hidden />
-              Edit
-            </Link>
-            <Button variant="outline" disabled>
-              <Archive aria-hidden />
-              Archive
-            </Button>
+            {editable && (
+              <Link
+                to={
+                  coreLinks.settings.machines.machine.edit({ plant, equipmentId: machine.id }).href
+                }
+                className={buttonVariants({ variant: 'outline' })}
+              >
+                <Pencil aria-hidden />
+                Edit machine
+              </Link>
+            )}
+            <MachineActions machine={machine} />
           </>
         ) : undefined
       }
       state={state}
     >
-      {loaded && (
+      {state.status === 'ready' && machine && snapshot !== undefined && (
         <>
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <p>{plantSettingsActionReason}</p>
-            {snapshot.fixture !== undefined && <p>Showing fixture {snapshot.fixture}.</p>}
-          </div>
+          {machine.archivedAt !== null && (
+            <p>
+              <StatusBadge tone="neutral" icon={Archive}>
+                Archived
+              </StatusBadge>
+            </p>
+          )}
           <MachineSection snapshot={snapshot} machine={machine} />
           <AllowedSection snapshot={snapshot} machine={machine} />
           <WeekSection snapshot={snapshot} machine={machine} />
+          <p className="text-xs text-muted-foreground">{machineFixtureNote}</p>
         </>
       )}
     </PageFrame>
