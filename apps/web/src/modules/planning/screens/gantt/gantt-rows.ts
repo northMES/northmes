@@ -15,8 +15,12 @@ import type {
 import { orderNumbersText } from '../../gantt-draft.ts';
 import { isNotPlaced } from '../../gantt-loaded.ts';
 
-/** The levels of the order Gantt tree (plan 18, Rows and the tree): a run above its orders, then operations and job orders. */
-export type GanttRow = RunRow | OrderRow | OperationRow | JobOrderRow;
+/**
+ * The rows of the order Gantt tree (plan 18, Rows and the tree): a run above its orders, and under
+ * each order one row per job order. The tree has the same two levels, three under a run, whether an
+ * operation has one job order or several.
+ */
+export type GanttRow = RunRow | OrderRow | JobOrderRow;
 
 /** A level 1 row: an order, or a run with its orders under it (plan 18, Runs). */
 export type Level1Row = RunRow | OrderRow;
@@ -50,17 +54,13 @@ export interface OrderRow {
   readonly runId?: string;
   /** The early flag of an order whose own deadline is later than its run's (ADR 0083 rule 5). */
   readonly early?: EarlyOrder;
-  readonly subRows: readonly OperationRow[];
+  readonly subRows: readonly JobOrderRow[];
 }
 
-export interface OperationRow {
-  readonly kind: 'operation';
-  readonly id: string;
-  readonly order: GanttOrder;
-  readonly operation: GanttOperation;
-  /** How many of the operation's job orders sit in the Not placed row. */
-  readonly notPlaced: number;
-  readonly subRows: readonly JobOrderRow[];
+/** Which part of a split operation a job order is, counted in the row order: 1 of 2. */
+export interface JobOrderPart {
+  readonly index: number;
+  readonly count: number;
 }
 
 export interface JobOrderRow {
@@ -70,19 +70,20 @@ export interface JobOrderRow {
   readonly operation: GanttOperation;
   readonly jobOrder: GanttJobOrder;
   readonly analysis: JobOrderAnalysis | undefined;
+  /** The part of its operation the row is, when the operation has more than one job order. */
+  readonly part?: JobOrderPart;
   readonly subRows: readonly never[];
 }
 
-/** The ids of the rows: a run and an order by their ids, an operation and a job order by theirs. */
+/** The ids of the rows: a run, an order and a job order by their own ids. */
 export const rowIds = {
   run: (run: Run) => run.id,
   order: (order: GanttOrder) => order.id,
-  operation: (operation: GanttOperation) => `op-${operation.id}`,
   jobOrder: (jobOrder: GanttJobOrder) => jobOrder.id,
 };
 
 /** The row heights of plan 18, in rem: 36 px for summary rows, 52 px for job order rows. */
-export const rowHeightRem = { run: 2.25, order: 2.25, operation: 2.25, jobOrder: 3.25 } as const;
+export const rowHeightRem = { run: 2.25, order: 2.25, jobOrder: 3.25 } as const;
 
 /** The workload lane's height, 40 px, in rem. */
 export const laneHeightRem = 2.5;
@@ -125,26 +126,22 @@ function orderRowOf(snapshot: GanttSnapshot, order: GanttOrder, run: Run | undef
     ...(early !== undefined && { early }),
     subRows: [...order.operations]
       .sort((a, b) => a.sequence - b.sequence)
-      .map((operation) => {
+      .flatMap((operation) => {
         const jobOrders = order.jobOrders
           .filter((jobOrder) => jobOrder.operationId === operation.id)
           .sort(compareJobOrders);
-        return {
-          kind: 'operation',
-          id: rowIds.operation(operation),
-          order,
-          operation,
-          notPlaced: jobOrders.filter(isNotPlaced).length,
-          subRows: jobOrders.map((jobOrder) => ({
+        return jobOrders.map(
+          (jobOrder, index): JobOrderRow => ({
             kind: 'jobOrder',
             id: rowIds.jobOrder(jobOrder),
             order,
             operation,
             jobOrder,
             analysis: snapshot.analysis.jobOrders[jobOrder.id],
+            ...(jobOrders.length > 1 && { part: { index: index + 1, count: jobOrders.length } }),
             subRows: [],
-          })),
-        };
+          }),
+        );
       }),
   };
 }
@@ -170,7 +167,7 @@ function compareLevel1(a: Level1Row, b: Level1Row): number {
 
 /**
  * The tree of a snapshot: runs and the orders outside them in the autoplan order, a run's orders
- * under it, operations by sequence, job orders by start.
+ * under it, and under each order its job orders by their operation's sequence, then by start.
  */
 export function buildGanttRows(snapshot: GanttSnapshot): Level1Row[] {
   const runs = snapshot.runs ?? [];
@@ -233,12 +230,10 @@ export function earlyText(early: EarlyOrder): string {
 /**
  * The span of a summary row: from the earliest setup start to the latest end of its placed rows.
  * A row whose placement awaits its time chunk counts its order's span from the row list, so a
- * summary bar shows before its job orders load (ADR 0089); an operation's span leaves it out, as
- * the order's span would stretch it over the whole order.
+ * summary bar shows before its job orders load (ADR 0089).
  */
 export function summarySpan(
   rows: readonly JobOrderRow[],
-  withOrderSpans = true,
 ): { readonly fromMs: number; readonly toMs: number } | undefined {
   let fromMs: number | undefined;
   let toMs: number | undefined;
@@ -246,7 +241,7 @@ export function summarySpan(
     const span =
       jobOrder.placement !== undefined
         ? { fromMs: jobOrder.placement.setupStartMs, toMs: jobOrder.placement.endMs }
-        : jobOrder.awaitingPlacement === true && withOrderSpans
+        : jobOrder.awaitingPlacement === true
           ? order.span
           : undefined;
     if (span === undefined) continue;
@@ -256,19 +251,17 @@ export function summarySpan(
   return fromMs === undefined || toMs === undefined ? undefined : { fromMs, toMs };
 }
 
-/** The span of a run, an order or an operation row's summary bar. */
+/** The span of a run or an order row's summary bar. */
 export function rowSpan(
-  row: RunRow | OrderRow | OperationRow,
+  row: RunRow | OrderRow,
 ): { readonly fromMs: number; readonly toMs: number } | undefined {
-  return summarySpan(jobOrderRowsOf(row), row.kind !== 'operation');
+  return summarySpan(jobOrderRowsOf(row));
 }
 
-/** The job order rows under a run, an order or an operation. */
-export function jobOrderRowsOf(row: RunRow | OrderRow | OperationRow): JobOrderRow[] {
+/** The job order rows under a run or an order. */
+export function jobOrderRowsOf(row: RunRow | OrderRow): JobOrderRow[] {
   if (row.kind === 'run') return row.subRows.flatMap((order) => jobOrderRowsOf(order));
-  return row.kind === 'order'
-    ? row.subRows.flatMap((operation) => operation.subRows)
-    : [...row.subRows];
+  return [...row.subRows];
 }
 
 /**
@@ -284,9 +277,9 @@ export function selectionRowOf(
 }
 
 /**
- * What Zoom to fit fits on the Gantt (ADR 0089, Zoom levels): a row's span, which for a run, an
- * order or an operation runs from its first setup start to its last end, and its name; with no
- * row, every loaded row. A row with nothing placed has no span.
+ * What Zoom to fit fits on the Gantt (ADR 0089, Zoom levels): a row's span, which for a run or an
+ * order runs from its first setup start to its last end, and its name; with no row, every loaded
+ * row. A row with nothing placed has no span.
  */
 export function fitTargetOf(
   row: GanttRow | undefined,
@@ -311,12 +304,7 @@ export function fitTargetOf(
       name: `job order ${row.jobOrder.displayNumber}`,
     };
   }
-  const name =
-    row.kind === 'run'
-      ? `the run of ${row.run.article}`
-      : row.kind === 'order'
-        ? `order ${row.order.number}`
-        : `operation ${row.operation.displayNumber}`;
+  const name = row.kind === 'run' ? `the run of ${row.run.article}` : `order ${row.order.number}`;
   return { span: rowSpan(row), name };
 }
 
@@ -340,16 +328,13 @@ export function latenessText(analysis: OrderAnalysis | undefined): string {
  * the span and, for an order, whether it is on time: "Order 1001, Tue 3 Nov 11:30 to Thu 5 Nov
  * 10:45, on time".
  */
-export function summaryName(row: RunRow | OrderRow | OperationRow, timeZone: string): string {
+export function summaryName(row: RunRow | OrderRow, timeZone: string): string {
   const span = rowSpan(row);
   const spanText = span === undefined ? 'not placed' : formatSpan(span.fromMs, span.toMs, timeZone);
   if (row.kind === 'run') {
     return `${runTitle(row.run)}, ${orderNumbersText(row.run.orderNumbers)}, ${spanText}, ${runLatenessText(row.analysis)}`;
   }
-  if (row.kind === 'order') {
-    return `Order ${row.order.number}, ${spanText}, ${latenessText(row.analysis)}`;
-  }
-  return `Operation ${row.operation.displayNumber} ${row.operation.name}, ${spanText}`;
+  return `Order ${row.order.number}, ${spanText}, ${latenessText(row.analysis)}`;
 }
 
 /** The words of a status, as the board draws them. */
@@ -373,13 +358,30 @@ export function orderSubtext(order: GanttOrder, timeZone: string): string {
   return `${order.article}, ${quantityText(order.quantity)}, deadline ${formatPlantDate(order.deadlineMs, timeZone)}, ${statusLabel(order.status)}`;
 }
 
-/** The machines of an operation as a count with the default one: "2 machines, default CNC 1". */
-export function machinesText(
-  operation: GanttOperation,
-  machineName: (code: string) => string,
+/** The title of a job order row: its operation's number and name, and its part when split, "1003.10 Turn (1 of 2)". */
+export function jobOrderTitle(row: JobOrderRow): string {
+  const title = `${row.operation.displayNumber} ${row.operation.name}`;
+  return row.part === undefined ? title : `${title} (${row.part.index} of ${row.part.count})`;
+}
+
+/** The second line of a job order row's header: machine, or "Not placed", quantity and status. */
+export function jobOrderSubtext(
+  jobOrder: GanttJobOrder,
+  machineName: (code: string | undefined) => string,
 ): string {
-  const [first] = operation.allowedEquipment;
-  const count = operation.allowedEquipment.length;
-  const name = first === undefined ? 'no machine' : machineName(first);
-  return count === 1 ? `1 machine, ${name}` : `${count} machines, default ${name}`;
+  const where = isNotPlaced(jobOrder) ? 'Not placed' : machineName(jobOrder.equipment);
+  return `${where}, ${quantityText(jobOrder.quantity)}, ${statusLabel(jobOrder.status)}`;
+}
+
+/**
+ * The machines an operation allows besides the job order's own, by name, "Mill 1"; none when the
+ * job order's machine is the only one.
+ */
+export function otherAllowedMachinesText(
+  operation: GanttOperation,
+  jobOrder: GanttJobOrder,
+  machineName: (code: string) => string,
+): string | undefined {
+  const others = operation.allowedEquipment.filter((code) => code !== jobOrder.equipment);
+  return others.length === 0 ? undefined : others.map(machineName).join(', ');
 }

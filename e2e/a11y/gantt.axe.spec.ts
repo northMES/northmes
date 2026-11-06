@@ -87,7 +87,8 @@ test.describe('the order Gantt', () => {
     await gantt.locator('[data-row-id="po-1001"]').focus();
     await page.keyboard.press('Space');
     await expect(gantt.locator('[data-row-id="po-1001"]')).toHaveAttribute('aria-selected', 'true');
-    for (let step = 0; step < 10; step += 1) await page.keyboard.press('ArrowDown');
+    // Down walks the two rows of 1001 and the three of 1004 (plan 18, Rows and the tree).
+    for (let step = 0; step < 6; step += 1) await page.keyboard.press('ArrowDown');
     await expect(gantt.locator('[data-row-id="po-1005"]')).toBeFocused();
     await page.keyboard.press('Shift+Space');
     await expect(gantt.locator('[data-row-id="po-1005"]')).toHaveAttribute('aria-selected', 'true');

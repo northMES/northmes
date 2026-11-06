@@ -3,13 +3,45 @@
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { findGantt, renderGanttRoute } from './gantt-fixtures.tsx';
+import { g1Snapshot } from '../../../src/modules/planning/gantt-data-g1.ts';
+import { findDetails, findGantt, renderGanttRoute, sourceOf } from './gantt-fixtures.tsx';
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   window.localStorage.removeItem('northmes.planning.gantt.options');
 });
+
+/**
+ * G1 with 1003.10 split in two parts of 300 pcs: the first keeps its place on CNC 1, the second
+ * has no machine yet, so it sits in the Not placed row.
+ */
+function splitSource() {
+  const snapshot = g1Snapshot();
+  return sourceOf({
+    ...snapshot,
+    productionOrders: snapshot.productionOrders.map((order) => {
+      if (order.number !== '1003') return order;
+      const turn = order.jobOrders.find((each) => each.id === 'jo-1003-10');
+      if (turn === undefined) throw new Error('G1 has no jo-1003-10');
+      const { equipment: _, placement: __, ...unplaced } = turn;
+      return {
+        ...order,
+        jobOrders: [
+          ...order.jobOrders.map((each) => (each === turn ? { ...turn, quantity: 300 } : each)),
+          { ...unplaced, id: 'jo-1003-10-2', quantity: 300 },
+        ],
+      };
+    }),
+  });
+}
+
+/** The row header of a row by its id. */
+function headerOf(gantt: HTMLElement, rowId: string): HTMLElement {
+  const row = gantt.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`);
+  if (row === null) throw new Error(`No row ${rowId}`);
+  return within(row).getByRole('rowheader');
+}
 
 /** The rows of the tree at a level, under the treegrid. */
 function rowsAtLevel(gantt: HTMLElement, level: number): HTMLElement[] {
@@ -19,17 +51,16 @@ function rowsAtLevel(gantt: HTMLElement, level: number): HTMLElement[] {
 }
 
 describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
-  it('GT1 renders G1 as 6 orders, 10 operations and 10 job order rows with their levels, sizes and positions', async () => {
+  it('GT1 renders G1 as 6 order rows at level 1 and 10 job order rows at level 2 with their sizes and positions, and no level 3', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
     const orders = rowsAtLevel(gantt, 1);
-    const operations = rowsAtLevel(gantt, 2);
-    const jobOrders = rowsAtLevel(gantt, 3);
+    const jobOrders = rowsAtLevel(gantt, 2);
     expect(orders).toHaveLength(6);
-    expect(operations).toHaveLength(10);
     expect(jobOrders).toHaveLength(10);
-    expect(gantt.getAttribute('aria-rowcount')).toBe(String(26 + 2));
+    expect(rowsAtLevel(gantt, 3)).toHaveLength(0);
+    expect(gantt.getAttribute('aria-rowcount')).toBe(String(16 + 2));
     // The autoplan order: deadline, then priority, then number, so 1003 (Wed) comes first and 1005 and 1006 (next week, no priority) last.
     expect(
       orders.map((row) => within(row).getByRole('rowheader').textContent?.slice(0, 4)),
@@ -37,18 +68,24 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     expect(orders[0]?.getAttribute('aria-setsize')).toBe('6');
     expect(orders[2]?.getAttribute('aria-posinset')).toBe('3');
     expect(orders[0]?.getAttribute('aria-expanded')).toBe('true');
-    const op = operations.find((row) =>
-      within(row).getByRole('rowheader').textContent?.startsWith('1001.20'),
-    );
-    expect(op?.getAttribute('aria-setsize')).toBe('2');
-    expect(op?.getAttribute('aria-posinset')).toBe('2');
-    expect(within(op as HTMLElement).getByRole('rowheader').textContent).toContain(
-      '2 machines, default CNC 2',
-    );
-    expect(jobOrders[0]?.getAttribute('aria-expanded')).toBeNull();
+    const mill = jobOrders.find((row) => row.getAttribute('data-row-id') === 'jo-1001-20');
+    expect(mill?.getAttribute('data-row-kind')).toBe('jobOrder');
+    expect(mill?.getAttribute('aria-setsize')).toBe('2');
+    expect(mill?.getAttribute('aria-posinset')).toBe('2');
+    expect(mill?.getAttribute('aria-expanded')).toBeNull();
   });
 
-  it('GT1 names a summary bar after its row header, its span and whether the order is on time', async () => {
+  it('GT1 heads a job order row with its operation number and name, then its machine, quantity and status', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    const turn = gantt.querySelector('[data-row-id="jo-1003-10"]') as HTMLElement;
+    const header = within(turn).getByRole('rowheader');
+    expect(within(header).getByText('1003.10 Turn')).toBeTruthy();
+    expect(within(header).getByText('CNC 1, 600 pcs, Planned')).toBeTruthy();
+  });
+
+  it('GT1 names a summary bar after its row header, its span and whether the order is on time, and draws one per order only', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
@@ -62,11 +99,8 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
         name: 'Order 1003, Wed 4 Nov 08:00 to Thu 5 Nov 06:15, late by 15 h 15 min',
       }),
     ).toBeTruthy();
-    expect(
-      within(gantt).getByRole('gridcell', {
-        name: 'Operation 1001.10 Turn, Tue 3 Nov 11:30 to Wed 4 Nov 08:00',
-      }),
-    ).toBeTruthy();
+    expect(within(gantt).getAllByRole('gridcell', { name: /^Order \d{4}, / })).toHaveLength(6);
+    expect(within(gantt).queryAllByRole('gridcell', { name: /^Operation / })).toHaveLength(0);
   });
 
   it('GT1 collapsing an order hides its rows and keeps aria-setsize', async () => {
@@ -79,11 +113,10 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     expect(order.getAttribute('aria-expanded')).toBe('false');
     expect(order.getAttribute('aria-setsize')).toBe('6');
     expect(rowsAtLevel(gantt, 2)).toHaveLength(8);
-    expect(rowsAtLevel(gantt, 3)).toHaveLength(8);
-    expect(gantt.getAttribute('aria-rowcount')).toBe(String(22 + 2));
-    expect(within(gantt).queryByRole('row', { name: /^1001\.10 / })).toBeNull();
+    expect(gantt.getAttribute('aria-rowcount')).toBe(String(14 + 2));
+    expect(gantt.querySelector('[data-row-id="jo-1001-10"]')).toBeNull();
     await userEvent.click(within(gantt).getByRole('button', { name: 'Expand order 1001' }));
-    expect(rowsAtLevel(gantt, 3)).toHaveLength(10);
+    expect(rowsAtLevel(gantt, 2)).toHaveLength(10);
   });
 
   it('GT1 shows the default tree columns and the Columns menu shows and hides one', async () => {
@@ -111,12 +144,162 @@ describe('the order Gantt tree (plan 18, Rows and the tree)', () => {
     expect(within(gantt).queryByRole('columnheader', { name: 'Deadline' })).toBeNull();
   });
 
-  it('GT1 shows the Not placed row with no job order and an operation says how many it misses when one is unplaced', async () => {
+  it('plan 18 the Machine and Lock columns fill on job order rows, with the hard lock of 1002.10, and stay empty on order rows', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
     const gantt = await findGantt();
 
-    const notPlaced = within(gantt).getByRole('row', { name: /Not placed/ });
+    await userEvent.click(screen.getByRole('button', { name: 'View' }));
+    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Machine' }));
+    await userEvent.click(screen.getByRole('menuitemcheckbox', { name: 'Lock' }));
+    await userEvent.keyboard('{Escape}');
+    await within(gantt).findByRole('columnheader', { name: 'Lock' });
+
+    const cellsOf = (rowId: string) => {
+      const row = gantt.querySelector<HTMLElement>(`[data-row-id="${rowId}"]`);
+      if (row === null) throw new Error(`No row ${rowId}`);
+      const headers = within(gantt)
+        .getAllByRole('columnheader')
+        .map((cell) => cell.getAttribute('aria-label') ?? cell.textContent);
+      const cells = within(row).getAllByRole('gridcell');
+      return {
+        machine: cells[headers.indexOf('Machine') - 1]?.textContent,
+        lock: cells[headers.indexOf('Lock') - 1]?.textContent,
+      };
+    };
+    expect(cellsOf('jo-1002-10')).toEqual({ machine: 'CNC 2', lock: 'Hard lock' });
+    expect(cellsOf('jo-1003-10')).toEqual({ machine: 'CNC 1', lock: '' });
+    expect(cellsOf('po-1002')).toEqual({ machine: '', lock: '' });
+  });
+
+  it('plan 18 an order with no job orders is a leaf row: no aria-expanded and no Expand or Collapse button', async () => {
+    const snapshot = g1Snapshot();
+    renderGanttRoute(
+      { zoom: 'week', from: '2026-11-02' },
+      sourceOf({
+        ...snapshot,
+        productionOrders: snapshot.productionOrders.map((order) =>
+          order.number === '1006' ? { ...order, jobOrders: [] } : order,
+        ),
+      }),
+    );
+    const gantt = await findGantt();
+
+    const order = gantt.querySelector<HTMLElement>('[data-row-id="po-1006"]');
+    expect(order?.getAttribute('aria-level')).toBe('1');
+    expect(order?.hasAttribute('aria-expanded')).toBe(false);
+    expect(within(gantt).getByRole('button', { name: 'Collapse order 1005' })).toBeTruthy();
+    expect(
+      within(gantt).queryByRole('button', { name: /^(Expand|Collapse) order 1006$/ }),
+    ).toBeNull();
+  });
+
+  it('GT1 shows the Not placed row with no job order', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    const notPlaced = within(gantt).getByRole('row', { name: /^Not placed/ });
     expect(notPlaced.textContent).toContain('No job orders without a place');
+  });
+
+  it('GT1 shows the hard lock of 1002.10 as a Locked badge on its job order row', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+
+    expect(within(headerOf(gantt, 'jo-1002-10')).getByText('Locked')).toBeTruthy();
+    expect(within(headerOf(gantt, 'jo-1003-10')).queryByText('Locked')).toBeNull();
+  });
+
+  it('plan 18 a split operation shows one job order row per part under its order, each with the operation number and its part marker', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, splitSource());
+    const gantt = await findGantt();
+
+    const order = within(gantt).getByRole('row', { name: /^1003 / });
+    const rows = within(gantt).getAllByRole('row');
+    const under = rows.slice(rows.indexOf(order) + 1, rows.indexOf(order) + 4);
+    expect(under.map((row) => row.getAttribute('data-row-id'))).toEqual([
+      'jo-1003-10',
+      'jo-1003-10-2',
+      'jo-1003-20',
+    ]);
+    expect(under.map((row) => row.getAttribute('aria-level'))).toEqual(['2', '2', '2']);
+    expect(order.getAttribute('aria-level')).toBe('1');
+    expect(within(headerOf(gantt, 'jo-1003-10')).getByText('1003.10 Turn (1 of 2)')).toBeTruthy();
+    expect(within(headerOf(gantt, 'jo-1003-10-2')).getByText('1003.10 Turn (2 of 2)')).toBeTruthy();
+    expect(within(headerOf(gantt, 'jo-1003-20')).getByText('1003.20 Mill')).toBeTruthy();
+  });
+
+  it('plan 18 the block, the hover card and the Details title of a part carry its part marker', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, splitSource());
+    const gantt = await findGantt();
+
+    const block = gantt.querySelector<HTMLElement>('[data-block="jo-1003-10"]');
+    if (block === null) throw new Error('No block jo-1003-10');
+    expect(block.getAttribute('aria-label')).toMatch(/^1003\.10 Turn \(1 of 2\), /);
+    block.focus();
+    expect((await screen.findByRole('tooltip')).textContent).toContain('1003.10 Turn (1 of 2)');
+    await userEvent.keyboard('{Enter}');
+    const details = await findDetails();
+    expect(within(details).getByRole('heading', { level: 2 }).textContent).toBe(
+      '1003.10 Turn (1 of 2)',
+    );
+  });
+
+  it('plan 18 the part marker counts the parts in the row order, by start, not by id', async () => {
+    const snapshot = g1Snapshot();
+    const hour = 3_600_000;
+    renderGanttRoute(
+      { zoom: 'week', from: '2026-11-02' },
+      sourceOf({
+        ...snapshot,
+        productionOrders: snapshot.productionOrders.map((order) => {
+          if (order.number !== '1003') return order;
+          const turn = order.jobOrders.find((each) => each.id === 'jo-1003-10');
+          const placement = turn?.placement;
+          if (turn === undefined || placement === undefined) throw new Error('G1 places 1003.10');
+          // The first part by id starts two hours after the second.
+          const later = {
+            setupStartMs: placement.setupStartMs + 2 * hour,
+            runStartMs: placement.runStartMs + 2 * hour,
+            endMs: placement.endMs + 2 * hour,
+            segments: placement.segments.map((segment) => ({
+              fromMs: segment.fromMs + 2 * hour,
+              toMs: segment.toMs + 2 * hour,
+            })),
+          };
+          return {
+            ...order,
+            jobOrders: [
+              ...order.jobOrders.map((each) =>
+                each === turn ? { ...turn, quantity: 300, placement: later } : each,
+              ),
+              { ...turn, id: 'jo-1003-10-2', quantity: 300 },
+            ],
+          };
+        }),
+      }),
+    );
+    const gantt = await findGantt();
+
+    const rows = within(gantt).getAllByRole('row');
+    const order = within(gantt).getByRole('row', { name: /^1003 / });
+    expect(
+      rows
+        .slice(rows.indexOf(order) + 1, rows.indexOf(order) + 3)
+        .map((row) => row.getAttribute('data-row-id')),
+    ).toEqual(['jo-1003-10-2', 'jo-1003-10']);
+    expect(within(headerOf(gantt, 'jo-1003-10-2')).getByText('1003.10 Turn (1 of 2)')).toBeTruthy();
+    expect(within(headerOf(gantt, 'jo-1003-10')).getByText('1003.10 Turn (2 of 2)')).toBeTruthy();
+  });
+
+  it('plan 18 a job order without a machine sits in the Not placed row and its own row says Not placed where the machine would be', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, splitSource());
+    const gantt = await findGantt();
+
+    expect(
+      within(headerOf(gantt, 'jo-1003-10-2')).getByText('Not placed, 300 pcs, Planned'),
+    ).toBeTruthy();
+    const notPlaced = within(gantt).getByRole('row', { name: /^Not placed/ });
+    expect(notPlaced.textContent).toContain('1003.10');
   });
 
   it('ADR0089 the time area is a buffer of three viewport widths and scrolls sideways under the sticky tree pane', async () => {

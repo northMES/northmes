@@ -5,7 +5,7 @@ import { shownFields } from '../../board-fields.ts';
 import type { GanttSnapshot } from '../../gantt-data.ts';
 import type { MaterialShortage } from '../../material-projection.ts';
 import { durationsOf, materialShortText } from './gantt-block-states.ts';
-import { type JobOrderRow, quantityText, savedSetupOf } from './gantt-rows.ts';
+import { type JobOrderRow, jobOrderTitle, quantityText, savedSetupOf } from './gantt-rows.ts';
 
 /** One line of the hover card: its field id or analysis line, a label and its value. */
 export interface HoverField {
@@ -107,9 +107,7 @@ export function GanttHoverCard({
 }) {
   return (
     <div className="grid w-72 gap-1 text-data">
-      <p className="font-mono text-sm font-semibold">
-        {row.operation.displayNumber} {row.operation.name}
-      </p>
+      <p className="font-mono text-sm font-semibold">{jobOrderTitle(row)}</p>
       <p className="text-xs opacity-80">
         {row.order.article}, {quantityText(row.jobOrder.quantity)}, order {row.order.number}
       </p>

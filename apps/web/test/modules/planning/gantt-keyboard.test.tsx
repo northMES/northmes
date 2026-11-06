@@ -61,13 +61,13 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
     rowOf(gantt, 'po-1003').focus();
     expect(focusedRowId()).toBe('po-1003');
     await userEvent.keyboard('{ArrowDown}');
-    expect(focusedRowId()).toBe('op-1003.10');
-    await userEvent.keyboard('{ArrowDown}');
     expect(focusedRowId()).toBe('jo-1003-10');
-    expect(rowOf(gantt, 'jo-1003-10').getAttribute('tabindex')).toBe('0');
+    await userEvent.keyboard('{ArrowDown}');
+    expect(focusedRowId()).toBe('jo-1003-20');
+    expect(rowOf(gantt, 'jo-1003-20').getAttribute('tabindex')).toBe('0');
     expect(rowOf(gantt, 'po-1003').getAttribute('tabindex')).toBe('-1');
     await userEvent.keyboard('{ArrowUp}');
-    expect(focusedRowId()).toBe('op-1003.10');
+    expect(focusedRowId()).toBe('jo-1003-10');
     await userEvent.keyboard('{End}');
     expect(focusedRowId()).toBe('jo-1006-10');
     await userEvent.keyboard('{Home}');
@@ -83,7 +83,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
     rowOf(gantt, 'po-1003').focus();
     await userEvent.keyboard('{ArrowLeft}');
     expect(rowOf(gantt, 'po-1003').getAttribute('aria-expanded')).toBe('false');
-    expect(gantt.querySelector('[data-row-id="op-1003.10"]')).toBeNull();
+    expect(gantt.querySelector('[data-row-id="jo-1003-10"]')).toBeNull();
     await userEvent.keyboard('{ArrowDown}');
     expect(focusedRowId()).toBe('po-1002');
     await userEvent.keyboard('{ArrowUp}{ArrowRight}');
@@ -92,7 +92,7 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
 
     rowOf(gantt, 'jo-1003-20').focus();
     await userEvent.keyboard('{ArrowLeft}');
-    expect(focusedRowId()).toBe('op-1003.20');
+    expect(focusedRowId()).toBe('po-1003');
   });
 
   it('ADR0021 Right on an expanded row moves into its time cell and Left comes back to the row', async () => {
@@ -131,7 +131,9 @@ describe('row focus mode of the order Gantt (plan 18, Tree grid semantics)', () 
   it('ADR0021 Right on an unplaced job order row lands on its time cell, named "not placed"', async () => {
     renderGanttRoute({ zoom: 'week', from: '2026-11-02' }, sourceOf(withUnplaced1006()));
     const gantt = await findGantt();
-    expect(within(gantt).getByRole('row', { name: /Not placed/ }).textContent).toContain('1006.10');
+    expect(within(gantt).getByRole('row', { name: /^Not placed/ }).textContent).toContain(
+      '1006.10',
+    );
 
     rowOf(gantt, 'jo-1006-10').focus();
     await userEvent.keyboard('{ArrowRight}');

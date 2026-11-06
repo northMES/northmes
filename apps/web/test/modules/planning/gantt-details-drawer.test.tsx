@@ -13,6 +13,7 @@ import {
   detailsOpen,
   findDetails,
   findGantt,
+  openDetailsSection,
   plant,
   renderGanttRoute,
   sourceOf,
@@ -94,6 +95,34 @@ describe('the Details drawer leads with the move decision (#917)', () => {
     expect(within(panel).queryByRole('region', { name: 'Hover fields' })).toBeNull();
     expect(within(panel).queryByRole('region', { name: 'Actions' })).toBeNull();
     expect(within(panel).queryByRole('button', { name: 'Lock' })).toBeNull();
+  });
+
+  it('plan 18 names the other machines the operation allows under the machine select, and its lead time and send-ahead quantity in Float and timing', async () => {
+    renderGanttRoute({ zoom: 'week', from: '2026-11-02' });
+    const gantt = await findGantt();
+    const mill = await openDetails(gantt, 'jo-1001-20');
+
+    const glance = within(mill).getByRole('region', { name: 'At a glance' });
+    expect(within(glance).getByText('Also allowed: Mill 1')).toBeTruthy();
+    await openDetailsSection(mill, 'Float and timing');
+    const float = within(mill).getByRole('region', { name: 'Float and timing' });
+    expect(within(float).getByText('Lead time after the operation before: 1 h.')).toBeTruthy();
+    expect(within(float).getByText('Send ahead to the next operation: none.')).toBeTruthy();
+    await userEvent.keyboard('{Escape}');
+    await waitFor(() => {
+      expect(detailsOpen()).toBe(false);
+    });
+
+    // 1004.10 runs on CNC 1, the one machine it allows, so no other machine is named.
+    const turn = await openDetails(gantt, 'jo-1004-10');
+    await openDetailsSection(turn, 'Float and timing');
+    expect(
+      within(within(turn).getByRole('region', { name: 'Float and timing' })).getByText(
+        'Send ahead to the next operation: 300 pcs.',
+      ),
+    ).toBeTruthy();
+    const turnGlance = within(turn).getByRole('region', { name: 'At a glance' });
+    expect(turnGlance.textContent).not.toContain('allowed');
   });
 
   it('#917 names the operation after a job order with its start', async () => {

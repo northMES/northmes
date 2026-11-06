@@ -143,8 +143,8 @@ function useStableCalendar(calendar: GanttCalendar | undefined): GanttCalendar |
 }
 
 /**
- * The order Gantt (plan 18, The order Gantt), on its own page: the tree of orders, operations and
- * job orders on the left, the time area on the right, both inside one treegrid, the pinned Not
+ * The order Gantt (plan 18, The order Gantt), on its own page: the tree of orders and their job
+ * orders on the left, the time area on the right, both inside one treegrid, the pinned Not
  * placed row under the time header, and the toolbar of D5. The URL holds the view, the
  * zoom, the range start and the selected order; the options stay local. The screen reads one data
  * source and never knows which; phase 1 reads the fixture G1 and says so.
@@ -573,10 +573,7 @@ export function GanttScreen({ source: given }: GanttScreenProps) {
     const addOrder = (order: GanttRow) => {
       map.set(order.id, order);
       if (order.kind !== 'order') return;
-      for (const operation of order.subRows) {
-        map.set(operation.id, operation);
-        for (const jobOrder of operation.subRows) map.set(jobOrder.id, jobOrder);
-      }
+      for (const jobOrder of order.subRows) map.set(jobOrder.id, jobOrder);
     };
     for (const row of rows) {
       map.set(row.id, row);

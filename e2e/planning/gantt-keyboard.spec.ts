@@ -26,13 +26,13 @@ test.describe('keyboard move mode on the order Gantt', () => {
     await expect(gantt).not.toHaveAttribute('aria-busy', 'true');
     const spoken = page.getByRole('status');
 
-    // Collapse order 1001 and expand it again from the keyboard, then walk into its first row.
+    // Collapse order 1001 and expand it again from the keyboard, then walk into its first job
+    // order row, directly under it (plan 18, Rows and the tree).
     await page.getByRole('button', { name: 'Collapse order 1001' }).click();
     const orderRow = gantt.locator('[data-row-id="po-1001"]');
     await orderRow.focus();
     await page.keyboard.press('ArrowRight');
     await expect(orderRow).toHaveAttribute('aria-expanded', 'true');
-    await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowDown');
     await expect(gantt.locator('[data-row-id="jo-1001-10"]')).toBeFocused();
     await page.keyboard.press('ArrowRight');
