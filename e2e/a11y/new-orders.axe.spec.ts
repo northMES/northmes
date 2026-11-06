@@ -44,7 +44,8 @@ test.describe('the new order forms', () => {
 
     // The order lives in the tab's memory, so the Gantt opens through the app, not a new load.
     await page.getByRole('link', { name: 'Zoom to order on the Gantt' }).click();
-    await expect(page.getByRole('row', { name: /Not placed/ })).toContainText('N-1007.10');
+    // The pinned Not placed row; an unplaced job order's own row says "Not placed" further in.
+    await expect(page.getByRole('row', { name: /^Not placed/ })).toContainText('N-1007.10');
     await checkA11y('the Gantt after a created order');
 
     await page.goto(withSearch(form, { line: '40211-2', preview: 'saveError' }));
